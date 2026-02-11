@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import RegionGraphView from '@/components/admin/RegionGraphView';
 import NodeEditorDialog from '@/components/admin/NodeEditorDialog';
 import RegionManager from '@/components/admin/RegionManager';
+import ItemManager from '@/components/admin/ItemManager';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -86,62 +88,75 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           {isValar ? '⚡ Valar' : '✨ Maiar'} World Editor
         </h1>
         <div className="flex-1" />
-
-        {/* Region selector */}
-        <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-          <SelectTrigger className="w-48 h-8 text-xs font-display">
-            <SelectValue placeholder="Select region" />
-          </SelectTrigger>
-          <SelectContent>
-            {regions.map(r => (
-              <SelectItem key={r.id} value={r.id} className="text-xs">
-                {r.name} <span className="text-muted-foreground ml-1">(Lvl {r.min_level}–{r.max_level})</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {isValar && currentRegion && (
-          <Button variant="destructive" size="sm" onClick={() => deleteRegion(selectedRegion)} className="text-xs h-8">
-            <Trash2 className="w-3 h-3" />
-          </Button>
-        )}
-
-        <RegionManager
-          regions={regions}
-          onCreated={loadData}
-          isValar={isValar}
-          onDelete={deleteRegion}
-        />
       </div>
 
-      {/* Region info bar */}
-      {currentRegion && (
-        <div className="px-4 py-1.5 border-b border-border bg-card/30 flex items-center gap-4">
-          <span className="font-display text-xs text-primary">{currentRegion.name}</span>
-          <span className="text-xs text-muted-foreground">Level {currentRegion.min_level}–{currentRegion.max_level}</span>
-          <span className="text-xs text-muted-foreground">{regionNodes.length} nodes</span>
-          {currentRegion.description && (
-            <span className="text-xs text-muted-foreground truncate">{currentRegion.description}</span>
-          )}
+      <Tabs defaultValue="world" className="flex-1 flex flex-col min-h-0">
+        <div className="px-4 pt-2 border-b border-border bg-card/30">
+          <TabsList className="h-8">
+            <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
+            <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
+          </TabsList>
         </div>
-      )}
 
-      {/* Graph view */}
-      <div className="flex-1 overflow-hidden">
-        {selectedRegion ? (
-          <RegionGraphView
-            nodes={regionNodes}
-            onNodeClick={handleNodeClick}
-            onAddNodeBetween={handleAddNodeBetween}
-            onAddNodeAdjacent={handleAddNodeAdjacent}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground font-display text-sm">
-            Select or create a region to begin
+        <TabsContent value="world" className="flex-1 flex flex-col min-h-0 mt-0">
+          {/* Region controls */}
+          <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30">
+            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+              <SelectTrigger className="w-48 h-8 text-xs font-display">
+                <SelectValue placeholder="Select region" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50">
+                {regions.map(r => (
+                  <SelectItem key={r.id} value={r.id} className="text-xs">
+                    {r.name} <span className="text-muted-foreground ml-1">(Lvl {r.min_level}–{r.max_level})</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {isValar && currentRegion && (
+              <Button variant="destructive" size="sm" onClick={() => deleteRegion(selectedRegion)} className="text-xs h-8">
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            )}
+
+            <RegionManager
+              regions={regions}
+              onCreated={loadData}
+              isValar={isValar}
+              onDelete={deleteRegion}
+            />
+
+            {currentRegion && (
+              <>
+                <span className="text-xs text-primary font-display ml-2">{currentRegion.name}</span>
+                <span className="text-xs text-muted-foreground">Lvl {currentRegion.min_level}–{currentRegion.max_level}</span>
+                <span className="text-xs text-muted-foreground">{regionNodes.length} nodes</span>
+              </>
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Graph view */}
+          <div className="flex-1 overflow-hidden">
+            {selectedRegion ? (
+              <RegionGraphView
+                nodes={regionNodes}
+                onNodeClick={handleNodeClick}
+                onAddNodeBetween={handleAddNodeBetween}
+                onAddNodeAdjacent={handleAddNodeAdjacent}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground font-display text-sm">
+                Select or create a region to begin
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="items" className="flex-1 min-h-0 mt-0">
+          <ItemManager />
+        </TabsContent>
+      </Tabs>
 
       {/* Node editor dialog */}
       <NodeEditorDialog
