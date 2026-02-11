@@ -18,6 +18,7 @@ interface NodeEditorProps {
   onClose: () => void;
   onSaved: () => void;
   isValar: boolean;
+  adjacentToNodeId?: string | null;
 }
 
 const defaultCreatureForm = () => ({
@@ -25,7 +26,7 @@ const defaultCreatureForm = () => ({
   is_aggressive: false, respawn_seconds: 300, loot_table: '[]',
 });
 
-export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onClose, onSaved, isValar }: NodeEditorProps) {
+export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onClose, onSaved, isValar, adjacentToNodeId }: NodeEditorProps) {
   const [form, setForm] = useState({
     name: '', description: '', is_vendor: false,
     connections: '[]', searchable_items: '[]',
@@ -79,11 +80,31 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
     } else {
-      const { error } = await supabase.from('nodes').insert({
+      // If adjacent to an existing node, auto-set bidirectional connections
+      if (adjacentToNodeId) {
+        const parentNode = allNodes.find(n => n.id === adjacentToNodeId);
+        if (parentNode) {
+          // Add connection from new node back to parent (direction S by default)
+          connections = [{ node_id: adjacentToNodeId, direction: 'S', label: parentNode.name }];
+        }
+      }
+
+      const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: regionId,
         is_vendor: form.is_vendor, connections, searchable_items,
-      });
+      }).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
+
+      // Update parent node to add connection to the new node
+      if (adjacentToNodeId && inserted) {
+        const parentNode = allNodes.find(n => n.id === adjacentToNodeId);
+        if (parentNode) {
+          const parentConns = Array.isArray(parentNode.connections) ? [...parentNode.connections] : [];
+          parentConns.push({ node_id: inserted.id, direction: 'N', label: form.name });
+          await supabase.from('nodes').update({ connections: parentConns }).eq('id', adjacentToNodeId);
+        }
+      }
+
       toast.success('Node created');
     }
     setLoading(false);

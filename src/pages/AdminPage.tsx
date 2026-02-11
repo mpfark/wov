@@ -20,6 +20,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [isNewNode, setIsNewNode] = useState(false);
+  const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const [r, n] = await Promise.all([
@@ -41,12 +42,14 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const handleNodeClick = (nodeId: string) => {
     setEditingNodeId(nodeId);
     setIsNewNode(false);
+    setAdjacentToNodeId(null);
     setEditorOpen(true);
   };
 
   const handleAddNodeAdjacent = (fromId: string) => {
     setEditingNodeId(null);
     setIsNewNode(true);
+    setAdjacentToNodeId(fromId || null);
     setEditorOpen(true);
   };
 
@@ -149,6 +152,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         onClose={() => setEditorOpen(false)}
         onSaved={handleEditorSaved}
         isValar={isValar}
+        adjacentToNodeId={adjacentToNodeId}
       />
     </div>
   );
