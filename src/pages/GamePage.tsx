@@ -19,7 +19,7 @@ interface Props {
 }
 
 export default function GamePage({ character, updateCharacter, onSignOut }: Props) {
-  const { regions, nodes, getNode, getRegion } = useNodes();
+  const { regions, nodes, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
