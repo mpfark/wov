@@ -50,17 +50,31 @@ export default function NodeView({
           <h3 className="font-display text-xs text-muted-foreground mb-1">In the Area</h3>
           <div className="space-y-1">
             {creatures.map(c => (
-              <div key={c.id} className="flex items-center justify-between p-2 bg-background/50 rounded border border-border">
-                <div>
-                  <span className={`text-sm font-display ${
-                    c.rarity === 'boss' ? 'text-primary text-glow' :
-                    c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
-                  }`}>{c.name}</span>
-                  <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
+              <div key={c.id} className="p-2 bg-background/50 rounded border border-border space-y-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className={`text-sm font-display ${
+                      c.rarity === 'boss' ? 'text-primary text-glow' :
+                      c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
+                    }`}>{c.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
+                  </div>
+                  <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
+                    Attack
+                  </Button>
                 </div>
-                <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
-                  Attack
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.max((c.hp / c.max_hp) * 100, 0)}%`,
+                        backgroundColor: c.hp / c.max_hp > 0.5 ? 'hsl(var(--chart-2))' : c.hp / c.max_hp > 0.25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{c.hp}/{c.max_hp}</span>
+                </div>
               </div>
             ))}
             {otherPlayers.map(p => (
