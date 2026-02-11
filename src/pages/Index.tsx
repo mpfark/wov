@@ -1,14 +1,19 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCharacter } from '@/hooks/useCharacter';
+import { useRole } from '@/hooks/useRole';
 import AuthPage from './AuthPage';
 import CharacterCreation from './CharacterCreation';
 import GamePage from './GamePage';
+import AdminPage from './AdminPage';
 import { useNodes } from '@/hooks/useNodes';
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { character, loading: charLoading, createCharacter, updateCharacter } = useCharacter(user);
   const { nodes, loading: nodesLoading } = useNodes(!!user);
+  const { isAdmin, isValar } = useRole(user);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   if (authLoading) {
     return (
@@ -28,7 +33,10 @@ const Index = () => {
     );
   }
 
-  // Find a starting node (first node from first region)
+  if (showAdmin && isAdmin) {
+    return <AdminPage onBack={() => setShowAdmin(false)} isValar={isValar} />;
+  }
+
   const startingNode = nodes[0];
 
   if (!character) {
@@ -52,6 +60,8 @@ const Index = () => {
       character={character}
       updateCharacter={updateCharacter}
       onSignOut={signOut}
+      isAdmin={isAdmin}
+      onOpenAdmin={() => setShowAdmin(true)}
     />
   );
 };
