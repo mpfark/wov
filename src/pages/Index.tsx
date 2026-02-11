@@ -8,7 +8,7 @@ import { useNodes } from '@/hooks/useNodes';
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { character, loading: charLoading, createCharacter, updateCharacter } = useCharacter(user);
-  const { nodes, loading: nodesLoading } = useNodes();
+  const { nodes, loading: nodesLoading } = useNodes(!!user);
 
   if (authLoading) {
     return (
@@ -32,10 +32,17 @@ const Index = () => {
   const startingNode = nodes[0];
 
   if (!character) {
+    if (!startingNode) {
+      return (
+        <div className="flex min-h-screen items-center justify-center parchment-bg">
+          <p className="font-display text-muted-foreground">No world data found. A Valar must seed the world.</p>
+        </div>
+      );
+    }
     return (
       <CharacterCreation
         onCreateCharacter={createCharacter}
-        startingNodeId={startingNode?.id || ''}
+        startingNodeId={startingNode.id}
       />
     );
   }
