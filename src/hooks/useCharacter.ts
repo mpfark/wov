@@ -97,6 +97,8 @@ export function useCharacter(user: User | null) {
 
   const updateCharacter = async (updates: Partial<Character>) => {
     if (!character) return;
+    // Optimistically update local state immediately
+    setCharacter(prev => prev ? { ...prev, ...updates } : prev);
     const { error } = await supabase
       .from('characters')
       .update(updates as any)
