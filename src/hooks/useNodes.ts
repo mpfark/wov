@@ -19,12 +19,17 @@ export interface Region {
   max_level: number;
 }
 
-export function useNodes() {
+export function useNodes(isAuthenticated: boolean = false) {
   const [regions, setRegions] = useState<Region[]>([]);
   const [nodes, setNodes] = useState<GameNode[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
     const fetchAll = async () => {
       const [regRes, nodeRes] = await Promise.all([
         supabase.from('regions').select('*'),
@@ -35,7 +40,7 @@ export function useNodes() {
       setLoading(false);
     };
     fetchAll();
-  }, []);
+  }, [isAuthenticated]);
 
   const getNode = (nodeId: string) => nodes.find(n => n.id === nodeId);
   const getRegion = (regionId: string) => regions.find(r => r.id === regionId);
