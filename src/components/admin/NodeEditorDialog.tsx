@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus } from 'lucide-react';
+import { Save, Trash2, Plus, Pencil, X } from 'lucide-react';
+import { generateCreatureStats } from '@/lib/game-data';
 
 interface NodeEditorProps {
   nodeId: string | null;
@@ -19,18 +20,19 @@ interface NodeEditorProps {
   isValar: boolean;
 }
 
+const defaultCreatureForm = () => ({
+  name: '', description: '', level: 1, rarity: 'regular',
+  is_aggressive: false, respawn_seconds: 300, loot_table: '[]',
+});
+
 export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onClose, onSaved, isValar }: NodeEditorProps) {
   const [form, setForm] = useState({
     name: '', description: '', is_vendor: false,
     connections: '[]', searchable_items: '[]',
   });
   const [creatures, setCreatures] = useState<any[]>([]);
-  const [creatureForm, setCreatureForm] = useState({
-    name: '', description: '', level: 1, hp: 10, max_hp: 10, ac: 10,
-    rarity: 'regular', is_aggressive: false, respawn_seconds: 300,
-    stats: '{"str":10,"dex":10,"con":10,"int":10,"wis":10,"cha":10}',
-    loot_table: '[]',
-  });
+  const [creatureForm, setCreatureForm] = useState(defaultCreatureForm());
+  const [editingCreatureId, setEditingCreatureId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -42,15 +44,15 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
       setForm({ name: '', description: '', is_vendor: false, connections: '[]', searchable_items: '[]' });
       setCreatures([]);
     }
+    setEditingCreatureId(null);
+    setCreatureForm(defaultCreatureForm());
   }, [nodeId, open]);
 
   const loadNode = async (id: string) => {
     const { data } = await supabase.from('nodes').select('*').eq('id', id).single();
     if (data) {
       setForm({
-        name: data.name,
-        description: data.description,
-        is_vendor: data.is_vendor,
+        name: data.name, description: data.description, is_vendor: data.is_vendor,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: JSON.stringify(data.searchable_items, null, 2),
       });
@@ -97,22 +99,47 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
     onClose();
   };
 
-  const addCreature = async () => {
+  const saveCreature = async () => {
     if (!nodeId || !creatureForm.name) return toast.error('Save the node first and provide a creature name');
-    let stats: any, loot_table: any;
-    try { stats = JSON.parse(creatureForm.stats); } catch { return toast.error('Invalid stats JSON'); }
+    let loot_table: any;
     try { loot_table = JSON.parse(creatureForm.loot_table); } catch { return toast.error('Invalid loot_table JSON'); }
-    const { error } = await supabase.from('creatures').insert({
+
+    const generated = generateCreatureStats(creatureForm.level, creatureForm.rarity);
+    const payload = {
       name: creatureForm.name, description: creatureForm.description,
       node_id: nodeId, level: creatureForm.level,
-      hp: creatureForm.hp, max_hp: creatureForm.max_hp, ac: creatureForm.ac,
+      hp: generated.hp, max_hp: generated.hp, ac: generated.ac,
       rarity: creatureForm.rarity as any, is_aggressive: creatureForm.is_aggressive,
-      respawn_seconds: creatureForm.respawn_seconds, stats, loot_table,
-    });
-    if (error) return toast.error(error.message);
-    toast.success('Creature added');
-    setCreatureForm(f => ({ ...f, name: '', description: '' }));
+      respawn_seconds: creatureForm.respawn_seconds, stats: generated.stats, loot_table,
+    };
+
+    if (editingCreatureId) {
+      const { error } = await supabase.from('creatures').update(payload).eq('id', editingCreatureId);
+      if (error) return toast.error(error.message);
+      toast.success('Creature updated');
+    } else {
+      const { error } = await supabase.from('creatures').insert(payload);
+      if (error) return toast.error(error.message);
+      toast.success('Creature added');
+    }
+    setCreatureForm(defaultCreatureForm());
+    setEditingCreatureId(null);
     loadCreatures(nodeId);
+  };
+
+  const editCreature = (c: any) => {
+    setEditingCreatureId(c.id);
+    setCreatureForm({
+      name: c.name, description: c.description || '', level: c.level,
+      rarity: c.rarity, is_aggressive: c.is_aggressive,
+      respawn_seconds: c.respawn_seconds,
+      loot_table: JSON.stringify(c.loot_table, null, 2),
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingCreatureId(null);
+    setCreatureForm(defaultCreatureForm());
   };
 
   const removeCreature = async (id: string) => {
@@ -120,6 +147,15 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
     if (error) return toast.error(error.message);
     toast.success('Creature removed');
     if (nodeId) loadCreatures(nodeId);
+  };
+
+  // Preview generated stats
+  const previewStats = generateCreatureStats(creatureForm.level, creatureForm.rarity);
+
+  const formatRespawn = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
   };
 
   return (
@@ -165,26 +201,48 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
 
           {nodeId && (
             <TabsContent value="creatures" className="space-y-3">
+              {/* Existing creatures list */}
               <div className="space-y-2">
                 {creatures.map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-2 bg-background/40 rounded border border-border">
+                  <div key={c.id} className={`flex items-center justify-between p-2 rounded border ${
+                    editingCreatureId === c.id ? 'border-primary bg-primary/10' : 'border-border bg-background/40'
+                  }`}>
                     <div>
                       <span className={`font-display text-sm ${c.rarity === 'boss' ? 'text-primary text-glow' : c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'}`}>
                         {c.name}
                       </span>
                       <span className="text-xs text-muted-foreground ml-2">
-                        Lvl {c.level} | HP {c.hp}/{c.max_hp} | {c.is_alive ? '✅' : '💀'}
+                        Lvl {c.level} | HP {c.hp}/{c.max_hp} | AC {c.ac} | ⏱ {formatRespawn(c.respawn_seconds)} | {c.is_alive ? '✅' : '💀'}
                       </span>
                     </div>
-                    <Button size="sm" variant="destructive" onClick={() => removeCreature(c.id)} className="text-xs h-6">
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => editCreature(c)} className="text-xs h-6 px-2">
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => removeCreature(c.id)} className="text-xs h-6 px-2">
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
+                {creatures.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic">No creatures spawned here.</p>
+                )}
               </div>
 
+              {/* Add / Edit creature form */}
               <div className="border-t border-border pt-3 space-y-2">
-                <p className="font-display text-xs text-primary">Add Creature</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-display text-xs text-primary">
+                    {editingCreatureId ? 'Edit Creature' : 'Add Creature'}
+                  </p>
+                  {editingCreatureId && (
+                    <Button size="sm" variant="ghost" onClick={cancelEdit} className="text-xs h-6 px-2">
+                      <X className="w-3 h-3 mr-1" /> Cancel
+                    </Button>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-2">
                   <Input placeholder="Name" value={creatureForm.name}
                     onChange={e => setCreatureForm(f => ({ ...f, name: e.target.value }))} />
@@ -197,28 +255,59 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
                     </SelectContent>
                   </Select>
                 </div>
+
                 <Textarea placeholder="Description" value={creatureForm.description}
                   onChange={e => setCreatureForm(f => ({ ...f, description: e.target.value }))} rows={2} />
-                <div className="grid grid-cols-4 gap-2">
-                  <Input type="number" placeholder="Lvl" value={creatureForm.level}
-                    onChange={e => setCreatureForm(f => ({ ...f, level: +e.target.value }))} />
-                  <Input type="number" placeholder="HP" value={creatureForm.hp}
-                    onChange={e => setCreatureForm(f => ({ ...f, hp: +e.target.value, max_hp: +e.target.value }))} />
-                  <Input type="number" placeholder="AC" value={creatureForm.ac}
-                    onChange={e => setCreatureForm(f => ({ ...f, ac: +e.target.value }))} />
-                  <Input type="number" placeholder="Respawn" value={creatureForm.respawn_seconds}
-                    onChange={e => setCreatureForm(f => ({ ...f, respawn_seconds: +e.target.value }))} />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Level</label>
+                    <Input type="number" min={1} value={creatureForm.level}
+                      onChange={e => setCreatureForm(f => ({ ...f, level: Math.max(1, +e.target.value) }))} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Respawn Timer</label>
+                    <div className="flex gap-1 items-center">
+                      <Input type="number" min={0} value={creatureForm.respawn_seconds}
+                        onChange={e => setCreatureForm(f => ({ ...f, respawn_seconds: Math.max(0, +e.target.value) }))} />
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                        ({formatRespawn(creatureForm.respawn_seconds)})
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <Textarea placeholder='Stats JSON' value={creatureForm.stats}
-                  onChange={e => setCreatureForm(f => ({ ...f, stats: e.target.value }))}
-                  className="font-mono text-xs" rows={2} />
+
+                {/* Auto-generated stats preview */}
+                <div className="p-2 bg-background/50 rounded border border-border">
+                  <p className="text-[10px] text-muted-foreground mb-1">Auto-generated stats (Lvl {creatureForm.level} {creatureForm.rarity})</p>
+                  <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-xs">
+                    <span>HP: <strong>{previewStats.hp}</strong></span>
+                    <span>AC: <strong>{previewStats.ac}</strong></span>
+                    <span>STR: <strong>{previewStats.stats.str}</strong></span>
+                    <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
+                    <span>CON: <strong>{previewStats.stats.con}</strong></span>
+                    <span>INT: <strong>{previewStats.stats.int}</strong></span>
+                    <span>WIS: <strong>{previewStats.stats.wis}</strong></span>
+                    <span>CHA: <strong>{previewStats.stats.cha}</strong></span>
+                  </div>
+                </div>
+
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={creatureForm.is_aggressive}
                     onChange={e => setCreatureForm(f => ({ ...f, is_aggressive: e.target.checked }))} />
                   Aggressive
                 </label>
-                <Button onClick={addCreature} className="font-display text-xs">
-                  <Plus className="w-3 h-3 mr-1" /> Add Creature
+
+                <Textarea placeholder='Loot table JSON' value={creatureForm.loot_table}
+                  onChange={e => setCreatureForm(f => ({ ...f, loot_table: e.target.value }))}
+                  className="font-mono text-xs" rows={2} />
+
+                <Button onClick={saveCreature} className="font-display text-xs">
+                  {editingCreatureId ? (
+                    <><Save className="w-3 h-3 mr-1" /> Update Creature</>
+                  ) : (
+                    <><Plus className="w-3 h-3 mr-1" /> Add Creature</>
+                  )}
                 </Button>
               </div>
             </TabsContent>
