@@ -3,10 +3,12 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import CharacterPanel from '@/components/game/CharacterPanel';
 import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
+import VendorPanel from '@/components/game/VendorPanel';
 import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
 import { useCreatures } from '@/hooks/useCreatures';
+import { useInventory } from '@/hooks/useInventory';
 import { rollD20, getStatModifier, rollDamage } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -24,7 +26,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { regions, nodes, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, inventory } = useInventory(character.id);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
+  const [vendorOpen, setVendorOpen] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   const addLog = useCallback((msg: string) => {
@@ -35,8 +39,26 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [eventLog]);
 
+  // Update last_online periodically
+  useEffect(() => {
+    const updateOnline = () => {
+      supabase.from('characters').update({ last_online: new Date().toISOString() } as any).eq('id', character.id).then(() => {});
+    };
+    updateOnline();
+    const interval = setInterval(updateOnline, 60000);
+    return () => clearInterval(interval);
+  }, [character.id]);
+
+  // Run return_unique_items on load
+  useEffect(() => {
+    supabase.rpc('return_unique_items').then(() => {});
+  }, []);
+
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
+
+  // Effective AC including equipment
+  const effectiveAC = character.ac + (equipmentBonuses.ac || 0);
 
   const handleMove = useCallback(async (nodeId: string) => {
     const targetNode = getNode(nodeId);
@@ -55,21 +77,69 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [character, getNode, getRegion, updateCharacter, addLog]);
 
-  const handleSearch = useCallback(() => {
+  const handleSearch = useCallback(async () => {
+    if (!currentNode) return;
     const roll = rollD20();
-    if (roll >= 15) {
-      addLog(`Search roll: ${roll} — You found something interesting! (Items coming soon)`);
+    const searchItems = currentNode.searchable_items as any[];
+    if (roll >= 12 && searchItems && searchItems.length > 0) {
+      // Roll against each searchable item's chance
+      for (const entry of searchItems) {
+        if (Math.random() <= (entry.chance || 0.5)) {
+          const { data: item } = await supabase.from('items').select('name').eq('id', entry.item_id).single();
+          if (item) {
+            await supabase.from('character_inventory').insert({
+              character_id: character.id, item_id: entry.item_id, current_durability: 100,
+            });
+            addLog(`🔍 Search roll: ${roll} — You found ${item.name}!`);
+            fetchInventory();
+            return;
+          }
+        }
+      }
+      addLog(`Search roll: ${roll} — You rummage around but find nothing useful.`);
     } else {
       addLog(`Search roll: ${roll} — You find nothing of note.`);
     }
-  }, [addLog]);
+  }, [currentNode, character.id, addLog, fetchInventory]);
+
+  const rollLoot = useCallback(async (lootTable: any[], creatureName: string) => {
+    if (!lootTable || lootTable.length === 0) return;
+    for (const entry of lootTable) {
+      if (Math.random() <= (entry.chance || 0.1)) {
+        const { data: item } = await supabase.from('items').select('name').eq('id', entry.item_id).single();
+        if (item) {
+          await supabase.from('character_inventory').insert({
+            character_id: character.id, item_id: entry.item_id, current_durability: 100,
+          });
+          addLog(`💎 ${creatureName} dropped ${item.name}!`);
+          fetchInventory();
+        }
+      }
+    }
+  }, [character.id, addLog, fetchInventory]);
+
+  const degradeEquipment = useCallback(async () => {
+    // Degrade all equipped items by 1 durability
+    for (const item of equipped) {
+      const newDur = item.current_durability - 1;
+      if (newDur <= 0) {
+        // Item breaks
+        addLog(`💔 Your ${item.item.name} has broken!`);
+        await supabase.from('character_inventory').delete().eq('id', item.id);
+      } else {
+        await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
+      }
+    }
+    if (equipped.length > 0) fetchInventory();
+  }, [equipped, addLog, fetchInventory]);
 
   const handleAttack = useCallback(async (creatureId: string) => {
     const creature = creatures.find(c => c.id === creatureId);
     if (!creature) return;
 
+    const strBonus = equipmentBonuses.str || 0;
     const atkRoll = rollD20();
-    const strMod = getStatModifier(character.str);
+    const strMod = getStatModifier(character.str + strBonus);
     const totalAtk = atkRoll + strMod;
 
     if (atkRoll === 20 || (atkRoll !== 1 && totalAtk >= creature.ac)) {
@@ -83,26 +153,34 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       );
 
       if (newHp <= 0) {
-        addLog(`☠️ ${creature.name} has been slain! (+${creature.level * 10} XP)`);
+        // Creature dies — award XP, gold, and roll loot
+        const goldDrop = Math.floor(creature.level * (creature.rarity === 'boss' ? 25 : creature.rarity === 'rare' ? 15 : 5) * (0.8 + Math.random() * 0.4));
+        addLog(`☠️ ${creature.name} has been slain! (+${creature.level * 10} XP, +${goldDrop} gold)`);
         await supabase.from('creatures').update({ hp: 0, is_alive: false, died_at: new Date().toISOString() }).eq('id', creatureId);
+        
         const newXp = character.xp + creature.level * 10;
+        const newGold = character.gold + goldDrop;
         const xpForNext = character.level * 100;
         if (newXp >= xpForNext) {
           const newLevel = character.level + 1;
           addLog(`🎉 Level Up! You are now level ${newLevel}!`);
-          await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5 });
+          await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold });
         } else {
-          await updateCharacter({ xp: newXp });
+          await updateCharacter({ xp: newXp, gold: newGold });
         }
+        
+        // Roll loot
+        await rollLoot(creature.loot_table as any[], creature.name);
       } else {
         await supabase.from('creatures').update({ hp: newHp }).eq('id', creatureId);
         // Creature counterattack
         const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-        if (creatureAtk >= character.ac) {
+        if (creatureAtk >= effectiveAC) {
           const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
           const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-          addLog(`${creature.name} strikes back! Rolled ${creatureAtk} vs AC ${character.ac} — Hit! ${creatureDmg} damage.`);
+          addLog(`${creature.name} strikes back! Rolled ${creatureAtk} vs AC ${effectiveAC} — Hit! ${creatureDmg} damage.`);
           await updateCharacter({ hp: playerNewHp });
+          await degradeEquipment();
           if (playerNewHp <= 0) {
             addLog('💀 You have been defeated...');
           }
@@ -114,14 +192,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`You rolled ${atkRoll} + ${strMod} STR = ${totalAtk} vs AC ${creature.ac} — Miss!`);
       // Creature still attacks
       const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-      if (creatureAtk >= character.ac) {
+      if (creatureAtk >= effectiveAC) {
         const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
         const playerNewHp = Math.max(character.hp - creatureDmg, 0);
         addLog(`${creature.name} retaliates! ${creatureDmg} damage.`);
         await updateCharacter({ hp: playerNewHp });
+        await degradeEquipment();
       }
     }
-  }, [character, creatures, addLog, updateCharacter]);
+  }, [character, creatures, addLog, updateCharacter, equipmentBonuses, effectiveAC, rollLoot, degradeEquipment]);
 
   if (!currentNode) {
     return (
@@ -156,7 +235,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel defaultSize={22} minSize={18} maxSize={30}>
             <div className="h-full ornate-border bg-card/60">
-              <CharacterPanel character={character} />
+              <CharacterPanel
+                character={character}
+                equipped={equipped}
+                unequipped={unequipped}
+                equipmentBonuses={equipmentBonuses}
+                onEquip={equipItem}
+                onUnequip={unequipItem}
+                onDrop={dropItem}
+              />
             </div>
           </ResizablePanel>
 
@@ -174,6 +261,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onMove={handleMove}
                 onSearch={handleSearch}
                 onAttack={handleAttack}
+                onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
               />
             </div>
           </ResizablePanel>
@@ -209,6 +297,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           <div ref={logEndRef} />
         </div>
       </div>
+
+      {/* Vendor Dialog */}
+      {currentNode.is_vendor && (
+        <VendorPanel
+          open={vendorOpen}
+          onClose={() => setVendorOpen(false)}
+          nodeId={currentNode.id}
+          characterId={character.id}
+          gold={character.gold}
+          inventory={[...equipped, ...unequipped]}
+          onGoldChange={(g) => updateCharacter({ gold: g })}
+          onInventoryChange={fetchInventory}
+          addLog={addLog}
+        />
+      )}
     </div>
   );
 }

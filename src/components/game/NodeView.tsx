@@ -16,10 +16,11 @@ interface Props {
   onMove: (nodeId: string) => void;
   onSearch: () => void;
   onAttack: (creatureId: string) => void;
+  onOpenVendor?: () => void;
 }
 
 export default function NodeView({
-  node, region, players, creatures, character, eventLog, onMove, onSearch, onAttack,
+  node, region, players, creatures, character, eventLog, onMove, onSearch, onAttack, onOpenVendor,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
 
@@ -108,6 +109,11 @@ export default function NodeView({
         <Button variant="secondary" size="sm" onClick={onSearch} className="w-full mt-1.5 font-display text-xs">
           Search Area
         </Button>
+        {onOpenVendor && (
+          <Button variant="outline" size="sm" onClick={onOpenVendor} className="w-full mt-1.5 font-display text-xs text-primary">
+            🛒 Open Shop
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -69,6 +69,7 @@ export type Database = {
           hp: number
           id: string
           int: number
+          last_online: string
           level: number
           max_hp: number
           name: string
@@ -91,6 +92,7 @@ export type Database = {
           hp?: number
           id?: string
           int?: number
+          last_online?: string
           level?: number
           max_hp?: number
           name: string
@@ -113,6 +115,7 @@ export type Database = {
           hp?: number
           id?: string
           int?: number
+          last_online?: string
           level?: number
           max_hp?: number
           name?: string
@@ -347,6 +350,48 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_inventory: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          node_id: string
+          price: number
+          stock: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          node_id: string
+          price?: number
+          stock?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          node_id?: string
+          price?: number
+          stock?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_inventory_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_inventory_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -363,6 +408,7 @@ export type Database = {
       is_valar: { Args: never; Returns: boolean }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
       respawn_creatures: { Args: never; Returns: undefined }
+      return_unique_items: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "player" | "maiar" | "valar"
