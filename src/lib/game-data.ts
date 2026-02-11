@@ -95,3 +95,26 @@ export function rollDamage(min: number, max: number): number {
 export function getStatModifier(stat: number): number {
   return Math.floor((stat - 10) / 2);
 }
+
+// Generate creature stats based on level and rarity
+const RARITY_MULTIPLIER: Record<string, { stat: number; hp: number; ac: number }> = {
+  regular: { stat: 1, hp: 1, ac: 0 },
+  rare:    { stat: 1.3, hp: 1.5, ac: 2 },
+  boss:    { stat: 1.6, hp: 2.5, ac: 4 },
+};
+
+export function generateCreatureStats(level: number, rarity: string) {
+  const mult = RARITY_MULTIPLIER[rarity] || RARITY_MULTIPLIER.regular;
+  const baseStat = 8 + Math.floor(level * 0.5);
+  const stats = {
+    str: Math.round(baseStat * mult.stat),
+    dex: Math.round((baseStat - 1) * mult.stat),
+    con: Math.round((baseStat + 1) * mult.stat),
+    int: Math.round((baseStat - 2) * mult.stat),
+    wis: Math.round((baseStat - 1) * mult.stat),
+    cha: Math.round((baseStat - 3) * mult.stat),
+  };
+  const hp = Math.round((8 + level * 4) * mult.hp);
+  const ac = 8 + Math.floor(level * 0.4) + mult.ac;
+  return { stats, hp, ac };
+}
