@@ -1,0 +1,238 @@
+import { useState, useMemo, useCallback } from 'react';
+import { Plus } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+
+interface GraphNode {
+  id: string;
+  name: string;
+  is_vendor: boolean;
+  connections: Array<{ node_id: string; direction: string; label?: string }>;
+}
+
+interface Props {
+  nodes: GraphNode[];
+  onNodeClick: (nodeId: string) => void;
+  onAddNodeBetween: (fromId: string, toId: string) => void;
+  onAddNodeAdjacent: (fromId: string) => void;
+}
+
+const DIRECTION_OFFSETS: Record<string, [number, number]> = {
+  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
+  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
+};
+
+function layoutNodes(nodes: GraphNode[]) {
+  if (nodes.length === 0) return new Map<string, { x: number; y: number }>();
+
+  const positions = new Map<string, { x: number; y: number }>();
+  const visited = new Set<string>();
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+  // BFS from first node
+  const queue: Array<{ id: string; x: number; y: number }> = [{ id: nodes[0].id, x: 0, y: 0 }];
+  visited.add(nodes[0].id);
+  positions.set(nodes[0].id, { x: 0, y: 0 });
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const node = nodeMap.get(current.id);
+    if (!node) continue;
+
+    for (const conn of node.connections) {
+      if (visited.has(conn.node_id)) continue;
+      if (!nodeMap.has(conn.node_id)) continue;
+      visited.add(conn.node_id);
+
+      const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+      let nx = current.x + offset[0];
+      let ny = current.y + offset[1];
+
+      // Avoid collisions
+      while ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
+        nx += offset[0] || 1;
+        ny += offset[1] || 1;
+      }
+
+      positions.set(conn.node_id, { x: nx, y: ny });
+      queue.push({ id: conn.node_id, x: nx, y: ny });
+    }
+  }
+
+  // Place disconnected nodes
+  let row = 0;
+  for (const node of nodes) {
+    if (!positions.has(node.id)) {
+      const maxX = Math.max(0, ...[...positions.values()].map(p => p.x));
+      positions.set(node.id, { x: maxX + 2, y: row++ });
+    }
+  }
+
+  return positions;
+}
+
+export default function RegionGraphView({ nodes, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+
+  const positions = useMemo(() => layoutNodes(nodes), [nodes]);
+
+  // Normalize positions to pixel space
+  const { nodePositions, svgWidth, svgHeight } = useMemo(() => {
+    if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 400, svgHeight: 300 };
+
+    const SPACING = 160;
+    const PADDING = 80;
+    const vals = [...positions.values()];
+    const minX = Math.min(...vals.map(p => p.x));
+    const minY = Math.min(...vals.map(p => p.y));
+    const maxX = Math.max(...vals.map(p => p.x));
+    const maxY = Math.max(...vals.map(p => p.y));
+
+    const np = new Map<string, { px: number; py: number }>();
+    positions.forEach((pos, id) => {
+      np.set(id, {
+        px: (pos.x - minX) * SPACING + PADDING,
+        py: (pos.y - minY) * SPACING + PADDING,
+      });
+    });
+
+    return {
+      nodePositions: np,
+      svgWidth: (maxX - minX) * SPACING + PADDING * 2,
+      svgHeight: (maxY - minY) * SPACING + PADDING * 2,
+    };
+  }, [positions]);
+
+  // Collect edges (deduplicated)
+  const edges = useMemo(() => {
+    const edgeSet = new Set<string>();
+    const result: Array<{ from: string; to: string; label?: string }> = [];
+    for (const node of nodes) {
+      for (const conn of node.connections) {
+        const key = [node.id, conn.node_id].sort().join('-');
+        if (!edgeSet.has(key) && nodePositions.has(conn.node_id)) {
+          edgeSet.add(key);
+          result.push({ from: node.id, to: conn.node_id, label: conn.label });
+        }
+      }
+    }
+    return result;
+  }, [nodes, nodePositions]);
+
+  if (nodes.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-3">
+        <p className="font-display text-sm">No nodes in this region</p>
+        <button
+          onClick={() => onAddNodeAdjacent('')}
+          className="flex items-center gap-1 px-3 py-1.5 rounded border border-dashed border-primary/40 text-primary text-xs font-display hover:bg-primary/10 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Create First Node
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+        <svg
+          width={Math.max(svgWidth, 400)}
+          height={Math.max(svgHeight, 300)}
+          className="block mx-auto"
+        >
+          {/* Edges */}
+          {edges.map(edge => {
+            const from = nodePositions.get(edge.from);
+            const to = nodePositions.get(edge.to);
+            if (!from || !to) return null;
+            const midX = (from.px + to.px) / 2;
+            const midY = (from.py + to.py) / 2;
+
+            return (
+              <g key={`${edge.from}-${edge.to}`}>
+                <line
+                  x1={from.px} y1={from.py} x2={to.px} y2={to.py}
+                  stroke="hsl(35 20% 35%)" strokeWidth={2} strokeDasharray="6 3"
+                />
+                {edge.label && (
+                  <text x={midX} y={midY - 12} textAnchor="middle"
+                    className="fill-muted-foreground text-[9px]">
+                    {edge.label}
+                  </text>
+                )}
+                {/* Plus button on edge midpoint */}
+                <g
+                  className="cursor-pointer"
+                  onClick={e => { e.stopPropagation(); onAddNodeBetween(edge.from, edge.to); }}
+                >
+                  <circle cx={midX} cy={midY} r={10}
+                    className="fill-background stroke-primary/50 hover:stroke-primary hover:fill-primary/10 transition-colors"
+                    strokeWidth={1.5}
+                  />
+                  <text x={midX} y={midY + 4} textAnchor="middle"
+                    className="fill-primary text-xs font-bold pointer-events-none select-none">+</text>
+                </g>
+              </g>
+            );
+          })}
+
+          {/* Nodes */}
+          {nodes.map(node => {
+            const pos = nodePositions.get(node.id);
+            if (!pos) return null;
+            const isHovered = hoveredNode === node.id;
+
+            return (
+              <g key={node.id}
+                onMouseEnter={() => setHoveredNode(node.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+              >
+                {/* Node circle */}
+                <circle
+                  cx={pos.px} cy={pos.py} r={28}
+                  className={`cursor-pointer transition-all duration-200 ${
+                    isHovered
+                      ? 'fill-primary/20 stroke-primary'
+                      : 'fill-card stroke-border'
+                  }`}
+                  strokeWidth={isHovered ? 2.5 : 1.5}
+                  onClick={() => onNodeClick(node.id)}
+                />
+                {node.is_vendor && (
+                  <text x={pos.px} y={pos.py - 16} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                    🛒
+                  </text>
+                )}
+                {/* Node name */}
+                <text
+                  x={pos.px} y={pos.py + 4}
+                  textAnchor="middle"
+                  className={`font-display text-[10px] pointer-events-none select-none ${
+                    isHovered ? 'fill-primary' : 'fill-foreground'
+                  }`}
+                >
+                  {node.name.length > 12 ? node.name.slice(0, 11) + '…' : node.name}
+                </text>
+
+                {/* Add adjacent node button (visible on hover) */}
+                {isHovered && (
+                  <g
+                    className="cursor-pointer"
+                    onClick={e => { e.stopPropagation(); onAddNodeAdjacent(node.id); }}
+                  >
+                    <circle cx={pos.px + 32} cy={pos.py - 22} r={9}
+                      className="fill-background stroke-elvish hover:fill-elvish/10 transition-colors"
+                      strokeWidth={1.5}
+                    />
+                    <text x={pos.px + 32} y={pos.py - 18} textAnchor="middle"
+                      className="fill-elvish text-[10px] font-bold pointer-events-none select-none">+</text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </TooltipProvider>
+  );
+}
