@@ -42,46 +42,38 @@ export default function NodeView({
           {node.description || 'A quiet place in Middle-earth...'}
         </p>
 
-        {/* Creatures */}
-        {creatures.length > 0 && (
-          <div>
-            <h3 className="font-display text-xs text-muted-foreground mb-1">Creatures</h3>
-            <div className="space-y-1">
-              {creatures.map(c => (
-                <div key={c.id} className="flex items-center justify-between p-2 bg-background/50 rounded border border-border">
-                  <div>
-                    <span className={`text-sm font-display ${
-                      c.rarity === 'boss' ? 'text-primary text-glow' :
-                      c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
-                    }`}>{c.name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
-                  </div>
-                  <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
-                    Attack
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Other Players */}
-        {otherPlayers.length > 0 && (
-          <div>
-            <h3 className="font-display text-xs text-muted-foreground mb-1">Adventurers Here</h3>
-            <div className="space-y-1">
-              {otherPlayers.map(p => (
-                <div key={p.id} className="text-xs text-foreground/80 p-1.5 bg-background/30 rounded border border-border">
-                  <span className="text-elvish">{p.name}</span>
-                  <span className="text-muted-foreground ml-1">
-                    — {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* In the Area - pinned above actions */}
+      {(creatures.length > 0 || otherPlayers.length > 0) && (
+        <div className="pt-2">
+          <h3 className="font-display text-xs text-muted-foreground mb-1">In the Area</h3>
+          <div className="space-y-1">
+            {creatures.map(c => (
+              <div key={c.id} className="flex items-center justify-between p-2 bg-background/50 rounded border border-border">
+                <div>
+                  <span className={`text-sm font-display ${
+                    c.rarity === 'boss' ? 'text-primary text-glow' :
+                    c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
+                  }`}>{c.name}</span>
+                  <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
+                </div>
+                <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
+                  Attack
+                </Button>
+              </div>
+            ))}
+            {otherPlayers.map(p => (
+              <div key={p.id} className="text-xs text-foreground/80 p-1.5 bg-background/30 rounded border border-border">
+                <span className="text-elvish">{p.name}</span>
+                <span className="text-muted-foreground ml-1">
+                  — {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons - pinned to bottom */}
       <div className="pt-3 border-t border-border mt-3">
