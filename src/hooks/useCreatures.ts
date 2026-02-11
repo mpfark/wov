@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Creature {
@@ -15,25 +15,48 @@ export interface Creature {
   is_aggressive: boolean;
   loot_table: any[];
   is_alive: boolean;
+  respawn_seconds: number;
+  died_at: string | null;
 }
 
 export function useCreatures(nodeId: string | null) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
 
-  useEffect(() => {
+  const fetchCreatures = useCallback(async () => {
     if (!nodeId) { setCreatures([]); return; }
-
-    const fetchCreatures = async () => {
-      const { data } = await supabase
-        .from('creatures')
-        .select('*')
-        .eq('node_id', nodeId)
-        .eq('is_alive', true);
-      if (data) setCreatures(data as Creature[]);
-    };
-
-    fetchCreatures();
+    // First trigger respawns server-side
+    await supabase.rpc('respawn_creatures');
+    const { data } = await supabase
+      .from('creatures')
+      .select('*')
+      .eq('node_id', nodeId)
+      .eq('is_alive', true);
+    if (data) setCreatures(data as Creature[]);
   }, [nodeId]);
+
+  useEffect(() => {
+    fetchCreatures();
+
+    if (!nodeId) return;
+
+    // Subscribe to realtime changes on creatures for this node
+    const channel = supabase
+      .channel(`creatures-${nodeId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'creatures', filter: `node_id=eq.${nodeId}` },
+        () => { fetchCreatures(); }
+      )
+      .subscribe();
+
+    // Periodic respawn check every 30s
+    const interval = setInterval(fetchCreatures, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, [nodeId, fetchCreatures]);
 
   return { creatures };
 }

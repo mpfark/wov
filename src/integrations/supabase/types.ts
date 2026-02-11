@@ -362,6 +362,7 @@ export type Database = {
       is_maiar_or_valar: { Args: never; Returns: boolean }
       is_valar: { Args: never; Returns: boolean }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
+      respawn_creatures: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "player" | "maiar" | "valar"
