@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { GameNode, Region } from '@/hooks/useNodes';
 import { PlayerPresence } from '@/hooks/usePresence';
@@ -100,19 +101,6 @@ export default function NodeView({
         </Button>
       </div>
 
-      {/* Event Log */}
-      <div className="flex-1 min-h-0">
-        <h3 className="font-display text-xs text-muted-foreground mb-1">Event Log</h3>
-        <div className="h-40 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
-          {eventLog.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
-          ) : (
-            eventLog.map((log, i) => (
-              <p key={i} className="text-xs text-foreground/80">{log}</p>
-            ))
-          )}
-        </div>
-      </div>
     </div>
   );
 }

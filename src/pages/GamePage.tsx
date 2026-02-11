@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import CharacterPanel from '@/components/game/CharacterPanel';
 import NodeView from '@/components/game/NodeView';
@@ -23,10 +23,15 @@ export default function GamePage({ character, updateCharacter, onSignOut }: Prop
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
   const addLog = useCallback((msg: string) => {
     setEventLog(prev => [...prev.slice(-49), msg]);
   }, []);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [eventLog]);
 
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
@@ -137,47 +142,64 @@ export default function GamePage({ character, updateCharacter, onSignOut }: Prop
         </Button>
       </div>
 
-      {/* Three Column Layout */}
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        <ResizablePanel defaultSize={22} minSize={18} maxSize={30}>
-          <div className="h-full ornate-border bg-card/60">
-            <CharacterPanel character={character} />
-          </div>
-        </ResizablePanel>
+      {/* Main Content */}
+      <div className="flex-1 min-h-0">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          <ResizablePanel defaultSize={22} minSize={18} maxSize={30}>
+            <div className="h-full ornate-border bg-card/60">
+              <CharacterPanel character={character} />
+            </div>
+          </ResizablePanel>
 
-        <ResizableHandle withHandle />
+          <ResizableHandle withHandle />
 
-        <ResizablePanel defaultSize={50} minSize={35}>
-          <div className="h-full ornate-border bg-card/60">
-            <NodeView
-              node={currentNode}
-              region={currentRegion}
-              players={playersHere}
-              creatures={creatures}
-              character={character}
-              eventLog={eventLog}
-              onMove={handleMove}
-              onSearch={handleSearch}
-              onAttack={handleAttack}
-            />
-          </div>
-        </ResizablePanel>
+          <ResizablePanel defaultSize={50} minSize={35}>
+            <div className="h-full ornate-border bg-card/60">
+              <NodeView
+                node={currentNode}
+                region={currentRegion}
+                players={playersHere}
+                creatures={creatures}
+                character={character}
+                eventLog={eventLog}
+                onMove={handleMove}
+                onSearch={handleSearch}
+                onAttack={handleAttack}
+              />
+            </div>
+          </ResizablePanel>
 
-        <ResizableHandle withHandle />
+          <ResizableHandle withHandle />
 
-        <ResizablePanel defaultSize={28} minSize={18} maxSize={35}>
-          <div className="h-full ornate-border bg-card/60">
-            <MapPanel
-              regions={regions}
-              nodes={nodes}
-              currentNodeId={character.current_node_id}
-              currentRegionId={currentNode.region_id}
-              characterLevel={character.level}
-              onNodeClick={handleMove}
-            />
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          <ResizablePanel defaultSize={28} minSize={18} maxSize={35}>
+            <div className="h-full ornate-border bg-card/60">
+              <MapPanel
+                regions={regions}
+                nodes={nodes}
+                currentNodeId={character.current_node_id}
+                currentRegionId={currentNode.region_id}
+                characterLevel={character.level}
+                onNodeClick={handleMove}
+              />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+
+      {/* Event Log - Bottom Bar */}
+      <div className="border-t border-border bg-card/70 px-4 py-2">
+        <h3 className="font-display text-xs text-muted-foreground mb-1">Event Log</h3>
+        <div className="h-28 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
+          {eventLog.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
+          ) : (
+            eventLog.map((log, i) => (
+              <p key={i} className="text-xs text-foreground/80">{log}</p>
+            ))
+          )}
+          <div ref={logEndRef} />
+        </div>
+      </div>
     </div>
   );
 }
