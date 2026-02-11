@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Save, Trash2, Plus, Pencil, X } from 'lucide-react';
 import { generateCreatureStats } from '@/lib/game-data';
+import ItemPickerList from './ItemPickerList';
 
 interface NodeEditorProps {
   nodeId: string | null;
@@ -23,13 +24,13 @@ interface NodeEditorProps {
 
 const defaultCreatureForm = () => ({
   name: '', description: '', level: 1, rarity: 'regular',
-  is_aggressive: false, respawn_seconds: 300, loot_table: '[]',
+  is_aggressive: false, respawn_seconds: 300, loot_table: [] as { item_id: string; chance: number }[],
 });
 
 export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onClose, onSaved, isValar, adjacentToNodeId }: NodeEditorProps) {
   const [form, setForm] = useState({
     name: '', description: '', is_vendor: false,
-    connections: '[]', searchable_items: '[]',
+    connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
   });
   const [creatures, setCreatures] = useState<any[]>([]);
   const [creatureForm, setCreatureForm] = useState(defaultCreatureForm());
@@ -42,7 +43,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
       loadNode(nodeId);
       loadCreatures(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, connections: '[]', searchable_items: '[]' });
+      setForm({ name: '', description: '', is_vendor: false, connections: '[]', searchable_items: [] });
       setCreatures([]);
     }
     setEditingCreatureId(null);
@@ -55,7 +56,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
       setForm({
         name: data.name, description: data.description, is_vendor: data.is_vendor,
         connections: JSON.stringify(data.connections, null, 2),
-        searchable_items: JSON.stringify(data.searchable_items, null, 2),
+        searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
       });
     }
   };
@@ -67,9 +68,9 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
 
   const saveNode = async () => {
     if (!form.name) return toast.error('Name required');
-    let connections: any, searchable_items: any;
+    let connections: any;
+    const searchable_items = form.searchable_items;
     try { connections = JSON.parse(form.connections); } catch { return toast.error('Invalid connections JSON'); }
-    try { searchable_items = JSON.parse(form.searchable_items); } catch { return toast.error('Invalid searchable_items JSON'); }
 
     setLoading(true);
     if (nodeId) {
@@ -122,8 +123,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
 
   const saveCreature = async () => {
     if (!nodeId || !creatureForm.name) return toast.error('Save the node first and provide a creature name');
-    let loot_table: any;
-    try { loot_table = JSON.parse(creatureForm.loot_table); } catch { return toast.error('Invalid loot_table JSON'); }
+    const loot_table = creatureForm.loot_table;
 
     const generated = generateCreatureStats(creatureForm.level, creatureForm.rarity);
     const payload = {
@@ -154,7 +154,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
       name: c.name, description: c.description || '', level: c.level,
       rarity: c.rarity, is_aggressive: c.is_aggressive,
       respawn_seconds: c.respawn_seconds,
-      loot_table: JSON.stringify(c.loot_table, null, 2),
+      loot_table: Array.isArray(c.loot_table) ? c.loot_table as any : [],
     });
   };
 
@@ -200,9 +200,8 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             <Textarea placeholder="Description" value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} />
-            <Textarea placeholder='Searchable items JSON' value={form.searchable_items}
-              onChange={e => setForm(f => ({ ...f, searchable_items: e.target.value }))}
-              className="font-mono text-xs" rows={2} />
+            <ItemPickerList label="Searchable Items" value={form.searchable_items}
+              onChange={v => setForm(f => ({ ...f, searchable_items: v }))} />
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input type="checkbox" checked={form.is_vendor}
                 onChange={e => setForm(f => ({ ...f, is_vendor: e.target.checked }))} />
@@ -319,9 +318,8 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
                   Aggressive
                 </label>
 
-                <Textarea placeholder='Loot table JSON' value={creatureForm.loot_table}
-                  onChange={e => setCreatureForm(f => ({ ...f, loot_table: e.target.value }))}
-                  className="font-mono text-xs" rows={2} />
+                <ItemPickerList label="Loot Table" value={creatureForm.loot_table}
+                  onChange={v => setCreatureForm(f => ({ ...f, loot_table: v }))} />
 
                 <Button onClick={saveCreature} className="font-display text-xs">
                   {editingCreatureId ? (
