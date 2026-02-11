@@ -1,13 +1,51 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useAuth } from '@/hooks/useAuth';
+import { useCharacter } from '@/hooks/useCharacter';
+import AuthPage from './AuthPage';
+import CharacterCreation from './CharacterCreation';
+import GamePage from './GamePage';
+import { useNodes } from '@/hooks/useNodes';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { character, loading: charLoading, createCharacter, updateCharacter } = useCharacter(user);
+  const { nodes, loading: nodesLoading } = useNodes();
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center parchment-bg">
+        <p className="font-display text-primary text-glow animate-pulse">Entering Middle-earth...</p>
       </div>
-    </div>
+    );
+  }
+
+  if (!user) return <AuthPage />;
+
+  if (charLoading || nodesLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center parchment-bg">
+        <p className="font-display text-primary text-glow animate-pulse">Loading your adventure...</p>
+      </div>
+    );
+  }
+
+  // Find a starting node (first node from first region)
+  const startingNode = nodes[0];
+
+  if (!character) {
+    return (
+      <CharacterCreation
+        onCreateCharacter={createCharacter}
+        startingNodeId={startingNode?.id || ''}
+      />
+    );
+  }
+
+  return (
+    <GamePage
+      character={character}
+      updateCharacter={updateCharacter}
+      onSignOut={signOut}
+    />
   );
 };
 
