@@ -99,10 +99,14 @@ export function useParty(characterId: string | null) {
       .channel(`party-${characterId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'party_members' }, () => fetchParty())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'parties' }, () => fetchParty())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters' }, () => {
+        // Refresh when any character updates (e.g. position, hp) so party member data stays current
+        if (party) fetchParty();
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [characterId, fetchParty]);
+  }, [characterId, fetchParty, party]);
 
   const createParty = useCallback(async () => {
     if (!characterId || party) return;
