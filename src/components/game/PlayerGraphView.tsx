@@ -99,7 +99,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   // Compute exit stubs for neighbor nodes (connections leading to nodes not displayed)
   const displayedIds = new Set(allDisplayNodes.map(n => n.id));
   const exitStubs: Array<{ fromPx: number; fromPy: number; toPx: number; toPy: number }> = [];
-  const STUB_LEN = 30;
+  const STUB_LEN = 22;
+  const NODE_RADIUS = 28;
   for (const neighbor of neighbors) {
     const pos = nodePositions.get(neighbor.id);
     if (!pos) continue;
@@ -107,11 +108,13 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       if (displayedIds.has(conn.node_id)) continue;
       const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
       const len = Math.sqrt(offset[0] ** 2 + offset[1] ** 2) || 1;
+      const dx = offset[0] / len;
+      const dy = offset[1] / len;
       exitStubs.push({
-        fromPx: pos.px,
-        fromPy: pos.py,
-        toPx: pos.px + (offset[0] / len) * STUB_LEN,
-        toPy: pos.py + (offset[1] / len) * STUB_LEN,
+        fromPx: pos.px + dx * NODE_RADIUS,
+        fromPy: pos.py + dy * NODE_RADIUS,
+        toPx: pos.px + dx * (NODE_RADIUS + STUB_LEN),
+        toPy: pos.py + dy * (NODE_RADIUS + STUB_LEN),
       });
     }
   }
@@ -166,7 +169,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           <line
             key={`stub-${i}`}
             x1={stub.fromPx} y1={stub.fromPy} x2={stub.toPx} y2={stub.toPy}
-            stroke="hsl(35 20% 35% / 0.4)" strokeWidth={1.5} strokeDasharray="4 3"
+            stroke="hsl(35 20% 35% / 0.6)" strokeWidth={2} strokeDasharray="4 3"
           />
         ))}
 
