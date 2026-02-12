@@ -320,6 +320,35 @@ export type Database = {
           },
         ]
       }
+      party_combat_log: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          party_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          party_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          party_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_combat_log_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       party_members: {
         Row: {
           character_id: string
