@@ -71,9 +71,25 @@ Deno.serve(async (req) => {
 
       const [rolesRes, charsRes, profilesRes] = await Promise.all([
         adminClient.from("user_roles").select("*").in("user_id", userIds),
-        adminClient.from("characters").select("id, user_id, name, level, class, race, hp, max_hp, gold, current_node_id").in("user_id", userIds),
+        adminClient.from("characters").select("*").in("user_id", userIds),
         adminClient.from("profiles").select("*").in("user_id", userIds),
       ]);
+
+      // Fetch inventory for all characters
+      const charIds = (charsRes.data || []).map((c: any) => c.id);
+      let inventoryByChar: Record<string, any[]> = {};
+      if (charIds.length > 0) {
+        const { data: invData } = await adminClient
+          .from("character_inventory")
+          .select("*, item:items(*)")
+          .in("character_id", charIds);
+        if (invData) {
+          for (const inv of invData) {
+            if (!inventoryByChar[inv.character_id]) inventoryByChar[inv.character_id] = [];
+            inventoryByChar[inv.character_id].push(inv);
+          }
+        }
+      }
 
       const users = data.users.map((u: any) => ({
         id: u.id,
@@ -84,7 +100,10 @@ Deno.serve(async (req) => {
         banned_until: u.banned_until,
         role: rolesRes.data?.find((r: any) => r.user_id === u.id)?.role || "player",
         profile: profilesRes.data?.find((p: any) => p.user_id === u.id),
-        characters: charsRes.data?.filter((c: any) => c.user_id === u.id) || [],
+        characters: (charsRes.data?.filter((c: any) => c.user_id === u.id) || []).map((c: any) => ({
+          ...c,
+          inventory: inventoryByChar[c.id] || [],
+        })),
       }));
 
       return new Response(JSON.stringify({ users, total: data.total }), {
