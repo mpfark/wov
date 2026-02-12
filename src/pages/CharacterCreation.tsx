@@ -33,7 +33,7 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
         ...stats, hp, max_hp: hp, ac,
         current_node_id: startingNodeId,
       });
-      toast.success(`${name} has entered Middle-earth!`);
+      toast.success(`${name} has begun their adventure!`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to create character');
     } finally {
@@ -132,7 +132,7 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={() => setStep(2)} className="font-display">Back</Button>
                 <Button onClick={handleCreate} disabled={loading} className="flex-1 font-display">
-                  {loading ? 'Creating...' : 'Enter Middle-earth'}
+                  {loading ? 'Creating...' : 'Begin Your Adventure'}
                 </Button>
               </div>
             </div>

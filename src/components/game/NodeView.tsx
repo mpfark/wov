@@ -39,7 +39,7 @@ export default function NodeView({
 
         {/* Description */}
         <p className="text-sm text-foreground/90 leading-relaxed italic">
-          {node.description || 'A quiet place in Middle-earth...'}
+          {node.description || 'A quiet corner of the world...'}
         </p>
 
       </div>

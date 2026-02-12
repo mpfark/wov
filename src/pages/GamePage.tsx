@@ -34,7 +34,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow,
   } = useParty(character.id);
-  const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
+  const [eventLog, setEventLog] = useState<string[]>(['Welcome, Everyday Adventurer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
@@ -420,7 +420,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     <div className="h-screen flex flex-col parchment-bg">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
-        <h1 className="font-display text-sm text-primary text-glow">Middle-earth</h1>
+        <h1 className="font-display text-sm text-primary text-glow">Everyday Adventurer</h1>
         <div className="flex items-center gap-2">
           {isAdmin && (
             <Button variant="outline" size="sm" onClick={onOpenAdmin} className="text-xs font-display">
