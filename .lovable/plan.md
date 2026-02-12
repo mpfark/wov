@@ -1,62 +1,52 @@
 
+# Admin Character Sheet Mirror
 
-## Class-Based Combat Abilities
+## Overview
+Rebuild the admin UserManager's middle column to visually mirror the player's CharacterPanel, showing the full character sheet (name, HP/XP bars, stats with Base +Gear and Mod, AC, Gold, equipment paper doll, and inventory) -- everything except party information. This requires both backend and frontend changes since the admin endpoint currently only fetches basic character fields.
 
-Currently every class uses STR modifier and deals 1d8 melee damage. This plan introduces unique combat actions per class, each using the appropriate stat and dice, with flavored log messages.
+## Changes
 
-### Combat Abilities by Class
+### 1. Update the admin-users edge function
+- Expand the character SELECT to include all stat columns: `str, dex, con, int, wis, cha, ac, xp, unspent_stat_points`
+- Add a second query to fetch `character_inventory` with joined `items` data for each user's characters
+- Return inventory grouped by character ID alongside the existing character data
 
-| Class | Action Name | Stat Used | Damage Dice | Flavor |
-|-------|-------------|-----------|-------------|--------|
-| Warrior | Melee Strike | STR | 1d10 + STR mod | "You swing your blade..." |
-| Wizard | Fireball | INT | 1d8 + INT mod | "You hurl a bolt of arcane flame..." |
-| Ranger | Arrow Shot | DEX | 1d8 + DEX mod | "You loose an arrow..." |
-| Rogue | Backstab | DEX | 1d6 + DEX mod (bonus crit: crits on 19-20) | "You strike from the shadows..." |
-| Healer | Smite | WIS | 1d6 + WIS mod | "You channel divine light..." |
-| Bard | Cutting Words | CHA | 1d6 + CHA mod | "Your mocking verse cuts deep..." |
+### 2. Update UserManager types
+- Expand the `AdminUser.characters` interface to include all stat fields (`str, dex, con, int, wis, cha, ac, xp, unspent_stat_points`)
+- Add an `inventory` array per character matching the `InventoryItem` shape (with nested `item` object)
 
-### UI Change -- NodeView
+### 3. Rebuild the middle column to mirror CharacterPanel
+When a user is selected and has characters, render each character using the same visual layout as `CharacterPanel`:
 
-Replace the single "Attack" button with a class-themed button label:
-- Warrior: "Strike"
-- Wizard: "Cast Fireball"
-- Ranger: "Shoot"
-- Rogue: "Backstab"
-- Healer: "Smite"
-- Bard: "Mock"
+- **Name and Identity** -- name, race/class label, level
+- **HP Bar** -- colored progress bar (green/yellow/red thresholds)
+- **XP Bar** -- progress toward next level
+- **Attributes table** -- with "Stat / Base +Gear / Mod" headers and tooltips, calculating equipment bonuses from inventory data
+- **AC and Gold row**
+- **Equipment paper doll** -- 3-column grid with all 12 slots, showing equipped item names and durability (read-only, no unequip actions)
+- **Inventory list** -- unequipped items with rarity colors and tooltips (read-only, no equip/drop actions)
 
-The button passes the same `onAttack(creatureId)` -- the class logic is handled in `handleAttack`.
+The existing inline edit controls for HP, max_hp, gold, and level will be preserved and integrated into this new layout. The admin edit button will toggle inline inputs within the relevant sections (e.g., HP inputs appear in the HP bar area).
 
-### Technical Details
+### 4. Reuse constants and helpers
+Import from existing modules rather than duplicating:
+- `STAT_LABELS`, `STAT_FULL_NAMES` (or define locally), `getStatModifier`, `RACE_LABELS`, `CLASS_LABELS` from `game-data.ts`
+- `RARITY_COLORS`, `SLOT_LABELS` patterns from `CharacterPanel.tsx`
+- Equipment bonus calculation logic from `useInventory.ts`
 
-**New file: `src/lib/class-abilities.ts`**
+## Technical Details
 
-Define a `CLASS_COMBAT` config map:
+### Edge function query changes
+```sql
+-- Characters: fetch all columns instead of subset
+SELECT * FROM characters WHERE user_id IN (...)
 
-```text
-CLASS_COMBAT = {
-  warrior: { label: "Strike", stat: "str", diceMin: 1, diceMax: 10, critRange: 20, emoji: "sword", verb: "swing your blade at" },
-  wizard:  { label: "Cast Fireball", stat: "int", diceMin: 1, diceMax: 8, critRange: 20, emoji: "fire", verb: "hurl arcane flame at" },
-  ranger:  { label: "Shoot", stat: "dex", diceMin: 1, diceMax: 8, critRange: 20, emoji: "bow", verb: "loose an arrow at" },
-  rogue:   { label: "Backstab", stat: "dex", diceMin: 1, diceMax: 6, critRange: 19, emoji: "dagger", verb: "strike from the shadows at" },
-  healer:  { label: "Smite", stat: "wis", diceMin: 1, diceMax: 6, critRange: 20, emoji: "star", verb: "channel divine light against" },
-  bard:    { label: "Mock", stat: "cha", diceMin: 1, diceMax: 6, critRange: 20, emoji: "music", verb: "unleash cutting words upon" },
-}
+-- Inventory: join with items table
+SELECT ci.*, items.* FROM character_inventory ci
+JOIN items ON ci.item_id = items.id
+WHERE ci.character_id IN (...)
 ```
 
-**File: `src/pages/GamePage.tsx`** -- Update `handleAttack`:
-- Look up `CLASS_COMBAT[character.class]` to get the stat key, dice range, and crit range
-- Use `character[ability.stat] + equipmentBonuses[ability.stat]` instead of hardcoded STR
-- Use `rollDamage(ability.diceMin, ability.diceMax)` instead of `rollDamage(1, 8)`
-- Crit on `atkRoll >= ability.critRange` instead of `atkRoll === 20`
-- Use the verb/emoji in the log message
-
-**File: `src/components/game/NodeView.tsx`**:
-- Accept `characterClass` prop
-- Import `CLASS_COMBAT` from the new file
-- Change the Attack button label to `CLASS_COMBAT[characterClass]?.label || "Attack"`
-
-**File: `src/pages/GamePage.tsx`** -- Pass `characterClass={character.class}` to `NodeView`
-
-No database changes needed -- this is purely client-side combat logic.
-
+### Files modified
+1. `supabase/functions/admin-users/index.ts` -- expand character + add inventory queries
+2. `src/components/admin/UserManager.tsx` -- rebuild middle column with CharacterPanel layout
