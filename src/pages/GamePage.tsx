@@ -44,6 +44,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
+  const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -113,9 +114,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   useEffect(() => { updateCharRef.current = updateCharacter; }, [updateCharacter]);
   useEffect(() => { addLogRef.current = addLog; }, [addLog]);
 
-  // Death detection and respawn — only depends on hp and isDead
+  // Death detection and respawn — only depends on hp
   useEffect(() => {
-    if (character.hp > 0 || isDead) return;
+    if (character.hp > 0 || isDeadRef.current) return;
+    isDeadRef.current = true;
     setIsDead(true);
     setDeathCountdown(3);
     const countdownInterval = setInterval(() => {
@@ -129,11 +131,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         current_node_id: deathNodeRef.current,
       });
       addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
+      isDeadRef.current = false;
       setIsDead(false);
       clearInterval(countdownInterval);
     }, 3000);
-    return () => { clearTimeout(respawnTimeout); clearInterval(countdownInterval); };
-  }, [character.hp, isDead]);
+    return () => { clearTimeout(respawnTimeout); clearInterval(countdownInterval); isDeadRef.current = false; };
+  }, [character.hp]);
 
   // Sync follower's local character when leader moves them
   // The party realtime subscription updates faster than the character subscription in some cases
