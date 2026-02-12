@@ -176,14 +176,14 @@ export default function CharacterPanel({
             {/* Vitruvian Man silhouette */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
-              viewBox="0 0 240 340"
+              viewBox="0 0 240 420"
               preserveAspectRatio="xMidYMid meet"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
               <defs>
                 <filter id="silhouetteGlow">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feGaussianBlur stdDeviation="2.5" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
@@ -191,63 +191,67 @@ export default function CharacterPanel({
                 </filter>
               </defs>
               <g filter="url(#silhouetteGlow)">
-                {/* Outer circle */}
-                <circle cx="120" cy="170" r="130" stroke="hsl(var(--primary))" strokeWidth="0.6" opacity="0.15" />
-                {/* Inner circle */}
-                <circle cx="120" cy="170" r="90" stroke="hsl(var(--primary))" strokeWidth="0.4" opacity="0.1" />
                 {/* Head */}
-                <circle cx="120" cy="52" r="16" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.3" />
+                <ellipse cx="120" cy="42" rx="14" ry="17" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.3" />
                 {/* Neck */}
-                <line x1="120" y1="68" x2="120" y2="80" stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.25" />
+                <line x1="120" y1="59" x2="120" y2="72" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.25" />
+                {/* Shoulders line */}
+                <line x1="72" y1="78" x2="168" y2="78" stroke="hsl(var(--primary))" strokeWidth="0.6" opacity="0.2" />
                 {/* Torso */}
-                <path d="M 95 80 L 90 85 L 85 160 L 90 170 L 150 170 L 155 160 L 150 85 L 145 80 Z"
+                <path d="M 88 72 L 72 78 L 75 140 L 80 170 Q 85 180 100 182 L 140 182 Q 155 180 160 170 L 165 140 L 168 78 L 152 72 Z"
                   stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
-                {/* Left arm outstretched */}
-                <path d="M 90 90 Q 60 95 30 110 Q 15 118 10 125"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
-                {/* Right arm outstretched */}
-                <path d="M 150 90 Q 180 95 210 110 Q 225 118 230 125"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
-                {/* Left leg spread */}
-                <path d="M 100 170 L 70 260 Q 65 275 60 285"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
-                {/* Right leg spread */}
-                <path d="M 140 170 L 170 260 Q 175 275 180 285"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
-                {/* Left leg straight (vitruvian second pose) */}
-                <path d="M 108 170 L 105 260 Q 104 275 103 290"
-                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
-                {/* Right leg straight */}
-                <path d="M 132 170 L 135 260 Q 136 275 137 290"
-                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
-                {/* Left arm down (second pose) */}
-                <path d="M 90 90 Q 70 130 55 170 Q 50 185 48 195"
-                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
-                {/* Right arm down */}
-                <path d="M 150 90 Q 170 130 185 170 Q 190 185 192 195"
-                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
+                {/* Waist line */}
+                <path d="M 88 168 Q 120 175 152 168" stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
+                {/* Left arm */}
+                <path d="M 72 78 L 55 120 L 48 160 L 45 175"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
+                {/* Left hand */}
+                <ellipse cx="44" cy="180" rx="5" ry="7" stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
+                {/* Right arm */}
+                <path d="M 168 78 L 185 120 L 192 160 L 195 175"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
+                {/* Right hand */}
+                <ellipse cx="196" cy="180" rx="5" ry="7" stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
+                {/* Left leg */}
+                <path d="M 105 182 L 95 240 L 88 310 L 86 340"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
+                {/* Left foot */}
+                <path d="M 86 340 L 78 348 L 75 350 Q 74 352 80 352 L 92 350"
+                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
+                {/* Right leg */}
+                <path d="M 135 182 L 145 240 L 152 310 L 154 340"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
+                {/* Right foot */}
+                <path d="M 154 340 L 162 348 L 165 350 Q 166 352 160 352 L 148 350"
+                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
+                {/* Center line (spine) */}
+                <line x1="120" y1="72" x2="120" y2="182" stroke="hsl(var(--primary))" strokeWidth="0.4" opacity="0.1" strokeDasharray="4 4" />
               </g>
             </svg>
 
             {/* Equipment slots — 3-column grid */}
             <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
-              {/* Row 1: Trinket - Head - Amulet */}
+              {/* Row 1: Trinket - Head - (empty) */}
               <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
+              <div />
+              {/* Row 2: (empty) - Amulet - (empty) */}
+              <div />
               <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
-              {/* Row 2: Shoulders - Chest - Gloves */}
+              <div />
+              {/* Row 3: Shoulders - Chest - Gloves */}
               <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
-              {/* Row 3: Main Hand - Belt - Off Hand */}
+              {/* Row 4: Main Hand - Belt - Off Hand */}
               <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
-              {/* Row 4: Ring - Pants - (empty) */}
+              {/* Row 5: Ring - Pants - (empty) */}
               <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
-              <div /> {/* empty cell */}
-              {/* Row 5: (empty) - Boots - (empty) */}
+              <div />
+              {/* Row 6: (empty) - Boots - (empty) */}
               <div />
               <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} />
               <div />
