@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCharacter } from '@/hooks/useCharacter';
 import { useRole } from '@/hooks/useRole';
+import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import AuthPage from './AuthPage';
 import CharacterCreation from './CharacterCreation';
 import GamePage from './GamePage';
 import AdminPage from './AdminPage';
 import { useNodes } from '@/hooks/useNodes';
+import { toast } from 'sonner';
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -14,6 +16,15 @@ const Index = () => {
   const { nodes, loading: nodesLoading } = useNodes(!!user);
   const { isAdmin, isValar } = useRole(user);
   const [showAdmin, setShowAdmin] = useState(false);
+
+  const handleInactiveLogout = useCallback(() => {
+    if (user) {
+      toast.info('You have been logged out due to inactivity.');
+      signOut();
+    }
+  }, [user, signOut]);
+
+  useInactivityLogout(handleInactiveLogout);
 
   if (authLoading) {
     return (
