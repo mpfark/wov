@@ -164,6 +164,19 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearTimeout(timeout);
   }, [creatures, character.hp, effectiveAC, addLog, updateCharacter, party, partyMembers]);
 
+  const degradeEquipment = useCallback(async () => {
+    for (const item of equipped) {
+      const newDur = item.current_durability - 1;
+      if (newDur <= 0) {
+        addLog(`💔 Your ${item.item.name} has broken!`);
+        await supabase.from('character_inventory').delete().eq('id', item.id);
+      } else {
+        await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
+      }
+    }
+    if (equipped.length > 0) fetchInventory();
+  }, [equipped, addLog, fetchInventory]);
+
   const handleMove = useCallback(async (nodeId: string) => {
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
@@ -173,6 +186,30 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       toast.error(`Level ${targetRegion.min_level} required`);
       return;
     }
+
+    // Attack of Opportunity — each living creature gets a free strike
+    const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0);
+    let currentHp = character.hp;
+    for (const creature of livingCreatures) {
+      if (currentHp <= 0) break;
+      const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
+      if (atkRoll >= effectiveAC) {
+        const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+        currentHp = Math.max(currentHp - dmg, 0);
+        addLog(`⚔️ ${creature.name} strikes as you flee! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${dmg} damage!`);
+      } else {
+        addLog(`${creature.name} swipes at you as you flee — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
+      }
+    }
+    if (currentHp < character.hp) {
+      await updateCharacter({ hp: currentHp });
+      await degradeEquipment();
+    }
+    if (currentHp <= 0) {
+      addLog('💀 You were struck down while retreating...');
+      return;
+    }
+
     try {
       await updateCharacter({ current_node_id: nodeId });
       addLog(`You travel to ${targetNode.name}.`);
@@ -187,7 +224,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     } catch {
       addLog('Failed to move.');
     }
-  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers]);
+  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment]);
 
   const handleSearch = useCallback(async () => {
     if (!currentNode) return;
@@ -256,20 +293,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     fetchInventory();
   }, [pendingLoot, partyMembers, addLog, fetchInventory]);
 
-  const degradeEquipment = useCallback(async () => {
-    // Degrade all equipped items by 1 durability
-    for (const item of equipped) {
-      const newDur = item.current_durability - 1;
-      if (newDur <= 0) {
-        // Item breaks
-        addLog(`💔 Your ${item.item.name} has broken!`);
-        await supabase.from('character_inventory').delete().eq('id', item.id);
-      } else {
-        await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
-      }
-    }
-    if (equipped.length > 0) fetchInventory();
-  }, [equipped, addLog, fetchInventory]);
+  // degradeEquipment moved above handleMove
 
   const handleAttack = useCallback(async (creatureId: string) => {
     const creature = creatures.find(c => c.id === creatureId);
