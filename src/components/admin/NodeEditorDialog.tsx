@@ -7,9 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus, Pencil, X } from 'lucide-react';
+import { Save, Trash2, Plus, Pencil, X, ShoppingCart } from 'lucide-react';
 import { generateCreatureStats } from '@/lib/game-data';
 import ItemPickerList from './ItemPickerList';
+
+interface VendorEntry {
+  id: string;
+  item_id: string;
+  price: number;
+  stock: number;
+  item?: { name: string; rarity: string };
+}
 
 interface NodeEditorProps {
   nodeId: string | null;
@@ -36,18 +44,27 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
   const [creatureForm, setCreatureForm] = useState(defaultCreatureForm());
   const [editingCreatureId, setEditingCreatureId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [vendorItems, setVendorItems] = useState<VendorEntry[]>([]);
+  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; value: number }[]>([]);
+  const [vendorForm, setVendorForm] = useState({ item_id: '', price: 10, stock: -1 });
 
   useEffect(() => {
     if (!open) return;
+    supabase.from('items').select('id, name, rarity, value').order('name').then(({ data }) => {
+      if (data) setAllItems(data);
+    });
     if (nodeId) {
       loadNode(nodeId);
       loadCreatures(nodeId);
+      loadVendorInventory(nodeId);
     } else {
       setForm({ name: '', description: '', is_vendor: false, connections: '[]', searchable_items: [] });
       setCreatures([]);
+      setVendorItems([]);
     }
     setEditingCreatureId(null);
     setCreatureForm(defaultCreatureForm());
+    setVendorForm({ item_id: '', price: 10, stock: -1 });
   }, [nodeId, open]);
 
   const loadNode = async (id: string) => {
@@ -64,6 +81,41 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
   const loadCreatures = async (id: string) => {
     const { data } = await supabase.from('creatures').select('*').eq('node_id', id).order('name');
     setCreatures(data || []);
+  };
+
+  const loadVendorInventory = async (id: string) => {
+    const { data } = await supabase
+      .from('vendor_inventory')
+      .select('*, item:items(name, rarity)')
+      .eq('node_id', id)
+      .order('created_at');
+    if (data) setVendorItems(data as unknown as VendorEntry[]);
+  };
+
+  const addVendorItem = async () => {
+    if (!nodeId || !vendorForm.item_id) return toast.error('Select an item');
+    if (vendorItems.some(v => v.item_id === vendorForm.item_id)) return toast.error('Item already in vendor stock');
+    const { error } = await supabase.from('vendor_inventory').insert({
+      node_id: nodeId, item_id: vendorForm.item_id,
+      price: Math.max(0, vendorForm.price), stock: vendorForm.stock,
+    });
+    if (error) return toast.error(error.message);
+    toast.success('Item added to vendor');
+    setVendorForm({ item_id: '', price: 10, stock: -1 });
+    loadVendorInventory(nodeId);
+  };
+
+  const updateVendorItem = async (id: string, updates: { price?: number; stock?: number }) => {
+    const { error } = await supabase.from('vendor_inventory').update(updates).eq('id', id);
+    if (error) return toast.error(error.message);
+    if (nodeId) loadVendorInventory(nodeId);
+  };
+
+  const removeVendorItem = async (id: string) => {
+    const { error } = await supabase.from('vendor_inventory').delete().eq('id', id);
+    if (error) return toast.error(error.message);
+    toast.success('Item removed from vendor');
+    if (nodeId) loadVendorInventory(nodeId);
   };
 
   const saveNode = async () => {
@@ -192,6 +244,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
           <TabsList className="mb-3">
             <TabsTrigger value="details" className="font-display text-xs">Details</TabsTrigger>
             {nodeId && <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>}
+            {nodeId && form.is_vendor && <TabsTrigger value="vendor" className="font-display text-xs">Vendor Stock</TabsTrigger>}
             {nodeId && <TabsTrigger value="connections" className="font-display text-xs">Connections</TabsTrigger>}
           </TabsList>
 
@@ -328,6 +381,80 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
                     <><Plus className="w-3 h-3 mr-1" /> Add Creature</>
                   )}
                 </Button>
+              </div>
+            </TabsContent>
+          )}
+
+          {nodeId && form.is_vendor && (
+            <TabsContent value="vendor" className="space-y-3">
+              {/* Current vendor stock */}
+              <div className="space-y-2">
+                {vendorItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No items stocked. Add items below.</p>
+                ) : vendorItems.map(v => (
+                  <div key={v.id} className="flex items-center gap-2 p-2 rounded border border-border bg-background/40">
+                    <span className={`font-display text-sm flex-1 ${
+                      v.item?.rarity === 'unique' ? 'text-primary text-glow' :
+                      v.item?.rarity === 'rare' ? 'text-dwarvish' :
+                      v.item?.rarity === 'uncommon' ? 'text-chart-2' : 'text-foreground'
+                    }`}>{v.item?.name || v.item_id}</span>
+                    <div className="flex items-center gap-1">
+                      <label className="text-[10px] text-muted-foreground">Price:</label>
+                      <Input type="number" min={0} value={v.price}
+                        onChange={e => updateVendorItem(v.id, { price: Math.max(0, +e.target.value) })}
+                        className="w-20 h-7 text-xs" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <label className="text-[10px] text-muted-foreground">Stock:</label>
+                      <Input type="number" min={-1} value={v.stock}
+                        onChange={e => updateVendorItem(v.id, { stock: +e.target.value })}
+                        className="w-16 h-7 text-xs" />
+                      <span className="text-[9px] text-muted-foreground">(-1=∞)</span>
+                    </div>
+                    <Button size="sm" variant="destructive" onClick={() => removeVendorItem(v.id)} className="h-7 w-7 p-0">
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add new vendor item */}
+              <div className="border-t border-border pt-3 space-y-2">
+                <p className="font-display text-xs text-primary">Add Item to Vendor</p>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="text-[10px] text-muted-foreground">Item</label>
+                    <Select value={vendorForm.item_id} onValueChange={v => {
+                      const item = allItems.find(i => i.id === v);
+                      setVendorForm(f => ({ ...f, item_id: v, price: item?.value || 10 }));
+                    }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select item..." /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50 max-h-60">
+                        {allItems.filter(i => !vendorItems.some(v => v.item_id === i.id)).map(item => (
+                          <SelectItem key={item.id} value={item.id} className="text-xs">
+                            {item.name} <span className="text-muted-foreground capitalize">({item.rarity})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Price</label>
+                    <Input type="number" min={0} value={vendorForm.price}
+                      onChange={e => setVendorForm(f => ({ ...f, price: Math.max(0, +e.target.value) }))}
+                      className="w-20 h-8 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Stock</label>
+                    <Input type="number" min={-1} value={vendorForm.stock}
+                      onChange={e => setVendorForm(f => ({ ...f, stock: +e.target.value }))}
+                      className="w-16 h-8 text-xs" />
+                  </div>
+                  <Button onClick={addVendorItem} className="font-display text-xs h-8">
+                    <Plus className="w-3 h-3 mr-1" /> Add
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Stock -1 = unlimited. Price defaults to item's gold value.</p>
               </div>
             </TabsContent>
           )}
