@@ -46,6 +46,7 @@ const SLOT_LABELS: Record<string, string> = {
   main_hand: 'Main Hand', off_hand: 'Off Hand',
   head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
   gloves: 'Gloves', belt: 'Belt', pants: 'Pants', ring: 'Ring', trinket: 'Trinket',
+  boots: 'Boots',
 };
 
 function EquipSlot({ slot, item, blocked, onUnequip }: {
@@ -172,9 +173,10 @@ export default function CharacterPanel({
           <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
           <div className="relative flex flex-col items-center gap-1">
             {/* Body silhouette SVG behind slots */}
+            {/* Vitruvian Man silhouette */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
-              viewBox="0 0 200 320"
+              viewBox="0 0 240 340"
               preserveAspectRatio="xMidYMid meet"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -189,43 +191,67 @@ export default function CharacterPanel({
                 </filter>
               </defs>
               <g filter="url(#silhouetteGlow)">
-                {/* Head circle */}
-                <circle cx="100" cy="22" r="14" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.35" />
+                {/* Outer circle */}
+                <circle cx="120" cy="170" r="130" stroke="hsl(var(--primary))" strokeWidth="0.6" opacity="0.15" />
+                {/* Inner circle */}
+                <circle cx="120" cy="170" r="90" stroke="hsl(var(--primary))" strokeWidth="0.4" opacity="0.1" />
+                {/* Head */}
+                <circle cx="120" cy="52" r="16" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.3" />
                 {/* Neck */}
-                <line x1="100" y1="36" x2="100" y2="50" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.25" />
+                <line x1="120" y1="68" x2="120" y2="80" stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.25" />
                 {/* Torso */}
-                <path d="M 70 50 Q 65 55 60 80 L 60 160 Q 60 170 70 175 L 130 175 Q 140 170 140 160 L 140 80 Q 135 55 130 50 Z"
-                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.25" />
-                {/* Arms — left */}
-                <path d="M 60 70 Q 35 80 20 130 Q 18 140 22 145"
-                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
-                {/* Arms — right */}
-                <path d="M 140 70 Q 165 80 180 130 Q 182 140 178 145"
-                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
-                {/* Legs */}
-                <path d="M 80 175 L 75 260 Q 74 270 80 275"
-                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
-                <path d="M 120 175 L 125 260 Q 126 270 120 275"
-                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
+                <path d="M 95 80 L 90 85 L 85 160 L 90 170 L 150 170 L 155 160 L 150 85 L 145 80 Z"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
+                {/* Left arm outstretched */}
+                <path d="M 90 90 Q 60 95 30 110 Q 15 118 10 125"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
+                {/* Right arm outstretched */}
+                <path d="M 150 90 Q 180 95 210 110 Q 225 118 230 125"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
+                {/* Left leg spread */}
+                <path d="M 100 170 L 70 260 Q 65 275 60 285"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
+                {/* Right leg spread */}
+                <path d="M 140 170 L 170 260 Q 175 275 180 285"
+                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.18" />
+                {/* Left leg straight (vitruvian second pose) */}
+                <path d="M 108 170 L 105 260 Q 104 275 103 290"
+                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
+                {/* Right leg straight */}
+                <path d="M 132 170 L 135 260 Q 136 275 137 290"
+                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
+                {/* Left arm down (second pose) */}
+                <path d="M 90 90 Q 70 130 55 170 Q 50 185 48 195"
+                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
+                {/* Right arm down */}
+                <path d="M 150 90 Q 170 130 185 170 Q 190 185 192 195"
+                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.12" />
               </g>
             </svg>
 
-            {/* Slots layered on top */}
-            <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
-            <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
-            <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
-            <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
-            <div className="flex gap-8 w-full justify-center">
-              <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
-              <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
-            </div>
-            <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
-            <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
-            <div className="flex gap-8 w-full justify-center">
-              <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
+            {/* Equipment slots — 3-column grid */}
+            <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
+              {/* Row 1: Trinket - Head - Amulet */}
               <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
+              {/* Row 2: Shoulders - Chest - Gloves */}
+              <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
+              {/* Row 3: Main Hand - Belt - Off Hand */}
+              <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
+              {/* Row 4: Ring - Pants - (empty) */}
+              <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
+              <div /> {/* empty cell */}
+              {/* Row 5: (empty) - Boots - (empty) */}
+              <div />
+              <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} />
+              <div />
             </div>
-            <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
           </div>
         </div>
 

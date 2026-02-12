@@ -1,0 +1,1 @@
+ALTER TYPE item_slot ADD VALUE 'boots';
