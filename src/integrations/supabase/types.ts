@@ -510,6 +510,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_party_member: {
+        Args: { _character_id: string; _gold: number; _xp: number }
+        Returns: undefined
+      }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
         Returns: undefined
