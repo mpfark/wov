@@ -281,6 +281,84 @@ export type Database = {
           },
         ]
       }
+      parties: {
+        Row: {
+          created_at: string
+          id: string
+          leader_id: string
+          tank_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leader_id: string
+          tank_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leader_id?: string
+          tank_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parties_leader_id_fkey"
+            columns: ["leader_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parties_tank_id_fkey"
+            columns: ["tank_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_members: {
+        Row: {
+          character_id: string
+          id: string
+          is_following: boolean
+          joined_at: string
+          party_id: string
+          status: string
+        }
+        Insert: {
+          character_id: string
+          id?: string
+          is_following?: boolean
+          joined_at?: string
+          party_id: string
+          status?: string
+        }
+        Update: {
+          character_id?: string
+          id?: string
+          is_following?: boolean
+          joined_at?: string
+          party_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_members_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_members_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

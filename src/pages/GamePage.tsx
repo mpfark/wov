@@ -9,6 +9,7 @@ import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
 import { useCreatures } from '@/hooks/useCreatures';
 import { useInventory } from '@/hooks/useInventory';
+import { useParty } from '@/hooks/useParty';
 import { rollD20, getStatModifier, rollDamage } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory } = useInventory(character.id);
+  const {
+    party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
+    createParty, invitePlayer, acceptInvite, declineInvite,
+    leaveParty, kickMember, setTank, toggleFollow,
+  } = useParty(character.id);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -72,10 +78,18 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     try {
       await updateCharacter({ current_node_id: nodeId });
       addLog(`You travel to ${targetNode.name}.`);
+      // Move followers if I'm the party leader
+      if (party && isLeader) {
+        const followers = partyMembers.filter(m => m.is_following && m.character_id !== character.id);
+        for (const f of followers) {
+          await supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id);
+        }
+        if (followers.length > 0) addLog(`Your party follows you.`);
+      }
     } catch {
       addLog('Failed to move.');
     }
-  }, [character, getNode, getRegion, updateCharacter, addLog]);
+  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers]);
 
   const handleSearch = useCallback(async () => {
     if (!currentNode) return;
@@ -173,34 +187,65 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         await rollLoot(creature.loot_table as any[], creature.name);
       } else {
         await supabase.from('creatures').update({ hp: newHp }).eq('id', creatureId);
-        // Creature counterattack
+        // Creature counterattack — targets tank if party has one
+        const tankMember = party && party.tank_id && party.tank_id !== character.id
+          ? partyMembers.find(m => m.character_id === party.tank_id)
+          : null;
         const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-        if (creatureAtk >= effectiveAC) {
-          const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-          const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-          addLog(`${creature.name} strikes back! Rolled ${creatureAtk} vs AC ${effectiveAC} — Hit! ${creatureDmg} damage.`);
-          await updateCharacter({ hp: playerNewHp });
-          await degradeEquipment();
-          if (playerNewHp <= 0) {
-            addLog('💀 You have been defeated...');
+        if (tankMember) {
+          // Tank absorbs the hit
+          const tankAC = 10; // We don't have tank's full AC here, use base
+          if (creatureAtk >= tankAC) {
+            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+            const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
+            addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
+            await supabase.from('characters').update({ hp: tankNewHp }).eq('id', tankMember.character_id);
+          } else {
+            addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
           }
         } else {
-          addLog(`${creature.name} attacks — misses!`);
+          if (creatureAtk >= effectiveAC) {
+            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+            const playerNewHp = Math.max(character.hp - creatureDmg, 0);
+            addLog(`${creature.name} strikes back! Rolled ${creatureAtk} vs AC ${effectiveAC} — Hit! ${creatureDmg} damage.`);
+            await updateCharacter({ hp: playerNewHp });
+            await degradeEquipment();
+            if (playerNewHp <= 0) {
+              addLog('💀 You have been defeated...');
+            }
+          } else {
+            addLog(`${creature.name} attacks — misses!`);
+          }
         }
       }
     } else {
       addLog(`You rolled ${atkRoll} + ${strMod} STR = ${totalAtk} vs AC ${creature.ac} — Miss!`);
-      // Creature still attacks
+      // Creature still attacks — targets tank if available
+      const tankMember = party && party.tank_id && party.tank_id !== character.id
+        ? partyMembers.find(m => m.character_id === party.tank_id)
+        : null;
       const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-      if (creatureAtk >= effectiveAC) {
-        const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-        const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-        addLog(`${creature.name} retaliates! ${creatureDmg} damage.`);
-        await updateCharacter({ hp: playerNewHp });
-        await degradeEquipment();
+      if (tankMember) {
+        const tankAC = 10;
+        if (creatureAtk >= tankAC) {
+          const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+          const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
+          addLog(`🛡️ ${creature.name} retaliates at ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
+          await supabase.from('characters').update({ hp: tankNewHp }).eq('id', tankMember.character_id);
+        } else {
+          addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
+        }
+      } else {
+        if (creatureAtk >= effectiveAC) {
+          const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+          const playerNewHp = Math.max(character.hp - creatureDmg, 0);
+          addLog(`${creature.name} retaliates! ${creatureDmg} damage.`);
+          await updateCharacter({ hp: playerNewHp });
+          await degradeEquipment();
+        }
       }
     }
-  }, [character, creatures, addLog, updateCharacter, equipmentBonuses, effectiveAC, rollLoot, degradeEquipment]);
+  }, [character, creatures, addLog, updateCharacter, equipmentBonuses, effectiveAC, rollLoot, degradeEquipment, party, partyMembers]);
 
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
@@ -251,6 +296,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onUnequip={unequipItem}
                 onDrop={dropItem}
                 onUseConsumable={handleUseConsumable}
+                party={party}
+                partyMembers={partyMembers}
+                pendingInvites={pendingInvites}
+                isLeader={isLeader}
+                isTank={isTank}
+                myMembership={myMembership}
+                playersHere={playersHere}
+                onCreateParty={createParty}
+                onInvite={invitePlayer}
+                onAcceptInvite={acceptInvite}
+                onDeclineInvite={declineInvite}
+                onLeaveParty={leaveParty}
+                onKick={kickMember}
+                onSetTank={setTank}
+                onToggleFollow={toggleFollow}
               />
             </div>
           </ResizablePanel>

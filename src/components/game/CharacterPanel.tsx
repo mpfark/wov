@@ -1,9 +1,12 @@
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
+import { Party, PartyMember } from '@/hooks/useParty';
+import { PlayerPresence } from '@/hooks/usePresence';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shield, Trash2, Heart } from 'lucide-react';
+import PartyPanel from './PartyPanel';
 
 interface Props {
   character: Character;
@@ -14,6 +17,22 @@ interface Props {
   onUnequip: (inventoryId: string) => void;
   onDrop: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
+  // Party props
+  party: Party | null;
+  partyMembers: PartyMember[];
+  pendingInvites: { party_id: string; id: string; leader_name: string }[];
+  isLeader: boolean;
+  isTank: boolean;
+  myMembership: PartyMember | undefined;
+  playersHere: PlayerPresence[];
+  onCreateParty: () => void;
+  onInvite: (charId: string) => void;
+  onAcceptInvite: (membershipId: string) => void;
+  onDeclineInvite: (membershipId: string) => void;
+  onLeaveParty: () => void;
+  onKick: (charId: string) => void;
+  onSetTank: (charId: string | null) => void;
+  onToggleFollow: (following: boolean) => void;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -30,7 +49,11 @@ const SLOT_LABELS: Record<string, string> = {
 
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket'];
 
-export default function CharacterPanel({ character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable }: Props) {
+export default function CharacterPanel({
+  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
+  party, partyMembers, pendingInvites, isLeader, isTank, myMembership, playersHere,
+  onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
+}: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
   const xpForNext = character.level * 100;
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
@@ -202,6 +225,26 @@ export default function CharacterPanel({ character, equipped, unequipped, equipm
             ))}
           </div>
         </div>
+
+        {/* Party Section */}
+        <PartyPanel
+          character={character}
+          party={party}
+          members={partyMembers}
+          pendingInvites={pendingInvites}
+          isLeader={isLeader}
+          isTank={isTank}
+          myMembership={myMembership}
+          playersHere={playersHere}
+          onCreateParty={onCreateParty}
+          onInvite={onInvite}
+          onAcceptInvite={onAcceptInvite}
+          onDeclineInvite={onDeclineInvite}
+          onLeave={onLeaveParty}
+          onKick={onKick}
+          onSetTank={onSetTank}
+          onToggleFollow={onToggleFollow}
+        />
       </div>
     </TooltipProvider>
   );
