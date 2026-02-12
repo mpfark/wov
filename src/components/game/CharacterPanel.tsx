@@ -172,6 +172,12 @@ export default function CharacterPanel({
               </span>
             )}
           </div>
+          <div className="flex items-center justify-between text-[9px] text-muted-foreground/70 px-1 mb-0.5">
+            <span className="w-20">Stat</span>
+            <span className="flex-1 text-center">Base <span className="text-chart-2">+Gear</span></span>
+            <span className="w-8 text-right">Mod</span>
+            <div className="w-5 ml-1" />
+          </div>
           <div className="space-y-0.5">
             {Object.entries(STAT_LABELS).map(([key, label]) => {
               const base = (character as any)[key] as number;
@@ -184,11 +190,11 @@ export default function CharacterPanel({
                   <TooltipTrigger asChild>
                     <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
                       <span className="font-display text-foreground w-20">{STAT_FULL_NAMES[key]}</span>
-                      <span className="text-muted-foreground flex-1 text-center">
-                        <span className="text-foreground">{base}</span>
-                        {bonus > 0 && <span className="text-chart-2 ml-1">+{bonus}</span>}
+                      <span className="text-muted-foreground flex-1 text-center tabular-nums">
+                        <span className="text-foreground" title="Base">{base}</span>
+                        {bonus > 0 && <span className="text-chart-2 ml-1" title="Gear">+{bonus}</span>}
                       </span>
-                      <span className="text-primary text-[10px] w-8 text-right">
+                      <span className="text-primary text-[10px] w-8 text-right" title="Modifier">
                         ({mod >= 0 ? `+${mod}` : mod})
                       </span>
                       {canSpend && onSpendPoint ? (
