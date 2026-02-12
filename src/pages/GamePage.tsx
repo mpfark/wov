@@ -13,7 +13,7 @@ import { useCreatures } from '@/hooks/useCreatures';
 import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
-import { rollD20, getStatModifier, rollDamage } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -337,8 +337,34 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const xpForNext = character.level * 100;
         if (newXp >= xpForNext) {
           const newLevel = character.level + 1;
+          const levelUpUpdates: Partial<Character> = {
+            xp: newXp - xpForNext,
+            level: newLevel,
+            max_hp: character.max_hp + 5,
+            hp: character.max_hp + 5,
+            gold: newGold,
+            unspent_stat_points: (character.unspent_stat_points || 0) + 2,
+          };
+
+          // Class-based stat bonuses every 3 levels
+          if (newLevel % 3 === 0) {
+            const bonuses = CLASS_LEVEL_BONUSES[character.class] || {};
+            const bonusNames: string[] = [];
+            for (const [stat, amount] of Object.entries(bonuses)) {
+              const currentVal = (character as any)[stat] || 10;
+              const capped = Math.min(currentVal + amount, 30);
+              if (capped > currentVal) {
+                (levelUpUpdates as any)[stat] = capped;
+                bonusNames.push(`+${amount} ${stat.toUpperCase()}`);
+              }
+            }
+            if (bonusNames.length > 0) {
+              addLog(`📈 ${CLASS_LABELS[character.class] || character.class} bonus: ${bonusNames.join(', ')}!`);
+            }
+          }
+
           addLog(`🎉 Level Up! You are now level ${newLevel}! You gained 2 stat points.`);
-          await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold, unspent_stat_points: (character.unspent_stat_points || 0) + 2 });
+          await updateCharacter(levelUpUpdates);
         } else {
           await updateCharacter({ xp: newXp, gold: newGold });
         }
