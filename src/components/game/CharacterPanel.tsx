@@ -43,11 +43,12 @@ const RARITY_COLORS: Record<string, string> = {
 };
 
 const SLOT_LABELS: Record<string, string> = {
+  main_hand: 'Main Hand', off_hand: 'Off Hand',
   head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
   gloves: 'Gloves', belt: 'Belt', pants: 'Pants', ring: 'Ring', trinket: 'Trinket',
 };
 
-const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket'];
+const SLOTS = ['main_hand', 'off_hand', 'head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket'];
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
@@ -60,6 +61,8 @@ export default function CharacterPanel({
   const totalAC = character.ac + (equipmentBonuses.ac || 0);
 
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
+  const mainHandItem = getEquippedInSlot('main_hand');
+  const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -140,17 +143,21 @@ export default function CharacterPanel({
           <div className="grid grid-cols-3 gap-1">
             {SLOTS.map(slot => {
               const item = getEquippedInSlot(slot);
+              const blocked = slot === 'off_hand' && isTwoHanded;
               return (
                 <Tooltip key={slot}>
                   <TooltipTrigger asChild>
                     <div
                       className={`p-1.5 border rounded text-center cursor-pointer transition-colors ${
+                        blocked ? 'border-border/30 bg-background/10 opacity-50' :
                         item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
                       }`}
-                      onClick={() => item && onUnequip(item.id)}
+                      onClick={() => item && !blocked && onUnequip(item.id)}
                     >
                       <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>
-                      {item ? (
+                      {blocked ? (
+                        <div className="text-[10px] text-muted-foreground/50">2H</div>
+                      ) : item ? (
                         <>
                           <div className={`text-[10px] font-display truncate ${RARITY_COLORS[item.item.rarity]}`}>
                             {item.item.name}
@@ -162,10 +169,11 @@ export default function CharacterPanel({
                       )}
                     </div>
                   </TooltipTrigger>
-                  {item && (
+                  {item && !blocked && (
                     <TooltipContent className="bg-popover border-border z-50">
                       <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
                       <p className="text-xs text-muted-foreground">{item.item.description}</p>
+                      {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
                       {Object.entries(item.item.stats || {}).map(([k, v]) => (
                         <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
                       ))}

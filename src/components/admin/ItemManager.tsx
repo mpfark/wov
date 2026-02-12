@@ -18,11 +18,12 @@ interface Item {
   stats: Record<string, number>;
   value: number;
   max_durability: number;
+  hands: number | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
-const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket'];
-const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest'];
+const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand'];
+const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest', 'shield'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp'];
 
 const RARITY_COLORS: Record<string, string> = {
@@ -34,7 +35,7 @@ const RARITY_COLORS: Record<string, string> = {
 
 const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
-  slot: null, stats: {}, value: 0, max_durability: 100,
+  slot: null, stats: {}, value: 0, max_durability: 100, hands: null,
 });
 
 export default function ItemManager() {
@@ -63,7 +64,7 @@ export default function ItemManager() {
     setForm({
       name: item.name, description: item.description, item_type: item.item_type,
       rarity: item.rarity, slot: item.slot, stats: { ...item.stats },
-      value: item.value, max_durability: item.max_durability,
+      value: item.value, max_durability: item.max_durability, hands: item.hands,
     });
     setDialogOpen(true);
   };
@@ -78,10 +79,11 @@ export default function ItemManager() {
       description: form.description.trim(),
       item_type: form.item_type,
       rarity: form.rarity as any,
-      slot: form.item_type === 'equipment' ? form.slot as any : null,
+      slot: (form.item_type === 'equipment' || form.item_type === 'shield') ? form.slot as any : null,
       stats: form.stats,
       value: Math.max(0, form.value),
       max_durability: Math.max(1, form.max_durability),
+      hands: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) || form.item_type === 'shield' ? form.hands : null,
     };
 
     if (editingId) {
@@ -167,6 +169,7 @@ export default function ItemManager() {
                     )}
                     <span className="text-[10px] text-primary shrink-0">{item.value}g</span>
                     <span className="text-[10px] text-muted-foreground shrink-0">Dur: {item.max_durability}</span>
+                    {item.hands && <span className="text-[10px] text-muted-foreground shrink-0">{item.hands}H</span>}
                     {Object.entries(item.stats || {}).map(([k, v]) => (
                       <span key={k} className="text-[10px] text-chart-2 shrink-0">+{v} {k.toUpperCase()}</span>
                     ))}
@@ -205,7 +208,7 @@ export default function ItemManager() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] text-muted-foreground">Type</label>
-                <Select value={form.item_type} onValueChange={v => setForm(f => ({ ...f, item_type: v }))}>
+                <Select value={form.item_type} onValueChange={v => setForm(f => ({ ...f, item_type: v, slot: v === 'shield' ? 'off_hand' : f.slot, hands: v === 'shield' ? 1 : f.hands }))}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover border-border z-50">
                     {ITEM_TYPES.map(t => (
@@ -229,15 +232,28 @@ export default function ItemManager() {
               </div>
             </div>
 
-            {form.item_type === 'equipment' && (
+            {(form.item_type === 'equipment' || form.item_type === 'shield') && (
               <div>
                 <label className="text-[10px] text-muted-foreground">Equipment Slot</label>
                 <Select value={form.slot || ''} onValueChange={v => setForm(f => ({ ...f, slot: v || null }))}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select slot" /></SelectTrigger>
                   <SelectContent className="bg-popover border-border z-50">
-                    {SLOTS.map(s => (
-                      <SelectItem key={s} value={s} className="capitalize text-xs">{s}</SelectItem>
+                    {(form.item_type === 'shield' ? ['off_hand'] : SLOTS).map(s => (
+                      <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace('_', ' ')}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand') && (
+              <div>
+                <label className="text-[10px] text-muted-foreground">Hands Required</label>
+                <Select value={String(form.hands || 1)} onValueChange={v => setForm(f => ({ ...f, hands: +v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50">
+                    <SelectItem value="1" className="text-xs">One-Handed</SelectItem>
+                    <SelectItem value="2" className="text-xs">Two-Handed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
