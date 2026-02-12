@@ -1,52 +1,53 @@
 
-# Admin Character Sheet Mirror
 
-## Overview
-Rebuild the admin UserManager's middle column to visually mirror the player's CharacterPanel, showing the full character sheet (name, HP/XP bars, stats with Base +Gear and Mod, AC, Gold, equipment paper doll, and inventory) -- everything except party information. This requires both backend and frontend changes since the admin endpoint currently only fetches basic character fields.
+# Replace Raw JSON Connections Editor with Visual UI
 
-## Changes
+## Problem
+Currently, the "Connections" tab in the Node Editor shows a raw JSON textarea where admins must manually type node IDs, directions, and labels. This is error-prone and tedious.
 
-### 1. Update the admin-users edge function
-- Expand the character SELECT to include all stat columns: `str, dex, con, int, wis, cha, ac, xp, unspent_stat_points`
-- Add a second query to fetch `character_inventory` with joined `items` data for each user's characters
-- Return inventory grouped by character ID alongside the existing character data
-
-### 2. Update UserManager types
-- Expand the `AdminUser.characters` interface to include all stat fields (`str, dex, con, int, wis, cha, ac, xp, unspent_stat_points`)
-- Add an `inventory` array per character matching the `InventoryItem` shape (with nested `item` object)
-
-### 3. Rebuild the middle column to mirror CharacterPanel
-When a user is selected and has characters, render each character using the same visual layout as `CharacterPanel`:
-
-- **Name and Identity** -- name, race/class label, level
-- **HP Bar** -- colored progress bar (green/yellow/red thresholds)
-- **XP Bar** -- progress toward next level
-- **Attributes table** -- with "Stat / Base +Gear / Mod" headers and tooltips, calculating equipment bonuses from inventory data
-- **AC and Gold row**
-- **Equipment paper doll** -- 3-column grid with all 12 slots, showing equipped item names and durability (read-only, no unequip actions)
-- **Inventory list** -- unequipped items with rarity colors and tooltips (read-only, no equip/drop actions)
-
-The existing inline edit controls for HP, max_hp, gold, and level will be preserved and integrated into this new layout. The admin edit button will toggle inline inputs within the relevant sections (e.g., HP inputs appear in the HP bar area).
-
-### 4. Reuse constants and helpers
-Import from existing modules rather than duplicating:
-- `STAT_LABELS`, `STAT_FULL_NAMES` (or define locally), `getStatModifier`, `RACE_LABELS`, `CLASS_LABELS` from `game-data.ts`
-- `RARITY_COLORS`, `SLOT_LABELS` patterns from `CharacterPanel.tsx`
-- Equipment bonus calculation logic from `useInventory.ts`
+## Solution
+Replace the JSON textarea with an interactive connection manager featuring:
+- A list of current connections showing the connected node's **name**, **direction**, and optional **label**
+- A button to **remove** any connection (with automatic removal of the reverse connection on the other node)
+- An **"Add Connection"** form with:
+  - A dropdown to pick any node (from all nodes, not just the current region)
+  - A direction selector (N, S, E, W, NE, NW, SE, SW)
+  - An optional label text field
+- When adding a connection, the **reverse connection is automatically created** on the target node (e.g., if you connect A->B going North, B gets a connection to A going South)
 
 ## Technical Details
 
-### Edge function query changes
-```sql
--- Characters: fetch all columns instead of subset
-SELECT * FROM characters WHERE user_id IN (...)
+### File: `src/components/admin/NodeEditorDialog.tsx`
 
--- Inventory: join with items table
-SELECT ci.*, items.* FROM character_inventory ci
-JOIN items ON ci.item_id = items.id
-WHERE ci.character_id IN (...)
+**Changes to the Connections tab (lines 462-481):**
+
+1. **Parse connections from JSON into structured state** -- already stored as `form.connections` (JSON string). We'll parse it for display and provide add/remove helpers.
+
+2. **Replace the textarea** with:
+   - A list rendering each connection as a row: `[Node Name] -- [Direction] -- [Label] -- [Remove button]`
+   - An "Add Connection" section with:
+     - `Select` dropdown listing all nodes (passed via a new `allNodesGlobal` prop containing every node, not just region-filtered)
+     - Direction `Select` with the 8 compass directions
+     - Optional label `Input`
+     - "Add" button
+
+3. **Add connection logic:**
+   - Adds entry to current node's connections array
+   - Immediately saves both nodes to the database (current node + target node with reverse direction)
+   - Refreshes data via `onSaved()`
+
+4. **Remove connection logic:**
+   - Removes entry from current node's connections
+   - Also removes the reverse connection from the target node in the database
+   - Saves both and refreshes
+
+### File: `src/pages/AdminPage.tsx`
+
+- Pass **all nodes** (not just region-filtered) to the `NodeEditorDialog` as a new `allNodesGlobal` prop so the connection picker can reference nodes across regions.
+
+### Direction Reversal Map
+A simple mapping for auto-creating reverse connections:
+```
+N <-> S, E <-> W, NE <-> SW, NW <-> SE
 ```
 
-### Files modified
-1. `supabase/functions/admin-users/index.ts` -- expand character + add inventory queries
-2. `src/components/admin/UserManager.tsx` -- rebuild middle column with CharacterPanel layout
