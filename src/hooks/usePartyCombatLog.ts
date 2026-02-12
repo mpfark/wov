@@ -43,9 +43,10 @@ export function usePartyCombatLog(partyId: string | null) {
     return () => { supabase.removeChannel(channel); };
   }, [partyId]);
 
-  const addPartyCombatLog = useCallback(async (message: string) => {
-    if (!partyId) return;
-    await supabase.from('party_combat_log').insert({ party_id: partyId, message });
+  const addPartyCombatLog = useCallback(async (message: string): Promise<string | null> => {
+    if (!partyId) return null;
+    const { data } = await supabase.from('party_combat_log').insert({ party_id: partyId, message }).select('id').single();
+    return data?.id ?? null;
   }, [partyId]);
 
   return { entries, addPartyCombatLog };
