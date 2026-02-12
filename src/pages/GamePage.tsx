@@ -58,10 +58,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, [character.id]);
 
-  // Run return_unique_items on load
-  useEffect(() => {
-    supabase.rpc('return_unique_items').then(() => {});
-  }, []);
+  // return_unique_items, regen_creature_hp, respawn_creatures run server-side via scheduled jobs
 
   // Passive HP regeneration — 1 HP every 30s, multiplied by regen buff
   useEffect(() => {
@@ -78,14 +75,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, [character.hp, character.max_hp, regenBuff, updateCharacter]);
 
-  // Creature HP regen + respawn every 60s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      supabase.rpc('regen_creature_hp').then(() => {});
-      supabase.rpc('respawn_creatures').then(() => {});
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
