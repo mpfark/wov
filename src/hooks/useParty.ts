@@ -187,11 +187,23 @@ export function useParty(characterId: string | null) {
 
   const toggleFollow = useCallback(async (following: boolean) => {
     if (!party || !characterId) return;
+
+    // If enabling follow, check that we're on the same node as the leader
+    if (following) {
+      const leaderMember = members.find(m => m.character_id === party.leader_id);
+      const myMember = members.find(m => m.character_id === characterId);
+      if (leaderMember?.character?.current_node_id && myMember?.character?.current_node_id &&
+          leaderMember.character.current_node_id !== myMember.character.current_node_id) {
+        toast.error('You must be at the same location as the party leader to follow.');
+        return;
+      }
+    }
+
     await supabase.from('party_members').update({ is_following: following })
       .eq('party_id', party.id)
       .eq('character_id', characterId);
     fetchParty();
-  }, [party, characterId, fetchParty]);
+  }, [party, characterId, members, fetchParty]);
 
   const isLeader = party?.leader_id === characterId;
   const isTank = party?.tank_id === characterId;
