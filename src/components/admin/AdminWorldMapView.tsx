@@ -50,9 +50,35 @@ function layoutNodes(nodes: GraphNode[]) {
       const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
       let nx = current.x + offset[0];
       let ny = current.y + offset[1];
-      while ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
-        nx += offset[0] || 1;
-        ny += offset[1] || 1;
+      // Avoid collisions: try shifting along the primary direction axis first,
+      // then spiral outward if needed
+      if ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
+        const primaryAxis = Math.abs(offset[0]) >= Math.abs(offset[1]) ? 'x' : 'y';
+        let attempt = 1;
+        let placed = false;
+        while (!placed && attempt < 20) {
+          // Try shifting perpendicular first, then along direction
+          const candidates = primaryAxis === 'x'
+            ? [
+                { x: nx, y: ny + attempt },
+                { x: nx, y: ny - attempt },
+                { x: nx + (offset[0] >= 0 ? attempt : -attempt), y: ny },
+              ]
+            : [
+                { x: nx + attempt, y: ny },
+                { x: nx - attempt, y: ny },
+                { x: nx, y: ny + (offset[1] >= 0 ? attempt : -attempt) },
+              ];
+          for (const c of candidates) {
+            if (![...positions.values()].some(p => p.x === c.x && p.y === c.y)) {
+              nx = c.x;
+              ny = c.y;
+              placed = true;
+              break;
+            }
+          }
+          attempt++;
+        }
       }
       positions.set(conn.node_id, { x: nx, y: ny });
       queue.push({ id: conn.node_id, x: nx, y: ny });
