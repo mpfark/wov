@@ -170,30 +170,50 @@ export default function CharacterPanel({
         {/* Equipment — Paper Doll Layout */}
         <div>
           <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
-          <div className="flex flex-col items-center gap-1">
-            {/* Head */}
+          <div className="relative flex flex-col items-center gap-1">
+            {/* Body silhouette SVG behind slots */}
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              viewBox="0 0 200 320"
+              preserveAspectRatio="xMidYMid meet"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Head circle */}
+              <circle cx="100" cy="22" r="14" stroke="hsl(var(--border))" strokeWidth="1" opacity="0.4" />
+              {/* Neck */}
+              <line x1="100" y1="36" x2="100" y2="50" stroke="hsl(var(--border))" strokeWidth="1" opacity="0.3" />
+              {/* Torso */}
+              <path d="M 70 50 Q 65 55 60 80 L 60 160 Q 60 170 70 175 L 130 175 Q 140 170 140 160 L 140 80 Q 135 55 130 50 Z"
+                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.3" />
+              {/* Arms — left */}
+              <path d="M 60 70 Q 35 80 20 130 Q 18 140 22 145"
+                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
+              {/* Arms — right */}
+              <path d="M 140 70 Q 165 80 180 130 Q 182 140 178 145"
+                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
+              {/* Legs */}
+              <path d="M 80 175 L 75 260 Q 74 270 80 275"
+                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
+              <path d="M 120 175 L 125 260 Q 126 270 120 275"
+                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
+            </svg>
+
+            {/* Slots layered on top */}
             <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
-            {/* Amulet */}
             <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
-            {/* Shoulders */}
             <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
-            {/* Chest */}
             <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
-            {/* Main Hand + Off Hand */}
-            <div className="flex gap-4 w-full justify-center">
+            <div className="flex gap-8 w-full justify-center">
               <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
             </div>
-            {/* Gloves */}
             <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
-            {/* Belt */}
             <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
-            {/* Ring + Trinket */}
-            <div className="flex gap-4 w-full justify-center">
+            <div className="flex gap-8 w-full justify-center">
               <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
               <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} />
             </div>
-            {/* Pants */}
             <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
           </div>
         </div>
