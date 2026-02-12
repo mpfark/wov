@@ -10,6 +10,7 @@ import NodeEditorDialog from '@/components/admin/NodeEditorDialog';
 import RegionManager from '@/components/admin/RegionManager';
 import ItemManager from '@/components/admin/ItemManager';
 import CreatureManager from '@/components/admin/CreatureManager';
+import UserManager from '@/components/admin/UserManager';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -97,6 +98,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
             <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
+            <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
           </TabsList>
         </div>
 
@@ -161,6 +163,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="items" className="flex-1 min-h-0 mt-0">
           <ItemManager />
+        </TabsContent>
+
+        <TabsContent value="users" className="flex-1 min-h-0 mt-0">
+          <UserManager isValar={isValar} />
         </TabsContent>
       </Tabs>
 
