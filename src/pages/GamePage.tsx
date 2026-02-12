@@ -37,6 +37,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
+  const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const logEndRef = useRef<HTMLDivElement>(null);
 
   const addLog = useCallback((msg: string) => {
@@ -60,6 +61,30 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // Run return_unique_items on load
   useEffect(() => {
     supabase.rpc('return_unique_items').then(() => {});
+  }, []);
+
+  // Passive HP regeneration — 1 HP every 30s, multiplied by regen buff
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (character.hp < character.max_hp && character.hp > 0) {
+        const mult = Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
+        const regenAmount = Math.max(Math.floor(1 * mult), 1);
+        const newHp = Math.min(character.hp + regenAmount, character.max_hp);
+        if (newHp !== character.hp) {
+          updateCharacter({ hp: newHp });
+        }
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [character.hp, character.max_hp, regenBuff, updateCharacter]);
+
+  // Creature HP regen + respawn every 60s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      supabase.rpc('regen_creature_hp').then(() => {});
+      supabase.rpc('respawn_creatures').then(() => {});
+    }, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
@@ -279,6 +304,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
     if (result) {
       addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
+      // Apply regen buff: 3x regen for 2 minutes
+      setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
+      addLog(`✨ HP regeneration boosted for 2 minutes!`);
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
 
