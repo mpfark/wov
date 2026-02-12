@@ -228,8 +228,8 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
     <TooltipProvider delayDuration={200}>
       <div
         ref={containerRef}
-        className="overflow-hidden relative cursor-grab active:cursor-grabbing"
-        style={{ maxHeight: 'calc(100vh - 160px)' }}
+        className="overflow-hidden relative cursor-grab active:cursor-grabbing w-full h-full"
+        style={{ minHeight: '300px' }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -246,9 +246,10 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
             className="h-7 px-2 rounded bg-card border border-border text-[10px] hover:bg-accent transition-colors">Reset</button>
         </div>
         <svg
-          width={Math.max(svgWidth, 400)}
-          height={Math.max(svgHeight, 300)}
-          className="block mx-auto"
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${Math.max(svgWidth, 400)} ${Math.max(svgHeight, 300)}`}
+          className="block w-full h-full"
           style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center' }}
         >
           {/* Region bubbles */}
