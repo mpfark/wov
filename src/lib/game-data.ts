@@ -28,6 +28,16 @@ export const CLASS_BASE_AC: Record<string, number> = {
   warrior: 14, wizard: 10, ranger: 12, rogue: 12, healer: 11, bard: 11,
 };
 
+// Class-based stat bonuses awarded every 3 levels
+export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
+  warrior: { str: 1, con: 1 },
+  wizard:  { int: 1, wis: 1 },
+  ranger:  { dex: 1, wis: 1 },
+  rogue:   { dex: 1, cha: 1 },
+  healer:  { wis: 1, con: 1 },
+  bard:    { cha: 1, int: 1 },
+};
+
 export const RACE_LABELS: Record<string, string> = {
   human: 'Human', elf: 'Elf', dwarf: 'Dwarf', hobbit: 'Hobbit',
   dunedain: 'Dúnedain', half_elf: 'Half-Elf',
