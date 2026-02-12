@@ -205,6 +205,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          hands: number | null
           id: string
           item_type: string
           max_durability: number
@@ -217,6 +218,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string
+          hands?: number | null
           id?: string
           item_type?: string
           max_durability?: number
@@ -229,6 +231,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string
+          hands?: number | null
           id?: string
           item_type?: string
           max_durability?: number
@@ -517,6 +520,8 @@ export type Database = {
         | "pants"
         | "ring"
         | "trinket"
+        | "main_hand"
+        | "off_hand"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -673,6 +678,8 @@ export const Constants = {
         "pants",
         "ring",
         "trinket",
+        "main_hand",
+        "off_hand",
       ],
     },
   },

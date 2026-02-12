@@ -17,6 +17,7 @@ export interface InventoryItem {
     stats: Record<string, number>;
     value: number;
     max_durability: number;
+    hands: number | null;
   };
 }
 
@@ -52,6 +53,20 @@ export function useInventory(characterId: string | null) {
 
   const equipItem = useCallback(async (inventoryId: string, slot: string) => {
     if (!characterId) return;
+    const itemToEquip = inventory.find(i => i.id === inventoryId);
+    
+    // If equipping a 2h weapon to main_hand, also unequip off_hand
+    if (itemToEquip && slot === 'main_hand' && itemToEquip.item.hands === 2) {
+      const offHand = inventory.find(i => i.equipped_slot === 'off_hand');
+      if (offHand) {
+        await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', offHand.id);
+      }
+    }
+    // Prevent equipping off_hand if main_hand has a 2h weapon
+    if (slot === 'off_hand') {
+      const mainHand = inventory.find(i => i.equipped_slot === 'main_hand');
+      if (mainHand && mainHand.item.hands === 2) return;
+    }
     // Unequip anything in that slot first
     const existing = inventory.find(i => i.equipped_slot === slot);
     if (existing) {
