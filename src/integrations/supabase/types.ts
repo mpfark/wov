@@ -486,6 +486,7 @@ export type Database = {
         Returns: boolean
       }
       is_maiar_or_valar: { Args: never; Returns: boolean }
+      is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_valar: { Args: never; Returns: boolean }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
       regen_creature_hp: { Args: never; Returns: undefined }
