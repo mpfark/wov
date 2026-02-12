@@ -200,6 +200,7 @@ export default function CharacterPanel({
                   <TooltipTrigger asChild>
                     <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
                       {inv.item.name}
+                      {inv.item.hands && <span className="text-[9px] text-muted-foreground ml-1">({inv.item.hands}H)</span>}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="bg-popover border-border z-50">
