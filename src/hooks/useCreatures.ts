@@ -24,8 +24,7 @@ export function useCreatures(nodeId: string | null) {
 
   const fetchCreatures = useCallback(async () => {
     if (!nodeId) { setCreatures([]); return; }
-    // First trigger respawns server-side
-    await supabase.rpc('respawn_creatures');
+    // Respawns now handled by server-side scheduled jobs
     const { data } = await supabase
       .from('creatures')
       .select('*')
