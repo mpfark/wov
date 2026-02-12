@@ -25,7 +25,7 @@ interface Props {
 }
 
 export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin }: Props) {
-  const { regions, nodes, getNode, getRegion } = useNodes(true);
+  const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory } = useInventory(character.id);
@@ -393,6 +393,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`✨ HP regeneration boosted for 2 minutes!`);
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
+
+  if (nodesLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center parchment-bg">
+        <p className="font-display text-sm text-muted-foreground animate-pulse">Loading world...</p>
+      </div>
+    );
+  }
 
   if (!currentNode) {
     return (
