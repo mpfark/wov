@@ -121,10 +121,10 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
 
   // Compute region bubble positions and internal node positions
   const { regionBubbles, allNodePositions, svgWidth, svgHeight } = useMemo(() => {
-    const SPACING = 120;
+    const SPACING = 200;
     const NODE_R = 28;
-    const BUBBLE_PAD = 60;
-    const REGION_GAP = 100;
+    const BUBBLE_PAD = 80;
+    const REGION_GAP = 140;
 
     const bubbles: Array<{
       region: Region;
@@ -140,7 +140,7 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
     for (let i = 0; i < sortedRegions.length; i++) {
       const region = sortedRegions[i];
       const rNodes = nodesByRegion.get(region.id) || [];
-      const radius = Math.max(120, Math.sqrt(rNodes.length) * 90);
+      const radius = Math.max(160, Math.sqrt(rNodes.length) * 120);
 
       const cx = cursorX + radius;
       const cy = radius + 60 + (i % 2 === 1 ? 40 : 0); // stagger
