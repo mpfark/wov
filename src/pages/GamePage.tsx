@@ -44,6 +44,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
+  const [deathCountdown, setDeathCountdown] = useState(3);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   const ownLogIdsRef = useRef<Set<string>>(new Set());
@@ -116,6 +117,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   useEffect(() => {
     if (character.hp > 0 || isDead) return;
     setIsDead(true);
+    setDeathCountdown(3);
+    const countdownInterval = setInterval(() => {
+      setDeathCountdown(prev => Math.max(prev - 1, 0));
+    }, 1000);
     const goldLost = Math.floor(deathGoldRef.current * 0.1);
     const respawnTimeout = setTimeout(async () => {
       await updateCharRef.current({
@@ -125,8 +130,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       });
       addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
       setIsDead(false);
+      clearInterval(countdownInterval);
     }, 3000);
-    return () => clearTimeout(respawnTimeout);
+    return () => { clearTimeout(respawnTimeout); clearInterval(countdownInterval); };
   }, [character.hp, isDead]);
 
   // Sync follower's local character when leader moves them
@@ -687,11 +693,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       {/* Death Overlay */}
       {isDead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
-          <div className="text-center space-y-3 animate-pulse">
-            <p className="font-display text-4xl text-destructive">💀</p>
+          <div className="text-center space-y-4">
+            <p className="font-display text-5xl text-destructive animate-pulse">💀</p>
             <p className="font-display text-2xl text-destructive">You Have Fallen</p>
+            <p className="font-display text-6xl text-destructive/80 tabular-nums">{deathCountdown}</p>
             <p className="text-sm text-muted-foreground">Respawning at the starting area...</p>
-            <p className="text-xs text-muted-foreground">You lost {Math.floor(character.gold * 0.1)} gold.</p>
+            <p className="text-xs text-muted-foreground">You lost {Math.floor(deathGoldRef.current * 0.1)} gold.</p>
           </div>
         </div>
       )}
