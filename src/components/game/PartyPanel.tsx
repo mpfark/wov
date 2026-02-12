@@ -59,6 +59,7 @@ export default function PartyPanel({
         <div className="space-y-1.5">
           {/* Members list */}
           {members.map(m => {
+            if (!m.character) return null;
             const isMe = m.character_id === character.id;
             const isMemberTank = party.tank_id === m.character_id;
             const isMemberLeader = party.leader_id === m.character_id;
