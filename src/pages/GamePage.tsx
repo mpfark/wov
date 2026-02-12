@@ -34,7 +34,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
-    leaveParty, kickMember, setTank, toggleFollow,
+    leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
   const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Everyday Adventurer!']);
@@ -231,12 +231,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         for (const f of followers) {
           await supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id);
         }
-        if (followers.length > 0) addLog(`Your party follows you.`);
+        if (followers.length > 0) {
+          addLog(`Your party follows you.`);
+          // Refresh party member data so map shows updated positions
+          fetchParty();
+        }
       }
     } catch {
       addLog('Failed to move.');
     }
-  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment]);
+  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty]);
 
   const handleSearch = useCallback(async () => {
     if (!currentNode) return;
