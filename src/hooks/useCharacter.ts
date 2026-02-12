@@ -21,6 +21,7 @@ export interface Character {
   cha: number;
   ac: number;
   current_node_id: string | null;
+  unspent_stat_points: number;
 }
 
 export function useCharacter(user: User | null) {

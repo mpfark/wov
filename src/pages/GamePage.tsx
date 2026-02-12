@@ -5,6 +5,7 @@ import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
 import LootShareDialog, { LootDrop } from '@/components/game/LootShareDialog';
+import StatAllocationDialog from '@/components/game/StatAllocationDialog';
 import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
@@ -336,8 +337,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const xpForNext = character.level * 100;
         if (newXp >= xpForNext) {
           const newLevel = character.level + 1;
-          addLog(`🎉 Level Up! You are now level ${newLevel}!`);
-          await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold });
+          addLog(`🎉 Level Up! You are now level ${newLevel}! You gained 2 stat points.`);
+          await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold, unspent_stat_points: (character.unspent_stat_points || 0) + 2 });
         } else {
           await updateCharacter({ xp: newXp, gold: newGold });
         }
@@ -564,6 +565,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           onConfirm={handleLootDistribute}
         />
       )}
+
+      {/* Stat Allocation Dialog */}
+      <StatAllocationDialog character={character} onAllocate={updateCharacter} />
     </div>
   );
 }
