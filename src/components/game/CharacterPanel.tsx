@@ -173,13 +173,6 @@ export default function CharacterPanel({
         <div>
           <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
           <div className="relative flex flex-col items-center gap-1">
-            {/* Body silhouette SVG behind slots */}
-            {/* Vitruvian Man silhouette */}
-            <img
-              src={vitruvianMan}
-              alt=""
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-20"
-            />
 
             {/* Equipment slots — 3-column grid */}
             <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
