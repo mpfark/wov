@@ -477,7 +477,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 creatures={creatures}
                 character={character}
                 eventLog={eventLog}
-                onMove={handleMove}
                 onSearch={handleSearch}
                 onAttack={handleAttack}
                 onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}

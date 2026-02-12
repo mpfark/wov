@@ -1,0 +1,186 @@
+import { useState, useMemo } from 'react';
+import { GameNode } from '@/hooks/useNodes';
+
+interface Props {
+  currentNodeId: string;
+  nodes: GameNode[];
+  onNodeClick: (nodeId: string) => void;
+}
+
+const DIRECTION_OFFSETS: Record<string, [number, number]> = {
+  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
+  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
+};
+
+function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
+  const positions = new Map<string, { x: number; y: number }>();
+  positions.set(currentNode.id, { x: 0, y: 0 });
+
+  for (const conn of currentNode.connections) {
+    const neighbor = neighbors.find(n => n.id === conn.node_id);
+    if (!neighbor) continue;
+    const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+    let nx = offset[0];
+    let ny = offset[1];
+    // Avoid collisions
+    while ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
+      nx += offset[0] || 1;
+      ny += offset[1] || 1;
+    }
+    positions.set(neighbor.id, { x: nx, y: ny });
+  }
+
+  return positions;
+}
+
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: Props) {
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+
+  const currentNode = nodes.find(n => n.id === currentNodeId);
+  const neighbors = useMemo(() => {
+    if (!currentNode) return [];
+    const connIds = new Set(currentNode.connections.map((c: any) => c.node_id));
+    return nodes.filter(n => connIds.has(n.id));
+  }, [currentNode, nodes]);
+
+  const positions = useMemo(() => {
+    if (!currentNode) return new Map<string, { x: number; y: number }>();
+    return layoutFromCenter(currentNode, neighbors);
+  }, [currentNode, neighbors]);
+
+  const { nodePositions, svgWidth, svgHeight } = useMemo(() => {
+    if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250 };
+
+    const SPACING = 120;
+    const PADDING = 70;
+    const vals = [...positions.values()];
+    const minX = Math.min(...vals.map(p => p.x));
+    const minY = Math.min(...vals.map(p => p.y));
+    const maxX = Math.max(...vals.map(p => p.x));
+    const maxY = Math.max(...vals.map(p => p.y));
+
+    const np = new Map<string, { px: number; py: number }>();
+    positions.forEach((pos, id) => {
+      np.set(id, {
+        px: (pos.x - minX) * SPACING + PADDING,
+        py: (pos.y - minY) * SPACING + PADDING,
+      });
+    });
+
+    return {
+      nodePositions: np,
+      svgWidth: (maxX - minX) * SPACING + PADDING * 2,
+      svgHeight: (maxY - minY) * SPACING + PADDING * 2,
+    };
+  }, [positions]);
+
+  // Collect edges
+  const edges = useMemo(() => {
+    if (!currentNode) return [];
+    const result: Array<{ from: string; to: string; label?: string }> = [];
+    for (const conn of currentNode.connections) {
+      if (nodePositions.has(conn.node_id)) {
+        result.push({ from: currentNode.id, to: conn.node_id, label: conn.label });
+      }
+    }
+    return result;
+  }, [currentNode, nodePositions]);
+
+  if (!currentNode) {
+    return <p className="text-xs text-muted-foreground italic p-3">No location data...</p>;
+  }
+
+  const allDisplayNodes = [currentNode, ...neighbors];
+
+  return (
+    <div className="overflow-auto">
+      <svg
+        width={Math.max(svgWidth, 280)}
+        height={Math.max(svgHeight, 200)}
+        className="block mx-auto"
+      >
+        {/* Edges */}
+        {edges.map(edge => {
+          const from = nodePositions.get(edge.from);
+          const to = nodePositions.get(edge.to);
+          if (!from || !to) return null;
+          const midX = (from.px + to.px) / 2;
+          const midY = (from.py + to.py) / 2;
+
+          return (
+            <g key={`${edge.from}-${edge.to}`}>
+              <line
+                x1={from.px} y1={from.py} x2={to.px} y2={to.py}
+                stroke="hsl(35 20% 35%)" strokeWidth={2} strokeDasharray="6 3"
+              />
+              {edge.label && (
+                <text x={midX} y={midY - 8} textAnchor="middle"
+                  className="fill-muted-foreground text-[9px]">
+                  {edge.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Nodes */}
+        {allDisplayNodes.map(node => {
+          const pos = nodePositions.get(node.id);
+          if (!pos) return null;
+          const isCurrent = node.id === currentNodeId;
+          const isHovered = hoveredNode === node.id;
+
+          return (
+            <g key={node.id}
+              onMouseEnter={() => setHoveredNode(node.id)}
+              onMouseLeave={() => setHoveredNode(null)}
+            >
+              {/* Glow for current node */}
+              {isCurrent && (
+                <circle cx={pos.px} cy={pos.py} r={34}
+                  className="fill-none stroke-primary/30"
+                  strokeWidth={4}
+                />
+              )}
+              {/* Node circle */}
+              <circle
+                cx={pos.px} cy={pos.py} r={28}
+                className={`transition-all duration-200 ${
+                  isCurrent
+                    ? 'fill-primary/20 stroke-primary'
+                    : isHovered
+                    ? 'fill-primary/10 stroke-primary/70 cursor-pointer'
+                    : 'fill-card stroke-border cursor-pointer'
+                }`}
+                strokeWidth={isCurrent ? 2.5 : isHovered ? 2 : 1.5}
+                onClick={() => !isCurrent && onNodeClick(node.id)}
+              />
+              {node.is_vendor && (
+                <text x={pos.px} y={pos.py - 16} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                  🪙
+                </text>
+              )}
+              {/* Current marker */}
+              {isCurrent && (
+                <text x={pos.px} y={pos.py - 16} textAnchor="middle"
+                  className="fill-primary text-[10px] select-none pointer-events-none font-display">
+                  ◆
+                </text>
+              )}
+              {/* Node name */}
+              <text
+                x={pos.px} y={pos.py + 4}
+                textAnchor="middle"
+                className={`font-display text-[10px] pointer-events-none select-none ${
+                  isCurrent ? 'fill-primary' : isHovered ? 'fill-primary/80' : 'fill-foreground'
+                }`}
+              >
+                {node.name.length > 14 ? node.name.slice(0, 13) + '…' : node.name}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
