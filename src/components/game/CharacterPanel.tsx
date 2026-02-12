@@ -48,7 +48,49 @@ const SLOT_LABELS: Record<string, string> = {
   gloves: 'Gloves', belt: 'Belt', pants: 'Pants', ring: 'Ring', trinket: 'Trinket',
 };
 
-const SLOTS = ['main_hand', 'off_hand', 'head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket'];
+function EquipSlot({ slot, item, blocked, onUnequip }: {
+  slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={`w-[4.5rem] p-1 border rounded text-center cursor-pointer transition-colors ${
+            blocked ? 'border-border/30 bg-background/10 opacity-50' :
+            item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
+          }`}
+          onClick={() => item && !blocked && onUnequip(item.id)}
+        >
+          <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>
+          {blocked ? (
+            <div className="text-[10px] text-muted-foreground/50">2H</div>
+          ) : item ? (
+            <>
+              <div className={`text-[10px] font-display truncate ${RARITY_COLORS[item.item.rarity]}`}>
+                {item.item.name}
+              </div>
+              <div className="text-[9px] text-muted-foreground">{item.current_durability}%</div>
+            </>
+          ) : (
+            <div className="text-[10px] text-muted-foreground/50">Empty</div>
+          )}
+        </div>
+      </TooltipTrigger>
+      {item && !blocked && (
+        <TooltipContent className="bg-popover border-border z-50">
+          <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
+          <p className="text-xs text-muted-foreground">{item.item.description}</p>
+          {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
+          {Object.entries(item.item.stats || {}).map(([k, v]) => (
+            <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
+          ))}
+          <p className="text-[10px] text-muted-foreground mt-1">Click to unequip</p>
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+}
+
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
@@ -103,86 +145,56 @@ export default function CharacterPanel({
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-1.5">
+        {/* Stats + AC + Gold — compact inline chips */}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center text-xs">
           {Object.entries(STAT_LABELS).map(([key, label]) => {
             const base = (character as any)[key] as number;
             const bonus = equipmentBonuses[key] || 0;
             const total = base + bonus;
             const mod = getStatModifier(total);
             return (
-              <div key={key} className="text-center p-1.5 bg-background/50 rounded border border-border">
-                <div className="text-[10px] text-muted-foreground">{label}</div>
-                <div className="text-sm font-display text-foreground">
-                  {total}{bonus > 0 && <span className="text-chart-2 text-[10px]">+{bonus}</span>}
-                </div>
-                <div className="text-[10px] text-primary">{mod >= 0 ? `+${mod}` : mod}</div>
-              </div>
+              <span key={key} className="text-foreground font-display">
+                {label} {total}
+                {bonus > 0 && <span className="text-chart-2">+{bonus}</span>}
+                <span className="text-primary text-[10px]">({mod >= 0 ? `+${mod}` : mod})</span>
+              </span>
             );
           })}
+          <span className="text-foreground font-display">
+            AC {totalAC}
+            {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2">+{equipmentBonuses.ac}</span>}
+          </span>
+          <span className="font-display text-primary">Gold {character.gold}</span>
         </div>
 
-        {/* AC & Gold */}
-        <div className="flex justify-around text-center">
-          <div>
-            <div className="text-[10px] text-muted-foreground">AC</div>
-            <div className="font-display text-foreground">
-              {totalAC}
-              {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2 text-[10px] ml-0.5">+{equipmentBonuses.ac}</span>}
-            </div>
-          </div>
-          <div>
-            <div className="text-[10px] text-muted-foreground">Gold</div>
-            <div className="font-display text-primary">{character.gold}</div>
-          </div>
-        </div>
-
-        {/* Equipment Slots */}
+        {/* Equipment — Paper Doll Layout */}
         <div>
           <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
-          <div className="grid grid-cols-3 gap-1">
-            {SLOTS.map(slot => {
-              const item = getEquippedInSlot(slot);
-              const blocked = slot === 'off_hand' && isTwoHanded;
-              return (
-                <Tooltip key={slot}>
-                  <TooltipTrigger asChild>
-                    <div
-                      className={`p-1.5 border rounded text-center cursor-pointer transition-colors ${
-                        blocked ? 'border-border/30 bg-background/10 opacity-50' :
-                        item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
-                      }`}
-                      onClick={() => item && !blocked && onUnequip(item.id)}
-                    >
-                      <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>
-                      {blocked ? (
-                        <div className="text-[10px] text-muted-foreground/50">2H</div>
-                      ) : item ? (
-                        <>
-                          <div className={`text-[10px] font-display truncate ${RARITY_COLORS[item.item.rarity]}`}>
-                            {item.item.name}
-                          </div>
-                          <div className="text-[9px] text-muted-foreground">{item.current_durability}%</div>
-                        </>
-                      ) : (
-                        <div className="text-[10px] text-muted-foreground/50">Empty</div>
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  {item && !blocked && (
-                    <TooltipContent className="bg-popover border-border z-50">
-                      <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.item.description}</p>
-                      {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
-                      {Object.entries(item.item.stats || {}).map(([k, v]) => (
-                        <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
-                      ))}
-                      <p className="text-[10px] text-muted-foreground mt-1">Click to unequip</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              );
-            })}
+          <div className="flex flex-col items-center gap-1">
+            {/* Head */}
+            <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
+            {/* Amulet */}
+            <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
+            {/* Shoulders */}
+            <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
+            {/* Chest */}
+            <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
+            {/* Main Hand + Off Hand */}
+            <div className="flex gap-4 w-full justify-center">
+              <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
+            </div>
+            {/* Gloves */}
+            <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
+            {/* Belt */}
+            <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
+            {/* Ring + Trinket */}
+            <div className="flex gap-4 w-full justify-center">
+              <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
+              <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} />
+            </div>
+            {/* Pants */}
+            <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
           </div>
         </div>
 
