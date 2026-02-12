@@ -1,36 +1,60 @@
 
 
-## Rename the Game
+## Character Panel Redesign
 
-Update the game's title and branding across the entire codebase to reflect the "everyday hero" theme. The new name will be:
+Two main changes to `src/components/game/CharacterPanel.tsx`:
 
-**"The Everyday Adventurer's Guide to Middle-earth"**
+### 1. Stats: Compact Inline List
 
-With a short form **"Everyday Adventurer"** used in tight spaces (like the top bar).
+Replace the current 3x2 grid of stat boxes with a single horizontal row of compact stat chips. Each stat shows:
+- 3-letter label (STR, DEX, etc.)
+- Total value (with green bonus indicator if equipment adds to it)
+- Modifier in parentheses
 
-### Files to Update
+Layout: a single `flex flex-wrap` row with small inline items like `STR 14(+2)` separated by subtle dividers. This cuts the vertical space roughly in half.
 
-**1. `index.html`**
-- Change `<title>` from "Lovable App" to "The Everyday Adventurer's Guide to Middle-earth"
-- Update `og:title` meta tag to match
-- Update `description` and `og:description` to something like "A humble adventurer's journey through Middle-earth"
+AC and Gold will be merged into this same row as additional chips.
 
-**2. `src/pages/AuthPage.tsx`**
-- Change the heading from "Middle-earth" to "The Everyday Adventurer's Guide to Middle-earth" (or a two-line layout: "The Everyday Adventurer's" / "Guide to Middle-earth")
+### 2. Equipment: "Paper Doll" Body Layout
 
-**3. `src/pages/GamePage.tsx`**
-- Top bar title: Change "Middle-earth" to "Everyday Adventurer" (short form for the compact header)
-- Welcome log message: Change "Welcome to Middle-earth!" to "Welcome, Everyday Adventurer!"
+Replace the 3-column grid with a visual body silhouette arrangement using CSS positioning. The slots will be laid out to roughly mirror where they'd appear on a person:
 
-**4. `src/pages/Index.tsx`**
-- Loading text: Change "Entering Middle-earth..." to "Preparing your adventure..."
+```text
+         [Head]
+      [Amulet]
+  [Shoulders]  
+     [Chest]
+[Main Hand]  [Off Hand]
+    [Gloves]
+     [Belt]
+     [Ring]  [Trinket]
+     [Pants]
+```
 
-**5. `src/pages/CharacterCreation.tsx`**
-- Success toast: Change "has entered Middle-earth!" to "has begun their adventure!"
-- Button label: Change "Enter Middle-earth" to "Begin Your Adventure"
+Each slot remains a small clickable box showing the item name (colored by rarity) or "Empty". Tooltips stay the same. The layout uses a centered column with weapons flanking left/right, giving it that classic RPG equipment screen feel.
 
-**6. `src/components/game/NodeView.tsx`**
-- Default description fallback: Change "A quiet place in Middle-earth..." to "A quiet corner of the world..."
+### Technical Details
 
-Total: 6 files, all cosmetic string changes -- no logic modifications.
+**File: `src/components/game/CharacterPanel.tsx`**
+
+**Stats section (lines 106-123)** -- Replace the `grid grid-cols-3` block with:
+- A `flex flex-wrap gap-x-3 gap-y-1 justify-center` container
+- Each stat rendered as a compact inline span: `<span>STR 14<small>(+2)</small></span>`
+- AC and Gold folded in as additional items in the same row (removing the separate AC/Gold section at lines 125-138)
+
+**Equipment section (lines 140-187)** -- Replace the `grid grid-cols-3` layout with:
+- A centered flex-column layout with rows for each body region
+- Row 1: Head (centered)
+- Row 2: Amulet (centered)
+- Row 3: Shoulders (centered)
+- Row 4: Chest (centered)
+- Row 5: Main Hand (left) + Off Hand (right), flanking the body
+- Row 6: Gloves (centered)
+- Row 7: Belt (centered)
+- Row 8: Ring (left) + Trinket (right)
+- Row 9: Pants (centered)
+- Each slot keeps the same interactive behavior (click to unequip, tooltip on hover)
+- Slot boxes will be slightly narrower (~16-18 chars wide) to fit the body shape
+
+No changes to props, hooks, inventory section, or party panel. Pure visual rearrangement.
 
