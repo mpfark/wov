@@ -26,7 +26,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { regions, nodes, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, inventory } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory } = useInventory(character.id);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -202,6 +202,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [character, creatures, addLog, updateCharacter, equipmentBonuses, effectiveAC, rollLoot, degradeEquipment]);
 
+  const handleUseConsumable = useCallback(async (inventoryId: string) => {
+    const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
+    if (result) {
+      addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
+    }
+  }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
+
   if (!currentNode) {
     return (
       <div className="flex min-h-screen items-center justify-center parchment-bg">
@@ -243,6 +250,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onEquip={equipItem}
                 onUnequip={unequipItem}
                 onDrop={dropItem}
+                onUseConsumable={handleUseConsumable}
               />
             </div>
           </ResizablePanel>

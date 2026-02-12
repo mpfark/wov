@@ -71,6 +71,18 @@ export function useInventory(characterId: string | null) {
     fetchInventory();
   }, [fetchInventory]);
 
+  const useConsumable = useCallback(async (inventoryId: string, characterId: string, currentHp: number, maxHp: number, updateCharacter: (updates: { hp: number }) => Promise<void>) => {
+    const inv = inventory.find(i => i.id === inventoryId);
+    if (!inv || inv.item.item_type !== 'consumable') return null;
+    const hpRestore = (inv.item.stats?.hp as number) || 0;
+    if (hpRestore <= 0) return null;
+    const newHp = Math.min(currentHp + hpRestore, maxHp);
+    await updateCharacter({ hp: newHp });
+    await supabase.from('character_inventory').delete().eq('id', inventoryId);
+    fetchInventory();
+    return { restored: newHp - currentHp, itemName: inv.item.name };
+  }, [inventory, fetchInventory]);
+
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
 
@@ -83,5 +95,5 @@ export function useInventory(characterId: string | null) {
     return acc;
   }, {} as Record<string, number>);
 
-  return { inventory, equipped, unequipped, equipmentBonuses, loading, fetchInventory, equipItem, unequipItem, dropItem };
+  return { inventory, equipped, unequipped, equipmentBonuses, loading, fetchInventory, equipItem, unequipItem, dropItem, useConsumable };
 }
