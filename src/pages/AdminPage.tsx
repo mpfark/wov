@@ -156,6 +156,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         nodeId={editingNodeId}
         regionId={selectedRegion}
         allNodes={regionNodes}
+        allNodesGlobal={nodes}
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         onSaved={handleEditorSaved}
