@@ -443,6 +443,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
 
+  const handleSpendPoint = useCallback(async (stat: string) => {
+    if (character.unspent_stat_points <= 0) return;
+    const currentVal = (character as any)[stat] as number;
+    if (currentVal >= 30) return;
+    await updateCharacter({
+      [stat]: currentVal + 1,
+      unspent_stat_points: character.unspent_stat_points - 1,
+    });
+  }, [character, updateCharacter]);
+
   if (nodesLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center parchment-bg">
@@ -493,6 +503,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onUnequip={unequipItem}
                 onDrop={dropItem}
                 onUseConsumable={handleUseConsumable}
+                onSpendPoint={handleSpendPoint}
                 party={party}
                 partyMembers={partyMembers}
                 pendingInvites={pendingInvites}

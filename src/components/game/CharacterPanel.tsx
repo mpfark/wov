@@ -5,7 +5,7 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Trash2, Heart } from 'lucide-react';
+import { Shield, Trash2, Heart, Plus } from 'lucide-react';
 import PartyPanel from './PartyPanel';
 import vitruvianMan from '@/assets/vitruvian-man.png';
 
@@ -18,6 +18,7 @@ interface Props {
   onUnequip: (inventoryId: string) => void;
   onDrop: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
+  onSpendPoint?: (stat: string) => void;
   // Party props
   party: Party | null;
   partyMembers: PartyMember[];
@@ -41,6 +42,20 @@ const RARITY_COLORS: Record<string, string> = {
   uncommon: 'text-chart-2',
   rare: 'text-dwarvish',
   unique: 'text-primary text-glow',
+};
+
+const STAT_FULL_NAMES: Record<string, string> = {
+  str: 'Strength', dex: 'Dexterity', con: 'Constitution',
+  int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
+};
+
+const STAT_DESCRIPTIONS: Record<string, string> = {
+  str: 'Melee attack and damage rolls',
+  dex: 'Ranged attack, AC bonus, initiative',
+  con: 'Hit points and physical resilience',
+  int: 'Arcane power and knowledge checks',
+  wis: 'Perception, healing power, willpower',
+  cha: 'Persuasion, bardic abilities, leadership',
 };
 
 const SLOT_LABELS: Record<string, string> = {
@@ -95,7 +110,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 
 
 export default function CharacterPanel({
-  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
+  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
   party, partyMembers, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
 }: Props) {
@@ -147,26 +162,65 @@ export default function CharacterPanel({
           </div>
         </div>
 
-        {/* Stats + AC + Gold — compact inline chips */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center text-xs">
-          {Object.entries(STAT_LABELS).map(([key, label]) => {
-            const base = (character as any)[key] as number;
-            const bonus = equipmentBonuses[key] || 0;
-            const total = base + bonus;
-            const mod = getStatModifier(total);
-            return (
-              <span key={key} className="text-foreground font-display">
-                {label} {total}
-                {bonus > 0 && <span className="text-chart-2">+{bonus}</span>}
-                <span className="text-primary text-[10px]">({mod >= 0 ? `+${mod}` : mod})</span>
+        {/* Stats — vertical breakdown */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <h3 className="font-display text-xs text-muted-foreground">Attributes</h3>
+            {character.unspent_stat_points > 0 && (
+              <span className="text-xs font-display text-primary text-glow animate-pulse">
+                {character.unspent_stat_points} point{character.unspent_stat_points > 1 ? 's' : ''} to spend
               </span>
-            );
-          })}
-          <span className="text-foreground font-display">
-            AC {totalAC}
-            {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2">+{equipmentBonuses.ac}</span>}
-          </span>
-          <span className="font-display text-primary">Gold {character.gold}</span>
+            )}
+          </div>
+          <div className="space-y-0.5">
+            {Object.entries(STAT_LABELS).map(([key, label]) => {
+              const base = (character as any)[key] as number;
+              const bonus = equipmentBonuses[key] || 0;
+              const total = base + bonus;
+              const mod = getStatModifier(total);
+              const canSpend = character.unspent_stat_points > 0 && base < 30;
+              return (
+                <Tooltip key={key}>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
+                      <span className="font-display text-foreground w-20">{STAT_FULL_NAMES[key]}</span>
+                      <span className="text-muted-foreground flex-1 text-center">
+                        <span className="text-foreground">{base}</span>
+                        {bonus > 0 && <span className="text-chart-2 ml-1">+{bonus}</span>}
+                      </span>
+                      <span className="text-primary text-[10px] w-8 text-right">
+                        ({mod >= 0 ? `+${mod}` : mod})
+                      </span>
+                      {canSpend && onSpendPoint ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 w-5 p-0 ml-1 text-primary hover:text-primary-foreground hover:bg-primary"
+                          onClick={(e) => { e.stopPropagation(); onSpendPoint(key); }}
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      ) : (
+                        <div className="w-5 ml-1" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-popover border-border z-50">
+                    <p className="font-display text-sm">{STAT_FULL_NAMES[key]}</p>
+                    <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[key]}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Base {base}{bonus > 0 ? ` + ${bonus} gear` : ''} = {total} (modifier {mod >= 0 ? `+${mod}` : mod})</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+          <div className="flex gap-3 justify-center text-xs mt-1.5">
+            <span className="font-display text-foreground">
+              AC {totalAC}
+              {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2">+{equipmentBonuses.ac}</span>}
+            </span>
+            <span className="font-display text-primary">Gold {character.gold}</span>
+          </div>
         </div>
 
         {/* Equipment — Paper Doll Layout */}
