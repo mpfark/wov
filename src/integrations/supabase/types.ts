@@ -75,6 +75,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           str: number
+          unspent_stat_points: number
           updated_at: string
           user_id: string
           wis: number
@@ -98,6 +99,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           str?: number
+          unspent_stat_points?: number
           updated_at?: string
           user_id: string
           wis?: number
@@ -121,6 +123,7 @@ export type Database = {
           name?: string
           race?: Database["public"]["Enums"]["character_race"]
           str?: number
+          unspent_stat_points?: number
           updated_at?: string
           user_id?: string
           wis?: number
