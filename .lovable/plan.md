@@ -1,58 +1,62 @@
 
 
-## Rearrange Stats Display in Character Panel
+## Class-Based Combat Abilities
 
-### Current State
-Stats are shown as compact inline chips (e.g., `STR 14+2(+2)`). There's no breakdown of where stat values come from, no tooltip explaining what each stat does, and no visual indicator for unspent stat points.
+Currently every class uses STR modifier and deals 1d8 melee damage. This plan introduces unique combat actions per class, each using the appropriate stat and dice, with flavored log messages.
 
-### Planned Changes
+### Combat Abilities by Class
 
-#### 1. Replace inline stat chips with a vertical stat list
+| Class | Action Name | Stat Used | Damage Dice | Flavor |
+|-------|-------------|-----------|-------------|--------|
+| Warrior | Melee Strike | STR | 1d10 + STR mod | "You swing your blade..." |
+| Wizard | Fireball | INT | 1d8 + INT mod | "You hurl a bolt of arcane flame..." |
+| Ranger | Arrow Shot | DEX | 1d8 + DEX mod | "You loose an arrow..." |
+| Rogue | Backstab | DEX | 1d6 + DEX mod (bonus crit: crits on 19-20) | "You strike from the shadows..." |
+| Healer | Smite | WIS | 1d6 + WIS mod | "You channel divine light..." |
+| Bard | Cutting Words | CHA | 1d6 + CHA mod | "Your mocking verse cuts deep..." |
 
-Each stat will be displayed as a row showing the breakdown:
+### UI Change -- NodeView
 
-```text
-Strength    12 + 2         (+1)  [+]
-            base  gear
-```
+Replace the single "Attack" button with a class-themed button label:
+- Warrior: "Strike"
+- Wizard: "Cast Fireball"
+- Ranger: "Shoot"
+- Rogue: "Backstab"
+- Healer: "Smite"
+- Bard: "Mock"
 
-- **Full stat name** (Strength, Dexterity, etc.) on the left
-- **Base value** (the character's raw stat)
-- **+ Gear bonus** in green (only if > 0)
-- **Modifier** in parentheses on the right
-- **[+] button** on the far right, only visible when `unspent_stat_points > 0`
-
-#### 2. Tooltip on hover for each stat
-
-Hovering a stat row shows what that stat affects:
-
-| Stat | Tooltip |
-|------|---------|
-| STR | Melee attack and damage rolls |
-| DEX | Ranged attack, AC bonus, initiative |
-| CON | Hit points and physical resilience |
-| INT | Arcane power and knowledge checks |
-| WIS | Perception, healing power, willpower |
-| CHA | Persuasion, bardic abilities, leadership |
-
-#### 3. Unspent point indicator
-
-When `unspent_stat_points > 0`, a small `[+]` button appears next to each stat (that isn't at max 30). Clicking it spends one point on that stat immediately. A header line shows remaining points (e.g., "2 points to spend").
-
-AC and Gold remain as compact elements below the stat list.
+The button passes the same `onAttack(creatureId)` -- the class logic is handled in `handleAttack`.
 
 ### Technical Details
 
-**File: `src/components/game/CharacterPanel.tsx`**
-- Replace the `flex flex-wrap` stat chips section (lines 150-170) with a new vertical layout
-- Add a `STAT_DESCRIPTIONS` map for tooltip content
-- Add `STAT_FULL_NAMES` map (str -> "Strength", etc.)
-- Use existing `Tooltip` components for hover info
-- Wire `[+]` buttons to call a new `onSpendPoint` prop that updates a single stat and decrements `unspent_stat_points`
+**New file: `src/lib/class-abilities.ts`**
 
-**File: `src/pages/GamePage.tsx`**
-- Add a `handleSpendPoint` function that calls `updateCharacter` with the incremented stat and decremented points
-- Pass it as `onSpendPoint` to `CharacterPanel`
+Define a `CLASS_COMBAT` config map:
 
-**File: `src/components/game/StatAllocationDialog.tsx`**
-- Kept as-is for the initial level-up bulk allocation; the inline `[+]` buttons provide an alternative way to spend leftover points
+```text
+CLASS_COMBAT = {
+  warrior: { label: "Strike", stat: "str", diceMin: 1, diceMax: 10, critRange: 20, emoji: "sword", verb: "swing your blade at" },
+  wizard:  { label: "Cast Fireball", stat: "int", diceMin: 1, diceMax: 8, critRange: 20, emoji: "fire", verb: "hurl arcane flame at" },
+  ranger:  { label: "Shoot", stat: "dex", diceMin: 1, diceMax: 8, critRange: 20, emoji: "bow", verb: "loose an arrow at" },
+  rogue:   { label: "Backstab", stat: "dex", diceMin: 1, diceMax: 6, critRange: 19, emoji: "dagger", verb: "strike from the shadows at" },
+  healer:  { label: "Smite", stat: "wis", diceMin: 1, diceMax: 6, critRange: 20, emoji: "star", verb: "channel divine light against" },
+  bard:    { label: "Mock", stat: "cha", diceMin: 1, diceMax: 6, critRange: 20, emoji: "music", verb: "unleash cutting words upon" },
+}
+```
+
+**File: `src/pages/GamePage.tsx`** -- Update `handleAttack`:
+- Look up `CLASS_COMBAT[character.class]` to get the stat key, dice range, and crit range
+- Use `character[ability.stat] + equipmentBonuses[ability.stat]` instead of hardcoded STR
+- Use `rollDamage(ability.diceMin, ability.diceMax)` instead of `rollDamage(1, 8)`
+- Crit on `atkRoll >= ability.critRange` instead of `atkRoll === 20`
+- Use the verb/emoji in the log message
+
+**File: `src/components/game/NodeView.tsx`**:
+- Accept `characterClass` prop
+- Import `CLASS_COMBAT` from the new file
+- Change the Attack button label to `CLASS_COMBAT[characterClass]?.label || "Attack"`
+
+**File: `src/pages/GamePage.tsx`** -- Pass `characterClass={character.class}` to `NodeView`
+
+No database changes needed -- this is purely client-side combat logic.
+
