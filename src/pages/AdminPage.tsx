@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Trash2 } from 'lucide-react';
-import RegionGraphView from '@/components/admin/RegionGraphView';
+import { ArrowLeft } from 'lucide-react';
+import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorDialog from '@/components/admin/NodeEditorDialog';
 import RegionManager from '@/components/admin/RegionManager';
 import ItemManager from '@/components/admin/ItemManager';
@@ -33,17 +32,13 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     ]);
     setRegions(r.data || []);
     setNodes(n.data || []);
-    if (!selectedRegion && r.data && r.data.length > 0) {
-      setSelectedRegion(r.data[0].id);
-    }
-  }, [selectedRegion]);
+  }, []);
 
   useEffect(() => { loadData(); }, []);
 
-  const regionNodes = nodes.filter(n => n.region_id === selectedRegion);
-  const currentRegion = regions.find(r => r.id === selectedRegion);
-
   const handleNodeClick = (nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (node) setSelectedRegion(node.region_id);
     setEditingNodeId(nodeId);
     setIsNewNode(false);
     setAdjacentToNodeId(null);
@@ -51,6 +46,11 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   };
 
   const handleAddNodeAdjacent = (fromId: string) => {
+    // Derive region from the source node if possible
+    if (fromId) {
+      const node = nodes.find(n => n.id === fromId);
+      if (node) setSelectedRegion(node.region_id);
+    }
     setEditingNodeId(null);
     setIsNewNode(true);
     setAdjacentToNodeId(fromId || null);
@@ -58,7 +58,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   };
 
   const handleAddNodeBetween = (fromId: string, toId: string) => {
-    // Open new node editor — user will manually set connections after creation
+    const node = nodes.find(n => n.id === fromId);
+    if (node) setSelectedRegion(node.region_id);
     setEditingNodeId(null);
     setIsNewNode(true);
     setEditorOpen(true);
@@ -78,6 +79,9 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     if (selectedRegion === id) setSelectedRegion('');
     loadData();
   };
+
+  // Nodes for the selected region (used by NodeEditorDialog)
+  const regionNodes = nodes.filter(n => n.region_id === selectedRegion);
 
   return (
     <div className="h-screen flex flex-col parchment-bg">
@@ -103,57 +107,28 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         </div>
 
         <TabsContent value="world" className="flex-1 flex flex-col min-h-0 mt-0">
-          {/* Region controls */}
+          {/* Region controls — just the manager button */}
           <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30">
-            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-              <SelectTrigger className="w-48 h-8 text-xs font-display">
-                <SelectValue placeholder="Select region" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border z-50">
-                {regions.map(r => (
-                  <SelectItem key={r.id} value={r.id} className="text-xs">
-                    {r.name} <span className="text-muted-foreground ml-1">(Lvl {r.min_level}–{r.max_level})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {isValar && currentRegion && (
-              <Button variant="destructive" size="sm" onClick={() => deleteRegion(selectedRegion)} className="text-xs h-8">
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            )}
-
             <RegionManager
               regions={regions}
               onCreated={loadData}
               isValar={isValar}
               onDelete={deleteRegion}
             />
-
-            {currentRegion && (
-              <>
-                <span className="text-xs text-primary font-display ml-2">{currentRegion.name}</span>
-                <span className="text-xs text-muted-foreground">Lvl {currentRegion.min_level}–{currentRegion.max_level}</span>
-                <span className="text-xs text-muted-foreground">{regionNodes.length} nodes</span>
-              </>
-            )}
+            <span className="text-xs text-muted-foreground ml-2">
+              {regions.length} regions · {nodes.length} nodes
+            </span>
           </div>
 
-          {/* Graph view */}
+          {/* World map view */}
           <div className="flex-1 overflow-hidden">
-            {selectedRegion ? (
-              <RegionGraphView
-                nodes={regionNodes}
-                onNodeClick={handleNodeClick}
-                onAddNodeBetween={handleAddNodeBetween}
-                onAddNodeAdjacent={handleAddNodeAdjacent}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground font-display text-sm">
-                Select or create a region to begin
-              </div>
-            )}
+            <AdminWorldMapView
+              regions={regions}
+              nodes={nodes}
+              onNodeClick={handleNodeClick}
+              onAddNodeBetween={handleAddNodeBetween}
+              onAddNodeAdjacent={handleAddNodeAdjacent}
+            />
           </div>
         </TabsContent>
 
