@@ -48,8 +48,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: P
     return layoutFromCenter(currentNode, neighbors);
   }, [currentNode, neighbors]);
 
-  const { nodePositions, svgWidth, svgHeight } = useMemo(() => {
-    if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250 };
+  const { nodePositions, svgWidth, svgHeight, SPACING } = useMemo(() => {
+    if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250, SPACING: 120 };
 
     const SPACING = 120;
     const PADDING = 70;
@@ -71,6 +71,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: P
       nodePositions: np,
       svgWidth: (maxX - minX) * SPACING + PADDING * 2,
       svgHeight: (maxY - minY) * SPACING + PADDING * 2,
+      SPACING,
     };
   }, [positions]);
 
@@ -91,6 +92,26 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: P
   }
 
   const allDisplayNodes = [currentNode, ...neighbors];
+
+  // Compute exit stubs for neighbor nodes (connections leading to nodes not displayed)
+  const displayedIds = new Set(allDisplayNodes.map(n => n.id));
+  const exitStubs: Array<{ fromPx: number; fromPy: number; toPx: number; toPy: number }> = [];
+  const STUB_LEN = 30;
+  for (const neighbor of neighbors) {
+    const pos = nodePositions.get(neighbor.id);
+    if (!pos) continue;
+    for (const conn of neighbor.connections) {
+      if (displayedIds.has(conn.node_id)) continue; // already shown
+      const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+      const len = Math.sqrt(offset[0] ** 2 + offset[1] ** 2) || 1;
+      exitStubs.push({
+        fromPx: pos.px,
+        fromPy: pos.py,
+        toPx: pos.px + (offset[0] / len) * STUB_LEN,
+        toPy: pos.py + (offset[1] / len) * STUB_LEN,
+      });
+    }
+  }
 
   return (
     <div className="overflow-auto">
@@ -122,6 +143,15 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: P
             </g>
           );
         })}
+
+        {/* Exit stubs — short dashed lines showing additional exits from neighbors */}
+        {exitStubs.map((stub, i) => (
+          <line
+            key={`stub-${i}`}
+            x1={stub.fromPx} y1={stub.fromPy} x2={stub.toPx} y2={stub.toPy}
+            stroke="hsl(35 20% 35% / 0.4)" strokeWidth={1.5} strokeDasharray="4 3"
+          />
+        ))}
 
         {/* Nodes */}
         {allDisplayNodes.map(node => {
