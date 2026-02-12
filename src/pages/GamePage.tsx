@@ -93,6 +93,77 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // Effective AC including equipment
   const effectiveAC = character.ac + (equipmentBonuses.ac || 0);
 
+  // Track previous node to detect movement for aggressive creature triggers
+  const prevNodeRef = useRef<string | null>(null);
+  const aggroProcessedRef = useRef<Set<string>>(new Set());
+
+  // Aggressive creature auto-attack when entering a node
+  useEffect(() => {
+    if (!character.current_node_id || character.hp <= 0) return;
+
+    // Only trigger on node change
+    if (prevNodeRef.current === character.current_node_id) return;
+    prevNodeRef.current = character.current_node_id;
+    aggroProcessedRef.current = new Set();
+  }, [character.current_node_id, character.hp]);
+
+  // Process aggressive creatures when creatures list updates after a move
+  useEffect(() => {
+    if (!creatures.length || character.hp <= 0) return;
+    const aggressiveCreatures = creatures.filter(
+      c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
+    );
+    if (aggressiveCreatures.length === 0) return;
+
+    // Mark as processed immediately to avoid re-triggering
+    for (const c of aggressiveCreatures) {
+      aggroProcessedRef.current.add(c.id);
+    }
+
+    // Delayed auto-attack to give the UI time to render
+    const timeout = setTimeout(async () => {
+      for (const creature of aggressiveCreatures) {
+        if (character.hp <= 0) break;
+
+        addLog(`⚠️ ${creature.name} is aggressive and attacks you!`);
+
+        // Creature attacks — route to tank if available
+        const tankMember = party && party.tank_id && party.tank_id !== character.id
+          ? partyMembers.find(m => m.character_id === party.tank_id)
+          : null;
+
+        const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
+
+        if (tankMember) {
+          const tankAC = 10;
+          if (creatureAtk >= tankAC) {
+            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+            const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
+            addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
+            await supabase.from('characters').update({ hp: tankNewHp }).eq('id', tankMember.character_id);
+          } else {
+            addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
+          }
+        } else {
+          if (creatureAtk >= effectiveAC) {
+            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+            const playerNewHp = Math.max(character.hp - creatureDmg, 0);
+            addLog(`${creature.name} hits you for ${creatureDmg} damage! (Rolled ${creatureAtk} vs AC ${effectiveAC})`);
+            await updateCharacter({ hp: playerNewHp });
+            if (playerNewHp <= 0) {
+              addLog('💀 You have been defeated...');
+              break;
+            }
+          } else {
+            addLog(`${creature.name} swings at you — misses! (Rolled ${creatureAtk} vs AC ${effectiveAC})`);
+          }
+        }
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [creatures, character.hp, effectiveAC, addLog, updateCharacter, party, partyMembers]);
+
   const handleMove = useCallback(async (nodeId: string) => {
     const targetNode = getNode(nodeId);
     if (!targetNode) return;

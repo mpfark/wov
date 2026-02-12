@@ -58,6 +58,7 @@ export default function NodeView({
                       c.rarity === 'boss' ? 'text-primary text-glow' :
                       c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
                     }`}>{c.name}</span>
+                    {c.is_aggressive && <span className="text-[10px] text-destructive ml-1" title="Aggressive">⚠️</span>}
                     <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
                   </div>
                   <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
