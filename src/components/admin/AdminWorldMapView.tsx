@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -71,7 +71,39 @@ function layoutNodes(nodes: GraphNode[]) {
 
 export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
   const allNodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom(z => Math.min(Math.max(z * delta, 0.2), 3));
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanning) return;
+    setPan({
+      x: panStart.current.panX + (e.clientX - panStart.current.x),
+      y: panStart.current.panY + (e.clientY - panStart.current.y),
+    });
+  }, [isPanning]);
+
+  const handleMouseUp = useCallback(() => setIsPanning(false), []);
+
+  const resetView = useCallback(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
 
   // Sort regions by min_level
   const sortedRegions = useMemo(() => [...regions].sort((a, b) => a.min_level - b.min_level), [regions]);
@@ -184,11 +216,30 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
+      <div
+        ref={containerRef}
+        className="overflow-hidden relative cursor-grab active:cursor-grabbing"
+        style={{ maxHeight: 'calc(100vh - 160px)' }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {/* Zoom controls */}
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          <button onClick={() => setZoom(z => Math.min(z * 1.2, 3))}
+            className="w-7 h-7 rounded bg-card border border-border text-xs font-bold hover:bg-accent transition-colors">+</button>
+          <button onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))}
+            className="w-7 h-7 rounded bg-card border border-border text-xs font-bold hover:bg-accent transition-colors">−</button>
+          <button onClick={resetView}
+            className="h-7 px-2 rounded bg-card border border-border text-[10px] hover:bg-accent transition-colors">Reset</button>
+        </div>
         <svg
           width={Math.max(svgWidth, 400)}
           height={Math.max(svgHeight, 300)}
           className="block mx-auto"
+          style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center' }}
         >
           {/* Region bubbles */}
           {regionBubbles.map(b => (
