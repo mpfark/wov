@@ -89,9 +89,9 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
 
   // Compute region bubble positions and internal node positions
   const { regionBubbles, allNodePositions, svgWidth, svgHeight } = useMemo(() => {
-    const SPACING = 80;
-    const NODE_R = 20;
-    const BUBBLE_PAD = 50;
+    const SPACING = 120;
+    const NODE_R = 28;
+    const BUBBLE_PAD = 60;
     const REGION_GAP = 100;
 
     const bubbles: Array<{
@@ -108,7 +108,7 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
     for (let i = 0; i < sortedRegions.length; i++) {
       const region = sortedRegions[i];
       const rNodes = nodesByRegion.get(region.id) || [];
-      const radius = Math.max(100, Math.sqrt(rNodes.length) * 60);
+      const radius = Math.max(120, Math.sqrt(rNodes.length) * 90);
 
       const cx = cursorX + radius;
       const cy = radius + 60 + (i % 2 === 1 ? 40 : 0); // stagger
@@ -283,7 +283,7 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
                 onMouseLeave={() => setHoveredNode(null)}
               >
                 <circle
-                  cx={pos.px} cy={pos.py} r={20}
+                  cx={pos.px} cy={pos.py} r={28}
                   className={`cursor-pointer transition-all duration-200 ${
                     isHovered ? 'fill-primary/20 stroke-primary' : 'fill-card stroke-border'
                   }`}
@@ -298,11 +298,11 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
                 <text
                   x={pos.px} y={pos.py + 3}
                   textAnchor="middle"
-                  className={`font-display text-[8px] pointer-events-none select-none ${
+                  className={`font-display text-[10px] pointer-events-none select-none ${
                     isHovered ? 'fill-primary' : 'fill-foreground'
                   }`}
                 >
-                  {node.name.length > 10 ? node.name.slice(0, 9) + '…' : node.name}
+                  {node.name.length > 12 ? node.name.slice(0, 11) + '…' : node.name}
                 </text>
 
                 {/* Add adjacent node button on hover */}
@@ -311,12 +311,12 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
                     className="cursor-pointer"
                     onClick={e => { e.stopPropagation(); onAddNodeAdjacent(node.id); }}
                   >
-                    <circle cx={pos.px + 24} cy={pos.py - 16} r={7}
+                    <circle cx={pos.px + 32} cy={pos.py - 22} r={9}
                       className="fill-background stroke-elvish hover:fill-elvish/10 transition-colors"
                       strokeWidth={1.5}
                     />
-                    <text x={pos.px + 24} y={pos.py - 13} textAnchor="middle"
-                      className="fill-elvish text-[8px] font-bold pointer-events-none select-none">+</text>
+                    <text x={pos.px + 32} y={pos.py - 18} textAnchor="middle"
+                      className="fill-elvish text-[10px] font-bold pointer-events-none select-none">+</text>
                   </g>
                 )}
               </g>
