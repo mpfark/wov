@@ -5,6 +5,7 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { Creature } from '@/hooks/useCreatures';
 import { Character } from '@/hooks/useCharacter';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
+import { CLASS_COMBAT } from '@/lib/class-abilities';
 
 interface Props {
   node: GameNode;
@@ -61,7 +62,7 @@ export default function NodeView({
                     <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
                   </div>
                   <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
-                    Attack
+                    {CLASS_COMBAT[character.class]?.label || 'Attack'}
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">
