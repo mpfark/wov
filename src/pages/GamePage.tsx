@@ -530,6 +530,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 currentRegionId={currentNode.region_id}
                 characterLevel={character.level}
                 onNodeClick={handleMove}
+                partyMembers={partyMembers}
+                myCharacterId={character.id}
               />
             </div>
           </ResizablePanel>

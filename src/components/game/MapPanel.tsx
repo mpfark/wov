@@ -1,4 +1,5 @@
 import { Region, GameNode } from '@/hooks/useNodes';
+import { PartyMember } from '@/hooks/useParty';
 import PlayerGraphView from './PlayerGraphView';
 
 interface Props {
@@ -8,10 +9,12 @@ interface Props {
   currentRegionId: string | null;
   characterLevel: number;
   onNodeClick: (nodeId: string) => void;
+  partyMembers?: PartyMember[];
+  myCharacterId?: string;
 }
 
 export default function MapPanel({
-  regions, nodes, currentNodeId, currentRegionId, characterLevel, onNodeClick,
+  regions, nodes, currentNodeId, currentRegionId, characterLevel, onNodeClick, partyMembers, myCharacterId,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
 
@@ -40,6 +43,8 @@ export default function MapPanel({
             currentNodeId={currentNodeId}
             nodes={nodes}
             onNodeClick={onNodeClick}
+            partyMembers={partyMembers}
+            myCharacterId={myCharacterId}
           />
         ) : (
           <p className="text-xs text-muted-foreground italic">No locations mapped...</p>

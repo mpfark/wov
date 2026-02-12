@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
 import { GameNode } from '@/hooks/useNodes';
+import { PartyMember } from '@/hooks/useParty';
 
 interface Props {
   currentNodeId: string;
   nodes: GameNode[];
   onNodeClick: (nodeId: string) => void;
+  partyMembers?: PartyMember[];
+  myCharacterId?: string;
 }
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
@@ -33,7 +36,7 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
   return positions;
 }
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
@@ -101,7 +104,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: P
     const pos = nodePositions.get(neighbor.id);
     if (!pos) continue;
     for (const conn of neighbor.connections) {
-      if (displayedIds.has(conn.node_id)) continue; // already shown
+      if (displayedIds.has(conn.node_id)) continue;
       const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
       const len = Math.sqrt(offset[0] ** 2 + offset[1] ** 2) || 1;
       exitStubs.push({
@@ -112,6 +115,20 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: P
       });
     }
   }
+
+  // Compute party member positions on displayed nodes
+  const partyMembersByNode = (() => {
+    if (!partyMembers || partyMembers.length === 0) return new Map<string, PartyMember[]>();
+    const map = new Map<string, PartyMember[]>();
+    for (const m of partyMembers) {
+      if (!m.character || m.character_id === myCharacterId) continue;
+      const nodeId = m.character.current_node_id;
+      if (!nodeId || !displayedIds.has(nodeId)) continue;
+      if (!map.has(nodeId)) map.set(nodeId, []);
+      map.get(nodeId)!.push(m);
+    }
+    return map;
+  })();
 
   return (
     <div className="overflow-auto">
@@ -209,6 +226,26 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick }: P
               </text>
             </g>
           );
+        })}
+        {/* Party member indicators */}
+        {[...partyMembersByNode.entries()].map(([nodeId, pmembers]) => {
+          const pos = nodePositions.get(nodeId);
+          if (!pos) return null;
+          return pmembers.map((m, i) => {
+            const angle = (i / pmembers.length) * Math.PI * 2 - Math.PI / 2;
+            const r = 20;
+            const cx = pos.px + Math.cos(angle) * r;
+            const cy = pos.py + Math.sin(angle) * r;
+            return (
+              <g key={`pm-${m.id}`}>
+                <circle cx={cx} cy={cy} r={5} className="fill-chart-2 stroke-background" strokeWidth={1.5} />
+                <text x={cx} y={cy + 3} textAnchor="middle" className="fill-background text-[6px] font-bold pointer-events-none select-none">
+                  {m.character.name.charAt(0)}
+                </text>
+                <title>{m.character.name}</title>
+              </g>
+            );
+          });
         })}
       </svg>
     </div>
