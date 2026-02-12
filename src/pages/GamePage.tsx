@@ -11,6 +11,7 @@ import { usePresence } from '@/hooks/usePresence';
 import { useCreatures } from '@/hooks/useCreatures';
 import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
+import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { rollD20, getStatModifier, rollDamage } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow,
   } = useParty(character.id);
+  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Everyday Adventurer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
@@ -42,7 +44,27 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const addLog = useCallback((msg: string) => {
     setEventLog(prev => [...prev.slice(-49), msg]);
-  }, []);
+    // Also write to party combat log if in a party
+    addPartyCombatLog(msg);
+  }, [addPartyCombatLog]);
+
+  // Merge party combat log entries from other players into event log
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!party) return;
+    for (const entry of partyCombatEntries) {
+      if (!seenIdsRef.current.has(entry.id)) {
+        seenIdsRef.current.add(entry.id);
+        // Only add entries we didn't create (avoid duplicates from our own addLog)
+        // We check if the message is already in the last few entries
+        setEventLog(prev => {
+          // If this exact message is already the last entry, skip it
+          if (prev.length > 0 && prev[prev.length - 1] === entry.message) return prev;
+          return [...prev.slice(-49), entry.message];
+        });
+      }
+    }
+  }, [partyCombatEntries, party]);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
