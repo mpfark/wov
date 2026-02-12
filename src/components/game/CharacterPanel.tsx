@@ -179,24 +179,35 @@ export default function CharacterPanel({
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Head circle */}
-              <circle cx="100" cy="22" r="14" stroke="hsl(var(--border))" strokeWidth="1" opacity="0.4" />
-              {/* Neck */}
-              <line x1="100" y1="36" x2="100" y2="50" stroke="hsl(var(--border))" strokeWidth="1" opacity="0.3" />
-              {/* Torso */}
-              <path d="M 70 50 Q 65 55 60 80 L 60 160 Q 60 170 70 175 L 130 175 Q 140 170 140 160 L 140 80 Q 135 55 130 50 Z"
-                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.3" />
-              {/* Arms — left */}
-              <path d="M 60 70 Q 35 80 20 130 Q 18 140 22 145"
-                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
-              {/* Arms — right */}
-              <path d="M 140 70 Q 165 80 180 130 Q 182 140 178 145"
-                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
-              {/* Legs */}
-              <path d="M 80 175 L 75 260 Q 74 270 80 275"
-                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
-              <path d="M 120 175 L 125 260 Q 126 270 120 275"
-                stroke="hsl(var(--border))" strokeWidth="1" opacity="0.25" />
+              <defs>
+                <filter id="silhouetteGlow">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <g filter="url(#silhouetteGlow)">
+                {/* Head circle */}
+                <circle cx="100" cy="22" r="14" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.35" />
+                {/* Neck */}
+                <line x1="100" y1="36" x2="100" y2="50" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.25" />
+                {/* Torso */}
+                <path d="M 70 50 Q 65 55 60 80 L 60 160 Q 60 170 70 175 L 130 175 Q 140 170 140 160 L 140 80 Q 135 55 130 50 Z"
+                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.25" />
+                {/* Arms — left */}
+                <path d="M 60 70 Q 35 80 20 130 Q 18 140 22 145"
+                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
+                {/* Arms — right */}
+                <path d="M 140 70 Q 165 80 180 130 Q 182 140 178 145"
+                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
+                {/* Legs */}
+                <path d="M 80 175 L 75 260 Q 74 270 80 275"
+                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
+                <path d="M 120 175 L 125 260 Q 126 270 120 275"
+                  stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.2" />
+              </g>
             </svg>
 
             {/* Slots layered on top */}
