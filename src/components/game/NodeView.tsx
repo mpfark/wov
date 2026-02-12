@@ -13,14 +13,13 @@ interface Props {
   creatures: Creature[];
   character: Character;
   eventLog: string[];
-  onMove: (nodeId: string) => void;
   onSearch: () => void;
   onAttack: (creatureId: string) => void;
   onOpenVendor?: () => void;
 }
 
 export default function NodeView({
-  node, region, players, creatures, character, eventLog, onMove, onSearch, onAttack, onOpenVendor,
+  node, region, players, creatures, character, eventLog, onSearch, onAttack, onOpenVendor,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
 
@@ -93,21 +92,8 @@ export default function NodeView({
 
       {/* Action Buttons - pinned to bottom */}
       <div className="pt-3 border-t border-border mt-3">
-        <h3 className="font-display text-xs text-muted-foreground mb-1">Travel</h3>
-        <div className="grid grid-cols-2 gap-1.5">
-          {(node.connections as any[]).map((conn: any) => (
-            <Button
-              key={conn.node_id}
-              variant="outline"
-              size="sm"
-              onClick={() => onMove(conn.node_id)}
-              className="font-display text-xs"
-            >
-              {conn.direction}: {conn.label || 'Path'}
-            </Button>
-          ))}
-        </div>
-        <Button variant="secondary" size="sm" onClick={onSearch} className="w-full mt-1.5 font-display text-xs">
+        <h3 className="font-display text-xs text-muted-foreground mb-1">Actions</h3>
+        <Button variant="secondary" size="sm" onClick={onSearch} className="w-full font-display text-xs">
           Search Area
         </Button>
         {onOpenVendor && (
