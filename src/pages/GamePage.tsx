@@ -14,6 +14,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
+import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -331,19 +332,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const creature = creatures.find(c => c.id === creatureId);
     if (!creature) return;
 
-    const strBonus = equipmentBonuses.str || 0;
+    const ability = CLASS_COMBAT[character.class] || CLASS_COMBAT.warrior;
+    const statBonus = equipmentBonuses[ability.stat] || 0;
     const atkRoll = rollD20();
-    const strMod = getStatModifier(character.str + strBonus);
-    const totalAtk = atkRoll + strMod;
+    const statMod = getStatModifier((character as any)[ability.stat] + statBonus);
+    const totalAtk = atkRoll + statMod;
+    const statLabel = ability.stat.toUpperCase();
 
-    if (atkRoll === 20 || (atkRoll !== 1 && totalAtk >= creature.ac)) {
-      const dmg = rollDamage(1, 8) + strMod;
-      const isCrit = atkRoll === 20;
+    if (atkRoll >= ability.critRange || (atkRoll !== 1 && totalAtk >= creature.ac)) {
+      const dmg = rollDamage(ability.diceMin, ability.diceMax) + statMod;
+      const isCrit = atkRoll >= ability.critRange;
       const finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1);
       const newHp = Math.max(creature.hp - finalDmg, 0);
 
       addLog(
-        `${isCrit ? '⚔️ CRITICAL! ' : ''}You rolled ${atkRoll} + ${strMod} STR = ${totalAtk} vs AC ${creature.ac} — Hit! ${finalDmg} damage to ${creature.name}.`
+        `${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}You ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
       );
 
       if (newHp <= 0) {
@@ -448,7 +451,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         }
       }
     } else {
-      addLog(`You rolled ${atkRoll} + ${strMod} STR = ${totalAtk} vs AC ${creature.ac} — Miss!`);
+      addLog(`${ability.emoji} You ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac}.`);
       // Creature still attacks — targets tank if available
       const tankMember = party && party.tank_id && party.tank_id !== character.id
         ? partyMembers.find(m => m.character_id === party.tank_id)
