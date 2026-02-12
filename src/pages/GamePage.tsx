@@ -349,7 +349,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         // Creature dies — award XP, gold, and roll loot
         const goldDrop = Math.floor(creature.level * (creature.rarity === 'boss' ? 25 : creature.rarity === 'rare' ? 15 : 5) * (0.8 + Math.random() * 0.4));
         addLog(`☠️ ${creature.name} has been slain! (+${creature.level * 10} XP, +${goldDrop} gold)`);
-        await supabase.from('creatures').update({ hp: 0, is_alive: false, died_at: new Date().toISOString() }).eq('id', creatureId);
+        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
         
         const newXp = character.xp + creature.level * 10;
         const newGold = character.gold + goldDrop;
@@ -391,7 +391,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         // Roll loot
         await rollLoot(creature.loot_table as any[], creature.name);
       } else {
-        await supabase.from('creatures').update({ hp: newHp }).eq('id', creatureId);
+        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: false });
         // Creature counterattack — targets tank if party has one
         const tankMember = party && party.tank_id && party.tank_id !== character.id
           ? partyMembers.find(m => m.character_id === party.tank_id)

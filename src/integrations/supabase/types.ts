@@ -510,6 +510,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      damage_creature: {
+        Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
