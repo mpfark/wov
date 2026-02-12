@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText } from 'lucide-react';
+import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift } from 'lucide-react';
 import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
 
 interface AdminInventoryItem {
@@ -385,6 +385,9 @@ export default function UserManager({ isValar }: Props) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [editingChar, setEditingChar] = useState<string | null>(null);
   const [charEdits, setCharEdits] = useState<CharacterEdits>({});
+  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string }[]>([]);
+  const [giveItemId, setGiveItemId] = useState<string>('');
+  const [givingItem, setGivingItem] = useState(false);
 
   const callAdmin = useCallback(async (action: string, method: string, body?: any) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -419,6 +422,15 @@ export default function UserManager({ isValar }: Props) {
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
+  useEffect(() => {
+    supabase.from('items').select('id, name, rarity').order('name').then(({ data }) => {
+      if (data) {
+        setAllItems(data);
+        if (data.length > 0 && !giveItemId) setGiveItemId(data[0].id);
+      }
+    });
+  }, []);
+
   const handleResetPassword = async (email: string) => {
     try {
       await callAdmin('reset-password', 'POST', { email });
@@ -452,6 +464,18 @@ export default function UserManager({ isValar }: Props) {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleGiveItem = async (characterId: string) => {
+    if (!giveItemId) return;
+    setGivingItem(true);
+    try {
+      await callAdmin('give-item', 'POST', { character_id: characterId, item_id: giveItemId });
+      const itemName = allItems.find(i => i.id === giveItemId)?.name || 'Item';
+      toast.success(`Gave ${itemName} to character`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+    finally { setGivingItem(false); }
+  };
+
   const filteredUsers = search
     ? users.filter(u =>
         u.email.toLowerCase().includes(search.toLowerCase()) ||
@@ -476,11 +500,18 @@ export default function UserManager({ isValar }: Props) {
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const rarityColor = (rarity: string) => {
+    if (rarity === 'unique') return 'text-primary';
+    if (rarity === 'rare') return 'text-dwarvish';
+    if (rarity === 'uncommon') return 'text-chart-2';
+    return 'text-foreground';
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-full">
-        {/* LEFT — User List */}
-        <div className="w-64 shrink-0 border-r border-border flex flex-col">
+        {/* COL 1 — User List */}
+        <div className="w-56 shrink-0 border-r border-border flex flex-col">
           <div className="p-2 border-b border-border">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -535,53 +566,98 @@ export default function UserManager({ isValar }: Props) {
           )}
         </div>
 
-        {/* CENTER — Character Sheet */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        {/* COL 2 — Character Sheet */}
+        <div className="flex-1 overflow-y-auto min-h-0 border-r border-border">
           {!selectedUser ? (
             <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
-              Select a user to view details
+              Select a user
+            </div>
+          ) : selectedUser.characters.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-xs text-muted-foreground italic">
+              No characters
             </div>
           ) : (
-            <div className="p-4 space-y-4">
-              {/* Header */}
+            <div className="p-3 space-y-3">
+              <h4 className="font-display text-[10px] text-muted-foreground">Character Sheet</h4>
+              {selectedUser.characters.map(c => (
+                <AdminCharacterSheet
+                  key={c.id}
+                  c={c}
+                  isEditing={editingChar === c.id}
+                  charEdits={charEdits}
+                  setCharEdits={setCharEdits}
+                  onEdit={() => { setEditingChar(c.id); setCharEdits({ hp: c.hp, max_hp: c.max_hp, gold: c.gold, level: c.level }); }}
+                  onSave={() => handleSaveCharacter(c.id)}
+                  onCancel={() => { setEditingChar(null); setCharEdits({}); }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* COL 3 — Admin Actions */}
+        <div className="w-64 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+          <div className="px-3 py-2 border-b border-border">
+            <div className="flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+              <h3 className="font-display text-xs text-muted-foreground">Admin Actions</h3>
+            </div>
+          </div>
+
+          {!selectedUser ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-[10px] text-muted-foreground">Select a user</p>
+            </div>
+          ) : (
+            <div className="p-3 space-y-4">
+              {/* User info */}
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-display text-sm text-foreground">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-display text-xs text-foreground truncate">
                     {selectedUser.profile?.display_name || selectedUser.email.split('@')[0]}
-                  </h2>
+                  </h4>
                   {roleBadge(selectedUser.role)}
-                  {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() && (
-                    <Badge variant="destructive" className="text-[10px]">Banned</Badge>
-                  )}
                 </div>
-                <p className="text-[10px] text-muted-foreground">{selectedUser.email}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{selectedUser.email}</p>
               </div>
 
-              {/* Actions */}
-              <div className="flex flex-wrap gap-1.5">
-                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
+              {/* Account info */}
+              <div className="space-y-0.5 text-[10px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Confirmed</span><span>{selectedUser.email_confirmed_at ? 'Yes' : 'No'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Joined</span><span>{formatDate(selectedUser.created_at)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Last sign-in</span><span>{formatDate(selectedUser.last_sign_in_at)}</span></div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="space-y-1.5">
+                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full justify-start"
                   onClick={() => handleResetPassword(selectedUser.email)}>
                   <KeyRound className="w-3 h-3" /> Reset Password
                 </Button>
+
                 {isValar && (
                   <>
-                    <Select value={selectedUser.role} onValueChange={(v) => handleSetRole(selectedUser.id, v)}>
-                      <SelectTrigger className="h-7 w-28 text-[10px]">
-                        <Shield className="w-3 h-3 mr-1" /><SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50">
-                        <SelectItem value="player" className="text-xs">Player</SelectItem>
-                        <SelectItem value="maiar" className="text-xs">Maiar</SelectItem>
-                        <SelectItem value="valar" className="text-xs">Valar</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div>
+                      <p className="text-[9px] text-muted-foreground mb-1">Role</p>
+                      <Select value={selectedUser.role} onValueChange={(v) => handleSetRole(selectedUser.id, v)}>
+                        <SelectTrigger className="h-7 w-full text-[10px]">
+                          <Shield className="w-3 h-3 mr-1" /><SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          <SelectItem value="player" className="text-xs">Player</SelectItem>
+                          <SelectItem value="maiar" className="text-xs">Maiar</SelectItem>
+                          <SelectItem value="valar" className="text-xs">Valar</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() ? (
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full justify-start"
                         onClick={() => handleBan(selectedUser.id, false)}>
                         <UserCheck className="w-3 h-3" /> Unban
                       </Button>
                     ) : (
-                      <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1"
+                      <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 w-full justify-start"
                         onClick={() => handleBan(selectedUser.id, true)}>
                         <Ban className="w-3 h-3" /> Ban
                       </Button>
@@ -590,42 +666,48 @@ export default function UserManager({ isValar }: Props) {
                 )}
               </div>
 
-              {/* Account info */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px]">
-                <span className="text-muted-foreground">Email confirmed</span>
-                <span>{selectedUser.email_confirmed_at ? 'Yes' : 'No'}</span>
-                <span className="text-muted-foreground">Joined</span>
-                <span>{formatDate(selectedUser.created_at)}</span>
-                <span className="text-muted-foreground">Last sign-in</span>
-                <span>{formatDate(selectedUser.last_sign_in_at)}</span>
-              </div>
+              {/* Give Item */}
+              {selectedUser.characters.length > 0 && (
+                <div className="border-t border-border pt-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Gift className="w-3.5 h-3.5 text-primary" />
+                    <h4 className="font-display text-xs text-muted-foreground">Give Item</h4>
+                  </div>
 
-              {/* Characters — Full Sheet Mirror */}
-              {selectedUser.characters.length > 0 ? (
-                <div className="space-y-4">
-                  <h4 className="font-display text-[10px] text-muted-foreground">Characters</h4>
                   {selectedUser.characters.map(c => (
-                    <AdminCharacterSheet
-                      key={c.id}
-                      c={c}
-                      isEditing={editingChar === c.id}
-                      charEdits={charEdits}
-                      setCharEdits={setCharEdits}
-                      onEdit={() => { setEditingChar(c.id); setCharEdits({ hp: c.hp, max_hp: c.max_hp, gold: c.gold, level: c.level }); }}
-                      onSave={() => handleSaveCharacter(c.id)}
-                      onCancel={() => { setEditingChar(null); setCharEdits({}); }}
-                    />
+                    <div key={c.id} className="space-y-1.5 mb-3">
+                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
+                      <Select value={giveItemId} onValueChange={setGiveItemId}>
+                        <SelectTrigger className="h-7 w-full text-[10px]">
+                          <SelectValue placeholder="Select item..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50 max-h-60">
+                          {allItems.map(item => (
+                            <SelectItem key={item.id} value={item.id} className="text-xs">
+                              <span className={rarityColor(item.rarity)}>{item.name}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px] gap-1 w-full"
+                        disabled={!giveItemId || givingItem}
+                        onClick={() => handleGiveItem(c.id)}
+                      >
+                        <Gift className="w-3 h-3" /> Give to {c.name}
+                      </Button>
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <p className="text-[10px] text-muted-foreground italic">No characters</p>
               )}
             </div>
           )}
         </div>
 
-        {/* RIGHT — Player Logs */}
-        <div className="w-72 shrink-0 border-l border-border flex flex-col">
+        {/* COL 4 — Player Logs */}
+        <div className="w-56 shrink-0 flex flex-col">
           <div className="px-3 py-2 border-b border-border">
             <div className="flex items-center gap-1.5">
               <ScrollText className="w-3.5 h-3.5 text-muted-foreground" />
