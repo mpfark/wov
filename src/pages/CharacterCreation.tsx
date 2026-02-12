@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import {
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
-  STAT_LABELS, RACE_STATS, CLASS_STATS, calculateStats, calculateHP, calculateAC,
+  STAT_LABELS, RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC,
+  calculateStats, calculateHP, calculateAC,
 } from '@/lib/game-data';
 
 interface Props {
@@ -117,6 +118,12 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
                           {(val as number) > 0 ? '+' : ''}{val as number} {STAT_LABELS[stat]}
                         </span>
                       ))}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-display bg-destructive/15 text-blood">
+                        HP {CLASS_BASE_HP[key]}
+                      </span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-display bg-muted text-muted-foreground">
+                        AC {CLASS_BASE_AC[key]}
+                      </span>
                     </div>
                   </button>
                 ))}
