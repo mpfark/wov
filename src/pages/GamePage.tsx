@@ -154,41 +154,40 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // Effective AC including equipment
   const effectiveAC = character.ac + (equipmentBonuses.ac || 0);
 
-  // Track previous node to detect movement for aggressive creature triggers
+  // Track node entry to trigger aggressive creature auto-attacks only once per move
   const prevNodeRef = useRef<string | null>(null);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
+  const pendingAggroRef = useRef(false);
 
-  // Aggressive creature auto-attack when entering a node
+  // Flag that we moved to a new node — aggro should be checked once creatures load
   useEffect(() => {
     if (!character.current_node_id || character.hp <= 0) return;
-
-    // Only trigger on node change
     if (prevNodeRef.current === character.current_node_id) return;
     prevNodeRef.current = character.current_node_id;
     aggroProcessedRef.current = new Set();
+    pendingAggroRef.current = true;
   }, [character.current_node_id, character.hp]);
 
-  // Process aggressive creatures when creatures list updates after a move
+  // Process aggressive creatures ONLY after a node change (pendingAggroRef)
   useEffect(() => {
-    if (!creatures.length || character.hp <= 0) return;
+    if (!pendingAggroRef.current || !creatures.length || character.hp <= 0) return;
+    pendingAggroRef.current = false;
+
     const aggressiveCreatures = creatures.filter(
       c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
     );
     if (aggressiveCreatures.length === 0) return;
 
-    // Mark as processed immediately to avoid re-triggering
     for (const c of aggressiveCreatures) {
       aggroProcessedRef.current.add(c.id);
     }
 
-    // Delayed auto-attack to give the UI time to render
     const timeout = setTimeout(async () => {
       for (const creature of aggressiveCreatures) {
         if (character.hp <= 0) break;
 
         addLog(`⚠️ ${creature.name} is aggressive and attacks you!`);
 
-        // Creature attacks — route to tank if available
         const tankMember = party && party.tank_id && party.tank_id !== character.id
           ? partyMembers.find(m => m.character_id === party.tank_id)
           : null;
