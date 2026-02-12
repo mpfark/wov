@@ -223,6 +223,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
 
     try {
+      // If this player is following the leader, reset follow since they moved independently
+      if (party && !isLeader && myMembership?.is_following) {
+        await toggleFollow(false);
+        addLog('You break away from the party leader.');
+      }
       await updateCharacter({ current_node_id: nodeId });
       addLog(`You travel to ${targetNode.name}.`);
       // Move followers if I'm the party leader
