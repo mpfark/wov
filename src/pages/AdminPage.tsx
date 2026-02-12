@@ -9,6 +9,7 @@ import RegionGraphView from '@/components/admin/RegionGraphView';
 import NodeEditorDialog from '@/components/admin/NodeEditorDialog';
 import RegionManager from '@/components/admin/RegionManager';
 import ItemManager from '@/components/admin/ItemManager';
+import CreatureManager from '@/components/admin/CreatureManager';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -94,6 +95,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         <div className="px-4 pt-2 border-b border-border bg-card/30">
           <TabsList className="h-8">
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
+            <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
           </TabsList>
         </div>
@@ -151,6 +153,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="creatures" className="flex-1 min-h-0 mt-0">
+          <CreatureManager />
         </TabsContent>
 
         <TabsContent value="items" className="flex-1 min-h-0 mt-0">
