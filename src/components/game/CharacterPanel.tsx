@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shield, Trash2, Heart } from 'lucide-react';
 import PartyPanel from './PartyPanel';
+import vitruvianMan from '@/assets/vitruvian-man.png';
 
 interface Props {
   character: Character;
@@ -174,60 +175,11 @@ export default function CharacterPanel({
           <div className="relative flex flex-col items-center gap-1">
             {/* Body silhouette SVG behind slots */}
             {/* Vitruvian Man silhouette */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              viewBox="0 0 240 420"
-              preserveAspectRatio="xMidYMid meet"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <filter id="silhouetteGlow">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              <g filter="url(#silhouetteGlow)">
-                {/* Head */}
-                <ellipse cx="120" cy="42" rx="14" ry="17" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.3" />
-                {/* Neck */}
-                <line x1="120" y1="59" x2="120" y2="72" stroke="hsl(var(--primary))" strokeWidth="0.8" opacity="0.25" />
-                {/* Shoulders line */}
-                <line x1="72" y1="78" x2="168" y2="78" stroke="hsl(var(--primary))" strokeWidth="0.6" opacity="0.2" />
-                {/* Torso */}
-                <path d="M 88 72 L 72 78 L 75 140 L 80 170 Q 85 180 100 182 L 140 182 Q 155 180 160 170 L 165 140 L 168 78 L 152 72 Z"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
-                {/* Waist line */}
-                <path d="M 88 168 Q 120 175 152 168" stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
-                {/* Left arm */}
-                <path d="M 72 78 L 55 120 L 48 160 L 45 175"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
-                {/* Left hand */}
-                <ellipse cx="44" cy="180" rx="5" ry="7" stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
-                {/* Right arm */}
-                <path d="M 168 78 L 185 120 L 192 160 L 195 175"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
-                {/* Right hand */}
-                <ellipse cx="196" cy="180" rx="5" ry="7" stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
-                {/* Left leg */}
-                <path d="M 105 182 L 95 240 L 88 310 L 86 340"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
-                {/* Left foot */}
-                <path d="M 86 340 L 78 348 L 75 350 Q 74 352 80 352 L 92 350"
-                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
-                {/* Right leg */}
-                <path d="M 135 182 L 145 240 L 152 310 L 154 340"
-                  stroke="hsl(var(--primary))" strokeWidth="0.7" opacity="0.2" />
-                {/* Right foot */}
-                <path d="M 154 340 L 162 348 L 165 350 Q 166 352 160 352 L 148 350"
-                  stroke="hsl(var(--primary))" strokeWidth="0.5" opacity="0.15" />
-                {/* Center line (spine) */}
-                <line x1="120" y1="72" x2="120" y2="182" stroke="hsl(var(--primary))" strokeWidth="0.4" opacity="0.1" strokeDasharray="4 4" />
-              </g>
-            </svg>
+            <img
+              src={vitruvianMan}
+              alt=""
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-20"
+            />
 
             {/* Equipment slots — 3-column grid */}
             <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
