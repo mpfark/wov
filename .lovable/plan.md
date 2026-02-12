@@ -1,50 +1,50 @@
 
 
-## Vitruvian Man Silhouette + Rearranged Slots + Boots
+## Admin World Map -- All Regions with Grouped Nodes
 
-### 1. Database: Add "boots" to the item_slot enum
+Replace the current single-region graph view in the **Admin World tab** with a full world map that shows **all regions at once**, each as a labeled bubble containing its nodes. The player-side map remains unchanged.
 
-A migration is needed to add `'boots'` as a new value to the `item_slot` enum type so items can use the boots slot.
+### What Changes
 
-```sql
-ALTER TYPE item_slot ADD VALUE 'boots';
-```
+**Current behavior**: The admin World tab has a region dropdown, and shows only the nodes for the selected region.
 
-### 2. SVG: Replace current silhouette with Vitruvian Man
+**New behavior**: The World tab shows a single SVG map with all regions visible. Each region is a large circle containing its nodes. Cross-region connections (like Woody End to The Bree Gate) are visible as lines between region bubbles. Clicking a node still opens the node editor. The region dropdown is replaced with an "All Regions" overview, though clicking a region bubble or node still lets you edit it.
 
-Replace the current simple stick-figure SVG with a Vitruvian Man-inspired silhouette -- a figure with outstretched arms and legs inscribed in a circle, drawn with thin glowing primary-colored lines. This keeps the magical glow filter but gives a much more iconic, recognizable look.
+### Visual Layout
 
-### 3. Rearrange Equipment Slots
+- Regions arranged left-to-right sorted by `min_level`
+- Each region rendered as a large translucent circle with its name and level range as a label
+- Nodes laid out inside their region circle using the existing direction-based BFS layout, but scaled down
+- Intra-region edges drawn as dashed lines inside the bubble
+- Cross-region edges drawn as longer dashed lines between bubbles
+- Admin "+" buttons preserved on edges and node hover for adding nodes
+- Current admin interactions (click node to edit, add node adjacent/between) all still work
 
-New layout (read top to bottom, left to right):
+### Files
 
-```text
-Row 1: [Trinket]    [Head]     [Amulet]
-Row 2: [Shoulders]  [Chest]    [Gloves]  
-Row 3: [Main Hand]  [Belt]     [Off Hand]
-Row 4: [Ring]        [Pants]    (empty)
-Row 5:              [Boots]
-```
+**New: `src/components/admin/AdminWorldMapView.tsx`**
+- Accepts `regions`, `nodes` (all nodes), `onNodeClick`, `onAddNodeBetween`, `onAddNodeAdjacent`
+- Groups nodes by `region_id`
+- Positions region bubbles in a row/grid sorted by `min_level`, with vertical stagger to avoid overlap
+- Each bubble radius scales with node count: `Math.max(100, sqrt(nodeCount) * 60)`
+- Inside each bubble, runs the existing BFS direction layout but with tighter spacing (~80px) and smaller node circles (r=20)
+- Draws intra-region edges inside each bubble
+- Detects cross-region connections (where a node's connection points to a node in a different region) and draws them as lines between the two bubbles
+- Region label (name + level range) rendered above each bubble
+- Preserves hover-to-add-node and midpoint "+" buttons from current `RegionGraphView`
 
-- Head centered with Trinket on the left, Amulet on the right
-- Chest centered with Shoulders left, Gloves right
-- Belt centered with Main Hand left, Off Hand right
-- Ring on the left, Pants centered
-- Boots centered at the bottom (new slot)
-
-### 4. Update SLOT_LABELS and EquipSlot references
-
-Add `boots: 'Boots'` to the `SLOT_LABELS` map and add the new `EquipSlot` for boots in the layout.
+**Modified: `src/pages/AdminPage.tsx`**
+- Remove the region `Select` dropdown and per-region filtering from the World tab
+- Replace `RegionGraphView` with `AdminWorldMapView`, passing all `regions` and all `nodes`
+- Keep `selectedRegion` state but set it when a node is clicked (derived from the clicked node's `region_id`) so the `NodeEditorDialog` still gets the correct `regionId`
+- Keep `RegionManager` button for creating/deleting regions
+- Pass `allNodes` filtered by region to `NodeEditorDialog` (use the clicked node's region)
 
 ### Technical Details
 
-**Migration**: Add `'boots'` to `item_slot` enum.
-
-**File: `src/components/game/CharacterPanel.tsx`**:
-- Replace the SVG body (lines 175-211) with a Vitruvian Man figure: a circle, a human outline with outstretched arms and spread legs, all with the same glow filter and primary color styling
-- Rearrange the slot rows (lines 213-228) into a 3-column grid layout with the arrangement described above
-- Add `boots: 'Boots'` to `SLOT_LABELS`
-- Add a new `EquipSlot` for boots at the bottom
-
-No changes to hooks, inventory logic, or party panel.
+- Region bubble positions: sort regions by `min_level`, place them in a row with ~300px horizontal spacing and alternating Y offset (+/- 40px) for visual interest
+- Node layout inside bubble: reuse the same `layoutNodes` BFS function from `RegionGraphView`, then offset all positions relative to the bubble center
+- Cross-region edge detection: for each node, check if any `connection.node_id` belongs to a node with a different `region_id`; draw a line from the source node position to the target node position across bubbles
+- SVG viewBox computed dynamically to fit all bubbles
+- Scrollable container with pan support via overflow-auto
 
