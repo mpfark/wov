@@ -25,9 +25,10 @@ interface Props {
   onSignOut: () => void;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
+  startingNodeId?: string;
 }
 
-export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin }: Props) {
+export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId }: Props) {
   const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
@@ -42,6 +43,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [vendorOpen, setVendorOpen] = useState(false);
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
+  const [isDead, setIsDead] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   const ownLogIdsRef = useRef<Set<string>>(new Set());
@@ -100,6 +102,23 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, [character.hp, character.max_hp, regenBuff, updateCharacter]);
 
+  // Death detection and respawn
+  useEffect(() => {
+    if (character.hp > 0 || isDead) return;
+    setIsDead(true);
+    const goldLost = Math.floor(character.gold * 0.1);
+    const respawnTimeout = setTimeout(async () => {
+      const respawnNode = startingNodeId || character.current_node_id;
+      await updateCharacter({
+        hp: 1,
+        gold: character.gold - goldLost,
+        current_node_id: respawnNode,
+      });
+      addLog(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
+      setIsDead(false);
+    }, 3000);
+    return () => clearTimeout(respawnTimeout);
+  }, [character.hp, isDead, character.gold, startingNodeId, updateCharacter, addLog]);
 
   // Sync follower's local character when leader moves them
   // The party realtime subscription updates faster than the character subscription in some cases
@@ -202,6 +221,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [equipped, addLog, fetchInventory]);
 
   const handleMove = useCallback(async (nodeId: string) => {
+    if (isDead) return;
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
     const targetRegion = getRegion(targetNode.region_id);
@@ -257,9 +277,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     } catch {
       addLog('Failed to move.');
     }
-  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty]);
+  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead]);
 
   const handleSearch = useCallback(async () => {
+    if (isDead) return;
     if (!currentNode) return;
     const roll = rollD20();
     const searchItems = currentNode.searchable_items as any[];
@@ -282,7 +303,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     } else {
       addLog(`Search roll: ${roll} — You find nothing of note.`);
     }
-  }, [currentNode, character.id, addLog, fetchInventory]);
+  }, [currentNode, character.id, addLog, fetchInventory, isDead]);
 
   const rollLoot = useCallback(async (lootTable: any[], creatureName: string) => {
     if (!lootTable || lootTable.length === 0) return;
@@ -329,6 +350,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // degradeEquipment moved above handleMove
 
   const handleAttack = useCallback(async (creatureId: string) => {
+    if (isDead) return;
     const creature = creatures.find(c => c.id === creatureId);
     if (!creature) return;
 
@@ -478,7 +500,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         }
       }
     }
-  }, [character, creatures, addLog, updateCharacter, equipmentBonuses, effectiveAC, rollLoot, degradeEquipment, party, partyMembers]);
+  }, [character, creatures, addLog, updateCharacter, equipmentBonuses, effectiveAC, rollLoot, degradeEquipment, party, partyMembers, isDead]);
 
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
@@ -652,6 +674,18 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
       {/* Stat Allocation Dialog */}
       <StatAllocationDialog character={character} onAllocate={updateCharacter} />
+
+      {/* Death Overlay */}
+      {isDead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <div className="text-center space-y-3 animate-pulse">
+            <p className="font-display text-4xl text-destructive">💀</p>
+            <p className="font-display text-2xl text-destructive">You Have Fallen</p>
+            <p className="text-sm text-muted-foreground">Respawning at the starting area...</p>
+            <p className="text-xs text-muted-foreground">You lost {Math.floor(character.gold * 0.1)} gold.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

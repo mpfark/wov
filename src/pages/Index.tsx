@@ -62,6 +62,7 @@ const Index = () => {
       onSignOut={signOut}
       isAdmin={isAdmin}
       onOpenAdmin={() => setShowAdmin(true)}
+      startingNodeId={startingNode?.id ?? nodes[0]?.id}
     />
   );
 };
