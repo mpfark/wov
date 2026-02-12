@@ -338,6 +338,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const statMod = getStatModifier((character as any)[ability.stat] + statBonus);
     const totalAtk = atkRoll + statMod;
     const statLabel = ability.stat.toUpperCase();
+    const who = party ? character.name : 'You';
 
     if (atkRoll >= ability.critRange || (atkRoll !== 1 && totalAtk >= creature.ac)) {
       const dmg = rollDamage(ability.diceMin, ability.diceMax) + statMod;
@@ -346,7 +347,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const newHp = Math.max(creature.hp - finalDmg, 0);
 
       addLog(
-        `${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}You ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
+        `${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
       );
 
       if (newHp <= 0) {
@@ -409,7 +410,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             }
           }
 
-          addLog(`🎉 Level Up! You are now level ${newLevel}! You gained 2 stat points.`);
+          addLog(`🎉 Level Up! ${who} ${party ? 'is' : 'are'} now level ${newLevel}! ${party ? `${who} gained` : 'You gained'} 2 stat points.`);
           await updateCharacter(levelUpUpdates);
         } else {
           await updateCharacter({ xp: newXp, gold: newGold });
@@ -439,19 +440,19 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           if (creatureAtk >= effectiveAC) {
             const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
             const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-            addLog(`${creature.name} strikes back! Rolled ${creatureAtk} vs AC ${effectiveAC} — Hit! ${creatureDmg} damage.`);
+            addLog(`${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${effectiveAC} — Hit! ${creatureDmg} damage.`);
             await updateCharacter({ hp: playerNewHp });
             await degradeEquipment();
             if (playerNewHp <= 0) {
-              addLog('💀 You have been defeated...');
+              addLog(`💀 ${who} ${party ? 'has' : 'have'} been defeated...`);
             }
           } else {
-            addLog(`${creature.name} attacks — misses!`);
+            addLog(`${creature.name} attacks ${who} — misses!`);
           }
         }
       }
     } else {
-      addLog(`${ability.emoji} You ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac}.`);
+      addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac}.`);
       // Creature still attacks — targets tank if available
       const tankMember = party && party.tank_id && party.tank_id !== character.id
         ? partyMembers.find(m => m.character_id === party.tank_id)
@@ -471,7 +472,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         if (creatureAtk >= effectiveAC) {
           const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
           const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-          addLog(`${creature.name} retaliates! ${creatureDmg} damage.`);
+          addLog(`${creature.name} retaliates at ${who}! ${creatureDmg} damage.`);
           await updateCharacter({ hp: playerNewHp });
           await degradeEquipment();
         }
