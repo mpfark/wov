@@ -4,6 +4,7 @@ import CharacterPanel from '@/components/game/CharacterPanel';
 import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
+import LootShareDialog, { LootDrop } from '@/components/game/LootShareDialog';
 import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
@@ -35,6 +36,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   } = useParty(character.id);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome to Middle-earth!']);
   const [vendorOpen, setVendorOpen] = useState(false);
+  const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
   const addLog = useCallback((msg: string) => {
@@ -118,19 +120,45 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const rollLoot = useCallback(async (lootTable: any[], creatureName: string) => {
     if (!lootTable || lootTable.length === 0) return;
+    const droppedItems: LootDrop[] = [];
     for (const entry of lootTable) {
       if (Math.random() <= (entry.chance || 0.1)) {
-        const { data: item } = await supabase.from('items').select('name').eq('id', entry.item_id).single();
+        const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
         if (item) {
-          await supabase.from('character_inventory').insert({
-            character_id: character.id, item_id: entry.item_id, current_durability: 100,
-          });
+          droppedItems.push({ item_id: entry.item_id, item_name: item.name, item_rarity: item.rarity });
           addLog(`💎 ${creatureName} dropped ${item.name}!`);
-          fetchInventory();
         }
       }
     }
-  }, [character.id, addLog, fetchInventory]);
+    if (droppedItems.length === 0) return;
+
+    // If in a party, show loot sharing dialog; otherwise auto-assign
+    if (party && partyMembers.length > 1) {
+      setPendingLoot({ loot: droppedItems, creatureName });
+    } else {
+      for (const drop of droppedItems) {
+        await supabase.from('character_inventory').insert({
+          character_id: character.id, item_id: drop.item_id, current_durability: 100,
+        });
+      }
+      fetchInventory();
+    }
+  }, [character.id, addLog, fetchInventory, party, partyMembers]);
+
+  const handleLootDistribute = useCallback(async (assignments: Record<string, string>) => {
+    for (const [itemId, charId] of Object.entries(assignments)) {
+      await supabase.from('character_inventory').insert({
+        character_id: charId, item_id: itemId, current_durability: 100,
+      });
+      const lootItem = pendingLoot?.loot.find(l => l.item_id === itemId);
+      const member = partyMembers.find(m => m.character_id === charId);
+      if (lootItem && member) {
+        addLog(`📦 ${lootItem.item_name} → ${member.character.name}`);
+      }
+    }
+    setPendingLoot(null);
+    fetchInventory();
+  }, [pendingLoot, partyMembers, addLog, fetchInventory]);
 
   const degradeEquipment = useCallback(async () => {
     // Degrade all equipped items by 1 durability
@@ -378,6 +406,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
+        />
+      )}
+
+      {/* Loot Share Dialog */}
+      {pendingLoot && party && (
+        <LootShareDialog
+          open={true}
+          loot={pendingLoot.loot}
+          partyMembers={partyMembers}
+          creatureName={pendingLoot.creatureName}
+          onConfirm={handleLootDistribute}
         />
       )}
     </div>
