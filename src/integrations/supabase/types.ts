@@ -139,6 +139,35 @@ export type Database = {
           },
         ]
       }
+      class_starting_gear: {
+        Row: {
+          class: Database["public"]["Enums"]["character_class"]
+          created_at: string
+          id: string
+          item_id: string
+        }
+        Insert: {
+          class: Database["public"]["Enums"]["character_class"]
+          created_at?: string
+          id?: string
+          item_id: string
+        }
+        Update: {
+          class?: Database["public"]["Enums"]["character_class"]
+          created_at?: string
+          id?: string
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_starting_gear_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creatures: {
         Row: {
           ac: number
