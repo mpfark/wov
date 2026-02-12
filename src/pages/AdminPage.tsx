@@ -96,8 +96,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         <div className="flex-1" />
       </div>
 
-      <Tabs defaultValue="world" className="flex-1 flex flex-col min-h-0">
-        <div className="px-4 pt-2 border-b border-border bg-card/30">
+      <Tabs defaultValue="world" className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="px-4 pt-2 border-b border-border bg-card/30 shrink-0">
           <TabsList className="h-8">
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
             <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
@@ -106,9 +106,9 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           </TabsList>
         </div>
 
-        <TabsContent value="world" className="flex-1 flex flex-col min-h-0 mt-0">
+        <TabsContent value="world" className="flex-1 flex flex-col min-h-0 mt-0 overflow-hidden">
           {/* Region controls — just the manager button */}
-          <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30">
+          <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30 shrink-0">
             <RegionManager
               regions={regions}
               onCreated={loadData}
@@ -132,15 +132,15 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           </div>
         </TabsContent>
 
-        <TabsContent value="creatures" className="flex-1 min-h-0 mt-0">
+        <TabsContent value="creatures" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <CreatureManager />
         </TabsContent>
 
-        <TabsContent value="items" className="flex-1 min-h-0 mt-0">
+        <TabsContent value="items" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <ItemManager />
         </TabsContent>
 
-        <TabsContent value="users" className="flex-1 min-h-0 mt-0">
+        <TabsContent value="users" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <UserManager isValar={isValar} />
         </TabsContent>
       </Tabs>
