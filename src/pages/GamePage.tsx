@@ -459,7 +459,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
           <ResizablePanel defaultSize={50} minSize={35}>
             <div className="h-full ornate-border bg-card/60 flex flex-col">
-              <div className="flex-1 min-h-0">
+              <div className="flex-[2] min-h-0">
                 <NodeView
                   node={currentNode}
                   region={currentRegion}
@@ -472,10 +472,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
                 />
               </div>
-              {/* Event Log - docked at bottom of middle column */}
-              <div className="border-t border-border px-3 py-2">
-                <h3 className="font-display text-xs text-muted-foreground mb-1">Event Log</h3>
-                <div className="h-28 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
+              {/* Event Log - docked at bottom of middle column, 1/3 height */}
+              <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
+                <h3 className="font-display text-xs text-muted-foreground mb-1 shrink-0">Event Log</h3>
+                <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
                   {eventLog.length === 0 ? (
                     <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
                   ) : (
