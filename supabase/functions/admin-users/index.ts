@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
       const [rolesRes, charsRes, profilesRes] = await Promise.all([
         adminClient.from("user_roles").select("*").in("user_id", userIds),
-        adminClient.from("characters").select("id, name, level, class, race, hp, max_hp, gold, current_node_id").in("user_id", userIds),
+        adminClient.from("characters").select("id, user_id, name, level, class, race, hp, max_hp, gold, current_node_id").in("user_id", userIds),
         adminClient.from("profiles").select("*").in("user_id", userIds),
       ]);
 
