@@ -35,8 +35,8 @@ export default function AuthPage() {
     <div className="flex min-h-screen items-center justify-center parchment-bg p-4">
       <Card className="w-full max-w-md ornate-border bg-card/90 backdrop-blur">
         <CardHeader className="text-center">
-          <h1 className="font-display text-3xl text-primary text-glow mb-2">
-            Middle-earth
+          <h1 className="font-display text-2xl text-primary text-glow mb-2 leading-tight">
+            The Everyday Adventurer's<br />Guide to Middle-earth
           </h1>
           <CardTitle className="font-display text-xl text-foreground">
             {isLogin ? 'Enter the Realm' : 'Join the Fellowship'}

@@ -18,7 +18,7 @@ const Index = () => {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center parchment-bg">
-        <p className="font-display text-primary text-glow animate-pulse">Entering Middle-earth...</p>
+        <p className="font-display text-primary text-glow animate-pulse">Preparing your adventure...</p>
       </div>
     );
   }
