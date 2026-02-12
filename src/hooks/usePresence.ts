@@ -9,6 +9,9 @@ export interface PlayerPresence {
   level: number;
 }
 
+// Only show players whose last_online is within the last 2 minutes
+const ONLINE_THRESHOLD_MS = 2 * 60 * 1000;
+
 export function usePresence(nodeId: string | null) {
   const [playersHere, setPlayersHere] = useState<PlayerPresence[]>([]);
 
@@ -16,10 +19,12 @@ export function usePresence(nodeId: string | null) {
     if (!nodeId) { setPlayersHere([]); return; }
 
     const fetchPlayers = async () => {
+      const cutoff = new Date(Date.now() - ONLINE_THRESHOLD_MS).toISOString();
       const { data } = await supabase
         .from('characters')
         .select('id, name, race, class, level')
-        .eq('current_node_id', nodeId);
+        .eq('current_node_id', nodeId)
+        .gte('last_online', cutoff);
       if (data) setPlayersHere(data as PlayerPresence[]);
     };
 
