@@ -348,12 +348,35 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
       if (newHp <= 0) {
         // Creature dies — award XP, gold, and roll loot
-        const goldDrop = Math.floor(creature.level * (creature.rarity === 'boss' ? 25 : creature.rarity === 'rare' ? 15 : 5) * (0.8 + Math.random() * 0.4));
-        addLog(`☠️ ${creature.name} has been slain! (+${creature.level * 10} XP, +${goldDrop} gold)`);
+        const totalXp = creature.level * 10;
+        const totalGold = Math.floor(creature.level * (creature.rarity === 'boss' ? 25 : creature.rarity === 'rare' ? 15 : 5) * (0.8 + Math.random() * 0.4));
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
-        
-        const newXp = character.xp + creature.level * 10;
-        const newGold = character.gold + goldDrop;
+
+        // Split rewards among party members present at the same node
+        const membersHere = party
+          ? partyMembers.filter(m => m.character?.current_node_id === character.current_node_id)
+          : [];
+        const splitCount = membersHere.length > 1 ? membersHere.length : 1;
+        const xpShare = Math.floor(totalXp / splitCount);
+        const goldShare = Math.floor(totalGold / splitCount);
+
+        if (splitCount > 1) {
+          addLog(`☠️ ${creature.name} has been slain! Rewards split ${splitCount} ways: +${xpShare} XP, +${goldShare} gold each.`);
+          // Award XP and gold to other party members via RPC
+          for (const m of membersHere) {
+            if (m.character_id === character.id) continue;
+            await supabase.rpc('award_party_member', {
+              _character_id: m.character_id,
+              _xp: xpShare,
+              _gold: goldShare,
+            });
+          }
+        } else {
+          addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP, +${goldShare} gold)`);
+        }
+
+        const newXp = character.xp + xpShare;
+        const newGold = character.gold + goldShare;
         const xpForNext = character.level * 100;
         if (newXp >= xpForNext) {
           const newLevel = character.level + 1;
