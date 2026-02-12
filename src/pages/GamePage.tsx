@@ -102,23 +102,32 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, [character.hp, character.max_hp, regenBuff, updateCharacter]);
 
-  // Death detection and respawn
+  // Refs for death respawn to avoid stale closures / cleanup races
+  const deathGoldRef = useRef(character.gold);
+  const deathNodeRef = useRef(startingNodeId || character.current_node_id);
+  const updateCharRef = useRef(updateCharacter);
+  const addLogRef = useRef(addLog);
+  useEffect(() => { deathGoldRef.current = character.gold; }, [character.gold]);
+  useEffect(() => { deathNodeRef.current = startingNodeId || character.current_node_id; }, [startingNodeId, character.current_node_id]);
+  useEffect(() => { updateCharRef.current = updateCharacter; }, [updateCharacter]);
+  useEffect(() => { addLogRef.current = addLog; }, [addLog]);
+
+  // Death detection and respawn — only depends on hp and isDead
   useEffect(() => {
     if (character.hp > 0 || isDead) return;
     setIsDead(true);
-    const goldLost = Math.floor(character.gold * 0.1);
+    const goldLost = Math.floor(deathGoldRef.current * 0.1);
     const respawnTimeout = setTimeout(async () => {
-      const respawnNode = startingNodeId || character.current_node_id;
-      await updateCharacter({
+      await updateCharRef.current({
         hp: 1,
-        gold: character.gold - goldLost,
-        current_node_id: respawnNode,
+        gold: deathGoldRef.current - goldLost,
+        current_node_id: deathNodeRef.current,
       });
-      addLog(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
+      addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
       setIsDead(false);
     }, 3000);
     return () => clearTimeout(respawnTimeout);
-  }, [character.hp, isDead, character.gold, startingNodeId, updateCharacter, addLog]);
+  }, [character.hp, isDead]);
 
   // Sync follower's local character when leader moves them
   // The party realtime subscription updates faster than the character subscription in some cases
