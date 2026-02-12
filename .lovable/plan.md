@@ -1,51 +1,36 @@
 
 
-## Travel System Overhaul
+## Rename the Game
 
-Replace the text-based travel buttons in the center panel with a visual SVG node graph in the right panel, similar to the admin graph editor.
+Update the game's title and branding across the entire codebase to reflect the "everyday hero" theme. The new name will be:
 
-### Changes Overview
+**"The Everyday Adventurer's Guide to Middle-earth"**
 
-**1. Remove travel buttons from NodeView (center panel)**
-- Remove the "Travel" heading and the grid of directional travel buttons
-- Keep "Search Area" and "Open Shop" action buttons
+With a short form **"Everyday Adventurer"** used in tight spaces (like the top bar).
 
-**2. Simplify the World Map (right panel)**
-- Show only the current region the player is in (no list of all regions)
-- Display region name, level range
+### Files to Update
 
-**3. Replace Local Area list with an SVG graph view**
-- Create a new `PlayerGraphView` component based on the admin `RegionGraphView`
-- Show only the current node and its directly connected neighbors (not the full region)
-- Current node is highlighted (golden/primary glow)
-- Connected nodes are clickable to travel
-- No admin features (no "+" buttons for adding nodes)
-- Edges rendered as dashed lines with optional path labels
-- Vendor nodes show a shop icon
+**1. `index.html`**
+- Change `<title>` from "Lovable App" to "The Everyday Adventurer's Guide to Middle-earth"
+- Update `og:title` meta tag to match
+- Update `description` and `og:description` to something like "A humble adventurer's journey through Middle-earth"
 
-**4. Wire up click-to-travel**
-- Clicking a neighboring node in the graph triggers the existing `handleMove` function (which already handles Attack of Opportunity on retreat)
+**2. `src/pages/AuthPage.tsx`**
+- Change the heading from "Middle-earth" to "The Everyday Adventurer's Guide to Middle-earth" (or a two-line layout: "The Everyday Adventurer's" / "Guide to Middle-earth")
 
-### Technical Details
+**3. `src/pages/GamePage.tsx`**
+- Top bar title: Change "Middle-earth" to "Everyday Adventurer" (short form for the compact header)
+- Welcome log message: Change "Welcome to Middle-earth!" to "Welcome, Everyday Adventurer!"
 
-**New file: `src/components/game/PlayerGraphView.tsx`**
-- Adapted from `RegionGraphView`, stripped of admin controls
-- Props: `currentNodeId`, `nodes` (current + connected only), `onNodeClick`
-- Reuses the same BFS `layoutNodes` algorithm but centered on current node
-- Current node styled distinctly (primary fill, glow effect)
-- Connected nodes styled as interactive/clickable
-- Smaller spacing since fewer nodes are shown
+**4. `src/pages/Index.tsx`**
+- Loading text: Change "Entering Middle-earth..." to "Preparing your adventure..."
 
-**Modified: `src/components/game/NodeView.tsx`**
-- Remove lines 94-108 (the Travel section with directional buttons)
-- Keep "Actions" section with Search and Vendor buttons
-- The `onMove` prop can be removed from this component since travel is handled by the map
+**5. `src/pages/CharacterCreation.tsx`**
+- Success toast: Change "has entered Middle-earth!" to "has begun their adventure!"
+- Button label: Change "Enter Middle-earth" to "Begin Your Adventure"
 
-**Modified: `src/components/game/MapPanel.tsx`**
-- World Map: filter regions to only show the current one
-- Local Area: replace the button list with `PlayerGraphView`, passing only the current node + its direct neighbors
-- Pass `onNodeClick` through to `PlayerGraphView`
+**6. `src/components/game/NodeView.tsx`**
+- Default description fallback: Change "A quiet place in Middle-earth..." to "A quiet corner of the world..."
 
-**Modified: `src/pages/GamePage.tsx`**
-- Remove `onMove` from NodeView props (minor cleanup)
-- No logic changes needed -- `handleMove` is already wired to `onNodeClick` in MapPanel
+Total: 6 files, all cosmetic string changes -- no logic modifications.
+
