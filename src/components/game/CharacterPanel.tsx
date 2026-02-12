@@ -174,8 +174,25 @@ export default function CharacterPanel({
           </div>
           <div className="flex items-center justify-between text-[9px] text-muted-foreground/70 px-1 mb-0.5">
             <span className="w-20">Stat</span>
-            <span className="flex-1 text-center">Base <span className="text-chart-2">+Gear</span></span>
-            <span className="w-8 text-right">Mod</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex-1 text-center cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
+              </TooltipTrigger>
+              <TooltipContent className="bg-popover border-border z-50">
+                <p className="font-display text-sm">Base + Gear</p>
+                <p className="text-xs text-muted-foreground"><strong>Base</strong> — Your natural stat from race, class, and level-up points.</p>
+                <p className="text-xs text-muted-foreground"><strong>Gear</strong> — Bonus from equipped items (shown in green).</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="w-8 text-right cursor-help underline decoration-dotted">Mod</span>
+              </TooltipTrigger>
+              <TooltipContent className="bg-popover border-border z-50">
+                <p className="font-display text-sm">Modifier</p>
+                <p className="text-xs text-muted-foreground">Added to dice rolls using this stat. Calculated as (total − 10) ÷ 2, rounded down.</p>
+              </TooltipContent>
+            </Tooltip>
             <div className="w-5 ml-1" />
           </div>
           <div className="space-y-0.5">
@@ -214,7 +231,6 @@ export default function CharacterPanel({
                   <TooltipContent className="bg-popover border-border z-50">
                     <p className="font-display text-sm">{STAT_FULL_NAMES[key]}</p>
                     <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[key]}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">Base {base}{bonus > 0 ? ` + ${bonus} gear` : ''} = {total} (modifier {mod >= 0 ? `+${mod}` : mod})</p>
                   </TooltipContent>
                 </Tooltip>
               );
