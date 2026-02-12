@@ -23,6 +23,7 @@ interface NodeEditorProps {
   nodeId: string | null;
   regionId: string;
   allNodes: any[];
+  allNodesGlobal: any[];
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -30,12 +31,137 @@ interface NodeEditorProps {
   adjacentToNodeId?: string | null;
 }
 
+const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
+const REVERSE_DIR: Record<string, string> = {
+  N: 'S', S: 'N', E: 'W', W: 'E',
+  NE: 'SW', SW: 'NE', NW: 'SE', SE: 'NW',
+};
+
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: {
+  nodeId: string;
+  connections: string;
+  allNodesGlobal: any[];
+  onUpdated: () => void;
+}) {
+  const [addDir, setAddDir] = useState('N');
+  const [addNodeId, setAddNodeId] = useState('');
+  const [addLabel, setAddLabel] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const parsed: { node_id: string; direction: string; label?: string }[] = (() => {
+    try { return JSON.parse(connections) || []; } catch { return []; }
+  })();
+
+  const nodeName = (id: string) => allNodesGlobal.find((n: any) => n.id === id)?.name || id.slice(0, 8);
+
+  const addConnection = async () => {
+    if (!addNodeId) return toast.error('Select a target node');
+    if (parsed.some(c => c.node_id === addNodeId)) return toast.error('Already connected to that node');
+    setSaving(true);
+
+    // Update current node
+    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}) }];
+    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
+
+    // Update target node with reverse connection
+    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
+    if (targetNode) {
+      const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
+      if (!targetConns.some((c: any) => c.node_id === nodeId)) {
+        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S' });
+        await supabase.from('nodes').update({ connections: targetConns }).eq('id', addNodeId);
+      }
+    }
+
+    toast.success('Connection added');
+    setAddNodeId('');
+    setAddLabel('');
+    setSaving(false);
+    onUpdated();
+  };
+
+  const removeConnection = async (targetId: string) => {
+    setSaving(true);
+    // Remove from current node
+    const newConns = parsed.filter(c => c.node_id !== targetId);
+    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
+
+    // Remove reverse from target node
+    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', targetId).single();
+    if (targetNode) {
+      const targetConns: any[] = Array.isArray(targetNode.connections) ? (targetNode.connections as any[]).filter((c: any) => c.node_id !== nodeId) : [];
+      await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
+    }
+
+    toast.success('Connection removed');
+    setSaving(false);
+    onUpdated();
+  };
+
+  const availableNodes = allNodesGlobal.filter((n: any) => n.id !== nodeId && !parsed.some(c => c.node_id === n.id));
+
+  return (
+    <div className="space-y-3">
+      {/* Current connections */}
+      <div className="space-y-1.5">
+        {parsed.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">No connections yet.</p>
+        )}
+        {parsed.map(c => (
+          <div key={c.node_id} className="flex items-center gap-2 p-2 rounded border border-border bg-background/40">
+            <span className="font-display text-sm flex-1">{nodeName(c.node_id)}</span>
+            <span className="text-xs text-muted-foreground font-mono">{c.direction}</span>
+            {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
+            <Button size="sm" variant="destructive" disabled={saving} onClick={() => removeConnection(c.node_id)} className="h-6 w-6 p-0">
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      {/* Add connection */}
+      <div className="border-t border-border pt-3 space-y-2">
+        <p className="font-display text-xs text-primary">Add Connection</p>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
+          <div>
+            <label className="text-[10px] text-muted-foreground">Target Node</label>
+            <Select value={addNodeId} onValueChange={setAddNodeId}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node..." /></SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50 max-h-60">
+                {availableNodes.map((n: any) => (
+                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">Direction</label>
+            <Select value={addDir} onValueChange={setAddDir}>
+              <SelectTrigger className="h-8 text-xs w-20"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50">
+                {DIRECTIONS.map(d => (
+                  <SelectItem key={d} value={d} className="text-xs">{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <Input placeholder="Label (optional)" value={addLabel}
+          onChange={e => setAddLabel(e.target.value)} className="h-8 text-xs" />
+        <Button onClick={addConnection} disabled={saving || !addNodeId} className="font-display text-xs">
+          <Plus className="w-3 h-3 mr-1" /> Add Connection
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const defaultCreatureForm = () => ({
   name: '', description: '', level: 1, rarity: 'regular',
   is_aggressive: false, respawn_seconds: 300, loot_table: [] as { item_id: string; chance: number }[],
 });
 
-export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onClose, onSaved, isValar, adjacentToNodeId }: NodeEditorProps) {
+export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId }: NodeEditorProps) {
   const [form, setForm] = useState({
     name: '', description: '', is_vendor: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
@@ -461,23 +587,12 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, onC
 
           {nodeId && (
             <TabsContent value="connections" className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Edit the raw connections JSON. Each entry needs a <code>node_id</code>, <code>direction</code>, and optional <code>label</code>.
-              </p>
-              <Textarea
-                value={form.connections}
-                onChange={e => setForm(f => ({ ...f, connections: e.target.value }))}
-                className="font-mono text-xs" rows={10}
+              <ConnectionsManager
+                nodeId={nodeId}
+                connections={form.connections}
+                allNodesGlobal={allNodesGlobal}
+                onUpdated={() => { onSaved(); if (nodeId) loadNode(nodeId); }}
               />
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Available nodes in this region:</p>
-                {allNodes.map(n => (
-                  <p key={n.id} className="font-mono text-[10px]">{n.id} — {n.name}</p>
-                ))}
-              </div>
-              <Button onClick={saveNode} disabled={loading} className="font-display text-xs">
-                <Save className="w-3 h-3 mr-1" /> Save Connections
-              </Button>
             </TabsContent>
           )}
         </Tabs>
