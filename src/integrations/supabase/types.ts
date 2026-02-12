@@ -528,6 +528,10 @@ export type Database = {
       regen_creature_hp: { Args: never; Returns: undefined }
       respawn_creatures: { Args: never; Returns: undefined }
       return_unique_items: { Args: never; Returns: undefined }
+      update_party_member_hp: {
+        Args: { _character_id: string; _new_hp: number }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "player" | "maiar" | "valar"

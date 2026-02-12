@@ -43,10 +43,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const logEndRef = useRef<HTMLDivElement>(null);
 
+  const ownLogIdsRef = useRef<Set<string>>(new Set());
+
   const addLog = useCallback((msg: string) => {
     setEventLog(prev => [...prev.slice(-49), msg]);
-    // Also write to party combat log if in a party
-    addPartyCombatLog(msg);
+    // Also write to party combat log if in a party, and track own IDs to prevent duplicates
+    (async () => {
+      const id = await addPartyCombatLog(msg);
+      if (id) ownLogIdsRef.current.add(id);
+    })();
   }, [addPartyCombatLog]);
 
   // Merge party combat log entries from other players into event log
@@ -56,13 +61,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     for (const entry of partyCombatEntries) {
       if (!seenIdsRef.current.has(entry.id)) {
         seenIdsRef.current.add(entry.id);
-        // Only add entries we didn't create (avoid duplicates from our own addLog)
-        // We check if the message is already in the last few entries
-        setEventLog(prev => {
-          // If this exact message is already the last entry, skip it
-          if (prev.length > 0 && prev[prev.length - 1] === entry.message) return prev;
-          return [...prev.slice(-49), entry.message];
-        });
+        // Skip entries we created ourselves
+        if (ownLogIdsRef.current.has(entry.id)) continue;
+        setEventLog(prev => [...prev.slice(-49), entry.message]);
       }
     }
   }, [partyCombatEntries, party]);
@@ -162,7 +163,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
             const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
             addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
-            await supabase.from('characters').update({ hp: tankNewHp }).eq('id', tankMember.character_id);
+            await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
           } else {
             addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
           }
@@ -404,7 +405,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
             const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
             addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
-            await supabase.from('characters').update({ hp: tankNewHp }).eq('id', tankMember.character_id);
+            await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
           } else {
             addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
           }
@@ -436,7 +437,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
           const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
           addLog(`🛡️ ${creature.name} retaliates at ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
-          await supabase.from('characters').update({ hp: tankNewHp }).eq('id', tankMember.character_id);
+          await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
         } else {
           addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
         }
