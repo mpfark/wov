@@ -200,6 +200,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    // GIVE ITEM TO CHARACTER
+    if (action === "give-item" && req.method === "POST") {
+      const { character_id, item_id } = await req.json();
+      if (!character_id || !item_id) throw new Error("character_id and item_id required");
+
+      // Get item max_durability
+      const { data: item } = await adminClient.from("items").select("max_durability").eq("id", item_id).single();
+      const durability = item?.max_durability ?? 100;
+
+      const { error } = await adminClient.from("character_inventory").insert({
+        character_id,
+        item_id,
+        current_durability: durability,
+      });
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
