@@ -1,51 +1,58 @@
 
 
-## Rearrange Users Tab into 3-Column Layout
+## Rearrange Stats Display in Character Panel
 
-### Overview
+### Current State
+Stats are shown as compact inline chips (e.g., `STR 14+2(+2)`). There's no breakdown of where stat values come from, no tooltip explaining what each stat does, and no visual indicator for unspent stat points.
 
-Restructure the Users tab from its current single-column expandable list into a 3-panel layout:
+### Planned Changes
 
-- **Left column**: Compact user list with search and pagination
-- **Center column**: Full character sheet for the selected user (account info, admin actions, character details with edit capability)
-- **Right column**: Player activity logs
+#### 1. Replace inline stat chips with a vertical stat list
 
-### Layout
+Each stat will be displayed as a row showing the breakdown:
 
 ```text
-+------------------+------------------------+------------------+
-|   USER LIST      |   CHARACTER SHEET       |   PLAYER LOGS    |
-|                  |                         |                  |
-| [Search...]      |  Name / Role / Status   |  Activity feed   |
-|                  |  Admin actions (ban,    |  (login, move,   |
-| > User A         |   role, reset pwd)      |   combat, etc.)  |
-| > User B (sel)   |  Account info grid      |                  |
-| > User C         |  Character cards with   |  Placeholder     |
-|                  |  paper-doll stats and   |  until logs       |
-|                  |  inline edit            |  table exists     |
-|                  |                         |                  |
-| [Prev] [Next]    |                         |                  |
-+------------------+------------------------+------------------+
+Strength    12 + 2         (+1)  [+]
+            base  gear
 ```
 
-### What Changes
+- **Full stat name** (Strength, Dexterity, etc.) on the left
+- **Base value** (the character's raw stat)
+- **+ Gear bonus** in green (only if > 0)
+- **Modifier** in parentheses on the right
+- **[+] button** on the far right, only visible when `unspent_stat_points > 0`
 
-**1. `src/components/admin/UserManager.tsx`** -- Major restructure
+#### 2. Tooltip on hover for each stat
 
-- Change the outer container from a single scrollable column to a `flex h-full` row with 3 columns:
-  - Left (w-64, border-right): Search input, scrollable user list (compact rows showing name, role badge, char count), pagination at bottom. Clicking a user sets `selectedUserId` state (replaces the expand/collapse pattern).
-  - Center (flex-1): Shows the selected user's full details -- account info, admin action buttons (role selector, ban/unban, reset password), and all their characters with inline editing (HP, gold, level). Only renders when a user is selected; otherwise shows an empty state message.
-  - Right (w-72, border-left): Player logs panel. Since there is no `player_logs` table in the database yet, this will show a placeholder ("No logs available") for now. The column structure will be ready for when a logging system is added.
+Hovering a stat row shows what that stat affects:
 
-- Replace `expandedUser` state with `selectedUserId` -- clicking a user in the left list highlights it and populates the center column instead of expanding inline.
+| Stat | Tooltip |
+|------|---------|
+| STR | Melee attack and damage rolls |
+| DEX | Ranged attack, AC bonus, initiative |
+| CON | Hit points and physical resilience |
+| INT | Arcane power and knowledge checks |
+| WIS | Perception, healing power, willpower |
+| CHA | Persuasion, bardic abilities, leadership |
 
-**2. No database changes needed** -- The player logs column will be a placeholder panel ready for future integration. No new tables or edge function changes required for this layout rearrangement.
+#### 3. Unspent point indicator
+
+When `unspent_stat_points > 0`, a small `[+]` button appears next to each stat (that isn't at max 30). Clicking it spends one point on that stat immediately. A header line shows remaining points (e.g., "2 points to spend").
+
+AC and Gold remain as compact elements below the stat list.
 
 ### Technical Details
 
-- Left column: `w-64 shrink-0 border-r border-border flex flex-col` with ScrollArea for the user list
-- Center column: `flex-1 overflow-y-auto p-4` containing the selected user's details (moved from the inline expanded section)
-- Right column: `w-72 shrink-0 border-l border-border p-3` with a "Player Logs" header and placeholder content
-- The selected user row in the left list gets a highlight class (`bg-accent/20`)
-- All existing functionality (search, role change, ban, character editing) stays the same, just reorganized into the center panel
+**File: `src/components/game/CharacterPanel.tsx`**
+- Replace the `flex flex-wrap` stat chips section (lines 150-170) with a new vertical layout
+- Add a `STAT_DESCRIPTIONS` map for tooltip content
+- Add `STAT_FULL_NAMES` map (str -> "Strength", etc.)
+- Use existing `Tooltip` components for hover info
+- Wire `[+]` buttons to call a new `onSpendPoint` prop that updates a single stat and decrements `unspent_stat_points`
 
+**File: `src/pages/GamePage.tsx`**
+- Add a `handleSpendPoint` function that calls `updateCharacter` with the incremented stat and decremented points
+- Pass it as `onSpendPoint` to `CharacterPanel`
+
+**File: `src/components/game/StatAllocationDialog.tsx`**
+- Kept as-is for the initial level-up bulk allocation; the inline `[+]` buttons provide an alternative way to spend leftover points
