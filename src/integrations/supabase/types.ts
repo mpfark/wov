@@ -485,6 +485,7 @@ export type Database = {
       is_maiar_or_valar: { Args: never; Returns: boolean }
       is_valar: { Args: never; Returns: boolean }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
+      regen_creature_hp: { Args: never; Returns: undefined }
       respawn_creatures: { Args: never; Returns: undefined }
       return_unique_items: { Args: never; Returns: undefined }
     }
