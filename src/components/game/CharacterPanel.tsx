@@ -3,7 +3,7 @@ import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Trash2 } from 'lucide-react';
+import { Shield, Trash2, Heart } from 'lucide-react';
 
 interface Props {
   character: Character;
@@ -13,6 +13,7 @@ interface Props {
   onEquip: (inventoryId: string, slot: string) => void;
   onUnequip: (inventoryId: string) => void;
   onDrop: (inventoryId: string) => void;
+  onUseConsumable?: (inventoryId: string) => void;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -29,7 +30,7 @@ const SLOT_LABELS: Record<string, string> = {
 
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket'];
 
-export default function CharacterPanel({ character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop }: Props) {
+export default function CharacterPanel({ character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
   const xpForNext = character.level * 100;
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
@@ -180,6 +181,12 @@ export default function CharacterPanel({ character, equipped, unequipped, equipm
                   </TooltipContent>
                 </Tooltip>
                 <div className="flex gap-0.5 shrink-0 ml-1">
+                  {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && (
+                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                      onClick={() => onUseConsumable(inv.id)}>
+                      <Heart className="w-3 h-3 text-blood" />
+                    </Button>
+                  )}
                   {inv.item.slot && (
                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
                       onClick={() => onEquip(inv.id, inv.item.slot!)}>
