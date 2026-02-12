@@ -121,9 +121,8 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
 
   // Compute region bubble positions and internal node positions
   const { regionBubbles, allNodePositions, svgWidth, svgHeight } = useMemo(() => {
-    const SPACING = 200;
-    const NODE_R = 28;
-    const BUBBLE_PAD = 80;
+    const MIN_NODE_GAP = 90;
+    const BUBBLE_PAD = 60;
     const REGION_GAP = 140;
 
     const bubbles: Array<{
@@ -140,39 +139,50 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
     for (let i = 0; i < sortedRegions.length; i++) {
       const region = sortedRegions[i];
       const rNodes = nodesByRegion.get(region.id) || [];
-      const radius = Math.max(160, Math.sqrt(rNodes.length) * 120);
 
-      const cx = cursorX + radius;
-      const cy = radius + 60 + (i % 2 === 1 ? 40 : 0); // stagger
-
-      bubbles.push({ region, cx, cy, radius, nodeCount: rNodes.length });
-
-      // Layout nodes inside this bubble
+      // Layout nodes first at fixed spacing
       if (rNodes.length > 0) {
         const positions = layoutNodes(rNodes);
         const vals = [...positions.values()];
-        if (vals.length > 0) {
-          const minX = Math.min(...vals.map(p => p.x));
-          const minY = Math.min(...vals.map(p => p.y));
-          const maxX = Math.max(...vals.map(p => p.x));
-          const maxY = Math.max(...vals.map(p => p.y));
-          const rangeX = maxX - minX || 1;
-          const rangeY = maxY - minY || 1;
+        // Convert grid positions to pixel positions with fixed gap
+        const pixelPositions = new Map<string, { x: number; y: number }>();
+        positions.forEach((pos, id) => {
+          pixelPositions.set(id, { x: pos.x * MIN_NODE_GAP, y: pos.y * MIN_NODE_GAP });
+        });
 
-          // Scale to fit inside bubble
-          const usableRadius = radius - BUBBLE_PAD;
-          const scale = Math.min(usableRadius / (rangeX * SPACING / 2), usableRadius / (rangeY * SPACING / 2), SPACING);
+        const pVals = [...pixelPositions.values()];
+        const minX = Math.min(...pVals.map(p => p.x));
+        const minY = Math.min(...pVals.map(p => p.y));
+        const maxX = Math.max(...pVals.map(p => p.x));
+        const maxY = Math.max(...pVals.map(p => p.y));
+        const bboxW = maxX - minX;
+        const bboxH = maxY - minY;
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
 
-          positions.forEach((pos, id) => {
-            nodePos.set(id, {
-              px: cx + (pos.x - (minX + maxX) / 2) * scale,
-              py: cy + (pos.y - (minY + maxY) / 2) * scale,
-            });
+        // Size bubble to fit nodes
+        const radius = Math.max(160, Math.max(bboxW, bboxH) / 2 + BUBBLE_PAD);
+        const cx = cursorX + radius;
+        const cy = radius + 60 + (i % 2 === 1 ? 40 : 0);
+
+        bubbles.push({ region, cx, cy, radius, nodeCount: rNodes.length });
+
+        // Position nodes centered in bubble
+        pixelPositions.forEach((pos, id) => {
+          nodePos.set(id, {
+            px: cx + (pos.x - centerX),
+            py: cy + (pos.y - centerY),
           });
-        }
-      }
+        });
 
-      cursorX += radius * 2 + REGION_GAP;
+        cursorX += radius * 2 + REGION_GAP;
+      } else {
+        const radius = 160;
+        const cx = cursorX + radius;
+        const cy = radius + 60 + (i % 2 === 1 ? 40 : 0);
+        bubbles.push({ region, cx, cy, radius, nodeCount: 0 });
+        cursorX += radius * 2 + REGION_GAP;
+      }
     }
 
     const totalW = cursorX > 0 ? cursorX - REGION_GAP + 40 : 400;
