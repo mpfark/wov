@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import {
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
-  STAT_LABELS, calculateStats, calculateHP, calculateAC,
+  STAT_LABELS, RACE_STATS, CLASS_STATS, calculateStats, calculateHP, calculateAC,
 } from '@/lib/game-data';
 
 interface Props {
@@ -79,6 +79,15 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
                   >
                     <div className="font-display text-sm text-foreground">{label}</div>
                     <div className="text-xs text-muted-foreground mt-1">{RACE_DESCRIPTIONS[key]}</div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {Object.entries(RACE_STATS[key] || {}).filter(([, v]) => v !== 0).map(([stat, val]) => (
+                        <span key={stat} className={`text-[10px] px-1.5 py-0.5 rounded font-display ${
+                          (val as number) > 0 ? 'bg-primary/15 text-primary' : 'bg-destructive/15 text-destructive'
+                        }`}>
+                          {(val as number) > 0 ? '+' : ''}{val as number} {STAT_LABELS[stat]}
+                        </span>
+                      ))}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -100,6 +109,15 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
                   >
                     <div className="font-display text-sm text-foreground">{label}</div>
                     <div className="text-xs text-muted-foreground mt-1">{CLASS_DESCRIPTIONS[key]}</div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {Object.entries(CLASS_STATS[key] || {}).filter(([, v]) => v !== 0).map(([stat, val]) => (
+                        <span key={stat} className={`text-[10px] px-1.5 py-0.5 rounded font-display ${
+                          (val as number) > 0 ? 'bg-primary/15 text-primary' : 'bg-destructive/15 text-destructive'
+                        }`}>
+                          {(val as number) > 0 ? '+' : ''}{val as number} {STAT_LABELS[stat]}
+                        </span>
+                      ))}
+                    </div>
                   </button>
                 ))}
               </div>
