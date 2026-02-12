@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
@@ -29,11 +30,32 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
     if (!stats) return;
     setLoading(true);
     try {
-      await onCreateCharacter({
+      const char = await onCreateCharacter({
         name, race, class: charClass,
         ...stats, hp, max_hp: hp, ac,
         current_node_id: startingNodeId,
       });
+      // Grant starting weapon if configured
+      if (char?.id) {
+        const { data: gear } = await supabase
+          .from('class_starting_gear')
+          .select('item_id')
+          .eq('class', charClass as any)
+          .maybeSingle();
+        if (gear?.item_id) {
+          const { data: item } = await supabase
+            .from('items')
+            .select('max_durability')
+            .eq('id', gear.item_id)
+            .maybeSingle();
+          await supabase.from('character_inventory').insert({
+            character_id: char.id,
+            item_id: gear.item_id,
+            equipped_slot: 'main_hand' as any,
+            current_durability: item?.max_durability ?? 100,
+          });
+        }
+      }
       toast.success(`${name} has begun their adventure!`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to create character');

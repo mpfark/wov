@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { Sword } from 'lucide-react';
 import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC,
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
@@ -23,6 +28,57 @@ function StatBadge({ value }: { value: number }) {
 
 export default function RaceClassManager() {
   const [tab, setTab] = useState('classes');
+  const [weapons, setWeapons] = useState<any[]>([]);
+  const [startingGear, setStartingGear] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    const [itemsRes, gearRes] = await Promise.all([
+      supabase.from('items').select('id, name, slot, item_type, rarity').order('name'),
+      supabase.from('class_starting_gear').select('*'),
+    ]);
+    // Filter to weapons (main_hand slot)
+    setWeapons((itemsRes.data || []).filter((i: any) => i.slot === 'main_hand'));
+    const gearMap: Record<string, string> = {};
+    (gearRes.data || []).forEach((g: any) => { gearMap[g.class] = g.item_id; });
+    setStartingGear(gearMap);
+  };
+
+  const handleSetWeapon = async (cls: string, itemId: string) => {
+    setSaving(cls);
+    const existing = startingGear[cls];
+    let error;
+    if (existing) {
+      ({ error } = await supabase.from('class_starting_gear').update({ item_id: itemId }).eq('class', cls as any));
+    } else {
+      ({ error } = await supabase.from('class_starting_gear').insert({ class: cls as any, item_id: itemId }));
+    }
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setStartingGear(prev => ({ ...prev, [cls]: itemId }));
+      toast.success(`Starting weapon set for ${CLASS_LABELS[cls]}`);
+    }
+    setSaving(null);
+  };
+
+  const handleClearWeapon = async (cls: string) => {
+    setSaving(cls);
+    const { error } = await supabase.from('class_starting_gear').delete().eq('class', cls as any);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setStartingGear(prev => { const n = { ...prev }; delete n[cls]; return n; });
+      toast.success(`Starting weapon cleared for ${CLASS_LABELS[cls]}`);
+    }
+    setSaving(null);
+  };
+
+  const getWeaponName = (itemId: string) => weapons.find(w => w.id === itemId)?.name || 'Unknown';
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -40,6 +96,7 @@ export default function RaceClassManager() {
               {Object.keys(CLASS_LABELS).map(cls => {
                 const combat = CLASS_COMBAT[cls];
                 const levelBonus = CLASS_LEVEL_BONUSES[cls] || {};
+                const currentWeaponId = startingGear[cls];
                 return (
                   <Card key={cls} className="bg-card/80 border-border">
                     <CardHeader className="pb-2 pt-4 px-4">
@@ -91,6 +148,43 @@ export default function RaceClassManager() {
                           </div>
                         </div>
                       )}
+
+                      {/* Starting weapon */}
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                          <Sword className="w-3 h-3" /> Starting Weapon
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={currentWeaponId || ''}
+                            onValueChange={(val) => handleSetWeapon(cls, val)}
+                            disabled={saving === cls}
+                          >
+                            <SelectTrigger className="h-7 text-xs flex-1">
+                              <SelectValue placeholder="None assigned" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {weapons.map(w => (
+                                <SelectItem key={w.id} value={w.id} className="text-xs">
+                                  {w.name}
+                                  <span className="text-muted-foreground ml-1">({w.rarity})</span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {currentWeaponId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-destructive"
+                              onClick={() => handleClearWeapon(cls)}
+                              disabled={saving === cls}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 );
