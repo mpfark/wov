@@ -99,6 +99,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [character.hp, character.max_hp, regenBuff, updateCharacter]);
 
 
+  // Sync follower's local character when leader moves them
+  // The party realtime subscription updates faster than the character subscription in some cases
+  useEffect(() => {
+    if (!myMembership?.character?.current_node_id) return;
+    if (myMembership.character.current_node_id !== character.current_node_id) {
+      // Party data shows we've been moved — sync local state
+      updateCharacter({ current_node_id: myMembership.character.current_node_id });
+    }
+  }, [myMembership?.character?.current_node_id]);
+
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
 
