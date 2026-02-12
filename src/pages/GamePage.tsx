@@ -458,18 +458,34 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           <ResizableHandle withHandle />
 
           <ResizablePanel defaultSize={50} minSize={35}>
-            <div className="h-full ornate-border bg-card/60">
-              <NodeView
-                node={currentNode}
-                region={currentRegion}
-                players={playersHere}
-                creatures={creatures}
-                character={character}
-                eventLog={eventLog}
-                onSearch={handleSearch}
-                onAttack={handleAttack}
-                onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
-              />
+            <div className="h-full ornate-border bg-card/60 flex flex-col">
+              <div className="flex-1 min-h-0">
+                <NodeView
+                  node={currentNode}
+                  region={currentRegion}
+                  players={playersHere}
+                  creatures={creatures}
+                  character={character}
+                  eventLog={eventLog}
+                  onSearch={handleSearch}
+                  onAttack={handleAttack}
+                  onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
+                />
+              </div>
+              {/* Event Log - docked at bottom of middle column */}
+              <div className="border-t border-border px-3 py-2">
+                <h3 className="font-display text-xs text-muted-foreground mb-1">Event Log</h3>
+                <div className="h-28 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
+                  {eventLog.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
+                  ) : (
+                    eventLog.map((log, i) => (
+                      <p key={i} className="text-xs text-foreground/80">{log}</p>
+                    ))
+                  )}
+                  <div ref={logEndRef} />
+                </div>
+              </div>
             </div>
           </ResizablePanel>
 
@@ -490,20 +506,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         </ResizablePanelGroup>
       </div>
 
-      {/* Event Log - Bottom Bar */}
-      <div className="border-t border-border bg-card/70 px-4 py-2">
-        <h3 className="font-display text-xs text-muted-foreground mb-1">Event Log</h3>
-        <div className="h-28 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
-          {eventLog.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
-          ) : (
-            eventLog.map((log, i) => (
-              <p key={i} className="text-xs text-foreground/80">{log}</p>
-            ))
-          )}
-          <div ref={logEndRef} />
-        </div>
-      </div>
 
       {/* Vendor Dialog */}
       {currentNode.is_vendor && (
