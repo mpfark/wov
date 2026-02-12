@@ -1,30 +1,51 @@
 
 
-## Fix: Size Region Bubbles to Fit Nodes (Not the Other Way Around)
+## Rearrange Users Tab into 3-Column Layout
 
-### The Problem
+### Overview
 
-The current code calculates a bubble radius first, then scales node positions down to fit inside it. With many nodes, this compresses them so much that they overlap (node radius is 28px but spacing can shrink to under 40px).
+Restructure the Users tab from its current single-column expandable list into a 3-panel layout:
 
-### The Fix
+- **Left column**: Compact user list with search and pagination
+- **Center column**: Full character sheet for the selected user (account info, admin actions, character details with edit capability)
+- **Right column**: Player activity logs
 
-Reverse the logic in `AdminWorldMapView.tsx`:
+### Layout
 
-1. **First**, run the BFS layout and compute node positions at a fixed minimum spacing (e.g., 90px between adjacent nodes -- guaranteeing no overlap with r=28 circles)
-2. **Then**, calculate the bubble radius to encompass all the laid-out nodes (plus padding)
-3. Position nodes relative to the bubble center
+```text
++------------------+------------------------+------------------+
+|   USER LIST      |   CHARACTER SHEET       |   PLAYER LOGS    |
+|                  |                         |                  |
+| [Search...]      |  Name / Role / Status   |  Activity feed   |
+|                  |  Admin actions (ban,    |  (login, move,   |
+| > User A         |   role, reset pwd)      |   combat, etc.)  |
+| > User B (sel)   |  Account info grid      |                  |
+| > User C         |  Character cards with   |  Placeholder     |
+|                  |  paper-doll stats and   |  until logs       |
+|                  |  inline edit            |  table exists     |
+|                  |                         |                  |
+| [Prev] [Next]    |                         |                  |
++------------------+------------------------+------------------+
+```
 
-This way the bubble always grows large enough to contain its nodes without overlap.
+### What Changes
 
-### Technical Detail (single file change)
+**1. `src/components/admin/UserManager.tsx`** -- Major restructure
 
-**`src/components/admin/AdminWorldMapView.tsx`** -- modify the region/node positioning logic (around lines 140-175):
+- Change the outer container from a single scrollable column to a `flex h-full` row with 3 columns:
+  - Left (w-64, border-right): Search input, scrollable user list (compact rows showing name, role badge, char count), pagination at bottom. Clicking a user sets `selectedUserId` state (replaces the expand/collapse pattern).
+  - Center (flex-1): Shows the selected user's full details -- account info, admin action buttons (role selector, ban/unban, reset password), and all their characters with inline editing (HP, gold, level). Only renders when a user is selected; otherwise shows an empty state message.
+  - Right (w-72, border-left): Player logs panel. Since there is no `player_logs` table in the database yet, this will show a placeholder ("No logs available") for now. The column structure will be ready for when a logging system is added.
 
-- Run `layoutNodes()` and multiply grid positions by a fixed `MIN_NODE_GAP = 90` (pixels between adjacent node centers, ensuring 28+28+34 = no overlap)
-- Compute the bounding box of those positions
-- Set bubble radius to `Math.max(160, Math.max(bboxWidth, bboxHeight) / 2 + BUBBLE_PAD)`
-- Center nodes inside the bubble
-- Remove the current scale-to-fit math that causes compression
+- Replace `expandedUser` state with `selectedUserId` -- clicking a user in the left list highlights it and populates the center column instead of expanding inline.
 
-Everything else (edges, interactions, zoom/pan, cross-region lines) stays the same.
+**2. No database changes needed** -- The player logs column will be a placeholder panel ready for future integration. No new tables or edge function changes required for this layout rearrangement.
+
+### Technical Details
+
+- Left column: `w-64 shrink-0 border-r border-border flex flex-col` with ScrollArea for the user list
+- Center column: `flex-1 overflow-y-auto p-4` containing the selected user's details (moved from the inline expanded section)
+- Right column: `w-72 shrink-0 border-l border-border p-3` with a "Player Logs" header and placeholder content
+- The selected user row in the left list gets a highlight class (`bg-accent/20`)
+- All existing functionality (search, role change, ban, character editing) stays the same, just reorganized into the center panel
 
