@@ -22,7 +22,7 @@ interface Item {
 }
 
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
-const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand'];
+const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
 const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest', 'shield'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp'];
 
