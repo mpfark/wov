@@ -533,7 +533,6 @@ export default function UserManager({ isValar }: Props) {
       loadUsers();
     } catch (err: any) { toast.error(err.message); }
   };
-  };
 
   const filteredUsers = search
     ? users.filter(u =>
