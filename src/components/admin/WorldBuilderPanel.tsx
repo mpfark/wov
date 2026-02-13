@@ -65,12 +65,10 @@ interface ExistingRegion {
 }
 
 const DIRECTION_OPPOSITES: Record<string, string> = {
-  north: 'south', south: 'north',
-  east: 'west', west: 'east',
-  northeast: 'southwest', southwest: 'northeast',
-  northwest: 'southeast', southeast: 'northwest',
-  up: 'down', down: 'up',
-  inside: 'outside', outside: 'inside',
+  N: 'S', S: 'N',
+  E: 'W', W: 'E',
+  NE: 'SW', SW: 'NE',
+  NW: 'SE', SE: 'NW',
 };
 
 type Mode = 'new' | 'expand';
