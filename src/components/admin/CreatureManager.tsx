@@ -56,6 +56,7 @@ export default function CreatureManager() {
   const [isNew, setIsNew] = useState(false);
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
+  const [regionFilter, setRegionFilter] = useState('all');
   const [loading, setLoading] = useState(false);
 
   const loadData = async () => {
@@ -166,11 +167,20 @@ export default function CreatureManager() {
     return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
   };
 
-  const filtered = creatures.filter(c =>
-    c.name.toLowerCase().includes(filter.toLowerCase()) ||
-    c.rarity.includes(filter.toLowerCase()) ||
-    getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase())
-  );
+  const regionNames = [...new Set(nodes.map(n => n.region_name).filter(Boolean))].sort();
+
+  const getNodeRegion = (nodeId: string | null) => {
+    if (!nodeId) return '';
+    return nodes.find(n => n.id === nodeId)?.region_name || '';
+  };
+
+  const filtered = creatures.filter(c => {
+    const matchesText = c.name.toLowerCase().includes(filter.toLowerCase()) ||
+      c.rarity.includes(filter.toLowerCase()) ||
+      getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
+    const matchesRegion = regionFilter === 'all' || getNodeRegion(c.node_id) === regionFilter;
+    return matchesText && matchesRegion;
+  });
 
   return (
     <div className="h-full flex">
@@ -181,6 +191,15 @@ export default function CreatureManager() {
           <h2 className="font-display text-sm text-primary">Creatures</h2>
           <span className="text-xs text-muted-foreground">({creatures.length})</span>
           <div className="flex-1" />
+          <Select value={regionFilter} onValueChange={setRegionFilter}>
+            <SelectTrigger className="w-32 h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
+            <SelectContent className="bg-popover border-border z-50 max-h-60">
+              <SelectItem value="all" className="text-xs">All Regions</SelectItem>
+              {regionNames.map(r => (
+                <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
