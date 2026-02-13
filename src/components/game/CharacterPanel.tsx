@@ -22,6 +22,7 @@ interface Props {
   // Regen info
   isAtInn?: boolean;
   regenBuff?: { multiplier: number; expiresAt: number };
+  regenTick?: boolean;
   // Party props
   party: Party | null;
   partyMembers: PartyMember[];
@@ -114,7 +115,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
-  isAtInn, regenBuff,
+  isAtInn, regenBuff, regenTick,
   party, partyMembers, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
 }: Props) {
@@ -144,9 +145,14 @@ export default function CharacterPanel({
             <div className="cursor-help">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-muted-foreground">HP</span>
-                <span className="text-blood">{character.hp}/{character.max_hp}</span>
+                <span className="flex items-center gap-1">
+                  {regenTick && (
+                    <span className="text-[10px] text-elvish animate-fade-in font-display">+regen</span>
+                  )}
+                  <span className="text-blood">{character.hp}/{character.max_hp}</span>
+                </span>
               </div>
-              <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
+              <div className={`h-2 bg-background rounded-full overflow-hidden border transition-all duration-300 ${regenTick ? 'border-elvish shadow-[0_0_8px_hsl(var(--elvish)/0.6)]' : 'border-border'}`}>
                 <div
                   className="h-full transition-all duration-500"
                   style={{
