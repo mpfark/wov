@@ -89,6 +89,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   // return_unique_items, regen_creature_hp, respawn_creatures run server-side via scheduled jobs
 
+  // Regen tick visual indicator
+  const [regenTick, setRegenTick] = useState(false);
+
   // Passive HP regeneration — 1 HP every 30s, multiplied by regen buff and inn bonus
   useEffect(() => {
     const interval = setInterval(() => {
@@ -101,6 +104,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const newHp = Math.min(character.hp + regenAmount, character.max_hp);
         if (newHp !== character.hp) {
           updateCharacter({ hp: newHp });
+          setRegenTick(true);
+          setTimeout(() => setRegenTick(false), 1200);
         }
       }
     }, 30000);
@@ -607,6 +612,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onSpendPoint={handleSpendPoint}
                 isAtInn={currentNode?.is_inn ?? false}
                 regenBuff={regenBuff}
+                regenTick={regenTick}
                 party={party}
                 partyMembers={partyMembers}
                 pendingInvites={pendingInvites}
