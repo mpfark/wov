@@ -73,22 +73,31 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     const PADDING = 70;
     const vals = [...positions.values()];
     const minX = Math.min(...vals.map(p => p.x));
-    const minY = Math.min(...vals.map(p => p.y));
     const maxX = Math.max(...vals.map(p => p.x));
+    const minY = Math.min(...vals.map(p => p.y));
     const maxY = Math.max(...vals.map(p => p.y));
+
+    const totalW = (maxX - minX) * SPACING + PADDING * 2;
+    const totalH = (maxY - minY) * SPACING + PADDING * 2;
+
+    // Center node is at grid (0,0) — compute its pixel position then offset everything so it's centered
+    const centerPxRaw = (0 - minX) * SPACING + PADDING;
+    const centerPyRaw = (0 - minY) * SPACING + PADDING;
+    const offsetX = totalW / 2 - centerPxRaw;
+    const offsetY = totalH / 2 - centerPyRaw;
 
     const np = new Map<string, { px: number; py: number }>();
     positions.forEach((pos, id) => {
       np.set(id, {
-        px: (pos.x - minX) * SPACING + PADDING,
-        py: (pos.y - minY) * SPACING + PADDING,
+        px: (pos.x - minX) * SPACING + PADDING + offsetX,
+        py: (pos.y - minY) * SPACING + PADDING + offsetY,
       });
     });
 
     return {
       nodePositions: np,
-      svgWidth: (maxX - minX) * SPACING + PADDING * 2,
-      svgHeight: (maxY - minY) * SPACING + PADDING * 2,
+      svgWidth: totalW,
+      svgHeight: totalH,
       SPACING,
     };
   }, [positions]);
