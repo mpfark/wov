@@ -262,7 +262,7 @@ export default function NodeEditorPanel({
       if (adjacentToNodeId) {
         const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
         if (parentNode) {
-          connections = [{ node_id: adjacentToNodeId, direction: 'S', label: parentNode.name }];
+          connections = [{ node_id: adjacentToNodeId, direction: 'S', label: '' }];
         }
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
