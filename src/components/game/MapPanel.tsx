@@ -71,6 +71,14 @@ export default function MapPanel({
             <svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke="hsl(35 20% 35% / 0.4)" strokeWidth={1.5} strokeDasharray="4 3" /></svg>
             <span className="text-muted-foreground">Exit path</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="hsl(0 70% 50%)" className="stroke-background" strokeWidth={1} /></svg>
+            <span className="text-muted-foreground">Aggressive</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} /></svg>
+            <span className="text-muted-foreground">Creature</span>
+          </div>
         </div>
       </div>
     </div>
