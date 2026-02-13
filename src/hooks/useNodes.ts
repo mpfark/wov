@@ -10,6 +10,7 @@ export interface GameNode {
   searchable_items: string[];
   is_vendor: boolean;
   is_inn: boolean;
+  is_blacksmith: boolean;
 }
 
 export interface Region {

@@ -8,6 +8,7 @@ interface GraphNode {
   region_id: string;
   is_vendor: boolean;
   is_inn: boolean;
+  is_blacksmith: boolean;
   connections: Array<{ node_id: string; direction: string; label?: string }>;
 }
 
@@ -381,9 +382,9 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, onNo
                   onClick={() => onNodeClick(node.id)}
                 />
                 {/* Icon markers row above node */}
-                {(node.is_vendor || node.is_inn) && (
+                {(node.is_vendor || node.is_inn || node.is_blacksmith) && (
                   <text x={pos.px} y={pos.py - 12} textAnchor="middle" className="text-[8px] select-none pointer-events-none">
-                    {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}
+                    {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}{node.is_blacksmith ? '🔨' : ''}
                   </text>
                 )}
                 {/* Creature dots below node */}

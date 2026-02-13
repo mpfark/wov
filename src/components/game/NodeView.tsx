@@ -16,12 +16,13 @@ interface Props {
   onSearch: () => void;
   onAttack: (creatureId: string) => void;
   onOpenVendor?: () => void;
+  onOpenBlacksmith?: () => void;
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
 }
 
 export default function NodeView({
-  node, region, players, creatures, character, eventLog, onSearch, onAttack, onOpenVendor,
+  node, region, players, creatures, character, eventLog, onSearch, onAttack, onOpenVendor, onOpenBlacksmith,
   inCombat, activeCombatCreatureId,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
@@ -40,6 +41,9 @@ export default function NodeView({
           )}
           {node.is_inn && (
             <p className="text-xs text-elvish mt-0.5">🏨 Inn — Resting here boosts HP regeneration</p>
+          )}
+          {node.is_blacksmith && (
+            <p className="text-xs text-dwarvish mt-0.5">🔨 Blacksmith — Repair your equipment here</p>
           )}
         </div>
 
@@ -115,6 +119,11 @@ export default function NodeView({
         {onOpenVendor && (
           <Button variant="outline" size="sm" onClick={onOpenVendor} className="w-full mt-1.5 font-display text-xs text-primary">
             🛒 Open Shop
+          </Button>
+        )}
+        {onOpenBlacksmith && (
+          <Button variant="outline" size="sm" onClick={onOpenBlacksmith} className="w-full mt-1.5 font-display text-xs text-dwarvish">
+            🔨 Open Blacksmith
           </Button>
         )}
       </div>

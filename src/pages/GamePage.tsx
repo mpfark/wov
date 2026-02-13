@@ -4,6 +4,7 @@ import CharacterPanel from '@/components/game/CharacterPanel';
 import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
+import BlacksmithPanel from '@/components/game/BlacksmithPanel';
 import LootShareDialog, { LootDrop } from '@/components/game/LootShareDialog';
 import StatAllocationDialog from '@/components/game/StatAllocationDialog';
 import { Character } from '@/hooks/useCharacter';
@@ -42,6 +43,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Everyday Adventurer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
+  const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
@@ -247,7 +249,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     for (const item of equipped) {
       const newDur = item.current_durability - 1;
       if (newDur <= 0) {
-        addLog(`💔 Your ${item.item.name} has broken!`);
+        if (item.item.rarity === 'unique') {
+          addLog(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`);
+        } else {
+          addLog(`💔 Your ${item.item.name} has broken!`);
+        }
         await supabase.from('character_inventory').delete().eq('id', item.id);
       } else {
         await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
@@ -321,11 +327,18 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const roll = rollD20();
     const searchItems = currentNode.searchable_items as any[];
     if (roll >= 12 && searchItems && searchItems.length > 0) {
-      // Roll against each searchable item's chance
       for (const entry of searchItems) {
         if (Math.random() <= (entry.chance || 0.5)) {
-          const { data: item } = await supabase.from('items').select('name').eq('id', entry.item_id).single();
+          const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
           if (item) {
+            // Unique item exclusivity check
+            if (item.rarity === 'unique') {
+              const { data: held } = await supabase.from('character_inventory').select('id').eq('item_id', entry.item_id).limit(1);
+              if (held && held.length > 0) {
+                addLog(`🔍 Search roll: ${roll} — The unique power of ${item.name} is already claimed by another...`);
+                return;
+              }
+            }
             await supabase.from('character_inventory').insert({
               character_id: character.id, item_id: entry.item_id, current_durability: 100,
             });
@@ -349,6 +362,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       if (Math.random() <= (entry.chance || 0.1)) {
         const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
         if (item) {
+          // Unique item exclusivity check
+          if (item.rarity === 'unique') {
+            const { data: held } = await supabase.from('character_inventory').select('id').eq('item_id', entry.item_id).limit(1);
+            if (held && held.length > 0) {
+              addLog(`✨ The unique power of ${item.name} is already claimed by another...`);
+              continue;
+            }
+          }
           droppedItems.push({ item_id: entry.item_id, item_name: item.name, item_rarity: item.rarity });
           addLog(`💎 ${creatureName} dropped ${item.name}!`);
         }
@@ -481,6 +502,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   onSearch={handleSearch}
                   onAttack={handleAttack}
                   onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
+                  onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
                   inCombat={inCombat}
                   activeCombatCreatureId={activeCombatCreatureId}
                 />
@@ -543,6 +565,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           open={vendorOpen}
           onClose={() => setVendorOpen(false)}
           nodeId={currentNode.id}
+          characterId={character.id}
+          gold={character.gold}
+          inventory={[...equipped, ...unequipped]}
+          onGoldChange={(g) => updateCharacter({ gold: g })}
+          onInventoryChange={fetchInventory}
+          addLog={addLog}
+        />
+      )}
+
+      {/* Blacksmith Dialog */}
+      {currentNode.is_blacksmith && (
+        <BlacksmithPanel
+          open={blacksmithOpen}
+          onClose={() => setBlacksmithOpen(false)}
           characterId={character.id}
           gold={character.gold}
           inventory={[...equipped, ...unequipped]}
