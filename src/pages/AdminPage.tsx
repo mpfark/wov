@@ -22,6 +22,7 @@ interface AdminPageProps {
 export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [regions, setRegions] = useState<any[]>([]);
   const [nodes, setNodes] = useState<any[]>([]);
+  const [creatureCounts, setCreatureCounts] = useState<Map<string, { total: number; aggressive: number }>>(new Map());
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -29,12 +30,24 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const [r, n] = await Promise.all([
+    const [r, n, c] = await Promise.all([
       supabase.from('regions').select('*').order('min_level'),
       supabase.from('nodes').select('*').order('name'),
+      supabase.from('creatures').select('id, node_id, is_aggressive, is_alive'),
     ]);
     setRegions(r.data || []);
     setNodes(n.data || []);
+
+    // Build creature counts per node
+    const counts = new Map<string, { total: number; aggressive: number }>();
+    for (const cr of (c.data || [])) {
+      if (!cr.node_id || !cr.is_alive) continue;
+      const entry = counts.get(cr.node_id) || { total: 0, aggressive: 0 };
+      entry.total++;
+      if (cr.is_aggressive) entry.aggressive++;
+      counts.set(cr.node_id, entry);
+    }
+    setCreatureCounts(counts);
   }, []);
 
   useEffect(() => { loadData(); }, []);
@@ -125,6 +138,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                 <AdminWorldMapView
                   regions={regions}
                   nodes={nodes}
+                  creatureCounts={creatureCounts}
                   onNodeClick={handleNodeClick}
                   onAddNodeBetween={handleAddNodeBetween}
                   onAddNodeAdjacent={handleAddNodeAdjacent}
