@@ -12,6 +12,7 @@ import ItemManager from '@/components/admin/ItemManager';
 import CreatureManager from '@/components/admin/CreatureManager';
 import UserManager from '@/components/admin/UserManager';
 import RaceClassManager from '@/components/admin/RaceClassManager';
+import RoadmapManager from '@/components/admin/RoadmapManager';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -99,6 +100,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
             <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
+            <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
           </TabsList>
         </div>
 
@@ -163,6 +165,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="races-classes" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <RaceClassManager />
+        </TabsContent>
+
+        <TabsContent value="roadmap" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          <RoadmapManager />
         </TabsContent>
       </Tabs>
     </div>
