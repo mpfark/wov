@@ -1,72 +1,53 @@
 
 
-# Roadmap Feature for Admin Panel
+# Add New Admin Actions: Teleport, Grant XP, Revive, Remove Item, Reset Stats
 
 ## Overview
-Add a new "Roadmap" tab to the admin panel that displays all planned features as a manageable list. Each entry has a **title**, **description**, **category** tag, and a **done** checkbox. Admins can add, edit, and mark entries as implemented. All your brainstormed ideas (A through J) will be pre-seeded into the table.
 
-## Database
+Add five new admin actions to the Users panel so admins can better manage and assist players. All actions will be added to the existing Admin Actions column (Column 2) and backed by new endpoints in the `admin-users` edge function.
 
-### New table: `roadmap_items`
+## New Actions
 
-| Column | Type | Default | Notes |
-|--------|------|---------|-------|
-| id | uuid | gen_random_uuid() | PK |
-| title | text | | Required, short name |
-| description | text | '' | Detailed explanation |
-| category | text | 'general' | e.g. "Combat", "Items", "UI", "NPCs", "Quests", "Classes", "Analytics" |
-| is_done | boolean | false | Checkmark when implemented |
-| sort_order | integer | 0 | For manual ordering |
-| created_at | timestamptz | now() | |
+1. **Teleport Player** -- Move a character to any node via a searchable dropdown
+2. **Grant XP** -- Award XP directly (with automatic level-up handling via existing DB logic)
+3. **Revive Character** -- Instantly set HP to max_hp for dead/incapacitated characters
+4. **Remove Item** -- Delete a specific item from a character's inventory
+5. **Reset Stat Points** -- Refund all allocated stat points back to base (racial/class defaults) and grant them as unspent points
 
-- RLS: SELECT open to all authenticated users; INSERT/UPDATE/DELETE restricted to admins (`is_maiar_or_valar()`)
+## Technical Details
 
-### Seed data (inserted via migration)
-All 10 brainstormed ideas will be inserted as initial rows:
+### Edge Function Changes (`supabase/functions/admin-users/index.ts`)
 
-| Title | Category |
-|-------|----------|
-| Auto-progressing combat system | Combat |
-| Class abilities (Healer spells, Bard songs) | Classes |
-| Player action logs for balancing | Analytics |
-| Non-Player Characters (NPCs) | NPCs |
-| Quest system with AI generation | Quests |
-| Inn resting for faster HP regen | Mechanics |
-| Unique item rules and repair system | Items |
-| HP regen rate tooltip | UI |
-| Level-difference XP penalty | Mechanics |
-| Creature presence indicators on nodes | UI |
+Add five new action handlers:
 
-## Frontend
+- **`teleport`** -- Updates `characters.current_node_id` to the provided `node_id`. Validates the node exists.
+- **`grant-xp`** -- Adds XP to a character. Reuses the same level-up logic as `award_party_member` DB function but via direct SQL update (XP add, check threshold, bump level/max_hp/stat points if needed).
+- **`revive`** -- Sets `characters.hp = characters.max_hp` for the given character.
+- **`remove-item`** -- Deletes a row from `character_inventory` by inventory entry ID.
+- **`reset-stats`** -- Calculates the character's base stats (10 for all, plus racial/class bonuses from level-ups), sets those as current stats, and converts the difference into `unspent_stat_points`.
 
-### 1. AdminPage.tsx
-- Add a "Roadmap" tab trigger to the existing `TabsList`
-- Add a `TabsContent` rendering the new `RoadmapManager` component
+### Frontend Changes (`src/components/admin/UserManager.tsx`)
 
-### 2. New component: `src/components/admin/RoadmapManager.tsx`
-A full-height scrollable panel with:
+Add new UI sections in the Admin Actions column (Column 2), below the existing "Give Item" section:
 
-- **Header bar**: Title "Roadmap" + "Add Entry" button + optional category filter dropdown
-- **Entry list**: Each row shows:
-  - A checkbox to toggle `is_done` (saves immediately to DB)
-  - The title (bold) with the category as a colored `Badge`
-  - The description below in smaller text
-  - An edit button to inline-edit title, description, and category
-  - A delete button (with confirmation)
-- **Add/Edit form**: A small inline form (or collapsible section at the top) with:
-  - Title input
-  - Description textarea
-  - Category selector (predefined list: Combat, Classes, Analytics, NPCs, Quests, Mechanics, Items, UI, General -- plus ability to type custom)
-- Done items are visually muted (strikethrough title, lower opacity) and sorted to the bottom
-- Undone items are sorted by `sort_order` then `created_at`
+- **Teleport**: A select dropdown listing all nodes (fetched on mount, grouped or flat). Button: "Teleport {charName}".
+- **Grant XP**: A number input for XP amount. Button: "Grant XP to {charName}".
+- **Revive**: A simple button per character, only enabled when HP < max_hp. Button: "Revive {charName}".
+- **Remove Item**: A select dropdown showing the character's current inventory items. Button: "Remove".
+- **Reset Stats**: A button per character. Button: "Reset Stats for {charName}".
 
-### Visual Style
-- Follows the existing admin panel parchment/fantasy aesthetic
-- Category badges use different muted colors (e.g. Combat = red, UI = blue, Items = amber)
-- Checkmark uses the existing `Checkbox` component
-- Consistent with the `font-display text-xs` pattern used across other admin tabs
+New state variables: `teleportNodeId`, `grantXpAmount`, `removeItemId`, plus a nodes list fetched on mount.
 
-## Technical Notes
-- Uses the standard Supabase client for CRUD -- no edge function needed
-- Realtime not required since this is admin-only and low-frequency
-- The category list is hardcoded in the component but the column is free-text so custom categories work too
+New icons imported from lucide-react: `MapPin`, `Sparkles`, `Heart`, `Trash2`, `RotateCcw`.
+
+Each action calls `callAdmin()` with the appropriate action name and payload, shows a toast on success, and reloads the user list.
+
+### Data Loading
+
+- Fetch all nodes on mount (similar to how `allItems` is loaded) for the teleport dropdown.
+- The character's inventory is already available from the user list response for the remove-item dropdown.
+
+### No Database Migrations Needed
+
+All operations use existing tables and columns. The edge function uses the service role key to bypass RLS, so no policy changes are required.
+
