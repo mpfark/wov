@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift } from 'lucide-react';
+import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
 import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
 
 interface AdminInventoryItem {
@@ -388,6 +388,10 @@ export default function UserManager({ isValar }: Props) {
   const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string }[]>([]);
   const [giveItemId, setGiveItemId] = useState<string>('');
   const [givingItem, setGivingItem] = useState(false);
+  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_name: string }[]>([]);
+  const [teleportNodeId, setTeleportNodeId] = useState<string>('');
+  const [grantXpAmount, setGrantXpAmount] = useState<number>(100);
+  const [removeItemId, setRemoveItemId] = useState<string>('');
 
   const callAdmin = useCallback(async (action: string, method: string, body?: any) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -423,10 +427,19 @@ export default function UserManager({ isValar }: Props) {
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   useEffect(() => {
-    supabase.from('items').select('id, name, rarity').order('name').then(({ data }) => {
-      if (data) {
-        setAllItems(data);
-        if (data.length > 0 && !giveItemId) setGiveItemId(data[0].id);
+    Promise.all([
+      supabase.from('items').select('id, name, rarity').order('name'),
+      supabase.from('nodes').select('id, name, region_id').order('name'),
+      supabase.from('regions').select('id, name'),
+    ]).then(([itemsRes, nodesRes, regionsRes]) => {
+      if (itemsRes.data) {
+        setAllItems(itemsRes.data);
+        if (itemsRes.data.length > 0 && !giveItemId) setGiveItemId(itemsRes.data[0].id);
+      }
+      if (nodesRes.data && regionsRes.data) {
+        const regionMap = Object.fromEntries((regionsRes.data || []).map(r => [r.id, r.name]));
+        setAllNodes(nodesRes.data.map(n => ({ id: n.id, name: n.name, region_name: regionMap[n.region_id] || 'Unknown' })));
+        if (nodesRes.data.length > 0) setTeleportNodeId(nodesRes.data[0].id);
       }
     });
   }, []);
@@ -474,6 +487,52 @@ export default function UserManager({ isValar }: Props) {
       loadUsers();
     } catch (err: any) { toast.error(err.message); }
     finally { setGivingItem(false); }
+  };
+
+  const handleTeleport = async (characterId: string) => {
+    if (!teleportNodeId) return;
+    try {
+      await callAdmin('teleport', 'POST', { character_id: characterId, node_id: teleportNodeId });
+      const nodeName = allNodes.find(n => n.id === teleportNodeId)?.name || 'node';
+      toast.success(`Teleported to ${nodeName}`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleGrantXp = async (characterId: string) => {
+    if (!grantXpAmount || grantXpAmount <= 0) return;
+    try {
+      const data = await callAdmin('grant-xp', 'POST', { character_id: characterId, amount: grantXpAmount });
+      toast.success(`Granted ${grantXpAmount} XP${data.levels_gained > 0 ? ` (+${data.levels_gained} levels!)` : ''}`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleRevive = async (characterId: string) => {
+    try {
+      await callAdmin('revive', 'POST', { character_id: characterId });
+      toast.success('Character revived');
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleRemoveItem = async () => {
+    if (!removeItemId) return;
+    try {
+      await callAdmin('remove-item', 'POST', { inventory_id: removeItemId });
+      toast.success('Item removed');
+      setRemoveItemId('');
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleResetStats = async (characterId: string) => {
+    try {
+      const data = await callAdmin('reset-stats', 'POST', { character_id: characterId });
+      toast.success(`Stats reset — ${data.refunded_points} points refunded`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
   };
 
   const filteredUsers = search
@@ -673,6 +732,107 @@ export default function UserManager({ isValar }: Props) {
                   ))}
                 </div>
               )}
+
+              {/* Teleport */}
+              {selectedUser.characters.length > 0 && (
+                <div className="border-t border-border pt-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <MapPin className="w-3.5 h-3.5 text-chart-2" />
+                    <h4 className="font-display text-xs text-muted-foreground">Teleport</h4>
+                  </div>
+                  {selectedUser.characters.map(c => (
+                    <div key={c.id} className="space-y-1.5 mb-3">
+                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
+                      <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
+                        <SelectTrigger className="h-7 w-full text-[10px]">
+                          <SelectValue placeholder="Select node..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50 max-h-60">
+                          {allNodes.map(node => (
+                            <SelectItem key={node.id} value={node.id} className="text-xs">
+                              {node.name} <span className="text-muted-foreground">({node.region_name})</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                        disabled={!teleportNodeId} onClick={() => handleTeleport(c.id)}>
+                        <MapPin className="w-3 h-3" /> Teleport {c.name}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Grant XP */}
+              {selectedUser.characters.length > 0 && (
+                <div className="border-t border-border pt-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    <h4 className="font-display text-xs text-muted-foreground">Grant XP</h4>
+                  </div>
+                  {selectedUser.characters.map(c => (
+                    <div key={c.id} className="space-y-1.5 mb-3">
+                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
+                      <Input type="number" min={1} value={grantXpAmount}
+                        onChange={e => setGrantXpAmount(parseInt(e.target.value) || 0)}
+                        className="h-7 text-[10px]" placeholder="XP amount" />
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                        disabled={grantXpAmount <= 0} onClick={() => handleGrantXp(c.id)}>
+                        <Sparkles className="w-3 h-3" /> Grant XP to {c.name}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Revive / Remove Item / Reset Stats */}
+              {selectedUser.characters.length > 0 && (
+                <div className="border-t border-border pt-3 space-y-3">
+                  {selectedUser.characters.map(c => (
+                    <div key={c.id} className="space-y-1.5">
+                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
+                      
+                      {/* Revive */}
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                        disabled={c.hp >= c.max_hp} onClick={() => handleRevive(c.id)}>
+                        <Heart className="w-3 h-3" /> Revive {c.name}
+                        {c.hp < c.max_hp && <span className="text-blood ml-1">({c.hp}/{c.max_hp})</span>}
+                      </Button>
+
+                      {/* Remove Item */}
+                      {c.inventory.length > 0 && (
+                        <div className="space-y-1">
+                          <Select value={removeItemId} onValueChange={setRemoveItemId}>
+                            <SelectTrigger className="h-7 w-full text-[10px]">
+                              <SelectValue placeholder="Select item to remove..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border-border z-50 max-h-60">
+                              {c.inventory.map(inv => (
+                                <SelectItem key={inv.id} value={inv.id} className="text-xs">
+                                  <span className={rarityColor(inv.item.rarity)}>{inv.item.name}</span>
+                                  {inv.equipped_slot && <span className="text-muted-foreground ml-1">(equipped)</span>}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 w-full"
+                            disabled={!removeItemId} onClick={handleRemoveItem}>
+                            <Trash2 className="w-3 h-3" /> Remove Item
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Reset Stats */}
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                        onClick={() => handleResetStats(c.id)}>
+                        <RotateCcw className="w-3 h-3" /> Reset Stats for {c.name}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
             </div>
           )}
         </div>
