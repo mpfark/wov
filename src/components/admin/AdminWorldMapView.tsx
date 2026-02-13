@@ -340,12 +340,6 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, onNo
                   strokeWidth={edge.crossRegion ? 2.5 : 1.5}
                   strokeDasharray={edge.crossRegion ? '10 5' : '6 3'}
                 />
-                {edge.label && (
-                  <text x={midX} y={midY - 10} textAnchor="middle"
-                    className="fill-muted-foreground text-[8px]">
-                    {edge.label}
-                  </text>
-                )}
                 {/* Plus button on edge midpoint */}
                 <g
                   className="cursor-pointer"
