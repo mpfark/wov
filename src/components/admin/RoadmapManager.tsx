@@ -19,7 +19,7 @@ interface RoadmapItem {
   created_at: string;
 }
 
-const CATEGORIES = ['Combat', 'Classes', 'Analytics', 'NPCs', 'Quests', 'Mechanics', 'Items', 'UI', 'General'];
+const CATEGORIES = ['Combat', 'Classes', 'Analytics', 'NPCs', 'Quests', 'Mechanics', 'Items', 'UI', 'Admin', 'General'];
 
 const CATEGORY_COLORS: Record<string, string> = {
   Combat: 'bg-red-900/60 text-red-200 border-red-700',
@@ -30,6 +30,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Mechanics: 'bg-orange-900/60 text-orange-200 border-orange-700',
   Items: 'bg-amber-900/60 text-amber-200 border-amber-700',
   UI: 'bg-blue-900/60 text-blue-200 border-blue-700',
+  Admin: 'bg-indigo-900/60 text-indigo-200 border-indigo-700',
   General: 'bg-muted text-muted-foreground border-border',
 };
 
