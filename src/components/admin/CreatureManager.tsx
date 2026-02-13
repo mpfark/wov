@@ -175,7 +175,7 @@ export default function CreatureManager() {
   return (
     <div className="h-full flex">
       {/* Left: Creature List */}
-      <div className={`flex flex-col ${panelOpen ? 'w-1/2' : 'w-full'} border-r border-border transition-all`}>
+      <div className="flex flex-col w-1/2 border-r border-border transition-all">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
           <Skull className="w-4 h-4 text-primary" />
           <h2 className="font-display text-sm text-primary">Creatures</h2>
@@ -223,8 +223,9 @@ export default function CreatureManager() {
       </div>
 
       {/* Right: Properties Panel */}
-      {panelOpen && (
-        <div className="w-1/2 flex flex-col bg-card/50">
+      <div className="w-1/2 flex flex-col bg-card/50">
+        {panelOpen ? (
+          <>
           <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
             <h2 className="font-display text-sm text-primary text-glow truncate">
               {selectedId ? `Edit: ${form.name || 'Creature'}` : 'New Creature'}
@@ -349,8 +350,13 @@ export default function CreatureManager() {
               </div>
             </div>
           </ScrollArea>
-        </div>
-      )}
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic font-display">
+            Select a creature to edit
+          </div>
+        )}
+      </div>
     </div>
   );
 }
