@@ -1,77 +1,73 @@
 
 
-# Auto-Combat System: Continuous Combat Loop
+# Item Stat Budget System
 
 ## Overview
 
-Replace the current single-click-per-exchange combat with a persistent auto-combat loop. When combat starts (via Attack button or aggressive creature), the player and creature exchange blows automatically at intervals until one dies. Combat resumes when re-entering a node with living creatures you've previously engaged (or aggressive ones).
+Add a `level` field to items and enforce a stat point budget based on level and rarity, with per-stat caps to prevent stacking. Admins see a live budget meter when editing items and cannot save over-budget items.
 
-## How It Works
+## Budget Formula
 
-1. **Starting combat**: Click "Attack" on a creature, or enter a node with aggressive creatures
-2. **Combat loop**: Player and creature take turns attacking automatically on a timer
-3. **Attack speed**: Interval between player attacks is based on DEX -- higher DEX = faster attacks (e.g., base 3s, reduced by DEX modifier, minimum 1s). Creature attack speed is fixed (e.g., 2.5s)
-4. **Ending combat**: Combat ends when the creature dies (rewards granted) or the player dies (death/respawn flow)
-5. **Resuming**: If a player leaves and returns to a node with a creature they were fighting (or an aggressive creature), combat auto-resumes
-6. **UI**: The Attack button changes to show combat is active (e.g., "In Combat..." with a pulsing indicator). Player cannot manually click attack while auto-combat is running. Moving away triggers attack of opportunity as before.
+```text
+Budget = floor(level * 0.3 * rarity_multiplier)
 
-## Technical Plan
+Rarity multipliers:
+  common:   1.0x
+  uncommon: 1.5x
+  rare:     2.0x
+  unique:   3.0x
 
-### 1. New Hook: `useCombat.ts`
-
-Create a dedicated hook to manage the combat loop state:
-
-- **State**: `activeCombatCreatureId` (the creature currently being fought), `inCombat` boolean
-- **Core loop**: Uses `setInterval` with the DEX-based attack speed
-- Each tick:
-  - Player attacks creature (same roll logic as current `handleAttack`)
-  - If creature survives, creature counterattacks (same logic)
-  - If creature dies, award XP/gold/loot, clear combat, auto-target next aggressive creature if any
-  - If player dies, clear combat, trigger death flow
-- **Start combat**: Called from Attack button click or aggressive creature detection
-- **Stop combat**: Called on creature death, player death, or node change
-- **Attack speed calculation**: `Math.max(3000 - (dexMod * 250), 1000)` ms -- so DEX 10 (mod 0) = 3s, DEX 18 (mod +4) = 2s, DEX 22 (mod +6) = 1.5s, capped at 1s minimum
-
-### 2. Refactor `GamePage.tsx`
-
-- Extract all combat logic (the current `handleAttack` body) into the `useCombat` hook
-- Remove the manual `handleAttack` callback; replace with `startCombat(creatureId)` from the hook
-- Update aggressive creature auto-attack effect to call `startCombat` instead of doing a one-off exchange
-- Keep attack of opportunity on movement (one-time strikes when fleeing, not a loop)
-- Pass `inCombat` and `activeCombatCreatureId` to NodeView for UI updates
-
-### 3. Update `NodeView.tsx`
-
-- When `inCombat` is true and the creature matches `activeCombatCreatureId`, show "In Combat..." instead of the Attack button (with a pulsing/animated indicator)
-- Other creatures still show the Attack button (clicking switches target)
-- Add a "Flee" button during combat that triggers movement (with attack of opportunity)
-
-### 4. Combat Resume on Node Re-entry
-
-- When creatures load for a node, check if any are aggressive and alive -- if so, auto-start combat after a short delay (500ms)
-- This reuses the existing aggressive creature detection but now calls `startCombat` instead of doing a single exchange
-
-### 5. Attack Speed Formula
-
+Examples (Level 40):
+  common:   floor(40 * 0.3 * 1.0) = 12 points
+  uncommon: floor(40 * 0.3 * 1.5) = 18 points
+  rare:     floor(40 * 0.3 * 2.0) = 24 points
+  unique:   floor(40 * 0.3 * 3.0) = 36 points
 ```
-Base interval: 3000ms
-DEX modifier: Math.floor((dex - 10) / 2)
-Interval: Math.max(3000 - (dexMod * 250), 1000)
 
-Examples:
-  DEX 8  (mod -1) -> 3250ms (capped display, actual 3250)
-  DEX 10 (mod  0) -> 3000ms
-  DEX 14 (mod +2) -> 2500ms
-  DEX 18 (mod +4) -> 2000ms
-  DEX 22 (mod +6) -> 1500ms
-  DEX 30 (mod +10) -> 1000ms (minimum)
+## Stat Costs and Per-Item Caps
+
+```text
+Stat       Cost    Max per item
+------     ----    ------------
+STR         1        +5
+DEX         1        +5
+CON         1        +5
+INT         1        +5
+WIS         1        +5
+CHA         1        +5
+AC          3        +3
+HP          0.5      +10
 ```
+
+## Changes
+
+### 1. Database Migration
+
+Add `level` column to `items` table with a default of 1 and a range constraint (1-100).
+
+### 2. `src/lib/game-data.ts` -- New Functions and Constants
+
+- `ITEM_RARITY_MULTIPLIER` -- rarity to multiplier map
+- `ITEM_STAT_COSTS` -- cost per stat point (AC=3, HP=0.5, others=1)
+- `ITEM_STAT_CAPS` -- max value per stat per item (AC=3, HP=10, others=5)
+- `getItemStatBudget(level, rarity)` -- returns the total budget
+- `calculateItemStatCost(stats)` -- returns the weighted cost of current stats
+- `getItemStatCap(statKey)` -- returns the cap for a given stat
+
+### 3. `src/components/admin/ItemManager.tsx` -- UI and Validation
+
+- Add `level` to the `Item` interface and form state (default 1)
+- Add level number input (1-100) in the properties panel
+- Add a budget indicator bar showing `used / total` points, colored green when under budget, red when over
+- Clamp stat inputs to their per-stat cap (e.g., AC input max=3, HP input max=10, others max=5)
+- On save, validate total cost does not exceed budget; show error toast if over
+- Show level in the item list row
 
 ### Files Changed
 
 | File | Change |
 |---|---|
-| `src/hooks/useCombat.ts` | **New** -- combat loop hook with start/stop, auto-attack interval, all hit/damage/kill/loot logic |
-| `src/pages/GamePage.tsx` | Refactor to use `useCombat` hook; remove inline `handleAttack`; update aggro effect to call `startCombat` |
-| `src/components/game/NodeView.tsx` | Add `inCombat`/`activeCombatCreatureId` props; show combat status indicator; add Flee button |
+| Migration SQL | Add `level` column (integer, default 1, range 1-100) to `items` |
+| `src/lib/game-data.ts` | Add budget/cost/cap constants and helper functions |
+| `src/components/admin/ItemManager.tsx` | Add level field, budget indicator, stat caps, save validation |
 
