@@ -1,74 +1,65 @@
 
 
-# Hidden Paths (Discoverable via Search)
+# AI World Builder Assistant
 
-Add a `hidden` flag to node connections so admins can mark certain paths as secret. Hidden paths won't appear on the player's map, but when a player uses "Search Area" at a node with hidden exits, they can discover and travel through them.
+## Overview
+Add an "AI World Builder" tab to the Admin panel that lets you generate Middle-earth regions, nodes, creatures, NPCs, and (later) quests using AI. The assistant understands your existing world structure and generates content that fits seamlessly -- proper connections, level gating, lore-accurate descriptions, and balanced encounters.
 
----
+## How It Works
 
-## What Changes for Players
+1. You open the **World Builder** tab in the Admin panel
+2. You type a prompt like *"Create the Rivendell region for levels 15-25 with 6 nodes including Elrond's House as an inn"*
+3. The AI generates a structured plan: region, nodes, connections, creatures, and NPCs
+4. You review the generated content in a preview panel
+5. Click **Apply** to insert everything into the database, or edit individual items before saving
 
-- Hidden connections are invisible on the local area map
-- When clicking "Search Area," if a hidden path exists and the search roll succeeds (roll >= 10), the player gets a message like "You discover a hidden path to [Node Name]!" and is moved there automatically
-- If the roll fails, they see nothing special (existing search behavior continues)
+## Architecture
 
-## What Changes for Admins
+### Backend: Edge Function (`ai-world-builder`)
+- Uses Lovable AI (Gemini Flash) to generate world content
+- System prompt includes:
+  - Middle-earth lore guidelines and naming conventions
+  - Your current world structure (regions, node names, level ranges) for context
+  - Output schema using tool calling for structured JSON (regions, nodes, creatures, NPCs)
+  - Rules: proper directional connections, level-appropriate creatures, balanced vendor/inn/blacksmith placement
+- Accepts a user prompt + current world summary
+- Returns structured data ready for database insertion
 
-- The Connection manager in the Node Editor gains a "Hidden" checkbox per connection
-- Hidden connections still appear in the admin world map but are rendered with a dotted/faded style to distinguish them
+### Frontend: Admin Panel Tab
+- New **"World Builder"** tab alongside existing tabs (World, Creatures, NPCs, etc.)
+- Chat-style interface where you describe what to generate
+- Preview panel showing generated content organized by type (Region, Nodes, Creatures, NPCs)
+- Edit capability on each generated item before applying
+- "Apply All" button that batch-inserts into the database with proper bidirectional connections
 
----
+## What Gets Generated
 
-## Implementation Steps
+| Content Type | Fields | Example |
+|---|---|---|
+| Region | name, description, min/max level | Rivendell, Lvl 15-25 |
+| Nodes | name, description, connections, flags (inn/vendor/blacksmith) | Elrond's House (inn), The Ford of Bruinen |
+| Creatures | name, level, hp, stats, rarity, aggressive flag, loot table | Cave Troll (boss, lvl 22) |
+| NPCs | name, description, dialogue | Elrond, Glorfindel |
 
-### 1. Update Connection Type
+## Future Expansion
+The same assistant architecture supports generating quests once a quest system is built -- the edge function just needs an additional tool/schema for quest output.
 
-In `src/hooks/useNodes.ts`, add `hidden?: boolean` to the connection type:
+## Technical Details
 
-```typescript
-connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
-```
+### Files to Create
+- `supabase/functions/ai-world-builder/index.ts` -- Edge function with Lovable AI integration, structured output via tool calling
+- `src/components/admin/WorldBuilderPanel.tsx` -- Chat UI + generated content preview with edit/apply workflow
 
-### 2. Filter Hidden Paths from Player Graph
+### Files to Modify
+- `src/pages/AdminPage.tsx` -- Add "World Builder" tab
+- `supabase/config.toml` -- Register the new edge function
 
-In `src/components/game/PlayerGraphView.tsx`:
-- Filter out connections where `hidden === true` when computing neighbors and edges
-- Hidden paths won't appear as nodes or lines on the player map
+### Database
+No schema changes needed -- all generated content uses existing `regions`, `nodes`, `creatures`, and `npcs` tables.
 
-### 3. Update Search to Discover Hidden Paths
-
-In `src/pages/GamePage.tsx` `handleSearch`:
-- After the existing search logic, check if the current node has any hidden connections
-- On a successful search roll (>= 10), pick one hidden connection and move the player there with a discovery message
-- Hidden path discovery takes priority over item search when both are possible
-
-### 4. Admin: Hidden Checkbox in ConnectionsManager
-
-In `src/components/admin/NodeEditorPanel.tsx` (`ConnectionsManager`):
-- Display a "Hidden" indicator next to each connection
-- Add a "Hidden" checkbox when adding a new connection
-- The hidden flag is stored in the connection JSON: `{ node_id, direction, label, hidden: true }`
-
-### 5. Admin: Hidden Checkbox in NodeEditorDialog
-
-In `src/components/admin/NodeEditorDialog.tsx` (the dialog variant of the editor):
-- Same changes as the panel version for consistency
-
-### 6. Admin World Map Styling
-
-In `src/components/admin/AdminWorldMapView.tsx`:
-- Render hidden connections with a more transparent/dotted line style so admins can see them but they're visually distinct from normal paths
-
-### 7. Player Map Legend Update
-
-In `src/components/game/MapPanel.tsx`:
-- No legend entry needed since players shouldn't know hidden paths exist
-
----
-
-## Technical Notes
-
-- No database migration needed -- `hidden` is stored inside the existing `connections` JSONB column
-- The `RegionGraphView` admin component should also style hidden edges distinctly
-- Bidirectional hidden connections: when adding a hidden connection A->B, the reverse B->A connection should also be marked hidden automatically
+### AI Integration
+- Model: `google/gemini-3-flash-preview` (fast, good structured output)
+- Uses tool calling to extract structured JSON (no fragile JSON parsing)
+- System prompt includes current world state fetched at request time
+- Handles bidirectional connection generation automatically
 
