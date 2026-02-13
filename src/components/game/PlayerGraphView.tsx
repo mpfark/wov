@@ -47,16 +47,24 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
+  // Filter out hidden connections for player view
+  const visibleConnections = useMemo(() => {
+    if (!currentNode) return [];
+    return currentNode.connections.filter(c => !c.hidden);
+  }, [currentNode]);
+
   const neighbors = useMemo(() => {
     if (!currentNode) return [];
-    const connIds = new Set(currentNode.connections.map((c: any) => c.node_id));
+    const connIds = new Set(visibleConnections.map(c => c.node_id));
     return nodes.filter(n => connIds.has(n.id));
-  }, [currentNode, nodes]);
+  }, [currentNode, visibleConnections, nodes]);
 
   const positions = useMemo(() => {
     if (!currentNode) return new Map<string, { x: number; y: number }>();
-    return layoutFromCenter(currentNode, neighbors);
-  }, [currentNode, neighbors]);
+    // Use a virtual node with only visible connections for layout
+    const virtualNode = { ...currentNode, connections: visibleConnections };
+    return layoutFromCenter(virtualNode, neighbors);
+  }, [currentNode, visibleConnections, neighbors]);
 
   const { nodePositions, svgWidth, svgHeight, SPACING } = useMemo(() => {
     if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250, SPACING: 120 };
@@ -89,13 +97,13 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const edges = useMemo(() => {
     if (!currentNode) return [];
     const result: Array<{ from: string; to: string; label?: string }> = [];
-    for (const conn of currentNode.connections) {
+    for (const conn of visibleConnections) {
       if (nodePositions.has(conn.node_id)) {
         result.push({ from: currentNode.id, to: conn.node_id, label: conn.label });
       }
     }
     return result;
-  }, [currentNode, nodePositions]);
+  }, [currentNode, visibleConnections, nodePositions]);
 
   // Compute visible node IDs for creature fetch
   const visibleNodeIds = useMemo(() => {

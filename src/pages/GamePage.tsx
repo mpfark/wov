@@ -329,6 +329,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (isDead) return;
     if (!currentNode) return;
     const roll = rollD20();
+
+    // Check for hidden paths first (priority over item search)
+    const hiddenPaths = currentNode.connections.filter(c => c.hidden);
+    if (roll >= 10 && hiddenPaths.length > 0) {
+      const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
+      const targetNode = getNode(discovered.node_id);
+      const targetName = targetNode?.name || 'an unknown place';
+      addLog(`🔍 Search roll: ${roll} — You discover a hidden path to ${targetName}!`);
+      if (targetNode) {
+        await updateCharacter({ current_node_id: discovered.node_id });
+        addLog(`You travel through the hidden path to ${targetName}.`);
+      }
+      return;
+    }
+
     const searchItems = currentNode.searchable_items as any[];
     if (roll >= 12 && searchItems && searchItems.length > 0) {
       for (const entry of searchItems) {
@@ -356,7 +371,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     } else {
       addLog(`Search roll: ${roll} — You find nothing of note.`);
     }
-  }, [currentNode, character.id, addLog, fetchInventory, isDead]);
+  }, [currentNode, character.id, addLog, fetchInventory, isDead, getNode, updateCharacter]);
 
   const rollLoot = useCallback(async (lootTable: any[], creatureName: string) => {
     if (!lootTable || lootTable.length === 0) return;

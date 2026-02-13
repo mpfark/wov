@@ -6,7 +6,7 @@ export interface GameNode {
   region_id: string;
   name: string;
   description: string;
-  connections: Array<{ node_id: string; direction: string; label?: string }>;
+  connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
   searchable_items: string[];
   is_vendor: boolean;
   is_inn: boolean;
