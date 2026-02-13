@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, X, Package } from 'lucide-react';
-import { getItemStatBudget, calculateItemStatCost, getItemStatCap } from '@/lib/game-data';
+import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue } from '@/lib/game-data';
 
 interface Item {
   id: string;
@@ -304,8 +304,14 @@ export default function ItemManager() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Gold Value</label>
-                  <Input type="number" min={0} value={form.value}
-                    onChange={e => setForm(f => ({ ...f, value: Math.max(0, +e.target.value) }))} className="h-8 text-xs" />
+                  <div className="flex items-center gap-1">
+                    <Input type="number" min={0} value={form.value}
+                      onChange={e => setForm(f => ({ ...f, value: Math.max(0, +e.target.value) }))} className="h-8 text-xs flex-1" />
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-[10px] px-2 shrink-0"
+                      onClick={() => setForm(f => ({ ...f, value: suggestItemGoldValue(f.level, f.rarity) }))}>
+                      Auto
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <label className="text-[10px] text-muted-foreground">Max Durability</label>
