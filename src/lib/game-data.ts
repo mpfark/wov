@@ -121,6 +121,11 @@ export function getItemStatCap(statKey: string): number {
   return ITEM_STAT_CAPS[statKey] ?? 5;
 }
 
+export function suggestItemGoldValue(level: number, rarity: string): number {
+  const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
+  return Math.round(level * 2.5 * mult * mult);
+}
+
 // Dice rolling
 export function rollD20(): number {
   return Math.floor(Math.random() * 20) + 1;
