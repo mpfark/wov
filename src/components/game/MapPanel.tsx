@@ -57,7 +57,7 @@ export default function MapPanel({
       </div>
 
       {/* Local Map — SVG Graph */}
-      <div className="flex-1 min-h-0">
+      <div>
         <h3 className="font-display text-xs text-muted-foreground mb-1.5">Local Area</h3>
         {currentNodeId ? (
           <PlayerGraphView
@@ -72,30 +72,8 @@ export default function MapPanel({
         )}
       </div>
 
-      {/* Party Section */}
-      <div className="shrink-0 border-t border-border pt-2">
-        <PartyPanel
-          character={character}
-          party={party}
-          members={partyMembers || []}
-          pendingInvites={pendingInvites}
-          isLeader={isLeader}
-          isTank={isTank}
-          myMembership={myMembership}
-          playersHere={playersHere}
-          onCreateParty={onCreateParty}
-          onInvite={onInvite}
-          onAcceptInvite={onAcceptInvite}
-          onDeclineInvite={onDeclineInvite}
-          onLeave={onLeaveParty}
-          onKick={onKick}
-          onSetTank={onSetTank}
-          onToggleFollow={onToggleFollow}
-        />
-      </div>
-
       {/* Map Legend */}
-      <div className="shrink-0 border-t border-border pt-2">
+      <div className="border-t border-border pt-2">
         <h3 className="font-display text-[10px] text-muted-foreground mb-1">Legend</h3>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
           <div className="flex items-center gap-1.5">
@@ -123,6 +101,28 @@ export default function MapPanel({
             <span className="text-muted-foreground">Creature</span>
           </div>
         </div>
+      </div>
+
+      {/* Party Section */}
+      <div className="border-t border-border pt-2">
+        <PartyPanel
+          character={character}
+          party={party}
+          members={partyMembers || []}
+          pendingInvites={pendingInvites}
+          isLeader={isLeader}
+          isTank={isTank}
+          myMembership={myMembership}
+          playersHere={playersHere}
+          onCreateParty={onCreateParty}
+          onInvite={onInvite}
+          onAcceptInvite={onAcceptInvite}
+          onDeclineInvite={onDeclineInvite}
+          onLeave={onLeaveParty}
+          onKick={onKick}
+          onSetTank={onSetTank}
+          onToggleFollow={onToggleFollow}
+        />
       </div>
     </div>
   );
