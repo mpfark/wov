@@ -103,7 +103,7 @@ ${worldSummary || "No regions exist yet."}
 ${expandContext}
 
 RULES:
-- Nodes must have directional connections (north, south, east, west, northeast, northwest, southeast, southwest, up, down, inside, outside)
+- Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
 - Every region should have at least one inn node for resting
 - Creature levels must match the region's level range
 - Creature stats use: str, dex, con, int, wis, cha (range 5-30 based on level)
@@ -171,7 +171,7 @@ Call the generate_world tool with the structured output.`;
                             type: "object",
                             properties: {
                               target_temp_id: { type: "string", description: "Use temp_id for new nodes or 'existing:<uuid>' for existing nodes" },
-                              direction: { type: "string" },
+                              direction: { type: "string", enum: ["N", "S", "E", "W", "NE", "NW", "SE", "SW"] },
                             },
                             required: ["target_temp_id", "direction"],
                           },
