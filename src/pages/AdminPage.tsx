@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
-import NodeEditorDialog from '@/components/admin/NodeEditorDialog';
+import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
 import ItemManager from '@/components/admin/ItemManager';
 import CreatureManager from '@/components/admin/CreatureManager';
@@ -22,7 +23,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [nodes, setNodes] = useState<any[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [isNewNode, setIsNewNode] = useState(false);
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
 
@@ -43,11 +44,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setEditingNodeId(nodeId);
     setIsNewNode(false);
     setAdjacentToNodeId(null);
-    setEditorOpen(true);
+    setPanelOpen(true);
   };
 
   const handleAddNodeAdjacent = (fromId: string) => {
-    // Derive region from the source node if possible
     if (fromId) {
       const node = nodes.find(n => n.id === fromId);
       if (node) setSelectedRegion(node.region_id);
@@ -55,7 +55,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setEditingNodeId(null);
     setIsNewNode(true);
     setAdjacentToNodeId(fromId || null);
-    setEditorOpen(true);
+    setPanelOpen(true);
   };
 
   const handleAddNodeBetween = (fromId: string, toId: string) => {
@@ -63,14 +63,11 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     if (node) setSelectedRegion(node.region_id);
     setEditingNodeId(null);
     setIsNewNode(true);
-    setEditorOpen(true);
+    setPanelOpen(true);
   };
 
   const handleEditorSaved = () => {
     loadData();
-    if (isNewNode) {
-      setEditorOpen(false);
-    }
   };
 
   const deleteRegion = async (id: string) => {
@@ -80,9 +77,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     if (selectedRegion === id) setSelectedRegion('');
     loadData();
   };
-
-  // Nodes for the selected region (used by NodeEditorDialog)
-  const regionNodes = nodes.filter(n => n.region_id === selectedRegion);
 
   return (
     <div className="h-screen flex flex-col parchment-bg">
@@ -109,7 +103,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         </div>
 
         <TabsContent value="world" className="flex-1 flex flex-col min-h-0 mt-0 overflow-hidden">
-          {/* Region controls — just the manager button */}
+          {/* Region controls */}
           <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30 shrink-0">
             <RegionManager
               regions={regions}
@@ -122,15 +116,36 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             </span>
           </div>
 
-          {/* World map view */}
+          {/* Resizable map + properties panel */}
           <div className="flex-1 overflow-hidden">
-            <AdminWorldMapView
-              regions={regions}
-              nodes={nodes}
-              onNodeClick={handleNodeClick}
-              onAddNodeBetween={handleAddNodeBetween}
-              onAddNodeAdjacent={handleAddNodeAdjacent}
-            />
+            <ResizablePanelGroup direction="horizontal">
+              <ResizablePanel defaultSize={panelOpen ? 65 : 100} minSize={40}>
+                <AdminWorldMapView
+                  regions={regions}
+                  nodes={nodes}
+                  onNodeClick={handleNodeClick}
+                  onAddNodeBetween={handleAddNodeBetween}
+                  onAddNodeAdjacent={handleAddNodeAdjacent}
+                />
+              </ResizablePanel>
+              {panelOpen && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <NodeEditorPanel
+                      nodeId={editingNodeId}
+                      regions={regions}
+                      initialRegionId={selectedRegion || (regions[0]?.id ?? '')}
+                      allNodesGlobal={nodes}
+                      onClose={() => setPanelOpen(false)}
+                      onSaved={handleEditorSaved}
+                      isValar={isValar}
+                      adjacentToNodeId={adjacentToNodeId}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
           </div>
         </TabsContent>
 
@@ -150,19 +165,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           <RaceClassManager />
         </TabsContent>
       </Tabs>
-
-      {/* Node editor dialog */}
-      <NodeEditorDialog
-        nodeId={editingNodeId}
-        regionId={selectedRegion}
-        allNodes={regionNodes}
-        allNodesGlobal={nodes}
-        open={editorOpen}
-        onClose={() => setEditorOpen(false)}
-        onSaved={handleEditorSaved}
-        isValar={isValar}
-        adjacentToNodeId={adjacentToNodeId}
-      />
     </div>
   );
 }
