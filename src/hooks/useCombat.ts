@@ -115,7 +115,6 @@ export function useCombat({
       // Target is dead — find next aggressive creature
       const nextAggro = creatures.find(c => c.id !== activeCombatCreatureId && c.is_alive && c.hp > 0 && c.is_aggressive);
       if (nextAggro) {
-        // Switch target
         combatCreatureIdRef.current = nextAggro.id;
         setActiveCombatCreatureId(nextAggro.id);
       } else {
@@ -123,6 +122,31 @@ export function useCombat({
       }
     }
   }, [creatures, inCombat, activeCombatCreatureId, stopCombat]);
+
+  // After combat stops (e.g. creature killed), auto-engage next aggressive creature
+  const justStoppedRef = useRef(false);
+  useEffect(() => {
+    if (!inCombat) {
+      justStoppedRef.current = true;
+    } else {
+      justStoppedRef.current = false;
+    }
+  }, [inCombat]);
+
+  const startCombatRef = useRef<(id: string) => void>(() => {});
+
+  useEffect(() => {
+    if (inCombat || !justStoppedRef.current || isDeadRef.current) return;
+    justStoppedRef.current = false;
+    const nextAggro = creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
+    if (nextAggro) {
+      const timeout = setTimeout(() => {
+        addLogRef.current(`⚠️ ${nextAggro.name} attacks!`);
+        startCombatRef.current(nextAggro.id);
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [creatures, inCombat]);
 
   const doCombatTick = useCallback(async () => {
     if (combatBusyRef.current) return;
@@ -245,7 +269,9 @@ export function useCombat({
           }
 
           await _rollLoot(creature.loot_table as any[], creature.name);
-          // Don't stopCombat here — the useEffect watching creatures will auto-target or stop
+          // Stop combat immediately after kill — the useEffect watching creatures
+          // will auto-start combat with the next aggressive creature if any
+          stopCombat();
           return;
         } else {
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: false });
@@ -321,6 +347,9 @@ export function useCombat({
       doCombatTick();
     }, attackInterval);
   }, [doCombatTick]);
+
+  // Keep startCombatRef in sync
+  useEffect(() => { startCombatRef.current = startCombat; }, [startCombat]);
 
   // Cleanup on unmount
   useEffect(() => {
