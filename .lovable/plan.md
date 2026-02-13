@@ -1,92 +1,74 @@
 
 
-# NPC System
+# Hidden Paths (Discoverable via Search)
 
-Build an NPC system that allows admins to place non-hostile, non-combat characters at nodes. NPCs can display dialogue when interacted with, and are designed to later support quest-giving.
+Add a `hidden` flag to node connections so admins can mark certain paths as secret. Hidden paths won't appear on the player's map, but when a player uses "Search Area" at a node with hidden exits, they can discover and travel through them.
 
 ---
 
-## What Players Will See
+## What Changes for Players
 
-- NPCs listed in the "In the Area" section of each node, visually distinct from creatures (no HP bar, no attack button)
-- A "Talk" button next to each NPC
-- A dialog popup showing the NPC's name and their dialogue text
-- NPCs marked with a speech bubble icon
+- Hidden connections are invisible on the local area map
+- When clicking "Search Area," if a hidden path exists and the search roll succeeds (roll >= 10), the player gets a message like "You discover a hidden path to [Node Name]!" and is moved there automatically
+- If the roll fails, they see nothing special (existing search behavior continues)
 
-## What Admins Will See
+## What Changes for Admins
 
-- A new "NPCs" tab in the admin panel (alongside Creatures, Items, etc.)
-- A split-view CRUD manager (same pattern as Creatures) to create/edit/delete NPCs
-- Fields: name, description, dialogue text, node assignment
-- NPC markers on the admin world map (distinct icon/color from creatures)
+- The Connection manager in the Node Editor gains a "Hidden" checkbox per connection
+- Hidden connections still appear in the admin world map but are rendered with a dotted/faded style to distinguish them
 
 ---
 
 ## Implementation Steps
 
-### 1. Database: Create `npcs` table
+### 1. Update Connection Type
 
-A new migration to create the table with the following columns:
+In `src/hooks/useNodes.ts`, add `hidden?: boolean` to the connection type:
 
-- `id` (uuid, primary key)
-- `name` (text, required)
-- `description` (text, default empty)
-- `dialogue` (text, default empty) -- what the NPC says when talked to
-- `node_id` (uuid, nullable, foreign key to nodes)
-- `created_at` (timestamptz, default now())
+```typescript
+connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
+```
 
-RLS policies:
-- SELECT: anyone (authenticated) can view
-- INSERT/UPDATE/DELETE: admins only (is_maiar_or_valar())
+### 2. Filter Hidden Paths from Player Graph
 
-### 2. Hook: `useNPCs`
+In `src/components/game/PlayerGraphView.tsx`:
+- Filter out connections where `hidden === true` when computing neighbors and edges
+- Hidden paths won't appear as nodes or lines on the player map
 
-A new hook (`src/hooks/useNPCs.ts`) similar to `useCreatures`:
-- Fetches NPCs at the current node
-- Subscribes to realtime changes on NPCs for that node
-- Returns an array of NPC objects
+### 3. Update Search to Discover Hidden Paths
 
-### 3. Player UI: Show NPCs in NodeView
+In `src/pages/GamePage.tsx` `handleSearch`:
+- After the existing search logic, check if the current node has any hidden connections
+- On a successful search roll (>= 10), pick one hidden connection and move the player there with a discovery message
+- Hidden path discovery takes priority over item search when both are possible
 
-Update `NodeView` to:
-- Accept an `npcs` prop
-- Render each NPC in the "In the Area" section with a distinct style (no HP bar, no attack button)
-- Show a "Talk" button that opens a dialog with the NPC's name and dialogue text
+### 4. Admin: Hidden Checkbox in ConnectionsManager
 
-### 4. Player UI: NPC Dialog Component
+In `src/components/admin/NodeEditorPanel.tsx` (`ConnectionsManager`):
+- Display a "Hidden" indicator next to each connection
+- Add a "Hidden" checkbox when adding a new connection
+- The hidden flag is stored in the connection JSON: `{ node_id, direction, label, hidden: true }`
 
-Create `src/components/game/NPCDialogPanel.tsx`:
-- A simple dialog/sheet showing the NPC name and their dialogue text
-- Styled consistently with the game's fantasy theme
+### 5. Admin: Hidden Checkbox in NodeEditorDialog
 
-### 5. Wire NPCs into GamePage
+In `src/components/admin/NodeEditorDialog.tsx` (the dialog variant of the editor):
+- Same changes as the panel version for consistency
 
-Update `GamePage` to:
-- Call `useNPCs(character.current_node_id)`
-- Pass NPCs to `NodeView`
-- Manage the NPC dialog open/close state
+### 6. Admin World Map Styling
 
-### 6. Admin: NPC Manager
+In `src/components/admin/AdminWorldMapView.tsx`:
+- Render hidden connections with a more transparent/dotted line style so admins can see them but they're visually distinct from normal paths
 
-Create `src/components/admin/NPCManager.tsx`:
-- Split-view layout matching `CreatureManager` pattern
-- Left panel: searchable/filterable list of all NPCs
-- Right panel: form with name, description, dialogue, and node assignment
-- CRUD operations against the `npcs` table
+### 7. Player Map Legend Update
 
-### 7. Admin: Add NPCs Tab
-
-Update `AdminPage.tsx` to add an "NPCs" tab in the TabsList, rendering `NPCManager`.
-
-### 8. Admin World Map: NPC Markers
-
-Update `AdminWorldMapView` to show NPC presence on nodes (e.g., a small speech-bubble icon or a count indicator), similar to how creature counts are shown.
+In `src/components/game/MapPanel.tsx`:
+- No legend entry needed since players shouldn't know hidden paths exist
 
 ---
 
-## Technical Details
+## Technical Notes
 
-- The `npcs` table is intentionally simple now. When quests are added later, a `quest_id` or `quest_giver` flag can be added without disrupting existing NPCs.
-- Realtime subscriptions follow the same pattern as creatures (channel per node_id).
-- No new dependencies are needed.
+- No database migration needed -- `hidden` is stored inside the existing `connections` JSONB column
+- The `RegionGraphView` admin component should also style hidden edges distinctly
+- Bidirectional hidden connections: when adding a hidden connection A->B, the reverse B->A connection should also be marked hidden automatically
 
