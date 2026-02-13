@@ -92,25 +92,37 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // Regen tick visual indicator
   const [regenTick, setRegenTick] = useState(false);
 
+  // Refs for regen to avoid stale closures resetting the timer
+  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id });
+  const regenBuffRef = useRef(regenBuff);
+  const getNodeRef = useRef(getNode);
+  const updateCharRegenRef = useRef(updateCharacter);
+  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id }; }, [character.hp, character.max_hp, character.current_node_id]);
+  useEffect(() => { regenBuffRef.current = regenBuff; }, [regenBuff]);
+  useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
+  useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
+
   // Passive HP regeneration — 1 HP every 30s, multiplied by regen buff and inn bonus
   useEffect(() => {
     const interval = setInterval(() => {
-      if (character.hp < character.max_hp && character.hp > 0) {
-        const potionMult = Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
-        const node = character.current_node_id ? getNode(character.current_node_id) : null;
+      const { hp, max_hp, current_node_id } = regenCharRef.current;
+      if (hp < max_hp && hp > 0) {
+        const buff = regenBuffRef.current;
+        const potionMult = Date.now() < buff.expiresAt ? buff.multiplier : 1;
+        const node = current_node_id ? getNodeRef.current(current_node_id) : null;
         const innMult = node?.is_inn ? 3 : 1;
         const totalMult = potionMult * innMult;
         const regenAmount = Math.max(Math.floor(1 * totalMult), 1);
-        const newHp = Math.min(character.hp + regenAmount, character.max_hp);
-        if (newHp !== character.hp) {
-          updateCharacter({ hp: newHp });
+        const newHp = Math.min(hp + regenAmount, max_hp);
+        if (newHp !== hp) {
+          updateCharRegenRef.current({ hp: newHp });
           setRegenTick(true);
           setTimeout(() => setRegenTick(false), 1200);
         }
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [character.hp, character.max_hp, regenBuff, character.current_node_id, getNode, updateCharacter]);
+  }, []); // stable — no deps, reads from refs
 
   // Refs for death respawn to avoid stale closures / cleanup races
   const deathGoldRef = useRef(character.gold);
