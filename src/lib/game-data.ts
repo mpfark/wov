@@ -126,6 +126,17 @@ export function suggestItemGoldValue(level: number, rarity: string): number {
   return Math.round(level * 2.5 * mult * mult);
 }
 
+// Repair cost calculation
+const REPAIR_RARITY_MULT: Record<string, number> = {
+  common: 1, uncommon: 1.5, rare: 2, unique: 0,
+};
+
+export function calculateRepairCost(maxDurability: number, currentDurability: number, value: number, rarity: string): number {
+  const mult = REPAIR_RARITY_MULT[rarity] ?? 1;
+  if (mult === 0) return 0; // unique = unrepairable
+  return Math.max(1, Math.ceil((maxDurability - currentDurability) * value * mult / 100));
+}
+
 // Dice rolling
 export function rollD20(): number {
   return Math.floor(Math.random() * 20) + 1;

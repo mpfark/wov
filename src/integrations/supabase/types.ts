@@ -243,6 +243,8 @@ export type Database = {
           level: number
           max_durability: number
           name: string
+          origin_id: string | null
+          origin_type: string | null
           rarity: Database["public"]["Enums"]["item_rarity"]
           slot: Database["public"]["Enums"]["item_slot"] | null
           stats: Json
@@ -257,6 +259,8 @@ export type Database = {
           level?: number
           max_durability?: number
           name: string
+          origin_id?: string | null
+          origin_type?: string | null
           rarity?: Database["public"]["Enums"]["item_rarity"]
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
@@ -271,6 +275,8 @@ export type Database = {
           level?: number
           max_durability?: number
           name?: string
+          origin_id?: string | null
+          origin_type?: string | null
           rarity?: Database["public"]["Enums"]["item_rarity"]
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
@@ -284,6 +290,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          is_blacksmith: boolean
           is_inn: boolean
           is_vendor: boolean
           name: string
@@ -295,6 +302,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          is_blacksmith?: boolean
           is_inn?: boolean
           is_vendor?: boolean
           name: string
@@ -306,6 +314,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          is_blacksmith?: boolean
           is_inn?: boolean
           is_vendor?: boolean
           name?: string
