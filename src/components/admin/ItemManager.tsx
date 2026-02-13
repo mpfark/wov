@@ -132,7 +132,7 @@ export default function ItemManager() {
   return (
     <div className="h-full flex">
       {/* Left: Item List */}
-      <div className={`flex flex-col ${panelOpen ? 'w-1/2' : 'w-full'} border-r border-border transition-all`}>
+      <div className="flex flex-col w-1/2 border-r border-border transition-all">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
           <Package className="w-4 h-4 text-primary" />
           <h2 className="font-display text-sm text-primary">Items</h2>
@@ -185,8 +185,9 @@ export default function ItemManager() {
       </div>
 
       {/* Right: Properties Panel */}
-      {panelOpen && (
-        <div className="w-1/2 flex flex-col bg-card/50">
+      <div className="w-1/2 flex flex-col bg-card/50">
+        {panelOpen ? (
+          <>
           <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
             <h2 className="font-display text-sm text-primary text-glow truncate">
               {selectedId ? `Edit: ${form.name || 'Item'}` : 'New Item'}
@@ -294,8 +295,13 @@ export default function ItemManager() {
               </div>
             </div>
           </ScrollArea>
-        </div>
-      )}
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic font-display">
+            Select an item to edit
+          </div>
+        )}
+      </div>
     </div>
   );
 }
