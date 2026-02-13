@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, X, Package } from 'lucide-react';
+import { getItemStatBudget, calculateItemStatCost, getItemStatCap } from '@/lib/game-data';
 
 interface Item {
   id: string;
@@ -19,6 +20,7 @@ interface Item {
   value: number;
   max_durability: number;
   hands: number | null;
+  level: number;
 }
 
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
@@ -35,8 +37,33 @@ const RARITY_COLORS: Record<string, string> = {
 
 const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
-  slot: null, stats: {}, value: 0, max_durability: 100, hands: null,
+  slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
 });
+
+function BudgetIndicator({ level, rarity, stats }: { level: number; rarity: string; stats: Record<string, number> }) {
+  const budget = getItemStatBudget(level, rarity);
+  const used = calculateItemStatCost(stats);
+  const pct = budget > 0 ? Math.min((used / budget) * 100, 100) : 0;
+  const over = used > budget;
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] text-muted-foreground">Stat Budget</label>
+        <span className={`text-xs font-display ${over ? 'text-destructive' : 'text-chart-2'}`}>
+          {used} / {budget} pts
+        </span>
+      </div>
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+        <div
+          className={`h-full transition-all ${over ? 'bg-destructive' : 'bg-chart-2'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {over && <p className="text-[10px] text-destructive">Over budget by {(used - budget).toFixed(1)} pts</p>}
+    </div>
+  );
+}
 
 export default function ItemManager() {
   const [items, setItems] = useState<Item[]>([]);
@@ -66,6 +93,7 @@ export default function ItemManager() {
       name: item.name, description: item.description, item_type: item.item_type,
       rarity: item.rarity, slot: item.slot, stats: { ...item.stats },
       value: item.value, max_durability: item.max_durability, hands: item.hands,
+      level: item.level ?? 1,
     });
   };
 
@@ -77,6 +105,11 @@ export default function ItemManager() {
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error('Name is required');
     if (form.name.length > 100) return toast.error('Name must be under 100 characters');
+
+    const budget = getItemStatBudget(form.level, form.rarity);
+    const cost = calculateItemStatCost(form.stats);
+    if (cost > budget) return toast.error(`Stat cost (${cost}) exceeds budget (${budget})`);
+
     setLoading(true);
 
     const payload = {
@@ -89,6 +122,7 @@ export default function ItemManager() {
       value: Math.max(0, form.value),
       max_durability: Math.max(1, form.max_durability),
       hands: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) || form.item_type === 'shield' ? form.hands : null,
+      level: Math.max(1, Math.min(100, form.level)),
     };
 
     if (selectedId) {
@@ -114,9 +148,11 @@ export default function ItemManager() {
   };
 
   const setStat = (key: string, val: number) => {
+    const cap = getItemStatCap(key);
+    const clamped = Math.max(0, Math.min(val, cap));
     setForm(f => {
       const stats = { ...f.stats };
-      if (val === 0) { delete stats[key]; } else { stats[key] = val; }
+      if (clamped === 0) { delete stats[key]; } else { stats[key] = clamped; }
       return { ...f, stats };
     });
   };
@@ -161,6 +197,7 @@ export default function ItemManager() {
                   <div className="flex items-center gap-2">
                     <span className={`font-display text-sm ${RARITY_COLORS[item.rarity]}`}>{item.name}</span>
                     <span className="text-[10px] text-muted-foreground capitalize px-1 py-0.5 rounded bg-background/50 border border-border">{item.rarity}</span>
+                    <span className="text-[10px] text-muted-foreground px-1 py-0.5 rounded bg-background/50 border border-border">Lv{item.level ?? 1}</span>
                     {item.slot && (
                       <span className="text-[10px] text-muted-foreground capitalize px-1 py-0.5 rounded bg-background/50 border border-border">{item.slot.replace('_', ' ')}</span>
                     )}
@@ -203,7 +240,7 @@ export default function ItemManager() {
               <Textarea placeholder="Description" value={form.description} maxLength={500}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" />
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Type</label>
                   <Select value={form.item_type} onValueChange={v => setForm(f => ({ ...f, item_type: v, slot: v === 'shield' ? 'off_hand' : f.slot, hands: v === 'shield' ? 1 : f.hands }))}>
@@ -228,7 +265,14 @@ export default function ItemManager() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Level</label>
+                  <Input type="number" min={1} max={100} value={form.level}
+                    onChange={e => setForm(f => ({ ...f, level: Math.max(1, Math.min(100, +e.target.value)) }))} className="h-8 text-xs" />
+                </div>
               </div>
+
+              <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} />
 
               {(form.item_type === 'equipment' || form.item_type === 'shield') && (
                 <div>
@@ -271,12 +315,12 @@ export default function ItemManager() {
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground">Stat Bonuses</label>
+                <label className="text-[10px] text-muted-foreground">Stat Bonuses (capped per stat)</label>
                 <div className="grid grid-cols-4 gap-1.5 mt-1">
                   {STAT_KEYS.map(key => (
                     <div key={key} className="flex items-center gap-1">
                       <span className="text-[10px] text-muted-foreground uppercase w-6">{key}</span>
-                      <Input type="number" min={0} max={99}
+                      <Input type="number" min={0} max={getItemStatCap(key)}
                         value={form.stats[key] || 0}
                         onChange={e => setStat(key, Math.max(0, +e.target.value))}
                         className="h-7 text-xs text-center" />
