@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Save, X, Skull } from 'lucide-react';
@@ -22,7 +22,7 @@ interface Creature {
   ac: number;
   stats: Record<string, number>;
   is_aggressive: boolean;
-  loot_table: { item_id: string; chance: number }[];
+  loot_table: any[];
   respawn_seconds: number;
   is_alive: boolean;
 }
@@ -46,13 +46,14 @@ const defaultForm = () => ({
   level: 1, rarity: 'regular',
   is_aggressive: false, respawn_seconds: 300,
   loot_table: [] as { item_id: string; chance: number }[],
+  gold_min: 0, gold_max: 0, gold_chance: 0.5,
 });
 
 export default function CreatureManager() {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [nodes, setNodes] = useState<NodeOption[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isNew, setIsNew] = useState(false);
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(false);
@@ -82,25 +83,41 @@ export default function CreatureManager() {
   };
 
   const openNew = () => {
-    setEditingId(null);
+    setSelectedId(null);
+    setIsNew(true);
     setForm(defaultForm());
-    setDialogOpen(true);
   };
 
   const openEdit = (c: Creature) => {
-    setEditingId(c.id);
+    setSelectedId(c.id);
+    setIsNew(false);
+    const rawLoot = Array.isArray(c.loot_table) ? c.loot_table : [];
+    const goldEntry = rawLoot.find((e: any) => e.type === 'gold');
+    const itemLoot = rawLoot.filter((e: any) => e.type !== 'gold');
     setForm({
       name: c.name, description: c.description, node_id: c.node_id,
       level: c.level, rarity: c.rarity,
       is_aggressive: c.is_aggressive, respawn_seconds: c.respawn_seconds,
-      loot_table: Array.isArray(c.loot_table) ? c.loot_table : [],
+      loot_table: itemLoot,
+      gold_min: goldEntry?.min || 0,
+      gold_max: goldEntry?.max || 0,
+      gold_chance: goldEntry?.chance ?? 0.5,
     });
-    setDialogOpen(true);
+  };
+
+  const closePanel = () => {
+    setSelectedId(null);
+    setIsNew(false);
   };
 
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error('Name is required');
     setLoading(true);
+
+    const loot_table: any[] = [...form.loot_table];
+    if (form.gold_max > 0) {
+      loot_table.push({ type: 'gold', min: form.gold_min, max: form.gold_max, chance: form.gold_chance });
+    }
 
     const generated = generateCreatureStats(form.level, form.rarity);
     const payload = {
@@ -115,20 +132,20 @@ export default function CreatureManager() {
       stats: generated.stats,
       is_aggressive: form.is_aggressive,
       respawn_seconds: Math.max(0, form.respawn_seconds),
-      loot_table: form.loot_table,
+      loot_table,
     };
 
-    if (editingId) {
-      const { error } = await supabase.from('creatures').update(payload).eq('id', editingId);
+    if (selectedId) {
+      const { error } = await supabase.from('creatures').update(payload).eq('id', selectedId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Creature updated');
     } else {
-      const { error } = await supabase.from('creatures').insert(payload);
+      const { data, error } = await supabase.from('creatures').insert(payload).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Creature created');
+      if (data) { setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
-    setDialogOpen(false);
     loadData();
   };
 
@@ -136,10 +153,12 @@ export default function CreatureManager() {
     const { error } = await supabase.from('creatures').delete().eq('id', id);
     if (error) return toast.error(error.message);
     toast.success('Creature deleted');
+    if (selectedId === id) closePanel();
     loadData();
   };
 
   const previewStats = generateCreatureStats(form.level, form.rarity);
+  const panelOpen = isNew || selectedId !== null;
 
   const formatRespawn = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
@@ -154,184 +173,184 @@ export default function CreatureManager() {
   );
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
-        <Skull className="w-4 h-4 text-primary" />
-        <h2 className="font-display text-sm text-primary">Creature Database</h2>
-        <span className="text-xs text-muted-foreground">({creatures.length} creatures)</span>
-        <div className="flex-1" />
-        <Input
-          placeholder="Search creatures..."
-          value={filter}
-          onChange={e => setFilter(e.target.value)}
-          className="w-48 h-7 text-xs"
-        />
-        <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
-          <Plus className="w-3 h-3 mr-1" /> New Creature
-        </Button>
-      </div>
-
-      {/* Creature List */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8 italic">
-            {creatures.length === 0 ? 'No creatures yet. Create your first creature!' : 'No creatures match your search.'}
-          </p>
-        ) : (
-          <div className="grid gap-2">
-            {filtered.map(creature => (
-              <div key={creature.id} className="flex items-center justify-between p-2.5 rounded border border-border bg-card/50 hover:bg-card/80 transition-colors">
+    <div className="h-full flex">
+      {/* Left: Creature List */}
+      <div className={`flex flex-col ${panelOpen ? 'w-1/2' : 'w-full'} border-r border-border transition-all`}>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+          <Skull className="w-4 h-4 text-primary" />
+          <h2 className="font-display text-sm text-primary">Creatures</h2>
+          <span className="text-xs text-muted-foreground">({creatures.length})</span>
+          <div className="flex-1" />
+          <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
+          <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
+            <Plus className="w-3 h-3 mr-1" /> New
+          </Button>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-3 space-y-1.5">
+            {filtered.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8 italic">
+                {creatures.length === 0 ? 'No creatures yet.' : 'No match.'}
+              </p>
+            ) : filtered.map(creature => (
+              <div
+                key={creature.id}
+                className={`flex items-center justify-between p-2 rounded border transition-colors cursor-pointer ${
+                  selectedId === creature.id ? 'border-primary bg-primary/10' : 'border-border bg-card/50 hover:bg-card/80'
+                }`}
+                onClick={() => openEdit(creature)}
+              >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`font-display text-sm ${RARITY_COLORS[creature.rarity]}`}>{creature.name}</span>
-                    <span className="text-[10px] text-muted-foreground capitalize px-1.5 py-0.5 rounded bg-background/50 border border-border">
-                      {creature.rarity}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-background/50 border border-border">
-                      Lvl {creature.level}
-                    </span>
+                    <span className="text-[10px] text-muted-foreground capitalize px-1 py-0.5 rounded bg-background/50 border border-border">{creature.rarity}</span>
+                    <span className="text-[10px] text-muted-foreground">Lvl {creature.level}</span>
                     {!creature.is_alive && <span className="text-[10px]">💀</span>}
-                    {creature.is_aggressive && <span className="text-[10px]" title="Aggressive">⚔️</span>}
+                    {creature.is_aggressive && <span className="text-[10px]">⚔️</span>}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-xs text-muted-foreground">
-                      📍 {getNodeName(creature.node_id)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      HP {creature.hp}/{creature.max_hp} | AC {creature.ac}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      ⏱ {formatRespawn(creature.respawn_seconds)}
-                    </span>
-                    {(creature.loot_table?.length || 0) > 0 && (
-                      <span className="text-[10px] text-chart-2">
-                        {creature.loot_table.length} loot entries
-                      </span>
-                    )}
+                    <span className="text-xs text-muted-foreground">📍 {getNodeName(creature.node_id)}</span>
+                    <span className="text-[10px] text-muted-foreground">HP {creature.hp}/{creature.max_hp} | AC {creature.ac}</span>
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0 ml-2">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(creature)} className="h-7 w-7 p-0">
-                    <Pencil className="w-3 h-3" />
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(creature.id)} className="h-7 w-7 p-0">
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
-                </div>
+                <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); handleDelete(creature.id); }} className="h-7 w-7 p-0 shrink-0 ml-2">
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
             ))}
           </div>
-        )}
+        </ScrollArea>
       </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={v => !v && setDialogOpen(false)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="font-display text-primary text-glow">
-              {editingId ? 'Edit Creature' : 'New Creature'}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Right: Properties Panel */}
+      {panelOpen && (
+        <div className="w-1/2 flex flex-col bg-card/50">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
+            <h2 className="font-display text-sm text-primary text-glow truncate">
+              {selectedId ? `Edit: ${form.name || 'Creature'}` : 'New Creature'}
+            </h2>
+            <Button variant="ghost" size="sm" onClick={closePanel} className="h-6 w-6 p-0">
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-3 space-y-3">
+              <Input placeholder="Creature name" value={form.name} maxLength={100}
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" />
+              <Textarea placeholder="Description" value={form.description} maxLength={500}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" />
 
-          <div className="space-y-3">
-            <Input placeholder="Creature name" value={form.name} maxLength={100}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Rarity</label>
+                  <Select value={form.rarity} onValueChange={v => setForm(f => ({ ...f, rarity: v }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50">
+                      {RARITIES.map(r => (
+                        <SelectItem key={r} value={r} className="capitalize text-xs">
+                          <span className={RARITY_COLORS[r]}>{r}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Level</label>
+                  <Input type="number" min={1} max={40} value={form.level}
+                    onChange={e => setForm(f => ({ ...f, level: Math.max(1, Math.min(40, +e.target.value)) }))}
+                    className="h-8 text-xs" />
+                </div>
+              </div>
 
-            <Textarea placeholder="Description" value={form.description} maxLength={500}
-              onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} />
-
-            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] text-muted-foreground">Rarity</label>
-                <Select value={form.rarity} onValueChange={v => setForm(f => ({ ...f, rarity: v }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-popover border-border z-50">
-                    {RARITIES.map(r => (
-                      <SelectItem key={r} value={r} className="capitalize text-xs">
-                        <span className={RARITY_COLORS[r]}>{r}</span>
+                <label className="text-[10px] text-muted-foreground">Spawn Location</label>
+                <Select value={form.node_id || 'none'} onValueChange={v => setForm(f => ({ ...f, node_id: v === 'none' ? null : v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node" /></SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50 max-h-60">
+                    <SelectItem value="none" className="text-xs text-muted-foreground">Unassigned</SelectItem>
+                    {nodes.map(n => (
+                      <SelectItem key={n.id} value={n.id} className="text-xs">
+                        {n.name} <span className="text-muted-foreground ml-1">({n.region_name})</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground">Level</label>
-                <Input type="number" min={1} max={40} value={form.level}
-                  onChange={e => setForm(f => ({ ...f, level: Math.max(1, Math.min(40, +e.target.value)) }))}
-                  className="h-8 text-xs" />
-              </div>
-            </div>
 
-            {/* Spawn Location */}
-            <div>
-              <label className="text-[10px] text-muted-foreground">Spawn Location</label>
-              <Select value={form.node_id || 'none'} onValueChange={v => setForm(f => ({ ...f, node_id: v === 'none' ? null : v }))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node" /></SelectTrigger>
-                <SelectContent className="bg-popover border-border z-50 max-h-60">
-                  <SelectItem value="none" className="text-xs text-muted-foreground">Unassigned</SelectItem>
-                  {nodes.map(n => (
-                    <SelectItem key={n.id} value={n.id} className="text-xs">
-                      {n.name} <span className="text-muted-foreground ml-1">({n.region_name})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] text-muted-foreground">Respawn Timer (seconds)</label>
-                <div className="flex items-center gap-1">
-                  <Input type="number" min={0} value={form.respawn_seconds}
-                    onChange={e => setForm(f => ({ ...f, respawn_seconds: Math.max(0, +e.target.value) }))}
-                    className="h-8 text-xs" />
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    ({formatRespawn(form.respawn_seconds)})
-                  </span>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Respawn (seconds)</label>
+                  <div className="flex items-center gap-1">
+                    <Input type="number" min={0} value={form.respawn_seconds}
+                      onChange={e => setForm(f => ({ ...f, respawn_seconds: Math.max(0, +e.target.value) }))}
+                      className="h-8 text-xs" />
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">({formatRespawn(form.respawn_seconds)})</span>
+                  </div>
+                </div>
+                <div className="flex items-end pb-1">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input type="checkbox" checked={form.is_aggressive}
+                      onChange={e => setForm(f => ({ ...f, is_aggressive: e.target.checked }))} />
+                    Aggressive
+                  </label>
                 </div>
               </div>
-              <div className="flex items-end pb-1">
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <input type="checkbox" checked={form.is_aggressive}
-                    onChange={e => setForm(f => ({ ...f, is_aggressive: e.target.checked }))} />
-                  Aggressive
-                </label>
+
+              <div className="p-2 bg-background/50 rounded border border-border">
+                <p className="text-[10px] text-muted-foreground mb-1">Auto-generated stats (Lvl {form.level} {form.rarity})</p>
+                <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-xs">
+                  <span>HP: <strong>{previewStats.hp}</strong></span>
+                  <span>AC: <strong>{previewStats.ac}</strong></span>
+                  <span>STR: <strong>{previewStats.stats.str}</strong></span>
+                  <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
+                  <span>CON: <strong>{previewStats.stats.con}</strong></span>
+                  <span>INT: <strong>{previewStats.stats.int}</strong></span>
+                  <span>WIS: <strong>{previewStats.stats.wis}</strong></span>
+                  <span>CHA: <strong>{previewStats.stats.cha}</strong></span>
+                </div>
+              </div>
+
+              <ItemPickerList label="Loot Table" value={form.loot_table}
+                onChange={v => setForm(f => ({ ...f, loot_table: v }))} />
+
+              {/* Gold drop config */}
+              <div className="space-y-1.5">
+                <p className="font-display text-xs text-primary">Gold Drop</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Min</label>
+                    <Input type="number" min={0} value={form.gold_min}
+                      onChange={e => setForm(f => ({ ...f, gold_min: Math.max(0, +e.target.value) }))}
+                      className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Max</label>
+                    <Input type="number" min={0} value={form.gold_max}
+                      onChange={e => setForm(f => ({ ...f, gold_max: Math.max(0, +e.target.value) }))}
+                      className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Chance</label>
+                    <Input type="number" min={0} max={1} step={0.05} value={form.gold_chance}
+                      onChange={e => setForm(f => ({ ...f, gold_chance: Math.min(1, Math.max(0, +e.target.value)) }))}
+                      className="h-7 text-xs" />
+                  </div>
+                </div>
+                <p className="text-[9px] text-muted-foreground">Set max &gt; 0 to enable. Chance 0–1.</p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button onClick={handleSave} disabled={loading} className="font-display text-xs">
+                  <Save className="w-3 h-3 mr-1" /> {selectedId ? 'Update' : 'Create'}
+                </Button>
+                <Button variant="outline" onClick={closePanel} className="font-display text-xs">
+                  <X className="w-3 h-3 mr-1" /> Cancel
+                </Button>
               </div>
             </div>
-
-            {/* Auto-generated stats preview */}
-            <div className="p-2 bg-background/50 rounded border border-border">
-              <p className="text-[10px] text-muted-foreground mb-1">
-                Auto-generated stats (Lvl {form.level} {form.rarity})
-              </p>
-              <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-xs">
-                <span>HP: <strong>{previewStats.hp}</strong></span>
-                <span>AC: <strong>{previewStats.ac}</strong></span>
-                <span>STR: <strong>{previewStats.stats.str}</strong></span>
-                <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
-                <span>CON: <strong>{previewStats.stats.con}</strong></span>
-                <span>INT: <strong>{previewStats.stats.int}</strong></span>
-                <span>WIS: <strong>{previewStats.stats.wis}</strong></span>
-                <span>CHA: <strong>{previewStats.stats.cha}</strong></span>
-              </div>
-            </div>
-
-            {/* Loot Table */}
-            <ItemPickerList label="Loot Table" value={form.loot_table}
-              onChange={v => setForm(f => ({ ...f, loot_table: v }))} />
-
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} disabled={loading} className="font-display text-xs">
-                <Save className="w-3 h-3 mr-1" /> {editingId ? 'Update' : 'Create'}
-              </Button>
-              <Button variant="outline" onClick={() => setDialogOpen(false)} className="font-display text-xs">
-                <X className="w-3 h-3 mr-1" /> Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </ScrollArea>
+        </div>
+      )}
     </div>
   );
 }
