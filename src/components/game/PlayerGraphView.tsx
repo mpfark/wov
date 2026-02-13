@@ -1,6 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { GameNode } from '@/hooks/useNodes';
 import { PartyMember } from '@/hooks/useParty';
+import { supabase } from '@/integrations/supabase/client';
+
+interface NodeCreatureInfo {
+  hasCreatures: boolean;
+  hasAggressive: boolean;
+}
 
 interface Props {
   currentNodeId: string;
@@ -38,6 +44,7 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
 
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
   const neighbors = useMemo(() => {
@@ -90,14 +97,44 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return result;
   }, [currentNode, nodePositions]);
 
+  // Compute visible node IDs for creature fetch
+  const visibleNodeIds = useMemo(() => {
+    if (!currentNode) return [];
+    return [currentNode.id, ...neighbors.map(n => n.id)];
+  }, [currentNode, neighbors]);
+
+  // Fetch creature presence for all visible nodes
+  useEffect(() => {
+    if (visibleNodeIds.length === 0) return;
+    const fetchCreaturePresence = async () => {
+      const { data } = await supabase
+        .from('creatures')
+        .select('node_id, is_aggressive')
+        .eq('is_alive', true)
+        .in('node_id', visibleNodeIds);
+      const map = new Map<string, NodeCreatureInfo>();
+      if (data) {
+        for (const c of data) {
+          if (!c.node_id) continue;
+          const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false };
+          existing.hasCreatures = true;
+          if (c.is_aggressive) existing.hasAggressive = true;
+          map.set(c.node_id, existing);
+        }
+      }
+      setCreatureMap(map);
+    };
+    fetchCreaturePresence();
+  }, [visibleNodeIds]);
+
   if (!currentNode) {
     return <p className="text-xs text-muted-foreground italic p-3">No location data...</p>;
   }
 
   const allDisplayNodes = [currentNode, ...neighbors];
+  const displayedIds = new Set(allDisplayNodes.map(n => n.id));
 
   // Compute exit stubs for neighbor nodes (connections leading to nodes not displayed)
-  const displayedIds = new Set(allDisplayNodes.map(n => n.id));
   const exitStubs: Array<{ fromPx: number; fromPy: number; toPx: number; toPy: number }> = [];
   const STUB_LEN = 22;
   const NODE_RADIUS = 28;
@@ -205,6 +242,18 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                 strokeWidth={isCurrent ? 2.5 : isHovered ? 2 : 1.5}
                 onClick={() => !isCurrent && onNodeClick(node.id)}
               />
+              {/* Creature presence dot */}
+              {creatureMap.has(node.id) && (() => {
+                const info = creatureMap.get(node.id)!;
+                return (
+                  <circle
+                    cx={pos.px + 20} cy={pos.py - 20} r={4}
+                    fill={info.hasAggressive ? 'hsl(0 70% 50%)' : 'hsl(35 60% 50%)'}
+                    className="stroke-background pointer-events-none"
+                    strokeWidth={1.5}
+                  />
+                );
+              })()}
               {node.is_vendor && (
                 <text x={pos.px} y={pos.py - 16} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
                   🪙
