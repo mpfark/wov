@@ -77,20 +77,25 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     const minY = Math.min(...vals.map(p => p.y));
     const maxY = Math.max(...vals.map(p => p.y));
 
-    const totalW = (maxX - minX) * SPACING + PADDING * 2;
-    const totalH = (maxY - minY) * SPACING + PADDING * 2;
+    // Compute the max extent from center (0,0) in each direction
+    const extentLeft = Math.abs(Math.min(0, minX));
+    const extentRight = Math.max(0, maxX);
+    const extentUp = Math.abs(Math.min(0, minY));
+    const extentDown = Math.max(0, maxY);
+    const maxExtentX = Math.max(extentLeft, extentRight);
+    const maxExtentY = Math.max(extentUp, extentDown);
 
-    // Center node is at grid (0,0) — compute its pixel position then offset everything so it's centered
-    const centerPxRaw = (0 - minX) * SPACING + PADDING;
-    const centerPyRaw = (0 - minY) * SPACING + PADDING;
-    const offsetX = totalW / 2 - centerPxRaw;
-    const offsetY = totalH / 2 - centerPyRaw;
+    // SVG size is symmetrical around center
+    const totalW = maxExtentX * 2 * SPACING + PADDING * 2;
+    const totalH = maxExtentY * 2 * SPACING + PADDING * 2;
+    const centerPx = totalW / 2;
+    const centerPy = totalH / 2;
 
     const np = new Map<string, { px: number; py: number }>();
     positions.forEach((pos, id) => {
       np.set(id, {
-        px: (pos.x - minX) * SPACING + PADDING + offsetX,
-        py: (pos.y - minY) * SPACING + PADDING + offsetY,
+        px: centerPx + pos.x * SPACING,
+        py: centerPy + pos.y * SPACING,
       });
     });
 
