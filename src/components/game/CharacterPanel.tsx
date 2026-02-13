@@ -135,21 +135,30 @@ export default function CharacterPanel({
         </div>
 
         {/* HP Bar */}
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-muted-foreground">HP</span>
-            <span className="text-blood">{character.hp}/{character.max_hp}</span>
-          </div>
-          <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
-            <div
-              className="h-full transition-all duration-500"
-              style={{
-                width: `${hpPercent}%`,
-                background: hpPercent > 50 ? 'hsl(var(--elvish))' : hpPercent > 25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
-              }}
-            />
-          </div>
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="cursor-help">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-muted-foreground">HP</span>
+                <span className="text-blood">{character.hp}/{character.max_hp}</span>
+              </div>
+              <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
+                <div
+                  className="h-full transition-all duration-500"
+                  style={{
+                    width: `${hpPercent}%`,
+                    background: hpPercent > 50 ? 'hsl(var(--elvish))' : hpPercent > 25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
+                  }}
+                />
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="bg-popover border-border z-50 space-y-1">
+            <p className="font-display text-sm">Regeneration</p>
+            <p className="text-xs text-muted-foreground">Base: <span className="text-elvish">1 HP</span> every <span className="text-foreground">30s</span></p>
+            <p className="text-[10px] text-muted-foreground italic">Potions, food & abilities will show here when active</p>
+          </TooltipContent>
+        </Tooltip>
 
         {/* XP Bar */}
         <div>
