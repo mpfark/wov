@@ -14,6 +14,7 @@ import UserManager from '@/components/admin/UserManager';
 import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
+import WorldBuilderPanel from '@/components/admin/WorldBuilderPanel';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -126,6 +127,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
+            <TabsTrigger value="world-builder" className="font-display text-xs">🧙 World Builder</TabsTrigger>
           </TabsList>
         </div>
 
@@ -200,6 +202,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="roadmap" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <RoadmapManager />
+        </TabsContent>
+
+        <TabsContent value="world-builder" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          <WorldBuilderPanel />
         </TabsContent>
       </Tabs>
     </div>
