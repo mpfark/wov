@@ -329,6 +329,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (!lootTable || lootTable.length === 0) return;
     const droppedItems: LootDrop[] = [];
     for (const entry of lootTable) {
+      if (entry.type === 'gold') continue; // Gold handled separately in kill rewards
       if (Math.random() <= (entry.chance || 0.1)) {
         const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
         if (item) {
@@ -393,16 +394,22 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       );
 
       if (newHp <= 0) {
-        // Creature dies — award XP, gold, and roll loot
+        // Creature dies — award XP and roll loot (gold comes from loot table)
         const baseXp = creature.level * 10;
-        // Level-difference XP penalty: lose 20% per level above creature, min 10% XP
         const levelDiff = Math.max(character.level - creature.level, 0);
         const xpPenalty = Math.max(1 - levelDiff * 0.2, 0.1);
         const totalXp = Math.floor(baseXp * xpPenalty);
-        const totalGold = Math.floor(creature.level * (creature.rarity === 'boss' ? 25 : creature.rarity === 'rare' ? 15 : 5) * (0.8 + Math.random() * 0.4));
+
+        // Roll gold from loot table if configured
+        const lootTable = creature.loot_table as any[];
+        const goldEntry = lootTable?.find((e: any) => e.type === 'gold');
+        let totalGold = 0;
+        if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+          totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+        }
+
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
 
-        // Split rewards among party members present at the same node
         const membersHere = party
           ? partyMembers.filter(m => m.character?.current_node_id === character.current_node_id)
           : [];
@@ -411,9 +418,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const goldShare = Math.floor(totalGold / splitCount);
 
         const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
+        const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
         if (splitCount > 1) {
-          addLog(`☠️ ${creature.name} has been slain! Rewards split ${splitCount} ways: +${xpShare} XP, +${goldShare} gold each.${penaltyNote}`);
-          // Award XP and gold to other party members via RPC
+          addLog(`☠️ ${creature.name} has been slain! Rewards split ${splitCount} ways: +${xpShare} XP${goldNote} each.${penaltyNote}`);
           for (const m of membersHere) {
             if (m.character_id === character.id) continue;
             await supabase.rpc('award_party_member', {
@@ -423,7 +430,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             });
           }
         } else {
-          addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP, +${goldShare} gold)${penaltyNote}`);
+          addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
         }
 
         const newXp = character.xp + xpShare;

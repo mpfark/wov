@@ -145,7 +145,9 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
 
 const defaultCreatureForm = () => ({
   name: '', description: '', level: 1, rarity: 'regular',
-  is_aggressive: false, respawn_seconds: 300, loot_table: [] as { item_id: string; chance: number }[],
+  is_aggressive: false, respawn_seconds: 300,
+  loot_table: [] as { item_id: string; chance: number }[],
+  gold_min: 0, gold_max: 0, gold_chance: 0.5,
 });
 
 export default function NodeEditorPanel({
@@ -299,7 +301,11 @@ export default function NodeEditorPanel({
 
   const saveCreature = async () => {
     if (!activeNodeId || !creatureForm.name) return toast.error('Save the node first and provide a creature name');
-    const loot_table = creatureForm.loot_table;
+    const loot_table: any[] = [...creatureForm.loot_table];
+    // Add gold drop entry if configured
+    if (creatureForm.gold_max > 0) {
+      loot_table.push({ type: 'gold', min: creatureForm.gold_min, max: creatureForm.gold_max, chance: creatureForm.gold_chance });
+    }
     const generated = generateCreatureStats(creatureForm.level, creatureForm.rarity);
     const payload = {
       name: creatureForm.name, description: creatureForm.description,
@@ -324,11 +330,17 @@ export default function NodeEditorPanel({
 
   const editCreature = (c: any) => {
     setEditingCreatureId(c.id);
+    const rawLoot = Array.isArray(c.loot_table) ? c.loot_table as any[] : [];
+    const goldEntry = rawLoot.find((e: any) => e.type === 'gold');
+    const itemLoot = rawLoot.filter((e: any) => e.type !== 'gold');
     setCreatureForm({
       name: c.name, description: c.description || '', level: c.level,
       rarity: c.rarity, is_aggressive: c.is_aggressive,
       respawn_seconds: c.respawn_seconds,
-      loot_table: Array.isArray(c.loot_table) ? c.loot_table as any : [],
+      loot_table: itemLoot,
+      gold_min: goldEntry?.min || 0,
+      gold_max: goldEntry?.max || 0,
+      gold_chance: goldEntry?.chance ?? 0.5,
     });
   };
 
@@ -510,6 +522,31 @@ export default function NodeEditorPanel({
                   </label>
                   <ItemPickerList label="Loot Table" value={creatureForm.loot_table}
                     onChange={v => setCreatureForm(f => ({ ...f, loot_table: v }))} />
+                  {/* Gold drop config */}
+                  <div className="space-y-1.5">
+                    <p className="font-display text-xs text-primary">Gold Drop</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">Min</label>
+                        <Input type="number" min={0} value={creatureForm.gold_min}
+                          onChange={e => setCreatureForm(f => ({ ...f, gold_min: Math.max(0, +e.target.value) }))}
+                          className="h-7 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">Max</label>
+                        <Input type="number" min={0} value={creatureForm.gold_max}
+                          onChange={e => setCreatureForm(f => ({ ...f, gold_max: Math.max(0, +e.target.value) }))}
+                          className="h-7 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">Chance</label>
+                        <Input type="number" min={0} max={1} step={0.05} value={creatureForm.gold_chance}
+                          onChange={e => setCreatureForm(f => ({ ...f, gold_chance: Math.min(1, Math.max(0, +e.target.value)) }))}
+                          className="h-7 text-xs" />
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-muted-foreground">Set max &gt; 0 to enable gold drops. Chance is 0–1.</p>
+                  </div>
                   <Button onClick={saveCreature} className="font-display text-xs">
                     {editingCreatureId ? (
                       <><Save className="w-3 h-3 mr-1" /> Update Creature</>
