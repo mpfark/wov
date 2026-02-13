@@ -152,7 +152,7 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false,
+    name: '', description: '', is_vendor: false, is_inn: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
@@ -177,7 +177,7 @@ export default function NodeEditorPanel({
       loadCreatures(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, connections: '[]', searchable_items: [] });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, connections: '[]', searchable_items: [] });
       setCreatures([]);
       setVendorItems([]);
     }
@@ -191,6 +191,7 @@ export default function NodeEditorPanel({
     if (data) {
       setForm({
         name: data.name, description: data.description, is_vendor: data.is_vendor,
+        is_inn: data.is_inn ?? false,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
       });
@@ -249,7 +250,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        connections, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, connections, searchable_items, region_id: selectedRegionId,
       }).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
@@ -263,7 +264,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, connections, searchable_items,
       }).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
 
@@ -399,6 +400,11 @@ export default function NodeEditorPanel({
                 <input type="checkbox" checked={form.is_vendor}
                   onChange={e => setForm(f => ({ ...f, is_vendor: e.target.checked }))} />
                 Is Vendor
+              </label>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input type="checkbox" checked={form.is_inn}
+                  onChange={e => setForm(f => ({ ...f, is_inn: e.target.checked }))} />
+                Is Inn (3× HP regen)
               </label>
               <div className="flex gap-2">
                 <Button onClick={saveNode} disabled={loading} className="font-display text-xs">

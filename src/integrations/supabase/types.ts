@@ -281,6 +281,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          is_inn: boolean
           is_vendor: boolean
           name: string
           region_id: string
@@ -291,6 +292,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          is_inn?: boolean
           is_vendor?: boolean
           name: string
           region_id: string
@@ -301,6 +303,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          is_inn?: boolean
           is_vendor?: boolean
           name?: string
           region_id?: string
