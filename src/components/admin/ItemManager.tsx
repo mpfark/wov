@@ -21,6 +21,8 @@ interface Item {
   max_durability: number;
   hands: number | null;
   level: number;
+  origin_type: string | null;
+  origin_id: string | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
@@ -38,6 +40,7 @@ const RARITY_COLORS: Record<string, string> = {
 const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
+  origin_type: null, origin_id: null,
 });
 
 function BudgetIndicator({ level, rarity, stats }: { level: number; rarity: string; stats: Record<string, number> }) {
@@ -72,13 +75,19 @@ export default function ItemManager() {
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(false);
+  const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
+  const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
 
   const loadItems = async () => {
     const { data } = await supabase.from('items').select('*').order('name');
     if (data) setItems(data as Item[]);
   };
 
-  useEffect(() => { loadItems(); }, []);
+  useEffect(() => {
+    loadItems();
+    supabase.from('creatures').select('id, name').order('name').then(({ data }) => { if (data) setAllCreatures(data); });
+    supabase.from('nodes').select('id, name').order('name').then(({ data }) => { if (data) setAllNodes(data); });
+  }, []);
 
   const openNew = () => {
     setSelectedId(null);
@@ -94,6 +103,7 @@ export default function ItemManager() {
       rarity: item.rarity, slot: item.slot, stats: { ...item.stats },
       value: item.value, max_durability: item.max_durability, hands: item.hands,
       level: item.level ?? 1,
+      origin_type: item.origin_type, origin_id: item.origin_id,
     });
   };
 
@@ -112,7 +122,7 @@ export default function ItemManager() {
 
     setLoading(true);
 
-    const payload = {
+    const payload: any = {
       name: form.name.trim(),
       description: form.description.trim(),
       item_type: form.item_type,
@@ -123,6 +133,8 @@ export default function ItemManager() {
       max_durability: Math.max(1, form.max_durability),
       hands: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) || form.item_type === 'shield' ? form.hands : null,
       level: Math.max(1, Math.min(100, form.level)),
+      origin_type: form.rarity === 'unique' ? form.origin_type : null,
+      origin_id: form.rarity === 'unique' ? form.origin_id : null,
     };
 
     if (selectedId) {
@@ -334,6 +346,38 @@ export default function ItemManager() {
                   ))}
                 </div>
               </div>
+
+              {/* Origin tracking for unique items */}
+              {form.rarity === 'unique' && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <label className="text-[10px] text-muted-foreground font-display">Unique Item Origin (where it returns when broken/offline)</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">Origin Type</label>
+                      <Select value={form.origin_type || ''} onValueChange={v => setForm(f => ({ ...f, origin_type: v || null, origin_id: null }))}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          <SelectItem value="creature" className="text-xs">Creature</SelectItem>
+                          <SelectItem value="node" className="text-xs">Node (search)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground">
+                        {form.origin_type === 'creature' ? 'Source Creature' : form.origin_type === 'node' ? 'Source Node' : 'Source'}
+                      </label>
+                      <Select value={form.origin_id || ''} onValueChange={v => setForm(f => ({ ...f, origin_id: v || null }))} disabled={!form.origin_type}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select..." /></SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50 max-h-60">
+                          {(form.origin_type === 'creature' ? allCreatures : allNodes).map(e => (
+                            <SelectItem key={e.id} value={e.id} className="text-xs">{e.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-2">
                 <Button onClick={handleSave} disabled={loading} className="font-display text-xs">
