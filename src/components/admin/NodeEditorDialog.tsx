@@ -264,7 +264,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
         const parentNode = allNodes.find(n => n.id === adjacentToNodeId);
         if (parentNode) {
           // Add connection from new node back to parent (direction S by default)
-          connections = [{ node_id: adjacentToNodeId, direction: 'S', label: parentNode.name }];
+          connections = [{ node_id: adjacentToNodeId, direction: 'S', label: '' }];
         }
       }
 
