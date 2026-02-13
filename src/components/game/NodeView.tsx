@@ -1,11 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
 import { GameNode, Region } from '@/hooks/useNodes';
 import { PlayerPresence } from '@/hooks/usePresence';
 import { Creature } from '@/hooks/useCreatures';
 import { Character } from '@/hooks/useCharacter';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   node: GameNode;
@@ -17,10 +16,13 @@ interface Props {
   onSearch: () => void;
   onAttack: (creatureId: string) => void;
   onOpenVendor?: () => void;
+  inCombat?: boolean;
+  activeCombatCreatureId?: string | null;
 }
 
 export default function NodeView({
   node, region, players, creatures, character, eventLog, onSearch, onAttack, onOpenVendor,
+  inCombat, activeCombatCreatureId,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
 
@@ -53,35 +55,45 @@ export default function NodeView({
         <div className="pt-2">
           <h3 className="font-display text-xs text-muted-foreground mb-1">In the Area</h3>
           <div className="space-y-1">
-            {creatures.map(c => (
-              <div key={c.id} className="p-2 bg-background/50 rounded border border-border space-y-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className={`text-sm font-display ${
-                      c.rarity === 'boss' ? 'text-primary text-glow' :
-                      c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
-                    }`}>{c.name}</span>
-                    {c.is_aggressive && <span className="text-[10px] text-destructive ml-1" title="Aggressive">⚠️</span>}
-                    <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
+            {creatures.map(c => {
+              const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
+              return (
+                <div key={c.id} className={`p-2 bg-background/50 rounded border space-y-1 ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : 'border-border'}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className={`text-sm font-display ${
+                        c.rarity === 'boss' ? 'text-primary text-glow' :
+                        c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
+                      }`}>{c.name}</span>
+                      {c.is_aggressive && <span className="text-[10px] text-destructive ml-1" title="Aggressive">⚠️</span>}
+                      <span className="text-xs text-muted-foreground ml-2">Lvl {c.level}</span>
+                    </div>
+                    {isActiveTarget ? (
+                      <span className="text-xs font-display text-destructive animate-pulse flex items-center gap-1">
+                        <span className="inline-block w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                        In Combat...
+                      </span>
+                    ) : (
+                      <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
+                        {CLASS_COMBAT[character.class]?.label || 'Attack'}
+                      </Button>
+                    )}
                   </div>
-                  <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-xs h-7">
-                    {CLASS_COMBAT[character.class]?.label || 'Attack'}
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${Math.max((c.hp / c.max_hp) * 100, 0)}%`,
-                        backgroundColor: c.hp / c.max_hp > 0.5 ? 'hsl(var(--chart-2))' : c.hp / c.max_hp > 0.25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
-                      }}
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{
+                          width: `${Math.max((c.hp / c.max_hp) * 100, 0)}%`,
+                          backgroundColor: c.hp / c.max_hp > 0.5 ? 'hsl(var(--chart-2))' : c.hp / c.max_hp > 0.25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{c.hp}/{c.max_hp}</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{c.hp}/{c.max_hp}</span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {otherPlayers.map(p => (
               <div key={p.id} className="text-xs text-foreground/80 p-1.5 bg-background/30 rounded border border-border">
                 <span className="text-elvish">{p.name}</span>

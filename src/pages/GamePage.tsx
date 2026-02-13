@@ -13,6 +13,7 @@ import { useCreatures } from '@/hooks/useCreatures';
 import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
+import { useCombat } from '@/hooks/useCombat';
 import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
@@ -188,7 +189,35 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     pendingAggroRef.current = true;
   }, [character.current_node_id, character.hp]);
 
-  // Process aggressive creatures ONLY after a node change (pendingAggroRef)
+  // Refs for forward-declared callbacks used by useCombat
+  const rollLootRef = useRef<(lootTable: any[], creatureName: string) => Promise<void>>(async () => {});
+  const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
+
+  // --- Auto-combat hook (must be before aggro effect) ---
+  const { inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn } = useCombat({
+    character,
+    creatures,
+    updateCharacter,
+    equipmentBonuses,
+    effectiveAC,
+    addLog,
+    rollLoot: useCallback(async (lootTable: any[], creatureName: string) => {
+      await rollLootRef.current(lootTable, creatureName);
+    }, []),
+    degradeEquipment: useCallback(async () => {
+      await degradeEquipmentRef.current();
+    }, []),
+    party,
+    partyMembers,
+    isDead,
+  });
+
+  const handleAttack = useCallback((creatureId: string) => {
+    if (isDead) return;
+    startCombat(creatureId);
+  }, [isDead, startCombat]);
+
+  // Process aggressive creatures ONLY after a node change (pendingAggroRef) — now starts auto-combat
   useEffect(() => {
     if (!pendingAggroRef.current || !creatures.length || character.hp <= 0) return;
     pendingAggroRef.current = false;
@@ -202,47 +231,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       aggroProcessedRef.current.add(c.id);
     }
 
-    const timeout = setTimeout(async () => {
-      for (const creature of aggressiveCreatures) {
-        if (character.hp <= 0) break;
-
-        addLog(`⚠️ ${creature.name} is aggressive and attacks you!`);
-
-        const tankMember = party && party.tank_id && party.tank_id !== character.id
-          ? partyMembers.find(m => m.character_id === party.tank_id)
-          : null;
-
-        const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-
-        if (tankMember) {
-          const tankAC = 10;
-          if (creatureAtk >= tankAC) {
-            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-            const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
-            addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
-            await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
-          } else {
-            addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
-          }
-        } else {
-          if (creatureAtk >= effectiveAC) {
-            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-            const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-            addLog(`${creature.name} hits you for ${creatureDmg} damage! (Rolled ${creatureAtk} vs AC ${effectiveAC})`);
-            await updateCharacter({ hp: playerNewHp });
-            if (playerNewHp <= 0) {
-              addLog('💀 You have been defeated...');
-              break;
-            }
-          } else {
-            addLog(`${creature.name} swings at you — misses! (Rolled ${creatureAtk} vs AC ${effectiveAC})`);
-          }
-        }
+    const timeout = setTimeout(() => {
+      if (character.hp <= 0) return;
+      const firstAggro = aggressiveCreatures[0];
+      if (firstAggro) {
+        addLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
+        startCombat(firstAggro.id);
       }
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [creatures, character.hp, effectiveAC, addLog, updateCharacter, party, partyMembers]);
+  }, [creatures, character.hp, addLog, startCombat]);
 
   const degradeEquipment = useCallback(async () => {
     for (const item of equipped) {
@@ -385,171 +384,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     fetchInventory();
   }, [pendingLoot, partyMembers, addLog, fetchInventory]);
 
-  // degradeEquipment moved above handleMove
-
-  const handleAttack = useCallback(async (creatureId: string) => {
-    if (isDead) return;
-    const creature = creatures.find(c => c.id === creatureId);
-    if (!creature) return;
-
-    const ability = CLASS_COMBAT[character.class] || CLASS_COMBAT.warrior;
-    const statBonus = equipmentBonuses[ability.stat] || 0;
-    const atkRoll = rollD20();
-    const statMod = getStatModifier((character as any)[ability.stat] + statBonus);
-    const totalAtk = atkRoll + statMod;
-    const statLabel = ability.stat.toUpperCase();
-    const who = party ? character.name : 'You';
-
-    if (atkRoll >= ability.critRange || (atkRoll !== 1 && totalAtk >= creature.ac)) {
-      const dmg = rollDamage(ability.diceMin, ability.diceMax) + statMod;
-      const isCrit = atkRoll >= ability.critRange;
-      const finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1);
-      const newHp = Math.max(creature.hp - finalDmg, 0);
-
-      addLog(
-        `${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
-      );
-
-      if (newHp <= 0) {
-        // Creature dies — award XP and roll loot (gold comes from loot table)
-        const baseXp = creature.level * 10;
-        const levelDiff = Math.max(character.level - creature.level, 0);
-        const xpPenalty = Math.max(1 - levelDiff * 0.2, 0.1);
-        const totalXp = Math.floor(baseXp * xpPenalty);
-
-        // Roll gold from loot table if configured
-        const lootTable = creature.loot_table as any[];
-        const goldEntry = lootTable?.find((e: any) => e.type === 'gold');
-        let totalGold = 0;
-        if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-          totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-        }
-
-        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
-
-        const membersHere = party
-          ? partyMembers.filter(m => m.character?.current_node_id === character.current_node_id)
-          : [];
-        const splitCount = membersHere.length > 1 ? membersHere.length : 1;
-        const xpShare = Math.floor(totalXp / splitCount);
-        const goldShare = Math.floor(totalGold / splitCount);
-
-        const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
-        const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
-        if (splitCount > 1) {
-          addLog(`☠️ ${creature.name} has been slain! Rewards split ${splitCount} ways: +${xpShare} XP${goldNote} each.${penaltyNote}`);
-          for (const m of membersHere) {
-            if (m.character_id === character.id) continue;
-            await supabase.rpc('award_party_member', {
-              _character_id: m.character_id,
-              _xp: xpShare,
-              _gold: goldShare,
-            });
-          }
-        } else {
-          addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
-        }
-
-        const newXp = character.xp + xpShare;
-        const newGold = character.gold + goldShare;
-        const xpForNext = character.level * 100;
-        if (newXp >= xpForNext) {
-          const newLevel = character.level + 1;
-          const levelUpUpdates: Partial<Character> = {
-            xp: newXp - xpForNext,
-            level: newLevel,
-            max_hp: character.max_hp + 5,
-            hp: character.max_hp + 5,
-            gold: newGold,
-            unspent_stat_points: (character.unspent_stat_points || 0) + 2,
-          };
-
-          // Class-based stat bonuses every 3 levels
-          if (newLevel % 3 === 0) {
-            const bonuses = CLASS_LEVEL_BONUSES[character.class] || {};
-            const bonusNames: string[] = [];
-            for (const [stat, amount] of Object.entries(bonuses)) {
-              const currentVal = (character as any)[stat] || 10;
-              const capped = Math.min(currentVal + amount, 30);
-              if (capped > currentVal) {
-                (levelUpUpdates as any)[stat] = capped;
-                bonusNames.push(`+${amount} ${stat.toUpperCase()}`);
-              }
-            }
-            if (bonusNames.length > 0) {
-              addLog(`📈 ${CLASS_LABELS[character.class] || character.class} bonus: ${bonusNames.join(', ')}!`);
-            }
-          }
-
-          addLog(`🎉 Level Up! ${who} ${party ? 'is' : 'are'} now level ${newLevel}! ${party ? `${who} gained` : 'You gained'} 2 stat points.`);
-          await updateCharacter(levelUpUpdates);
-        } else {
-          await updateCharacter({ xp: newXp, gold: newGold });
-        }
-        
-        // Roll loot
-        await rollLoot(creature.loot_table as any[], creature.name);
-      } else {
-        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: false });
-        // Creature counterattack — targets tank if party has one
-        const tankMember = party && party.tank_id && party.tank_id !== character.id
-          ? partyMembers.find(m => m.character_id === party.tank_id)
-          : null;
-        const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-        if (tankMember) {
-          // Tank absorbs the hit
-          const tankAC = 10; // We don't have tank's full AC here, use base
-          if (creatureAtk >= tankAC) {
-            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-            const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
-            addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
-            await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
-          } else {
-            addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
-          }
-        } else {
-          if (creatureAtk >= effectiveAC) {
-            const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-            const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-            addLog(`${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${effectiveAC} — Hit! ${creatureDmg} damage.`);
-            await updateCharacter({ hp: playerNewHp });
-            await degradeEquipment();
-            if (playerNewHp <= 0) {
-              addLog(`💀 ${who} ${party ? 'has' : 'have'} been defeated...`);
-            }
-          } else {
-            addLog(`${creature.name} attacks ${who} — misses!`);
-          }
-        }
-      }
-    } else {
-      addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac}.`);
-      // Creature still attacks — targets tank if available
-      const tankMember = party && party.tank_id && party.tank_id !== character.id
-        ? partyMembers.find(m => m.character_id === party.tank_id)
-        : null;
-      const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-      if (tankMember) {
-        const tankAC = 10;
-        if (creatureAtk >= tankAC) {
-          const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-          const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
-          addLog(`🛡️ ${creature.name} retaliates at ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
-          await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
-        } else {
-          addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
-        }
-      } else {
-        if (creatureAtk >= effectiveAC) {
-          const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-          const playerNewHp = Math.max(character.hp - creatureDmg, 0);
-          addLog(`${creature.name} retaliates at ${who}! ${creatureDmg} damage.`);
-          await updateCharacter({ hp: playerNewHp });
-          await degradeEquipment();
-        }
-      }
-    }
-  }, [character, creatures, addLog, updateCharacter, equipmentBonuses, effectiveAC, rollLoot, degradeEquipment, party, partyMembers, isDead]);
+  // Wire up refs for forward-declared callbacks
+  useEffect(() => { rollLootRef.current = rollLoot; }, [rollLoot]);
+  useEffect(() => { degradeEquipmentRef.current = degradeEquipment; }, [degradeEquipment]);
 
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
@@ -659,6 +496,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   onSearch={handleSearch}
                   onAttack={handleAttack}
                   onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
+                  inCombat={inCombat}
+                  activeCombatCreatureId={activeCombatCreatureId}
                 />
               </div>
               {/* Event Log - docked at bottom of middle column, 1/3 height */}
