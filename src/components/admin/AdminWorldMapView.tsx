@@ -9,7 +9,7 @@ interface GraphNode {
   is_vendor: boolean;
   is_inn: boolean;
   is_blacksmith: boolean;
-  connections: Array<{ node_id: string; direction: string; label?: string }>;
+  connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
 }
 
 interface Region {
@@ -231,7 +231,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   // Collect all edges (deduplicated), tagged as intra or cross-region
   const edges = useMemo(() => {
     const edgeSet = new Set<string>();
-    const result: Array<{ from: string; to: string; label?: string; crossRegion: boolean }> = [];
+    const result: Array<{ from: string; to: string; label?: string; crossRegion: boolean; hidden: boolean }> = [];
     for (const node of nodes) {
       for (const conn of node.connections) {
         const key = [node.id, conn.node_id].sort().join('-');
@@ -240,7 +240,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
         edgeSet.add(key);
         const targetNode = allNodeMap.get(conn.node_id);
         const crossRegion = !!targetNode && targetNode.region_id !== node.region_id;
-        result.push({ from: node.id, to: conn.node_id, label: conn.label, crossRegion });
+        result.push({ from: node.id, to: conn.node_id, label: conn.label, crossRegion, hidden: !!conn.hidden });
       }
     }
     return result;
@@ -337,9 +337,9 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
               <g key={`${edge.from}-${edge.to}`}>
                 <line
                   x1={from.px} y1={from.py} x2={to.px} y2={to.py}
-                  stroke={edge.crossRegion ? 'hsl(200 50% 50% / 0.6)' : 'hsl(35 20% 35%)'}
-                  strokeWidth={edge.crossRegion ? 2.5 : 1.5}
-                  strokeDasharray={edge.crossRegion ? '10 5' : '6 3'}
+                  stroke={edge.hidden ? 'hsl(280 50% 50% / 0.4)' : edge.crossRegion ? 'hsl(200 50% 50% / 0.6)' : 'hsl(35 20% 35%)'}
+                  strokeWidth={edge.hidden ? 1 : edge.crossRegion ? 2.5 : 1.5}
+                  strokeDasharray={edge.hidden ? '4 4' : edge.crossRegion ? '10 5' : '6 3'}
                 />
                 {/* Plus button on edge midpoint */}
                 <g

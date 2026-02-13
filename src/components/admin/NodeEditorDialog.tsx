@@ -46,9 +46,10 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
   const [addDir, setAddDir] = useState('N');
   const [addNodeId, setAddNodeId] = useState('');
   const [addLabel, setAddLabel] = useState('');
+  const [addHidden, setAddHidden] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const parsed: { node_id: string; direction: string; label?: string }[] = (() => {
+  const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean }[] = (() => {
     try { return JSON.parse(connections) || []; } catch { return []; }
   })();
 
@@ -60,15 +61,15 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
     setSaving(true);
 
     // Update current node
-    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}) }];
+    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}) }];
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
 
-    // Update target node with reverse connection
+    // Update target node with reverse connection (also hidden if source is hidden)
     const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
     if (targetNode) {
       const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
       if (!targetConns.some((c: any) => c.node_id === nodeId)) {
-        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S' });
+        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S', ...(addHidden ? { hidden: true } : {}) });
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', addNodeId);
       }
     }
@@ -76,6 +77,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
     toast.success('Connection added');
     setAddNodeId('');
     setAddLabel('');
+    setAddHidden(false);
     setSaving(false);
     onUpdated();
   };
@@ -112,6 +114,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
             <span className="font-display text-sm flex-1">{nodeName(c.node_id)}</span>
             <span className="text-xs text-muted-foreground font-mono">{c.direction}</span>
             {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
+            {c.hidden && <span className="text-[10px] text-primary/70 font-mono">🔒 Hidden</span>}
             <Button size="sm" variant="destructive" disabled={saving} onClick={() => removeConnection(c.node_id)} className="h-6 w-6 p-0">
               <Trash2 className="w-3 h-3" />
             </Button>
@@ -148,6 +151,10 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
         </div>
         <Input placeholder="Label (optional)" value={addLabel}
           onChange={e => setAddLabel(e.target.value)} className="h-8 text-xs" />
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" checked={addHidden} onChange={e => setAddHidden(e.target.checked)} />
+          Hidden (discoverable via search)
+        </label>
         <Button onClick={addConnection} disabled={saving || !addNodeId} className="font-display text-xs">
           <Plus className="w-3 h-3 mr-1" /> Add Connection
         </Button>

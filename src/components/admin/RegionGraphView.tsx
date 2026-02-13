@@ -6,7 +6,7 @@ interface GraphNode {
   id: string;
   name: string;
   is_vendor: boolean;
-  connections: Array<{ node_id: string; direction: string; label?: string }>;
+  connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
 }
 
 interface Props {
@@ -105,13 +105,13 @@ export default function RegionGraphView({ nodes, onNodeClick, onAddNodeBetween, 
   // Collect edges (deduplicated)
   const edges = useMemo(() => {
     const edgeSet = new Set<string>();
-    const result: Array<{ from: string; to: string; label?: string }> = [];
+    const result: Array<{ from: string; to: string; label?: string; hidden: boolean }> = [];
     for (const node of nodes) {
       for (const conn of node.connections) {
         const key = [node.id, conn.node_id].sort().join('-');
         if (!edgeSet.has(key) && nodePositions.has(conn.node_id)) {
           edgeSet.add(key);
-          result.push({ from: node.id, to: conn.node_id, label: conn.label });
+          result.push({ from: node.id, to: conn.node_id, label: conn.label, hidden: !!conn.hidden });
         }
       }
     }
@@ -152,7 +152,9 @@ export default function RegionGraphView({ nodes, onNodeClick, onAddNodeBetween, 
               <g key={`${edge.from}-${edge.to}`}>
                 <line
                   x1={from.px} y1={from.py} x2={to.px} y2={to.py}
-                  stroke="hsl(35 20% 35%)" strokeWidth={2} strokeDasharray="6 3"
+                  stroke={edge.hidden ? 'hsl(280 50% 50% / 0.4)' : 'hsl(35 20% 35%)'}
+                  strokeWidth={edge.hidden ? 1 : 2}
+                  strokeDasharray={edge.hidden ? '4 4' : '6 3'}
                 />
                 {/* Plus button on edge midpoint */}
                 <g
