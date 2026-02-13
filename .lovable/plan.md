@@ -1,60 +1,72 @@
 
 
-# Replace Node Editor Dialog with Inline Properties Panel
+# Roadmap Feature for Admin Panel
 
 ## Overview
-Replace the popup dialog-based node editor with a side-by-side resizable layout on the World tab: the SVG map on the left and a properties panel on the right. Clicking a node or "add node" opens the editor inline in the right column, giving admins full visibility of both the map and the node details simultaneously. The properties panel will also include a region selector and the connections manager for both new and existing nodes.
+Add a new "Roadmap" tab to the admin panel that displays all planned features as a manageable list. Each entry has a **title**, **description**, **category** tag, and a **done** checkbox. Admins can add, edit, and mark entries as implemented. All your brainstormed ideas (A through J) will be pre-seeded into the table.
 
-## Changes
+## Database
 
-### 1. AdminPage.tsx -- Restructure the World tab
+### New table: `roadmap_items`
 
-- Remove the `NodeEditorDialog` component usage entirely
-- Replace the World tab content with a `ResizablePanelGroup` (horizontal) containing:
-  - **Left panel**: The existing `AdminWorldMapView`
-  - **Right panel**: A new inline `NodeEditorPanel` (the same editor content, but rendered as a panel instead of a dialog)
-- Pass all needed state (editing node ID, new node flag, regions list) down to the panel
-- Add a region selector (`Select` dropdown) to the node editor so admins can assign/change a node's region during create or edit
+| Column | Type | Default | Notes |
+|--------|------|---------|-------|
+| id | uuid | gen_random_uuid() | PK |
+| title | text | | Required, short name |
+| description | text | '' | Detailed explanation |
+| category | text | 'general' | e.g. "Combat", "Items", "UI", "NPCs", "Quests", "Classes", "Analytics" |
+| is_done | boolean | false | Checkmark when implemented |
+| sort_order | integer | 0 | For manual ordering |
+| created_at | timestamptz | now() | |
 
-### 2. New Component: NodeEditorPanel.tsx
+- RLS: SELECT open to all authenticated users; INSERT/UPDATE/DELETE restricted to admins (`is_maiar_or_valar()`)
 
-Extract the contents of `NodeEditorDialog` into a new `NodeEditorPanel` component that:
-- Renders as a scrollable panel (not a dialog) with a header showing the node name and a close button
-- Contains all existing tabs: Details, Creatures, Vendor Stock, Connections
-- Adds a **Region** dropdown on the Details tab, populated from the regions list, allowing the admin to set or change the node's region
-- Shows the Connections tab for both new and existing nodes (not just existing ones)
-- On save for new nodes, uses the selected region from the dropdown instead of a pre-set `regionId`
+### Seed data (inserted via migration)
+All 10 brainstormed ideas will be inserted as initial rows:
 
-### 3. NodeEditorDialog.tsx -- Keep or Remove
+| Title | Category |
+|-------|----------|
+| Auto-progressing combat system | Combat |
+| Class abilities (Healer spells, Bard songs) | Classes |
+| Player action logs for balancing | Analytics |
+| Non-Player Characters (NPCs) | NPCs |
+| Quest system with AI generation | Quests |
+| Inn resting for faster HP regen | Mechanics |
+| Unique item rules and repair system | Items |
+| HP regen rate tooltip | UI |
+| Level-difference XP penalty | Mechanics |
+| Creature presence indicators on nodes | UI |
 
-The dialog component can be kept for backward compatibility but will no longer be used from the World tab. Alternatively, it can be removed entirely if no other page references it.
+## Frontend
 
-## Technical Details
+### 1. AdminPage.tsx
+- Add a "Roadmap" tab trigger to the existing `TabsList`
+- Add a `TabsContent` rendering the new `RoadmapManager` component
 
-### Layout Structure (AdminPage World tab)
-```text
-+--------------------------------------------------+
-| Region controls bar                               |
-+------------------------+-------------------------+
-|                        |  Node Editor Panel       |
-|   SVG World Map        |  - Details (+ Region)    |
-|   (resizable)          |  - Creatures             |
-|                        |  - Vendor Stock          |
-|                        |  - Connections           |
-+------------------------+-------------------------+
-```
+### 2. New component: `src/components/admin/RoadmapManager.tsx`
+A full-height scrollable panel with:
 
-- Uses `ResizablePanelGroup`, `ResizablePanel`, `ResizableHandle` from the existing `resizable.tsx` UI component
-- Default split: ~65% map / ~35% properties
-- When no node is selected, the right panel shows a placeholder message like "Select a node to edit"
+- **Header bar**: Title "Roadmap" + "Add Entry" button + optional category filter dropdown
+- **Entry list**: Each row shows:
+  - A checkbox to toggle `is_done` (saves immediately to DB)
+  - The title (bold) with the category as a colored `Badge`
+  - The description below in smaller text
+  - An edit button to inline-edit title, description, and category
+  - A delete button (with confirmation)
+- **Add/Edit form**: A small inline form (or collapsible section at the top) with:
+  - Title input
+  - Description textarea
+  - Category selector (predefined list: Combat, Classes, Analytics, NPCs, Quests, Mechanics, Items, UI, General -- plus ability to type custom)
+- Done items are visually muted (strikethrough title, lower opacity) and sorted to the bottom
+- Undone items are sorted by `sort_order` then `created_at`
 
-### Region Selector on Details Tab
-- A `Select` dropdown populated with all regions (passed as prop)
-- For new nodes: defaults to the region of the adjacent node (if any), otherwise first region
-- For existing nodes: shows the current region, allows changing it
-- On save, the selected region is written to the `region_id` column
+### Visual Style
+- Follows the existing admin panel parchment/fantasy aesthetic
+- Category badges use different muted colors (e.g. Combat = red, UI = blue, Items = amber)
+- Checkmark uses the existing `Checkbox` component
+- Consistent with the `font-display text-xs` pattern used across other admin tabs
 
-### Connections on New Nodes
-- For new nodes, connections can be configured after the initial save (node needs an ID first)
-- After creating a node, the panel stays open and switches to "edit mode" so the admin can immediately add connections
-
+## Technical Notes
+- Uses the standard Supabase client for CRUD -- no edge function needed
+- Realtime not required since this is admin-only and low-frequency
+- The category list is hardcoded in the component but the column is free-text so custom categories work too
