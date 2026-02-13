@@ -331,6 +331,41 @@ export type Database = {
           },
         ]
       }
+      npcs: {
+        Row: {
+          created_at: string
+          description: string
+          dialogue: string
+          id: string
+          name: string
+          node_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          dialogue?: string
+          id?: string
+          name: string
+          node_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          dialogue?: string
+          id?: string
+          name?: string
+          node_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "npcs_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parties: {
         Row: {
           created_at: string

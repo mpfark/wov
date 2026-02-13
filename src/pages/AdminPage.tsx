@@ -13,6 +13,7 @@ import CreatureManager from '@/components/admin/CreatureManager';
 import UserManager from '@/components/admin/UserManager';
 import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
+import NPCManager from '@/components/admin/NPCManager';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -23,6 +24,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [regions, setRegions] = useState<any[]>([]);
   const [nodes, setNodes] = useState<any[]>([]);
   const [creatureCounts, setCreatureCounts] = useState<Map<string, { total: number; aggressive: number }>>(new Map());
+  const [npcCounts, setNPCCounts] = useState<Map<string, number>>(new Map());
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -30,10 +32,11 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const [r, n, c] = await Promise.all([
+    const [r, n, c, np] = await Promise.all([
       supabase.from('regions').select('*').order('min_level'),
       supabase.from('nodes').select('*').order('name'),
       supabase.from('creatures').select('id, node_id, is_aggressive, is_alive'),
+      supabase.from('npcs').select('id, node_id'),
     ]);
     setRegions(r.data || []);
     setNodes(n.data || []);
@@ -48,6 +51,14 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
       counts.set(cr.node_id, entry);
     }
     setCreatureCounts(counts);
+
+    // Build NPC counts per node
+    const nCounts = new Map<string, number>();
+    for (const npc of (np.data || [])) {
+      if (!npc.node_id) continue;
+      nCounts.set(npc.node_id, (nCounts.get(npc.node_id) || 0) + 1);
+    }
+    setNPCCounts(nCounts);
   }, []);
 
   useEffect(() => { loadData(); }, []);
@@ -110,6 +121,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           <TabsList className="h-8">
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
             <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
+            <TabsTrigger value="npcs" className="font-display text-xs">NPCs</TabsTrigger>
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
             <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
@@ -139,6 +151,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   regions={regions}
                   nodes={nodes}
                   creatureCounts={creatureCounts}
+                  npcCounts={npcCounts}
                   onNodeClick={handleNodeClick}
                   onAddNodeBetween={handleAddNodeBetween}
                   onAddNodeAdjacent={handleAddNodeAdjacent}
@@ -167,6 +180,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="creatures" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <CreatureManager />
+        </TabsContent>
+
+        <TabsContent value="npcs" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          <NPCManager />
         </TabsContent>
 
         <TabsContent value="items" className="flex-1 min-h-0 mt-0 overflow-hidden">

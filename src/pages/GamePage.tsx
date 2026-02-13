@@ -11,6 +11,8 @@ import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
 import { useCreatures } from '@/hooks/useCreatures';
+import { useNPCs, NPC } from '@/hooks/useNPCs';
+import NPCDialogPanel from '@/components/game/NPCDialogPanel';
 import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
@@ -34,6 +36,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
+  const { npcs } = useNPCs(character.current_node_id);
+  const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory } = useInventory(character.id);
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
@@ -497,10 +501,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   region={currentRegion}
                   players={playersHere}
                   creatures={creatures}
+                  npcs={npcs}
                   character={character}
                   eventLog={eventLog}
                   onSearch={handleSearch}
                   onAttack={handleAttack}
+                  onTalkToNPC={npc => setTalkingToNPC(npc)}
                   onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
                   onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
                   inCombat={inCombat}
@@ -598,6 +604,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           onConfirm={handleLootDistribute}
         />
       )}
+
+      {/* NPC Dialog */}
+      <NPCDialogPanel npc={talkingToNPC} open={!!talkingToNPC} onClose={() => setTalkingToNPC(null)} />
 
       {/* Stat Allocation Dialog */}
       <StatAllocationDialog character={character} onAllocate={updateCharacter} />
