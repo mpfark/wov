@@ -93,6 +93,34 @@ export function calculateAC(charClass: string, dex: number) {
   return baseAC + dexMod;
 }
 
+// Item stat budget system
+export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {
+  common: 1.0, uncommon: 1.5, rare: 2.0, unique: 3.0,
+};
+
+export const ITEM_STAT_COSTS: Record<string, number> = {
+  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5,
+};
+
+export const ITEM_STAT_CAPS: Record<string, number> = {
+  str: 5, dex: 5, con: 5, int: 5, wis: 5, cha: 5, ac: 3, hp: 10,
+};
+
+export function getItemStatBudget(level: number, rarity: string): number {
+  const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
+  return Math.floor(level * 0.3 * mult);
+}
+
+export function calculateItemStatCost(stats: Record<string, number>): number {
+  return Object.entries(stats).reduce(
+    (sum, [key, val]) => sum + val * (ITEM_STAT_COSTS[key] || 1), 0
+  );
+}
+
+export function getItemStatCap(statKey: string): number {
+  return ITEM_STAT_CAPS[statKey] ?? 5;
+}
+
 // Dice rolling
 export function rollD20(): number {
   return Math.floor(Math.random() * 20) + 1;

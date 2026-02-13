@@ -240,6 +240,7 @@ export type Database = {
           hands: number | null
           id: string
           item_type: string
+          level: number
           max_durability: number
           name: string
           rarity: Database["public"]["Enums"]["item_rarity"]
@@ -253,6 +254,7 @@ export type Database = {
           hands?: number | null
           id?: string
           item_type?: string
+          level?: number
           max_durability?: number
           name: string
           rarity?: Database["public"]["Enums"]["item_rarity"]
@@ -266,6 +268,7 @@ export type Database = {
           hands?: number | null
           id?: string
           item_type?: string
+          level?: number
           max_durability?: number
           name?: string
           rarity?: Database["public"]["Enums"]["item_rarity"]
