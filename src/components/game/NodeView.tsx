@@ -1,6 +1,7 @@
 import { GameNode, Region } from '@/hooks/useNodes';
 import { PlayerPresence } from '@/hooks/usePresence';
 import { Creature } from '@/hooks/useCreatures';
+import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
@@ -11,10 +12,12 @@ interface Props {
   region: Region | undefined;
   players: PlayerPresence[];
   creatures: Creature[];
+  npcs?: NPC[];
   character: Character;
   eventLog: string[];
   onSearch: () => void;
   onAttack: (creatureId: string) => void;
+  onTalkToNPC?: (npc: NPC) => void;
   onOpenVendor?: () => void;
   onOpenBlacksmith?: () => void;
   inCombat?: boolean;
@@ -22,7 +25,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, players, creatures, character, eventLog, onSearch, onAttack, onOpenVendor, onOpenBlacksmith,
+  node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
   inCombat, activeCombatCreatureId,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
@@ -55,7 +58,7 @@ export default function NodeView({
       </div>
 
       {/* In the Area - pinned above actions */}
-      {(creatures.length > 0 || otherPlayers.length > 0) && (
+      {(creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0) && (
         <div className="pt-2">
           <h3 className="font-display text-xs text-muted-foreground mb-1">In the Area</h3>
           <div className="space-y-1">
@@ -98,6 +101,17 @@ export default function NodeView({
                 </div>
               );
             })}
+            {npcs.map(npc => (
+              <div key={npc.id} className="flex items-center justify-between p-2 bg-background/50 rounded border border-elvish/30">
+                <div>
+                  <span className="text-sm font-display text-elvish">💬 {npc.name}</span>
+                  {npc.description && <span className="text-[10px] text-muted-foreground ml-2">{npc.description}</span>}
+                </div>
+                <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-xs h-7 border-elvish/50 text-elvish">
+                  Talk
+                </Button>
+              </div>
+            ))}
             {otherPlayers.map(p => (
               <div key={p.id} className="text-xs text-foreground/80 p-1.5 bg-background/30 rounded border border-border">
                 <span className="text-elvish">{p.name}</span>

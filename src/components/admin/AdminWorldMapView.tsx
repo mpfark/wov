@@ -23,6 +23,7 @@ interface Props {
   regions: Region[];
   nodes: GraphNode[];
   creatureCounts?: Map<string, { total: number; aggressive: number }>;
+  npcCounts?: Map<string, number>;
   onNodeClick: (nodeId: string) => void;
   onAddNodeBetween: (fromId: string, toId: string) => void;
   onAddNodeAdjacent: (fromId: string) => void;
@@ -98,7 +99,7 @@ function layoutNodes(nodes: GraphNode[]) {
   return positions;
 }
 
-export default function AdminWorldMapView({ regions, nodes, creatureCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
+export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -381,23 +382,27 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, onNo
                     {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}{node.is_blacksmith ? '🔨' : ''}
                   </text>
                 )}
-                {/* Creature dots below node */}
+                {/* Creature dots and NPC indicator below node */}
                 {(() => {
                   const cc = creatureCounts?.get(node.id);
-                  if (!cc || cc.total === 0) return null;
+                  const nc = npcCounts?.get(node.id) || 0;
+                  if ((!cc || cc.total === 0) && nc === 0) return null;
                   return (
                     <g>
-                      {cc.aggressive > 0 && (
+                      {cc && cc.aggressive > 0 && (
                         <circle cx={pos.px - 6} cy={pos.py + 18} r={4}
                           fill="hsl(0 70% 50%)" className="stroke-background" strokeWidth={1} />
                       )}
-                      {cc.total - cc.aggressive > 0 && (
+                      {cc && cc.total - cc.aggressive > 0 && (
                         <circle cx={pos.px + (cc.aggressive > 0 ? 6 : 0)} cy={pos.py + 18} r={4}
                           fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} />
                       )}
-                      <text x={pos.px} y={pos.py + 30} textAnchor="middle"
+                      {nc > 0 && (
+                        <text x={pos.px + 14} y={pos.py + 22} className="text-[8px] select-none pointer-events-none">💬</text>
+                      )}
+                      <text x={pos.px} y={pos.py + 34} textAnchor="middle"
                         className="fill-muted-foreground text-[7px] select-none pointer-events-none">
-                        {cc.total}
+                        {(cc?.total || 0) > 0 ? `${cc!.total}c` : ''}{nc > 0 ? ` ${nc}n` : ''}
                       </text>
                     </g>
                   );
