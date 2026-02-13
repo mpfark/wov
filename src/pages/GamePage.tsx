@@ -89,12 +89,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   // return_unique_items, regen_creature_hp, respawn_creatures run server-side via scheduled jobs
 
-  // Passive HP regeneration — 1 HP every 30s, multiplied by regen buff
+  // Passive HP regeneration — 1 HP every 30s, multiplied by regen buff and inn bonus
   useEffect(() => {
     const interval = setInterval(() => {
       if (character.hp < character.max_hp && character.hp > 0) {
-        const mult = Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
-        const regenAmount = Math.max(Math.floor(1 * mult), 1);
+        const potionMult = Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
+        const node = character.current_node_id ? getNode(character.current_node_id) : null;
+        const innMult = node?.is_inn ? 3 : 1;
+        const totalMult = Math.max(potionMult, innMult);
+        const regenAmount = Math.max(Math.floor(1 * totalMult), 1);
         const newHp = Math.min(character.hp + regenAmount, character.max_hp);
         if (newHp !== character.hp) {
           updateCharacter({ hp: newHp });
@@ -102,7 +105,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [character.hp, character.max_hp, regenBuff, updateCharacter]);
+  }, [character.hp, character.max_hp, regenBuff, character.current_node_id, getNode, updateCharacter]);
 
   // Refs for death respawn to avoid stale closures / cleanup races
   const deathGoldRef = useRef(character.gold);
@@ -590,6 +593,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onDrop={dropItem}
                 onUseConsumable={handleUseConsumable}
                 onSpendPoint={handleSpendPoint}
+                isAtInn={currentNode?.is_inn ?? false}
+                regenBuff={regenBuff}
                 party={party}
                 partyMembers={partyMembers}
                 pendingInvites={pendingInvites}

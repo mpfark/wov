@@ -36,6 +36,9 @@ export default function NodeView({
               {region.name} — Levels {region.min_level}–{region.max_level}
             </p>
           )}
+          {node.is_inn && (
+            <p className="text-xs text-elvish mt-0.5">🏨 Inn — Resting here boosts HP regeneration</p>
+          )}
         </div>
 
         {/* Description */}

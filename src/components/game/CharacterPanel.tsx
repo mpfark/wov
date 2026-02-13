@@ -19,6 +19,9 @@ interface Props {
   onDrop: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
   onSpendPoint?: (stat: string) => void;
+  // Regen info
+  isAtInn?: boolean;
+  regenBuff?: { multiplier: number; expiresAt: number };
   // Party props
   party: Party | null;
   partyMembers: PartyMember[];
@@ -111,6 +114,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
+  isAtInn, regenBuff,
   party, partyMembers, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
 }: Props) {
@@ -156,7 +160,15 @@ export default function CharacterPanel({
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
             <p className="font-display text-sm">Regeneration</p>
             <p className="text-xs text-muted-foreground">Base: <span className="text-elvish">1 HP</span> every <span className="text-foreground">30s</span></p>
-            <p className="text-[10px] text-muted-foreground italic">Potions, food & abilities will show here when active</p>
+            {isAtInn && (
+              <p className="text-xs text-elvish">🏨 Inn Rest: <span className="text-foreground">3× regen</span></p>
+            )}
+            {regenBuff && Date.now() < regenBuff.expiresAt && (
+              <p className="text-xs text-primary">🧪 Potion Buff: <span className="text-foreground">{regenBuff.multiplier}× regen</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
+            )}
+            {!isAtInn && !(regenBuff && Date.now() < regenBuff.expiresAt) && (
+              <p className="text-[10px] text-muted-foreground italic">Rest at an Inn or use potions for faster regen</p>
+            )}
           </TooltipContent>
         </Tooltip>
 

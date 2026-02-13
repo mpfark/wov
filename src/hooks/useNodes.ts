@@ -9,6 +9,7 @@ export interface GameNode {
   connections: Array<{ node_id: string; direction: string; label?: string }>;
   searchable_items: string[];
   is_vendor: boolean;
+  is_inn: boolean;
 }
 
 export interface Region {
