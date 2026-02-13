@@ -268,7 +268,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
 
     // Attack of Opportunity — each living creature gets a free strike
-    const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0);
+    const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0 && (c.is_aggressive || c.id === activeCombatCreatureId));
     let currentHp = character.hp;
     for (const creature of livingCreatures) {
       if (currentHp <= 0) break;
