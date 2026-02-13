@@ -47,12 +47,50 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
   const [addLabel, setAddLabel] = useState('');
   const [addHidden, setAddHidden] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingConnId, setEditingConnId] = useState<string | null>(null);
+  const [editDir, setEditDir] = useState('N');
+  const [editLabel, setEditLabel] = useState('');
+  const [editHidden, setEditHidden] = useState(false);
 
   const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean }[] = (() => {
     try { return JSON.parse(connections) || []; } catch { return []; }
   })();
 
   const nodeName = (id: string) => allNodesGlobal.find((n: any) => n.id === id)?.name || id.slice(0, 8);
+
+  const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean }) => {
+    setEditingConnId(c.node_id);
+    setEditDir(c.direction);
+    setEditLabel(c.label || '');
+    setEditHidden(!!c.hidden);
+  };
+
+  const saveEditConnection = async () => {
+    if (!editingConnId) return;
+    setSaving(true);
+    const newConns = parsed.map(c =>
+      c.node_id === editingConnId
+        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}) }
+        : c
+    );
+    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
+    // Update reverse direction on target node
+    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', editingConnId).single();
+    if (targetNode) {
+      const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
+      const reverseIdx = targetConns.findIndex((c: any) => c.node_id === nodeId);
+      if (reverseIdx >= 0) {
+        targetConns[reverseIdx] = { ...targetConns[reverseIdx], direction: REVERSE_DIR[editDir] || targetConns[reverseIdx].direction, ...(editHidden ? { hidden: true } : { hidden: undefined }) };
+        // Clean undefined
+        if (!targetConns[reverseIdx].hidden) delete targetConns[reverseIdx].hidden;
+        await supabase.from('nodes').update({ connections: targetConns }).eq('id', editingConnId);
+      }
+    }
+    toast.success('Connection updated');
+    setEditingConnId(null);
+    setSaving(false);
+    onUpdated();
+  };
 
   const addConnection = async () => {
     if (!addNodeId) return toast.error('Select a target node');
@@ -99,14 +137,52 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
           <p className="text-xs text-muted-foreground italic">No connections yet.</p>
         )}
         {parsed.map(c => (
-          <div key={c.node_id} className="flex items-center gap-2 p-2 rounded border border-border bg-background/40">
-            <span className="font-display text-sm flex-1">{nodeName(c.node_id)}</span>
-            <span className="text-xs text-muted-foreground font-mono">{c.direction}</span>
-            {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
-            {c.hidden && <span className="text-[10px] text-primary/70 font-mono">🔒 Hidden</span>}
-            <Button size="sm" variant="destructive" disabled={saving} onClick={() => removeConnection(c.node_id)} className="h-6 w-6 p-0">
-              <Trash2 className="w-3 h-3" />
-            </Button>
+          <div key={c.node_id}>
+            {editingConnId === c.node_id ? (
+              <div className="p-2 rounded border border-primary/50 bg-primary/5 space-y-2">
+                <p className="font-display text-xs text-primary">Editing: {nodeName(c.node_id)}</p>
+                <div className="grid grid-cols-[auto_1fr] gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Direction</label>
+                    <Select value={editDir} onValueChange={setEditDir}>
+                      <SelectTrigger className="h-8 text-xs w-20"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        {DIRECTIONS.map(d => (
+                          <SelectItem key={d} value={d} className="text-xs">{d}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Label</label>
+                    <Input value={editLabel} onChange={e => setEditLabel(e.target.value)} className="h-8 text-xs" placeholder="Label (optional)" />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={editHidden} onChange={e => setEditHidden(e.target.checked)} />
+                  Hidden (discoverable via search)
+                </label>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveEditConnection} disabled={saving} className="h-7 text-xs font-display">
+                    <Save className="w-3 h-3 mr-1" /> Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingConnId(null)} className="h-7 text-xs">Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-2 rounded border border-border bg-background/40">
+                <span className="font-display text-sm flex-1">{nodeName(c.node_id)}</span>
+                <span className="text-xs text-muted-foreground font-mono">{c.direction}</span>
+                {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
+                {c.hidden && <span className="text-[10px] text-primary/70 font-mono">🔒 Hidden</span>}
+                <Button size="sm" variant="ghost" disabled={saving} onClick={() => startEditConnection(c)} className="h-6 w-6 p-0">
+                  <Pencil className="w-3 h-3" />
+                </Button>
+                <Button size="sm" variant="destructive" disabled={saving} onClick={() => removeConnection(c.node_id)} className="h-6 w-6 p-0">
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
           </div>
         ))}
       </div>
