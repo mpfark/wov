@@ -1,73 +1,132 @@
 
 
-# Item Stat Budget System
+# Unique Items, Loot Fallback, and Blacksmith System
 
 ## Overview
 
-Add a `level` field to items and enforce a stat point budget based on level and rarity, with per-stat caps to prevent stacking. Admins see a live budget meter when editing items and cannot save over-budget items.
+Three interconnected features:
+1. **Unique item exclusivity** -- creatures/search nodes drop a common fallback if the unique item is already held by someone
+2. **Unique item return** -- items return to their origin (creature loot table or search node) when durability hits 0 or owner is offline 24h (already partially handled by `return_unique_items` DB function, but needs origin tracking)
+3. **Blacksmith nodes** -- a new node type where players can repair items for gold
 
-## Budget Formula
+---
 
-```text
-Budget = floor(level * 0.3 * rarity_multiplier)
+## 1. Database Changes
 
-Rarity multipliers:
-  common:   1.0x
-  uncommon: 1.5x
-  rare:     2.0x
-  unique:   3.0x
+### `items` table -- add `origin_type` and `origin_id`
 
-Examples (Level 40):
-  common:   floor(40 * 0.3 * 1.0) = 12 points
-  uncommon: floor(40 * 0.3 * 1.5) = 18 points
-  rare:     floor(40 * 0.3 * 2.0) = 24 points
-  unique:   floor(40 * 0.3 * 3.0) = 36 points
-```
-
-## Stat Costs and Per-Item Caps
+Track where a unique item "belongs" so it can return there:
 
 ```text
-Stat       Cost    Max per item
-------     ----    ------------
-STR         1        +5
-DEX         1        +5
-CON         1        +5
-INT         1        +5
-WIS         1        +5
-CHA         1        +5
-AC          3        +3
-HP          0.5      +10
+origin_type  TEXT  nullable  (values: 'creature' or 'node')
+origin_id    UUID  nullable  (the creature ID or node ID it originates from)
 ```
 
-## Changes
+These are only meaningful for unique-rarity items. Set by admins when configuring loot tables/searchable items.
 
-### 1. Database Migration
+### `nodes` table -- add `is_blacksmith` boolean
 
-Add `level` column to `items` table with a default of 1 and a range constraint (1-100).
+```text
+is_blacksmith  BOOLEAN  default false
+```
 
-### 2. `src/lib/game-data.ts` -- New Functions and Constants
+### Admin World Map marker
 
-- `ITEM_RARITY_MULTIPLIER` -- rarity to multiplier map
-- `ITEM_STAT_COSTS` -- cost per stat point (AC=3, HP=0.5, others=1)
-- `ITEM_STAT_CAPS` -- max value per stat per item (AC=3, HP=10, others=5)
-- `getItemStatBudget(level, rarity)` -- returns the total budget
-- `calculateItemStatCost(stats)` -- returns the weighted cost of current stats
-- `getItemStatCap(statKey)` -- returns the cap for a given stat
+Add a hammer icon for blacksmith nodes, similar to vendor/inn markers.
 
-### 3. `src/components/admin/ItemManager.tsx` -- UI and Validation
+---
 
-- Add `level` to the `Item` interface and form state (default 1)
-- Add level number input (1-100) in the properties panel
-- Add a budget indicator bar showing `used / total` points, colored green when under budget, red when over
-- Clamp stat inputs to their per-stat cap (e.g., AC input max=3, HP input max=10, others max=5)
-- On save, validate total cost does not exceed budget; show error toast if over
-- Show level in the item list row
+## 2. Unique Item Drop Logic
 
-### Files Changed
+### Creature loot (`GamePage.tsx` -- `rollLoot`)
+
+When rolling loot and an item is `unique` rarity:
+- Query `character_inventory` to check if **any** player currently holds that `item_id`
+- If held: skip the drop (log "The unique power of [item] is already claimed...")
+- If not held: drop normally
+
+### Node search (`GamePage.tsx` -- `handleSearch`)
+
+Same check for searchable items with unique rarity -- if already held by anyone, skip.
+
+---
+
+## 3. Unique Item Return (Origin Tracking)
+
+### `return_unique_items()` DB function update
+
+The existing function already deletes unique items from offline (24h) players and broken items. No code change needed there -- items are simply deleted, making them available again.
+
+The loot/search logic above already checks if anyone holds the item, so once deleted the item becomes droppable again from its original creature or search node.
+
+### `degradeEquipment` in `GamePage.tsx`
+
+When a unique item breaks (durability reaches 0), log a special message: "Your [item name] shatters and its essence returns to [origin]..."
+
+---
+
+## 4. Blacksmith System
+
+### Node property (`is_blacksmith`)
+
+- Admin can toggle "Is Blacksmith" on any node (like vendor/inn)
+- Shown in NodeView with a hammer icon and "Repair your equipment here" text
+
+### Repair pricing formula
+
+```text
+repairCost = ceil((maxDurability - currentDurability) * itemValue * rarityMult / 100)
+
+rarityMult: common=1, uncommon=1.5, rare=2, unique=0 (unrepairable)
+```
+
+Unique items cannot be repaired -- they are meant to break and return.
+
+### Blacksmith UI (`NodeView.tsx`)
+
+When at a blacksmith node, show a "Open Blacksmith" button (like vendor). Opens a `BlacksmithPanel` dialog listing equipped and unequipped items with:
+- Current durability bar
+- Repair cost
+- "Repair" button (disabled if full durability, unique, or not enough gold)
+- "Repair All" button for convenience
+
+### `BlacksmithPanel.tsx` (new component)
+
+Dialog similar to `VendorPanel`:
+- Lists all inventory items with durability < max
+- Shows repair cost per item
+- Repair updates `current_durability` to `max_durability` and deducts gold
+- Unique items shown grayed out with "Unrepairable" label
+
+---
+
+## 5. Admin UI Changes
+
+### `NodeEditorPanel.tsx`
+
+- Add "Is Blacksmith" checkbox alongside "Is Vendor" and "Is Inn"
+
+### `AdminWorldMapView.tsx`
+
+- Add hammer icon for blacksmith nodes on the map
+
+### `ItemManager.tsx` (optional enhancement)
+
+- For unique items, show `origin_type` and `origin_id` fields so admins can link the item to its source creature or node
+
+---
+
+## Files Changed
 
 | File | Change |
 |---|---|
-| Migration SQL | Add `level` column (integer, default 1, range 1-100) to `items` |
-| `src/lib/game-data.ts` | Add budget/cost/cap constants and helper functions |
-| `src/components/admin/ItemManager.tsx` | Add level field, budget indicator, stat caps, save validation |
+| Migration SQL | Add `origin_type`, `origin_id` to `items`; add `is_blacksmith` to `nodes` |
+| `src/hooks/useNodes.ts` | Add `is_blacksmith` to `GameNode` interface |
+| `src/pages/GamePage.tsx` | Update `rollLoot` and `handleSearch` to check unique ownership; add blacksmith dialog state |
+| `src/components/game/NodeView.tsx` | Show blacksmith button and indicator |
+| `src/components/game/BlacksmithPanel.tsx` | New component for repair UI |
+| `src/components/admin/NodeEditorPanel.tsx` | Add blacksmith checkbox |
+| `src/components/admin/AdminWorldMapView.tsx` | Add blacksmith marker |
+| `src/components/admin/ItemManager.tsx` | Add origin fields for unique items |
+| `src/lib/game-data.ts` | Add `calculateRepairCost` helper |
 
