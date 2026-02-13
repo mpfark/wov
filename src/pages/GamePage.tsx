@@ -462,21 +462,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 isAtInn={currentNode?.is_inn ?? false}
                 regenBuff={regenBuff}
                 regenTick={regenTick}
-                party={party}
-                partyMembers={partyMembers}
-                pendingInvites={pendingInvites}
-                isLeader={isLeader}
-                isTank={isTank}
-                myMembership={myMembership}
-                playersHere={playersHere}
-                onCreateParty={createParty}
-                onInvite={invitePlayer}
-                onAcceptInvite={acceptInvite}
-                onDeclineInvite={declineInvite}
-                onLeaveParty={leaveParty}
-                onKick={kickMember}
-                onSetTank={setTank}
-                onToggleFollow={toggleFollow}
               />
             </div>
           </ResizablePanel>
@@ -530,6 +515,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onNodeClick={handleMove}
                 partyMembers={partyMembers}
                 myCharacterId={character.id}
+                character={character}
+                party={party}
+                pendingInvites={pendingInvites}
+                isLeader={isLeader}
+                isTank={isTank}
+                myMembership={myMembership}
+                playersHere={playersHere}
+                onCreateParty={createParty}
+                onInvite={invitePlayer}
+                onAcceptInvite={acceptInvite}
+                onDeclineInvite={declineInvite}
+                onLeaveParty={leaveParty}
+                onKick={kickMember}
+                onSetTank={setTank}
+                onToggleFollow={toggleFollow}
               />
             </div>
           </ResizablePanel>
