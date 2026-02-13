@@ -96,7 +96,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const potionMult = Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
         const node = character.current_node_id ? getNode(character.current_node_id) : null;
         const innMult = node?.is_inn ? 3 : 1;
-        const totalMult = Math.max(potionMult, innMult);
+        const totalMult = potionMult * innMult;
         const regenAmount = Math.max(Math.floor(1 * totalMult), 1);
         const newHp = Math.min(character.hp + regenAmount, character.max_hp);
         if (newHp !== character.hp) {
