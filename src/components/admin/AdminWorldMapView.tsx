@@ -7,6 +7,7 @@ interface GraphNode {
   name: string;
   region_id: string;
   is_vendor: boolean;
+  is_inn: boolean;
   connections: Array<{ node_id: string; direction: string; label?: string }>;
 }
 
@@ -20,6 +21,7 @@ interface Region {
 interface Props {
   regions: Region[];
   nodes: GraphNode[];
+  creatureCounts?: Map<string, { total: number; aggressive: number }>;
   onNodeClick: (nodeId: string) => void;
   onAddNodeBetween: (fromId: string, toId: string) => void;
   onAddNodeAdjacent: (fromId: string) => void;
@@ -95,7 +97,7 @@ function layoutNodes(nodes: GraphNode[]) {
   return positions;
 }
 
-export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
+export default function AdminWorldMapView({ regions, nodes, creatureCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -378,11 +380,33 @@ export default function AdminWorldMapView({ regions, nodes, onNodeClick, onAddNo
                   strokeWidth={isHovered ? 2.5 : 1.5}
                   onClick={() => onNodeClick(node.id)}
                 />
-                {node.is_vendor && (
+                {/* Icon markers row above node */}
+                {(node.is_vendor || node.is_inn) && (
                   <text x={pos.px} y={pos.py - 12} textAnchor="middle" className="text-[8px] select-none pointer-events-none">
-                    🛒
+                    {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}
                   </text>
                 )}
+                {/* Creature dots below node */}
+                {(() => {
+                  const cc = creatureCounts?.get(node.id);
+                  if (!cc || cc.total === 0) return null;
+                  return (
+                    <g>
+                      {cc.aggressive > 0 && (
+                        <circle cx={pos.px - 6} cy={pos.py + 18} r={4}
+                          fill="hsl(0 70% 50%)" className="stroke-background" strokeWidth={1} />
+                      )}
+                      {cc.total - cc.aggressive > 0 && (
+                        <circle cx={pos.px + (cc.aggressive > 0 ? 6 : 0)} cy={pos.py + 18} r={4}
+                          fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} />
+                      )}
+                      <text x={pos.px} y={pos.py + 30} textAnchor="middle"
+                        className="fill-muted-foreground text-[7px] select-none pointer-events-none">
+                        {cc.total}
+                      </text>
+                    </g>
+                  );
+                })()}
                 <text
                   x={pos.px} y={pos.py + 3}
                   textAnchor="middle"
