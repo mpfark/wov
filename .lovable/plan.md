@@ -1,53 +1,77 @@
 
 
-# Add New Admin Actions: Teleport, Grant XP, Revive, Remove Item, Reset Stats
+# Auto-Combat System: Continuous Combat Loop
 
 ## Overview
 
-Add five new admin actions to the Users panel so admins can better manage and assist players. All actions will be added to the existing Admin Actions column (Column 2) and backed by new endpoints in the `admin-users` edge function.
+Replace the current single-click-per-exchange combat with a persistent auto-combat loop. When combat starts (via Attack button or aggressive creature), the player and creature exchange blows automatically at intervals until one dies. Combat resumes when re-entering a node with living creatures you've previously engaged (or aggressive ones).
 
-## New Actions
+## How It Works
 
-1. **Teleport Player** -- Move a character to any node via a searchable dropdown
-2. **Grant XP** -- Award XP directly (with automatic level-up handling via existing DB logic)
-3. **Revive Character** -- Instantly set HP to max_hp for dead/incapacitated characters
-4. **Remove Item** -- Delete a specific item from a character's inventory
-5. **Reset Stat Points** -- Refund all allocated stat points back to base (racial/class defaults) and grant them as unspent points
+1. **Starting combat**: Click "Attack" on a creature, or enter a node with aggressive creatures
+2. **Combat loop**: Player and creature take turns attacking automatically on a timer
+3. **Attack speed**: Interval between player attacks is based on DEX -- higher DEX = faster attacks (e.g., base 3s, reduced by DEX modifier, minimum 1s). Creature attack speed is fixed (e.g., 2.5s)
+4. **Ending combat**: Combat ends when the creature dies (rewards granted) or the player dies (death/respawn flow)
+5. **Resuming**: If a player leaves and returns to a node with a creature they were fighting (or an aggressive creature), combat auto-resumes
+6. **UI**: The Attack button changes to show combat is active (e.g., "In Combat..." with a pulsing indicator). Player cannot manually click attack while auto-combat is running. Moving away triggers attack of opportunity as before.
 
-## Technical Details
+## Technical Plan
 
-### Edge Function Changes (`supabase/functions/admin-users/index.ts`)
+### 1. New Hook: `useCombat.ts`
 
-Add five new action handlers:
+Create a dedicated hook to manage the combat loop state:
 
-- **`teleport`** -- Updates `characters.current_node_id` to the provided `node_id`. Validates the node exists.
-- **`grant-xp`** -- Adds XP to a character. Reuses the same level-up logic as `award_party_member` DB function but via direct SQL update (XP add, check threshold, bump level/max_hp/stat points if needed).
-- **`revive`** -- Sets `characters.hp = characters.max_hp` for the given character.
-- **`remove-item`** -- Deletes a row from `character_inventory` by inventory entry ID.
-- **`reset-stats`** -- Calculates the character's base stats (10 for all, plus racial/class bonuses from level-ups), sets those as current stats, and converts the difference into `unspent_stat_points`.
+- **State**: `activeCombatCreatureId` (the creature currently being fought), `inCombat` boolean
+- **Core loop**: Uses `setInterval` with the DEX-based attack speed
+- Each tick:
+  - Player attacks creature (same roll logic as current `handleAttack`)
+  - If creature survives, creature counterattacks (same logic)
+  - If creature dies, award XP/gold/loot, clear combat, auto-target next aggressive creature if any
+  - If player dies, clear combat, trigger death flow
+- **Start combat**: Called from Attack button click or aggressive creature detection
+- **Stop combat**: Called on creature death, player death, or node change
+- **Attack speed calculation**: `Math.max(3000 - (dexMod * 250), 1000)` ms -- so DEX 10 (mod 0) = 3s, DEX 18 (mod +4) = 2s, DEX 22 (mod +6) = 1.5s, capped at 1s minimum
 
-### Frontend Changes (`src/components/admin/UserManager.tsx`)
+### 2. Refactor `GamePage.tsx`
 
-Add new UI sections in the Admin Actions column (Column 2), below the existing "Give Item" section:
+- Extract all combat logic (the current `handleAttack` body) into the `useCombat` hook
+- Remove the manual `handleAttack` callback; replace with `startCombat(creatureId)` from the hook
+- Update aggressive creature auto-attack effect to call `startCombat` instead of doing a one-off exchange
+- Keep attack of opportunity on movement (one-time strikes when fleeing, not a loop)
+- Pass `inCombat` and `activeCombatCreatureId` to NodeView for UI updates
 
-- **Teleport**: A select dropdown listing all nodes (fetched on mount, grouped or flat). Button: "Teleport {charName}".
-- **Grant XP**: A number input for XP amount. Button: "Grant XP to {charName}".
-- **Revive**: A simple button per character, only enabled when HP < max_hp. Button: "Revive {charName}".
-- **Remove Item**: A select dropdown showing the character's current inventory items. Button: "Remove".
-- **Reset Stats**: A button per character. Button: "Reset Stats for {charName}".
+### 3. Update `NodeView.tsx`
 
-New state variables: `teleportNodeId`, `grantXpAmount`, `removeItemId`, plus a nodes list fetched on mount.
+- When `inCombat` is true and the creature matches `activeCombatCreatureId`, show "In Combat..." instead of the Attack button (with a pulsing/animated indicator)
+- Other creatures still show the Attack button (clicking switches target)
+- Add a "Flee" button during combat that triggers movement (with attack of opportunity)
 
-New icons imported from lucide-react: `MapPin`, `Sparkles`, `Heart`, `Trash2`, `RotateCcw`.
+### 4. Combat Resume on Node Re-entry
 
-Each action calls `callAdmin()` with the appropriate action name and payload, shows a toast on success, and reloads the user list.
+- When creatures load for a node, check if any are aggressive and alive -- if so, auto-start combat after a short delay (500ms)
+- This reuses the existing aggressive creature detection but now calls `startCombat` instead of doing a single exchange
 
-### Data Loading
+### 5. Attack Speed Formula
 
-- Fetch all nodes on mount (similar to how `allItems` is loaded) for the teleport dropdown.
-- The character's inventory is already available from the user list response for the remove-item dropdown.
+```
+Base interval: 3000ms
+DEX modifier: Math.floor((dex - 10) / 2)
+Interval: Math.max(3000 - (dexMod * 250), 1000)
 
-### No Database Migrations Needed
+Examples:
+  DEX 8  (mod -1) -> 3250ms (capped display, actual 3250)
+  DEX 10 (mod  0) -> 3000ms
+  DEX 14 (mod +2) -> 2500ms
+  DEX 18 (mod +4) -> 2000ms
+  DEX 22 (mod +6) -> 1500ms
+  DEX 30 (mod +10) -> 1000ms (minimum)
+```
 
-All operations use existing tables and columns. The edge function uses the service role key to bypass RLS, so no policy changes are required.
+### Files Changed
+
+| File | Change |
+|---|---|
+| `src/hooks/useCombat.ts` | **New** -- combat loop hook with start/stop, auto-attack interval, all hit/damage/kill/loot logic |
+| `src/pages/GamePage.tsx` | Refactor to use `useCombat` hook; remove inline `handleAttack`; update aggro effect to call `startCombat` |
+| `src/components/game/NodeView.tsx` | Add `inCombat`/`activeCombatCreatureId` props; show combat status indicator; add Flee button |
 
