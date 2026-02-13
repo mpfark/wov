@@ -1,6 +1,9 @@
 import { Region, GameNode } from '@/hooks/useNodes';
-import { PartyMember } from '@/hooks/useParty';
+import { Party, PartyMember } from '@/hooks/useParty';
+import { PlayerPresence } from '@/hooks/usePresence';
+import { Character } from '@/hooks/useCharacter';
 import PlayerGraphView from './PlayerGraphView';
+import PartyPanel from './PartyPanel';
 
 interface Props {
   regions: Region[];
@@ -11,10 +14,28 @@ interface Props {
   onNodeClick: (nodeId: string) => void;
   partyMembers?: PartyMember[];
   myCharacterId?: string;
+  // Party props
+  character: Character;
+  party: Party | null;
+  pendingInvites: { party_id: string; id: string; leader_name: string }[];
+  isLeader: boolean;
+  isTank: boolean;
+  myMembership: PartyMember | undefined;
+  playersHere: PlayerPresence[];
+  onCreateParty: () => void;
+  onInvite: (charId: string) => void;
+  onAcceptInvite: (membershipId: string) => void;
+  onDeclineInvite: (membershipId: string) => void;
+  onLeaveParty: () => void;
+  onKick: (charId: string) => void;
+  onSetTank: (charId: string | null) => void;
+  onToggleFollow: (following: boolean) => void;
 }
 
 export default function MapPanel({
   regions, nodes, currentNodeId, currentRegionId, characterLevel, onNodeClick, partyMembers, myCharacterId,
+  character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
+  onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
 
@@ -49,6 +70,28 @@ export default function MapPanel({
         ) : (
           <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
         )}
+      </div>
+
+      {/* Party Section */}
+      <div className="shrink-0 border-t border-border pt-2">
+        <PartyPanel
+          character={character}
+          party={party}
+          members={partyMembers || []}
+          pendingInvites={pendingInvites}
+          isLeader={isLeader}
+          isTank={isTank}
+          myMembership={myMembership}
+          playersHere={playersHere}
+          onCreateParty={onCreateParty}
+          onInvite={onInvite}
+          onAcceptInvite={onAcceptInvite}
+          onDeclineInvite={onDeclineInvite}
+          onLeave={onLeaveParty}
+          onKick={onKick}
+          onSetTank={onSetTank}
+          onToggleFollow={onToggleFollow}
+        />
       </div>
 
       {/* Map Legend */}
