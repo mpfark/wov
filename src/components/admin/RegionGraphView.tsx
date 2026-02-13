@@ -154,12 +154,6 @@ export default function RegionGraphView({ nodes, onNodeClick, onAddNodeBetween, 
                   x1={from.px} y1={from.py} x2={to.px} y2={to.py}
                   stroke="hsl(35 20% 35%)" strokeWidth={2} strokeDasharray="6 3"
                 />
-                {edge.label && (
-                  <text x={midX} y={midY - 12} textAnchor="middle"
-                    className="fill-muted-foreground text-[9px]">
-                    {edge.label}
-                  </text>
-                )}
                 {/* Plus button on edge midpoint */}
                 <g
                   className="cursor-pointer"

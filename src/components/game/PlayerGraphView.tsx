@@ -191,12 +191,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                 x1={from.px} y1={from.py} x2={to.px} y2={to.py}
                 stroke="hsl(35 20% 35%)" strokeWidth={2} strokeDasharray="6 3"
               />
-              {edge.label && (
-                <text x={midX} y={midY - 8} textAnchor="middle"
-                  className="fill-muted-foreground text-[9px]">
-                  {edge.label}
-                </text>
-              )}
             </g>
           );
         })}
