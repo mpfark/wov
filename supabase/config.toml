@@ -2,3 +2,6 @@ project_id = "gpclaklkaolyzfnooajt"
 
 [functions.admin-users]
 verify_jwt = false
+
+[functions.ai-world-builder]
+verify_jwt = false
