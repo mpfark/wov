@@ -1,0 +1,1 @@
+ALTER TABLE public.characters ADD CONSTRAINT characters_name_unique UNIQUE (name);
