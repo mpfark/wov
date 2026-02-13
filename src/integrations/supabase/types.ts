@@ -474,6 +474,36 @@ export type Database = {
         }
         Relationships: []
       }
+      roadmap_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_done: boolean
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_done?: boolean
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_done?: boolean
+          sort_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
