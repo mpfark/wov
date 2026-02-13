@@ -58,7 +58,12 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
       }
       toast.success(`${name} has begun their adventure!`);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create character');
+      if (err.message?.includes('characters_name_unique') || err.code === '23505') {
+        toast.error(`The name "${name}" is already taken. Choose a different name.`);
+        setStep(0);
+      } else {
+        toast.error(err.message || 'Failed to create character');
+      }
     } finally {
       setLoading(false);
     }
