@@ -77,15 +77,10 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     const minY = Math.min(...vals.map(p => p.y));
     const maxY = Math.max(...vals.map(p => p.y));
 
-    // Compute the max extent from center (0,0) in each direction
-    const extentLeft = Math.abs(Math.min(0, minX));
-    const extentRight = Math.max(0, maxX);
-    const extentUp = Math.abs(Math.min(0, minY));
-    const extentDown = Math.max(0, maxY);
-    const maxExtentX = Math.max(extentLeft, extentRight);
-    const maxExtentY = Math.max(extentUp, extentDown);
+    // Always ensure at least 1 unit extent in each direction from center so layout is stable
+    const maxExtentX = Math.max(1, Math.abs(minX), Math.abs(maxX));
+    const maxExtentY = Math.max(1, Math.abs(minY), Math.abs(maxY));
 
-    // SVG size is symmetrical around center
     const totalW = maxExtentX * 2 * SPACING + PADDING * 2;
     const totalH = maxExtentY * 2 * SPACING + PADDING * 2;
     const centerPx = totalW / 2;
