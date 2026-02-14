@@ -195,6 +195,18 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
 
     const nodePos = new Map<string, { px: number; py: number }>();
 
+    // First pass: compute bubble sizes and initial positions
+    const bubbleData: Array<{
+      region: Region;
+      cx: number;
+      cy: number;
+      radius: number;
+      nodeCount: number;
+      nodeLayout: Map<string, { x: number; y: number }> | null;
+      centerX: number;
+      centerY: number;
+    }> = [];
+
     regions.forEach((region, idx) => {
       const coord = getRegionCoord(region, idx);
       const rNodes = nodesByRegion.get(region.id) || [];
@@ -213,23 +225,66 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
         const maxY = Math.max(...pVals.map(p => p.y));
         const bboxW = maxX - minX;
         const bboxH = maxY - minY;
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
 
         const radius = Math.max(160, Math.max(bboxW, bboxH) / 2 + BUBBLE_PAD);
-
-        bubbles.push({ region, cx: coord.x, cy: coord.y, radius, nodeCount: rNodes.length });
-
-        pixelPositions.forEach((pos, id) => {
-          nodePos.set(id, {
-            px: coord.x + (pos.x - centerX),
-            py: coord.y + (pos.y - centerY),
-          });
+        bubbleData.push({
+          region, cx: coord.x, cy: coord.y, radius, nodeCount: rNodes.length,
+          nodeLayout: pixelPositions,
+          centerX: (minX + maxX) / 2,
+          centerY: (minY + maxY) / 2,
         });
       } else {
-        bubbles.push({ region, cx: coord.x, cy: coord.y, radius: 160, nodeCount: 0 });
+        bubbleData.push({
+          region, cx: coord.x, cy: coord.y, radius: 160, nodeCount: 0,
+          nodeLayout: null, centerX: 0, centerY: 0,
+        });
       }
     });
+
+    // Collision resolution: iteratively nudge overlapping bubbles apart
+    const PADDING = 30; // min gap between bubble edges
+    for (let iter = 0; iter < 50; iter++) {
+      let moved = false;
+      for (let i = 0; i < bubbleData.length; i++) {
+        for (let j = i + 1; j < bubbleData.length; j++) {
+          const a = bubbleData[i];
+          const b = bubbleData[j];
+          const dx = b.cx - a.cx;
+          const dy = b.cy - a.cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = a.radius + b.radius + PADDING;
+          if (dist < minDist && dist > 0) {
+            const overlap = (minDist - dist) / 2;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            a.cx -= nx * overlap;
+            a.cy -= ny * overlap;
+            b.cx += nx * overlap;
+            b.cy += ny * overlap;
+            moved = true;
+          } else if (dist === 0) {
+            // Coincident: push apart arbitrarily
+            a.cx -= 50;
+            b.cx += 50;
+            moved = true;
+          }
+        }
+      }
+      if (!moved) break;
+    }
+
+    // Build final bubbles and node positions from resolved coordinates
+    for (const bd of bubbleData) {
+      bubbles.push({ region: bd.region, cx: bd.cx, cy: bd.cy, radius: bd.radius, nodeCount: bd.nodeCount });
+      if (bd.nodeLayout) {
+        bd.nodeLayout.forEach((pos, id) => {
+          nodePos.set(id, {
+            px: bd.cx + (pos.x - bd.centerX),
+            py: bd.cy + (pos.y - bd.centerY),
+          });
+        });
+      }
+    }
 
     return { regionBubbles: bubbles, allNodePositions: nodePos };
   }, [regions, nodesByRegion, getRegionCoord]);
