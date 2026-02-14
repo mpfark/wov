@@ -150,6 +150,20 @@ export function getStatModifier(stat: number): number {
   return Math.floor((stat - 10) / 2);
 }
 
+// Humanoid gold scaling
+const HUMANOID_GOLD_RARITY_MULT: Record<string, number> = {
+  regular: 1, rare: 1.5, boss: 3,
+};
+
+export function calculateHumanoidGold(level: number, rarity: string): { min: number; max: number; chance: number } {
+  const mult = HUMANOID_GOLD_RARITY_MULT[rarity] || 1;
+  return {
+    min: Math.round(level * 1 * mult),
+    max: Math.round(level * 3 * mult),
+    chance: 1.0,
+  };
+}
+
 // Generate creature stats based on level and rarity
 const RARITY_MULTIPLIER: Record<string, { stat: number; hp: number; ac: number }> = {
   regular: { stat: 1, hp: 1, ac: 0 },

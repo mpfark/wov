@@ -1,0 +1,1 @@
+ALTER TABLE public.creatures ADD COLUMN is_humanoid boolean NOT NULL DEFAULT false;

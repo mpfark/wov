@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Save, X, Skull } from 'lucide-react';
-import { generateCreatureStats } from '@/lib/game-data';
+import { generateCreatureStats, calculateHumanoidGold } from '@/lib/game-data';
 import ItemPickerList from './ItemPickerList';
 
 interface Creature {
@@ -44,7 +44,7 @@ const RARITY_COLORS: Record<string, string> = {
 const defaultForm = () => ({
   name: '', description: '', node_id: '' as string | null,
   level: 1, rarity: 'regular',
-  is_aggressive: false, respawn_seconds: 300,
+  is_aggressive: false, is_humanoid: false, respawn_seconds: 300,
   loot_table: [] as { item_id: string; chance: number }[],
   gold_min: 0, gold_max: 0, gold_chance: 0.5,
 });
@@ -98,7 +98,8 @@ export default function CreatureManager() {
     setForm({
       name: c.name, description: c.description, node_id: c.node_id,
       level: c.level, rarity: c.rarity,
-      is_aggressive: c.is_aggressive, respawn_seconds: c.respawn_seconds,
+      is_aggressive: c.is_aggressive, is_humanoid: (c as any).is_humanoid ?? false,
+      respawn_seconds: c.respawn_seconds,
       loot_table: itemLoot,
       gold_min: goldEntry?.min || 0,
       gold_max: goldEntry?.max || 0,
@@ -132,6 +133,7 @@ export default function CreatureManager() {
       ac: generated.ac,
       stats: generated.stats,
       is_aggressive: form.is_aggressive,
+      is_humanoid: form.is_humanoid,
       respawn_seconds: Math.max(0, form.respawn_seconds),
       loot_table,
     };
@@ -263,7 +265,16 @@ export default function CreatureManager() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Rarity</label>
-                  <Select value={form.rarity} onValueChange={v => setForm(f => ({ ...f, rarity: v }))}>
+                  <Select value={form.rarity} onValueChange={v => {
+                    setForm(f => {
+                      const updated = { ...f, rarity: v };
+                      if (updated.is_humanoid) {
+                        const gold = calculateHumanoidGold(updated.level, v);
+                        updated.gold_min = gold.min; updated.gold_max = gold.max; updated.gold_chance = gold.chance;
+                      }
+                      return updated;
+                    });
+                  }}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border-border z-50">
                       {RARITIES.map(r => (
@@ -277,7 +288,17 @@ export default function CreatureManager() {
                 <div>
                   <label className="text-[10px] text-muted-foreground">Level</label>
                   <Input type="number" min={1} max={40} value={form.level}
-                    onChange={e => setForm(f => ({ ...f, level: Math.max(1, Math.min(40, +e.target.value)) }))}
+                    onChange={e => {
+                      const level = Math.max(1, Math.min(40, +e.target.value));
+                      setForm(f => {
+                        const updated = { ...f, level };
+                        if (updated.is_humanoid) {
+                          const gold = calculateHumanoidGold(level, updated.rarity);
+                          updated.gold_min = gold.min; updated.gold_max = gold.max; updated.gold_chance = gold.chance;
+                        }
+                        return updated;
+                      });
+                    }}
                     className="h-8 text-xs" />
                 </div>
               </div>
@@ -307,11 +328,25 @@ export default function CreatureManager() {
                     <span className="text-[10px] text-muted-foreground whitespace-nowrap">({formatRespawn(form.respawn_seconds)})</span>
                   </div>
                 </div>
-                <div className="flex items-end pb-1">
+                <div className="flex flex-col items-start gap-1.5 pb-1">
                   <label className="flex items-center gap-2 text-xs text-muted-foreground">
                     <input type="checkbox" checked={form.is_aggressive}
                       onChange={e => setForm(f => ({ ...f, is_aggressive: e.target.checked }))} />
                     Aggressive
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input type="checkbox" checked={form.is_humanoid}
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        setForm(f => {
+                          if (checked) {
+                            const gold = calculateHumanoidGold(f.level, f.rarity);
+                            return { ...f, is_humanoid: true, gold_min: gold.min, gold_max: gold.max, gold_chance: gold.chance };
+                          }
+                          return { ...f, is_humanoid: false, gold_min: 0, gold_max: 0, gold_chance: 0.5 };
+                        });
+                      }} />
+                    Humanoid (auto gold)
                   </label>
                 </div>
               </div>
@@ -341,22 +376,27 @@ export default function CreatureManager() {
                     <label className="text-[10px] text-muted-foreground">Min</label>
                     <Input type="number" min={0} value={form.gold_min}
                       onChange={e => setForm(f => ({ ...f, gold_min: Math.max(0, +e.target.value) }))}
+                      disabled={form.is_humanoid}
                       className="h-7 text-xs" />
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground">Max</label>
                     <Input type="number" min={0} value={form.gold_max}
                       onChange={e => setForm(f => ({ ...f, gold_max: Math.max(0, +e.target.value) }))}
+                      disabled={form.is_humanoid}
                       className="h-7 text-xs" />
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground">Chance</label>
                     <Input type="number" min={0} max={1} step={0.05} value={form.gold_chance}
                       onChange={e => setForm(f => ({ ...f, gold_chance: Math.min(1, Math.max(0, +e.target.value)) }))}
+                      disabled={form.is_humanoid}
                       className="h-7 text-xs" />
                   </div>
                 </div>
-                <p className="text-[9px] text-muted-foreground">Set max &gt; 0 to enable. Chance 0–1.</p>
+                <p className="text-[9px] text-muted-foreground">
+                  {form.is_humanoid ? 'Auto-calculated from level & rarity.' : 'Set max > 0 to enable. Chance 0–1.'}
+                </p>
               </div>
 
               <div className="flex gap-2 pt-2">
