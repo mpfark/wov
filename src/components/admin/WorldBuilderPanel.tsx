@@ -98,12 +98,16 @@ export default function WorldBuilderPanel() {
   const [selectedRegionId, setSelectedRegionId] = useState<string>('');
   const [allNodes, setAllNodes] = useState<ExistingNode[]>([]);
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+  const [creatureCounts, setCreatureCounts] = useState<Map<string, { total: number; aggressive: number }>>(new Map());
+  const [npcCounts, setNPCCounts] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     const load = async () => {
-      const [regRes, nodeRes] = await Promise.all([
+      const [regRes, nodeRes, crRes, npRes] = await Promise.all([
         supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level'),
         supabase.from('nodes').select('id, name, description, region_id, connections').order('name'),
+        supabase.from('creatures').select('id, node_id, is_aggressive, is_alive'),
+        supabase.from('npcs').select('id, node_id'),
       ]);
       const regs = regRes.data || [];
       setRegions(regs);
@@ -112,6 +116,23 @@ export default function WorldBuilderPanel() {
         return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level, connections: (n.connections as any[]) || [] };
       });
       setAllNodes(ns);
+
+      const cc = new Map<string, { total: number; aggressive: number }>();
+      for (const cr of (crRes.data || [])) {
+        if (!cr.node_id || !cr.is_alive) continue;
+        const entry = cc.get(cr.node_id) || { total: 0, aggressive: 0 };
+        entry.total++;
+        if (cr.is_aggressive) entry.aggressive++;
+        cc.set(cr.node_id, entry);
+      }
+      setCreatureCounts(cc);
+
+      const nc = new Map<string, number>();
+      for (const npc of (npRes.data || [])) {
+        if (!npc.node_id) continue;
+        nc.set(npc.node_id, (nc.get(npc.node_id) || 0) + 1);
+      }
+      setNPCCounts(nc);
     };
     load();
   }, []);
@@ -417,6 +438,8 @@ export default function WorldBuilderPanel() {
               <PopulateNodeSelector
                 nodes={regionNodes}
                 selectedIds={selectedNodeIds}
+                creatureCounts={creatureCounts}
+                npcCounts={npcCounts}
                 onToggle={toggleNode}
                 onSelectAll={selectAllNodes}
                 onDeselectAll={deselectAllNodes}
