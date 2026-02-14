@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug } from 'lucide-react';
+import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
 
 // ... keep existing code (interfaces GeneratedRegion through ExistingRegion, lines 13-65)
 interface GeneratedRegion {
@@ -482,7 +483,37 @@ export default function WorldBuilderPanel() {
 
         {generated && (
           <div className="p-4 space-y-3">
-            {/* Region (hide for populate mode) */}
+            {/* Visual Node Graph Preview */}
+            <WorldBuilderPreviewGraph
+              nodes={generated.nodes}
+              creatures={generated.creatures}
+              npcs={generated.npcs}
+              mode={mode}
+              existingAnchors={
+                mode === 'expand'
+                  ? generated.nodes
+                      .flatMap(n => n.connections)
+                      .filter(c => c.target_temp_id.startsWith('existing:'))
+                      .map(c => {
+                        const realId = c.target_temp_id.replace('existing:', '');
+                        const node = allNodes.find(n => n.id === realId);
+                        return { id: realId, name: node?.name || realId };
+                      })
+                      .filter((v, i, a) => a.findIndex(x => x.id === v.id) === i)
+                  : []
+              }
+              populateNodeNames={
+                mode === 'populate'
+                  ? new Map(
+                      allNodes
+                        .filter(n => selectedNodeIds.has(n.id))
+                        .map(n => [n.id, n.name])
+                    )
+                  : undefined
+              }
+            />
+
+            {/* Region info (hide for populate mode) */}
             {mode !== 'populate' && (
               <Card className="p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -495,38 +526,6 @@ export default function WorldBuilderPanel() {
                 </div>
                 <p className="text-[11px] text-muted-foreground">{generated.region.description}</p>
               </Card>
-            )}
-
-            {/* Nodes (hide for populate mode) */}
-            {mode !== 'populate' && generated.nodes.length > 0 && (
-              <Collapsible defaultOpen>
-                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
-                  <ChevronDown className="w-3 h-3" />
-                  New Nodes ({generated.nodes.length})
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1 mt-1">
-                  {generated.nodes.map((node, i) => (
-                    <Card key={i} className="p-2">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span className="text-xs font-medium">{node.name}</span>
-                        {node.is_inn && <Badge variant="outline" className="text-[9px]">🏨 Inn</Badge>}
-                        {node.is_vendor && <Badge variant="outline" className="text-[9px]">🛒 Vendor</Badge>}
-                        {node.is_blacksmith && <Badge variant="outline" className="text-[9px]">🔨 Smith</Badge>}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{node.description}</p>
-                      <div className="text-[9px] text-muted-foreground mt-0.5">
-                        Exits: {node.connections.map(c => {
-                          const isExisting = c.target_temp_id.startsWith('existing:');
-                          const targetName = isExisting
-                            ? `⟵ existing node`
-                            : generated.nodes.find(n => n.temp_id === c.target_temp_id)?.name || c.target_temp_id;
-                          return `${c.direction} → ${targetName}`;
-                        }).join(', ')}
-                      </div>
-                    </Card>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
             )}
 
             {/* Creatures */}
