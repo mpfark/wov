@@ -36,7 +36,7 @@ interface Props {
 
 export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
-  const { playersHere } = usePresence(character.current_node_id);
+  const { playersHere } = usePresence(character.current_node_id, character);
   const { creatures } = useCreatures(character.current_node_id);
   const { npcs } = useNPCs(character.current_node_id);
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
