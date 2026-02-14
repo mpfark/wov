@@ -300,8 +300,13 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           const pos = nodePositions.get(nodeId);
           if (!pos) return null;
           return pmembers.map((m, i) => {
-            const angle = (i / pmembers.length) * Math.PI * 2 - Math.PI / 2;
-            const r = 20;
+            // Place party dots along the bottom arc (π/4 to 3π/4) to avoid top indicators
+            const startAngle = Math.PI * 0.25;
+            const endAngle = Math.PI * 0.75;
+            const angle = pmembers.length === 1
+              ? Math.PI / 2
+              : startAngle + (i / (pmembers.length - 1)) * (endAngle - startAngle);
+            const r = 22;
             const cx = pos.px + Math.cos(angle) * r;
             const cy = pos.py + Math.sin(angle) * r;
             return (
