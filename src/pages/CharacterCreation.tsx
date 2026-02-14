@@ -13,9 +13,10 @@ import {
 interface Props {
   onCreateCharacter: (data: any) => Promise<any>;
   startingNodeId: string;
+  onBack?: () => void;
 }
 
-export default function CharacterCreation({ onCreateCharacter, startingNodeId }: Props) {
+export default function CharacterCreation({ onCreateCharacter, startingNodeId, onBack }: Props) {
   const [name, setName] = useState('');
   const [race, setRace] = useState('');
   const [charClass, setCharClass] = useState('');
@@ -73,6 +74,13 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId }:
     <div className="flex min-h-screen items-center justify-center parchment-bg p-4">
       <Card className="w-full max-w-lg ornate-border bg-card/90 backdrop-blur">
         <CardHeader className="text-center">
+          {onBack && (
+            <div className="flex justify-start">
+              <Button variant="ghost" size="sm" onClick={onBack} className="text-xs font-display text-muted-foreground">
+                ← Back to Characters
+              </Button>
+            </div>
+          )}
           <h1 className="font-display text-2xl text-primary text-glow">Forge Your Hero</h1>
           <p className="text-sm text-muted-foreground">Step {step + 1} of 4</p>
         </CardHeader>

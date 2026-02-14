@@ -30,9 +30,10 @@ interface Props {
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
   startingNodeId?: string;
+  onSwitchCharacter?: () => void;
 }
 
-export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId }: Props) {
+export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id);
   const { creatures } = useCreatures(character.current_node_id);
@@ -473,16 +474,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
         <h1 className="font-display text-sm text-primary text-glow">Everyday Adventurer</h1>
-        <div className="flex items-center gap-2">
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={onOpenAdmin} className="text-xs font-display">
-              ⚡ Admin
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={onOpenAdmin} className="text-xs font-display">
+                ⚡ Admin
+              </Button>
+            )}
+            {onSwitchCharacter && (
+              <Button variant="outline" size="sm" onClick={onSwitchCharacter} className="text-xs font-display">
+                Switch Character
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={onSignOut} className="text-xs text-muted-foreground">
+              Sign Out
             </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={onSignOut} className="text-xs text-muted-foreground">
-            Sign Out
-          </Button>
-        </div>
+          </div>
       </div>
 
       {/* Main Content */}

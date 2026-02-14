@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { User } from '@supabase/supabase-js';
 
 export interface Character {
@@ -25,35 +26,37 @@ export interface Character {
 }
 
 export function useCharacter(user: User | null) {
-  const [character, setCharacter] = useState<Character | null>(null);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const selectedCharacter = characters.find(c => c.id === selectedCharacterId) ?? null;
 
   useEffect(() => {
     if (!user) {
-      setCharacter(null);
+      setCharacters([]);
+      setSelectedCharacterId(null);
       setLoading(false);
       return;
     }
 
-    const fetchCharacter = async () => {
+    const fetchCharacters = async () => {
       const { data, error } = await supabase
         .from('characters')
         .select('*')
         .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: true });
 
       if (!error && data) {
-        setCharacter(data as Character);
+        setCharacters(data as Character[]);
       }
       setLoading(false);
     };
 
-    fetchCharacter();
+    fetchCharacters();
 
-    // Subscribe to realtime changes on own character
     const channel = supabase
-      .channel('my-character')
+      .channel('my-characters')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -61,15 +64,38 @@ export function useCharacter(user: User | null) {
         filter: `user_id=eq.${user.id}`,
       }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setCharacter(null);
+          const deletedId = (payload.old as any).id;
+          setCharacters(prev => prev.filter(c => c.id !== deletedId));
+          setSelectedCharacterId(prev => prev === deletedId ? null : prev);
+        } else if (payload.eventType === 'INSERT') {
+          setCharacters(prev => [...prev, payload.new as Character]);
         } else {
-          setCharacter(payload.new as Character);
+          setCharacters(prev => prev.map(c => c.id === (payload.new as any).id ? payload.new as Character : c));
         }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  const selectCharacter = useCallback((id: string) => {
+    setSelectedCharacterId(id);
+  }, []);
+
+  const clearSelectedCharacter = useCallback(() => {
+    setSelectedCharacterId(null);
+  }, []);
+
+  const deleteCharacter = useCallback(async (id: string) => {
+    // Clean up related data first
+    await supabase.from('character_inventory').delete().eq('character_id', id);
+    await supabase.from('party_members').delete().eq('character_id', id);
+    const { error } = await supabase.from('characters').delete().eq('id', id);
+    if (error) {
+      toast.error('Failed to delete character');
+      throw error;
+    }
+  }, []);
 
   const createCharacter = async (charData: {
     name: string; race: string; class: string;
@@ -92,20 +118,30 @@ export function useCharacter(user: User | null) {
       .select()
       .single();
     if (error) throw error;
-    setCharacter(data as Character);
+    const char = data as Character;
+    setCharacters(prev => [...prev, char]);
+    setSelectedCharacterId(char.id);
     return data;
   };
 
   const updateCharacter = async (updates: Partial<Character>) => {
-    if (!character) return;
-    // Optimistically update local state immediately
-    setCharacter(prev => prev ? { ...prev, ...updates } : prev);
+    if (!selectedCharacter) return;
+    setCharacters(prev => prev.map(c => c.id === selectedCharacter.id ? { ...c, ...updates } : c));
     const { error } = await supabase
       .from('characters')
       .update(updates as any)
-      .eq('id', character.id);
+      .eq('id', selectedCharacter.id);
     if (error) throw error;
   };
 
-  return { character, loading, createCharacter, updateCharacter };
+  return {
+    characters,
+    character: selectedCharacter,
+    loading,
+    selectCharacter,
+    clearSelectedCharacter,
+    deleteCharacter,
+    createCharacter,
+    updateCharacter,
+  };
 }
