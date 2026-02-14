@@ -1,65 +1,72 @@
 
 
-# AI World Builder Assistant
+# Geographic World Map with Region Sidebar
 
 ## Overview
-Add an "AI World Builder" tab to the Admin panel that lets you generate Middle-earth regions, nodes, creatures, NPCs, and (later) quests using AI. The assistant understands your existing world structure and generates content that fits seamlessly -- proper connections, level gating, lore-accurate descriptions, and balanced encounters.
+Replace the current level-sorted horizontal layout of the Admin World Map with a geographic Middle-earth overview map. Regions will be positioned at lore-accurate coordinates, and a clickable region list on the right side will allow zooming into any region.
 
-## How It Works
+## Changes
 
-1. You open the **World Builder** tab in the Admin panel
-2. You type a prompt like *"Create the Rivendell region for levels 15-25 with 6 nodes including Elrond's House as an inn"*
-3. The AI generates a structured plan: region, nodes, connections, creatures, and NPCs
-4. You review the generated content in a preview panel
-5. Click **Apply** to insert everything into the database, or edit individual items before saving
+### 1. Geographic Region Positioning
+Instead of placing region bubbles left-to-right by level, each region gets a fixed geographic coordinate on a large canvas representing Middle-earth:
 
-## Architecture
+| Region | Approximate Position |
+|--------|---------------------|
+| The Shire | Far west |
+| Bree-land | West-center |
+| The Lone-lands | Center |
+| The Trollshaws | East-center |
+| Rivendell | Far east |
 
-### Backend: Edge Function (`ai-world-builder`)
-- Uses Lovable AI (Gemini Flash) to generate world content
-- System prompt includes:
-  - Middle-earth lore guidelines and naming conventions
-  - Your current world structure (regions, node names, level ranges) for context
-  - Output schema using tool calling for structured JSON (regions, nodes, creatures, NPCs)
-  - Rules: proper directional connections, level-appropriate creatures, balanced vendor/inn/blacksmith placement
-- Accepts a user prompt + current world summary
-- Returns structured data ready for database insertion
+New regions added in the future will need a geographic coordinate. A fallback auto-placement will handle regions without explicit coordinates (placing them in an unused area).
 
-### Frontend: Admin Panel Tab
-- New **"World Builder"** tab alongside existing tabs (World, Creatures, NPCs, etc.)
-- Chat-style interface where you describe what to generate
-- Preview panel showing generated content organized by type (Region, Nodes, Creatures, NPCs)
-- Edit capability on each generated item before applying
-- "Apply All" button that batch-inserts into the database with proper bidirectional connections
+### 2. Region Sidebar (Right Panel)
+A narrow scrollable list panel on the right side of the map area showing all regions with:
+- Region name and level range
+- Node count
+- Click handler that smoothly animates the map's pan/zoom to center on that region
 
-## What Gets Generated
-
-| Content Type | Fields | Example |
-|---|---|---|
-| Region | name, description, min/max level | Rivendell, Lvl 15-25 |
-| Nodes | name, description, connections, flags (inn/vendor/blacksmith) | Elrond's House (inn), The Ford of Bruinen |
-| Creatures | name, level, hp, stats, rarity, aggressive flag, loot table | Cave Troll (boss, lvl 22) |
-| NPCs | name, description, dialogue | Elrond, Glorfindel |
-
-## Future Expansion
-The same assistant architecture supports generating quests once a quest system is built -- the edge function just needs an additional tool/schema for quest output.
+### 3. Zoom-to-Region Animation
+When a region is clicked in the sidebar:
+- Calculate the region bubble's center and radius
+- Set zoom level so the region fills most of the viewport
+- Animate pan to center on the region
+- Highlight the selected region in the sidebar
 
 ## Technical Details
 
-### Files to Create
-- `supabase/functions/ai-world-builder/index.ts` -- Edge function with Lovable AI integration, structured output via tool calling
-- `src/components/admin/WorldBuilderPanel.tsx` -- Chat UI + generated content preview with edit/apply workflow
+### File Modified: `src/components/admin/AdminWorldMapView.tsx`
 
-### Files to Modify
-- `src/pages/AdminPage.tsx` -- Add "World Builder" tab
-- `supabase/config.toml` -- Register the new edge function
+**Region coordinate system:**
+- Add a `REGION_COORDINATES` lookup mapping region names to `{ x, y }` positions on a ~2000x1200 canvas
+- Fall back to auto-placement for unknown regions
+- Region bubbles are still sized dynamically based on node count
 
-### Database
-No schema changes needed -- all generated content uses existing `regions`, `nodes`, `creatures`, and `npcs` tables.
+**Layout refactor:**
+- Replace the `cursorX` linear layout with direct coordinate placement from the geographic map
+- Each region bubble is centered at its geographic coordinate
+- Internal node layout within each bubble remains unchanged (BFS-based)
 
-### AI Integration
-- Model: `google/gemini-3-flash-preview` (fast, good structured output)
-- Uses tool calling to extract structured JSON (no fragile JSON parsing)
-- System prompt includes current world state fetched at request time
-- Handles bidirectional connection generation automatically
+**Sidebar component (inline):**
+- Wrap the SVG in a flex container: `[map flex-1] [sidebar w-48]`
+- Sidebar lists regions with name, level range, node count
+- Clicking a region calls a `zoomToRegion` function that sets `pan` and `zoom` state
+
+**Zoom-to-region logic:**
+```
+zoomToRegion(regionId):
+  1. Find the region bubble's cx, cy, radius
+  2. Get the container's width/height
+  3. Calculate zoom = containerWidth / (radius * 3)
+  4. Calculate pan to center the bubble in the viewport
+  5. Set zoom and pan state (with CSS transition for smooth animation)
+```
+
+**Smooth transitions:**
+- Add a `isAnimating` state that temporarily applies CSS `transition: transform 0.4s ease` to the SVG when zooming to a region
+- Normal pan/zoom interactions remain instant (no transition)
+
+### Wire-up
+- The `AdminPage.tsx` does not need changes -- it already passes regions and nodes to `AdminWorldMapView`
+- The sidebar is self-contained within the map component
 
