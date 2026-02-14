@@ -147,8 +147,53 @@ Deno.serve(async (req) => {
     // UPDATE CHARACTER (admin edit)
     if (action === "update-character" && req.method === "POST") {
       const { character_id, updates } = await req.json();
-      if (!character_id || !updates) throw new Error("character_id and updates required");
-      const { error } = await adminClient.from("characters").update(updates).eq("id", character_id);
+      if (!character_id || !updates || typeof updates !== "object") throw new Error("character_id and updates required");
+
+      const allowedFields = ["name", "hp", "max_hp", "gold", "xp", "level",
+        "str", "dex", "con", "int", "wis", "cha", "ac", "current_node_id", "unspent_stat_points"];
+
+      const filteredUpdates: Record<string, any> = {};
+      for (const [key, value] of Object.entries(updates)) {
+        if (!allowedFields.includes(key)) {
+          throw new Error(`Field '${key}' cannot be updated via this endpoint`);
+        }
+        filteredUpdates[key] = value;
+      }
+
+      // Validate string fields
+      if (filteredUpdates.name !== undefined) {
+        if (typeof filteredUpdates.name !== "string" || filteredUpdates.name.trim().length === 0 || filteredUpdates.name.length > 50) {
+          throw new Error("Name must be a non-empty string up to 50 characters");
+        }
+      }
+
+      // Validate numeric ranges
+      const numericRanges: Record<string, [number, number]> = {
+        hp: [0, 10000], max_hp: [1, 10000], gold: [0, 1000000], xp: [0, 1000000],
+        level: [1, 100], str: [1, 30], dex: [1, 30], con: [1, 30],
+        int: [1, 30], wis: [1, 30], cha: [1, 30], ac: [0, 100],
+        unspent_stat_points: [0, 200],
+      };
+      for (const [field, [min, max]] of Object.entries(numericRanges)) {
+        if (filteredUpdates[field] !== undefined) {
+          const val = filteredUpdates[field];
+          if (typeof val !== "number" || !Number.isInteger(val) || val < min || val > max) {
+            throw new Error(`${field} must be an integer between ${min} and ${max}`);
+          }
+        }
+      }
+
+      // Validate current_node_id is a valid UUID if provided
+      if (filteredUpdates.current_node_id !== undefined && filteredUpdates.current_node_id !== null) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (typeof filteredUpdates.current_node_id !== "string" || !uuidRegex.test(filteredUpdates.current_node_id)) {
+          throw new Error("current_node_id must be a valid UUID");
+        }
+      }
+
+      if (Object.keys(filteredUpdates).length === 0) throw new Error("No valid fields to update");
+
+      const { error } = await adminClient.from("characters").update(filteredUpdates).eq("id", character_id);
       if (error) throw error;
       return jsonResponse({ success: true });
     }
