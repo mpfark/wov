@@ -5,6 +5,7 @@ import { useRole } from '@/hooks/useRole';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import AuthPage from './AuthPage';
 import CharacterCreation from './CharacterCreation';
+import CharacterSelect from './CharacterSelect';
 import GamePage from './GamePage';
 import AdminPage from './AdminPage';
 import { useNodes } from '@/hooks/useNodes';
@@ -12,10 +13,15 @@ import { toast } from 'sonner';
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { character, loading: charLoading, createCharacter, updateCharacter } = useCharacter(user);
+  const {
+    characters, character, loading: charLoading,
+    selectCharacter, clearSelectedCharacter, deleteCharacter,
+    createCharacter, updateCharacter,
+  } = useCharacter(user);
   const { nodes, loading: nodesLoading } = useNodes(!!user);
   const { isAdmin, isValar } = useRole(user);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showCreateNew, setShowCreateNew] = useState(false);
 
   const handleInactiveLogout = useCallback(() => {
     if (user) {
@@ -50,7 +56,8 @@ const Index = () => {
 
   const startingNode = nodes[0];
 
-  if (!character) {
+  // Character creation flow (no characters yet, or explicitly creating new)
+  if (characters.length === 0 || showCreateNew) {
     if (!startingNode) {
       return (
         <div className="flex min-h-screen items-center justify-center parchment-bg">
@@ -62,6 +69,20 @@ const Index = () => {
       <CharacterCreation
         onCreateCharacter={createCharacter}
         startingNodeId={startingNode.id}
+        onBack={characters.length > 0 ? () => setShowCreateNew(false) : undefined}
+      />
+    );
+  }
+
+  // Character selection screen
+  if (!character) {
+    return (
+      <CharacterSelect
+        characters={characters}
+        onSelect={selectCharacter}
+        onCreateNew={() => setShowCreateNew(true)}
+        onDelete={deleteCharacter}
+        onSignOut={signOut}
       />
     );
   }
@@ -74,6 +95,7 @@ const Index = () => {
       isAdmin={isAdmin}
       onOpenAdmin={() => setShowAdmin(true)}
       startingNodeId={startingNode?.id ?? nodes[0]?.id}
+      onSwitchCharacter={clearSelectedCharacter}
     />
   );
 };
