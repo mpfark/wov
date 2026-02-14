@@ -383,6 +383,7 @@ export default function UserManager({ isValar }: Props) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [editingChar, setEditingChar] = useState<string | null>(null);
   const [charEdits, setCharEdits] = useState<CharacterEdits>({});
   const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string }[]>([]);
@@ -443,6 +444,19 @@ export default function UserManager({ isValar }: Props) {
       }
     });
   }, []);
+
+  // Auto-select first character when user changes
+  useEffect(() => {
+    const user = users.find(u => u.id === selectedUserId);
+    if (user?.characters?.length) {
+      setSelectedCharId(user.characters[0].id);
+    } else {
+      setSelectedCharId(null);
+    }
+    setRemoveItemId('');
+    setEditingChar(null);
+    setCharEdits({});
+  }, [selectedUserId, users]);
 
   const handleResetPassword = async (email: string) => {
     try {
@@ -543,6 +557,7 @@ export default function UserManager({ isValar }: Props) {
     : users;
 
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
+  const selectedChar = selectedUser?.characters.find(c => c.id === selectedCharId) || null;
 
   const roleBadge = (role: string) => {
     const colors: Record<string, string> = {
@@ -657,7 +672,7 @@ export default function UserManager({ isValar }: Props) {
                 <div className="flex justify-between"><span className="text-muted-foreground">Last sign-in</span><span>{formatDate(selectedUser.last_sign_in_at)}</span></div>
               </div>
 
-              {/* Action buttons */}
+              {/* Account action buttons */}
               <div className="space-y-1.5">
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full justify-start"
                   onClick={() => handleResetPassword(selectedUser.email)}>
@@ -695,17 +710,35 @@ export default function UserManager({ isValar }: Props) {
                 )}
               </div>
 
-              {/* Give Item */}
+              {/* Character Selector */}
               {selectedUser.characters.length > 0 && (
                 <div className="border-t border-border pt-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Gift className="w-3.5 h-3.5 text-primary" />
-                    <h4 className="font-display text-xs text-muted-foreground">Give Item</h4>
-                  </div>
+                  <p className="text-[9px] text-muted-foreground mb-1">Character</p>
+                  <Select value={selectedCharId || ''} onValueChange={setSelectedCharId}>
+                    <SelectTrigger className="h-8 w-full text-xs">
+                      <SelectValue placeholder="Select character..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50">
+                      {selectedUser.characters.map(c => (
+                        <SelectItem key={c.id} value={c.id} className="text-xs">
+                          {c.name} — {CLASS_LABELS[c.class as keyof typeof CLASS_LABELS]} Lvl {c.level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-                  {selectedUser.characters.map(c => (
-                    <div key={c.id} className="space-y-1.5 mb-3">
-                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
+              {/* Character-specific actions (single selected character) */}
+              {selectedChar && (
+                <>
+                  {/* Give Item */}
+                  <div className="border-t border-border pt-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Gift className="w-3.5 h-3.5 text-primary" />
+                      <h4 className="font-display text-xs text-muted-foreground">Give Item</h4>
+                    </div>
+                    <div className="space-y-1.5">
                       <Select value={giveItemId} onValueChange={setGiveItemId}>
                         <SelectTrigger className="h-7 w-full text-[10px]">
                           <SelectValue placeholder="Select item..." />
@@ -718,30 +751,20 @@ export default function UserManager({ isValar }: Props) {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-[10px] gap-1 w-full"
-                        disabled={!giveItemId || givingItem}
-                        onClick={() => handleGiveItem(c.id)}
-                      >
-                        <Gift className="w-3 h-3" /> Give to {c.name}
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                        disabled={!giveItemId || givingItem} onClick={() => handleGiveItem(selectedChar.id)}>
+                        <Gift className="w-3 h-3" /> Give to {selectedChar.name}
                       </Button>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Teleport */}
-              {selectedUser.characters.length > 0 && (
-                <div className="border-t border-border pt-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <MapPin className="w-3.5 h-3.5 text-chart-2" />
-                    <h4 className="font-display text-xs text-muted-foreground">Teleport</h4>
                   </div>
-                  {selectedUser.characters.map(c => (
-                    <div key={c.id} className="space-y-1.5 mb-3">
-                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
+
+                  {/* Teleport */}
+                  <div className="border-t border-border pt-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <MapPin className="w-3.5 h-3.5 text-chart-2" />
+                      <h4 className="font-display text-xs text-muted-foreground">Teleport</h4>
+                    </div>
+                    <div className="space-y-1.5">
                       <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
                         <SelectTrigger className="h-7 w-full text-[10px]">
                           <SelectValue placeholder="Select node..." />
@@ -755,112 +778,92 @@ export default function UserManager({ isValar }: Props) {
                         </SelectContent>
                       </Select>
                       <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                        disabled={!teleportNodeId} onClick={() => handleTeleport(c.id)}>
-                        <MapPin className="w-3 h-3" /> Teleport {c.name}
+                        disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
+                        <MapPin className="w-3 h-3" /> Teleport {selectedChar.name}
                       </Button>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Grant XP */}
-              {selectedUser.characters.length > 0 && (
-                <div className="border-t border-border pt-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    <h4 className="font-display text-xs text-muted-foreground">Grant XP</h4>
                   </div>
-                  {selectedUser.characters.map(c => (
-                    <div key={c.id} className="space-y-1.5 mb-3">
-                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
+
+                  {/* Grant XP */}
+                  <div className="border-t border-border pt-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      <h4 className="font-display text-xs text-muted-foreground">Grant XP</h4>
+                    </div>
+                    <div className="space-y-1.5">
                       <Input type="number" min={1} value={grantXpAmount}
                         onChange={e => setGrantXpAmount(parseInt(e.target.value) || 0)}
                         className="h-7 text-[10px]" placeholder="XP amount" />
                       <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                        disabled={grantXpAmount <= 0} onClick={() => handleGrantXp(c.id)}>
-                        <Sparkles className="w-3 h-3" /> Grant XP to {c.name}
+                        disabled={grantXpAmount <= 0} onClick={() => handleGrantXp(selectedChar.id)}>
+                        <Sparkles className="w-3 h-3" /> Grant XP to {selectedChar.name}
                       </Button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+
+                  {/* Revive / Remove Item / Reset Stats */}
+                  <div className="border-t border-border pt-3 space-y-1.5">
+                    <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                      disabled={selectedChar.hp >= selectedChar.max_hp} onClick={() => handleRevive(selectedChar.id)}>
+                      <Heart className="w-3 h-3" /> Revive {selectedChar.name}
+                      {selectedChar.hp < selectedChar.max_hp && <span className="text-blood ml-1">({selectedChar.hp}/{selectedChar.max_hp})</span>}
+                    </Button>
+
+                    {selectedChar.inventory.length > 0 && (
+                      <div className="space-y-1">
+                        <Select value={removeItemId} onValueChange={setRemoveItemId}>
+                          <SelectTrigger className="h-7 w-full text-[10px]">
+                            <SelectValue placeholder="Select item to remove..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50 max-h-60">
+                            {selectedChar.inventory.map(inv => (
+                              <SelectItem key={inv.id} value={inv.id} className="text-xs">
+                                <span className={rarityColor(inv.item.rarity)}>{inv.item.name}</span>
+                                {inv.equipped_slot && <span className="text-muted-foreground ml-1">(equipped)</span>}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 w-full"
+                          disabled={!removeItemId} onClick={handleRemoveItem}>
+                          <Trash2 className="w-3 h-3" /> Remove Item
+                        </Button>
+                      </div>
+                    )}
+
+                    <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                      onClick={() => handleResetStats(selectedChar.id)}>
+                      <RotateCcw className="w-3 h-3" /> Reset Stats
+                    </Button>
+                  </div>
+                </>
               )}
-
-              {/* Revive / Remove Item / Reset Stats */}
-              {selectedUser.characters.length > 0 && (
-                <div className="border-t border-border pt-3 space-y-3">
-                  {selectedUser.characters.map(c => (
-                    <div key={c.id} className="space-y-1.5">
-                      <p className="text-[10px] font-display text-foreground">{c.name}</p>
-                      
-                      {/* Revive */}
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                        disabled={c.hp >= c.max_hp} onClick={() => handleRevive(c.id)}>
-                        <Heart className="w-3 h-3" /> Revive {c.name}
-                        {c.hp < c.max_hp && <span className="text-blood ml-1">({c.hp}/{c.max_hp})</span>}
-                      </Button>
-
-                      {/* Remove Item */}
-                      {c.inventory.length > 0 && (
-                        <div className="space-y-1">
-                          <Select value={removeItemId} onValueChange={setRemoveItemId}>
-                            <SelectTrigger className="h-7 w-full text-[10px]">
-                              <SelectValue placeholder="Select item to remove..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover border-border z-50 max-h-60">
-                              {c.inventory.map(inv => (
-                                <SelectItem key={inv.id} value={inv.id} className="text-xs">
-                                  <span className={rarityColor(inv.item.rarity)}>{inv.item.name}</span>
-                                  {inv.equipped_slot && <span className="text-muted-foreground ml-1">(equipped)</span>}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 w-full"
-                            disabled={!removeItemId} onClick={handleRemoveItem}>
-                            <Trash2 className="w-3 h-3" /> Remove Item
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Reset Stats */}
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                        onClick={() => handleResetStats(c.id)}>
-                        <RotateCcw className="w-3 h-3" /> Reset Stats for {c.name}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
             </div>
           )}
         </div>
 
-        {/* COL 3 — Character Sheet */}
+        {/* COL 3 — Character Sheet (selected character only) */}
         <div className="flex-1 overflow-y-auto min-h-0 border-r border-border">
           {!selectedUser ? (
             <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
               Select a user
             </div>
-          ) : selectedUser.characters.length === 0 ? (
+          ) : !selectedChar ? (
             <div className="flex items-center justify-center h-full text-xs text-muted-foreground italic">
-              No characters
+              {selectedUser.characters.length === 0 ? 'No characters' : 'Select a character'}
             </div>
           ) : (
             <div className="p-3 space-y-3">
               <h4 className="font-display text-[10px] text-muted-foreground">Character Sheet</h4>
-              {selectedUser.characters.map(c => (
-                <AdminCharacterSheet
-                  key={c.id}
-                  c={c}
-                  isEditing={editingChar === c.id}
-                  charEdits={charEdits}
-                  setCharEdits={setCharEdits}
-                  onEdit={() => { setEditingChar(c.id); setCharEdits({ hp: c.hp, max_hp: c.max_hp, gold: c.gold, level: c.level }); }}
-                  onSave={() => handleSaveCharacter(c.id)}
-                  onCancel={() => { setEditingChar(null); setCharEdits({}); }}
-                />
-              ))}
+              <AdminCharacterSheet
+                c={selectedChar}
+                isEditing={editingChar === selectedChar.id}
+                charEdits={charEdits}
+                setCharEdits={setCharEdits}
+                onEdit={() => { setEditingChar(selectedChar.id); setCharEdits({ hp: selectedChar.hp, max_hp: selectedChar.max_hp, gold: selectedChar.gold, level: selectedChar.level }); }}
+                onSave={() => handleSaveCharacter(selectedChar.id)}
+                onCancel={() => { setEditingChar(null); setCharEdits({}); }}
+              />
             </div>
           )}
         </div>
