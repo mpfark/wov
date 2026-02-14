@@ -4,12 +4,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand } from 'lucide-react';
+import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug } from 'lucide-react';
 
+// ... keep existing code (interfaces GeneratedRegion through ExistingRegion, lines 13-65)
 interface GeneratedRegion {
   name: string;
   description: string;
@@ -64,6 +66,16 @@ interface ExistingRegion {
   max_level: number;
 }
 
+interface ExistingNode {
+  id: string;
+  name: string;
+  description: string;
+  region_id: string;
+  region_name?: string;
+  min_level?: number;
+  max_level?: number;
+}
+
 const DIRECTION_OPPOSITES: Record<string, string> = {
   N: 'S', S: 'N',
   E: 'W', W: 'E',
@@ -71,7 +83,7 @@ const DIRECTION_OPPOSITES: Record<string, string> = {
   NW: 'SE', SE: 'NW',
 };
 
-type Mode = 'new' | 'expand';
+type Mode = 'new' | 'expand' | 'populate';
 
 export default function WorldBuilderPanel() {
   const [prompt, setPrompt] = useState('');
@@ -81,19 +93,54 @@ export default function WorldBuilderPanel() {
   const [mode, setMode] = useState<Mode>('new');
   const [regions, setRegions] = useState<ExistingRegion[]>([]);
   const [selectedRegionId, setSelectedRegionId] = useState<string>('');
+  const [allNodes, setAllNodes] = useState<ExistingNode[]>([]);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level').then(({ data }) => {
-      setRegions(data || []);
-    });
+    const load = async () => {
+      const [regRes, nodeRes] = await Promise.all([
+        supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level'),
+        supabase.from('nodes').select('id, name, description, region_id').order('name'),
+      ]);
+      const regs = regRes.data || [];
+      setRegions(regs);
+      const ns = (nodeRes.data || []).map((n: any) => {
+        const r = regs.find((reg: any) => reg.id === n.region_id);
+        return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level };
+      });
+      setAllNodes(ns);
+    };
+    load();
   }, []);
 
   const selectedRegion = regions.find(r => r.id === selectedRegionId);
+  const regionNodes = allNodes.filter(n => n.region_id === selectedRegionId);
+
+  const toggleNode = (nodeId: string) => {
+    setSelectedNodeIds(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  };
+
+  const selectAllNodes = () => {
+    setSelectedNodeIds(new Set(regionNodes.map(n => n.id)));
+  };
+
+  const deselectAllNodes = () => {
+    setSelectedNodeIds(new Set());
+  };
 
   const generate = async () => {
     if (!prompt.trim()) return;
     if (mode === 'expand' && !selectedRegionId) {
       toast.error('Select a region to expand');
+      return;
+    }
+    if (mode === 'populate' && selectedNodeIds.size === 0) {
+      toast.error('Select at least one node to populate');
       return;
     }
     setLoading(true);
@@ -104,13 +151,18 @@ export default function WorldBuilderPanel() {
       if (mode === 'expand' && selectedRegion) {
         body.expand_region = { id: selectedRegion.id, name: selectedRegion.name };
       }
+      if (mode === 'populate') {
+        body.populate_nodes = allNodes
+          .filter(n => selectedNodeIds.has(n.id))
+          .map(n => ({ id: n.id, name: n.name, description: n.description, region_name: n.region_name, min_level: n.min_level, max_level: n.max_level }));
+      }
 
       const { data, error } = await supabase.functions.invoke('ai-world-builder', { body });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setGenerated(data as GeneratedWorld);
-      toast.success('World content generated! Review below.');
+      toast.success('Content generated! Review below.');
     } catch (e: any) {
       toast.error(e.message || 'Generation failed');
     } finally {
@@ -123,13 +175,37 @@ export default function WorldBuilderPanel() {
     setApplying(true);
 
     try {
+      if (mode === 'populate') {
+        // Populate mode: only insert creatures, using real node IDs directly
+        for (const creature of generated.creatures) {
+          const nodeId = creature.node_temp_id; // Already a real UUID
+          await supabase.from('creatures').insert({
+            name: creature.name,
+            description: creature.description,
+            node_id: nodeId,
+            level: creature.level,
+            hp: creature.hp,
+            max_hp: creature.max_hp,
+            ac: creature.ac,
+            rarity: creature.rarity as any,
+            is_aggressive: creature.is_aggressive,
+            respawn_seconds: creature.respawn_seconds || 300,
+            stats: creature.stats,
+            loot_table: creature.loot_table || [],
+          });
+        }
+        toast.success(`Populated ${generated.creatures.length} creatures across ${selectedNodeIds.size} nodes.`);
+        setGenerated(null);
+        setPrompt('');
+        setApplying(false);
+        return;
+      }
+
       let regionId: string;
 
       if (mode === 'expand' && selectedRegionId) {
-        // Use existing region
         regionId = selectedRegionId;
       } else {
-        // Insert new region
         const { data: regionData, error: regErr } = await supabase
           .from('regions')
           .insert({
@@ -144,7 +220,7 @@ export default function WorldBuilderPanel() {
         regionId = regionData.id;
       }
 
-      // Insert new nodes (without connections first to get real IDs)
+      // Insert new nodes
       const tempToReal = new Map<string, string>();
       for (const node of generated.nodes) {
         const { data: nodeData, error: nodeErr } = await supabase
@@ -164,7 +240,6 @@ export default function WorldBuilderPanel() {
         tempToReal.set(node.temp_id, nodeData.id);
       }
 
-      // Resolve target IDs (temp or existing)
       const resolveTarget = (target: string): string | null => {
         if (target.startsWith('existing:')) {
           return target.replace('existing:', '');
@@ -172,7 +247,6 @@ export default function WorldBuilderPanel() {
         return tempToReal.get(target) || null;
       };
 
-      // Update connections on new nodes
       for (const node of generated.nodes) {
         const realId = tempToReal.get(node.temp_id)!;
         const connections = node.connections
@@ -182,11 +256,10 @@ export default function WorldBuilderPanel() {
             return { node_id: targetId, direction: c.direction };
           })
           .filter(Boolean);
-
         await supabase.from('nodes').update({ connections }).eq('id', realId);
       }
 
-      // Add reverse connections (both to new and existing nodes)
+      // Reverse connections
       const reverseMap = new Map<string, { node_id: string; direction: string }[]>();
       for (const node of generated.nodes) {
         const realId = tempToReal.get(node.temp_id)!;
@@ -250,7 +323,6 @@ export default function WorldBuilderPanel() {
       toast.success(`${action} ${generated.region.name}: ${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs.`);
       setGenerated(null);
       setPrompt('');
-      // Refresh regions list
       const { data: newRegions } = await supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level');
       setRegions(newRegions || []);
     } catch (e: any) {
@@ -264,6 +336,15 @@ export default function WorldBuilderPanel() {
     if (r === 'boss') return 'destructive';
     if (r === 'rare') return 'secondary';
     return 'outline';
+  };
+
+  // For populate mode, map node IDs to names for the preview
+  const getNodeNameForCreature = (nodeTempId: string) => {
+    if (mode === 'populate') {
+      const node = allNodes.find(n => n.id === nodeTempId);
+      return node?.name || nodeTempId;
+    }
+    return generated?.nodes.find(n => n.temp_id === nodeTempId)?.name || nodeTempId;
   };
 
   return (
@@ -288,6 +369,14 @@ export default function WorldBuilderPanel() {
           >
             <Expand className="w-3 h-3 mr-1" /> Expand Region
           </Button>
+          <Button
+            size="sm"
+            variant={mode === 'populate' ? 'default' : 'outline'}
+            onClick={() => { setMode('populate'); setGenerated(null); setSelectedNodeIds(new Set()); }}
+            className="text-xs"
+          >
+            <Bug className="w-3 h-3 mr-1" /> Populate Nodes
+          </Button>
         </div>
 
         {/* Region picker for expand mode */}
@@ -306,10 +395,50 @@ export default function WorldBuilderPanel() {
           </Select>
         )}
 
+        {/* Region + node picker for populate mode */}
+        {mode === 'populate' && (
+          <div className="space-y-2">
+            <Select value={selectedRegionId} onValueChange={(v) => { setSelectedRegionId(v); setSelectedNodeIds(new Set()); }}>
+              <SelectTrigger className="text-xs h-8">
+                <SelectValue placeholder="Select region…" />
+              </SelectTrigger>
+              <SelectContent>
+                {regions.map(r => (
+                  <SelectItem key={r.id} value={r.id} className="text-xs">
+                    {r.name} (Lvl {r.min_level}–{r.max_level})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedRegionId && regionNodes.length > 0 && (
+              <div className="border border-border rounded p-2 max-h-40 overflow-y-auto space-y-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] text-muted-foreground font-medium">Select nodes ({selectedNodeIds.size}/{regionNodes.length})</span>
+                  <Button variant="link" size="sm" onClick={selectAllNodes} className="text-[10px] h-4 p-0">All</Button>
+                  <Button variant="link" size="sm" onClick={deselectAllNodes} className="text-[10px] h-4 p-0">None</Button>
+                </div>
+                {regionNodes.map(n => (
+                  <label key={n.id} className="flex items-center gap-2 cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5">
+                    <Checkbox
+                      checked={selectedNodeIds.has(n.id)}
+                      onCheckedChange={() => toggleNode(n.id)}
+                      className="h-3 w-3"
+                    />
+                    <span className="text-xs">{n.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <Textarea
-          placeholder={mode === 'expand'
-            ? 'e.g. "Add 10 more nodes to the south, including a dark forest with wolves and a hidden cave with a boss"'
-            : 'e.g. "Create the Rivendell region for levels 15-25 with 6 nodes including Elrond\'s House as an inn"'
+          placeholder={
+            mode === 'populate'
+              ? 'e.g. "Add lore-appropriate creatures to these nodes, mix of aggressive and passive"'
+              : mode === 'expand'
+              ? 'e.g. "Add 10 more nodes to the south, including a dark forest with wolves and a hidden cave with a boss"'
+              : 'e.g. "Create the Rivendell region for levels 15-25 with 6 nodes including Elrond\'s House as an inn"'
           }
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
@@ -317,9 +446,14 @@ export default function WorldBuilderPanel() {
           onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) generate(); }}
         />
         <div className="flex items-center gap-2">
-          <Button size="sm" onClick={generate} disabled={loading || !prompt.trim() || (mode === 'expand' && !selectedRegionId)} className="text-xs">
+          <Button
+            size="sm"
+            onClick={generate}
+            disabled={loading || !prompt.trim() || (mode === 'expand' && !selectedRegionId) || (mode === 'populate' && selectedNodeIds.size === 0)}
+            className="text-xs"
+          >
             {loading ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Wand2 className="w-3 h-3 mr-1" />}
-            {loading ? 'Generating…' : mode === 'expand' ? 'Expand' : 'Generate'}
+            {loading ? 'Generating…' : mode === 'populate' ? 'Populate' : mode === 'expand' ? 'Expand' : 'Generate'}
           </Button>
           <span className="text-[10px] text-muted-foreground">⌘+Enter to generate</span>
         </div>
@@ -329,112 +463,131 @@ export default function WorldBuilderPanel() {
       <ScrollArea className="flex-1">
         {!generated && !loading && (
           <div className="flex items-center justify-center h-48 text-muted-foreground text-xs">
-            {mode === 'expand' ? 'Select a region and describe how to expand it' : 'Describe a region to generate world content'}
+            {mode === 'populate'
+              ? 'Select a region & nodes, then describe what creatures to generate'
+              : mode === 'expand'
+              ? 'Select a region and describe how to expand it'
+              : 'Describe a region to generate world content'}
           </div>
         )}
 
         {loading && (
           <div className="flex flex-col items-center justify-center h-48 gap-2">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground">{mode === 'expand' ? 'Expanding region…' : 'Building your world…'}</span>
+            <span className="text-xs text-muted-foreground">
+              {mode === 'populate' ? 'Generating creatures…' : mode === 'expand' ? 'Expanding region…' : 'Building your world…'}
+            </span>
           </div>
         )}
 
         {generated && (
           <div className="p-4 space-y-3">
-            {/* Region */}
-            <Card className="p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin className="w-3 h-3 text-primary" />
-                <span className="font-display text-sm text-primary">{generated.region.name}</span>
-                <Badge variant="outline" className="text-[10px]">
-                  Lvl {generated.region.min_level}–{generated.region.max_level}
-                </Badge>
-                {mode === 'expand' && <Badge variant="secondary" className="text-[9px]">Expanding</Badge>}
-              </div>
-              <p className="text-[11px] text-muted-foreground">{generated.region.description}</p>
-            </Card>
+            {/* Region (hide for populate mode) */}
+            {mode !== 'populate' && (
+              <Card className="p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <MapPin className="w-3 h-3 text-primary" />
+                  <span className="font-display text-sm text-primary">{generated.region.name}</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    Lvl {generated.region.min_level}–{generated.region.max_level}
+                  </Badge>
+                  {mode === 'expand' && <Badge variant="secondary" className="text-[9px]">Expanding</Badge>}
+                </div>
+                <p className="text-[11px] text-muted-foreground">{generated.region.description}</p>
+              </Card>
+            )}
 
-            {/* Nodes */}
-            <Collapsible defaultOpen>
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
-                <ChevronDown className="w-3 h-3" />
-                New Nodes ({generated.nodes.length})
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-1 mt-1">
-                {generated.nodes.map((node, i) => (
-                  <Card key={i} className="p-2">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span className="text-xs font-medium">{node.name}</span>
-                      {node.is_inn && <Badge variant="outline" className="text-[9px]">🏨 Inn</Badge>}
-                      {node.is_vendor && <Badge variant="outline" className="text-[9px]">🛒 Vendor</Badge>}
-                      {node.is_blacksmith && <Badge variant="outline" className="text-[9px]">🔨 Smith</Badge>}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{node.description}</p>
-                    <div className="text-[9px] text-muted-foreground mt-0.5">
-                      Exits: {node.connections.map(c => {
-                        const isExisting = c.target_temp_id.startsWith('existing:');
-                        const targetName = isExisting
-                          ? `⟵ existing node`
-                          : generated.nodes.find(n => n.temp_id === c.target_temp_id)?.name || c.target_temp_id;
-                        return `${c.direction} → ${targetName}`;
-                      }).join(', ')}
-                    </div>
-                  </Card>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
+            {/* Nodes (hide for populate mode) */}
+            {mode !== 'populate' && generated.nodes.length > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
+                  <ChevronDown className="w-3 h-3" />
+                  New Nodes ({generated.nodes.length})
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {generated.nodes.map((node, i) => (
+                    <Card key={i} className="p-2">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-xs font-medium">{node.name}</span>
+                        {node.is_inn && <Badge variant="outline" className="text-[9px]">🏨 Inn</Badge>}
+                        {node.is_vendor && <Badge variant="outline" className="text-[9px]">🛒 Vendor</Badge>}
+                        {node.is_blacksmith && <Badge variant="outline" className="text-[9px]">🔨 Smith</Badge>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{node.description}</p>
+                      <div className="text-[9px] text-muted-foreground mt-0.5">
+                        Exits: {node.connections.map(c => {
+                          const isExisting = c.target_temp_id.startsWith('existing:');
+                          const targetName = isExisting
+                            ? `⟵ existing node`
+                            : generated.nodes.find(n => n.temp_id === c.target_temp_id)?.name || c.target_temp_id;
+                          return `${c.direction} → ${targetName}`;
+                        }).join(', ')}
+                      </div>
+                    </Card>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             {/* Creatures */}
-            <Collapsible defaultOpen>
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
-                <ChevronDown className="w-3 h-3" />
-                <Swords className="w-3 h-3" /> Creatures ({generated.creatures.length})
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-1 mt-1">
-                {generated.creatures.map((cr, i) => (
-                  <Card key={i} className="p-2">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      <span className="text-xs font-medium">{cr.name}</span>
-                      <Badge variant={rarityColor(cr.rarity)} className="text-[9px]">{cr.rarity}</Badge>
-                      <span className="text-[9px] text-muted-foreground">Lvl {cr.level}</span>
-                      <span className="text-[9px] text-muted-foreground">HP {cr.hp}</span>
-                      {cr.is_aggressive && <Badge variant="destructive" className="text-[9px]">⚔ Aggressive</Badge>}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{cr.description}</p>
-                    <div className="text-[9px] text-muted-foreground">
-                      📍 {generated.nodes.find(n => n.temp_id === cr.node_temp_id)?.name || cr.node_temp_id}
-                    </div>
-                  </Card>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
+            {generated.creatures.length > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
+                  <ChevronDown className="w-3 h-3" />
+                  <Swords className="w-3 h-3" /> Creatures ({generated.creatures.length})
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {generated.creatures.map((cr, i) => (
+                    <Card key={i} className="p-2">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-xs font-medium">{cr.name}</span>
+                        <Badge variant={rarityColor(cr.rarity)} className="text-[9px]">{cr.rarity}</Badge>
+                        <span className="text-[9px] text-muted-foreground">Lvl {cr.level}</span>
+                        <span className="text-[9px] text-muted-foreground">HP {cr.hp}</span>
+                        {cr.is_aggressive && <Badge variant="destructive" className="text-[9px]">⚔ Aggressive</Badge>}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{cr.description}</p>
+                      <div className="text-[9px] text-muted-foreground">
+                        📍 {getNodeNameForCreature(cr.node_temp_id)}
+                      </div>
+                    </Card>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
-            {/* NPCs */}
-            <Collapsible defaultOpen>
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
-                <ChevronDown className="w-3 h-3" />
-                <MessageSquare className="w-3 h-3" /> NPCs ({generated.npcs.length})
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-1 mt-1">
-                {generated.npcs.map((npc, i) => (
-                  <Card key={i} className="p-2">
-                    <span className="text-xs font-medium">{npc.name}</span>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{npc.description}</p>
-                    <p className="text-[10px] italic text-muted-foreground mt-0.5">"{npc.dialogue.slice(0, 120)}{npc.dialogue.length > 120 ? '…' : ''}"</p>
-                    <div className="text-[9px] text-muted-foreground">
-                      📍 {generated.nodes.find(n => n.temp_id === npc.node_temp_id)?.name || npc.node_temp_id}
-                    </div>
-                  </Card>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
+            {/* NPCs (hide for populate mode) */}
+            {mode !== 'populate' && generated.npcs.length > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
+                  <ChevronDown className="w-3 h-3" />
+                  <MessageSquare className="w-3 h-3" /> NPCs ({generated.npcs.length})
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {generated.npcs.map((npc, i) => (
+                    <Card key={i} className="p-2">
+                      <span className="text-xs font-medium">{npc.name}</span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{npc.description}</p>
+                      <p className="text-[10px] italic text-muted-foreground mt-0.5">"{npc.dialogue.slice(0, 120)}{npc.dialogue.length > 120 ? '…' : ''}"</p>
+                      <div className="text-[9px] text-muted-foreground">
+                        📍 {generated.nodes.find(n => n.temp_id === npc.node_temp_id)?.name || npc.node_temp_id}
+                      </div>
+                    </Card>
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             {/* Apply button */}
             <div className="pt-2 border-t border-border">
               <Button onClick={applyAll} disabled={applying} className="w-full text-xs">
                 {applying ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Check className="w-3 h-3 mr-1" />}
-                {applying ? 'Applying…' : `Apply All (${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs)`}
+                {applying
+                  ? 'Applying…'
+                  : mode === 'populate'
+                  ? `Apply ${generated.creatures.length} Creatures`
+                  : `Apply All (${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs)`
+                }
               </Button>
             </div>
           </div>

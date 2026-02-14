@@ -35,7 +35,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
-    const { prompt, expand_region } = await req.json();
+    const { prompt, expand_region, populate_nodes } = await req.json();
     if (!prompt) {
       return new Response(JSON.stringify({ error: "Prompt is required" }), { status: 400, headers: corsHeaders });
     }
@@ -62,9 +62,29 @@ serve(async (req) => {
       return `- ${r.name} (Lvl ${r.min_level}-${r.max_level}): ${nodeNames || "no nodes yet"}`;
     }).join("\n");
 
-    // Build expand-specific context
+    // Build expand-specific or populate-specific context
     let expandContext = "";
-    if (expand_region) {
+    let isPopulateMode = false;
+    if (populate_nodes && Array.isArray(populate_nodes) && populate_nodes.length > 0) {
+      isPopulateMode = true;
+      const nodeDetails = populate_nodes.map((pn: any) => {
+        const nodeCreatures = creatures.filter((c: any) => c.node_id === pn.id).map((c: any) => `${c.name} (${c.rarity}, lvl ${c.level})`).join(", ");
+        return `  - ${pn.name} [id: ${pn.id}] (Region: ${pn.region_name}, Lvl ${pn.min_level}-${pn.max_level})\n    Description: ${pn.description}\n    Existing creatures: ${nodeCreatures || "none"}`;
+      }).join("\n");
+
+      expandContext = `\n\nYOU ARE POPULATING EXISTING NODES WITH CREATURES. Do NOT generate new nodes or NPCs.
+TARGET NODES TO POPULATE:
+${nodeDetails}
+
+IMPORTANT RULES FOR POPULATING:
+- Do NOT generate any new nodes — the "nodes" array must be empty []
+- Do NOT generate any NPCs — the "npcs" array must be empty []
+- Use the real node IDs (e.g. "${populate_nodes[0].id}") as the node_temp_id for creatures
+- Generate 2-4 creatures per node (mix of aggressive and passive)
+- Creature levels must match each node's region level range
+- Do NOT duplicate existing creature names on the same node
+- The "region" field should use name "Populate" with description "Populating existing nodes" min_level 1 max_level 1 (placeholder)`;
+    } else if (expand_region) {
       const targetRegion = regions.find((r: any) => r.id === expand_region.id);
       if (targetRegion) {
         const existingNodes = nodes.filter((n: any) => n.region_id === targetRegion.id);
