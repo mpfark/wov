@@ -29,9 +29,10 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
   const [repairing, setRepairing] = useState(false);
 
   const damagedItems = inventory.filter(i => i.current_durability < i.item.max_durability);
+  const isUnrepairable = (rarity: string) => rarity === 'unique' || rarity === 'rare';
 
   const repairItem = async (inv: InventoryItem) => {
-    if (inv.item.rarity === 'unique') return;
+    if (isUnrepairable(inv.item.rarity)) return;
     const cost = calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity);
     if (gold < cost) {
       toast.error('Not enough gold!');
@@ -49,7 +50,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
   };
 
   const repairAll = async () => {
-    const repairableItems = damagedItems.filter(i => i.item.rarity !== 'unique');
+    const repairableItems = damagedItems.filter(i => !isUnrepairable(i.item.rarity));
     const totalCost = repairableItems.reduce((sum, inv) =>
       sum + calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity), 0);
     if (gold < totalCost) {
@@ -70,7 +71,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
   };
 
   const totalRepairCost = damagedItems
-    .filter(i => i.item.rarity !== 'unique')
+    .filter(i => !isUnrepairable(i.item.rarity))
     .reduce((sum, inv) => sum + calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity), 0);
 
   return (
@@ -87,7 +88,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
             <Coins className="w-4 h-4 text-primary" />
             <span className="font-display text-primary">{gold} Gold</span>
           </div>
-          {damagedItems.filter(i => i.item.rarity !== 'unique').length > 1 && (
+          {damagedItems.filter(i => !isUnrepairable(i.item.rarity)).length > 1 && (
             <Button size="sm" onClick={repairAll} disabled={repairing || gold < totalRepairCost}
               className="font-display text-xs h-7">
               <Hammer className="w-3 h-3 mr-1" /> Repair All ({totalRepairCost}g)
@@ -99,19 +100,24 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
           {damagedItems.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">All your equipment is in good condition.</p>
           ) : damagedItems.map(inv => {
-            const isUnique = inv.item.rarity === 'unique';
-            const cost = isUnique ? 0 : calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity);
+            const cantRepair = isUnrepairable(inv.item.rarity);
+            const cost = cantRepair ? 0 : calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity);
             const durPct = Math.round((inv.current_durability / inv.item.max_durability) * 100);
 
             return (
-              <div key={inv.id} className={`p-2 rounded border border-border bg-background/40 space-y-1.5 ${isUnique ? 'opacity-60' : ''}`}>
+              <div key={inv.id} className={`p-2 rounded border border-border bg-background/40 space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <span className={`text-sm font-display ${RARITY_COLORS[inv.item.rarity] || ''}`}>{inv.item.name}</span>
                     {inv.equipped_slot && <span className="text-[10px] text-muted-foreground ml-1 capitalize">({inv.equipped_slot.replace('_', ' ')})</span>}
                   </div>
-                  {isUnique ? (
-                    <span className="text-[10px] text-destructive font-display">Unrepairable</span>
+                  {cantRepair ? (
+                    <div className="text-right">
+                      <span className="text-[10px] text-destructive font-display block">Unrepairable</span>
+                      <span className="text-[9px] text-muted-foreground italic">
+                        {inv.item.rarity === 'unique' ? 'Unique items cannot be restored by mortal hands.' : 'Rare items are too finely crafted to repair.'}
+                      </span>
+                    </div>
                   ) : (
                     <Button size="sm" onClick={() => repairItem(inv)} disabled={repairing || gold < cost}
                       className="font-display text-xs h-7">
