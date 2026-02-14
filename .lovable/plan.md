@@ -1,52 +1,37 @@
 
 
-## Clean Up Admin User Actions for Multi-Character Support
+## Add "Humanoid" Toggle for Auto-Scaled Gold Drops
 
 ### Problem
-The Admin Actions column (COL 2) currently duplicates every action section (Give Item, Teleport, Grant XP, Revive, Remove Item, Reset Stats) for **each character** inline. With multiple characters per user, this creates a very long, repetitive scrolling list that's hard to use.
+Manually configuring gold min/max/chance for every humanoid creature is tedious. You want a quick way to flag a creature as humanoid so it automatically carries gold appropriate to its level.
 
 ### Solution
-Add a **character selector** at the top of the actions panel. All character-specific actions then apply to the single selected character, eliminating duplication.
+Add an **"Is Humanoid"** checkbox to the Creature Manager. When enabled, gold drop values are auto-calculated from the creature's level and rarity, removing the need to manually set them each time.
 
-### Changes
+### How It Works
 
-#### `src/components/admin/UserManager.tsx`
+- A new `is_humanoid` column is added to the `creatures` table (boolean, default false)
+- When the checkbox is toggled ON in the editor, gold min/max/chance fields are auto-filled using a formula based on level and rarity, and the fields become read-only (showing calculated values)
+- When toggled OFF, the gold fields revert to manual entry (reset to 0)
+- The auto-gold values scale like this:
+  - **Min gold**: `level * 1` (multiplied by rarity: regular x1, rare x1.5, boss x3)
+  - **Max gold**: `level * 3` (multiplied by rarity)
+  - **Chance**: always `1.0` for humanoids (they always carry gold)
 
-1. **Add `selectedCharId` state** — tracks which character is selected for actions. Auto-selects the first character when a user is picked.
-
-2. **Character Selector** — a dropdown at the top of the actions panel showing character name, class, and level. Appears when the selected user has 1+ characters.
-
-3. **Flatten action sections** — instead of mapping over `selectedUser.characters` for each action group, all actions reference the single `selectedChar` derived from `selectedCharId`. This removes the repeated character name labels and per-character loops.
-
-4. **Character Sheet column (COL 3)** — also highlight/scroll to the selected character, or optionally only show the selected character's sheet instead of all sheets stacked.
-
-5. **Auto-select logic** — when `selectedUserId` changes, auto-pick the first character. When `selectedCharId` changes, reset action-specific state (giveItemId selection, removeItemId, etc.).
-
-### Layout After Changes
-
-```text
-+------------+------------------+------------------+----------+
-| User List  | Admin Actions    | Character Sheet  | Logs     |
-|            |                  |                  |          |
-|            | [Character ▼]    | (selected char)  |          |
-|            | -- Account --    |                  |          |
-|            | Reset Password   |                  |          |
-|            | Role / Ban       |                  |          |
-|            | -- Character --  |                  |          |
-|            | Give Item        |                  |          |
-|            | Teleport         |                  |          |
-|            | Grant XP         |                  |          |
-|            | Revive           |                  |          |
-|            | Remove Item      |                  |          |
-|            | Reset Stats      |                  |          |
-+------------+------------------+------------------+----------+
-```
+Example at level 10: regular humanoid drops 10-30 gold, rare drops 15-45, boss drops 30-90.
 
 ### Technical Details
 
-- New state: `selectedCharId: string | null`
-- Derived: `const selectedChar = selectedUser?.characters.find(c => c.id === selectedCharId)`
-- Effect: when `selectedUserId` changes, set `selectedCharId` to first character's id (or null)
-- All action handlers already accept `characterId` as a parameter, so no handler changes needed
-- Character Sheet column will show only the selected character instead of all characters stacked
+1. **Database migration**: Add `is_humanoid boolean NOT NULL DEFAULT false` to the `creatures` table
+
+2. **`src/lib/game-data.ts`**: Add a `calculateHumanoidGold(level, rarity)` function returning `{ min, max, chance }`
+
+3. **`src/components/admin/CreatureManager.tsx`**:
+   - Add `is_humanoid` to the form state
+   - Add a checkbox labeled "Humanoid (auto gold)" next to the existing "Aggressive" checkbox
+   - When `is_humanoid` is toggled on, auto-fill gold_min, gold_max, gold_chance from the formula and make those inputs disabled/read-only
+   - When level or rarity changes while humanoid is on, recalculate gold values automatically
+   - Persist `is_humanoid` to the database on save
+
+4. **`src/hooks/useCombat.ts`** (or wherever loot is resolved): No changes needed -- gold is already read from the creature's `loot_table` at combat time, so the humanoid flag just affects how the loot_table is built in the admin editor.
 
