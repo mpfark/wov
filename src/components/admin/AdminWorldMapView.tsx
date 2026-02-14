@@ -345,6 +345,40 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex h-full w-full">
+        {/* Region sidebar */}
+        <div className="w-48 border-r border-border bg-card/50 flex flex-col">
+          <div className="px-3 py-2 border-b border-border">
+            <h3 className="font-display text-xs text-primary">Regions</h3>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-1">
+              {sortedRegions.map(region => {
+                const nodeCount = nodesByRegion.get(region.id)?.length || 0;
+                const isSelected = selectedRegionId === region.id;
+                return (
+                  <button
+                    key={region.id}
+                    onClick={() => zoomToRegion(region.id)}
+                    className={`w-full text-left px-2.5 py-2 rounded text-xs transition-colors ${
+                      isSelected
+                        ? 'bg-primary/15 text-primary'
+                        : 'hover:bg-accent text-foreground'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
+                      <span className="font-display truncate">{region.name}</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5 pl-[18px]">
+                      Lvl {region.min_level}–{region.max_level} · {nodeCount} nodes
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
+
         {/* Map area */}
         <div
           ref={containerRef}
@@ -523,40 +557,6 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
               );
             })}
           </svg>
-        </div>
-
-        {/* Region sidebar */}
-        <div className="w-48 border-l border-border bg-card/50 flex flex-col">
-          <div className="px-3 py-2 border-b border-border">
-            <h3 className="font-display text-xs text-primary">Regions</h3>
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="p-1">
-              {sortedRegions.map(region => {
-                const nodeCount = nodesByRegion.get(region.id)?.length || 0;
-                const isSelected = selectedRegionId === region.id;
-                return (
-                  <button
-                    key={region.id}
-                    onClick={() => zoomToRegion(region.id)}
-                    className={`w-full text-left px-2.5 py-2 rounded text-xs transition-colors ${
-                      isSelected
-                        ? 'bg-primary/15 text-primary'
-                        : 'hover:bg-accent text-foreground'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
-                      <span className="font-display truncate">{region.name}</span>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5 pl-[18px]">
-                      Lvl {region.min_level}–{region.max_level} · {nodeCount} nodes
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </ScrollArea>
         </div>
       </div>
     </TooltipProvider>
