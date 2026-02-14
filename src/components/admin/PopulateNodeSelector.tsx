@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface NodeData {
@@ -61,6 +61,10 @@ function layoutNodes(nodes: NodeData[]): Map<string, { x: number; y: number }> {
 
 export default function PopulateNodeSelector({ nodes, selectedIds, onToggle, onSelectAll, onDeselectAll }: Props) {
   const positions = useMemo(() => layoutNodes(nodes), [nodes]);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
   const edges = useMemo(() => {
     const edgeSet = new Set<string>();
@@ -106,13 +110,47 @@ export default function PopulateNodeSelector({ nodes, selectedIds, onToggle, onS
         <Button variant="link" size="sm" onClick={onSelectAll} className="text-[10px] h-4 p-0">All</Button>
         <Button variant="link" size="sm" onClick={onDeselectAll} className="text-[10px] h-4 p-0">None</Button>
       </div>
-      <svg
-        width="100%"
-        viewBox={`0 0 ${Math.max(width, 160)} ${Math.max(height, 100)}`}
-        className="block rounded bg-card/30"
-        style={{ maxHeight: '220px' }}
+      <div
+        className="overflow-hidden rounded bg-card/30 cursor-grab active:cursor-grabbing relative"
+        style={{ maxHeight: '280px', minHeight: '160px' }}
+        onWheel={(e) => {
+          e.preventDefault();
+          setZoom(z => Math.min(Math.max(z * (e.deltaY > 0 ? 0.9 : 1.1), 0.3), 4));
+        }}
+        onMouseDown={(e) => {
+          if (e.button !== 0) return;
+          setIsPanning(true);
+          panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+        }}
+        onMouseMove={(e) => {
+          if (!isPanning) return;
+          setPan({
+            x: panStart.current.panX + (e.clientX - panStart.current.x),
+            y: panStart.current.panY + (e.clientY - panStart.current.y),
+          });
+        }}
+        onMouseUp={() => setIsPanning(false)}
+        onMouseLeave={() => setIsPanning(false)}
       >
-        {/* Edges */}
+        <div className="absolute top-1 right-1 z-10 flex gap-0.5">
+          <button onClick={() => setZoom(z => Math.min(z * 1.2, 4))}
+            className="w-5 h-5 rounded bg-card border border-border text-[10px] font-bold hover:bg-accent">+</button>
+          <button onClick={() => setZoom(z => Math.max(z * 0.8, 0.3))}
+            className="w-5 h-5 rounded bg-card border border-border text-[10px] font-bold hover:bg-accent">−</button>
+          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+            className="h-5 px-1 rounded bg-card border border-border text-[9px] hover:bg-accent">⟲</button>
+        </div>
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${Math.max(width, 160)} ${Math.max(height, 100)}`}
+          className="block"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            minHeight: '160px',
+          }}
+        >
         {edges.map(edge => {
           const from = positions.get(edge.from);
           const to = positions.get(edge.to);
@@ -168,7 +206,8 @@ export default function PopulateNodeSelector({ nodes, selectedIds, onToggle, onS
             </g>
           );
         })}
-      </svg>
+        </svg>
+      </div>
     </div>
   );
 }
