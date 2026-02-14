@@ -321,20 +321,30 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     const cw = container.clientWidth;
     const ch = container.clientHeight;
 
+    // Account for SVG viewBox mapping (preserveAspectRatio: xMidYMid meet)
+    const svgScale = Math.min(cw / canvasW, ch / canvasH);
+    const svgOffsetX = (cw - canvasW * svgScale) / 2;
+    const svgOffsetY = (ch - canvasH * svgScale) / 2;
+
+    // Bubble position in screen pixels (before CSS transform)
+    const bubbleScreenX = svgOffsetX + bubble.cx * svgScale;
+    const bubbleScreenY = svgOffsetY + bubble.cy * svgScale;
+
     // Calculate zoom so region fills ~60% of viewport
-    const targetZoom = Math.min(cw, ch) / (bubble.radius * 3.5);
+    const regionScreenSize = bubble.radius * 2 * svgScale;
+    const targetZoom = Math.min(cw, ch) * 0.6 / regionScreenSize;
     const clampedZoom = Math.min(Math.max(targetZoom, 0.3), 3);
 
-    // Calculate pan to center the bubble
-    const targetPanX = cw / 2 - bubble.cx * clampedZoom;
-    const targetPanY = ch / 2 - bubble.cy * clampedZoom;
+    // Calculate pan to center the bubble in viewport
+    const targetPanX = cw / 2 - bubbleScreenX * clampedZoom;
+    const targetPanY = ch / 2 - bubbleScreenY * clampedZoom;
 
     setIsAnimating(true);
     setZoom(clampedZoom);
     setPan({ x: targetPanX, y: targetPanY });
     setSelectedRegionId(regionId);
     setTimeout(() => setIsAnimating(false), 450);
-  }, [regionBubbles]);
+  }, [regionBubbles, canvasW, canvasH]);
 
   // Collect all edges
   const edges = useMemo(() => {
