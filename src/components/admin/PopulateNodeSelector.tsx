@@ -4,12 +4,17 @@ import { Button } from '@/components/ui/button';
 interface NodeData {
   id: string;
   name: string;
+  is_inn?: boolean;
+  is_vendor?: boolean;
+  is_blacksmith?: boolean;
   connections: Array<{ node_id: string; direction: string }>;
 }
 
 interface Props {
   nodes: NodeData[];
   selectedIds: Set<string>;
+  creatureCounts?: Map<string, { total: number; aggressive: number }>;
+  npcCounts?: Map<string, number>;
   onToggle: (id: string) => void;
   onSelectAll: () => void;
   onDeselectAll: () => void;
@@ -59,7 +64,7 @@ function layoutNodes(nodes: NodeData[]): Map<string, { x: number; y: number }> {
   return positions;
 }
 
-export default function PopulateNodeSelector({ nodes, selectedIds, onToggle, onSelectAll, onDeselectAll }: Props) {
+export default function PopulateNodeSelector({ nodes, selectedIds, creatureCounts, npcCounts, onToggle, onSelectAll, onDeselectAll }: Props) {
   const positions = useMemo(() => layoutNodes(nodes), [nodes]);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -112,7 +117,7 @@ export default function PopulateNodeSelector({ nodes, selectedIds, onToggle, onS
       </div>
       <div
         className="overflow-hidden rounded bg-card/30 cursor-grab active:cursor-grabbing relative"
-        style={{ maxHeight: '280px', minHeight: '160px' }}
+        style={{ height: '400px' }}
         onWheel={(e) => {
           e.preventDefault();
           setZoom(z => Math.min(Math.max(z * (e.deltaY > 0 ? 0.9 : 1.1), 0.3), 4));
@@ -189,11 +194,50 @@ export default function PopulateNodeSelector({ nodes, selectedIds, onToggle, onS
                 strokeWidth={isSelected ? 2.5 : 1.5}
               />
               {isSelected && (
-                <text x={px} y={py - 10} textAnchor="middle"
+                <text x={px} y={py - 12} textAnchor="middle"
                   className="text-[10px] select-none pointer-events-none fill-primary">
                   ✓
                 </text>
               )}
+
+              {/* Node flags */}
+              {(() => {
+                const node = nodes.find(n => n.id === id);
+                const flags = [node?.is_inn && '🏨', node?.is_vendor && '🛒', node?.is_blacksmith && '🔨'].filter(Boolean).join('');
+                return flags ? (
+                  <text x={px} y={py - 26} textAnchor="middle"
+                    className="text-[8px] select-none pointer-events-none">{flags}</text>
+                ) : null;
+              })()}
+
+              {/* Creature dots */}
+              {(() => {
+                const cc = creatureCounts?.get(id);
+                const nc = npcCounts?.get(id) || 0;
+                return (
+                  <>
+                    {cc && cc.aggressive > 0 && (
+                      <circle cx={px - 8} cy={py + 18} r={3.5}
+                        fill="hsl(0 70% 50%)" className="stroke-background" strokeWidth={1} />
+                    )}
+                    {cc && (cc.total - cc.aggressive) > 0 && (
+                      <circle cx={px + (cc.aggressive > 0 ? 0 : -4)} cy={py + 18} r={3.5}
+                        fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} />
+                    )}
+                    {nc > 0 && (
+                      <text x={px + 12} y={py + 22}
+                        className="text-[7px] select-none pointer-events-none">💬</text>
+                    )}
+                    {(cc?.total || nc > 0) && (
+                      <text x={px} y={py + 32} textAnchor="middle"
+                        className="fill-muted-foreground text-[7px] select-none pointer-events-none">
+                        {cc?.total ? `${cc.total}c` : ''}{nc > 0 ? ` ${nc}n` : ''}
+                      </text>
+                    )}
+                  </>
+                );
+              })()}
+
               <text
                 x={px} y={py + (isSelected ? 5 : 3)}
                 textAnchor="middle"
