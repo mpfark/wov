@@ -335,9 +335,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (!currentNode) return;
     const roll = rollD20();
 
-    // Check for hidden paths first (priority over item search)
     const hiddenPaths = currentNode.connections.filter(c => c.hidden);
-    if (roll >= 10 && hiddenPaths.length > 0) {
+    const searchItems = currentNode.searchable_items as any[];
+    const canFindPath = roll >= 10 && hiddenPaths.length > 0;
+    const canFindLoot = roll >= 12 && searchItems && searchItems.length > 0;
+
+    // If both are possible, randomly pick one; otherwise whichever is available
+    let tryPathFirst = canFindPath && (!canFindLoot || Math.random() < 0.5);
+
+    if (tryPathFirst) {
       const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
       const targetNode = getNode(discovered.node_id);
       const targetName = targetNode?.name || 'an unknown place';
@@ -349,8 +355,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       return;
     }
 
-    const searchItems = currentNode.searchable_items as any[];
-    if (roll >= 12 && searchItems && searchItems.length > 0) {
+    if (canFindLoot) {
       for (const entry of searchItems) {
         if (Math.random() <= (entry.chance || 0.5)) {
           const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
@@ -374,6 +379,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         }
       }
       addLog(`Search roll: ${roll} — You rummage around but find nothing useful.`);
+    } else if (canFindPath) {
+      // Fallback: path was possible but we tried loot first and failed
+      const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
+      const targetNode = getNode(discovered.node_id);
+      const targetName = targetNode?.name || 'an unknown place';
+      addLog(`🔍 Search roll: ${roll} — You discover a hidden path to ${targetName}!`);
+      if (targetNode) {
+        await updateCharacter({ current_node_id: discovered.node_id });
+        addLog(`You travel through the hidden path to ${targetName}.`);
+      }
     } else {
       addLog(`Search roll: ${roll} — You find nothing of note.`);
     }
