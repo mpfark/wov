@@ -275,6 +275,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   🏨
                 </text>
               )}
+              {node.is_blacksmith && (
+                <text x={pos.px} y={pos.py - 38} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                  🔨
+                </text>
+              )}
               {/* Current marker */}
               {isCurrent && (
                 <text x={pos.px} y={pos.py - 16} textAnchor="middle"
