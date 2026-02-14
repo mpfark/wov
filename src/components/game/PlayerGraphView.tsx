@@ -266,7 +266,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                 );
               })()}
               {node.is_vendor && (
-                <text x={pos.px} y={pos.py - 16} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                <text x={pos.px - 20} y={pos.py - 18} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
                   🪙
                 </text>
               )}
