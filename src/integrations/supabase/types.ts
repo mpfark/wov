@@ -665,6 +665,7 @@ export type Database = {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
         Returns: undefined
       }
+      get_character_name: { Args: { _character_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -673,6 +674,7 @@ export type Database = {
         Returns: boolean
       }
       is_maiar_or_valar: { Args: never; Returns: boolean }
+      is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_valar: { Args: never; Returns: boolean }
       owns_character: { Args: { _character_id: string }; Returns: boolean }

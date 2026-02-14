@@ -77,12 +77,9 @@ export function useParty(characterId: string | null) {
       for (const inv of pending) {
         const leaderId = (inv as any).party?.leader_id;
         if (leaderId) {
-          const { data: leader } = await supabase
-            .from('characters')
-            .select('name')
-            .eq('id', leaderId)
-            .single();
-          invites.push({ party_id: inv.party_id, id: inv.id, leader_name: leader?.name || 'Unknown' });
+          const { data: leaderName } = await supabase
+            .rpc('get_character_name', { _character_id: leaderId });
+          invites.push({ party_id: inv.party_id, id: inv.id, leader_name: (leaderName as string) || 'Unknown' });
         }
       }
       setPendingInvites(invites);
