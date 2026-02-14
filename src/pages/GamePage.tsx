@@ -47,7 +47,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
   const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
-  const [eventLog, setEventLog] = useState<string[]>(['Welcome, Everyday Adventurer!']);
+  const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
@@ -478,7 +478,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     <div className="h-screen flex flex-col parchment-bg">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
-        <h1 className="font-display text-sm text-primary text-glow">Everyday Adventurer</h1>
+        <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Arda</h1>
           <div className="flex items-center gap-2">
             {isAdmin && (
               <Button variant="outline" size="sm" onClick={onOpenAdmin} className="text-xs font-display">
