@@ -294,44 +294,56 @@ export default function CharacterPanel({
           <div className="space-y-1 max-h-40 overflow-y-auto">
             {unequipped.length === 0 ? (
               <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>
-            ) : unequipped.map(inv => (
-              <div key={inv.id} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
-                      {inv.item.name}
-                      {inv.item.hands && <span className="text-[9px] text-muted-foreground ml-1">({inv.item.hands}H)</span>}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-popover border-border z-50">
-                    <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
-                    <p className="text-xs text-muted-foreground">{inv.item.description}</p>
-                    {Object.entries(inv.item.stats || {}).map(([k, v]) => (
-                      <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
-                    ))}
-                    <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div className="flex gap-0.5 shrink-0 ml-1">
-                  {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && (
+            ) : (() => {
+              // Group unequipped items by item_id
+              const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];
+              const map = new Map<string, InventoryItem[]>();
+              for (const inv of unequipped) {
+                const key = inv.item_id;
+                if (!map.has(key)) { map.set(key, []); grouped.push({ representative: inv, all: map.get(key)! }); }
+                map.get(key)!.push(inv);
+              }
+              return grouped.map(({ representative: inv, all }) => (
+                <div key={inv.item_id} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
+                        {inv.item.name}
+                        {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
+                        {inv.item.hands && <span className="text-[9px] text-muted-foreground ml-1">({inv.item.hands}H)</span>}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-popover border-border z-50">
+                      <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
+                      <p className="text-xs text-muted-foreground">{inv.item.description}</p>
+                      {Object.entries(inv.item.stats || {}).map(([k, v]) => (
+                        <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
+                      ))}
+                      <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
+                      {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                  <div className="flex gap-0.5 shrink-0 ml-1">
+                    {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && (
+                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                        onClick={() => onUseConsumable(all[0].id)}>
+                        <Heart className="w-3 h-3 text-blood" />
+                      </Button>
+                    )}
+                    {inv.item.slot && (
+                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                        onClick={() => onEquip(all[0].id, inv.item.slot!)}>
+                        <Shield className="w-3 h-3 text-primary" />
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                      onClick={() => onUseConsumable(inv.id)}>
-                      <Heart className="w-3 h-3 text-blood" />
+                      onClick={() => onDrop(all[0].id)}>
+                      <Trash2 className="w-3 h-3 text-destructive" />
                     </Button>
-                  )}
-                  {inv.item.slot && (
-                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                      onClick={() => onEquip(inv.id, inv.item.slot!)}>
-                      <Shield className="w-3 h-3 text-primary" />
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                    onClick={() => onDrop(inv.id)}>
-                    <Trash2 className="w-3 h-3 text-destructive" />
-                  </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </div>
 
