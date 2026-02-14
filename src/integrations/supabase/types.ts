@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          character_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          message: string
+          metadata: Json
+          user_id: string
+        }
+        Insert: {
+          character_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          message: string
+          metadata?: Json
+          user_id: string
+        }
+        Update: {
+          character_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_inventory: {
         Row: {
           character_id: string

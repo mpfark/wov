@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCharacter } from '@/hooks/useCharacter';
 import { useRole } from '@/hooks/useRole';
@@ -10,6 +10,7 @@ import GamePage from './GamePage';
 import AdminPage from './AdminPage';
 import { useNodes } from '@/hooks/useNodes';
 import { toast } from 'sonner';
+import { logActivity } from '@/hooks/useActivityLog';
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -31,6 +32,16 @@ const Index = () => {
   }, [user, signOut]);
 
   useInactivityLogout(handleInactiveLogout);
+
+  // Log login event once per session
+  const loggedLoginRef = useRef(false);
+  useEffect(() => {
+    if (user && !loggedLoginRef.current) {
+      loggedLoginRef.current = true;
+      logActivity(user.id, null, 'login', 'Logged in');
+    }
+    if (!user) loggedLoginRef.current = false;
+  }, [user]);
 
   if (authLoading) {
     return (

@@ -22,6 +22,7 @@ import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { logActivity } from '@/hooks/useActivityLog';
 
 interface Props {
   character: Character;
@@ -159,6 +160,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         current_node_id: deathNodeRef.current,
       });
       addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
+      logActivity(character.user_id, character.id, 'combat_death', `Died and lost ${goldLost} gold`, { gold_lost: goldLost });
       isDeadRef.current = false;
       setIsDead(false);
       clearInterval(countdownInterval);
@@ -310,6 +312,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
       await updateCharacter({ current_node_id: nodeId });
       addLog(`You travel to ${targetNode.name}.`);
+      logActivity(character.user_id, character.id, 'move', `Traveled to ${targetNode.name}`, { node_id: nodeId });
       // Move followers if I'm the party leader
       if (party && isLeader) {
         const followers = partyMembers.filter(m => m.is_following && m.character_id !== character.id);
@@ -364,6 +367,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               character_id: character.id, item_id: entry.item_id, current_durability: 100,
             });
             addLog(`🔍 Search roll: ${roll} — You found ${item.name}!`);
+            logActivity(character.user_id, character.id, 'item_found', `Found ${item.name} while searching`, { item_name: item.name });
             fetchInventory();
             return;
           }
@@ -434,6 +438,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
     if (result) {
       addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
+      logActivity(character.user_id, character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
       // Apply regen buff: 3x regen for 2 minutes
       setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
       addLog(`✨ HP regeneration boosted for 2 minutes!`);
