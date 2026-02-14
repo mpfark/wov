@@ -271,10 +271,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
     const targetRegion = getRegion(targetNode.region_id);
-    if (targetRegion && character.level < targetRegion.min_level) {
-      addLog(`You are not strong enough to enter ${targetRegion.name} (requires Lvl ${targetRegion.min_level}).`);
-      toast.error(`Level ${targetRegion.min_level} required`);
-      return;
+    const currentRegion = character.current_node_id ? getRegion(getNode(character.current_node_id)?.region_id || '') : null;
+    if (targetRegion && currentRegion && targetRegion.id !== currentRegion.id && character.level < targetRegion.min_level) {
+      const levelDiff = targetRegion.min_level - character.level;
+      addLog(`⚠️ You are entering ${targetRegion.name} (Lvl ${targetRegion.min_level}–${targetRegion.max_level}). These lands are ${levelDiff >= 10 ? 'extremely' : levelDiff >= 5 ? 'very' : ''} dangerous for your level!`);
+      toast.warning(`Warning: ${targetRegion.name} is dangerous for your level`);
     }
 
     // Attack of Opportunity — each living creature gets a free strike
