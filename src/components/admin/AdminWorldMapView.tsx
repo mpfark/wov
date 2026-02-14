@@ -181,7 +181,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   }, []);
 
   // Compute region bubbles and node positions using geographic coordinates
-  const { regionBubbles, allNodePositions } = useMemo(() => {
+  const { regionBubbles, allNodePositions, canvasW, canvasH } = useMemo(() => {
     const MIN_NODE_GAP = 90;
     const BUBBLE_PAD = 60;
 
@@ -273,6 +273,29 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       if (!moved) break;
     }
 
+    // Normalize: ensure no bubble extends past the viewBox origin
+    const MARGIN = 20;
+    let shiftX = 0;
+    let shiftY = 0;
+    for (const bd of bubbleData) {
+      shiftX = Math.max(shiftX, MARGIN + bd.radius - bd.cx);
+      shiftY = Math.max(shiftY, MARGIN + bd.radius - bd.cy);
+    }
+    if (shiftX > 0 || shiftY > 0) {
+      for (const bd of bubbleData) {
+        bd.cx += shiftX;
+        bd.cy += shiftY;
+      }
+    }
+
+    // Compute dynamic canvas size from resolved positions
+    let maxRight = 0;
+    let maxBottom = 0;
+    for (const bd of bubbleData) {
+      maxRight = Math.max(maxRight, bd.cx + bd.radius + MARGIN);
+      maxBottom = Math.max(maxBottom, bd.cy + bd.radius + MARGIN);
+    }
+
     // Build final bubbles and node positions from resolved coordinates
     for (const bd of bubbleData) {
       bubbles.push({ region: bd.region, cx: bd.cx, cy: bd.cy, radius: bd.radius, nodeCount: bd.nodeCount });
@@ -286,7 +309,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       }
     }
 
-    return { regionBubbles: bubbles, allNodePositions: nodePos };
+    return { regionBubbles: bubbles, allNodePositions: nodePos, canvasW: Math.max(maxRight, CANVAS_W), canvasH: Math.max(maxBottom, CANVAS_H) };
   }, [regions, nodesByRegion, getRegionCoord]);
 
   // Zoom to a specific region
@@ -402,7 +425,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
           <svg
             width="100%"
             height="100%"
-            viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+            viewBox={`0 0 ${canvasW} ${canvasH}`}
             className="block w-full h-full"
             style={{
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
