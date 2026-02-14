@@ -98,6 +98,7 @@ export default function WorldBuilderPanel() {
   const [selectedRegionId, setSelectedRegionId] = useState<string>('');
   const [allNodes, setAllNodes] = useState<ExistingNode[]>([]);
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
+  const [mapCollapsed, setMapCollapsed] = useState(false);
   const [creatureCounts, setCreatureCounts] = useState<Map<string, { total: number; aggressive: number }>>(new Map());
   const [npcCounts, setNPCCounts] = useState<Map<string, number>>(new Map());
 
@@ -169,6 +170,7 @@ export default function WorldBuilderPanel() {
     }
     setLoading(true);
     setGenerated(null);
+    setMapCollapsed(true);
 
     try {
       const body: any = { prompt: prompt.trim() };
@@ -435,15 +437,23 @@ export default function WorldBuilderPanel() {
               </SelectContent>
             </Select>
             {selectedRegionId && regionNodes.length > 0 && (
-              <PopulateNodeSelector
-                nodes={regionNodes}
-                selectedIds={selectedNodeIds}
-                creatureCounts={creatureCounts}
-                npcCounts={npcCounts}
-                onToggle={toggleNode}
-                onSelectAll={selectAllNodes}
-                onDeselectAll={deselectAllNodes}
-              />
+              <Collapsible open={!mapCollapsed} onOpenChange={(open) => setMapCollapsed(!open)}>
+                <CollapsibleTrigger className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium w-full hover:text-foreground">
+                  <ChevronDown className={`w-3 h-3 transition-transform ${mapCollapsed ? '-rotate-90' : ''}`} />
+                  Node Map ({selectedNodeIds.size}/{regionNodes.length} selected)
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <PopulateNodeSelector
+                    nodes={regionNodes}
+                    selectedIds={selectedNodeIds}
+                    creatureCounts={creatureCounts}
+                    npcCounts={npcCounts}
+                    onToggle={toggleNode}
+                    onSelectAll={selectAllNodes}
+                    onDeselectAll={deselectAllNodes}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </div>
         )}
