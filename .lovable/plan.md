@@ -1,53 +1,52 @@
 
 
-## Multi-Character Support
+## Clean Up Admin User Actions for Multi-Character Support
 
-### Overview
-Allow each user to own multiple characters and switch between them. Currently the code fetches only one character per user — the database already supports multiple (no unique constraint on `user_id`). This plan adds a **character selection screen** between login and gameplay.
+### Problem
+The Admin Actions column (COL 2) currently duplicates every action section (Give Item, Teleport, Grant XP, Revive, Remove Item, Reset Stats) for **each character** inline. With multiple characters per user, this creates a very long, repetitive scrolling list that's hard to use.
 
-### User Experience Flow
+### Solution
+Add a **character selector** at the top of the actions panel. All character-specific actions then apply to the single selected character, eliminating duplication.
 
-1. **After login**, if the user has 0 characters, they go straight to Character Creation (same as today)
-2. If they have 1+ characters, they see a **Character Select** screen showing all their characters as cards
-3. From that screen they can:
-   - Select a character to play
-   - Create a new character (goes to existing Character Creation flow)
-   - Delete a character (with confirmation dialog)
-4. While in-game, a small button in the header/character panel lets them **Switch Character** (returns to selection screen)
+### Changes
 
-### Technical Changes
+#### `src/components/admin/UserManager.tsx`
 
-#### 1. Update `useCharacter` hook
-- Fetch **all** characters for the user instead of `.limit(1).maybeSingle()`
-- Return `characters: Character[]` (array) plus `selectedCharacter` state
-- Add `selectCharacter(id)` and `deleteCharacter(id)` functions
-- Keep `createCharacter` and `updateCharacter` as-is
-- Realtime subscription stays filtered to `user_id` but handles the full array
+1. **Add `selectedCharId` state** — tracks which character is selected for actions. Auto-selects the first character when a user is picked.
 
-#### 2. Create `CharacterSelect.tsx` page
-- Grid of character cards showing: name, race/class, level, HP, gold
-- "Create New Character" button
-- "Delete" button per character (with AlertDialog confirmation)
-- Clicking a card selects that character and enters the game
+2. **Character Selector** — a dropdown at the top of the actions panel showing character name, class, and level. Appears when the selected user has 1+ characters.
 
-#### 3. Update `Index.tsx` routing logic
-- Instead of `!character -> CharacterCreation`, the flow becomes:
-  - `characters.length === 0` -> CharacterCreation
-  - `characters.length > 0 && !selectedCharacter` -> CharacterSelect
-  - `selectedCharacter` -> GamePage
-- Pass a `onSwitchCharacter` callback to GamePage
+3. **Flatten action sections** — instead of mapping over `selectedUser.characters` for each action group, all actions reference the single `selectedChar` derived from `selectedCharId`. This removes the repeated character name labels and per-character loops.
 
-#### 4. Update `GamePage.tsx`
-- Add a "Switch Character" button (in the header area near sign out)
-- Calls `onSwitchCharacter()` which clears the selected character, returning to CharacterSelect
+4. **Character Sheet column (COL 3)** — also highlight/scroll to the selected character, or optionally only show the selected character's sheet instead of all sheets stacked.
 
-#### 5. Update `CharacterCreation.tsx`
-- Add a "Back" button when the user already has other characters (to return to selection)
+5. **Auto-select logic** — when `selectedUserId` changes, auto-pick the first character. When `selectedCharId` changes, reset action-specific state (giveItemId selection, removeItemId, etc.).
 
-#### 6. Cleanup on delete
-- When deleting a character, also delete their `character_inventory`, `party_members` entries
-- Use cascading deletes or explicit cleanup before the character row delete
+### Layout After Changes
 
-### No Database Changes Needed
-The `characters` table already allows multiple rows per `user_id`. The only constraint is `characters_name_unique` (globally unique names), which remains correct.
+```text
++------------+------------------+------------------+----------+
+| User List  | Admin Actions    | Character Sheet  | Logs     |
+|            |                  |                  |          |
+|            | [Character ▼]    | (selected char)  |          |
+|            | -- Account --    |                  |          |
+|            | Reset Password   |                  |          |
+|            | Role / Ban       |                  |          |
+|            | -- Character --  |                  |          |
+|            | Give Item        |                  |          |
+|            | Teleport         |                  |          |
+|            | Grant XP         |                  |          |
+|            | Revive           |                  |          |
+|            | Remove Item      |                  |          |
+|            | Reset Stats      |                  |          |
++------------+------------------+------------------+----------+
+```
+
+### Technical Details
+
+- New state: `selectedCharId: string | null`
+- Derived: `const selectedChar = selectedUser?.characters.find(c => c.id === selectedCharId)`
+- Effect: when `selectedUserId` changes, set `selectedCharId` to first character's id (or null)
+- All action handlers already accept `characterId` as a parameter, so no handler changes needed
+- Character Sheet column will show only the selected character instead of all characters stacked
 
