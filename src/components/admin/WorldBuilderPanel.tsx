@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
+import PopulateNodeSelector from './PopulateNodeSelector';
 
 // ... keep existing code (interfaces GeneratedRegion through ExistingRegion, lines 13-65)
 interface GeneratedRegion {
@@ -75,6 +76,7 @@ interface ExistingNode {
   region_name?: string;
   min_level?: number;
   max_level?: number;
+  connections: Array<{ node_id: string; direction: string }>;
 }
 
 const DIRECTION_OPPOSITES: Record<string, string> = {
@@ -101,13 +103,13 @@ export default function WorldBuilderPanel() {
     const load = async () => {
       const [regRes, nodeRes] = await Promise.all([
         supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level'),
-        supabase.from('nodes').select('id, name, description, region_id').order('name'),
+        supabase.from('nodes').select('id, name, description, region_id, connections').order('name'),
       ]);
       const regs = regRes.data || [];
       setRegions(regs);
       const ns = (nodeRes.data || []).map((n: any) => {
         const r = regs.find((reg: any) => reg.id === n.region_id);
-        return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level };
+        return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level, connections: (n.connections as any[]) || [] };
       });
       setAllNodes(ns);
     };
@@ -412,23 +414,13 @@ export default function WorldBuilderPanel() {
               </SelectContent>
             </Select>
             {selectedRegionId && regionNodes.length > 0 && (
-              <div className="border border-border rounded p-2 max-h-40 overflow-y-auto space-y-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] text-muted-foreground font-medium">Select nodes ({selectedNodeIds.size}/{regionNodes.length})</span>
-                  <Button variant="link" size="sm" onClick={selectAllNodes} className="text-[10px] h-4 p-0">All</Button>
-                  <Button variant="link" size="sm" onClick={deselectAllNodes} className="text-[10px] h-4 p-0">None</Button>
-                </div>
-                {regionNodes.map(n => (
-                  <label key={n.id} className="flex items-center gap-2 cursor-pointer hover:bg-accent/30 rounded px-1 py-0.5">
-                    <Checkbox
-                      checked={selectedNodeIds.has(n.id)}
-                      onCheckedChange={() => toggleNode(n.id)}
-                      className="h-3 w-3"
-                    />
-                    <span className="text-xs">{n.name}</span>
-                  </label>
-                ))}
-              </div>
+              <PopulateNodeSelector
+                nodes={regionNodes}
+                selectedIds={selectedNodeIds}
+                onToggle={toggleNode}
+                onSelectAll={selectAllNodes}
+                onDeselectAll={deselectAllNodes}
+              />
             )}
           </div>
         )}
