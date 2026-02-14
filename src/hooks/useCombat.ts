@@ -4,6 +4,7 @@ import { Creature } from '@/hooks/useCreatures';
 import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
+import { logActivity } from '@/hooks/useActivityLog';
 
 interface EquipmentBonuses {
   [key: string]: number;
@@ -232,6 +233,10 @@ export function useCombat({
             _addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
           }
 
+          logActivity(char.user_id, char.id, 'combat_kill', `Slew ${creature.name} (Lvl ${creature.level}) +${xpShare} XP`, {
+            creature_name: creature.name, creature_level: creature.level, xp: xpShare, gold: goldShare,
+          });
+
           const newXp = char.xp + xpShare;
           const newGold = char.gold + goldShare;
           const xpForNext = char.level * 100;
@@ -263,6 +268,7 @@ export function useCombat({
             }
 
             _addLog(`🎉 Level Up! ${who} ${_party ? 'is' : 'are'} now level ${newLevel}! ${_party ? `${who} gained` : 'You gained'} 2 stat points.`);
+            logActivity(char.user_id, char.id, 'level_up', `Reached level ${newLevel}`, { level: newLevel });
             await _updateCharacter(levelUpUpdates);
           } else {
             await _updateCharacter({ xp: newXp, gold: newGold });
