@@ -124,6 +124,7 @@ ${expandContext}
 
 RULES:
 - Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
+- ALL names (region, node, creature, NPC, item) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead (e.g. "Lorien" not "Lórien", "Udun" not "Údûn").
 - Every region should have at least one inn node for resting
 - Creature levels must match the region's level range
 - Creature stats use: str, dex, con, int, wis, cha (range 5-30 based on level)
@@ -289,6 +290,19 @@ Call the generate_world tool with the structured output.`;
     }
 
     const generated = JSON.parse(toolCall.function.arguments);
+
+    // Sanitize: strip non-ASCII from all name fields
+    const stripNonAscii = (s: string) => s.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
+    if (generated.region?.name) generated.region.name = stripNonAscii(generated.region.name);
+    for (const node of (generated.nodes || [])) {
+      if (node.name) node.name = stripNonAscii(node.name);
+    }
+    for (const cr of (generated.creatures || [])) {
+      if (cr.name) cr.name = stripNonAscii(cr.name);
+    }
+    for (const npc of (generated.npcs || [])) {
+      if (npc.name) npc.name = stripNonAscii(npc.name);
+    }
 
     return new Response(JSON.stringify(generated), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
