@@ -128,7 +128,7 @@ export function suggestItemGoldValue(level: number, rarity: string): number {
 
 // Repair cost calculation
 const REPAIR_RARITY_MULT: Record<string, number> = {
-  common: 1, uncommon: 1.5, rare: 2, unique: 0,
+  common: 1, uncommon: 1.5, rare: 0, unique: 0,
 };
 
 export function calculateRepairCost(maxDurability: number, currentDurability: number, value: number, rarity: string): number {
