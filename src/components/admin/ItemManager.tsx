@@ -317,6 +317,17 @@ export default function ItemManager() {
                 </div>
               )}
 
+              {/* Potion slots for belt items */}
+              {(form.item_type === 'equipment' || form.item_type === 'shield') && form.slot === 'belt' && (
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Potion Slots</label>
+                  <Input type="number" min={0} max={10} value={form.stats.potion_slots || 0}
+                    onChange={e => setStat('potion_slots', Math.max(0, Math.min(10, +e.target.value)))}
+                    className="h-8 text-xs w-24" />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">How many potions can be loaded into this belt for combat use.</p>
+                </div>
+              )}
+
               {form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand') && (
                 <div>
                   <label className="text-[10px] text-muted-foreground">Hands Required</label>
