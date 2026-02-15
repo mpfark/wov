@@ -438,7 +438,7 @@ export default function CharacterPanel({
                     </TooltipContent>
                   </Tooltip>
                   <div className="flex gap-0.5 shrink-0 ml-1">
-                    {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && !inCombat && (
+                    {inv.item.item_type === 'consumable' && ((inv.item.stats?.hp as number) > 0 || (inv.item.stats?.hp_regen as number) > 0) && onUseConsumable && !inCombat && (
                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
                         onClick={() => onUseConsumable(all[0].id)}>
                         <Heart className="w-3 h-3 text-blood" />
