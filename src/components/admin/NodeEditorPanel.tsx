@@ -376,6 +376,18 @@ export default function NodeEditorPanel({
 
   const deleteNode = async () => {
     if (!activeNodeId) return;
+    // Remove this node from all other nodes' connections
+    const { data: allNodes } = await supabase.from('nodes').select('id, connections');
+    if (allNodes) {
+      for (const n of allNodes) {
+        if (n.id === activeNodeId) continue;
+        const conns = (n.connections as any[]) || [];
+        const filtered = conns.filter((c: any) => c.node_id !== activeNodeId);
+        if (filtered.length !== conns.length) {
+          await supabase.from('nodes').update({ connections: filtered }).eq('id', n.id);
+        }
+      }
+    }
     const { error } = await supabase.from('nodes').delete().eq('id', activeNodeId);
     if (error) return toast.error(error.message);
     toast.success('Node deleted');
