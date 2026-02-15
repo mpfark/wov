@@ -4,7 +4,7 @@ import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Trash2, Heart, Plus } from 'lucide-react';
+import { Shield, Trash2, Heart, Plus, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
 import vitruvianMan from '@/assets/vitruvian-man.png';
 
 interface Props {
@@ -21,6 +21,12 @@ interface Props {
   isAtInn?: boolean;
   regenBuff?: { multiplier: number; expiresAt: number };
   regenTick?: boolean;
+  // Belt potion system
+  beltedPotions?: InventoryItem[];
+  beltCapacity?: number;
+  onBeltPotion?: (inventoryId: string) => void;
+  onUnbeltPotion?: (inventoryId: string) => void;
+  inCombat?: boolean;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -143,6 +149,7 @@ function ActiveBuffs({ isAtInn, regenBuff }: { isAtInn?: boolean; regenBuff?: { 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
   isAtInn, regenBuff, regenTick,
+  beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
   const xpForNext = character.level * 100;
@@ -331,8 +338,51 @@ export default function CharacterPanel({
               <div />
               <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} />
               <div />
+          </div>
+        </div>
+
+        {/* Belt Potions */}
+        {beltCapacity > 0 && (
+          <div>
+            <h3 className="font-display text-xs text-muted-foreground mb-1.5">
+              Belt Potions ({beltedPotions.length}/{beltCapacity})
+            </h3>
+            <div className="space-y-1">
+              {Array.from({ length: beltCapacity }, (_, i) => {
+                const slot = i + 1;
+                const potion = beltedPotions.find(p => p.belt_slot === slot);
+                return (
+                  <div key={slot} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                    <span className="text-muted-foreground text-[9px] w-4">{slot}.</span>
+                    {potion ? (
+                      <>
+                        <span className={`font-display truncate flex-1 ${RARITY_COLORS[potion.item.rarity]}`}>
+                          {potion.item.name}
+                        </span>
+                        <div className="flex gap-0.5 shrink-0 ml-1">
+                          {onUseConsumable && (
+                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                              onClick={() => onUseConsumable(potion.id)}>
+                              <Heart className="w-3 h-3 text-blood" />
+                            </Button>
+                          )}
+                          {!inCombat && onUnbeltPotion && (
+                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                              onClick={() => onUnbeltPotion(potion.id)}>
+                              <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/50 flex-1">Empty</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
+        )}
         </div>
 
         {/* Inventory */}
@@ -373,10 +423,16 @@ export default function CharacterPanel({
                     </TooltipContent>
                   </Tooltip>
                   <div className="flex gap-0.5 shrink-0 ml-1">
-                    {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && (
+                    {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && !inCombat && inv.belt_slot === null && (
                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
                         onClick={() => onUseConsumable(all[0].id)}>
                         <Heart className="w-3 h-3 text-blood" />
+                      </Button>
+                    )}
+                    {inv.item.item_type === 'consumable' && !inCombat && onBeltPotion && beltCapacity > 0 && inv.belt_slot === null && beltedPotions.length < beltCapacity && (
+                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                        onClick={() => onBeltPotion(all[0].id)}>
+                        <ArrowUpFromLine className="w-3 h-3 text-primary" />
                       </Button>
                     )}
                     {inv.item.slot && (

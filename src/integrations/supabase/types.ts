@@ -54,6 +54,7 @@ export type Database = {
       }
       character_inventory: {
         Row: {
+          belt_slot: number | null
           character_id: string
           created_at: string
           current_durability: number
@@ -62,6 +63,7 @@ export type Database = {
           item_id: string
         }
         Insert: {
+          belt_slot?: number | null
           character_id: string
           created_at?: string
           current_durability?: number
@@ -70,6 +72,7 @@ export type Database = {
           item_id: string
         }
         Update: {
+          belt_slot?: number | null
           character_id?: string
           created_at?: string
           current_durability?: number
