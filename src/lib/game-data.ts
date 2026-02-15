@@ -99,12 +99,16 @@ export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {
 };
 
 export const ITEM_STAT_COSTS: Record<string, number> = {
-  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5,
+  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2,
 };
 
 export const ITEM_STAT_CAPS: Record<string, number> = {
-  str: 5, dex: 5, con: 5, int: 5, wis: 5, cha: 5, ac: 3, hp: 10,
+  str: 5, dex: 5, con: 5, int: 5, wis: 5, cha: 5, ac: 3, hp: 10, hp_regen: 3,
 };
+
+export function getBaseRegen(con: number): number {
+  return 1 + Math.floor((con - 10) / 4);
+}
 
 export function getItemStatBudget(level: number, rarity: string): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;

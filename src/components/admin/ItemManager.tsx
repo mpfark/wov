@@ -28,7 +28,12 @@ interface Item {
 const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
 const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest', 'shield'];
-const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp'];
+const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];
+
+const STAT_KEY_LABELS: Record<string, string> = {
+  str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA',
+  ac: 'AC', hp: 'HP', hp_regen: 'REGEN',
+};
 
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
@@ -261,7 +266,9 @@ export default function ItemManager() {
                     <span className="text-[10px] text-muted-foreground shrink-0">Dur: {item.max_durability}</span>
                     {item.hands && <span className="text-[10px] text-muted-foreground shrink-0">{item.hands}H</span>}
                     {Object.entries(item.stats || {}).map(([k, v]) => (
-                      <span key={k} className="text-[10px] text-chart-2 shrink-0">+{v} {k.toUpperCase()}</span>
+                      <span key={k} className={`text-[10px] shrink-0 ${k === 'hp_regen' ? 'text-elvish' : 'text-chart-2'}`}>
+                        {k === 'hp_regen' ? `+${v} Regen` : `+${v} ${k.toUpperCase()}`}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -389,7 +396,7 @@ export default function ItemManager() {
                 <div className="grid grid-cols-4 gap-1.5 mt-1">
                   {STAT_KEYS.map(key => (
                     <div key={key} className="flex items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground uppercase w-6">{key}</span>
+                      <span className={`text-[10px] uppercase w-8 ${key === 'hp_regen' ? 'text-elvish' : 'text-muted-foreground'}`}>{STAT_KEY_LABELS[key] || key}</span>
                       <Input type="number" min={0} max={getItemStatCap(key)}
                         value={form.stats[key] || 0}
                         onChange={e => setStat(key, Math.max(0, +e.target.value))}

@@ -21,6 +21,8 @@ interface Props {
   isAtInn?: boolean;
   regenBuff?: { multiplier: number; expiresAt: number };
   regenTick?: boolean;
+  baseRegen?: number;
+  itemHpRegen?: number;
   // Belt potion system
   beltedPotions?: InventoryItem[];
   beltCapacity?: number;
@@ -91,7 +93,9 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
           {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
           {Object.entries(item.item.stats || {}).map(([k, v]) => (
-            <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
+            <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
+              {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
+            </p>
           ))}
           <p className="text-[10px] text-muted-foreground mt-1">Click to unequip</p>
         </TooltipContent>
@@ -148,7 +152,7 @@ function ActiveBuffs({ isAtInn, regenBuff }: { isAtInn?: boolean; regenBuff?: { 
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
-  isAtInn, regenBuff, regenTick,
+  isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
@@ -197,16 +201,22 @@ export default function CharacterPanel({
           </TooltipTrigger>
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
             <p className="font-display text-sm">Regeneration</p>
-            <p className="text-xs text-muted-foreground">Base: <span className="text-elvish">1 HP</span> every <span className="text-foreground">30s</span></p>
+            <p className="text-xs text-muted-foreground">Base (CON): <span className="text-elvish">{baseRegen} HP</span> every <span className="text-foreground">30s</span></p>
+            {itemHpRegen > 0 && (
+              <p className="text-xs text-elvish">⚙️ Gear: <span className="text-foreground">+{itemHpRegen} HP</span></p>
+            )}
             {isAtInn && (
-              <p className="text-xs text-elvish">🏨 Inn Rest: <span className="text-foreground">3× regen</span></p>
+              <p className="text-xs text-elvish">🏨 Inn Rest: <span className="text-foreground">3× multiplier</span></p>
             )}
             {regenBuff && Date.now() < regenBuff.expiresAt && (
-              <p className="text-xs text-primary">🧪 Potion Buff: <span className="text-foreground">{regenBuff.multiplier}× regen</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
+              <p className="text-xs text-primary">🧪 Buff: <span className="text-foreground">{regenBuff.multiplier}× multiplier</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
             )}
-            {!isAtInn && !(regenBuff && Date.now() < regenBuff.expiresAt) && (
-              <p className="text-[10px] text-muted-foreground italic">Rest at an Inn or use potions for faster regen</p>
-            )}
+            {(() => {
+              const potionMult = regenBuff && Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
+              const innMult = isAtInn ? 3 : 1;
+              const total = Math.max(Math.floor((baseRegen + itemHpRegen) * potionMult * innMult), 1);
+              return <p className="text-xs font-display text-elvish border-t border-border pt-1">Total: {total} HP every 30s</p>;
+            })()}
           </TooltipContent>
         </Tooltip>
 
@@ -419,7 +429,9 @@ export default function CharacterPanel({
                       <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
                       <p className="text-xs text-muted-foreground">{inv.item.description}</p>
                       {Object.entries(inv.item.stats || {}).map(([k, v]) => (
-                        <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
+                        <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
+                          {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
+                        </p>
                       ))}
                       <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
                       {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
