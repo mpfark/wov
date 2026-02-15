@@ -52,6 +52,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
+  const [foodBuff, setFoodBuff] = useState<{ flatRegen: number; expiresAt: number }>({ flatRegen: 0, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
   const [abilityCooldownEnd, setAbilityCooldownEnd] = useState(0);
   const isDeadRef = useRef(false);
@@ -114,11 +115,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // Refs for regen to avoid stale closures resetting the timer
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con });
   const regenBuffRef = useRef(regenBuff);
+  const foodBuffRef = useRef(foodBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
   const equippedRef = useRef(equipped);
   useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con }; }, [character.hp, character.max_hp, character.current_node_id, character.con]);
   useEffect(() => { regenBuffRef.current = regenBuff; }, [regenBuff]);
+  useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
   useEffect(() => { equippedRef.current = equipped; }, [equipped]);
@@ -140,7 +143,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
         const conRegen = getBaseRegen(conWithGear);
         const itemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
-        const regenAmount = Math.max(Math.floor((conRegen + itemRegen) * totalMult), 1);
+        const food = foodBuffRef.current;
+        const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
+        const regenAmount = Math.max(Math.floor((conRegen + itemRegen + foodRegen) * totalMult), 1);
         const newHp = Math.min(hp + regenAmount, max_hp);
         if (newHp !== hp) {
           updateCharRegenRef.current({ hp: newHp });
@@ -473,13 +478,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       if (result.restored > 0) {
         addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
         logActivity(character.user_id, character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
-      } else {
-        addLog(`🍞 You consumed ${result.itemName}.`);
-        logActivity(character.user_id, character.id, 'general', `Consumed ${result.itemName}`);
+        // Potions grant a 3x regen multiplier for 2 minutes
+        setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
+        addLog(`✨ HP regeneration boosted for 2 minutes!`);
+      } else if (result.hpRegen > 0) {
+        addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} regen for 2 minutes.`);
+        logActivity(character.user_id, character.id, 'general', `Consumed ${result.itemName} (+${result.hpRegen} regen)`);
+        // Food grants a flat regen bonus via a special buff value (stored as negative to distinguish)
+        setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 120000 });
       }
-      // Apply regen buff: 3x regen for 2 minutes
-      setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
-      addLog(`✨ HP regeneration boosted for 2 minutes!`);
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
 
@@ -607,6 +614,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 inCombat={inCombat}
                 baseRegen={baseRegen}
                 itemHpRegen={itemHpRegen}
+                foodBuff={foodBuff}
               />
             </div>
           </ResizablePanel>
