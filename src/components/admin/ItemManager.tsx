@@ -74,6 +74,7 @@ export default function ItemManager() {
   const [isNew, setIsNew] = useState(false);
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
+  const [typeTab, setTypeTab] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
@@ -171,11 +172,12 @@ export default function ItemManager() {
 
   const panelOpen = isNew || selectedId !== null;
 
-  const filtered = items.filter(i =>
-    i.name.toLowerCase().includes(filter.toLowerCase()) ||
-    i.rarity.includes(filter.toLowerCase()) ||
-    i.item_type.includes(filter.toLowerCase())
-  );
+  const filtered = items.filter(i => {
+    if (typeTab !== 'all' && i.item_type !== typeTab) return false;
+    if (!filter) return true;
+    return i.name.toLowerCase().includes(filter.toLowerCase()) ||
+      i.rarity.includes(filter.toLowerCase());
+  });
 
   return (
     <div className="h-full flex">
@@ -184,12 +186,27 @@ export default function ItemManager() {
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
           <Package className="w-4 h-4 text-primary" />
           <h2 className="font-display text-sm text-primary">Items</h2>
-          <span className="text-xs text-muted-foreground">({items.length})</span>
+          <span className="text-xs text-muted-foreground">({filtered.length})</span>
           <div className="flex-1" />
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
+        </div>
+        <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border bg-card/30 shrink-0 flex-wrap">
+          {['all', ...ITEM_TYPES].map(t => (
+            <button
+              key={t}
+              onClick={() => setTypeTab(t)}
+              className={`px-2 py-0.5 rounded text-[10px] font-display capitalize transition-colors ${
+                typeTab === t
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              {t} {t !== 'all' ? `(${items.filter(i => i.item_type === t).length})` : `(${items.length})`}
+            </button>
+          ))}
         </div>
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
