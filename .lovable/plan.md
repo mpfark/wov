@@ -1,96 +1,47 @@
 
 
-# IP-Safe Renaming Plan
+# Belt Potion System
 
 ## Overview
-Rename all Tolkien-trademarked terms throughout the codebase to original names that are *inspired by* but legally distinct from Tolkien's work. This touches the game title, race names, admin role names, DB enums, RLS policy helper functions, edge functions, the AI world builder prompt, and the admin map view.
+Belts will serve as potion holders for combat. Players can only use potions that are "loaded" into their belt, and can only load potions onto the belt while out of combat. Potions in the regular inventory are stored but not usable during fights.
 
-## Proposed Name Changes
+## How It Works
 
-### Game Title
-- "Wayfarers of Arda" -> **"Wayfarers of Eldara"**
+1. **Belt Slots**: When a belt is equipped, it unlocks a number of potion slots (e.g., based on belt stats or a fixed number like 3). Without a belt, no potions can be used in combat.
 
-### Race Names (DB enum + code)
-| Current | New Key | New Label | Rationale |
-|---------|---------|-----------|-----------|
-| hobbit | halfling | Halfling | Generic fantasy term, not trademarked |
-| dunedain | edain | Edain | Evocative but distinct; "Edain" alone is not trademarked in the same way |
+2. **Loading Potions**: While out of combat, the player can move consumable potions from their inventory into belt slots. This is a UI-only concept -- we track which inventory items are "belted" via a new field.
 
-*Note: Human, Elf, Dwarf, Half-Elf are generic fantasy terms and safe to keep.*
+3. **Combat Restriction**: During combat, only belted potions show the "Use" (heart) button. Regular inventory potions hide the use button. Loading/unloading potions is blocked while in combat.
 
-### Race Descriptions (remove direct references)
-- "the Firstborn" -> "the Elder Folk"
-- "Durin's Folk" -> "the Mountain Clans"
-- "descendants of Numenor" -> "descendants of the Old Kingdom"
-
-### Class Descriptions
-- "drawn from the fabric of Arda" -> "drawn from the fabric of the world"
-
-### Admin Role Names (DB enum + all code)
-| Current | New |
-|---------|-----|
-| valar | overlord |
-| maiar | steward |
-
-This requires renaming the `app_role` enum values and updating all helper functions (`is_valar()`, `is_maiar_or_valar()`), RLS policies, edge functions, and frontend code.
-
-### AI World Builder Prompt
-- "Middle-earth world builder" -> "high-fantasy world builder"
-- "fit Tolkien's lore" -> "fit the world's lore"
-- Remove all direct Tolkien references; instruct AI to generate names *inspired by* but not taken from any copyrighted works
-
-### Admin Map Region Coordinates
-- Replace all Tolkien place names (The Shire, Rivendell, Mordor, etc.) with generic placeholders or remove the hardcoded coordinate map entirely (since regions are dynamic)
-
----
+4. **Belt UI**: A new small section appears in the Character Panel below the equipment grid showing the belt's potion slots with the loaded potions and use/remove buttons.
 
 ## Technical Details
 
-### 1. Database Migration (single migration)
-```sql
--- Rename app_role enum values
-ALTER TYPE public.app_role RENAME VALUE 'valar' TO 'overlord';
-ALTER TYPE public.app_role RENAME VALUE 'maiar' TO 'steward';
+### Database Change
+- Add a `belt_slot` smallint column (nullable) to `character_inventory` table. When set (1, 2, 3...), the potion is loaded in that belt slot. NULL means it's just in the bag.
 
--- Rename character_race enum values
-ALTER TYPE public.character_race RENAME VALUE 'hobbit' TO 'halfling';
-ALTER TYPE public.character_race RENAME VALUE 'dunedain' TO 'edain';
-```
+### Belt Capacity
+- Each belt item will use a new stat key `potion_slots` in its `stats` JSON (e.g., `{"potion_slots": 3, "con": 1}`). Default to 3 if a belt is equipped but has no explicit value. No belt equipped = 0 slots.
 
-### 2. Database Functions to Update
-- `is_valar()` -> `is_overlord()`
-- `is_maiar_or_valar()` -> `is_steward_or_overlord()`
-- All RLS policies referencing these functions must be dropped and recreated
+### Code Changes
 
-### 3. Files to Modify
+**`src/hooks/useInventory.ts`**
+- Add a `beltPotion` / `unbeltPotion` function to set/clear the `belt_slot` column on a consumable inventory row.
+- Expose `beltedPotions` (inventory items where `belt_slot IS NOT NULL` and item_type = consumable).
+- Expose `beltCapacity` derived from the equipped belt's `potion_slots` stat.
 
-**Frontend (role references -- "valar"/"maiar" -> "overlord"/"steward"):**
-- `src/hooks/useRole.ts`
-- `src/pages/Index.tsx`
-- `src/pages/AdminPage.tsx`
-- `src/components/admin/UserManager.tsx`
-- `src/components/admin/NodeEditorPanel.tsx`
-- `src/components/admin/NodeEditorDialog.tsx`
-- `src/components/admin/RegionManager.tsx`
+**`src/components/game/CharacterPanel.tsx`**
+- Add a "Belt Potions" section below the equipment grid showing occupied belt slots.
+- Each slot shows the potion name with a Use button (heart icon) and an Unload button.
+- Empty slots show an "Empty" placeholder.
+- When out of combat: show a "Load" button next to consumable potions in the inventory to assign them to an open belt slot.
+- When in combat: hide Load/Unload buttons; only show Use on belted potions.
+- Hide the existing Use (heart) button on non-belted consumables.
 
-**Frontend (race + game title + descriptions):**
-- `src/lib/game-data.ts` -- rename hobbit/dunedain keys and descriptions
-- `src/pages/AuthPage.tsx` -- title
-- `src/pages/GamePage.tsx` -- title
-- `index.html` -- title and meta tags
-- `src/components/admin/AdminWorldMapView.tsx` -- remove Tolkien region coordinates
+**`src/pages/GamePage.tsx`**
+- Pass `inCombat` state down to `CharacterPanel` so it can conditionally show/hide load/unload/use buttons.
+- Update `handleUseConsumable` to work as before (it already takes an inventoryId).
 
-**Edge Functions:**
-- `supabase/functions/admin-users/index.ts` -- role checks + race stats
-- `supabase/functions/ai-world-builder/index.ts` -- role checks + system prompt
-
-### 4. Existing Data Considerations
-- The DB enum rename (`ALTER TYPE ... RENAME VALUE`) updates all existing rows automatically -- no data migration needed
-- Any existing regions in the database with Tolkien names (e.g., "The Shire") will remain as-is in the data; only the hardcoded coordinate map in the admin view changes. You can rename those regions manually via the admin UI if desired.
-
-### 5. Sequence
-1. Run the database migration (enum renames + function renames + RLS policy recreation)
-2. Update both edge functions
-3. Update all frontend files
-4. Deploy edge functions
+### Existing belt item update
+- Update the existing "An Iron Belt" item's stats JSON to include `"potion_slots": 3` via a migration.
 
