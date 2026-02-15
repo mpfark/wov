@@ -6,7 +6,7 @@ import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
 import BlacksmithPanel from '@/components/game/BlacksmithPanel';
 import LootShareDialog, { LootDrop } from '@/components/game/LootShareDialog';
-import StatAllocationDialog from '@/components/game/StatAllocationDialog';
+
 import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
@@ -717,8 +717,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       {/* NPC Dialog */}
       <NPCDialogPanel npc={talkingToNPC} open={!!talkingToNPC} onClose={() => setTalkingToNPC(null)} />
 
-      {/* Stat Allocation Dialog */}
-      <StatAllocationDialog character={character} onAllocate={updateCharacter} />
+
+
 
       {/* Death Overlay */}
       {isDead && (
