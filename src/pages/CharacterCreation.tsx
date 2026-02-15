@@ -91,7 +91,7 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId, o
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Aragorn, Legolas, Gimli..."
+                placeholder="Theron, Mirael, Dunric..."
                 className="bg-input border-border text-lg"
                 maxLength={24}
               />
