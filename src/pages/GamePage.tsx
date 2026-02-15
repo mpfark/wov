@@ -18,7 +18,8 @@ import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
 import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
-import { CLASS_COMBAT } from '@/lib/class-abilities';
+import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
+import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -53,6 +54,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
+  const [abilityCooldownEnd, setAbilityCooldownEnd] = useState(0);
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -460,6 +462,31 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
 
+  const handleUseAbility = useCallback(async () => {
+    if (isDead || character.hp <= 0) return;
+    const ability = CLASS_ABILITIES[character.class];
+    if (!ability) return;
+    if (Date.now() < abilityCooldownEnd) return;
+
+    if (ability.type === 'heal') {
+      const wisMod = getStatMod2(character.wis);
+      const healAmount = Math.max(3, wisMod * 3 + character.level);
+      const newHp = Math.min(character.max_hp, character.hp + healAmount);
+      const restored = newHp - character.hp;
+      if (restored > 0) {
+        await updateCharacter({ hp: newHp });
+        addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`);
+      } else {
+        addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
+      }
+    } else if (ability.type === 'regen_buff') {
+      setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
+      addLog(`${ability.emoji} You play an inspiring song! HP regeneration doubled for 90 seconds.`);
+    }
+
+    setAbilityCooldownEnd(Date.now() + ability.cooldownMs);
+  }, [isDead, character, abilityCooldownEnd, updateCharacter, addLog]);
+
   const handleSpendPoint = useCallback(async (stat: string) => {
     if (character.unspent_stat_points <= 0) return;
     const currentVal = (character as any)[stat] as number;
@@ -553,6 +580,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
                   inCombat={inCombat}
                   activeCombatCreatureId={activeCombatCreatureId}
+                  classAbility={CLASS_ABILITIES[character.class] || null}
+                  abilityCooldownEnd={abilityCooldownEnd}
+                  onUseAbility={handleUseAbility}
                 />
               </div>
               {/* Event Log - docked at bottom of middle column, 1/3 height */}

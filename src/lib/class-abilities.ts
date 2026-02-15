@@ -16,3 +16,28 @@ export const CLASS_COMBAT: Record<string, ClassCombat> = {
   healer:  { label: 'Smite',         stat: 'wis', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '⭐', verb: 'channel divine light against' },
   bard:    { label: 'Mock',          stat: 'cha', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '🎵', verb: 'unleash cutting words upon' },
 };
+
+export interface ClassAbility {
+  label: string;
+  emoji: string;
+  description: string;
+  cooldownMs: number;
+  type: 'heal' | 'regen_buff';
+}
+
+export const CLASS_ABILITIES: Record<string, ClassAbility> = {
+  healer: {
+    label: 'Heal',
+    emoji: '💚',
+    description: 'Restore HP based on your Wisdom',
+    cooldownMs: 30000,
+    type: 'heal',
+  },
+  bard: {
+    label: 'Inspire',
+    emoji: '🎶',
+    description: 'A song that boosts HP regeneration',
+    cooldownMs: 60000,
+    type: 'regen_buff',
+  },
+};
