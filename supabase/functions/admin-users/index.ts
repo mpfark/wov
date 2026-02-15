@@ -39,7 +39,7 @@ async function verifyAdmin(req: Request) {
     .maybeSingle();
 
   const callerRole = roleData?.role;
-  if (callerRole !== "maiar" && callerRole !== "valar") throw { status: 403, message: "Forbidden" };
+  if (callerRole !== "steward" && callerRole !== "overlord") throw { status: 403, message: "Forbidden" };
 
   return { adminClient, callerRole, userId };
 }
@@ -117,12 +117,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, message: "Password reset link generated" });
     }
 
-    // UPDATE USER ROLE (valar only)
+    // UPDATE USER ROLE (overlord only)
     if (action === "set-role" && req.method === "POST") {
-      if (callerRole !== "valar") return jsonResponse({ error: "Only Valar can change roles" }, 403);
+      if (callerRole !== "overlord") return jsonResponse({ error: "Only Overlords can change roles" }, 403);
       const { user_id, role } = await req.json();
       if (!user_id || !role) throw new Error("user_id and role required");
-      if (!["player", "maiar", "valar"].includes(role)) throw new Error("Invalid role");
+      if (!["player", "steward", "overlord"].includes(role)) throw new Error("Invalid role");
 
       const { data: existing } = await adminClient.from("user_roles").select("id").eq("user_id", user_id).maybeSingle();
       if (existing) {
@@ -133,9 +133,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true });
     }
 
-    // BAN / UNBAN USER (valar only)
+    // BAN / UNBAN USER (overlord only)
     if (action === "ban" && req.method === "POST") {
-      if (callerRole !== "valar") return jsonResponse({ error: "Only Valar can ban users" }, 403);
+      if (callerRole !== "overlord") return jsonResponse({ error: "Only Overlords can ban users" }, 403);
       const { user_id, ban_duration } = await req.json();
       if (!user_id) throw new Error("user_id required");
       await adminClient.auth.admin.updateUserById(user_id, {
@@ -308,8 +308,8 @@ Deno.serve(async (req) => {
         human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
         elf:      { str: 0, dex: 2, con: 0, int: 1, wis: 1, cha: 0 },
         dwarf:    { str: 2, dex: 0, con: 2, int: 0, wis: 1, cha: -1 },
-        hobbit:   { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
-        dunedain: { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
+      halfling: { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
+      edain:    { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
         half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 2 },
       };
       const CLASS_STATS: Record<string, Record<string, number>> = {

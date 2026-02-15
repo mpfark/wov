@@ -31,7 +31,7 @@ serve(async (req) => {
 
     const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const roles = (roleData || []).map((r: any) => r.role);
-    if (!roles.includes("maiar") && !roles.includes("valar")) {
+    if (!roles.includes("steward") && !roles.includes("overlord")) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
     }
 
@@ -116,7 +116,7 @@ IMPORTANT RULES FOR EXPANSION:
       }
     }
 
-    const systemPrompt = `You are a Middle-earth world builder for a text-based RPG. You generate regions, nodes, creatures, and NPCs that fit Tolkien's lore.
+    const systemPrompt = `You are a high-fantasy world builder for a text-based RPG called "Wayfarers of Eldara". You generate regions, nodes, creatures, and NPCs that fit the world's lore. Generate original names and content inspired by classic high-fantasy settings but NOT taken directly from any copyrighted works (e.g. do not use names from Tolkien, D&D, or other franchises).
 
 CURRENT WORLD STATE:
 ${worldSummary || "No regions exist yet."}
@@ -124,7 +124,7 @@ ${expandContext}
 
 RULES:
 - Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
-- ALL names (region, node, creature, NPC, item) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead (e.g. "Lorien" not "Lórien", "Udun" not "Údûn").
+- ALL names (region, node, creature, NPC, item) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead.
 - Every region should have at least one inn node for resting
 - Creature levels must match the region's level range
 - Creature stats use: str, dex, con, int, wis, cha (range 5-30 based on level)
@@ -138,6 +138,7 @@ RULES:
 - Connections between nodes you generate should be bidirectional
 - Generate 2-4 creatures per node (mix of aggressive and passive)
 - Generate 1-2 NPCs for inn/vendor/blacksmith nodes
+- Create original fantasy names that evoke a sense of ancient, mythic world-building
 
 Call the generate_world tool with the structured output.`;
 

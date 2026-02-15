@@ -70,7 +70,7 @@ const Index = () => {
     if (!startingNode) {
       return (
         <div className="flex min-h-screen items-center justify-center parchment-bg">
-          <p className="font-display text-muted-foreground">No world data found. A Valar must seed the world.</p>
+          <p className="font-display text-muted-foreground">No world data found. An Overlord must seed the world.</p>
         </div>
       );
     }

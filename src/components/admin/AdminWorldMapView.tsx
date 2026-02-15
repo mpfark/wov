@@ -30,22 +30,8 @@ interface Props {
   onAddNodeAdjacent: (fromId: string) => void;
 }
 
-// Geographic coordinates for known Middle-earth regions on a ~2000x1200 canvas
-const REGION_COORDINATES: Record<string, { x: number; y: number }> = {
-  'The Shire':       { x: 250,  y: 500 },
-  'Bree-land':       { x: 550,  y: 450 },
-  'The Lone-lands':  { x: 900,  y: 420 },
-  'The Trollshaws':  { x: 1250, y: 380 },
-  'Rivendell':       { x: 1600, y: 350 },
-  // Future regions
-  'Moria':           { x: 1500, y: 650 },
-  'Rohan':           { x: 1200, y: 800 },
-  'Gondor':          { x: 1400, y: 1000 },
-  'Mordor':          { x: 1700, y: 900 },
-  'Fangorn':         { x: 1050, y: 650 },
-  'Isengard':        { x: 950,  y: 750 },
-  'The Misty Mountains': { x: 1400, y: 500 },
-};
+// Dynamic region placement — no hardcoded coordinates; all regions are laid out automatically
+const REGION_COORDINATES: Record<string, { x: number; y: number }> = {};
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],

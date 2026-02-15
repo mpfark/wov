@@ -112,7 +112,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           <ArrowLeft className="w-3 h-3 mr-1" /> Back
         </Button>
         <h1 className="font-display text-sm text-primary text-glow">
-          {isValar ? '⚡ Valar' : '✨ Maiar'} World Editor
+          {isValar ? '⚡ Overlord' : '✨ Steward'} World Editor
         </h1>
         <div className="flex-1" />
       </div>

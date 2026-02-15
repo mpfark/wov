@@ -655,8 +655,8 @@ export default function UserManager({ isValar }: Props) {
 
   const roleBadge = (role: string) => {
     const colors: Record<string, string> = {
-      valar: 'bg-primary/20 text-primary border-primary/40',
-      maiar: 'bg-chart-2/20 text-chart-2 border-chart-2/40',
+      overlord: 'bg-primary/20 text-primary border-primary/40',
+      steward: 'bg-chart-2/20 text-chart-2 border-chart-2/40',
       player: 'bg-muted text-muted-foreground border-border',
     };
     return <Badge variant="outline" className={`text-[10px] ${colors[role] || colors.player}`}>{role}</Badge>;
@@ -783,8 +783,8 @@ export default function UserManager({ isValar }: Props) {
                         </SelectTrigger>
                         <SelectContent className="bg-popover border-border z-50">
                           <SelectItem value="player" className="text-xs">Player</SelectItem>
-                          <SelectItem value="maiar" className="text-xs">Maiar</SelectItem>
-                          <SelectItem value="valar" className="text-xs">Valar</SelectItem>
+                          <SelectItem value="steward" className="text-xs">Steward</SelectItem>
+                          <SelectItem value="overlord" className="text-xs">Overlord</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
