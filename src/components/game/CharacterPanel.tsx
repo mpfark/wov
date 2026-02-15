@@ -388,16 +388,19 @@ export default function CharacterPanel({
         {/* Inventory */}
         <div>
           <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-            Inventory ({unequipped.length})
+            Inventory ({unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined).length})
           </h3>
           <div className="space-y-1 max-h-40 overflow-y-auto">
             {unequipped.length === 0 ? (
               <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>
             ) : (() => {
-              // Group unequipped items by item_id
+              // Filter out belted items — they show in the belt section
+              const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+              if (bagItems.length === 0) return <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>;
+              // Group bag items by item_id
               const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];
               const map = new Map<string, InventoryItem[]>();
-              for (const inv of unequipped) {
+              for (const inv of bagItems) {
                 const key = inv.item_id;
                 if (!map.has(key)) { map.set(key, []); grouped.push({ representative: inv, all: map.get(key)! }); }
                 map.get(key)!.push(inv);
@@ -423,13 +426,13 @@ export default function CharacterPanel({
                     </TooltipContent>
                   </Tooltip>
                   <div className="flex gap-0.5 shrink-0 ml-1">
-                    {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && !inCombat && inv.belt_slot === null && (
+                    {inv.item.item_type === 'consumable' && (inv.item.stats?.hp as number) > 0 && onUseConsumable && !inCombat && (
                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
                         onClick={() => onUseConsumable(all[0].id)}>
                         <Heart className="w-3 h-3 text-blood" />
                       </Button>
                     )}
-                    {inv.item.item_type === 'consumable' && !inCombat && onBeltPotion && beltCapacity > 0 && inv.belt_slot === null && beltedPotions.length < beltCapacity && (
+                    {inv.item.item_type === 'consumable' && !inCombat && onBeltPotion && beltCapacity > 0 && beltedPotions.length < beltCapacity && (
                       <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
                         onClick={() => onBeltPotion(all[0].id)}>
                         <ArrowUpFromLine className="w-3 h-3 text-primary" />
