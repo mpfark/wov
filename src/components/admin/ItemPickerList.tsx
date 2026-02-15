@@ -20,14 +20,15 @@ interface ItemOption {
   id: string;
   name: string;
   rarity: string;
+  level: number;
 }
 
 export default function ItemPickerList({ value, onChange, label }: ItemPickerListProps) {
   const [items, setItems] = useState<ItemOption[]>([]);
 
   useEffect(() => {
-    supabase.from('items').select('id, name, rarity').order('name').then(({ data }) => {
-      if (data) setItems(data);
+    supabase.from('items').select('id, name, rarity, level').order('name').then(({ data }) => {
+      if (data) setItems(data as ItemOption[]);
     });
   }, []);
 
@@ -86,6 +87,7 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
               {items.map(item => (
                 <SelectItem key={item.id} value={item.id}>
                   <span className={rarityColor(item.id)}>{item.name}</span>
+                  <span className="text-muted-foreground ml-1">Lv{item.level}</span>
                 </SelectItem>
               ))}
             </SelectContent>
