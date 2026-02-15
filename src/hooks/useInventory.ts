@@ -91,12 +91,15 @@ export function useInventory(characterId: string | null) {
     const inv = inventory.find(i => i.id === inventoryId);
     if (!inv || inv.item.item_type !== 'consumable') return null;
     const hpRestore = (inv.item.stats?.hp as number) || 0;
-    if (hpRestore <= 0) return null;
-    const newHp = Math.min(currentHp + hpRestore, maxHp);
-    await updateCharacter({ hp: newHp });
+    const hpRegen = (inv.item.stats?.hp_regen as number) || 0;
+    if (hpRestore <= 0 && hpRegen <= 0) return null;
+    if (hpRestore > 0) {
+      const newHp = Math.min(currentHp + hpRestore, maxHp);
+      await updateCharacter({ hp: newHp });
+    }
     await supabase.from('character_inventory').delete().eq('id', inventoryId);
     fetchInventory();
-    return { restored: newHp - currentHp, itemName: inv.item.name };
+    return { restored: hpRestore > 0 ? Math.min(hpRestore, maxHp - currentHp) : 0, itemName: inv.item.name, hpRegen };
   }, [inventory, fetchInventory]);
 
   const equipped = inventory.filter(i => i.equipped_slot);
