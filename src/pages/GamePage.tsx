@@ -62,7 +62,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const ownLogIdsRef = useRef<Set<string>>(new Set());
 
   const addLog = useCallback((msg: string) => {
-    setEventLog(prev => [...prev.slice(-49), msg]);
+    // Strip internal buff tags from the displayed message
+    const displayMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
+    setEventLog(prev => [...prev.slice(-49), displayMsg]);
     // Also write to party combat log if in a party, and track own IDs to prevent duplicates
     (async () => {
       const id = await addPartyCombatLog(msg);
@@ -79,6 +81,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         seenIdsRef.current.add(entry.id);
         // Skip entries we created ourselves
         if (ownLogIdsRef.current.has(entry.id)) continue;
+        // Detect inspire buff signal from a party bard
+        if (entry.message.includes('[INSPIRE_BUFF]')) {
+          setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
+          const cleanMsg = entry.message.replace('[INSPIRE_BUFF]', '').trim();
+          setEventLog(prev => [...prev.slice(-49), cleanMsg]);
+          continue;
+        }
         setEventLog(prev => [...prev.slice(-49), entry.message]);
       }
     }
@@ -481,7 +490,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
     } else if (ability.type === 'regen_buff') {
       setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
-      addLog(`${ability.emoji} You play an inspiring song! HP regeneration doubled for 90 seconds.`);
+      const inspireMsg = `${ability.emoji} ${character.name} plays an inspiring song! HP regeneration doubled for 90 seconds.`;
+      if (party) {
+        // Tag message so party members auto-apply the buff
+        addLog(`${inspireMsg}[INSPIRE_BUFF]`);
+      } else {
+        addLog(inspireMsg);
+      }
     }
 
     setAbilityCooldownEnd(Date.now() + ability.cooldownMs);
