@@ -470,8 +470,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
     if (result) {
-      addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
-      logActivity(character.user_id, character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
+      if (result.restored > 0) {
+        addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
+        logActivity(character.user_id, character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
+      } else {
+        addLog(`🍞 You consumed ${result.itemName}.`);
+        logActivity(character.user_id, character.id, 'general', `Consumed ${result.itemName}`);
+      }
       // Apply regen buff: 3x regen for 2 minutes
       setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
       addLog(`✨ HP regeneration boosted for 2 minutes!`);
