@@ -78,7 +78,11 @@ const Index = () => {
     }
     return (
       <CharacterCreation
-        onCreateCharacter={createCharacter}
+        onCreateCharacter={async (data) => {
+          const result = await createCharacter(data);
+          setShowCreateNew(false);
+          return result;
+        }}
         startingNodeId={startingNode.id}
         onBack={characters.length > 0 ? () => setShowCreateNew(false) : undefined}
       />
