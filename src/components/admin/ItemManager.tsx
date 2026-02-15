@@ -75,6 +75,7 @@ export default function ItemManager() {
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [typeTab, setTypeTab] = useState<string>('all');
+  const [slotTab, setSlotTab] = useState<string>('all');
   const [loading, setLoading] = useState(false);
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
@@ -174,6 +175,9 @@ export default function ItemManager() {
 
   const filtered = items.filter(i => {
     if (typeTab !== 'all' && i.item_type !== typeTab) return false;
+    if ((typeTab === 'equipment' || typeTab === 'shield') && slotTab !== 'all') {
+      if (i.slot !== slotTab) return false;
+    }
     if (!filter) return true;
     return i.name.toLowerCase().includes(filter.toLowerCase()) ||
       i.rarity.includes(filter.toLowerCase());
@@ -197,7 +201,7 @@ export default function ItemManager() {
           {['all', ...ITEM_TYPES].map(t => (
             <button
               key={t}
-              onClick={() => setTypeTab(t)}
+              onClick={() => { setTypeTab(t); setSlotTab('all'); }}
               className={`px-2 py-0.5 rounded text-[10px] font-display capitalize transition-colors ${
                 typeTab === t
                   ? 'bg-primary text-primary-foreground'
@@ -208,6 +212,26 @@ export default function ItemManager() {
             </button>
           ))}
         </div>
+        {(typeTab === 'equipment' || typeTab === 'shield') && (
+          <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
+            {['all', ...(typeTab === 'shield' ? ['off_hand'] : SLOTS)].map(s => {
+              const count = items.filter(i => i.item_type === typeTab && (s === 'all' || i.slot === s)).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setSlotTab(s)}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                    slotTab === s
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {s === 'all' ? 'All' : s.replace('_', ' ')} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
