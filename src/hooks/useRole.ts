@@ -26,8 +26,8 @@ export function useRole(user: User | null) {
     fetch();
   }, [user]);
 
-  const isAdmin = role === 'maiar' || role === 'valar';
-  const isValar = role === 'valar';
+  const isAdmin = role === 'steward' || role === 'overlord';
+  const isValar = role === 'overlord';
 
   return { role, loading, isAdmin, isValar };
 }

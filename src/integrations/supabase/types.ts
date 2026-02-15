@@ -680,10 +680,10 @@ export type Database = {
         Args: { _heal_amount: number; _healer_id: string; _target_id: string }
         Returns: number
       }
-      is_maiar_or_valar: { Args: never; Returns: boolean }
+      is_overlord: { Args: never; Returns: boolean }
       is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
-      is_valar: { Args: never; Returns: boolean }
+      is_steward_or_overlord: { Args: never; Returns: boolean }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
       regen_creature_hp: { Args: never; Returns: undefined }
       respawn_creatures: { Args: never; Returns: undefined }
@@ -694,7 +694,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "player" | "maiar" | "valar"
+      app_role: "player" | "steward" | "overlord"
       character_class:
         | "warrior"
         | "wizard"
@@ -706,8 +706,8 @@ export type Database = {
         | "human"
         | "elf"
         | "dwarf"
-        | "hobbit"
-        | "dunedain"
+        | "halfling"
+        | "edain"
         | "half_elf"
       creature_rarity: "regular" | "rare" | "boss"
       item_rarity: "common" | "uncommon" | "rare" | "unique"
@@ -851,7 +851,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["player", "maiar", "valar"],
+      app_role: ["player", "steward", "overlord"],
       character_class: [
         "warrior",
         "wizard",
@@ -864,8 +864,8 @@ export const Constants = {
         "human",
         "elf",
         "dwarf",
-        "hobbit",
-        "dunedain",
+        "halfling",
+        "edain",
         "half_elf",
       ],
       creature_rarity: ["regular", "rare", "boss"],

@@ -36,7 +36,7 @@ export default function AuthPage() {
       <Card className="w-full max-w-md ornate-border bg-card/90 backdrop-blur">
         <CardHeader className="text-center">
           <h1 className="font-display text-2xl text-primary text-glow mb-2 leading-tight">
-            Wayfarers of Arda
+            Wayfarers of Eldara
           </h1>
           <CardTitle className="font-display text-xl text-foreground">
             {isLogin ? 'Enter the Realm' : 'Join the Fellowship'}
@@ -53,7 +53,7 @@ export default function AuthPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="gandalf@middleearth.com"
+                placeholder="wayfarer@eldara.com"
                 required
                 className="mt-1 bg-input border-border"
               />

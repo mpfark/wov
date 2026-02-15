@@ -3,8 +3,8 @@ export const RACE_STATS: Record<string, Record<string, number>> = {
   human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
   elf:      { str: 0, dex: 2, con: 0, int: 1, wis: 1, cha: 0 },
   dwarf:    { str: 2, dex: 0, con: 2, int: 0, wis: 1, cha: -1 },
-  hobbit:   { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
-  dunedain: { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
+  halfling: { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
+  edain:    { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
   half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 2 },
 };
 
@@ -39,8 +39,8 @@ export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
 };
 
 export const RACE_LABELS: Record<string, string> = {
-  human: 'Human', elf: 'Elf', dwarf: 'Dwarf', hobbit: 'Hobbit',
-  dunedain: 'Dúnedain', half_elf: 'Half-Elf',
+  human: 'Human', elf: 'Elf', dwarf: 'Dwarf', halfling: 'Halfling',
+  edain: 'Edain', half_elf: 'Half-Elf',
 };
 
 export const CLASS_LABELS: Record<string, string> = {
@@ -50,16 +50,16 @@ export const CLASS_LABELS: Record<string, string> = {
 
 export const RACE_DESCRIPTIONS: Record<string, string> = {
   human: 'Versatile and adaptable, the race of Men brings balanced abilities to any endeavor.',
-  elf: 'Graceful and wise, the Firstborn excel in dexterity and have keen minds.',
-  dwarf: 'Stout and hardy, Durin\'s Folk are strong of arm and iron of constitution.',
-  hobbit: 'Small but nimble, Hobbits possess surprising resilience and charm.',
-  dunedain: 'Noble descendants of Númenor, blessed with endurance and long life.',
+  elf: 'Graceful and wise, the Elder Folk excel in dexterity and have keen minds.',
+  dwarf: 'Stout and hardy, the Mountain Clans are strong of arm and iron of constitution.',
+  halfling: 'Small but nimble, Halflings possess surprising resilience and charm.',
+  edain: 'Noble descendants of the Old Kingdom, blessed with endurance and long life.',
   half_elf: 'Children of two worlds, Half-Elves combine elvish grace with human charisma.',
 };
 
 export const CLASS_DESCRIPTIONS: Record<string, string> = {
   warrior: 'Masters of martial combat, clad in heavy armor with devastating melee power.',
-  wizard: 'Wielders of ancient lore and arcane power drawn from the fabric of Arda.',
+  wizard: 'Wielders of ancient lore and arcane power drawn from the fabric of the world.',
   ranger: 'Swift hunters and trackers of the wild, deadly with bow and blade.',
   rogue: 'Shadow-walkers skilled in stealth, cunning strikes, and misdirection.',
   healer: 'Servants of light who mend wounds and bolster allies through divine grace.',
