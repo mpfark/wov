@@ -17,7 +17,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,26 +112,35 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [regenTick, setRegenTick] = useState(false);
 
   // Refs for regen to avoid stale closures resetting the timer
-  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id });
+  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con });
   const regenBuffRef = useRef(regenBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
-  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id }; }, [character.hp, character.max_hp, character.current_node_id]);
+  const equippedRef = useRef(equipped);
+  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con }; }, [character.hp, character.max_hp, character.current_node_id, character.con]);
   useEffect(() => { regenBuffRef.current = regenBuff; }, [regenBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
+  useEffect(() => { equippedRef.current = equipped; }, [equipped]);
 
-  // Passive HP regeneration — 1 HP every 30s, multiplied by regen buff and inn bonus
+  // Compute item hp_regen for display
+  const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
+  const baseRegen = getBaseRegen(character.con + (equipmentBonuses.con || 0));
+
+  // Passive HP regeneration — CON-based + item regen, multiplied by regen buff and inn bonus
   useEffect(() => {
     const interval = setInterval(() => {
-      const { hp, max_hp, current_node_id } = regenCharRef.current;
+      const { hp, max_hp, current_node_id, con } = regenCharRef.current;
       if (hp < max_hp && hp > 0) {
         const buff = regenBuffRef.current;
         const potionMult = Date.now() < buff.expiresAt ? buff.multiplier : 1;
         const node = current_node_id ? getNodeRef.current(current_node_id) : null;
         const innMult = node?.is_inn ? 3 : 1;
         const totalMult = potionMult * innMult;
-        const regenAmount = Math.max(Math.floor(1 * totalMult), 1);
+        const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
+        const conRegen = getBaseRegen(conWithGear);
+        const itemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
+        const regenAmount = Math.max(Math.floor((conRegen + itemRegen) * totalMult), 1);
         const newHp = Math.min(hp + regenAmount, max_hp);
         if (newHp !== hp) {
           updateCharRegenRef.current({ hp: newHp });
@@ -591,6 +600,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 onBeltPotion={beltPotion}
                 onUnbeltPotion={unbeltPotion}
                 inCombat={inCombat}
+                baseRegen={baseRegen}
+                itemHpRegen={itemHpRegen}
               />
             </div>
           </ResizablePanel>
