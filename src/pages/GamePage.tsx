@@ -528,6 +528,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
         }
       }
+    } else if (ability.type === 'self_heal') {
+      const conMod = getStatMod2(character.con);
+      const healAmount = Math.max(3, conMod * 3 + character.level);
+      const newHp = Math.min(character.max_hp, character.hp + healAmount);
+      const restored = newHp - character.hp;
+      if (restored > 0) {
+        await updateCharacter({ hp: newHp });
+        addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`);
+      } else {
+        addLog(`${ability.emoji} You use Second Wind but you're already at full health.`);
+      }
     } else if (ability.type === 'regen_buff') {
       setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
       const inspireMsg = `${ability.emoji} ${character.name} plays an inspiring song! HP regeneration doubled for 90 seconds.`;
