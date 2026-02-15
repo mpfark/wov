@@ -595,7 +595,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex">
         {/* Left: Character Panel — fit content */}
-        <div className="h-full w-72 shrink-0 ornate-border bg-card/60 overflow-y-auto">
+        <div className="h-full w-96 shrink-0 ornate-border bg-card/60 overflow-y-auto">
           <CharacterPanel
             character={character}
             equipped={equipped}
@@ -670,7 +670,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         </div>
 
         {/* Right: Map + Party — fit content */}
-        <div className="h-full w-80 shrink-0 ornate-border bg-card/60 overflow-y-auto">
+        <div className="h-full w-96 shrink-0 ornate-border bg-card/60 overflow-y-auto">
           <MapPanel
             regions={regions}
             nodes={nodes}
