@@ -215,19 +215,21 @@ export default function NodeView({
           </Button>
         )}
         {beltedPotions.length > 0 && onUseBeltPotion && (
-          <div className="mt-1.5 space-y-1">
-            <h4 className="font-display text-[10px] text-muted-foreground">Belt Potions</h4>
-            {beltedPotions.map(p => (
-              <Button
-                key={p.id}
-                variant="outline"
-                size="sm"
-                onClick={() => onUseBeltPotion(p.id)}
-                className="w-full font-display text-xs text-blood border-blood/30"
-              >
-                🧪 Use {p.item.name}
-              </Button>
-            ))}
+          <div className="mt-1.5">
+            <h4 className="font-display text-[10px] text-muted-foreground mb-1">Belt Potions</h4>
+            <div className="flex flex-wrap gap-1">
+              {beltedPotions.map(p => (
+                <Button
+                  key={p.id}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onUseBeltPotion(p.id)}
+                  className="font-display text-xs text-blood border-blood/30 h-7 px-2"
+                >
+                  🧪 {p.item.name}
+                </Button>
+              ))}
+            </div>
           </div>
         )}
       </div>
