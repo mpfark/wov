@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
@@ -94,6 +95,51 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 }
 
 
+function ActiveBuffs({ isAtInn, regenBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number } }) {
+  const [now, setNow] = useState(Date.now());
+  const buffActive = regenBuff && now < regenBuff.expiresAt;
+
+  useEffect(() => {
+    if (!buffActive && !isAtInn) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [buffActive, isAtInn]);
+
+  const buffs: { emoji: string; label: string; detail: string; color: string }[] = [];
+
+  if (isAtInn) {
+    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '3× regen', color: 'text-elvish' });
+  }
+
+  if (buffActive) {
+    const secsLeft = Math.ceil((regenBuff!.expiresAt - now) / 1000);
+    const isInspire = regenBuff!.multiplier === 2;
+    buffs.push({
+      emoji: isInspire ? '🎶' : '🧪',
+      label: isInspire ? 'Inspire' : 'Potion',
+      detail: `${regenBuff!.multiplier}× regen · ${secsLeft}s`,
+      color: isInspire ? 'text-elvish' : 'text-primary',
+    });
+  }
+
+  if (buffs.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {buffs.map(b => (
+        <span
+          key={b.label}
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-background/40 text-[10px] font-display ${b.color}`}
+        >
+          <span>{b.emoji}</span>
+          <span>{b.label}</span>
+          <span className="text-muted-foreground">{b.detail}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
   isAtInn, regenBuff, regenTick,
@@ -156,6 +202,9 @@ export default function CharacterPanel({
             )}
           </TooltipContent>
         </Tooltip>
+
+        {/* Active Buffs */}
+        <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} />
 
         {/* XP Bar */}
         <div>
