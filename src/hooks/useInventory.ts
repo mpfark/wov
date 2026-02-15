@@ -99,7 +99,7 @@ export function useInventory(characterId: string | null) {
     }
     await supabase.from('character_inventory').delete().eq('id', inventoryId);
     fetchInventory();
-    return { restored: hpRestore > 0 ? Math.min(hpRestore, maxHp - currentHp) : 0, itemName: inv.item.name, hpRegen };
+    return { restored: hpRestore > 0 ? Math.min(hpRestore, maxHp - currentHp) : 0, itemName: inv.item.name, hpRegen, isPotion: hpRestore > 0 };
   }, [inventory, fetchInventory]);
 
   const equipped = inventory.filter(i => i.equipped_slot);
