@@ -4,6 +4,7 @@ import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
 import { PartyMember } from '@/hooks/useParty';
+import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
@@ -30,11 +31,14 @@ interface Props {
   abilityCooldownEnd?: number;
   onUseAbility?: (targetId?: string) => void;
   healTargets?: { id: string; name: string; hp: number; max_hp: number }[];
+  beltedPotions?: InventoryItem[];
+  onUseBeltPotion?: (inventoryId: string) => void;
 }
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
   inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbility, abilityCooldownEnd = 0, onUseAbility, healTargets = [],
+  beltedPotions = [], onUseBeltPotion,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [healTarget, setHealTarget] = useState<string>('self');
@@ -209,6 +213,22 @@ export default function NodeView({
           <Button variant="outline" size="sm" onClick={onOpenBlacksmith} className="w-full mt-1.5 font-display text-xs text-dwarvish">
             🔨 Open Blacksmith
           </Button>
+        )}
+        {beltedPotions.length > 0 && onUseBeltPotion && (
+          <div className="mt-1.5 space-y-1">
+            <h4 className="font-display text-[10px] text-muted-foreground">Belt Potions</h4>
+            {beltedPotions.map(p => (
+              <Button
+                key={p.id}
+                variant="outline"
+                size="sm"
+                onClick={() => onUseBeltPotion(p.id)}
+                className="w-full font-display text-xs text-blood border-blood/30"
+              >
+                🧪 Use {p.item.name}
+              </Button>
+            ))}
+          </div>
         )}
       </div>
     </div>
