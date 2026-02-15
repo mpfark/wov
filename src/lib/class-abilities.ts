@@ -22,10 +22,17 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff';
+  type: 'heal' | 'regen_buff' | 'self_heal';
 }
 
 export const CLASS_ABILITIES: Record<string, ClassAbility> = {
+  warrior: {
+    label: 'Second Wind',
+    emoji: '💪',
+    description: 'Catch your breath and recover HP based on CON',
+    cooldownMs: 45000,
+    type: 'self_heal',
+  },
   healer: {
     label: 'Heal',
     emoji: '💚',
