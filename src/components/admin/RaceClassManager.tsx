@@ -13,7 +13,7 @@ import {
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
   STAT_LABELS, CLASS_LEVEL_BONUSES,
 } from '@/lib/game-data';
-import { CLASS_COMBAT } from '@/lib/class-abilities';
+import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
@@ -144,6 +144,19 @@ export default function RaceClassManager() {
                             <div className="text-muted-foreground">
                               {STAT_LABELS[combat.stat]} · {combat.diceMin}d{combat.diceMax} damage
                               {combat.critRange < 20 && ` · Crit ${combat.critRange}-20`}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Class Ability */}
+                      {CLASS_ABILITIES[cls] && (
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Class Ability</p>
+                          <div className="text-xs bg-secondary/50 rounded p-2 space-y-0.5">
+                            <div className="font-medium">{CLASS_ABILITIES[cls].emoji} {CLASS_ABILITIES[cls].label}</div>
+                            <div className="text-muted-foreground">
+                              {CLASS_ABILITIES[cls].description} · {CLASS_ABILITIES[cls].cooldownMs / 1000}s cooldown
                             </div>
                           </div>
                         </div>
