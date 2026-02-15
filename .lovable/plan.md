@@ -1,37 +1,52 @@
 
 
-## Add "Humanoid" Toggle for Auto-Scaled Gold Drops
+## Class Abilities: Healer Spells and Bard Songs
 
-### Problem
-Manually configuring gold min/max/chance for every humanoid creature is tedious. You want a quick way to flag a creature as humanoid so it automatically carries gold appropriate to its level.
+### Overview
+Add two class-specific active abilities that players can trigger manually:
+- **Healer -- "Heal"**: A direct healing spell that restores HP to self (or a party member in future), with a cooldown
+- **Bard -- "Inspire"**: A song that grants a regen buff (similar to potions), with a cooldown
 
-### Solution
-Add an **"Is Humanoid"** checkbox to the Creature Manager. When enabled, gold drop values are auto-calculated from the creature's level and rarity, removing the need to manually set them each time.
+### Design Decisions
 
-### How It Works
+**Cooldown system**: Client-side cooldowns (no database changes needed). Cooldowns reset on page refresh, which is acceptable since these are short utility abilities, not game-breaking powers.
 
-- A new `is_humanoid` column is added to the `creatures` table (boolean, default false)
-- When the checkbox is toggled ON in the editor, gold min/max/chance fields are auto-filled using a formula based on level and rarity, and the fields become read-only (showing calculated values)
-- When toggled OFF, the gold fields revert to manual entry (reset to 0)
-- The auto-gold values scale like this:
-  - **Min gold**: `level * 1` (multiplied by rarity: regular x1, rare x1.5, boss x3)
-  - **Max gold**: `level * 3` (multiplied by rarity)
-  - **Chance**: always `1.0` for humanoids (they always carry gold)
+**Healing formula (Healer)**:
+- Restores `WIS modifier * 3 + character level` HP (minimum 3)
+- 30-second cooldown
+- Usable in and out of combat
 
-Example at level 10: regular humanoid drops 10-30 gold, rare drops 15-45, boss drops 30-90.
+**Regen buff formula (Bard)**:
+- Grants a 2x regen multiplier for 90 seconds (stacks multiplicatively with inn/potion like existing buffs)
+- 60-second cooldown
+- Usable in and out of combat
+
+### UI
+- An "Ability" button appears in the **NodeView** actions area (bottom), only for healer and bard classes
+- Shows the ability name, emoji, and remaining cooldown if on cooldown
+- Healer sees: "Heal" button
+- Bard sees: "Inspire" button
+
+---
 
 ### Technical Details
 
-1. **Database migration**: Add `is_humanoid boolean NOT NULL DEFAULT false` to the `creatures` table
+**Files to modify:**
 
-2. **`src/lib/game-data.ts`**: Add a `calculateHumanoidGold(level, rarity)` function returning `{ min, max, chance }`
+1. **`src/lib/class-abilities.ts`** -- Add a new `CLASS_ABILITIES` definition alongside the existing `CLASS_COMBAT`:
+   - Each entry defines: label, emoji, description, cooldownMs, and a type (`heal` or `regen_buff`)
+   - Only healer and bard get entries for now
 
-3. **`src/components/admin/CreatureManager.tsx`**:
-   - Add `is_humanoid` to the form state
-   - Add a checkbox labeled "Humanoid (auto gold)" next to the existing "Aggressive" checkbox
-   - When `is_humanoid` is toggled on, auto-fill gold_min, gold_max, gold_chance from the formula and make those inputs disabled/read-only
-   - When level or rarity changes while humanoid is on, recalculate gold values automatically
-   - Persist `is_humanoid` to the database on save
+2. **`src/pages/GamePage.tsx`** -- Add ability state and handler:
+   - `abilityCooldownEnd` state (timestamp when cooldown expires)
+   - `handleUseAbility()` function that:
+     - For healer: calculates heal amount, calls `updateCharacter({ hp: newHp })`, logs it
+     - For bard: calls `setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 })`, logs it
+   - Pass ability info and handler down to NodeView
 
-4. **`src/hooks/useCombat.ts`** (or wherever loot is resolved): No changes needed -- gold is already read from the creature's `loot_table` at combat time, so the humanoid flag just affects how the loot_table is built in the admin editor.
+3. **`src/components/game/NodeView.tsx`** -- Add ability button:
+   - New prop for ability data, cooldown state, and onUseAbility callback
+   - Render an ability button in the Actions section when the character's class has an ability
+   - Show cooldown countdown text when on cooldown
+   - Disable button during cooldown or when dead
 
