@@ -52,6 +52,7 @@ export function useCombat({
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
+  const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
 
   // Use refs for values accessed inside the interval to avoid stale closures
   const characterRef = useRef(character);
@@ -92,6 +93,7 @@ export function useCombat({
     inCombatRef.current = false;
     setActiveCombatCreatureId(null);
     setInCombat(false);
+    setCreatureHpOverrides({});
   }, []);
 
   // Stop combat when player dies or node changes
@@ -208,6 +210,7 @@ export function useCombat({
             totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
           }
 
+          setCreatureHpOverrides(prev => ({ ...prev, [creatureId]: 0 }));
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
 
           const membersHere = _party
@@ -280,6 +283,7 @@ export function useCombat({
           stopCombat();
           return;
         } else {
+          setCreatureHpOverrides(prev => ({ ...prev, [creatureId]: newHp }));
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: false });
         }
       } else {
@@ -369,6 +373,7 @@ export function useCombat({
   return {
     inCombat,
     activeCombatCreatureId,
+    creatureHpOverrides,
     startCombat,
     stopCombat,
   };
