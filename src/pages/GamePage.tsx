@@ -475,8 +475,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
     if (result) {
-      if (result.restored > 0) {
-        addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
+      if (result.isPotion) {
+        if (result.restored > 0) {
+          addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
+        } else {
+          addLog(`🧪 You used ${result.itemName}. You are already at full health.`);
+        }
         logActivity(character.user_id, character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
         // Potions grant a 3x regen multiplier for 2 minutes
         setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
@@ -484,7 +488,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       } else if (result.hpRegen > 0) {
         addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} regen for 2 minutes.`);
         logActivity(character.user_id, character.id, 'general', `Consumed ${result.itemName} (+${result.hpRegen} regen)`);
-        // Food grants a flat regen bonus via a special buff value (stored as negative to distinguish)
         setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 120000 });
       }
     }
