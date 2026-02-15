@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { Coins, Hammer } from 'lucide-react';
 import { InventoryItem } from '@/hooks/useInventory';
 import { calculateRepairCost } from '@/lib/game-data';
@@ -35,7 +34,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
     if (isUnrepairable(inv.item.rarity)) return;
     const cost = calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity);
     if (gold < cost) {
-      toast.error('Not enough gold!');
+      addLog('❌ Not enough gold!');
       return;
     }
     setRepairing(true);
@@ -45,7 +44,6 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
     onGoldChange(newGold);
     onInventoryChange();
     addLog(`🔨 Repaired ${inv.item.name} for ${cost} gold.`);
-    toast.success(`Repaired ${inv.item.name}`);
     setRepairing(false);
   };
 
@@ -54,7 +52,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
     const totalCost = repairableItems.reduce((sum, inv) =>
       sum + calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity), 0);
     if (gold < totalCost) {
-      toast.error('Not enough gold to repair all!');
+      addLog('❌ Not enough gold to repair all!');
       return;
     }
     setRepairing(true);
@@ -66,7 +64,6 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
     onGoldChange(newGold);
     onInventoryChange();
     addLog(`🔨 Repaired ${repairableItems.length} items for ${totalCost} gold.`);
-    toast.success(`Repaired all items`);
     setRepairing(false);
   };
 

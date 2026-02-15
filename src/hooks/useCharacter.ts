@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import type { User } from '@supabase/supabase-js';
 
 export interface Character {
@@ -92,7 +91,6 @@ export function useCharacter(user: User | null) {
     await supabase.from('party_members').delete().eq('character_id', id);
     const { error } = await supabase.from('characters').delete().eq('id', id);
     if (error) {
-      toast.error('Failed to delete character');
       throw error;
     }
   }, []);
