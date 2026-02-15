@@ -593,119 +593,110 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 min-h-0">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          <ResizablePanel defaultSize={22} minSize={18} maxSize={30}>
-            <div className="h-full ornate-border bg-card/60">
-              <CharacterPanel
-                character={character}
-                equipped={equipped}
-                unequipped={unequipped}
-                equipmentBonuses={equipmentBonuses}
-                onEquip={equipItem}
-                onUnequip={unequipItem}
-                onDrop={dropItem}
-                onUseConsumable={handleUseConsumable}
-                onSpendPoint={handleSpendPoint}
-                isAtInn={currentNode?.is_inn ?? false}
-                regenBuff={regenBuff}
-                regenTick={regenTick}
-                beltedPotions={beltedPotions}
-                beltCapacity={beltCapacity}
-                onBeltPotion={beltPotion}
-                onUnbeltPotion={unbeltPotion}
-                inCombat={inCombat}
-                baseRegen={baseRegen}
-                itemHpRegen={itemHpRegen}
-                foodBuff={foodBuff}
-              />
+      <div className="flex-1 min-h-0 flex">
+        {/* Left: Character Panel — fit content */}
+        <div className="h-full w-72 shrink-0 ornate-border bg-card/60 overflow-y-auto">
+          <CharacterPanel
+            character={character}
+            equipped={equipped}
+            unequipped={unequipped}
+            equipmentBonuses={equipmentBonuses}
+            onEquip={equipItem}
+            onUnequip={unequipItem}
+            onDrop={dropItem}
+            onUseConsumable={handleUseConsumable}
+            onSpendPoint={handleSpendPoint}
+            isAtInn={currentNode?.is_inn ?? false}
+            regenBuff={regenBuff}
+            regenTick={regenTick}
+            beltedPotions={beltedPotions}
+            beltCapacity={beltCapacity}
+            onBeltPotion={beltPotion}
+            onUnbeltPotion={unbeltPotion}
+            inCombat={inCombat}
+            baseRegen={baseRegen}
+            itemHpRegen={itemHpRegen}
+            foodBuff={foodBuff}
+          />
+        </div>
+
+        {/* Middle: Node + Event Log — flexible */}
+        <div className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col">
+          <div className="flex-[2] min-h-0">
+            <NodeView
+              node={currentNode}
+              region={currentRegion}
+              players={playersHere}
+              creatures={creatures}
+              npcs={npcs}
+              character={character}
+              eventLog={eventLog}
+              onSearch={handleSearch}
+              onAttack={handleAttack}
+              onTalkToNPC={npc => setTalkingToNPC(npc)}
+              onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
+              onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
+              inCombat={inCombat}
+              activeCombatCreatureId={activeCombatCreatureId}
+              creatureHpOverrides={creatureHpOverrides}
+              classAbility={CLASS_ABILITIES[character.class] || null}
+              abilityCooldownEnd={abilityCooldownEnd}
+              onUseAbility={handleUseAbility}
+              healTargets={
+                party && character.class === 'healer'
+                  ? partyMembers
+                      .filter(m => m.character_id !== character.id && m.status === 'accepted' && m.character.current_node_id === character.current_node_id)
+                      .map(m => ({ id: m.character_id, name: m.character.name, hp: m.character.hp, max_hp: m.character.max_hp }))
+                  : []
+              }
+              beltedPotions={beltedPotions}
+              onUseBeltPotion={handleUseConsumable}
+            />
+          </div>
+          {/* Event Log - docked at bottom of middle column, 1/3 height */}
+          <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
+            <h3 className="font-display text-xs text-muted-foreground mb-1 shrink-0">Event Log</h3>
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
+              {eventLog.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
+              ) : (
+                eventLog.map((log, i) => (
+                  <p key={i} className="text-xs text-foreground/80">{log}</p>
+                ))
+              )}
+              <div ref={logEndRef} />
             </div>
-          </ResizablePanel>
+          </div>
+        </div>
 
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={50} minSize={35}>
-            <div className="h-full ornate-border bg-card/60 flex flex-col">
-              <div className="flex-[2] min-h-0">
-                <NodeView
-                  node={currentNode}
-                  region={currentRegion}
-                  players={playersHere}
-                  creatures={creatures}
-                  npcs={npcs}
-                  character={character}
-                  eventLog={eventLog}
-                  onSearch={handleSearch}
-                  onAttack={handleAttack}
-                  onTalkToNPC={npc => setTalkingToNPC(npc)}
-                  onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
-                  onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
-                  inCombat={inCombat}
-                  activeCombatCreatureId={activeCombatCreatureId}
-                  creatureHpOverrides={creatureHpOverrides}
-                  classAbility={CLASS_ABILITIES[character.class] || null}
-                  abilityCooldownEnd={abilityCooldownEnd}
-                  onUseAbility={handleUseAbility}
-                  healTargets={
-                    party && character.class === 'healer'
-                      ? partyMembers
-                          .filter(m => m.character_id !== character.id && m.status === 'accepted' && m.character.current_node_id === character.current_node_id)
-                          .map(m => ({ id: m.character_id, name: m.character.name, hp: m.character.hp, max_hp: m.character.max_hp }))
-                      : []
-                  }
-                  beltedPotions={beltedPotions}
-                  onUseBeltPotion={handleUseConsumable}
-                />
-              </div>
-              {/* Event Log - docked at bottom of middle column, 1/3 height */}
-              <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
-                <h3 className="font-display text-xs text-muted-foreground mb-1 shrink-0">Event Log</h3>
-                <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
-                  {eventLog.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
-                  ) : (
-                    eventLog.map((log, i) => (
-                      <p key={i} className="text-xs text-foreground/80">{log}</p>
-                    ))
-                  )}
-                  <div ref={logEndRef} />
-                </div>
-              </div>
-            </div>
-          </ResizablePanel>
-
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={28} minSize={18} maxSize={35}>
-            <div className="h-full ornate-border bg-card/60">
-              <MapPanel
-                regions={regions}
-                nodes={nodes}
-                currentNodeId={character.current_node_id}
-                currentRegionId={currentNode.region_id}
-                characterLevel={character.level}
-                onNodeClick={handleMove}
-                partyMembers={partyMembers}
-                myCharacterId={character.id}
-                character={character}
-                party={party}
-                pendingInvites={pendingInvites}
-                isLeader={isLeader}
-                isTank={isTank}
-                myMembership={myMembership}
-                playersHere={playersHere}
-                onCreateParty={createParty}
-                onInvite={invitePlayer}
-                onAcceptInvite={acceptInvite}
-                onDeclineInvite={declineInvite}
-                onLeaveParty={leaveParty}
-                onKick={kickMember}
-                onSetTank={setTank}
-                onToggleFollow={toggleFollow}
-              />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+        {/* Right: Map + Party — fit content */}
+        <div className="h-full w-80 shrink-0 ornate-border bg-card/60 overflow-y-auto">
+          <MapPanel
+            regions={regions}
+            nodes={nodes}
+            currentNodeId={character.current_node_id}
+            currentRegionId={currentNode.region_id}
+            characterLevel={character.level}
+            onNodeClick={handleMove}
+            partyMembers={partyMembers}
+            myCharacterId={character.id}
+            character={character}
+            party={party}
+            pendingInvites={pendingInvites}
+            isLeader={isLeader}
+            isTank={isTank}
+            myMembership={myMembership}
+            playersHere={playersHere}
+            onCreateParty={createParty}
+            onInvite={invitePlayer}
+            onAcceptInvite={acceptInvite}
+            onDeclineInvite={declineInvite}
+            onLeaveParty={leaveParty}
+            onKick={kickMember}
+            onSetTank={setTank}
+            onToggleFollow={toggleFollow}
+          />
+        </div>
       </div>
 
 
