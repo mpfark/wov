@@ -25,6 +25,7 @@ interface Props {
   onOpenBlacksmith?: () => void;
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
+  creatureHpOverrides?: Record<string, number>;
   classAbility?: ClassAbility | null;
   abilityCooldownEnd?: number;
   onUseAbility?: (targetId?: string) => void;
@@ -33,7 +34,7 @@ interface Props {
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
-  inCombat, activeCombatCreatureId, classAbility, abilityCooldownEnd = 0, onUseAbility, healTargets = [],
+  inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbility, abilityCooldownEnd = 0, onUseAbility, healTargets = [],
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [healTarget, setHealTarget] = useState<string>('self');
@@ -98,6 +99,7 @@ export default function NodeView({
           <div className="space-y-1">
             {creatures.map(c => {
               const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
+              const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
               return (
                 <div key={c.id} className={`p-2 bg-background/50 rounded border space-y-1 ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : 'border-border'}`}>
                   <div className="flex items-center justify-between">
@@ -125,12 +127,12 @@ export default function NodeView({
                       <div
                         className="h-full rounded-full transition-all duration-300"
                         style={{
-                          width: `${Math.max((c.hp / c.max_hp) * 100, 0)}%`,
-                          backgroundColor: c.hp / c.max_hp > 0.5 ? 'hsl(var(--chart-2))' : c.hp / c.max_hp > 0.25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
+                          width: `${Math.max((displayHp / c.max_hp) * 100, 0)}%`,
+                          backgroundColor: displayHp / c.max_hp > 0.5 ? 'hsl(var(--chart-2))' : displayHp / c.max_hp > 0.25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
                         }}
                       />
                     </div>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{c.hp}/{c.max_hp}</span>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                   </div>
                 </div>
               );

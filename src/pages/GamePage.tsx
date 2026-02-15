@@ -213,7 +213,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
 
   // --- Auto-combat hook (must be before aggro effect) ---
-  const { inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn } = useCombat({
+  const { inCombat, activeCombatCreatureId, creatureHpOverrides, startCombat, stopCombat: stopCombatFn } = useCombat({
     character,
     creatures,
     updateCharacter,
@@ -610,6 +610,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
                   inCombat={inCombat}
                   activeCombatCreatureId={activeCombatCreatureId}
+                  creatureHpOverrides={creatureHpOverrides}
                   classAbility={CLASS_ABILITIES[character.class] || null}
                   abilityCooldownEnd={abilityCooldownEnd}
                   onUseAbility={handleUseAbility}
