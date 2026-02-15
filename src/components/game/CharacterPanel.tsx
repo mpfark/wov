@@ -23,6 +23,7 @@ interface Props {
   regenTick?: boolean;
   baseRegen?: number;
   itemHpRegen?: number;
+  foodBuff?: { flatRegen: number; expiresAt: number };
   // Belt potion system
   beltedPotions?: InventoryItem[];
   beltCapacity?: number;
@@ -105,15 +106,16 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 }
 
 
-function ActiveBuffs({ isAtInn, regenBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number } }) {
+function ActiveBuffs({ isAtInn, regenBuff, foodBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number } }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
+  const foodActive = foodBuff && now < foodBuff.expiresAt;
 
   useEffect(() => {
-    if (!buffActive && !isAtInn) return;
+    if (!buffActive && !foodActive && !isAtInn) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [buffActive, isAtInn]);
+  }, [buffActive, foodActive, isAtInn]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string }[] = [];
 
@@ -129,6 +131,16 @@ function ActiveBuffs({ isAtInn, regenBuff }: { isAtInn?: boolean; regenBuff?: { 
       label: isInspire ? 'Inspire' : 'Potion',
       detail: `${regenBuff!.multiplier}× regen · ${secsLeft}s`,
       color: isInspire ? 'text-elvish' : 'text-primary',
+    });
+  }
+
+  if (foodActive) {
+    const secsLeft = Math.ceil((foodBuff!.expiresAt - now) / 1000);
+    buffs.push({
+      emoji: '🍞',
+      label: 'Food',
+      detail: `+${foodBuff!.flatRegen} regen · ${secsLeft}s`,
+      color: 'text-elvish',
     });
   }
 
@@ -152,7 +164,7 @@ function ActiveBuffs({ isAtInn, regenBuff }: { isAtInn?: boolean; regenBuff?: { 
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
-  isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
+  isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
@@ -209,19 +221,23 @@ export default function CharacterPanel({
               <p className="text-xs text-elvish">🏨 Inn Rest: <span className="text-foreground">3× multiplier</span></p>
             )}
             {regenBuff && Date.now() < regenBuff.expiresAt && (
-              <p className="text-xs text-primary">🧪 Buff: <span className="text-foreground">{regenBuff.multiplier}× multiplier</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
+              <p className="text-xs text-primary">🧪 Potion: <span className="text-foreground">{regenBuff.multiplier}× multiplier</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
+            )}
+            {foodBuff && Date.now() < foodBuff.expiresAt && (
+              <p className="text-xs text-elvish">🍞 Food: <span className="text-foreground">+{foodBuff.flatRegen} HP</span> <span className="text-muted-foreground">({Math.ceil((foodBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
             )}
             {(() => {
               const potionMult = regenBuff && Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
               const innMult = isAtInn ? 3 : 1;
-              const total = Math.max(Math.floor((baseRegen + itemHpRegen) * potionMult * innMult), 1);
+              const foodRegen = foodBuff && Date.now() < foodBuff.expiresAt ? foodBuff.flatRegen : 0;
+              const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * potionMult * innMult), 1);
               return <p className="text-xs font-display text-elvish border-t border-border pt-1">Total: {total} HP every 30s</p>;
             })()}
           </TooltipContent>
         </Tooltip>
 
         {/* Active Buffs */}
-        <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} />
+        <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} />
 
         {/* XP Bar */}
         <div>
