@@ -626,6 +626,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                           .map(m => ({ id: m.character_id, name: m.character.name, hp: m.character.hp, max_hp: m.character.max_hp }))
                       : []
                   }
+                  beltedPotions={beltedPotions}
+                  onUseBeltPotion={handleUseConsumable}
                 />
               </div>
               {/* Event Log - docked at bottom of middle column, 1/3 height */}
