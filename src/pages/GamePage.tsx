@@ -40,7 +40,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { creatures } = useCreatures(character.current_node_id);
   const { npcs } = useNPCs(character.current_node_id);
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
@@ -586,6 +586,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 isAtInn={currentNode?.is_inn ?? false}
                 regenBuff={regenBuff}
                 regenTick={regenTick}
+                beltedPotions={beltedPotions}
+                beltCapacity={beltCapacity}
+                onBeltPotion={beltPotion}
+                onUnbeltPotion={unbeltPotion}
+                inCombat={inCombat}
               />
             </div>
           </ResizablePanel>
