@@ -188,11 +188,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   })();
 
   return (
-    <div className="overflow-auto">
+    <div className="w-full">
       <svg
-        width={Math.max(svgWidth, 280)}
-        height={Math.max(svgHeight, 200)}
-        className="block mx-auto"
+        viewBox={`0 0 ${Math.max(svgWidth, 280)} ${Math.max(svgHeight, 200)}`}
+        className="block w-full h-auto"
+        preserveAspectRatio="xMidYMid meet"
       >
         {/* Edges */}
         {edges.map(edge => {
