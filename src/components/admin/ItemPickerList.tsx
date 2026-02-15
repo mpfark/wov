@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ArrowUpDown } from 'lucide-react';
 
 interface LootEntry {
   item_id: string;
@@ -23,8 +23,13 @@ interface ItemOption {
   level: number;
 }
 
+type SortMode = 'name' | 'level-asc' | 'level-desc';
+
 export default function ItemPickerList({ value, onChange, label }: ItemPickerListProps) {
   const [items, setItems] = useState<ItemOption[]>([]);
+  const [sortMode, setSortMode] = useState<SortMode>('name');
+  const [minLevel, setMinLevel] = useState('');
+  const [maxLevel, setMaxLevel] = useState('');
 
   useEffect(() => {
     supabase.from('items').select('id, name, rarity, level').order('name').then(({ data }) => {
@@ -32,9 +37,27 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
     });
   }, []);
 
+  const sortedItems = useMemo(() => {
+    let filtered = items.filter(i => {
+      if (minLevel && i.level < Number(minLevel)) return false;
+      if (maxLevel && i.level > Number(maxLevel)) return false;
+      return true;
+    });
+    if (sortMode === 'level-asc') filtered.sort((a, b) => a.level - b.level);
+    else if (sortMode === 'level-desc') filtered.sort((a, b) => b.level - a.level);
+    else filtered.sort((a, b) => a.name.localeCompare(b.name));
+    return filtered;
+  }, [items, sortMode, minLevel, maxLevel]);
+
+  const cycleSortMode = () => {
+    setSortMode(prev => prev === 'name' ? 'level-asc' : prev === 'level-asc' ? 'level-desc' : 'name');
+  };
+
+  const sortLabel = sortMode === 'name' ? 'A-Z' : sortMode === 'level-asc' ? 'Lv↑' : 'Lv↓';
+
   const addEntry = () => {
-    if (items.length === 0) return;
-    onChange([...value, { item_id: items[0].id, chance: 0.5 }]);
+    if (sortedItems.length === 0) return;
+    onChange([...value, { item_id: sortedItems[0].id, chance: 0.5 }]);
   };
 
   const updateEntry = (index: number, field: keyof LootEntry, val: string | number) => {
@@ -51,8 +74,6 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
     onChange(value.filter((_, i) => i !== index));
   };
 
-  const getItemName = (id: string) => items.find(i => i.id === id)?.name || 'Unknown';
-
   const rarityColor = (id: string) => {
     const r = items.find(i => i.id === id)?.rarity;
     if (r === 'unique') return 'text-primary';
@@ -65,10 +86,26 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-[10px] text-muted-foreground font-display">{label}</p>
-        <Button size="sm" variant="outline" onClick={addEntry} className="text-xs h-6 px-2"
-          disabled={items.length === 0}>
-          <Plus className="w-3 h-3 mr-1" /> Add
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="ghost" onClick={cycleSortMode} className="text-[10px] h-5 px-1.5 gap-0.5" title="Toggle sort">
+            <ArrowUpDown className="w-2.5 h-2.5" /> {sortLabel}
+          </Button>
+          <Input
+            type="number" placeholder="Min" value={minLevel}
+            onChange={e => setMinLevel(e.target.value)}
+            className="w-12 h-5 text-[10px] text-center px-1"
+          />
+          <span className="text-[10px] text-muted-foreground">–</span>
+          <Input
+            type="number" placeholder="Max" value={maxLevel}
+            onChange={e => setMaxLevel(e.target.value)}
+            className="w-12 h-5 text-[10px] text-center px-1"
+          />
+          <Button size="sm" variant="outline" onClick={addEntry} className="text-xs h-6 px-2"
+            disabled={sortedItems.length === 0}>
+            <Plus className="w-3 h-3 mr-1" /> Add
+          </Button>
+        </div>
       </div>
 
       {value.length === 0 && (
@@ -84,7 +121,7 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover border-border z-50">
-              {items.map(item => (
+              {sortedItems.map(item => (
                 <SelectItem key={item.id} value={item.id}>
                   <span className={rarityColor(item.id)}>{item.name}</span>
                   <span className="text-muted-foreground ml-1">Lv{item.level}</span>
