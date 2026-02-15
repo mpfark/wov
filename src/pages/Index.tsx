@@ -9,7 +9,6 @@ import CharacterSelect from './CharacterSelect';
 import GamePage from './GamePage';
 import AdminPage from './AdminPage';
 import { useNodes } from '@/hooks/useNodes';
-import { toast } from 'sonner';
 import { logActivity } from '@/hooks/useActivityLog';
 
 const Index = () => {
@@ -26,7 +25,6 @@ const Index = () => {
 
   const handleInactiveLogout = useCallback(() => {
     if (user) {
-      toast.info('You have been logged out due to inactivity.');
       signOut();
     }
   }, [user, signOut]);

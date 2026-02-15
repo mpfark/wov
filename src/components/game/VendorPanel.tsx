@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { Coins, ShoppingBag, ArrowUpFromLine } from 'lucide-react';
 import { InventoryItem } from '@/hooks/useInventory';
 
@@ -57,7 +56,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
 
   const buyItem = async (vi: VendorItem) => {
     if (gold < vi.price) {
-      toast.error('Not enough gold!');
+      addLog('❌ Not enough gold!');
       return;
     }
     const { error } = await supabase.from('character_inventory').insert({
@@ -65,14 +64,13 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       item_id: vi.item_id,
       current_durability: 100,
     });
-    if (error) return toast.error(error.message);
+    if (error) { addLog(`❌ ${error.message}`); return; }
 
     const newGold = gold - vi.price;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`Purchased ${vi.item.name} for ${vi.price} gold.`);
-    toast.success(`Bought ${vi.item.name}`);
+    addLog(`🪙 Purchased ${vi.item.name} for ${vi.price} gold.`);
 
     if (vi.stock > 0) {
       await supabase.from('vendor_inventory').update({ stock: vi.stock - 1 }).eq('id', vi.id);
@@ -87,8 +85,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`Sold ${inv.item.name} for ${sellPrice} gold.`);
-    toast.success(`Sold ${inv.item.name} for ${sellPrice}g`);
+    addLog(`🪙 Sold ${inv.item.name} for ${sellPrice} gold.`);
   };
 
   const sellableItems = inventory.filter(i => !i.equipped_slot);

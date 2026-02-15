@@ -22,7 +22,6 @@ import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
 import { logActivity } from '@/hooks/useActivityLog';
 
 interface Props {
@@ -289,7 +288,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (targetRegion && currentRegion && targetRegion.id !== currentRegion.id && character.level < targetRegion.min_level) {
       const levelDiff = targetRegion.min_level - character.level;
       addLog(`⚠️ You are entering ${targetRegion.name} (Lvl ${targetRegion.min_level}–${targetRegion.max_level}). These lands are ${levelDiff >= 10 ? 'extremely' : levelDiff >= 5 ? 'very' : ''} dangerous for your level!`);
-      toast.warning(`Warning: ${targetRegion.name} is dangerous for your level`);
     }
 
     // Attack of Opportunity — each living creature gets a free strike

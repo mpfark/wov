@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 export interface PartyMember {
   id: string;
@@ -112,14 +111,13 @@ export function useParty(characterId: string | null) {
       .insert({ leader_id: characterId })
       .select()
       .single();
-    if (error) { toast.error('Failed to create party'); return; }
+    if (error) return;
     // Add self as accepted member
     await supabase.from('party_members').insert({
       party_id: data.id,
       character_id: characterId,
       status: 'accepted',
     });
-    toast.success('Party created!');
     fetchParty();
   }, [characterId, party, fetchParty]);
 
@@ -130,19 +128,13 @@ export function useParty(characterId: string | null) {
       character_id: targetCharacterId,
       status: 'pending',
     });
-    if (error) {
-      if (error.code === '23505') toast.error('Already invited');
-      else toast.error('Failed to invite');
-      return;
-    }
-    toast.success('Invite sent!');
+    if (error) return;
   }, [party]);
 
   const acceptInvite = useCallback(async (membershipId: string) => {
     // If already in a party, leave it first
     if (party) await leaveParty();
     await supabase.from('party_members').update({ status: 'accepted' }).eq('id', membershipId);
-    toast.success('Joined party!');
     fetchParty();
   }, [party, fetchParty]);
 
@@ -157,12 +149,10 @@ export function useParty(characterId: string | null) {
       // Disband party
       await supabase.from('party_members').delete().eq('party_id', party.id);
       await supabase.from('parties').delete().eq('id', party.id);
-      toast.success('Party disbanded');
     } else {
       await supabase.from('party_members').delete()
         .eq('party_id', party.id)
         .eq('character_id', characterId);
-      toast.success('Left party');
     }
     fetchParty();
   }, [party, characterId, fetchParty]);
@@ -172,7 +162,6 @@ export function useParty(characterId: string | null) {
     await supabase.from('party_members').delete()
       .eq('party_id', party.id)
       .eq('character_id', targetCharacterId);
-    toast.success('Member removed');
     fetchParty();
   }, [party, fetchParty]);
 
@@ -191,7 +180,7 @@ export function useParty(characterId: string | null) {
       const myMember = members.find(m => m.character_id === characterId);
       if (leaderMember?.character?.current_node_id && myMember?.character?.current_node_id &&
           leaderMember.character.current_node_id !== myMember.character.current_node_id) {
-        toast.error('You must be at the same location as the party leader to follow.');
+        // Can't follow — not at same location
         return;
       }
     }
