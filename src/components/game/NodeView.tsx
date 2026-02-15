@@ -4,8 +4,9 @@ import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
-import { CLASS_COMBAT } from '@/lib/class-abilities';
+import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
 
 interface Props {
   node: GameNode;
@@ -22,13 +23,36 @@ interface Props {
   onOpenBlacksmith?: () => void;
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
+  classAbility?: ClassAbility | null;
+  abilityCooldownEnd?: number;
+  onUseAbility?: () => void;
 }
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
-  inCombat, activeCombatCreatureId,
+  inCombat, activeCombatCreatureId, classAbility, abilityCooldownEnd = 0, onUseAbility,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
+
+  // Cooldown countdown
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+  useEffect(() => {
+    if (!abilityCooldownEnd || abilityCooldownEnd <= Date.now()) {
+      setCooldownLeft(0);
+      return;
+    }
+    setCooldownLeft(Math.ceil((abilityCooldownEnd - Date.now()) / 1000));
+    const interval = setInterval(() => {
+      const remaining = Math.ceil((abilityCooldownEnd - Date.now()) / 1000);
+      if (remaining <= 0) {
+        setCooldownLeft(0);
+        clearInterval(interval);
+      } else {
+        setCooldownLeft(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [abilityCooldownEnd]);
 
   return (
     <div className="h-full flex flex-col p-3">
@@ -133,6 +157,18 @@ export default function NodeView({
         <Button variant="secondary" size="sm" onClick={onSearch} className="w-full font-display text-xs">
           Search Area
         </Button>
+        {classAbility && onUseAbility && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onUseAbility}
+            disabled={cooldownLeft > 0 || character.hp <= 0}
+            className="w-full mt-1.5 font-display text-xs text-elvish border-elvish/50"
+          >
+            {classAbility.emoji} {classAbility.label}
+            {cooldownLeft > 0 && <span className="ml-1 text-muted-foreground">({cooldownLeft}s)</span>}
+          </Button>
+        )}
         {onOpenVendor && (
           <Button variant="outline" size="sm" onClick={onOpenVendor} className="w-full mt-1.5 font-display text-xs text-primary">
             🛒 Open Shop
