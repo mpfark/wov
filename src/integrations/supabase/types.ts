@@ -676,6 +676,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      heal_party_member: {
+        Args: { _heal_amount: number; _healer_id: string; _target_id: string }
+        Returns: number
+      }
       is_maiar_or_valar: { Args: never; Returns: boolean }
       is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }

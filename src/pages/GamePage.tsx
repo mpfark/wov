@@ -471,7 +471,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
 
-  const handleUseAbility = useCallback(async () => {
+  const handleUseAbility = useCallback(async (targetId?: string) => {
     if (isDead || character.hp <= 0) return;
     const ability = CLASS_ABILITIES[character.class];
     if (!ability) return;
@@ -480,19 +480,36 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (ability.type === 'heal') {
       const wisMod = getStatMod2(character.wis);
       const healAmount = Math.max(3, wisMod * 3 + character.level);
-      const newHp = Math.min(character.max_hp, character.hp + healAmount);
-      const restored = newHp - character.hp;
-      if (restored > 0) {
-        await updateCharacter({ hp: newHp });
-        addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`);
+
+      if (targetId && targetId !== character.id) {
+        // Heal a party member via RPC
+        const { data: restored, error } = await supabase.rpc('heal_party_member', {
+          _healer_id: character.id,
+          _target_id: targetId,
+          _heal_amount: healAmount,
+        });
+        if (error) {
+          addLog(`${ability.emoji} Failed to heal: ${error.message}`);
+          return;
+        }
+        const targetMember = partyMembers.find(m => m.character_id === targetId);
+        const targetName = targetMember?.character.name || 'ally';
+        addLog(`${ability.emoji} ${character.name} casts Heal on ${targetName} and restores ${restored} HP!`);
       } else {
-        addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
+        // Self-heal
+        const newHp = Math.min(character.max_hp, character.hp + healAmount);
+        const restored = newHp - character.hp;
+        if (restored > 0) {
+          await updateCharacter({ hp: newHp });
+          addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`);
+        } else {
+          addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
+        }
       }
     } else if (ability.type === 'regen_buff') {
       setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
       const inspireMsg = `${ability.emoji} ${character.name} plays an inspiring song! HP regeneration doubled for 90 seconds.`;
       if (party) {
-        // Tag message so party members auto-apply the buff
         addLog(`${inspireMsg}[INSPIRE_BUFF]`);
       } else {
         addLog(inspireMsg);
@@ -500,7 +517,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
 
     setAbilityCooldownEnd(Date.now() + ability.cooldownMs);
-  }, [isDead, character, abilityCooldownEnd, updateCharacter, addLog]);
+  }, [isDead, character, abilityCooldownEnd, updateCharacter, addLog, party, partyMembers]);
 
   const handleSpendPoint = useCallback(async (stat: string) => {
     if (character.unspent_stat_points <= 0) return;
@@ -598,6 +615,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   classAbility={CLASS_ABILITIES[character.class] || null}
                   abilityCooldownEnd={abilityCooldownEnd}
                   onUseAbility={handleUseAbility}
+                  healTargets={
+                    party && character.class === 'healer'
+                      ? partyMembers
+                          .filter(m => m.character_id !== character.id && m.status === 'accepted' && m.character.current_node_id === character.current_node_id)
+                          .map(m => ({ id: m.character_id, name: m.character.name, hp: m.character.hp, max_hp: m.character.max_hp }))
+                      : []
+                  }
                 />
               </div>
               {/* Event Log - docked at bottom of middle column, 1/3 height */}

@@ -3,9 +3,11 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
+import { PartyMember } from '@/hooks/useParty';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 
 interface Props {
@@ -25,14 +27,19 @@ interface Props {
   activeCombatCreatureId?: string | null;
   classAbility?: ClassAbility | null;
   abilityCooldownEnd?: number;
-  onUseAbility?: () => void;
+  onUseAbility?: (targetId?: string) => void;
+  healTargets?: { id: string; name: string; hp: number; max_hp: number }[];
 }
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
-  inCombat, activeCombatCreatureId, classAbility, abilityCooldownEnd = 0, onUseAbility,
+  inCombat, activeCombatCreatureId, classAbility, abilityCooldownEnd = 0, onUseAbility, healTargets = [],
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
+  const [healTarget, setHealTarget] = useState<string>('self');
+
+  // Show target picker for healers with party members
+  const isHealerWithTargets = classAbility?.type === 'heal' && healTargets.length > 0;
 
   // Cooldown countdown
   const [cooldownLeft, setCooldownLeft] = useState(0);
@@ -158,16 +165,38 @@ export default function NodeView({
           Search Area
         </Button>
         {classAbility && onUseAbility && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onUseAbility}
-            disabled={cooldownLeft > 0 || character.hp <= 0}
-            className="w-full mt-1.5 font-display text-xs text-elvish border-elvish/50"
-          >
-            {classAbility.emoji} {classAbility.label}
-            {cooldownLeft > 0 && <span className="ml-1 text-muted-foreground">({cooldownLeft}s)</span>}
-          </Button>
+          <div className="mt-1.5 space-y-1">
+            {isHealerWithTargets && (
+              <Select value={healTarget} onValueChange={setHealTarget}>
+                <SelectTrigger className="h-7 text-xs font-display">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="self" className="text-xs">
+                    Self ({character.hp}/{character.max_hp} HP)
+                  </SelectItem>
+                  {healTargets.map(t => (
+                    <SelectItem key={t.id} value={t.id} className="text-xs">
+                      {t.name} ({t.hp}/{t.max_hp} HP)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onUseAbility(isHealerWithTargets && healTarget !== 'self' ? healTarget : undefined)}
+              disabled={cooldownLeft > 0 || character.hp <= 0}
+              className="w-full font-display text-xs text-elvish border-elvish/50"
+            >
+              {classAbility.emoji} {classAbility.label}
+              {isHealerWithTargets && healTarget !== 'self' && (
+                <span className="ml-1 text-muted-foreground">→ {healTargets.find(t => t.id === healTarget)?.name}</span>
+              )}
+              {cooldownLeft > 0 && <span className="ml-1 text-muted-foreground">({cooldownLeft}s)</span>}
+            </Button>
+          </div>
         )}
         {onOpenVendor && (
           <Button variant="outline" size="sm" onClick={onOpenVendor} className="w-full mt-1.5 font-display text-xs text-primary">
