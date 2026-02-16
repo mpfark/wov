@@ -18,6 +18,7 @@ interface Region {
   name: string;
   min_level: number;
   max_level: number;
+  direction?: string | null;
 }
 
 interface Props {
@@ -30,8 +31,12 @@ interface Props {
   onAddNodeAdjacent: (fromId: string) => void;
 }
 
-// Dynamic region placement — no hardcoded coordinates; all regions are laid out automatically
-const REGION_COORDINATES: Record<string, { x: number; y: number }> = {};
+// Dynamic region placement — direction-based from The Hearthlands
+const HEARTHLANDS_ID = '00000000-0000-0000-0000-000000000001';
+const REGION_DIR_OFFSETS: Record<string, { x: number; y: number }> = {
+  N: { x: 0, y: -400 }, S: { x: 0, y: 400 }, E: { x: 400, y: 0 }, W: { x: -400, y: 0 },
+  NE: { x: 280, y: -280 }, NW: { x: -280, y: -280 }, SE: { x: 280, y: 280 }, SW: { x: -280, y: 280 },
+};
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
@@ -156,14 +161,30 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     return map;
   }, [regions, nodes]);
 
-  // Get geographic coordinate for a region, with fallback
-  const getRegionCoord = useCallback((region: Region, index: number) => {
-    const known = REGION_COORDINATES[region.name];
-    if (known) return known;
-    // Fallback: place unknown regions in a grid at the bottom
-    const col = index % 5;
-    const row = Math.floor(index / 5);
-    return { x: 200 + col * 350, y: 900 + row * 250 };
+  // Get geographic coordinate for a region based on direction from Hearthlands
+  const getRegionCoord = useCallback((region: Region, index: number, allRegions: Region[]) => {
+    const centerX = CANVAS_W / 2;
+    const centerY = CANVAS_H / 2;
+    
+    // Hearthlands is always at center
+    if (region.id === HEARTHLANDS_ID) return { x: centerX, y: centerY };
+    
+    // If region has a direction, use it
+    if (region.direction && REGION_DIR_OFFSETS[region.direction]) {
+      const base = REGION_DIR_OFFSETS[region.direction];
+      // Count how many regions share this direction to stack them
+      const sameDir = allRegions.filter(r => r.direction === region.direction && r.id !== HEARTHLANDS_ID);
+      const myIndex = sameDir.findIndex(r => r.id === region.id);
+      const multiplier = 1 + myIndex * 0.6;
+      return { x: centerX + base.x * multiplier, y: centerY + base.y * multiplier };
+    }
+    
+    // Fallback: place undirected regions in a grid below
+    const undirected = allRegions.filter(r => !r.direction && r.id !== HEARTHLANDS_ID);
+    const uIdx = undirected.findIndex(r => r.id === region.id);
+    const col = uIdx % 5;
+    const row = Math.floor(uIdx / 5);
+    return { x: 200 + col * 350, y: centerY + 500 + row * 250 };
   }, []);
 
   // Compute region bubbles and node positions using geographic coordinates
@@ -194,7 +215,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     }> = [];
 
     regions.forEach((region, idx) => {
-      const coord = getRegionCoord(region, idx);
+      const coord = getRegionCoord(region, idx, regions);
       const rNodes = nodesByRegion.get(region.id) || [];
 
       if (rNodes.length > 0) {
@@ -387,6 +408,9 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
                       <span className="font-display truncate">{region.name}</span>
+                      {(region as any).direction && (
+                        <span className="text-[9px] text-muted-foreground ml-auto">{(region as any).direction}</span>
+                      )}
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5 pl-[18px]">
                       Lvl {region.min_level}–{region.max_level} · {nodeCount} nodes

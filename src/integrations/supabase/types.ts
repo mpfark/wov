@@ -545,6 +545,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          direction: string | null
           id: string
           max_level: number
           min_level: number
@@ -553,6 +554,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string
+          direction?: string | null
           id?: string
           max_level?: number
           min_level?: number
@@ -561,6 +563,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string
+          direction?: string | null
           id?: string
           max_level?: number
           min_level?: number
