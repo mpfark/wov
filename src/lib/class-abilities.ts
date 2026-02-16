@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff';
 }
 
 export const CLASS_ABILITIES: Record<string, ClassAbility> = {
@@ -39,6 +39,13 @@ export const CLASS_ABILITIES: Record<string, ClassAbility> = {
     description: 'Restore HP based on your Wisdom',
     cooldownMs: 30000,
     type: 'heal',
+  },
+  ranger: {
+    label: 'Eagle Eye',
+    emoji: '🦅',
+    description: 'Sharpen your focus to widen your critical hit range based on DEX',
+    cooldownMs: 60000,
+    type: 'crit_buff',
   },
   bard: {
     label: 'Inspire',

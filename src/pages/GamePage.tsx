@@ -54,6 +54,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [foodBuff, setFoodBuff] = useState<{ flatRegen: number; expiresAt: number }>({ flatRegen: 0, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
+  const [critBuff, setCritBuff] = useState<{ bonus: number; expiresAt: number }>({ bonus: 0, expiresAt: 0 });
   const [abilityCooldownEnd, setAbilityCooldownEnd] = useState(0);
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -243,6 +244,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     party,
     partyMembers,
     isDead,
+    critBuff,
   });
 
   const handleAttack = useCallback((creatureId: string) => {
@@ -547,6 +549,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       } else {
         addLog(inspireMsg);
       }
+    } else if (ability.type === 'crit_buff') {
+      const dexMod = getStatMod2(character.dex);
+      const critBonus = Math.max(1, Math.min(dexMod, 5));
+      const durationMs = 30000;
+      setCritBuff({ bonus: critBonus, expiresAt: Date.now() + durationMs });
+      addLog(`${ability.emoji} Eagle Eye! Your crit range is now ${20 - critBonus}-20 for ${durationMs / 1000}s.`);
     }
 
     setAbilityCooldownEnd(Date.now() + ability.cooldownMs);
@@ -628,6 +636,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             baseRegen={baseRegen}
             itemHpRegen={itemHpRegen}
             foodBuff={foodBuff}
+            critBuff={critBuff}
           />
         </div>
 
