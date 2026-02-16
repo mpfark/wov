@@ -376,11 +376,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (isDead) return;
     if (!currentNode) return;
     const roll = rollD20();
+    const searchStat = character.class === 'wizard' ? character.int : character.wis;
+    const searchMod = getStatModifier(searchStat);
+    const total = roll + searchMod;
 
     const hiddenPaths = currentNode.connections.filter(c => c.hidden);
     const searchItems = currentNode.searchable_items as any[];
-    const canFindPath = roll >= 10 && hiddenPaths.length > 0;
-    const canFindLoot = roll >= 12 && searchItems && searchItems.length > 0;
+    const canFindPath = total >= 10 && hiddenPaths.length > 0;
+    const canFindLoot = total >= 12 && searchItems && searchItems.length > 0;
 
     // If both are possible, randomly pick one; otherwise whichever is available
     let tryPathFirst = canFindPath && (!canFindLoot || Math.random() < 0.5);
@@ -389,7 +392,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
       const targetNode = getNode(discovered.node_id);
       const targetName = targetNode?.name || 'an unknown place';
-      addLog(`🔍 Search roll: ${roll} — You discover a hidden path to ${targetName}!`);
+      addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`);
       if (targetNode) {
         await updateCharacter({ current_node_id: discovered.node_id });
         addLog(`You travel through the hidden path to ${targetName}.`);
@@ -406,35 +409,35 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             if (item.rarity === 'unique') {
               const { data: held } = await supabase.from('character_inventory').select('id').eq('item_id', entry.item_id).limit(1);
               if (held && held.length > 0) {
-                addLog(`🔍 Search roll: ${roll} — The unique power of ${item.name} is already claimed by another...`);
+                addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — The unique power of ${item.name} is already claimed by another...`);
                 return;
               }
             }
             await supabase.from('character_inventory').insert({
               character_id: character.id, item_id: entry.item_id, current_durability: 100,
             });
-            addLog(`🔍 Search roll: ${roll} — You found ${item.name}!`);
+            addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You found ${item.name}!`);
             logActivity(character.user_id, character.id, 'item_found', `Found ${item.name} while searching`, { item_name: item.name });
             fetchInventory();
             return;
           }
         }
       }
-      addLog(`Search roll: ${roll} — You rummage around but find nothing useful.`);
+      addLog(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You rummage around but find nothing useful.`);
     } else if (canFindPath) {
       // Fallback: path was possible but we tried loot first and failed
       const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
       const targetNode = getNode(discovered.node_id);
       const targetName = targetNode?.name || 'an unknown place';
-      addLog(`🔍 Search roll: ${roll} — You discover a hidden path to ${targetName}!`);
+      addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`);
       if (targetNode) {
         await updateCharacter({ current_node_id: discovered.node_id });
         addLog(`You travel through the hidden path to ${targetName}.`);
       }
     } else {
-      addLog(`Search roll: ${roll} — You find nothing of note.`);
+      addLog(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You find nothing of note.`);
     }
-  }, [currentNode, character.id, addLog, fetchInventory, isDead, getNode, updateCharacter]);
+  }, [currentNode, character, addLog, fetchInventory, isDead, getNode, updateCharacter]);
 
   const rollLoot = useCallback(async (lootTable: any[], creatureName: string) => {
     if (!lootTable || lootTable.length === 0) return;
