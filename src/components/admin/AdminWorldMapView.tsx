@@ -173,10 +173,14 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     // If region has a direction, use it
     if (region.direction && REGION_DIR_OFFSETS[region.direction]) {
       const base = REGION_DIR_OFFSETS[region.direction];
-      // Count how many regions share this direction to stack them
+      // Count how many regions share this direction to stack them, sorted by sort_order
       const sameDir = allRegions
         .filter(r => r.direction === region.direction && r.id !== HEARTHLANDS_ID)
-        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        .sort((a, b) => {
+          const aOrder = typeof a.sort_order === 'number' ? a.sort_order : 0;
+          const bOrder = typeof b.sort_order === 'number' ? b.sort_order : 0;
+          return aOrder - bOrder;
+        });
       const myIndex = sameDir.findIndex(r => r.id === region.id);
       const multiplier = 1 + myIndex * 0.6;
       return { x: centerX + base.x * multiplier, y: centerY + base.y * multiplier };
@@ -188,7 +192,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     const col = uIdx % 5;
     const row = Math.floor(uIdx / 5);
     return { x: 200 + col * 350, y: centerY + 500 + row * 250 };
-  }, []);
+  }, [regions]);
 
   // Compute region bubbles and node positions using geographic coordinates
   const { regionBubbles, allNodePositions, canvasW, canvasH } = useMemo(() => {
