@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, Package } from 'lucide-react';
+import { Plus, Trash2, Save, X, Package, MapPin, Skull, ShoppingBag, Search } from 'lucide-react';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue } from '@/lib/game-data';
 
 interface Item {
@@ -84,10 +84,47 @@ export default function ItemManager() {
   const [loading, setLoading] = useState(false);
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
+  const [itemUsage, setItemUsage] = useState<{
+    creatures: { id: string; name: string; chance: number }[];
+    searchNodes: { id: string; name: string; chance: number }[];
+    vendors: { id: string; name: string; node_name: string; price: number }[];
+  } | null>(null);
 
   const loadItems = async () => {
     const { data } = await supabase.from('items').select('*').order('name');
     if (data) setItems(data as Item[]);
+  };
+
+  const loadItemUsage = async (itemId: string) => {
+    const [creaturesRes, nodesRes, vendorRes] = await Promise.all([
+      supabase.from('creatures').select('id, name, loot_table'),
+      supabase.from('nodes').select('id, name, searchable_items'),
+      supabase.from('vendor_inventory').select('id, item_id, node_id, price').eq('item_id', itemId),
+    ]);
+
+    const creatures: { id: string; name: string; chance: number }[] = [];
+    for (const c of (creaturesRes.data || [])) {
+      const loot = (c.loot_table as any[]) || [];
+      const entry = loot.find((l: any) => l.item_id === itemId);
+      if (entry) creatures.push({ id: c.id, name: c.name, chance: entry.chance });
+    }
+
+    const searchNodes: { id: string; name: string; chance: number }[] = [];
+    for (const n of (nodesRes.data || [])) {
+      const items = (n.searchable_items as any[]) || [];
+      const entry = items.find((l: any) => l.item_id === itemId);
+      if (entry) searchNodes.push({ id: n.id, name: n.name, chance: entry.chance });
+    }
+
+    const nodeMap = new Map((nodesRes.data || []).map(n => [n.id, n.name]));
+    const vendors = (vendorRes.data || []).map(v => ({
+      id: v.id,
+      name: '', 
+      node_name: nodeMap.get(v.node_id) || 'Unknown',
+      price: v.price,
+    }));
+
+    setItemUsage({ creatures, searchNodes, vendors });
   };
 
   useEffect(() => {
@@ -112,11 +149,13 @@ export default function ItemManager() {
       level: item.level ?? 1,
       origin_type: item.origin_type, origin_id: item.origin_id,
     });
+    loadItemUsage(item.id);
   };
 
   const closePanel = () => {
     setSelectedId(null);
     setIsNew(false);
+    setItemUsage(null);
   };
 
   const handleSave = async () => {
@@ -435,6 +474,46 @@ export default function ItemManager() {
                       </Select>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Used In section */}
+              {selectedId && itemUsage && (itemUsage.creatures.length > 0 || itemUsage.searchNodes.length > 0 || itemUsage.vendors.length > 0) && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <p className="font-display text-xs text-primary">📍 Used In</p>
+                  {itemUsage.creatures.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Skull className="w-3 h-3" /> Creature Loot Tables</p>
+                      {itemUsage.creatures.map(c => (
+                        <div key={c.id} className="flex items-center justify-between px-2 py-1 rounded bg-background/40 border border-border text-xs">
+                          <span className="text-foreground">{c.name}</span>
+                          <span className="text-muted-foreground">{(c.chance * 100).toFixed(0)}% drop</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {itemUsage.searchNodes.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Search className="w-3 h-3" /> Node Searchable Items</p>
+                      {itemUsage.searchNodes.map(n => (
+                        <div key={n.id} className="flex items-center justify-between px-2 py-1 rounded bg-background/40 border border-border text-xs">
+                          <span className="text-foreground">{n.name}</span>
+                          <span className="text-muted-foreground">{(n.chance * 100).toFixed(0)}% find</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {itemUsage.vendors.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><ShoppingBag className="w-3 h-3" /> Vendor Inventory</p>
+                      {itemUsage.vendors.map(v => (
+                        <div key={v.id} className="flex items-center justify-between px-2 py-1 rounded bg-background/40 border border-border text-xs">
+                          <span className="text-foreground">{v.node_name}</span>
+                          <span className="text-primary">{v.price}g</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
