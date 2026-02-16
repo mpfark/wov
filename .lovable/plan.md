@@ -1,62 +1,47 @@
 
 
-## Compact Action Bar Layout for NodeView
+## Character Panel Layout: Two-Column Stats + Buffs
 
-### Problem
-The middle column's NodeView stacks location info, creatures, NPCs, other players, and all action buttons vertically. With plans for 3 abilities per class and up to 10 belt potions, the actions section will overflow and push content off-screen.
+### Overview
+Restructure the Attributes section of the Character Panel into a two-column layout. Column 1 shows stats with base values (no modifier display). Column 2 shows active buffs, giving them a dedicated, always-visible home instead of being a small strip above the XP bar.
 
-### Solution: Reorganize into compact zones
-
-**1. Collapsible "In the Area" section**
-- Wrap the creatures/NPCs/players list in a collapsible section (using the existing Radix Collapsible component) that defaults to open but can be collapsed to save space when not needed.
-
-**2. Compact Action Bar (pinned to bottom)**
-- Replace the current stacked full-width buttons with a dense, icon-forward grid layout:
-  - **Row 1 -- Core actions**: Search, Shop, Blacksmith as small icon buttons in a horizontal row (not full-width). Only show Shop/Blacksmith when available.
-  - **Row 2 -- Abilities**: Up to 3 class abilities shown as compact emoji+label buttons in a horizontal flex-wrap row, with cooldown overlays. Healer target selector stays as a small dropdown only when relevant.
-  - **Row 3 -- Belt Potions**: Render as a scrollable horizontal row of small icon-only (or emoji + short name) pill buttons. With 10 potions this stays on 1-2 lines instead of 10 stacked buttons.
-
-**3. Creature cards -- tighter layout**
-- Reduce padding from `p-2` to `p-1.5`, combine name + level + attack button on a single line with inline HP bar (instead of a separate row for the HP bar).
-
-### Visual sketch
+### Current vs New Layout
 
 ```text
-+--------------------------------------+
-| [Location Name]                      |  <- header (compact)
-| Region -- Lvl range                  |
-+--------------------------------------+
-| "A quiet corner of the world..."     |  <- description (scrollable)
-+--------------------------------------+
-| v In the Area            [collapse]  |  <- collapsible
-|  [Goblin Lvl3 ====-- 14/20] [Strike]|  <- single-line creature
-|  [Wolf   Lvl2 ======  8/8 ] [Strike]|
-|  [NPC: Merchant]            [Talk]   |
-+--------------------------------------+
-| [Search] [Shop] [Smithy]            |  <- row of compact buttons
-| [💪 2nd Wind] [⚔️ Ability2] [🛡 Ab3] |  <- abilities row
-| [🧪HP] [🧪MP] [🧪HP] [🧪HP] ...     |  <- belt potions, wrapping
-+--------------------------------------+
+CURRENT:                              NEW:
++----------------------------+        +----------------------------+
+| Attributes                 |        | Attributes                 |
+| Stat    Base +Gear  Mod [+]|        | +-------------+-----------+|
+| STR     11   +2    (+1) [+]|        | | STR  11 +2  | Inn  3x   ||
+| DEX     10        ( 0)     |        | | DEX  10     | Potion 3x ||
+| CON     12   +1   (+1) [+]|        | | CON  12 +1  | Food +2   ||
+| ...                        |        | | INT   9     | Eagle Eye ||
+|                            |        | | WIS  10     |           ||
+| Active Buffs (separate)    |        | | CHA  11     |           ||
+| [Inn] [Potion] [Food]     |        | +-------------+-----------+|
++----------------------------+        | AC 14+2      Gold 120     |
+                                      +----------------------------+
 ```
+
+### Changes
+
+**File: `src/components/game/CharacterPanel.tsx`**
+
+1. **Remove the Mod column** from the stat rows -- delete the `(+1)` modifier display and its header column. The modifier is still used internally for rolls; it just won't clutter the panel.
+
+2. **Two-column grid for Attributes section**: Replace the current single-column stat list with a `grid grid-cols-[1fr_auto]` layout:
+   - **Left column**: The 6 stat rows (name, base value, gear bonus, spend button) -- same as now minus the modifier.
+   - **Right column**: The `ActiveBuffs` component, moved here from its current position between HP bar and XP bar. Rendered vertically to fit the column.
+
+3. **Move ActiveBuffs**: Remove it from between HP and XP bars (line 252). Render it inside the right column of the new two-column grid. Change its layout from `flex-wrap` horizontal pills to a vertical `flex-col` stack so buffs list downward alongside the stats.
+
+4. **Clean up header row**: Remove the "Mod" header and its tooltip since that column no longer exists. Simplify to just "Stat" and "Base +Gear".
 
 ### Technical Details
 
-**Files to modify:**
-- `src/components/game/NodeView.tsx` -- Main layout restructure:
-  - Import `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` from UI components
-  - Wrap "In the Area" section in a Collapsible, default open
-  - Creature cards: merge HP bar inline with name row, reduce padding
-  - Action bar: change from vertical stack to horizontal flex-wrap groups
-  - Abilities: update props to accept an array of `ClassAbility` objects (future-proofing for 3 abilities), render as compact row
-  - Belt potions: change from `flex-wrap` with full labels to a scrollable horizontal strip with shorter labels or emoji-only with tooltips
-  - All buttons use `h-6` or `h-7` height with minimal padding
+- The `ActiveBuffs` sub-component layout changes from `flex flex-wrap` to `flex flex-col` for vertical stacking
+- The buff pills remain the same visually (emoji + label + detail) but stack vertically
+- When no buffs are active, the right column can collapse or show a subtle "No buffs" placeholder
+- The modifier tooltips on individual stats can remain (hovering a stat row still explains what it does), just the inline `(+1)` text is removed
+- AC and Gold row below stays unchanged
 
-- `src/lib/class-abilities.ts` -- No changes needed now, but the interface already supports the multi-ability future.
-
-- `src/pages/GamePage.tsx` -- Minor: pass abilities as array when that expansion happens; no changes needed for this layout refactor.
-
-**Key decisions:**
-- Collapsible defaults to open so new players see everything; experienced players can collapse it
-- Belt potions use tooltip on hover for the full name, showing only emoji + abbreviated name (e.g., "🧪 HP Pot") to fit more per row
-- Abilities use `flex-wrap` so 1-3 abilities flow naturally without forcing specific grid columns
-- No structural changes to the middle column split ratio or the three-column layout itself
