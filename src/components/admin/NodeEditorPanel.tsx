@@ -702,6 +702,60 @@ export default function NodeEditorPanel({
                     )}
                   </Button>
                 </div>
+
+                {/* NPCs Section */}
+                <div className="border-t border-border pt-3 mt-4 space-y-2">
+                  <p className="font-display text-xs text-primary">💬 NPCs ({npcs.length})</p>
+                  {npcs.map(n => (
+                    <div key={n.id} className={`flex items-center justify-between p-2 rounded border ${
+                      editingNpcId === n.id ? 'border-primary bg-primary/10' : 'border-border bg-background/40'
+                    }`}>
+                      <div className="min-w-0 flex-1">
+                        <span className="font-display text-sm text-foreground">{n.name}</span>
+                        {n.dialogue && (
+                          <p className="text-[10px] text-muted-foreground truncate">"{n.dialogue.slice(0, 60)}{n.dialogue.length > 60 ? '...' : ''}"</p>
+                        )}
+                      </div>
+                      <div className="flex gap-1 shrink-0 ml-2">
+                        <Button size="sm" variant="outline" onClick={() => editNpc(n)} className="text-xs h-6 px-2">
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => removeNpc(n.id)} className="text-xs h-6 px-2">
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {npcs.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No NPCs at this location.</p>
+                  )}
+
+                  <div className="border-t border-border pt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-display text-xs text-primary">
+                        {editingNpcId ? 'Edit NPC' : 'Add NPC'}
+                      </p>
+                      {editingNpcId && (
+                        <Button size="sm" variant="ghost" onClick={cancelEditNpc} className="text-xs h-6 px-2">
+                          <X className="w-3 h-3 mr-1" /> Cancel
+                        </Button>
+                      )}
+                    </div>
+                    <Input placeholder="NPC name" value={npcForm.name}
+                      onChange={e => setNpcForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" />
+                    <Textarea placeholder="Description (optional)" value={npcForm.description}
+                      onChange={e => setNpcForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" />
+                    <Textarea placeholder="Dialogue — what does this NPC say?" value={npcForm.dialogue}
+                      onChange={e => setNpcForm(f => ({ ...f, dialogue: e.target.value }))} rows={3} className="text-xs" />
+                    <Button onClick={saveNpc} className="font-display text-xs">
+                      {editingNpcId ? (
+                        <><Save className="w-3 h-3 mr-1" /> Update NPC</>
+                      ) : (
+                        <><Plus className="w-3 h-3 mr-1" /> Add NPC</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </TabsContent>
             )}
 
