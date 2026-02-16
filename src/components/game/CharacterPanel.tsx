@@ -24,6 +24,7 @@ interface Props {
   baseRegen?: number;
   itemHpRegen?: number;
   foodBuff?: { flatRegen: number; expiresAt: number };
+  critBuff?: { bonus: number; expiresAt: number };
   // Belt potion system
   beltedPotions?: InventoryItem[];
   beltCapacity?: number;
@@ -106,16 +107,17 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 }
 
 
-function ActiveBuffs({ isAtInn, regenBuff, foodBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number } }) {
+function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number } }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
+  const critActive = critBuff && now < critBuff.expiresAt;
 
   useEffect(() => {
-    if (!buffActive && !foodActive && !isAtInn) return;
+    if (!buffActive && !foodActive && !isAtInn && !critActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [buffActive, foodActive, isAtInn]);
+  }, [buffActive, foodActive, isAtInn, critActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string }[] = [];
 
@@ -144,6 +146,16 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff }: { isAtInn?: boolean; rege
     });
   }
 
+  if (critActive) {
+    const secsLeft = Math.ceil((critBuff!.expiresAt - now) / 1000);
+    buffs.push({
+      emoji: '🦅',
+      label: 'Eagle Eye',
+      detail: `Crit ${20 - critBuff!.bonus}-20 · ${secsLeft}s`,
+      color: 'text-primary',
+    });
+  }
+
   if (buffs.length === 0) return null;
 
   return (
@@ -164,7 +176,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff }: { isAtInn?: boolean; rege
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
-  isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff,
+  isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
@@ -237,7 +249,7 @@ export default function CharacterPanel({
         </Tooltip>
 
         {/* Active Buffs */}
-        <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} />
+        <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} />
 
         {/* XP Bar */}
         <div>

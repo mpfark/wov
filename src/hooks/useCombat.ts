@@ -35,6 +35,7 @@ interface UseCombatParams {
   party: Party | null;
   partyMembers: PartyMember[];
   isDead: boolean;
+  critBuff?: { bonus: number; expiresAt: number };
 }
 
 export function useCombat({
@@ -49,6 +50,7 @@ export function useCombat({
   party,
   partyMembers,
   isDead,
+  critBuff,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -66,6 +68,7 @@ export function useCombat({
   const partyRef = useRef(party);
   const partyMembersRef = useRef(partyMembers);
   const isDeadRef = useRef(isDead);
+  const critBuffRef = useRef(critBuff);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -80,6 +83,7 @@ export function useCombat({
   useEffect(() => { partyRef.current = party; }, [party]);
   useEffect(() => { partyMembersRef.current = partyMembers; }, [partyMembers]);
   useEffect(() => { isDeadRef.current = isDead; }, [isDead]);
+  useEffect(() => { critBuffRef.current = critBuff; }, [critBuff]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -185,10 +189,13 @@ export function useCombat({
       const totalAtk = atkRoll + statMod;
       const statLabel = ability.stat.toUpperCase();
       const who = _party ? char.name : 'You';
+      const _critBuff = critBuffRef.current;
+      const critBonus = (_critBuff && Date.now() < _critBuff.expiresAt) ? _critBuff.bonus : 0;
+      const effectiveCritRange = ability.critRange - critBonus;
 
-      if (atkRoll >= ability.critRange || (atkRoll !== 1 && totalAtk >= creature.ac)) {
+      if (atkRoll >= effectiveCritRange || (atkRoll !== 1 && totalAtk >= creature.ac)) {
         const dmg = rollDamage(ability.diceMin, ability.diceMax) + statMod;
-        const isCrit = atkRoll >= ability.critRange;
+        const isCrit = atkRoll >= effectiveCritRange;
         const finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1);
         const newHp = Math.max(creature.hp - finalDmg, 0);
 
