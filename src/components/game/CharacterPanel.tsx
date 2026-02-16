@@ -290,19 +290,27 @@ export default function CharacterPanel({
           <div className="grid grid-cols-2 gap-2">
             {/* Left column: Stats */}
             <div>
-              <div className="flex items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5">
-                <span className="flex-1">Stat</span>
+              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5 gap-x-2">
+                <span>Stat</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
+                    <span className="cursor-help underline decoration-dotted text-right">Base</span>
                   </TooltipTrigger>
                   <TooltipContent className="bg-popover border-border z-50">
-                    <p className="font-display text-sm">Base + Gear</p>
-                    <p className="text-xs text-muted-foreground"><strong>Base</strong> — Your natural stat from race, class, and level-up points.</p>
-                    <p className="text-xs text-muted-foreground"><strong>Gear</strong> — Bonus from equipped items (shown in green).</p>
+                    <p className="font-display text-sm">Base</p>
+                    <p className="text-xs text-muted-foreground">Your natural stat from race, class, and level-up points.</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="w-6" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help underline decoration-dotted text-chart-2 text-right">Gear</span>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-popover border-border z-50">
+                    <p className="font-display text-sm">Gear</p>
+                    <p className="text-xs text-muted-foreground">Bonus from equipped items.</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div className="w-5" />
               </div>
               <div className="space-y-0.5">
                 {Object.entries(STAT_LABELS).map(([key, label]) => {
@@ -312,24 +320,21 @@ export default function CharacterPanel({
                   return (
                     <Tooltip key={key}>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
-                          <span className="font-display text-foreground flex-1">{STAT_FULL_NAMES[key]}</span>
-                          <span className="tabular-nums text-right">
-                            <span className="text-foreground" title="Base">{base}</span>
-                            {bonus > 0 && <span className="text-chart-2 ml-1" title="Gear">+{bonus}</span>}
-                          </span>
-                          
+                        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help gap-x-2">
+                          <span className="font-display text-foreground">{STAT_FULL_NAMES[key]}</span>
+                          <span className="tabular-nums text-foreground text-right" title="Base">{base}</span>
+                          <span className="tabular-nums text-chart-2 text-right w-6" title="Gear">{bonus > 0 ? `+${bonus}` : ''}</span>
                           {canSpend && onSpendPoint ? (
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-5 w-5 p-0 ml-1 text-primary hover:text-primary-foreground hover:bg-primary"
+                              className="h-5 w-5 p-0 text-primary hover:text-primary-foreground hover:bg-primary"
                               onClick={(e) => { e.stopPropagation(); onSpendPoint(key); }}
                             >
                               <Plus className="w-3 h-3" />
                             </Button>
                           ) : (
-                            <div className="w-5 ml-1" />
+                            <div className="w-5" />
                           )}
                         </div>
                       </TooltipTrigger>
