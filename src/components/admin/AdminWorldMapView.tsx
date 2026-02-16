@@ -163,31 +163,23 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   }, [regions, nodes]);
 
   // Get geographic coordinate for a region based on direction from Hearthlands
-  const getRegionCoord = useCallback((region: Region, index: number, allRegions: Region[]) => {
+  // NOTE: This provides a rough initial position; the useMemo below repositions
+  // direction groups using actual radii for proper spacing.
+  const getRegionCoord = useCallback((region: Region, _index: number, _allRegions: Region[]) => {
     const centerX = CANVAS_W / 2;
     const centerY = CANVAS_H / 2;
     
     // Hearthlands is always at center
     if (region.id === HEARTHLANDS_ID) return { x: centerX, y: centerY };
     
-    // If region has a direction, use it
+    // Initial rough placement (will be overridden for directional regions)
     if (region.direction && REGION_DIR_OFFSETS[region.direction]) {
       const base = REGION_DIR_OFFSETS[region.direction];
-      // Count how many regions share this direction to stack them, sorted by sort_order
-      const sameDir = allRegions
-        .filter(r => r.direction === region.direction && r.id !== HEARTHLANDS_ID)
-        .sort((a, b) => {
-          const aOrder = typeof a.sort_order === 'number' ? a.sort_order : 0;
-          const bOrder = typeof b.sort_order === 'number' ? b.sort_order : 0;
-          return aOrder - bOrder;
-        });
-      const myIndex = sameDir.findIndex(r => r.id === region.id);
-      const multiplier = 1 + myIndex * 0.6;
-      return { x: centerX + base.x * multiplier, y: centerY + base.y * multiplier };
+      return { x: centerX + base.x, y: centerY + base.y };
     }
     
     // Fallback: place undirected regions in a grid below
-    const undirected = allRegions.filter(r => !r.direction && r.id !== HEARTHLANDS_ID);
+    const undirected = _allRegions.filter(r => !r.direction && r.id !== HEARTHLANDS_ID);
     const uIdx = undirected.findIndex(r => r.id === region.id);
     const col = uIdx % 5;
     const row = Math.floor(uIdx / 5);
@@ -255,8 +247,49 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       }
     });
 
-    // Collision resolution: iteratively nudge overlapping bubbles apart
-    const PADDING = 30; // min gap between bubble edges
+    // Radius-aware directional placement: position regions along their
+    // direction axis using cumulative radii so they never overlap.
+    const BUFFER = 40; // gap between bubble edges
+    const hearthBubble = bubbleData.find(bd => bd.region.id === HEARTHLANDS_ID);
+    const hx = hearthBubble ? hearthBubble.cx : CANVAS_W / 2;
+    const hy = hearthBubble ? hearthBubble.cy : CANVAS_H / 2;
+    const hearthRadius = hearthBubble ? hearthBubble.radius : 160;
+
+    // Group directional regions
+    const dirGroups = new Map<string, typeof bubbleData>();
+    for (const bd of bubbleData) {
+      const dir = bd.region.direction;
+      if (!dir || bd.region.id === HEARTHLANDS_ID) continue;
+      if (!dirGroups.has(dir)) dirGroups.set(dir, []);
+      dirGroups.get(dir)!.push(bd);
+    }
+
+    for (const [dir, group] of dirGroups) {
+      const offset = REGION_DIR_OFFSETS[dir];
+      if (!offset) continue;
+      const dirLen = Math.sqrt(offset.x * offset.x + offset.y * offset.y);
+      const ux = offset.x / dirLen;
+      const uy = offset.y / dirLen;
+
+      // Sort by sort_order
+      group.sort((a, b) => {
+        const aOrder = typeof a.region.sort_order === 'number' ? a.region.sort_order : 0;
+        const bOrder = typeof b.region.sort_order === 'number' ? b.region.sort_order : 0;
+        return aOrder - bOrder;
+      });
+
+      // Place each region: distance = sum of previous radii + own radius + buffers
+      let edgeDist = hearthRadius + BUFFER; // distance from center to first bubble edge
+      for (const bd of group) {
+        const centerDist = edgeDist + bd.radius; // center of this bubble
+        bd.cx = hx + ux * centerDist;
+        bd.cy = hy + uy * centerDist;
+        edgeDist = centerDist + bd.radius + BUFFER; // far edge + buffer for next
+      }
+    }
+
+    // Collision resolution for non-directional overlaps (e.g. cross-direction bubbles)
+    const PADDING = 30;
     for (let iter = 0; iter < 50; iter++) {
       let moved = false;
       for (let i = 0; i < bubbleData.length; i++) {
@@ -271,13 +304,17 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
             const overlap = (minDist - dist) / 2;
             const nx = dx / dist;
             const ny = dy / dist;
+            // Only nudge perpendicular to avoid breaking directional ordering
+            // For same-direction pairs, skip (already placed correctly)
+            const aDir = a.region.direction;
+            const bDir = b.region.direction;
+            if (aDir && bDir && aDir === bDir) continue;
             a.cx -= nx * overlap;
             a.cy -= ny * overlap;
             b.cx += nx * overlap;
             b.cy += ny * overlap;
             moved = true;
           } else if (dist === 0) {
-            // Coincident: push apart arbitrarily
             a.cx -= 50;
             b.cx += 50;
             moved = true;
@@ -285,48 +322,6 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
         }
       }
       if (!moved) break;
-    }
-
-    // Post-collision: enforce sort_order along each direction axis
-    // Group bubbles by direction, then ensure their projections along the
-    // direction vector respect sort_order (lower sort_order = closer to center)
-    const centerX = CANVAS_W / 2;
-    const centerY = CANVAS_H / 2;
-    // Shift center by any normalization shift we haven't applied yet
-    const dirGroups = new Map<string, typeof bubbleData>();
-    for (const bd of bubbleData) {
-      const dir = bd.region.direction;
-      if (!dir || bd.region.id === HEARTHLANDS_ID) continue;
-      if (!dirGroups.has(dir)) dirGroups.set(dir, []);
-      dirGroups.get(dir)!.push(bd);
-    }
-
-    for (const [dir, group] of dirGroups) {
-      if (group.length < 2) continue;
-      const offset = REGION_DIR_OFFSETS[dir];
-      if (!offset) continue;
-      // Sort group by sort_order (desired order)
-      group.sort((a, b) => {
-        const aOrder = typeof a.region.sort_order === 'number' ? a.region.sort_order : 0;
-        const bOrder = typeof b.region.sort_order === 'number' ? b.region.sort_order : 0;
-        return aOrder - bOrder;
-      });
-      // Get current positions sorted by projection onto direction axis
-      const hearthBubble = bubbleData.find(bd => bd.region.id === HEARTHLANDS_ID);
-      const hx = hearthBubble ? hearthBubble.cx : centerX;
-      const hy = hearthBubble ? hearthBubble.cy : centerY;
-      const dirLen = Math.sqrt(offset.x * offset.x + offset.y * offset.y);
-      const ux = offset.x / dirLen;
-      const uy = offset.y / dirLen;
-      // Collect all positions, sorted by distance along direction
-      const positions = group
-        .map(bd => ({ cx: bd.cx, cy: bd.cy, proj: (bd.cx - hx) * ux + (bd.cy - hy) * uy }))
-        .sort((a, b) => a.proj - b.proj);
-      // Assign sorted positions to sort_order-sorted bubbles
-      for (let i = 0; i < group.length; i++) {
-        group[i].cx = positions[i].cx;
-        group[i].cy = positions[i].cy;
-      }
     }
 
     // Normalize: ensure no bubble extends past the viewBox origin
