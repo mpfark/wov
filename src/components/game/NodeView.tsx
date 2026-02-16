@@ -74,7 +74,7 @@ export default function NodeView({
   return (
     <TooltipProvider delayDuration={300}>
       <div className="h-full flex flex-col p-3">
-        {/* Scrollable content */}
+        {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
           {/* Location Header */}
           <div className="text-center border-b border-border pb-2">
@@ -99,78 +99,74 @@ export default function NodeView({
           <p className="text-sm text-foreground/90 leading-relaxed italic">
             {node.description || 'A quiet corner of the world...'}
           </p>
-
-          {/* Collapsible "In the Area" */}
-          {hasAreaContent && (
-            <Collapsible open={areaOpen} onOpenChange={setAreaOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
-                <h3 className="font-display text-xs text-muted-foreground">In the Area</h3>
-                <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${areaOpen ? '' : '-rotate-90'}`} />
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="space-y-1">
-                  {/* Creatures - compact single-line cards */}
-                  {creatures.map(c => {
-                    const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
-                    const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
-                    const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
-                    return (
-                      <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : 'border-border'}`}>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-xs font-display truncate ${
-                            c.rarity === 'boss' ? 'text-primary text-glow' :
-                            c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
-                          }`}>{c.name}</span>
-                          {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive">⚠️</span>}
-                          <span className="text-[10px] text-muted-foreground">L{c.level}</span>
-                          {/* Inline HP bar */}
-                          <div className="flex-1 h-1.5 bg-background rounded-full overflow-hidden border border-border">
-                            <div
-                              className="h-full rounded-full transition-all duration-300"
-                              style={{
-                                width: `${hpPct}%`,
-                                backgroundColor: hpPct > 50 ? 'hsl(var(--chart-2))' : hpPct > 25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
-                              }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-muted-foreground whitespace-nowrap">{displayHp}/{c.max_hp}</span>
-                          {isActiveTarget ? (
-                            <span className="text-[10px] font-display text-destructive animate-pulse">⚔️</span>
-                          ) : (
-                            <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
-                              {CLASS_COMBAT[character.class]?.label || 'Atk'}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {/* NPCs - compact */}
-                  {npcs.map(npc => (
-                    <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
-                      <div className="min-w-0">
-                        <span className="text-xs font-display text-elvish">💬 {npc.name}</span>
-                        {npc.description && <span className="text-[10px] text-muted-foreground ml-1 truncate">{npc.description}</span>}
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-[10px] h-5 px-1.5 border-elvish/50 text-elvish ml-1 shrink-0">
-                        Talk
-                      </Button>
-                    </div>
-                  ))}
-                  {/* Other players */}
-                  {otherPlayers.map(p => (
-                    <div key={p.id} className="text-[10px] text-foreground/80 p-1 bg-background/30 rounded border border-border">
-                      <span className="text-elvish">{p.name}</span>
-                      <span className="text-muted-foreground ml-1">
-                        — {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
         </div>
+
+        {/* In the Area - sticks above action bar, outside scrollable area */}
+        {hasAreaContent && (
+          <Collapsible open={areaOpen} onOpenChange={setAreaOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
+              <h3 className="font-display text-xs text-muted-foreground">In the Area</h3>
+              <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${areaOpen ? '' : '-rotate-90'}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-1">
+                {creatures.map(c => {
+                  const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
+                  const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
+                  const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
+                  return (
+                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : 'border-border'}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs font-display truncate ${
+                          c.rarity === 'boss' ? 'text-primary text-glow' :
+                          c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
+                        }`}>{c.name}</span>
+                        {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive">⚠️</span>}
+                        <span className="text-[10px] text-muted-foreground">L{c.level}</span>
+                        <div className="flex-1 h-1.5 bg-background rounded-full overflow-hidden border border-border">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${hpPct}%`,
+                              backgroundColor: hpPct > 50 ? 'hsl(var(--chart-2))' : hpPct > 25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
+                            }}
+                          />
+                        </div>
+                        <span className="text-[9px] text-muted-foreground whitespace-nowrap">{displayHp}/{c.max_hp}</span>
+                        {isActiveTarget ? (
+                          <span className="text-[10px] font-display text-destructive animate-pulse">⚔️</span>
+                        ) : (
+                          <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
+                            {CLASS_COMBAT[character.class]?.label || 'Atk'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {npcs.map(npc => (
+                  <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
+                    <div className="min-w-0">
+                      <span className="text-xs font-display text-elvish">💬 {npc.name}</span>
+                      {npc.description && <span className="text-[10px] text-muted-foreground ml-1 truncate">{npc.description}</span>}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-[10px] h-5 px-1.5 border-elvish/50 text-elvish ml-1 shrink-0">
+                      Talk
+                    </Button>
+                  </div>
+                ))}
+                {otherPlayers.map(p => (
+                  <div key={p.id} className="text-[10px] text-foreground/80 p-1 bg-background/30 rounded border border-border">
+                    <span className="text-elvish">{p.name}</span>
+                    <span className="text-muted-foreground ml-1">
+                      — {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
 
         {/* Compact Action Bar - pinned to bottom */}
         <div className="pt-2 border-t border-border mt-2 space-y-1.5">
@@ -191,7 +187,30 @@ export default function NodeView({
             )}
           </div>
 
-          {/* Row 2: Abilities */}
+          {/* Row 2: Belt Potions */}
+          {beltedPotions.length > 0 && onUseBeltPotion && (
+            <div className="flex flex-wrap gap-1">
+              {beltedPotions.map(p => (
+                <Tooltip key={p.id}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onUseBeltPotion(p.id)}
+                      className="font-display text-[10px] text-blood border-blood/30 h-5 px-1.5"
+                    >
+                      🧪 {p.item.name.length > 6 ? p.item.name.slice(0, 6) + '…' : p.item.name}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    {p.item.name}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          )}
+
+          {/* Row 3: Abilities */}
           {classAbility && onUseAbility && (
             <div className="flex flex-wrap items-center gap-1">
               {isHealerWithTargets && (
@@ -221,29 +240,6 @@ export default function NodeView({
                 {classAbility.emoji} {classAbility.label}
                 {cooldownLeft > 0 && <span className="ml-0.5 text-muted-foreground">({cooldownLeft}s)</span>}
               </Button>
-            </div>
-          )}
-
-          {/* Row 3: Belt Potions */}
-          {beltedPotions.length > 0 && onUseBeltPotion && (
-            <div className="flex flex-wrap gap-1">
-              {beltedPotions.map(p => (
-                <Tooltip key={p.id}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onUseBeltPotion(p.id)}
-                      className="font-display text-[10px] text-blood border-blood/30 h-5 px-1.5"
-                    >
-                      🧪 {p.item.name.length > 6 ? p.item.name.slice(0, 6) + '…' : p.item.name}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    {p.item.name}
-                  </TooltipContent>
-                </Tooltip>
-              ))}
             </div>
           )}
         </div>
