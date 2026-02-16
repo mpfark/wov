@@ -1,68 +1,51 @@
 
 
-## Direction-Based Region Placement + Region Editing
+## Region Sort Order for Directional Stacking
 
-### What Changes
+### Problem
+When multiple regions share the same compass direction, their stacking order (distance from The Hearthlands) is arbitrary -- based on array index. Admins need explicit control over which region appears closer or further from the center.
 
-**The Hearthlands** becomes the fixed center of the world map. Every other region gets a compass direction (N, S, E, W, NE, NW, SE, SW) relative to The Hearthlands, chosen by the admin. The admin world map uses these directions to position region bubbles geographically instead of lining them up by level. Admins can also edit a region's name and level range.
+### Solution
+Add a `sort_order` integer column to the `regions` table. Regions sharing the same direction are ordered by this value: lower = closer to Hearthlands, higher = further out along the compass axis. This also controls display order in sidebars and lists.
 
-### Database Change
+```text
+Example: Three regions all pointing North
 
-Add a `direction` column to the `regions` table:
-- Type: `text`, nullable, default `null`
-- Stores one of: `N`, `S`, `E`, `W`, `NE`, `NW`, `SE`, `SW`
-- The Hearthlands has no direction (it is the origin)
+    Hearthlands (center)
+         |
+    [sort_order: 1]  -- closest
+         |
+    [sort_order: 2]  -- middle
+         |
+    [sort_order: 3]  -- furthest north
+```
 
-### Admin World Map Layout Change (`AdminWorldMapView.tsx`)
+### Changes
 
-Currently, all regions start at (0,0) and get nudged apart by collision resolution with no directional intent. The new logic:
+**Database migration**
+- `ALTER TABLE regions ADD COLUMN sort_order integer NOT NULL DEFAULT 0`
 
-1. Place The Hearthlands at the center of the canvas
-2. For each other region, use its `direction` value to compute an initial position offset from center (e.g., N = up, SE = down-right)
-3. Regions without a direction fall back to a grid below the map
-4. Collision nudging still runs afterward to prevent overlaps, but now preserves the general compass layout
-5. The offset distance scales with the number of regions to keep spacing reasonable
+**`src/components/admin/RegionManager.tsx`**
+- Add a "Sort Order" number input to both the Create and Edit dialogs
+- Include `sort_order` in insert and update payloads
 
-### Region Manager Changes (`RegionManager.tsx`)
+**`src/components/admin/AdminWorldMapView.tsx`**
+- When computing region positions, sort regions by `sort_order` within each direction group
+- Use the sorted index (instead of arbitrary array index) as the distance multiplier from center
+- Sidebar region list ordered by `sort_order`
 
-Currently only supports creating regions. Will be expanded to:
-
-- **Create**: Add a direction dropdown (N/S/E/W/NE/NW/SE/SW) to the create dialog
-- **Edit**: Clicking a region in the sidebar opens an edit dialog where the admin can change the name, min/max level, and direction
-- **Delete**: Existing delete functionality remains (overlord only)
-
-### Region Sidebar Enhancement (`AdminWorldMapView.tsx`)
-
-Each region in the sidebar will show its assigned direction as a small compass indicator. Clicking a region will offer an "Edit" button that opens the edit dialog.
-
-### Files Changed
-
-| File | Change |
-|------|--------|
-| **Database migration** | `ALTER TABLE regions ADD COLUMN direction text DEFAULT null` |
-| `src/components/admin/RegionManager.tsx` | Add direction selector to create form; add edit dialog with name, level range, and direction fields |
-| `src/components/admin/AdminWorldMapView.tsx` | Replace `getRegionCoord` with direction-based placement using The Hearthlands as origin; pass direction data to region interface; add edit button to sidebar |
-| `src/pages/AdminPage.tsx` | Pass updated region data (including direction) through to components |
+**`src/pages/AdminPage.tsx`**
+- Already orders regions by `min_level` in the query; change to `order('sort_order')` so the data flows through sorted
 
 ### Technical Details
 
-**Direction-to-offset mapping** (used for initial region placement before collision nudging):
+The layout change is minimal. Currently in `getRegionCoord`:
 
-```text
-         NW    N    NE
-           \   |   /
-        W -- CENTER -- E
-           /   |   \
-         SW    S    SE
+```typescript
+// Current: arbitrary index
+const multiplier = 1 + myIndex * 0.6;
 ```
 
-Each direction maps to a base offset vector multiplied by a spacing constant (e.g., 400px):
-- `N: (0, -400)`, `S: (0, 400)`, `E: (400, 0)`, `W: (-400, 0)`
-- `NE: (280, -280)`, `NW: (-280, -280)`, `SE: (280, 280)`, `SW: (-280, 280)`
+After the change, `myIndex` will come from sorting the same-direction group by `sort_order`, giving admins deterministic control over stacking.
 
-If multiple regions share the same direction, they stack along that axis with increasing distance.
-
-**Identifying The Hearthlands**: Matched by the well-known ID `00000000-0000-0000-0000-000000000001`. This region is always placed at canvas center and cannot be assigned a direction.
-
-**Edit flow**: The edit dialog updates the region via `supabase.from('regions').update(...)` and calls `onCreated()` (renamed conceptually to `onRefresh`) to reload data.
-
+Default `sort_order` of 0 means existing regions will all start at the same priority and can be reordered as needed.
