@@ -310,7 +310,7 @@ export default function CharacterPanel({
                     <p className="text-xs text-muted-foreground">Bonus from equipped items.</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="w-5" />
+                <div className="w-4" />
               </div>
               <div className="space-y-0.5">
                 {Object.entries(STAT_LABELS).map(([key, label]) => {
@@ -328,13 +328,13 @@ export default function CharacterPanel({
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-5 w-5 p-0 text-primary hover:text-primary-foreground hover:bg-primary"
+                              className="h-4 w-4 p-0 text-primary hover:text-primary-foreground hover:bg-primary"
                               onClick={(e) => { e.stopPropagation(); onSpendPoint(key); }}
                             >
                               <Plus className="w-3 h-3" />
                             </Button>
                           ) : (
-                            <div className="w-5" />
+                            <div className="w-4" />
                           )}
                         </div>
                       </TooltipTrigger>
