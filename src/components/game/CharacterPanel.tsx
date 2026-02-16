@@ -107,6 +107,11 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 }
 
 
+// Duration constants for buff background calculation (in ms)
+const BUFF_DURATIONS: Record<string, number> = {
+  Potion: 120_000, Inspire: 90_000, Food: 120_000, 'Eagle Eye': 30_000,
+};
+
 function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number } }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
@@ -119,40 +124,50 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff }: { isAtInn?: boo
     return () => clearInterval(interval);
   }, [buffActive, foodActive, isAtInn, critActive]);
 
-  const buffs: { emoji: string; label: string; detail: string; color: string }[] = [];
+  const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
   if (isAtInn) {
-    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '3× regen', color: 'text-elvish' });
+    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '3× regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
   }
 
   if (buffActive) {
-    const secsLeft = Math.ceil((regenBuff!.expiresAt - now) / 1000);
     const isInspire = regenBuff!.multiplier === 2;
+    const lbl = isInspire ? 'Inspire' : 'Potion';
+    const dur = BUFF_DURATIONS[lbl] || 120_000;
+    const pct = Math.max(0, Math.min(100, ((regenBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
       emoji: isInspire ? '🎶' : '🧪',
-      label: isInspire ? 'Inspire' : 'Potion',
-      detail: `${regenBuff!.multiplier}× regen · ${secsLeft}s`,
+      label: lbl,
+      detail: `${regenBuff!.multiplier}× regen`,
       color: isInspire ? 'text-elvish' : 'text-primary',
+      bgColor: isInspire ? 'bg-elvish/15' : 'bg-primary/15',
+      pct,
     });
   }
 
   if (foodActive) {
-    const secsLeft = Math.ceil((foodBuff!.expiresAt - now) / 1000);
+    const dur = BUFF_DURATIONS['Food'] || 120_000;
+    const pct = Math.max(0, Math.min(100, ((foodBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
       emoji: '🍞',
       label: 'Food',
-      detail: `+${foodBuff!.flatRegen} regen · ${secsLeft}s`,
+      detail: `+${foodBuff!.flatRegen} regen`,
       color: 'text-elvish',
+      bgColor: 'bg-elvish/15',
+      pct,
     });
   }
 
   if (critActive) {
-    const secsLeft = Math.ceil((critBuff!.expiresAt - now) / 1000);
+    const dur = BUFF_DURATIONS['Eagle Eye'] || 30_000;
+    const pct = Math.max(0, Math.min(100, ((critBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
       emoji: '🦅',
       label: 'Eagle Eye',
-      detail: `Crit ${20 - critBuff!.bonus}-20 · ${secsLeft}s`,
+      detail: `Crit ${20 - critBuff!.bonus}-20`,
       color: 'text-primary',
+      bgColor: 'bg-primary/15',
+      pct,
     });
   }
 
@@ -165,11 +180,12 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff }: { isAtInn?: boo
       {buffs.map(b => (
         <span
           key={b.label}
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-background/40 text-[10px] font-display ${b.color}`}
+          className={`relative inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border overflow-hidden text-[10px] font-display ${b.color}`}
         >
-          <span>{b.emoji}</span>
-          <span>{b.label}</span>
-          <span className="text-muted-foreground">{b.detail}</span>
+          <span className={`absolute inset-0 ${b.bgColor} origin-left transition-transform duration-1000 ease-linear`} style={{ transform: `scaleX(${b.pct / 100})` }} />
+          <span className="relative z-10">{b.emoji}</span>
+          <span className="relative z-10">{b.label}</span>
+          <span className="relative z-10 text-muted-foreground">{b.detail}</span>
         </span>
       ))}
     </div>
