@@ -1,0 +1,1 @@
+ALTER TABLE public.regions ADD COLUMN direction text DEFAULT null;
