@@ -1,93 +1,75 @@
 
-
-# Tiered Abilities + Rogue "Sneak" Ability
+# Keyboard Movement Bindings
 
 ## Overview
 
-All current class abilities (Warrior's Second Wind, Healer's Heal, Ranger's Eagle Eye, Bard's Inspire) plus a new Rogue ability will be converted into a **tiered system**. Existing abilities become **Tier 1** and unlock at **level 5**. The Rogue gets a brand new ability: **Shadowstep** -- entering stealth to avoid attacks of opportunity when traveling and dealing bonus damage on the first combat strike.
+Add keyboard shortcuts so players can move between nodes by pressing direction keys. The current node's connections already have compass directions (N, S, E, W, NE, NW, SE, SW), so we can map keyboard keys to those directions and trigger movement automatically.
 
-## Rogue Ability: Shadowstep
+## Default Key Bindings
 
-- **Name**: Shadowstep
-- **Emoji**: `🌑`
-- **Type**: `stealth_buff`
-- **Effect**: For 15 seconds, the Rogue is cloaked in shadow:
-  - **No attacks of opportunity** when moving between nodes
-  - **First attack deals 2x damage** (like an ambush strike)
-- **Cooldown**: 60 seconds
-- **Scaling**: Duration increases slightly with DEX modifier (base 15s + dexMod seconds, capped at 25s)
+| Key | Direction |
+|-----|-----------|
+| W / ArrowUp | North |
+| S / ArrowDown | South |
+| D / ArrowRight | East |
+| A / ArrowLeft | West |
+| (no default) | NE, NW, SE, SW |
 
-## Changes
+Diagonal directions won't have default bindings but can be assigned by the player.
 
-### 1. Update ability data model (`src/lib/class-abilities.ts`)
+## How It Works
 
-- Add `tier` and `levelRequired` fields to the `ClassAbility` interface
-- Add `stealth_buff` to the ability type union
-- Set all existing abilities to `tier: 1, levelRequired: 5`
-- Add the Rogue's Shadowstep ability with the same tier/level requirement
+1. A `useKeyboardMovement` custom hook listens for `keydown` events on the document
+2. When a mapped key is pressed, it finds the current node's visible connection matching that direction
+3. If a connection exists, it calls `handleMove(connectionNodeId)` automatically
+4. Keys are ignored when the player is typing in an input/textarea, when a dialog is open, or when the character is dead
 
-### 2. Add stealth buff state (`src/pages/GamePage.tsx`)
+## Keybinding Settings
 
-- Add a `stealthBuff` state: `{ expiresAt: number }` (similar pattern to `critBuff`, `regenBuff`, `foodBuff`)
-- In `handleUseAbility`, add the `stealth_buff` branch that activates the buff with a DEX-scaled duration
-- Gate ability usage behind the level requirement check -- if `character.level < ability.levelRequired`, show a log message instead
+- A small keyboard icon button on the map panel header opens a compact keybinding editor
+- Players can click a direction slot and press any key to rebind it
+- Bindings are saved to `localStorage` so they persist between sessions
+- A "Reset to Defaults" button restores WASD + Arrow Keys
 
-### 3. Apply stealth to movement (`src/pages/GamePage.tsx` -- `handleMove`)
+## Files to Create/Modify
 
-- Before the "Attack of Opportunity" loop, check if `stealthBuff` is active (`Date.now() < stealthBuff.expiresAt`)
-- If active, skip attacks of opportunity and log: "You slip through the shadows unnoticed..."
-- Clear the stealth buff after moving (one use per activation for travel benefit)
+### New: `src/hooks/useKeyboardMovement.ts`
+- Custom hook that accepts the current node, nodes list, and move handler
+- Reads keybindings from localStorage (with defaults)
+- Attaches/detaches keydown listener
+- Skips input when focus is on form elements or character is dead
+- Exports a function to get/set bindings for the settings UI
 
-### 4. Apply stealth bonus damage to combat (`src/hooks/useCombat.ts`)
+### Modified: `src/pages/GamePage.tsx`
+- Import and call `useKeyboardMovement(currentNode, nodes, handleMove, isDead)`
+- Pass visible (non-hidden) connections to the hook
 
-- Accept a new `stealthBuff` parameter (same pattern as `critBuff`)
-- On the **first attack only** while stealth is active, double the damage and log an ambush message
-- Clear the stealth buff after the first strike (passed via a callback or ref)
-
-### 5. Update ability button in UI (`src/components/game/NodeView.tsx`)
-
-- Check `character.level >= ability.levelRequired` to show/disable the ability button
-- If below required level, show a tooltip like "Unlocks at level 5"
-
-### 6. Update admin display (`src/components/admin/RaceClassManager.tsx`)
-
-- Show the tier and level requirement alongside each class ability card
-- Display the Rogue's new Shadowstep ability in the class overview
-
----
+### Modified: `src/components/game/MapPanel.tsx`
+- Add a small keybinding settings button (keyboard icon) near the "Local Area" header
+- Inline keybinding editor: shows each direction with its current key, click to rebind
 
 ## Technical Details
 
 ```text
-ClassAbility interface changes:
-+  tier: number;
-+  levelRequired: number;
-   type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff';
+Hook signature:
+  useKeyboardMovement({
+    currentNode: GameNode | undefined,
+    nodes: GameNode[],
+    onMove: (nodeId: string) => void,
+    disabled: boolean
+  })
 
-New ability entry:
-  rogue: {
-    label: 'Shadowstep',
-    emoji: '🌑',
-    description: 'Vanish into shadow -- avoid attacks when fleeing and deal bonus damage on your next strike',
-    cooldownMs: 60000,
-    type: 'stealth_buff',
-    tier: 1,
-    levelRequired: 5,
-  }
+Default bindings stored as:
+  { N: ['w','ArrowUp'], S: ['s','ArrowDown'], E: ['d','ArrowRight'], W: ['a','ArrowLeft'],
+    NE: [], NW: [], SE: [], SW: [] }
 
-State shape:
-  stealthBuff: { expiresAt: number } | null
+localStorage key: 'movement-keybindings'
 
-Movement logic (pseudocode):
-  if stealthBuff active:
-    skip attacks of opportunity
-    log shadow travel message
-    clear stealthBuff
-
-Combat logic (pseudocode):
-  if stealthBuff active on first hit:
-    finalDmg *= 2
-    log ambush message
-    clear stealthBuff
+Key listener logic:
+  1. Skip if activeElement is input/textarea/select
+  2. Skip if any dialog/modal is open (check for [role="dialog"])
+  3. Look up pressed key in bindings map
+  4. Find matching direction in currentNode.connections (non-hidden only)
+  5. Call onMove(connection.node_id)
+  6. preventDefault to avoid scrolling on arrow keys
 ```
-
