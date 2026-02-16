@@ -1,52 +1,62 @@
 
 
-# Stat-Based HP Regen + Item Regen Bonus
+## Compact Action Bar Layout for NodeView
 
-## Balance Design
+### Problem
+The middle column's NodeView stacks location info, creatures, NPCs, other players, and all action buttons vertically. With plans for 3 abilities per class and up to 10 belt potions, the actions section will overflow and push content off-screen.
 
-Currently, HP regen is a flat **1 HP per 30 seconds**, multiplied by Inn (3x) and potion/bard buffs. We'll add a stat-based component using **CON** (constitution -- the natural choice for physical recovery):
+### Solution: Reorganize into compact zones
 
-**Formula**: `base_regen = 1 + floor((CON - 10) / 4)`
+**1. Collapsible "In the Area" section**
+- Wrap the creatures/NPCs/players list in a collapsible section (using the existing Radix Collapsible component) that defaults to open but can be collapsed to save space when not needed.
 
-- CON 8-13: 1 HP/tick (same as now for low-level characters)
-- CON 14-17: 2 HP/tick
-- CON 18-21: 3 HP/tick
-- CON 22-25: 4 HP/tick
-- CON 26-29: 5 HP/tick
-- CON 30: 6 HP/tick
+**2. Compact Action Bar (pinned to bottom)**
+- Replace the current stacked full-width buttons with a dense, icon-forward grid layout:
+  - **Row 1 -- Core actions**: Search, Shop, Blacksmith as small icon buttons in a horizontal row (not full-width). Only show Shop/Blacksmith when available.
+  - **Row 2 -- Abilities**: Up to 3 class abilities shown as compact emoji+label buttons in a horizontal flex-wrap row, with cooldown overlays. Healer target selector stays as a small dropdown only when relevant.
+  - **Row 3 -- Belt Potions**: Render as a scrollable horizontal row of small icon-only (or emoji + short name) pill buttons. With 10 potions this stays on 1-2 lines instead of 10 stacked buttons.
 
-This scales gently -- a high-CON Dwarf Warrior (CON ~12 at creation) starts the same but grows with levels. The multipliers from Inns, potions, and Bard still stack on top.
+**3. Creature cards -- tighter layout**
+- Reduce padding from `p-2` to `p-1.5`, combine name + level + attack button on a single line with inline HP bar (instead of a separate row for the HP bar).
 
-## Item Regen Bonus
+### Visual sketch
 
-Items can also add regen via a new `hp_regen` stat key in their stats JSON. For example, a ring might have `{"hp_regen": 1, "con": 1}`. This adds flat HP per tick before multipliers are applied.
+```text
++--------------------------------------+
+| [Location Name]                      |  <- header (compact)
+| Region -- Lvl range                  |
++--------------------------------------+
+| "A quiet corner of the world..."     |  <- description (scrollable)
++--------------------------------------+
+| v In the Area            [collapse]  |  <- collapsible
+|  [Goblin Lvl3 ====-- 14/20] [Strike]|  <- single-line creature
+|  [Wolf   Lvl2 ======  8/8 ] [Strike]|
+|  [NPC: Merchant]            [Talk]   |
++--------------------------------------+
+| [Search] [Shop] [Smithy]            |  <- row of compact buttons
+| [💪 2nd Wind] [⚔️ Ability2] [🛡 Ab3] |  <- abilities row
+| [🧪HP] [🧪MP] [🧪HP] [🧪HP] ...     |  <- belt potions, wrapping
++--------------------------------------+
+```
 
-**Formula with items**: `total_base = (1 + floor((CON - 10) / 4) + equipped_hp_regen) * multipliers`
+### Technical Details
 
-## Changes
+**Files to modify:**
+- `src/components/game/NodeView.tsx` -- Main layout restructure:
+  - Import `Collapsible`, `CollapsibleTrigger`, `CollapsibleContent` from UI components
+  - Wrap "In the Area" section in a Collapsible, default open
+  - Creature cards: merge HP bar inline with name row, reduce padding
+  - Action bar: change from vertical stack to horizontal flex-wrap groups
+  - Abilities: update props to accept an array of `ClassAbility` objects (future-proofing for 3 abilities), render as compact row
+  - Belt potions: change from `flex-wrap` with full labels to a scrollable horizontal strip with shorter labels or emoji-only with tooltips
+  - All buttons use `h-6` or `h-7` height with minimal padding
 
-### 1. Game Data (`src/lib/game-data.ts`)
-- Add `hp_regen` to `ITEM_STAT_COSTS` (cost: 2 points -- strong but not broken)
-- Add `hp_regen` to `ITEM_STAT_CAPS` (cap: 3 per item)
-- Add a `getBaseRegen(con: number)` helper function
+- `src/lib/class-abilities.ts` -- No changes needed now, but the interface already supports the multi-ability future.
 
-### 2. Regen Logic (`src/pages/GamePage.tsx`)
-- Update the regen interval to calculate `base_regen` from character CON using the formula
-- Sum `hp_regen` from all equipped items' stats
-- Use `(base_regen + item_regen) * totalMult` instead of `1 * totalMult`
-- Pass the computed base regen and item regen values to CharacterPanel for display
+- `src/pages/GamePage.tsx` -- Minor: pass abilities as array when that expansion happens; no changes needed for this layout refactor.
 
-### 3. Regen Tooltip (`src/components/game/CharacterPanel.tsx`)
-- Update the HP bar tooltip to show the breakdown:
-  - "Base (CON): X HP"
-  - "Gear: +Y HP" (if any equipped items have hp_regen)
-  - Multiplier lines (Inn, Potion) as before
-  - "Total: Z HP every 30s"
-
-### 4. Item Manager (`src/components/admin/ItemManager.tsx`)
-- Add `hp_regen` as a configurable stat in the item editor (alongside str, dex, etc.)
-- Display it with label "HP Regen" so admins can set it on any equipment piece
-
-### 5. Item Display (`src/components/game/CharacterPanel.tsx`)
-- When rendering item stat badges in inventory/equipment, show `hp_regen` with a distinct style (e.g., green/elvish color) labeled as "+X Regen"
-
+**Key decisions:**
+- Collapsible defaults to open so new players see everything; experienced players can collapse it
+- Belt potions use tooltip on hover for the full name, showing only emoji + abbreviated name (e.g., "🧪 HP Pot") to fit more per row
+- Abilities use `flex-wrap` so 1-3 abilities flow naturally without forcing specific grid columns
+- No structural changes to the middle column split ratio or the three-column layout itself
