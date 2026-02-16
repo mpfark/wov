@@ -156,10 +156,12 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff }: { isAtInn?: boo
     });
   }
 
-  if (buffs.length === 0) return null;
+  if (buffs.length === 0) return (
+    <div className="text-[9px] text-muted-foreground/40 italic">No buffs</div>
+  );
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-col gap-1">
       {buffs.map(b => (
         <span
           key={b.label}
@@ -248,9 +250,6 @@ export default function CharacterPanel({
           </TooltipContent>
         </Tooltip>
 
-        {/* Active Buffs */}
-        <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} />
-
         {/* XP Bar */}
         <div>
           <div className="flex justify-between text-xs mb-1">
@@ -272,69 +271,65 @@ export default function CharacterPanel({
               </span>
             )}
           </div>
-          <div className="flex items-center justify-between text-[9px] text-muted-foreground/70 px-1 mb-0.5">
-            <span className="w-20">Stat</span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex-1 text-center cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
-              </TooltipTrigger>
-              <TooltipContent className="bg-popover border-border z-50">
-                <p className="font-display text-sm">Base + Gear</p>
-                <p className="text-xs text-muted-foreground"><strong>Base</strong> — Your natural stat from race, class, and level-up points.</p>
-                <p className="text-xs text-muted-foreground"><strong>Gear</strong> — Bonus from equipped items (shown in green).</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="w-8 text-right cursor-help underline decoration-dotted">Mod</span>
-              </TooltipTrigger>
-              <TooltipContent className="bg-popover border-border z-50">
-                <p className="font-display text-sm">Modifier</p>
-                <p className="text-xs text-muted-foreground">Added to dice rolls using this stat. Calculated as (total − 10) ÷ 2, rounded down.</p>
-              </TooltipContent>
-            </Tooltip>
-            <div className="w-5 ml-1" />
-          </div>
-          <div className="space-y-0.5">
-            {Object.entries(STAT_LABELS).map(([key, label]) => {
-              const base = (character as any)[key] as number;
-              const bonus = equipmentBonuses[key] || 0;
-              const total = base + bonus;
-              const mod = getStatModifier(total);
-              const canSpend = character.unspent_stat_points > 0 && base < 30;
-              return (
-                <Tooltip key={key}>
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            {/* Left column: Stats */}
+            <div>
+              <div className="flex items-center justify-between text-[9px] text-muted-foreground/70 px-1 mb-0.5">
+                <span className="w-20">Stat</span>
+                <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
-                      <span className="font-display text-foreground w-20">{STAT_FULL_NAMES[key]}</span>
-                      <span className="text-muted-foreground flex-1 text-center tabular-nums">
-                        <span className="text-foreground" title="Base">{base}</span>
-                        {bonus > 0 && <span className="text-chart-2 ml-1" title="Gear">+{bonus}</span>}
-                      </span>
-                      <span className="text-primary text-[10px] w-8 text-right" title="Modifier">
-                        ({mod >= 0 ? `+${mod}` : mod})
-                      </span>
-                      {canSpend && onSpendPoint ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-5 w-5 p-0 ml-1 text-primary hover:text-primary-foreground hover:bg-primary"
-                          onClick={(e) => { e.stopPropagation(); onSpendPoint(key); }}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      ) : (
-                        <div className="w-5 ml-1" />
-                      )}
-                    </div>
+                    <span className="flex-1 text-center cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
                   </TooltipTrigger>
                   <TooltipContent className="bg-popover border-border z-50">
-                    <p className="font-display text-sm">{STAT_FULL_NAMES[key]}</p>
-                    <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[key]}</p>
+                    <p className="font-display text-sm">Base + Gear</p>
+                    <p className="text-xs text-muted-foreground"><strong>Base</strong> — Your natural stat from race, class, and level-up points.</p>
+                    <p className="text-xs text-muted-foreground"><strong>Gear</strong> — Bonus from equipped items (shown in green).</p>
                   </TooltipContent>
                 </Tooltip>
-              );
-            })}
+                <div className="w-5 ml-1" />
+              </div>
+              <div className="space-y-0.5">
+                {Object.entries(STAT_LABELS).map(([key, label]) => {
+                  const base = (character as any)[key] as number;
+                  const bonus = equipmentBonuses[key] || 0;
+                  const canSpend = character.unspent_stat_points > 0 && base < 30;
+                  return (
+                    <Tooltip key={key}>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
+                          <span className="font-display text-foreground w-20">{STAT_FULL_NAMES[key]}</span>
+                          <span className="text-muted-foreground flex-1 text-center tabular-nums">
+                            <span className="text-foreground" title="Base">{base}</span>
+                            {bonus > 0 && <span className="text-chart-2 ml-1" title="Gear">+{bonus}</span>}
+                          </span>
+                          {canSpend && onSpendPoint ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-5 w-5 p-0 ml-1 text-primary hover:text-primary-foreground hover:bg-primary"
+                              onClick={(e) => { e.stopPropagation(); onSpendPoint(key); }}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          ) : (
+                            <div className="w-5 ml-1" />
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-popover border-border z-50">
+                        <p className="font-display text-sm">{STAT_FULL_NAMES[key]}</p>
+                        <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[key]}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Right column: Active Buffs */}
+            <div className="border-l border-border pl-2 min-w-[5.5rem]">
+              <div className="text-[9px] text-muted-foreground/70 mb-0.5">Buffs</div>
+              <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} />
+            </div>
           </div>
           <div className="flex gap-3 justify-center text-xs mt-1.5">
             <span className="font-display text-foreground">
