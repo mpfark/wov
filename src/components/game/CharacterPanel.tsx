@@ -287,14 +287,14 @@ export default function CharacterPanel({
               </span>
             )}
           </div>
-          <div className="grid grid-cols-[1fr_auto] gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {/* Left column: Stats */}
             <div>
-              <div className="flex items-center justify-between text-[9px] text-muted-foreground/70 px-1 mb-0.5">
+              <div className="flex items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5">
                 <span className="w-20">Stat</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="flex-1 text-center cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
+                    <span className="cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
                   </TooltipTrigger>
                   <TooltipContent className="bg-popover border-border z-50">
                     <p className="font-display text-sm">Base + Gear</p>
@@ -302,7 +302,6 @@ export default function CharacterPanel({
                     <p className="text-xs text-muted-foreground"><strong>Gear</strong> — Bonus from equipped items (shown in green).</p>
                   </TooltipContent>
                 </Tooltip>
-                <div className="w-5 ml-1" />
               </div>
               <div className="space-y-0.5">
                 {Object.entries(STAT_LABELS).map(([key, label]) => {
@@ -312,12 +311,13 @@ export default function CharacterPanel({
                   return (
                     <Tooltip key={key}>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
+                        <div className="flex items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
                           <span className="font-display text-foreground w-20">{STAT_FULL_NAMES[key]}</span>
-                          <span className="text-muted-foreground flex-1 text-center tabular-nums">
+                          <span className="tabular-nums">
                             <span className="text-foreground" title="Base">{base}</span>
                             {bonus > 0 && <span className="text-chart-2 ml-1" title="Gear">+{bonus}</span>}
                           </span>
+                          <span className="flex-1" />
                           {canSpend && onSpendPoint ? (
                             <Button
                               size="sm"
@@ -342,7 +342,7 @@ export default function CharacterPanel({
               </div>
             </div>
             {/* Right column: Active Buffs */}
-            <div className="border-l border-border pl-2 min-w-[5.5rem]">
+            <div className="border-l border-border pl-2">
               <div className="text-[9px] text-muted-foreground/70 mb-0.5">Buffs</div>
               <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} />
             </div>
