@@ -287,6 +287,48 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       if (!moved) break;
     }
 
+    // Post-collision: enforce sort_order along each direction axis
+    // Group bubbles by direction, then ensure their projections along the
+    // direction vector respect sort_order (lower sort_order = closer to center)
+    const centerX = CANVAS_W / 2;
+    const centerY = CANVAS_H / 2;
+    // Shift center by any normalization shift we haven't applied yet
+    const dirGroups = new Map<string, typeof bubbleData>();
+    for (const bd of bubbleData) {
+      const dir = bd.region.direction;
+      if (!dir || bd.region.id === HEARTHLANDS_ID) continue;
+      if (!dirGroups.has(dir)) dirGroups.set(dir, []);
+      dirGroups.get(dir)!.push(bd);
+    }
+
+    for (const [dir, group] of dirGroups) {
+      if (group.length < 2) continue;
+      const offset = REGION_DIR_OFFSETS[dir];
+      if (!offset) continue;
+      // Sort group by sort_order (desired order)
+      group.sort((a, b) => {
+        const aOrder = typeof a.region.sort_order === 'number' ? a.region.sort_order : 0;
+        const bOrder = typeof b.region.sort_order === 'number' ? b.region.sort_order : 0;
+        return aOrder - bOrder;
+      });
+      // Get current positions sorted by projection onto direction axis
+      const hearthBubble = bubbleData.find(bd => bd.region.id === HEARTHLANDS_ID);
+      const hx = hearthBubble ? hearthBubble.cx : centerX;
+      const hy = hearthBubble ? hearthBubble.cy : centerY;
+      const dirLen = Math.sqrt(offset.x * offset.x + offset.y * offset.y);
+      const ux = offset.x / dirLen;
+      const uy = offset.y / dirLen;
+      // Collect all positions, sorted by distance along direction
+      const positions = group
+        .map(bd => ({ cx: bd.cx, cy: bd.cy, proj: (bd.cx - hx) * ux + (bd.cy - hy) * uy }))
+        .sort((a, b) => a.proj - b.proj);
+      // Assign sorted positions to sort_order-sorted bubbles
+      for (let i = 0; i < group.length; i++) {
+        group[i].cx = positions[i].cx;
+        group[i].cy = positions[i].cy;
+      }
+    }
+
     // Normalize: ensure no bubble extends past the viewBox origin
     const MARGIN = 20;
     let shiftX = 0;
