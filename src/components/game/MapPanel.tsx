@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Region, GameNode } from '@/hooks/useNodes';
 import { Party, PartyMember } from '@/hooks/useParty';
 import { PlayerPresence } from '@/hooks/usePresence';
 import { Character } from '@/hooks/useCharacter';
 import PlayerGraphView from './PlayerGraphView';
+import PlayerWorldMap from './PlayerWorldMap';
 import PartyPanel from './PartyPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface Props {
   regions: Region[];
@@ -37,40 +40,62 @@ export default function MapPanel({
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
 }: Props) {
+  const [tab, setTab] = useState<string>('local');
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
 
   return (
     <div className="h-full flex flex-col p-3 space-y-3 overflow-y-auto">
-      {/* Current Region */}
-      <div>
-        <h3 className="font-display text-xs text-muted-foreground mb-1.5">Region</h3>
-        {currentRegion ? (
-          <div className="p-2 rounded border border-primary bg-primary/10 text-xs">
-            <div className="font-display text-primary">{currentRegion.name}</div>
-            <div className="text-[10px] text-muted-foreground">
-              Lvl {currentRegion.min_level}–{currentRegion.max_level}
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground italic">Unknown region...</p>
-        )}
-      </div>
+      {/* Tab Toggle */}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="w-full h-8">
+          <TabsTrigger value="local" className="flex-1 text-[11px] h-6">Local Area</TabsTrigger>
+          <TabsTrigger value="world" className="flex-1 text-[11px] h-6">World Map</TabsTrigger>
+        </TabsList>
 
-      {/* Local Map — SVG Graph */}
-      <div>
-        <h3 className="font-display text-xs text-muted-foreground mb-1.5">Local Area</h3>
-        {currentNodeId ? (
-          <PlayerGraphView
-            currentNodeId={currentNodeId}
+        <TabsContent value="local" className="mt-2 space-y-3">
+          {/* Current Region */}
+          <div>
+            <h3 className="font-display text-xs text-muted-foreground mb-1.5">Region</h3>
+            {currentRegion ? (
+              <div className="p-2 rounded border border-primary bg-primary/10 text-xs">
+                <div className="font-display text-primary">{currentRegion.name}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  Lvl {currentRegion.min_level}–{currentRegion.max_level}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Unknown region...</p>
+            )}
+          </div>
+
+          {/* Local Map */}
+          <div>
+            <h3 className="font-display text-xs text-muted-foreground mb-1.5">Local Area</h3>
+            {currentNodeId ? (
+              <PlayerGraphView
+                currentNodeId={currentNodeId}
+                nodes={nodes}
+                onNodeClick={onNodeClick}
+                partyMembers={partyMembers}
+                myCharacterId={myCharacterId}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="world" className="mt-2">
+          <PlayerWorldMap
+            regions={regions}
             nodes={nodes}
-            onNodeClick={onNodeClick}
+            currentNodeId={currentNodeId}
+            currentRegionId={currentRegionId}
             partyMembers={partyMembers}
             myCharacterId={myCharacterId}
           />
-        ) : (
-          <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Map Legend */}
       <div className="border-t border-border pt-2">
