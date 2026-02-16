@@ -242,7 +242,10 @@ export default function NodeEditorPanel({
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
   const [creatures, setCreatures] = useState<any[]>([]);
+  const [npcs, setNpcs] = useState<any[]>([]);
   const [creatureForm, setCreatureForm] = useState(defaultCreatureForm());
+  const [npcForm, setNpcForm] = useState({ name: '', description: '', dialogue: '' });
+  const [editingNpcId, setEditingNpcId] = useState<string | null>(null);
   const [editingCreatureId, setEditingCreatureId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [vendorItems, setVendorItems] = useState<VendorEntry[]>([]);
@@ -260,14 +263,18 @@ export default function NodeEditorPanel({
     if (nodeId) {
       loadNode(nodeId);
       loadCreatures(nodeId);
+      loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
       setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, connections: '[]', searchable_items: [] });
       setCreatures([]);
+      setNpcs([]);
       setVendorItems([]);
     }
     setEditingCreatureId(null);
+    setEditingNpcId(null);
     setCreatureForm(defaultCreatureForm());
+    setNpcForm({ name: '', description: '', dialogue: '' });
     setVendorForm({ item_id: '', price: 10, stock: -1 });
   }, [nodeId, initialRegionId]);
 
@@ -288,6 +295,45 @@ export default function NodeEditorPanel({
   const loadCreatures = async (id: string) => {
     const { data } = await supabase.from('creatures').select('*').eq('node_id', id).order('name');
     setCreatures(data || []);
+  };
+
+  const loadNpcs = async (id: string) => {
+    const { data } = await supabase.from('npcs').select('*').eq('node_id', id).order('name');
+    setNpcs(data || []);
+  };
+
+  const saveNpc = async () => {
+    if (!activeNodeId || !npcForm.name) return toast.error('Save the node first and provide an NPC name');
+    const payload = { name: npcForm.name, description: npcForm.description, dialogue: npcForm.dialogue, node_id: activeNodeId };
+    if (editingNpcId) {
+      const { error } = await supabase.from('npcs').update(payload).eq('id', editingNpcId);
+      if (error) return toast.error(error.message);
+      toast.success('NPC updated');
+    } else {
+      const { error } = await supabase.from('npcs').insert(payload);
+      if (error) return toast.error(error.message);
+      toast.success('NPC added');
+    }
+    setNpcForm({ name: '', description: '', dialogue: '' });
+    setEditingNpcId(null);
+    loadNpcs(activeNodeId);
+  };
+
+  const editNpc = (n: any) => {
+    setEditingNpcId(n.id);
+    setNpcForm({ name: n.name, description: n.description || '', dialogue: n.dialogue || '' });
+  };
+
+  const cancelEditNpc = () => {
+    setEditingNpcId(null);
+    setNpcForm({ name: '', description: '', dialogue: '' });
+  };
+
+  const removeNpc = async (id: string) => {
+    const { error } = await supabase.from('npcs').delete().eq('id', id);
+    if (error) return toast.error(error.message);
+    toast.success('NPC removed');
+    if (activeNodeId) loadNpcs(activeNodeId);
   };
 
   const loadVendorInventory = async (id: string) => {
@@ -477,7 +523,7 @@ export default function NodeEditorPanel({
           <Tabs defaultValue="details">
             <TabsList className="mb-3 h-8">
               <TabsTrigger value="details" className="font-display text-xs">Details</TabsTrigger>
-              {activeNodeId && <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>}
+              {activeNodeId && <TabsTrigger value="creatures" className="font-display text-xs">Creatures & NPCs</TabsTrigger>}
               {activeNodeId && form.is_vendor && <TabsTrigger value="vendor" className="font-display text-xs">Vendor Stock</TabsTrigger>}
               {activeNodeId && <TabsTrigger value="connections" className="font-display text-xs">Connections</TabsTrigger>}
             </TabsList>
