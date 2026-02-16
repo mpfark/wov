@@ -24,6 +24,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { logActivity } from '@/hooks/useActivityLog';
 
+function getLogColor(log: string): string {
+  if (log.includes('CRITICAL!')) return 'text-primary font-semibold';
+  if (log.startsWith('💀') || log.includes('been defeated') || log.includes('struck down')) return 'text-destructive';
+  if (log.startsWith('☠️')) return 'text-elvish';
+  if (log.startsWith('🎉') || log.includes('Level Up')) return 'text-primary font-semibold';
+  if (log.startsWith('📈')) return 'text-primary';
+  if (log.startsWith('⚠️')) return 'text-dwarvish';
+  if (log.startsWith('💔')) return 'text-destructive/80';
+  if (log.startsWith('💚') || log.startsWith('💪') || log.includes('restore') || log.includes('recover')) return 'text-elvish';
+  if (log.startsWith('🦅')) return 'text-primary';
+  if (log.startsWith('🎶') || log.startsWith('✨')) return 'text-elvish';
+  if (log.startsWith('🛡️')) return 'text-dwarvish';
+  if (log.includes('miss')) return 'text-muted-foreground';
+  if (log.includes('damage')) return 'text-foreground/90';
+  return 'text-foreground/80';
+}
+
 interface Props {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
@@ -681,7 +698,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
               ) : (
                 eventLog.map((log, i) => (
-                  <p key={i} className="text-xs text-foreground/80">{log}</p>
+                  <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
                 ))
               )}
               <div ref={logEndRef} />
