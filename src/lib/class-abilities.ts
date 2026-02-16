@@ -22,7 +22,9 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff';
+  tier: number;
+  levelRequired: number;
 }
 
 export const CLASS_ABILITIES: Record<string, ClassAbility> = {
@@ -32,6 +34,8 @@ export const CLASS_ABILITIES: Record<string, ClassAbility> = {
     description: 'Catch your breath and recover HP based on CON',
     cooldownMs: 45000,
     type: 'self_heal',
+    tier: 1,
+    levelRequired: 5,
   },
   healer: {
     label: 'Heal',
@@ -39,6 +43,8 @@ export const CLASS_ABILITIES: Record<string, ClassAbility> = {
     description: 'Restore HP based on your Wisdom',
     cooldownMs: 30000,
     type: 'heal',
+    tier: 1,
+    levelRequired: 5,
   },
   ranger: {
     label: 'Eagle Eye',
@@ -46,6 +52,8 @@ export const CLASS_ABILITIES: Record<string, ClassAbility> = {
     description: 'Sharpen your focus to widen your critical hit range based on DEX',
     cooldownMs: 60000,
     type: 'crit_buff',
+    tier: 1,
+    levelRequired: 5,
   },
   bard: {
     label: 'Inspire',
@@ -53,5 +61,16 @@ export const CLASS_ABILITIES: Record<string, ClassAbility> = {
     description: 'A song that boosts HP regeneration',
     cooldownMs: 60000,
     type: 'regen_buff',
+    tier: 1,
+    levelRequired: 5,
+  },
+  rogue: {
+    label: 'Shadowstep',
+    emoji: '🌑',
+    description: 'Vanish into shadow — avoid attacks when fleeing and deal bonus damage on your next strike',
+    cooldownMs: 60000,
+    type: 'stealth_buff',
+    tier: 1,
+    levelRequired: 5,
   },
 };

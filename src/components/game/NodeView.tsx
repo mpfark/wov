@@ -211,37 +211,51 @@ export default function NodeView({
           )}
 
           {/* Row 3: Abilities */}
-          {classAbility && onUseAbility && (
-            <div className="flex flex-wrap items-center gap-1">
-              {isHealerWithTargets && (
-                <Select value={healTarget} onValueChange={setHealTarget}>
-                  <SelectTrigger className="h-6 text-[10px] font-display w-auto min-w-[80px] max-w-[120px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="self" className="text-[10px]">
-                      Self ({character.hp}/{character.max_hp})
-                    </SelectItem>
-                    {healTargets.map(t => (
-                      <SelectItem key={t.id} value={t.id} className="text-[10px]">
-                        {t.name} ({t.hp}/{t.max_hp})
+          {classAbility && onUseAbility && (() => {
+            const levelLocked = character.level < classAbility.levelRequired;
+            return (
+              <div className="flex flex-wrap items-center gap-1">
+                {!levelLocked && isHealerWithTargets && (
+                  <Select value={healTarget} onValueChange={setHealTarget}>
+                    <SelectTrigger className="h-6 text-[10px] font-display w-auto min-w-[80px] max-w-[120px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="self" className="text-[10px]">
+                        Self ({character.hp}/{character.max_hp})
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onUseAbility(isHealerWithTargets && healTarget !== 'self' ? healTarget : undefined)}
-                disabled={cooldownLeft > 0 || character.hp <= 0}
-                className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
-              >
-                {classAbility.emoji} {classAbility.label}
-                {cooldownLeft > 0 && <span className="ml-0.5 text-muted-foreground">({cooldownLeft}s)</span>}
-              </Button>
-            </div>
-          )}
+                      {healTargets.map(t => (
+                        <SelectItem key={t.id} value={t.id} className="text-[10px]">
+                          {t.name} ({t.hp}/{t.max_hp})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onUseAbility(isHealerWithTargets && healTarget !== 'self' ? healTarget : undefined)}
+                        disabled={levelLocked || cooldownLeft > 0 || character.hp <= 0}
+                        className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
+                      >
+                        {classAbility.emoji} {classAbility.label}
+                        {!levelLocked && cooldownLeft > 0 && <span className="ml-0.5 text-muted-foreground">({cooldownLeft}s)</span>}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {levelLocked && (
+                    <TooltipContent side="top" className="text-xs">
+                      Unlocks at level {classAbility.levelRequired}
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </TooltipProvider>
