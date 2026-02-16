@@ -19,6 +19,7 @@ interface Region {
   min_level: number;
   max_level: number;
   direction?: string | null;
+  sort_order?: number;
 }
 
 interface Props {
@@ -173,7 +174,9 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     if (region.direction && REGION_DIR_OFFSETS[region.direction]) {
       const base = REGION_DIR_OFFSETS[region.direction];
       // Count how many regions share this direction to stack them
-      const sameDir = allRegions.filter(r => r.direction === region.direction && r.id !== HEARTHLANDS_ID);
+      const sameDir = allRegions
+        .filter(r => r.direction === region.direction && r.id !== HEARTHLANDS_ID)
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
       const myIndex = sameDir.findIndex(r => r.id === region.id);
       const multiplier = 1 + myIndex * 0.6;
       return { x: centerX + base.x * multiplier, y: centerY + base.y * multiplier };
@@ -372,7 +375,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   }, [nodes, allNodePositions, allNodeMap]);
 
   // Sort regions by min_level for sidebar
-  const sortedRegions = useMemo(() => [...regions].sort((a, b) => a.min_level - b.min_level), [regions]);
+  const sortedRegions = useMemo(() => [...regions].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)), [regions]);
 
   if (regions.length === 0) {
     return (

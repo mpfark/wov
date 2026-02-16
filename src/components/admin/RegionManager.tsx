@@ -18,6 +18,7 @@ interface Region {
   min_level: number;
   max_level: number;
   direction?: string | null;
+  sort_order?: number;
 }
 
 interface Props {
@@ -31,16 +32,16 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
-  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10, direction: '' });
+  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10, direction: '', sort_order: 0 });
 
   const create = async () => {
     if (!form.name) return toast.error('Name required');
-    const payload: any = { name: form.name, description: form.description, min_level: form.min_level, max_level: form.max_level };
+    const payload: any = { name: form.name, description: form.description, min_level: form.min_level, max_level: form.max_level, sort_order: form.sort_order };
     if (form.direction) payload.direction = form.direction;
     const { error } = await supabase.from('regions').insert(payload);
     if (error) return toast.error(error.message);
     toast.success('Region created');
-    setForm({ name: '', description: '', min_level: 1, max_level: 10, direction: '' });
+    setForm({ name: '', description: '', min_level: 1, max_level: 10, direction: '', sort_order: 0 });
     setCreateOpen(false);
     onCreated();
   };
@@ -58,6 +59,7 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
       min_level: editingRegion.min_level,
       max_level: editingRegion.max_level,
       direction: editingRegion.direction || null,
+      sort_order: editingRegion.sort_order ?? 0,
     }).eq('id', editingRegion.id);
     if (error) return toast.error(error.message);
     toast.success('Region updated');
@@ -110,6 +112,8 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
                 ))}
               </SelectContent>
             </Select>
+            <Input type="number" placeholder="Sort order (lower = closer)" value={form.sort_order}
+              onChange={e => setForm(f => ({ ...f, sort_order: +e.target.value }))} />
             <Button onClick={create} className="font-display text-xs w-full">
               <Plus className="w-3 h-3 mr-1" /> Create Region
             </Button>
@@ -151,6 +155,8 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
                   </SelectContent>
                 </Select>
               )}
+              <Input type="number" placeholder="Sort order (lower = closer)" value={editingRegion.sort_order ?? 0}
+                onChange={e => setEditingRegion(r => r ? { ...r, sort_order: +e.target.value } : r)} />
               <Button onClick={saveEdit} className="font-display text-xs w-full">
                 Save Changes
               </Button>

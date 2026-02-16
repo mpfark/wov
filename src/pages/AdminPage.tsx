@@ -34,7 +34,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
   const loadData = useCallback(async () => {
     const [r, n, c, np] = await Promise.all([
-      supabase.from('regions').select('*').order('min_level'),
+      supabase.from('regions').select('*').order('sort_order'),
       supabase.from('nodes').select('*').order('name'),
       supabase.from('creatures').select('id, node_id, is_aggressive, is_alive'),
       supabase.from('npcs').select('id, node_id'),
