@@ -33,6 +33,7 @@ function getLogColor(log: string): string {
   if (log.startsWith('⚠️')) return 'text-dwarvish';
   if (log.startsWith('💔')) return 'text-destructive/80';
   if (log.startsWith('💚') || log.startsWith('💪') || log.includes('restore') || log.includes('recover')) return 'text-elvish';
+  if (log.startsWith('🌑')) return 'text-primary';
   if (log.startsWith('🦅')) return 'text-primary';
   if (log.startsWith('🎶') || log.startsWith('✨')) return 'text-elvish';
   if (log.startsWith('🛡️')) return 'text-dwarvish';
@@ -72,6 +73,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [foodBuff, setFoodBuff] = useState<{ flatRegen: number; expiresAt: number }>({ flatRegen: 0, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
   const [critBuff, setCritBuff] = useState<{ bonus: number; expiresAt: number }>({ bonus: 0, expiresAt: 0 });
+  const [stealthBuff, setStealthBuff] = useState<{ expiresAt: number } | null>(null);
   const [abilityCooldownEnd, setAbilityCooldownEnd] = useState(0);
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -262,6 +264,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     partyMembers,
     isDead,
     critBuff,
+    stealthBuff,
+    onClearStealthBuff: useCallback(() => setStealthBuff(null), []),
   });
 
   const handleAttack = useCallback((creatureId: string) => {
@@ -323,18 +327,24 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`⚠️ You are entering ${targetRegion.name} (Lvl ${targetRegion.min_level}–${targetRegion.max_level}). These lands are ${levelDiff >= 10 ? 'extremely' : levelDiff >= 5 ? 'very' : ''} dangerous for your level!`);
     }
 
-    // Attack of Opportunity — each living creature gets a free strike
+    // Attack of Opportunity — each living creature gets a free strike (unless stealthed)
     const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0 && (c.is_aggressive || c.id === activeCombatCreatureId));
     let currentHp = character.hp;
-    for (const creature of livingCreatures) {
-      if (currentHp <= 0) break;
-      const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
-      if (atkRoll >= effectiveAC) {
-        const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-        currentHp = Math.max(currentHp - dmg, 0);
-        addLog(`⚔️ ${creature.name} strikes as you flee! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${dmg} damage!`);
-      } else {
-        addLog(`${creature.name} swipes at you as you flee — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
+    const isStealthed = stealthBuff && Date.now() < stealthBuff.expiresAt;
+    if (isStealthed) {
+      addLog('🌑 You slip through the shadows unnoticed...');
+      setStealthBuff(null);
+    } else {
+      for (const creature of livingCreatures) {
+        if (currentHp <= 0) break;
+        const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
+        if (atkRoll >= effectiveAC) {
+          const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+          currentHp = Math.max(currentHp - dmg, 0);
+          addLog(`⚔️ ${creature.name} strikes as you flee! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${dmg} damage!`);
+        } else {
+          addLog(`${creature.name} swipes at you as you flee — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
+        }
       }
     }
     if (currentHp < character.hp) {
@@ -519,6 +529,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (isDead || character.hp <= 0) return;
     const ability = CLASS_ABILITIES[character.class];
     if (!ability) return;
+    if (character.level < ability.levelRequired) {
+      addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
+      return;
+    }
     if (Date.now() < abilityCooldownEnd) return;
 
     if (ability.type === 'heal') {
@@ -526,7 +540,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const healAmount = Math.max(3, wisMod * 3 + character.level);
 
       if (targetId && targetId !== character.id) {
-        // Heal a party member via RPC
         const { data: restored, error } = await supabase.rpc('heal_party_member', {
           _healer_id: character.id,
           _target_id: targetId,
@@ -540,7 +553,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const targetName = targetMember?.character.name || 'ally';
         addLog(`${ability.emoji} ${character.name} casts Heal on ${targetName} and restores ${restored} HP!`);
       } else {
-        // Self-heal
         const newHp = Math.min(character.max_hp, character.hp + healAmount);
         const restored = newHp - character.hp;
         if (restored > 0) {
@@ -575,6 +587,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationMs = 30000;
       setCritBuff({ bonus: critBonus, expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Eagle Eye! Your crit range is now ${20 - critBonus}-20 for ${durationMs / 1000}s.`);
+    } else if (ability.type === 'stealth_buff') {
+      const dexMod = getStatMod2(character.dex);
+      const durationMs = Math.min(15000 + dexMod * 1000, 25000);
+      setStealthBuff({ expiresAt: Date.now() + durationMs });
+      addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s.`);
     }
 
     setAbilityCooldownEnd(Date.now() + ability.cooldownMs);

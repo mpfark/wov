@@ -36,6 +36,8 @@ interface UseCombatParams {
   partyMembers: PartyMember[];
   isDead: boolean;
   critBuff?: { bonus: number; expiresAt: number };
+  stealthBuff?: { expiresAt: number } | null;
+  onClearStealthBuff?: () => void;
 }
 
 export function useCombat({
@@ -51,6 +53,8 @@ export function useCombat({
   partyMembers,
   isDead,
   critBuff,
+  stealthBuff,
+  onClearStealthBuff,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -69,6 +73,8 @@ export function useCombat({
   const partyMembersRef = useRef(partyMembers);
   const isDeadRef = useRef(isDead);
   const critBuffRef = useRef(critBuff);
+  const stealthBuffRef = useRef(stealthBuff);
+  const onClearStealthBuffRef = useRef(onClearStealthBuff);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -84,6 +90,8 @@ export function useCombat({
   useEffect(() => { partyMembersRef.current = partyMembers; }, [partyMembers]);
   useEffect(() => { isDeadRef.current = isDead; }, [isDead]);
   useEffect(() => { critBuffRef.current = critBuff; }, [critBuff]);
+  useEffect(() => { stealthBuffRef.current = stealthBuff; }, [stealthBuff]);
+  useEffect(() => { onClearStealthBuffRef.current = onClearStealthBuff; }, [onClearStealthBuff]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -196,11 +204,21 @@ export function useCombat({
       if (atkRoll >= effectiveCritRange || (atkRoll !== 1 && totalAtk >= creature.ac)) {
         const dmg = rollDamage(ability.diceMin, ability.diceMax) + statMod;
         const isCrit = atkRoll >= effectiveCritRange;
-        const finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1);
+        let finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1);
+
+        // Stealth ambush — double damage on first strike
+        const _stealthBuff = stealthBuffRef.current;
+        const isAmbush = _stealthBuff && Date.now() < _stealthBuff.expiresAt;
+        if (isAmbush) {
+          finalDmg *= 2;
+          onClearStealthBuffRef.current?.();
+        }
+
         const newHp = Math.max(creature.hp - finalDmg, 0);
 
+        const ambushPrefix = isAmbush ? '🌑 AMBUSH! ' : '';
         _addLog(
-          `${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
+          `${ambushPrefix}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
         );
 
         if (newHp <= 0) {
