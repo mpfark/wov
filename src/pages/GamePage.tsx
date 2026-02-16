@@ -23,6 +23,7 @@ import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { logActivity } from '@/hooks/useActivityLog';
+import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 
 function getLogColor(log: string): string {
   if (log.includes('CRITICAL!')) return 'text-primary font-semibold';
@@ -223,6 +224,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [myMembership?.character?.current_node_id]);
 
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
+
+
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
 
   // Effective AC including equipment
@@ -381,6 +384,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog('Failed to move.');
     }
   }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead]);
+
+  // Keyboard movement bindings
+  const keyboardMovement = useKeyboardMovement({
+    currentNode,
+    nodes,
+    onMove: handleMove,
+    disabled: isDead || inCombat,
+  });
 
   const handleSearch = useCallback(async () => {
     if (isDead) return;
@@ -752,6 +763,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             onKick={kickMember}
             onSetTank={setTank}
             onToggleFollow={toggleFollow}
+            keyboardBindings={keyboardMovement}
           />
         </div>
       </div>
