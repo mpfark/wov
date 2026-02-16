@@ -291,7 +291,7 @@ export default function CharacterPanel({
             {/* Left column: Stats */}
             <div>
               <div className="flex items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5">
-                <span className="w-20">Stat</span>
+                <span className="flex-1">Stat</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
@@ -302,6 +302,7 @@ export default function CharacterPanel({
                     <p className="text-xs text-muted-foreground"><strong>Gear</strong> — Bonus from equipped items (shown in green).</p>
                   </TooltipContent>
                 </Tooltip>
+                <div className="w-6" />
               </div>
               <div className="space-y-0.5">
                 {Object.entries(STAT_LABELS).map(([key, label]) => {
@@ -312,12 +313,12 @@ export default function CharacterPanel({
                     <Tooltip key={key}>
                       <TooltipTrigger asChild>
                         <div className="flex items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
-                          <span className="font-display text-foreground w-20">{STAT_FULL_NAMES[key]}</span>
-                          <span className="tabular-nums">
+                          <span className="font-display text-foreground flex-1">{STAT_FULL_NAMES[key]}</span>
+                          <span className="tabular-nums text-right">
                             <span className="text-foreground" title="Base">{base}</span>
                             {bonus > 0 && <span className="text-chart-2 ml-1" title="Gear">+{bonus}</span>}
                           </span>
-                          <span className="flex-1" />
+                          
                           {canSpend && onSpendPoint ? (
                             <Button
                               size="sm"
