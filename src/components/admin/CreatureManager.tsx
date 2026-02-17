@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Save, X, Skull } from 'lucide-react';
-import { generateCreatureStats, calculateHumanoidGold } from '@/lib/game-data';
+import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
 import ItemPickerList from './ItemPickerList';
 
 interface Creature {
@@ -362,6 +362,10 @@ export default function CreatureManager() {
                   <span>INT: <strong>{previewStats.stats.int}</strong></span>
                   <span>WIS: <strong>{previewStats.stats.wis}</strong></span>
                   <span>CHA: <strong>{previewStats.stats.cha}</strong></span>
+                </div>
+                <div className="mt-1.5 pt-1.5 border-t border-border/50 flex items-center gap-3 text-xs">
+                  <span>⚔️ Damage: <strong className="text-primary">1d{getCreatureDamageDie(form.level, form.rarity)} + {getStatModifier(previewStats.stats.str)}</strong></span>
+                  <span className="text-muted-foreground">({1 + getStatModifier(previewStats.stats.str)}–{getCreatureDamageDie(form.level, form.rarity) + getStatModifier(previewStats.stats.str)})</span>
                 </div>
               </div>
 
