@@ -175,7 +175,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           setTimeout(() => setRegenTick(false), 1200);
         }
       }
-    }, 30000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []); // stable — no deps, reads from refs
 
