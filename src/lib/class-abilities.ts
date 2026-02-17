@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff';
   tier: number;
   levelRequired: number;
 }
@@ -70,6 +70,15 @@ export const CLASS_ABILITIES: Record<string, ClassAbility> = {
     description: 'Vanish into shadow — avoid attacks when fleeing and deal bonus damage on your next strike',
     cooldownMs: 60000,
     type: 'stealth_buff',
+    tier: 1,
+    levelRequired: 5,
+  },
+  wizard: {
+    label: 'Arcane Surge',
+    emoji: '✨',
+    description: 'Channel raw arcane energy to amplify your spell damage',
+    cooldownMs: 60000,
+    type: 'damage_buff',
     tier: 1,
     levelRequired: 5,
   },

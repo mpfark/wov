@@ -75,6 +75,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [isDead, setIsDead] = useState(false);
   const [critBuff, setCritBuff] = useState<{ bonus: number; expiresAt: number }>({ bonus: 0, expiresAt: 0 });
   const [stealthBuff, setStealthBuff] = useState<{ expiresAt: number } | null>(null);
+  const [damageBuff, setDamageBuff] = useState<{ expiresAt: number } | null>(null);
   const [abilityCooldownEnd, setAbilityCooldownEnd] = useState(0);
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -269,6 +270,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     critBuff,
     stealthBuff,
     onClearStealthBuff: useCallback(() => setStealthBuff(null), []),
+    damageBuff,
   });
 
   const handleAttack = useCallback((creatureId: string) => {
@@ -603,6 +605,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationMs = Math.min(15000 + dexMod * 1000, 25000);
       setStealthBuff({ expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'damage_buff') {
+      const intMod = getStatMod2(character.int);
+      const durationMs = Math.min(25, 15 + intMod) * 1000;
+      setDamageBuff({ expiresAt: Date.now() + durationMs });
+      addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     }
 
     setAbilityCooldownEnd(Date.now() + ability.cooldownMs);

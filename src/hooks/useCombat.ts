@@ -38,6 +38,7 @@ interface UseCombatParams {
   critBuff?: { bonus: number; expiresAt: number };
   stealthBuff?: { expiresAt: number } | null;
   onClearStealthBuff?: () => void;
+  damageBuff?: { expiresAt: number } | null;
 }
 
 export function useCombat({
@@ -55,6 +56,7 @@ export function useCombat({
   critBuff,
   stealthBuff,
   onClearStealthBuff,
+  damageBuff,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -75,6 +77,7 @@ export function useCombat({
   const critBuffRef = useRef(critBuff);
   const stealthBuffRef = useRef(stealthBuff);
   const onClearStealthBuffRef = useRef(onClearStealthBuff);
+  const damageBuffRef = useRef(damageBuff);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -92,6 +95,7 @@ export function useCombat({
   useEffect(() => { critBuffRef.current = critBuff; }, [critBuff]);
   useEffect(() => { stealthBuffRef.current = stealthBuff; }, [stealthBuff]);
   useEffect(() => { onClearStealthBuffRef.current = onClearStealthBuff; }, [onClearStealthBuff]);
+  useEffect(() => { damageBuffRef.current = damageBuff; }, [damageBuff]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -214,11 +218,19 @@ export function useCombat({
           onClearStealthBuffRef.current?.();
         }
 
+        // Arcane Surge — 1.5x damage while active
+        const _damageBuff = damageBuffRef.current;
+        const isDmgBuffed = _damageBuff && Date.now() < _damageBuff.expiresAt;
+        if (isDmgBuffed) {
+          finalDmg = Math.floor(finalDmg * 1.5);
+        }
+
         const newHp = Math.max(creature.hp - finalDmg, 0);
 
         const ambushPrefix = isAmbush ? '🌑 AMBUSH! ' : '';
+        const surgePrefix = isDmgBuffed ? '✨ ' : '';
         _addLog(
-          `${ambushPrefix}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
+          `${ambushPrefix}${surgePrefix}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
         );
 
         if (newHp <= 0) {
