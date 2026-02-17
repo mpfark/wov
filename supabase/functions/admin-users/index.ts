@@ -170,8 +170,8 @@ Deno.serve(async (req) => {
       // Validate numeric ranges
       const numericRanges: Record<string, [number, number]> = {
         hp: [0, 10000], max_hp: [1, 10000], gold: [0, 1000000], xp: [0, 1000000],
-        level: [1, 100], str: [1, 30], dex: [1, 30], con: [1, 30],
-        int: [1, 30], wis: [1, 30], cha: [1, 30], ac: [0, 100],
+        level: [1, 100], str: [1, 999], dex: [1, 999], con: [1, 999],
+        int: [1, 999], wis: [1, 999], cha: [1, 999], ac: [0, 100],
         unspent_stat_points: [0, 200],
       };
       for (const [field, [min, max]] of Object.entries(numericRanges)) {
@@ -235,8 +235,12 @@ Deno.serve(async (req) => {
       let newXp = char.xp + amount;
       let newLevel = char.level;
       let newMaxHp = char.max_hp;
-      let newUnspent = char.unspent_stat_points;
       let newHp = char.hp;
+
+      // Track stat increases during level-ups
+      const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+      const statIncreases: Record<string, number> = {};
+      for (const s of statKeys) statIncreases[s] = 0;
 
       // Process multiple level-ups
       let xpForNext = newLevel * 100;
@@ -245,28 +249,31 @@ Deno.serve(async (req) => {
         newLevel++;
         newMaxHp += 5;
         newHp = newMaxHp; // Full heal on level up
-        newUnspent += 2;
+
+        // +1 all stats only before level 30
+        if (newLevel < 30) {
+          for (const s of statKeys) statIncreases[s]++;
+        }
+
+        // Class bonus every 3 levels (uncapped)
+        if (newLevel % 3 === 0) {
+          const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
+          for (const s of statKeys) {
+            if (bonuses[s]) statIncreases[s] += bonuses[s];
+          }
+        }
+
         xpForNext = newLevel * 100;
       }
 
       const updates: Record<string, any> = {
-        xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp, unspent_stat_points: newUnspent,
+        xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
       };
 
-      // Apply class level bonuses for each level gained
-      if (newLevel > char.level) {
-        const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
-        const stats = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-        for (const stat of stats) {
-          if (!bonuses[stat]) continue;
-          // Count bonus levels: every 3rd level in range (old_level, new_level]
-          let bonusCount = 0;
-          for (let l = char.level + 1; l <= newLevel; l++) {
-            if (l % 3 === 0) bonusCount++;
-          }
-          if (bonusCount > 0) {
-            updates[stat] = (char as any)[stat] + bonuses[stat] * bonusCount;
-          }
+      // Apply accumulated stat increases
+      for (const stat of statKeys) {
+        if (statIncreases[stat] > 0) {
+          updates[stat] = (char as any)[stat] + statIncreases[stat];
         }
       }
 
