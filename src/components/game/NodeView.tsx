@@ -169,9 +169,9 @@ export default function NodeView({
         )}
 
         {/* Compact Action Bar - pinned to bottom */}
-        <div className="pt-2 border-t border-border mt-2 space-y-1.5">
+        <div className="pt-2 border-t border-border mt-2 space-y-1.5 flex flex-col items-center">
           {/* Row 1: Core actions */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 justify-center">
             <Button variant="secondary" size="sm" onClick={onSearch} className="font-display text-[10px] h-6 px-2">
               <Search className="h-3 w-3 mr-0.5" /> Search
             </Button>
@@ -189,7 +189,7 @@ export default function NodeView({
 
           {/* Row 2: Belt Potions */}
           {beltedPotions.length > 0 && onUseBeltPotion && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 justify-center">
               {beltedPotions.map(p => (
                 <Tooltip key={p.id}>
                   <TooltipTrigger asChild>
@@ -214,7 +214,7 @@ export default function NodeView({
           {classAbility && onUseAbility && (() => {
             const levelLocked = character.level < classAbility.levelRequired;
             return (
-              <div className="flex flex-wrap items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1 justify-center">
                 {!levelLocked && isHealerWithTargets && (
                   <Select value={healTarget} onValueChange={setHealTarget}>
                     <SelectTrigger className="h-6 text-[10px] font-display w-auto min-w-[80px] max-w-[120px]">
