@@ -1,75 +1,82 @@
 
-# Keyboard Movement Bindings
+
+# Wizard Ability: Arcane Surge
 
 ## Overview
 
-Add keyboard shortcuts so players can move between nodes by pressing direction keys. The current node's connections already have compass directions (N, S, E, W, NE, NW, SE, SW), so we can map keyboard keys to those directions and trigger movement automatically.
+Add a Tier 1 ability for the Wizard class called **Arcane Surge** -- a self-buff aura that temporarily increases spell damage output. This follows the same pattern as existing abilities (Rogue's Shadowstep, Ranger's Eagle Eye, Bard's Inspire).
 
-## Default Key Bindings
+## Ability Details
 
-| Key | Direction |
-|-----|-----------|
-| W / ArrowUp | North |
-| S / ArrowDown | South |
-| D / ArrowRight | East |
-| A / ArrowLeft | West |
-| (no default) | NE, NW, SE, SW |
+- **Name**: Arcane Surge
+- **Emoji**: `✨`
+- **Type**: `damage_buff` (new type)
+- **Effect**: For a duration, the Wizard's attacks deal 1.5x damage
+- **Duration**: Base 15 seconds + INT modifier (capped at 25s)
+- **Cooldown**: 60 seconds
+- **Tier**: 1 (unlocks at Level 5)
 
-Diagonal directions won't have default bindings but can be assigned by the player.
+## Changes
 
-## How It Works
+### 1. Update ability data (`src/lib/class-abilities.ts`)
 
-1. A `useKeyboardMovement` custom hook listens for `keydown` events on the document
-2. When a mapped key is pressed, it finds the current node's visible connection matching that direction
-3. If a connection exists, it calls `handleMove(connectionNodeId)` automatically
-4. Keys are ignored when the player is typing in an input/textarea, when a dialog is open, or when the character is dead
+- Add `damage_buff` to the type union in `ClassAbility`
+- Add Wizard entry to `CLASS_ABILITIES`:
+  ```
+  wizard: {
+    label: 'Arcane Surge',
+    emoji: '✨',
+    description: 'Channel raw arcane energy to amplify your spell damage',
+    cooldownMs: 60000,
+    type: 'damage_buff',
+    tier: 1,
+    levelRequired: 5,
+  }
+  ```
 
-## Keybinding Settings
+### 2. Add damage buff state (`src/pages/GamePage.tsx`)
 
-- A small keyboard icon button on the map panel header opens a compact keybinding editor
-- Players can click a direction slot and press any key to rebind it
-- Bindings are saved to `localStorage` so they persist between sessions
-- A "Reset to Defaults" button restores WASD + Arrow Keys
+- Add `damageBuff` state: `{ expiresAt: number } | null` (same pattern as `critBuff`, `stealthBuff`, `regenBuff`)
+- In `handleUseAbility`, add the `damage_buff` branch:
+  - Calculate duration: base 15s + INT modifier, capped at 25s
+  - Set `damageBuff` state with expiry timestamp
+  - Log an activation message
+- Pass `damageBuff` into the combat hook
 
-## Files to Create/Modify
+### 3. Apply damage multiplier in combat (`src/hooks/useCombat.ts`)
 
-### New: `src/hooks/useKeyboardMovement.ts`
-- Custom hook that accepts the current node, nodes list, and move handler
-- Reads keybindings from localStorage (with defaults)
-- Attaches/detaches keydown listener
-- Skips input when focus is on form elements or character is dead
-- Exports a function to get/set bindings for the settings UI
+- Accept a `damageBuff` parameter (same pattern as `stealthBuff` and `critBuff`)
+- During the player attack step, if `damageBuff` is active (not expired), multiply final damage by 1.5x
+- Unlike stealth, the buff does NOT clear on first hit -- it persists until the timer expires
+- Log a special message when the buff is active (e.g., "Arcane energy surges through your attack!")
 
-### Modified: `src/pages/GamePage.tsx`
-- Import and call `useKeyboardMovement(currentNode, nodes, handleMove, isDead)`
-- Pass visible (non-hidden) connections to the hook
+### 4. Show buff indicator in UI (`src/components/game/NodeView.tsx`)
 
-### Modified: `src/components/game/MapPanel.tsx`
-- Add a small keybinding settings button (keyboard icon) near the "Local Area" header
-- Inline keybinding editor: shows each direction with its current key, click to rebind
+- The ability button and level-gating already work generically for all classes, so the Wizard's ability will appear automatically
+- The buff expiry visual (if one exists for other buffs) will apply here too
+
+### 5. Admin display (`src/components/admin/RaceClassManager.tsx`)
+
+- No changes needed -- the component already reads from `CLASS_ABILITIES` dynamically, so the Wizard entry will appear automatically
 
 ## Technical Details
 
 ```text
-Hook signature:
-  useKeyboardMovement({
-    currentNode: GameNode | undefined,
-    nodes: GameNode[],
-    onMove: (nodeId: string) => void,
-    disabled: boolean
-  })
+New type added to union:
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff'
 
-Default bindings stored as:
-  { N: ['w','ArrowUp'], S: ['s','ArrowDown'], E: ['d','ArrowRight'], W: ['a','ArrowLeft'],
-    NE: [], NW: [], SE: [], SW: [] }
+State shape:
+  damageBuff: { expiresAt: number } | null
 
-localStorage key: 'movement-keybindings'
+Combat logic (pseudocode):
+  if damageBuff active (Date.now() < expiresAt):
+    finalDmg = Math.floor(finalDmg * 1.5)
+    log "Arcane energy amplifies your attack!"
+  // buff persists until timer expires (no clear on hit)
 
-Key listener logic:
-  1. Skip if activeElement is input/textarea/select
-  2. Skip if any dialog/modal is open (check for [role="dialog"])
-  3. Look up pressed key in bindings map
-  4. Find matching direction in currentNode.connections (non-hidden only)
-  5. Call onMove(connection.node_id)
-  6. preventDefault to avoid scrolling on arrow keys
+Activation logic:
+  const intMod = getStatModifier(stats.int)
+  const duration = Math.min(25, 15 + intMod) * 1000
+  setDamageBuff({ expiresAt: Date.now() + duration })
 ```
+
