@@ -290,30 +290,27 @@ export function useCombat({
               gold: newGold,
             };
 
-            // Auto-increase all stats by 1 (capped at 30)
             const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
-            const boostedStats: string[] = [];
-            for (const stat of statKeys) {
-              const current = (char as any)[stat] || 10;
-              if (current < 30) {
+
+            // Only increase all stats by +1 before level 30
+            if (newLevel < 30) {
+              const boostedStats: string[] = [];
+              for (const stat of statKeys) {
+                const current = (char as any)[stat] || 10;
                 (levelUpUpdates as any)[stat] = current + 1;
                 boostedStats.push(stat.toUpperCase());
               }
-            }
-            if (boostedStats.length > 0) {
               _addLog(`📊 All stats increased: ${boostedStats.join(', ')} +1`);
             }
 
+            // Class bonus every 3 levels (uncapped, always applies)
             if (newLevel % 3 === 0) {
               const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
               const bonusNames: string[] = [];
               for (const [stat, amount] of Object.entries(bonuses)) {
                 const currentVal = (levelUpUpdates as any)[stat] ?? (char as any)[stat] ?? 10;
-                const capped = Math.min(currentVal + amount, 30);
-                if (capped > currentVal) {
-                  (levelUpUpdates as any)[stat] = capped;
-                  bonusNames.push(`+${amount} ${stat.toUpperCase()}`);
-                }
+                (levelUpUpdates as any)[stat] = currentVal + amount;
+                bonusNames.push(`+${amount} ${stat.toUpperCase()}`);
               }
               if (bonusNames.length > 0) {
                 _addLog(`📈 ${CLASS_LABELS[char.class] || char.class} bonus: ${bonusNames.join(', ')}!`);
