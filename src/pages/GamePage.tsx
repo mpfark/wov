@@ -321,7 +321,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (equipped.length > 0) fetchInventory();
   }, [equipped, addLog, fetchInventory]);
 
-  const handleMove = useCallback(async (nodeId: string) => {
+  const handleMove = useCallback(async (nodeId: string, direction?: string) => {
     if (isDead) return;
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
@@ -330,6 +330,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (targetRegion && currentRegion && targetRegion.id !== currentRegion.id && character.level < targetRegion.min_level) {
       const levelDiff = targetRegion.min_level - character.level;
       addLog(`⚠️ You are entering ${targetRegion.name} (Lvl ${targetRegion.min_level}–${targetRegion.max_level}). These lands are ${levelDiff >= 10 ? 'extremely' : levelDiff >= 5 ? 'very' : ''} dangerous for your level!`);
+    }
+
+    // Flee message if in combat
+    if (inCombat) {
+      const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
+      const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
+      addLog(`🏃 You flee${dirText}!`);
+      stopCombatFn();
     }
 
     // Attack of Opportunity — each living creature gets a free strike (unless stealthed)
@@ -385,7 +393,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     } catch {
       addLog('Failed to move.');
     }
-  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead]);
+  }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead, inCombat, stopCombatFn]);
 
   // Keyboard movement bindings
   const keyboardMovement = useKeyboardMovement({

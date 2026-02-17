@@ -54,7 +54,7 @@ export function getKeyLabel(key: string): string {
 interface UseKeyboardMovementOptions {
   currentNode: GameNode | undefined;
   nodes: GameNode[];
-  onMove: (nodeId: string) => void;
+  onMove: (nodeId: string, direction?: Direction) => void;
   disabled: boolean;
 }
 
@@ -101,7 +101,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled }: Us
       if (!conn) return;
 
       e.preventDefault();
-      onMoveRef.current(conn.node_id);
+      onMoveRef.current(conn.node_id, matchedDirection);
     };
 
     document.addEventListener('keydown', handleKeyDown);
