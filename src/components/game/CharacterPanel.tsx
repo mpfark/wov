@@ -281,11 +281,7 @@ export default function CharacterPanel({
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <h3 className="font-display text-xs text-muted-foreground">Attributes</h3>
-            {character.unspent_stat_points > 0 && (
-              <span className="text-xs font-display text-primary text-glow animate-pulse">
-                {character.unspent_stat_points} point{character.unspent_stat_points > 1 ? 's' : ''} to spend
-              </span>
-            )}
+            
           </div>
           <div className="grid grid-cols-2 gap-2">
             {/* Left column: Stats */}
@@ -316,26 +312,13 @@ export default function CharacterPanel({
                 {Object.entries(STAT_LABELS).map(([key, label]) => {
                   const base = (character as any)[key] as number;
                   const bonus = equipmentBonuses[key] || 0;
-                  const canSpend = character.unspent_stat_points > 0 && base < 30;
                   return (
                     <Tooltip key={key}>
                       <TooltipTrigger asChild>
-                        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help gap-x-2">
+                        <div className="grid grid-cols-[1fr_auto_auto] items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help gap-x-2">
                           <span className="font-display text-foreground">{STAT_FULL_NAMES[key]}</span>
-                          <span className="tabular-nums text-foreground text-right" title="Base">{base}</span>
-                          <span className="tabular-nums text-chart-2 text-right w-6" title="Gear">{bonus > 0 ? `+${bonus}` : ''}</span>
-                          {canSpend && onSpendPoint ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-4 w-4 p-0 text-primary hover:text-primary-foreground hover:bg-primary"
-                              onClick={(e) => { e.stopPropagation(); onSpendPoint(key); }}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          ) : (
-                            <div className="w-4" />
-                          )}
+                          <span className="tabular-nums text-foreground text-right">{base}</span>
+                          <span className="tabular-nums text-chart-2 text-right w-6">{bonus > 0 ? `+${bonus}` : ''}</span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="bg-popover border-border z-50">
