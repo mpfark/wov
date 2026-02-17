@@ -1,63 +1,98 @@
 
 
-## Remove Stat Cap, Change Progression After Level 30
+## Game Balance Analysis and Improvements
 
-### Problem
-Currently all stats are capped at 30, and every level gives +1 to all six stats. This means every class ends up identical at high levels. Class bonuses every 3 levels are also wasted once the cap is hit.
+### Current Balance at Level 20
 
-### New Progression Rules
-- **Levels 1-29**: +1 to all six stats per level (no cap). Class bonus every 3 levels on top.
-- **Level 30+**: No more +1 to all stats. Only class-specific bonuses every 3 levels (uncapped) and +5 max HP.
-- **Remove the hard cap of 30** entirely from all stat assignments.
+Here is a side-by-side comparison of a Level 20 Warrior (Human) vs a Level 20 Boss creature:
 
-### Changes Required
-
-**1. `src/hooks/useCombat.ts` (client-side level-up logic)**
-- Remove the `< 30` check on the per-level stat loop
-- Add a condition: only apply the "+1 all stats" if `newLevel < 30`
-- Remove `Math.min(..., 30)` from class bonus application
-- Update log messages accordingly (e.g., "Stats no longer increase" at level 30+)
-
-**2. `award_party_member` database function (migration)**
-- Same logic change server-side: only add +1 to all stats when `_new_level < 30`
-- Remove `LEAST(..., 30)` caps from all stat updates
-- Class bonuses every 3 levels remain uncapped
-
-**3. Reset existing characters (data update)**
-- Recalculate all existing character stats using the new formula:
-  - For characters level 1-29: base(10) + (level - 1) + class_bonuses
-  - For characters level 30+: base(10) + 29 + class_bonuses_through_all_levels
-- This ensures existing characters are consistent with the new system
-
-### Technical Details
-
-Client-side change (useCombat.ts lines ~293-321):
-```typescript
-// Only increase all stats before level 30
-if (newLevel < 30) {
-  for (const stat of statKeys) {
-    const current = (char as any)[stat] || 10;
-    (levelUpUpdates as any)[stat] = current + 1;
-    boostedStats.push(stat.toUpperCase());
-  }
-}
-
-// Class bonus every 3 levels (no cap)
-if (newLevel % 3 === 0) {
-  const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
-  for (const [stat, amount] of Object.entries(bonuses)) {
-    const currentVal = (levelUpUpdates as any)[stat] ?? (char as any)[stat] ?? 10;
-    (levelUpUpdates as any)[stat] = currentVal + amount;
-  }
-}
+```text
+                    Player (Warrior)     Boss Creature
+  Primary Stat      ~39 STR              ~29 STR
+  HP                ~130                 ~220
+  AC                ~19                  ~20
+  Attack Roll       d20 + 14             d20 + 9
+  Damage            1d10 + 14 (15-24)    1d6 + 9 (10-15)
+  Hit Chance        ~85% vs AC 20        ~55% vs AC 19
+  DPS (approx)      ~16.5/tick           ~6.9/tick
+  Ticks to Kill     ~14 ticks            ~8 ticks
 ```
 
-Database function change:
-```sql
--- Only +1 all stats for levels under 30
-IF _new_level < 30 THEN
-  -- add +1 to each stat (no cap)
-END IF;
--- Class bonus every 3 levels always applies (no cap)
+The player kills a boss in roughly 14 ticks. The boss needs about 19 ticks to kill the player. Factor in HP regen + abilities and the player wins handily. At higher levels the gap widens.
+
+### Root Causes
+
+1. **Creature damage is hard-coded to 1d6** regardless of level or rarity. A level 1 regular and a level 40 boss both roll 1d6 for damage.
+2. **Player stats scale linearly** (+1 all stats per level) while creature stats scale at only 0.5 per level.
+3. **Creature AC scaling is slow** (0.4 per level) compared to player stat modifier growth.
+4. **No creature ability scaling** -- creatures have no special attacks, abilities, or multi-hit.
+
+### Proposed Improvements
+
+#### 1. Scale Creature Damage Dice by Level and Rarity
+Replace the hard-coded `rollDamage(1, 6)` in `useCombat.ts` with a formula based on creature stats:
+
+```text
+  Regular:  1d(4 + level/2)  + STR mod
+  Rare:     1d(6 + level/2)  + STR mod
+  Boss:     1d(8 + level/2)  + STR mod
 ```
+
+At level 20 boss: 1d18 + 9 = 10-27 damage (up from 10-15).
+
+#### 2. Improve Creature Stat Scaling in `generateCreatureStats`
+Increase the per-level stat growth from 0.5 to 0.7:
+
+```text
+  Current:  baseStat = 8 + floor(level * 0.5)   -> 18 at level 20
+  Proposed: baseStat = 8 + floor(level * 0.7)   -> 22 at level 20
+```
+
+This keeps low-level creatures weak but closes the gap at higher levels.
+
+#### 3. Improve Creature AC Scaling
+Increase AC growth from 0.4 to 0.6 per level:
+
+```text
+  Current:  AC = 8 + floor(level * 0.4) + rarity_bonus  -> 20 for lv20 boss
+  Proposed: AC = 8 + floor(level * 0.6) + rarity_bonus  -> 24 for lv20 boss
+```
+
+#### 4. Add Creature HP Scaling for Regular Monsters
+The current HP formula `(8 + level * 4)` is reasonable for regulars but could use a slight bump:
+
+```text
+  Current:  (8 + level * 4) * rarity_mult
+  Proposed: (10 + level * 5) * rarity_mult
+```
+
+### Revised Balance at Level 20
+
+```text
+                    Player (Warrior)     Boss Creature (New)
+  Primary Stat      ~39 STR              ~35 STR
+  HP                ~130                 ~275
+  AC                ~19                  ~24
+  Attack Roll       d20 + 14             d20 + 12
+  Damage            1d10 + 14 (15-24)    1d18 + 12 (13-30)
+  Hit Chance        ~75% vs AC 24        ~70% vs AC 19
+  DPS (approx)      ~14.6/tick           ~15.1/tick
+  Ticks to Kill     ~19 ticks            ~9 ticks
+```
+
+Bosses become genuinely dangerous. Regulars remain farmable. Rare creatures become a challenge worth preparing for.
+
+### Files to Change
+
+1. **`src/lib/game-data.ts`** -- Update `generateCreatureStats` with new scaling constants (baseStat 0.7, AC 0.6, HP `10 + level*5`).
+2. **`src/hooks/useCombat.ts`** -- Replace hard-coded `rollDamage(1, 6)` in the creature counterattack section (~lines 344-368) with a level/rarity-based damage formula.
+3. **`src/components/admin/CreatureManager.tsx`** -- The admin panel auto-generates stats via `generateCreatureStats`, so existing creatures will get new stats on next save. Optionally run a bulk update on all existing creatures.
+4. **`supabase/functions/admin-users/index.ts`** -- No changes needed (admin grant-xp doesn't involve creature combat).
+5. **(Optional) Bulk creature stat update** -- SQL to recalculate stats for all existing creatures in the database using the new formula.
+
+### What This Does NOT Change
+- Player progression (stats, HP, abilities) stays the same
+- Loot tables, gold drops, XP formulas unchanged
+- Party mechanics and class abilities unchanged
+- Low-level balance (levels 1-5) remains gentle for new players
 
