@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -345,7 +345,8 @@ export function useCombat({
       if (tankMember) {
         const tankAC = 10;
         if (creatureAtk >= tankAC) {
-          const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+          const dmgDie = getCreatureDamageDie(creature.level, creature.rarity);
+          const creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
           const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
           _addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
           await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
@@ -354,7 +355,8 @@ export function useCombat({
         }
       } else {
         if (creatureAtk >= _effectiveAC) {
-          const creatureDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+          const dmgDie2 = getCreatureDamageDie(creature.level, creature.rarity);
+          const creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(creature.stats.str || 10), 1);
           const playerNewHp = Math.max(char.hp - creatureDmg, 0);
           _addLog(`${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${_effectiveAC} — Hit! ${creatureDmg} damage.`);
           await _updateCharacter({ hp: playerNewHp });
