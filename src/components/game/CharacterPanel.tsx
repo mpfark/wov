@@ -4,7 +4,7 @@ import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Trash2, Heart, Plus, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
 import vitruvianMan from '@/assets/vitruvian-man.png';
 
 interface Props {
@@ -16,7 +16,7 @@ interface Props {
   onUnequip: (inventoryId: string) => void;
   onDrop: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
-  onSpendPoint?: (stat: string) => void;
+  
   // Regen info
   isAtInn?: boolean;
   regenBuff?: { multiplier: number; expiresAt: number };
@@ -193,7 +193,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff }: { isAtInn?: boo
 }
 
 export default function CharacterPanel({
-  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable, onSpendPoint,
+  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
