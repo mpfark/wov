@@ -90,9 +90,6 @@ export default function NodeView({
             {node.is_blacksmith && (
               <p className="text-xs text-dwarvish mt-0.5">🔨 Blacksmith — Repair your equipment here</p>
             )}
-            {node.searchable_items && node.searchable_items.length > 0 && (
-              <p className="text-xs text-primary/80 mt-0.5">🔎 This area looks like it could be worth searching...</p>
-            )}
           </div>
 
           {/* Description */}
