@@ -175,9 +175,19 @@ const RARITY_MULTIPLIER: Record<string, { stat: number; hp: number; ac: number }
   boss:    { stat: 1.6, hp: 2.5, ac: 4 },
 };
 
+// Creature damage dice base by rarity
+const CREATURE_DAMAGE_BASE: Record<string, number> = {
+  regular: 4, rare: 6, boss: 8,
+};
+
+export function getCreatureDamageDie(level: number, rarity: string): number {
+  const base = CREATURE_DAMAGE_BASE[rarity] || 4;
+  return base + Math.floor(level / 2);
+}
+
 export function generateCreatureStats(level: number, rarity: string) {
   const mult = RARITY_MULTIPLIER[rarity] || RARITY_MULTIPLIER.regular;
-  const baseStat = 8 + Math.floor(level * 0.5);
+  const baseStat = 8 + Math.floor(level * 0.7);
   const stats = {
     str: Math.round(baseStat * mult.stat),
     dex: Math.round((baseStat - 1) * mult.stat),
@@ -186,7 +196,7 @@ export function generateCreatureStats(level: number, rarity: string) {
     wis: Math.round((baseStat - 1) * mult.stat),
     cha: Math.round((baseStat - 3) * mult.stat),
   };
-  const hp = Math.round((8 + level * 4) * mult.hp);
-  const ac = 8 + Math.floor(level * 0.4) + mult.ac;
+  const hp = Math.round((10 + level * 5) * mult.hp);
+  const ac = 8 + Math.floor(level * 0.6) + mult.ac;
   return { stats, hp, ac };
 }
