@@ -261,7 +261,7 @@ export default function CharacterPanel({
               const innMult = isAtInn ? 3 : 1;
               const foodRegen = foodBuff && Date.now() < foodBuff.expiresAt ? foodBuff.flatRegen : 0;
               const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * potionMult * innMult), 1);
-              return <p className="text-xs font-display text-elvish border-t border-border pt-1">Total: {total} HP every 30s</p>;
+              return <p className="text-xs font-display text-elvish border-t border-border pt-1">Total: {total} HP every 15s</p>;
             })()}
           </TooltipContent>
         </Tooltip>
