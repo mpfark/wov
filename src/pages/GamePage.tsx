@@ -392,7 +392,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     currentNode,
     nodes,
     onMove: handleMove,
-    disabled: isDead || inCombat,
+    disabled: isDead,
   });
 
   const handleSearch = useCallback(async () => {
