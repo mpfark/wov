@@ -148,17 +148,35 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
           <h3 className="font-display text-xs text-muted-foreground">Sell Items</h3>
           {sellableItems.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">No items to sell.</p>
-          ) : sellableItems.map(inv => (
-            <div key={inv.id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
-              <div>
-                <span className={`text-sm font-display ${RARITY_COLORS[inv.item.rarity] || ''}`}>{inv.item.name}</span>
-                <span className="text-xs text-muted-foreground ml-2">Dur: {inv.current_durability}%</span>
+          ) : (() => {
+            const stacked = sellableItems.reduce<Record<string, { inv: InventoryItem; count: number }>>((acc, inv) => {
+              if (acc[inv.item_id]) {
+                acc[inv.item_id].count += 1;
+              } else {
+                acc[inv.item_id] = { inv, count: 1 };
+              }
+              return acc;
+            }, {});
+            const sellPrice = (inv: InventoryItem) => Math.max(1, Math.floor(inv.item.value * 0.5));
+            return Object.values(stacked).map(({ inv, count }) => (
+              <div key={inv.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
+                <div className="flex items-center gap-1.5">
+                  {count > 1 && (
+                    <span className="text-[10px] font-display bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center">
+                      {count}
+                    </span>
+                  )}
+                  <div>
+                    <span className={`text-sm font-display ${RARITY_COLORS[inv.item.rarity] || ''}`}>{inv.item.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{inv.item.slot || inv.item.item_type}</span>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => sellItem(inv)} className="font-display text-xs h-7">
+                  <ArrowUpFromLine className="w-3 h-3 mr-1" /> {sellPrice(inv)}g
+                </Button>
               </div>
-              <Button size="sm" variant="outline" onClick={() => sellItem(inv)} className="font-display text-xs h-7">
-                <ArrowUpFromLine className="w-3 h-3 mr-1" /> {Math.max(1, Math.floor(inv.item.value * 0.5))}g
-              </Button>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       </DialogContent>
     </Dialog>
