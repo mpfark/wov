@@ -243,7 +243,7 @@ export default function CharacterPanel({
           </TooltipTrigger>
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
             <p className="font-display text-sm">Regeneration</p>
-            <p className="text-xs text-muted-foreground">Base (CON): <span className="text-elvish">{baseRegen} HP</span> every <span className="text-foreground">30s</span></p>
+            <p className="text-xs text-muted-foreground">Base (CON): <span className="text-elvish">{baseRegen} HP</span> every <span className="text-foreground">15s</span></p>
             {itemHpRegen > 0 && (
               <p className="text-xs text-elvish">⚙️ Gear: <span className="text-foreground">+{itemHpRegen} HP</span></p>
             )}
