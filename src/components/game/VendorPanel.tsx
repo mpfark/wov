@@ -107,21 +107,40 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
         {/* Buy */}
         <div className="space-y-2">
           <h3 className="font-display text-xs text-muted-foreground">For Sale</h3>
-          {vendorItems.length === 0 ? (
+        {vendorItems.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">This vendor has nothing for sale.</p>
-          ) : vendorItems.map(vi => (
-            <div key={vi.id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
-              <div>
-                <span className={`text-sm font-display ${RARITY_COLORS[vi.item.rarity] || ''}`}>{vi.item.name}</span>
-                <span className="text-xs text-muted-foreground ml-2">{vi.item.slot || vi.item.item_type}</span>
-                {vi.stock > 0 && <span className="text-xs text-muted-foreground ml-1">(×{vi.stock})</span>}
+          ) : (() => {
+            // Stack vendor items by item_id
+            const stacked = vendorItems.reduce<Record<string, { vi: VendorItem; count: number; totalStock: number }>>((acc, vi) => {
+              if (acc[vi.item_id]) {
+                acc[vi.item_id].count += 1;
+                acc[vi.item_id].totalStock += vi.stock;
+              } else {
+                acc[vi.item_id] = { vi, count: 1, totalStock: vi.stock };
+              }
+              return acc;
+            }, {});
+            return Object.values(stacked).map(({ vi, count, totalStock }) => (
+              <div key={vi.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
+                <div className="flex items-center gap-1.5">
+                  {count > 1 && (
+                    <span className="text-[10px] font-display bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center">
+                      {count}
+                    </span>
+                  )}
+                  <div>
+                    <span className={`text-sm font-display ${RARITY_COLORS[vi.item.rarity] || ''}`}>{vi.item.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">{vi.item.slot || vi.item.item_type}</span>
+                    {totalStock > 0 && <span className="text-xs text-muted-foreground ml-1">(×{totalStock})</span>}
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => buyItem(vi)} disabled={gold < vi.price}
+                  className="font-display text-xs h-7">
+                  <Coins className="w-3 h-3 mr-1" /> {vi.price}g
+                </Button>
               </div>
-              <Button size="sm" onClick={() => buyItem(vi)} disabled={gold < vi.price}
-                className="font-display text-xs h-7">
-                <Coins className="w-3 h-3 mr-1" /> {vi.price}g
-              </Button>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
 
         {/* Sell */}
