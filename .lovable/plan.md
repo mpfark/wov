@@ -1,82 +1,63 @@
 
 
-# Wizard Ability: Arcane Surge
+## Remove Stat Cap, Change Progression After Level 30
 
-## Overview
+### Problem
+Currently all stats are capped at 30, and every level gives +1 to all six stats. This means every class ends up identical at high levels. Class bonuses every 3 levels are also wasted once the cap is hit.
 
-Add a Tier 1 ability for the Wizard class called **Arcane Surge** -- a self-buff aura that temporarily increases spell damage output. This follows the same pattern as existing abilities (Rogue's Shadowstep, Ranger's Eagle Eye, Bard's Inspire).
+### New Progression Rules
+- **Levels 1-29**: +1 to all six stats per level (no cap). Class bonus every 3 levels on top.
+- **Level 30+**: No more +1 to all stats. Only class-specific bonuses every 3 levels (uncapped) and +5 max HP.
+- **Remove the hard cap of 30** entirely from all stat assignments.
 
-## Ability Details
+### Changes Required
 
-- **Name**: Arcane Surge
-- **Emoji**: `✨`
-- **Type**: `damage_buff` (new type)
-- **Effect**: For a duration, the Wizard's attacks deal 1.5x damage
-- **Duration**: Base 15 seconds + INT modifier (capped at 25s)
-- **Cooldown**: 60 seconds
-- **Tier**: 1 (unlocks at Level 5)
+**1. `src/hooks/useCombat.ts` (client-side level-up logic)**
+- Remove the `< 30` check on the per-level stat loop
+- Add a condition: only apply the "+1 all stats" if `newLevel < 30`
+- Remove `Math.min(..., 30)` from class bonus application
+- Update log messages accordingly (e.g., "Stats no longer increase" at level 30+)
 
-## Changes
+**2. `award_party_member` database function (migration)**
+- Same logic change server-side: only add +1 to all stats when `_new_level < 30`
+- Remove `LEAST(..., 30)` caps from all stat updates
+- Class bonuses every 3 levels remain uncapped
 
-### 1. Update ability data (`src/lib/class-abilities.ts`)
+**3. Reset existing characters (data update)**
+- Recalculate all existing character stats using the new formula:
+  - For characters level 1-29: base(10) + (level - 1) + class_bonuses
+  - For characters level 30+: base(10) + 29 + class_bonuses_through_all_levels
+- This ensures existing characters are consistent with the new system
 
-- Add `damage_buff` to the type union in `ClassAbility`
-- Add Wizard entry to `CLASS_ABILITIES`:
-  ```
-  wizard: {
-    label: 'Arcane Surge',
-    emoji: '✨',
-    description: 'Channel raw arcane energy to amplify your spell damage',
-    cooldownMs: 60000,
-    type: 'damage_buff',
-    tier: 1,
-    levelRequired: 5,
+### Technical Details
+
+Client-side change (useCombat.ts lines ~293-321):
+```typescript
+// Only increase all stats before level 30
+if (newLevel < 30) {
+  for (const stat of statKeys) {
+    const current = (char as any)[stat] || 10;
+    (levelUpUpdates as any)[stat] = current + 1;
+    boostedStats.push(stat.toUpperCase());
   }
-  ```
+}
 
-### 2. Add damage buff state (`src/pages/GamePage.tsx`)
+// Class bonus every 3 levels (no cap)
+if (newLevel % 3 === 0) {
+  const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
+  for (const [stat, amount] of Object.entries(bonuses)) {
+    const currentVal = (levelUpUpdates as any)[stat] ?? (char as any)[stat] ?? 10;
+    (levelUpUpdates as any)[stat] = currentVal + amount;
+  }
+}
+```
 
-- Add `damageBuff` state: `{ expiresAt: number } | null` (same pattern as `critBuff`, `stealthBuff`, `regenBuff`)
-- In `handleUseAbility`, add the `damage_buff` branch:
-  - Calculate duration: base 15s + INT modifier, capped at 25s
-  - Set `damageBuff` state with expiry timestamp
-  - Log an activation message
-- Pass `damageBuff` into the combat hook
-
-### 3. Apply damage multiplier in combat (`src/hooks/useCombat.ts`)
-
-- Accept a `damageBuff` parameter (same pattern as `stealthBuff` and `critBuff`)
-- During the player attack step, if `damageBuff` is active (not expired), multiply final damage by 1.5x
-- Unlike stealth, the buff does NOT clear on first hit -- it persists until the timer expires
-- Log a special message when the buff is active (e.g., "Arcane energy surges through your attack!")
-
-### 4. Show buff indicator in UI (`src/components/game/NodeView.tsx`)
-
-- The ability button and level-gating already work generically for all classes, so the Wizard's ability will appear automatically
-- The buff expiry visual (if one exists for other buffs) will apply here too
-
-### 5. Admin display (`src/components/admin/RaceClassManager.tsx`)
-
-- No changes needed -- the component already reads from `CLASS_ABILITIES` dynamically, so the Wizard entry will appear automatically
-
-## Technical Details
-
-```text
-New type added to union:
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff'
-
-State shape:
-  damageBuff: { expiresAt: number } | null
-
-Combat logic (pseudocode):
-  if damageBuff active (Date.now() < expiresAt):
-    finalDmg = Math.floor(finalDmg * 1.5)
-    log "Arcane energy amplifies your attack!"
-  // buff persists until timer expires (no clear on hit)
-
-Activation logic:
-  const intMod = getStatModifier(stats.int)
-  const duration = Math.min(25, 15 + intMod) * 1000
-  setDamageBuff({ expiresAt: Date.now() + duration })
+Database function change:
+```sql
+-- Only +1 all stats for levels under 30
+IF _new_level < 30 THEN
+  -- add +1 to each stat (no cap)
+END IF;
+-- Class bonus every 3 levels always applies (no cap)
 ```
 
