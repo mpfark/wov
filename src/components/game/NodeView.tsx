@@ -172,9 +172,16 @@ export default function NodeView({
         <div className="pt-2 border-t border-border mt-2 space-y-1.5 flex flex-col items-center">
           {/* Row 1: Core actions */}
           <div className="flex gap-1 justify-center">
-            <Button variant="secondary" size="sm" onClick={onSearch} className="font-display text-[10px] h-6 px-2">
-              <Search className="h-3 w-3 mr-0.5" /> Search
-            </Button>
+            {(() => {
+              const hasHidden = node.connections?.some((c: any) => c.hidden);
+              const hasLoot = node.searchable_items && node.searchable_items.length > 0;
+              const hasDiscoverable = hasHidden || hasLoot;
+              return (
+                <Button variant="secondary" size="sm" onClick={onSearch} className={`font-display text-[10px] h-6 px-2 ${hasDiscoverable ? 'ring-1 ring-primary/40 text-primary animate-pulse' : ''}`}>
+                  <Search className="h-3 w-3 mr-0.5" /> Search
+                </Button>
+              );
+            })()}
             {onOpenVendor && (
               <Button variant="outline" size="sm" onClick={onOpenVendor} className="font-display text-[10px] h-6 px-2 text-primary">
                 <ShoppingCart className="h-3 w-3 mr-0.5" /> Shop
