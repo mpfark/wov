@@ -615,15 +615,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     setAbilityCooldownEnd(Date.now() + ability.cooldownMs);
   }, [isDead, character, abilityCooldownEnd, updateCharacter, addLog, party, partyMembers]);
 
-  const handleSpendPoint = useCallback(async (stat: string) => {
-    if (character.unspent_stat_points <= 0) return;
-    const currentVal = (character as any)[stat] as number;
-    if (currentVal >= 30) return;
-    await updateCharacter({
-      [stat]: currentVal + 1,
-      unspent_stat_points: character.unspent_stat_points - 1,
-    });
-  }, [character, updateCharacter]);
 
   if (nodesLoading) {
     return (
@@ -679,7 +670,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             onUnequip={unequipItem}
             onDrop={dropItem}
             onUseConsumable={handleUseConsumable}
-            onSpendPoint={handleSpendPoint}
+            
             isAtInn={currentNode?.is_inn ?? false}
             regenBuff={regenBuff}
             regenTick={regenTick}
