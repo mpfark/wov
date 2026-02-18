@@ -972,6 +972,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               beltedPotions={beltedPotions}
               onUseBeltPotion={handleUseConsumable}
               actionBindings={keyboardMovement.actionBindings}
+              poisonStacks={poisonStacks}
             />
           </div>
           {/* Event Log - docked at bottom of middle column, 1/3 height */}
