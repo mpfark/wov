@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
@@ -28,6 +28,9 @@ export function useCharacter(user: User | null) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Track fields with pending DB writes so realtime doesn't revert optimistic updates
+  const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
 
   const selectedCharacter = characters.find(c => c.id === selectedCharacterId) ?? null;
 
@@ -69,7 +72,18 @@ export function useCharacter(user: User | null) {
         } else if (payload.eventType === 'INSERT') {
           setCharacters(prev => [...prev, payload.new as Character]);
         } else {
-          setCharacters(prev => prev.map(c => c.id === (payload.new as any).id ? payload.new as Character : c));
+          const incoming = payload.new as Character;
+          const pendingFields = pendingWritesRef.current.get(incoming.id);
+          setCharacters(prev => prev.map(c => {
+            if (c.id !== incoming.id) return c;
+            if (!pendingFields || pendingFields.size === 0) return incoming;
+            // Merge: use local optimistic value for pending fields, server value for rest
+            const merged = { ...incoming };
+            for (const field of pendingFields) {
+              (merged as any)[field] = (c as any)[field];
+            }
+            return merged;
+          }));
         }
       })
       .subscribe();
@@ -124,12 +138,30 @@ export function useCharacter(user: User | null) {
 
   const updateCharacter = async (updates: Partial<Character>) => {
     if (!selectedCharacter) return;
-    setCharacters(prev => prev.map(c => c.id === selectedCharacter.id ? { ...c, ...updates } : c));
-    const { error } = await supabase
-      .from('characters')
-      .update(updates as any)
-      .eq('id', selectedCharacter.id);
-    if (error) throw error;
+    const charId = selectedCharacter.id;
+    const fields = Object.keys(updates);
+
+    // Mark fields as pending so realtime won't revert them
+    const pending = pendingWritesRef.current.get(charId) || new Set<string>();
+    fields.forEach(f => pending.add(f));
+    pendingWritesRef.current.set(charId, pending);
+
+    setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
+
+    try {
+      const { error } = await supabase
+        .from('characters')
+        .update(updates as any)
+        .eq('id', charId);
+      if (error) throw error;
+    } finally {
+      // Clear pending fields after write completes
+      const current = pendingWritesRef.current.get(charId);
+      if (current) {
+        fields.forEach(f => current.delete(f));
+        if (current.size === 0) pendingWritesRef.current.delete(charId);
+      }
+    }
   };
 
   return {
