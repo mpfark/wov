@@ -66,8 +66,7 @@ interface AdminUser {
 }
 
 interface CharacterEdits {
-  hp?: number;
-  max_hp?: number;
+  name?: string;
   gold?: number;
   level?: number;
 }
@@ -166,12 +165,11 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
     return acc;
   }, {} as Record<string, number>);
 
-  const hp = isEditing ? (charEdits.hp ?? c.hp) : c.hp;
-  const maxHp = isEditing ? (charEdits.max_hp ?? c.max_hp) : c.max_hp;
   const gold = isEditing ? (charEdits.gold ?? c.gold) : c.gold;
   const level = isEditing ? (charEdits.level ?? c.level) : c.level;
+  const name = isEditing ? (charEdits.name ?? c.name) : c.name;
 
-  const hpPercent = Math.round((hp / maxHp) * 100);
+  const hpPercent = Math.round((c.hp / c.max_hp) * 100);
   const xpForNext = c.level * 100;
   const xpPercent = Math.round((c.xp / xpForNext) * 100);
   const totalAC = c.ac + (equipmentBonuses.ac || 0);
@@ -185,7 +183,12 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
       {/* Name & Identity + Edit button */}
       <div className="flex items-center justify-between">
         <div className="text-center flex-1">
-          <h2 className="font-display text-lg text-primary text-glow">{c.name}</h2>
+          {isEditing ? (
+            <input type="text" className="w-full bg-background border border-border rounded px-2 py-0.5 text-sm font-display text-primary text-center"
+              value={name} maxLength={50} onChange={e => setCharEdits(p => ({ ...p, name: e.target.value }))} />
+          ) : (
+            <h2 className="font-display text-lg text-primary text-glow">{c.name}</h2>
+          )}
           <p className="text-xs text-muted-foreground">
             {RACE_LABELS[c.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[c.class as keyof typeof CLASS_LABELS]} — Lvl {isEditing ? (
               <input type="number" className="w-10 bg-background border border-border rounded px-1 text-xs text-foreground inline"
@@ -215,17 +218,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
       <div>
         <div className="flex justify-between text-xs mb-1">
           <span className="text-muted-foreground">HP</span>
-          {isEditing ? (
-            <span className="flex items-center gap-1">
-              <input type="number" className="w-12 bg-background border border-border rounded px-1 text-xs text-blood"
-                value={hp} onChange={e => setCharEdits(p => ({ ...p, hp: parseInt(e.target.value) || 0 }))} />
-              <span className="text-muted-foreground">/</span>
-              <input type="number" className="w-12 bg-background border border-border rounded px-1 text-xs text-blood"
-                value={maxHp} onChange={e => setCharEdits(p => ({ ...p, max_hp: parseInt(e.target.value) || 1 }))} />
-            </span>
-          ) : (
-            <span className="text-blood">{hp}/{maxHp}</span>
-          )}
+          <span className="text-blood">{c.hp}/{c.max_hp}</span>
         </div>
         <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
           <div
@@ -964,7 +957,7 @@ export default function UserManager({ isValar }: Props) {
                 isEditing={editingChar === selectedChar.id}
                 charEdits={charEdits}
                 setCharEdits={setCharEdits}
-                onEdit={() => { setEditingChar(selectedChar.id); setCharEdits({ hp: selectedChar.hp, max_hp: selectedChar.max_hp, gold: selectedChar.gold, level: selectedChar.level }); }}
+                onEdit={() => { setEditingChar(selectedChar.id); setCharEdits({ name: selectedChar.name, gold: selectedChar.gold, level: selectedChar.level }); }}
                 onSave={() => handleSaveCharacter(selectedChar.id)}
                 onCancel={() => { setEditingChar(null); setCharEdits({}); }}
               />
