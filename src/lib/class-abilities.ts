@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cooldown_reset';
   tier: number;
   levelRequired: number;
 }
@@ -115,6 +115,33 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'regen_buff',
       tier: 1,
       levelRequired: 5,
+    },
+    {
+      label: 'Dissonance',
+      emoji: '🎵💢',
+      description: 'A discordant note that reduces your target\'s damage by 30%',
+      cooldownMs: 45000,
+      type: 'root_debuff',
+      tier: 2,
+      levelRequired: 10,
+    },
+    {
+      label: 'Crescendo',
+      emoji: '🎶✨',
+      description: 'A rising melody that heals all nearby allies over time, scaling with CHA',
+      cooldownMs: 60000,
+      type: 'party_regen',
+      tier: 3,
+      levelRequired: 15,
+    },
+    {
+      label: 'Encore',
+      emoji: '🔄🎭',
+      description: 'Reset the cooldown of your most recently used ability',
+      cooldownMs: 120000,
+      type: 'cooldown_reset',
+      tier: 4,
+      levelRequired: 20,
     },
   ],
   rogue: [
