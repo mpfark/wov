@@ -54,7 +54,7 @@ export default function NodeView({
   const [areaOpen, setAreaOpen] = useState(true);
 
   // Only hp_transfer needs a target selector (heal is self-only)
-  const hasTargetedAbility = classAbilities.some(a => a.type === 'hp_transfer');
+  const hasTargetedAbility = classAbilities.some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb');
 
   // Per-ability cooldown countdowns
   const [cooldownLefts, setCooldownLefts] = useState<Record<number, number>>({});
@@ -277,9 +277,9 @@ export default function NodeView({
               {classAbilities.map((ability, idx) => {
                 const levelLocked = character.level < ability.levelRequired;
                 const cooldownLeft = cooldownLefts[idx] || 0;
-                const needsTarget = ability.type === 'hp_transfer';
+                const needsTarget = ability.type === 'hp_transfer' || ability.type === 'ally_absorb';
                 const resolvedTarget = needsTarget && healTarget !== 'self' ? healTarget : undefined;
-                const disableNoTarget = needsTarget && (!resolvedTarget || healTargets.length === 0);
+                const disableNoTarget = ability.type === 'hp_transfer' && (!resolvedTarget || healTargets.length === 0);
                 return (
                   <Tooltip key={idx}>
                     <TooltipTrigger asChild>

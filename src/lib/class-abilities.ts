@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cooldown_reset';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cooldown_reset' | 'ally_absorb';
   tier: number;
   levelRequired: number;
 }
@@ -46,6 +46,24 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'heal',
       tier: 2,
       levelRequired: 10,
+    },
+    {
+      label: 'Purifying Light',
+      emoji: '✨💚',
+      description: 'A wave of divine radiance that heals all nearby allies over time, scaling with WIS',
+      cooldownMs: 60000,
+      type: 'party_regen',
+      tier: 3,
+      levelRequired: 15,
+    },
+    {
+      label: 'Divine Aegis',
+      emoji: '🛡️💚',
+      description: 'Create an absorb shield on a targeted ally (or self), soaking incoming damage based on WIS',
+      cooldownMs: 90000,
+      type: 'ally_absorb',
+      tier: 4,
+      levelRequired: 20,
     },
   ],
   warrior: [

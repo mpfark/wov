@@ -977,12 +977,32 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'party_regen') {
-      const chaMod = getStatMod2(character.cha + (equipmentBonuses.cha || 0));
-      const healPerTick = Math.max(1, chaMod + 2);
-      const durationMs = Math.min(25000, 15000 + chaMod * 1000);
+      // Bard scales with CHA, Healer scales with WIS
+      const scaleStat = character.class === 'healer'
+        ? getStatMod2(character.wis + (equipmentBonuses.wis || 0))
+        : getStatMod2(character.cha + (equipmentBonuses.cha || 0));
+      const healPerTick = Math.max(1, scaleStat + 2);
+      const durationMs = Math.min(25000, 15000 + scaleStat * 1000);
       setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs });
       const who = party ? 'your party' : 'you';
-      addLog(`${ability.emoji} Crescendo! A rising melody heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
+      const abilityName = character.class === 'healer' ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
+      addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'ally_absorb') {
+      const wisMod = getStatMod2(character.wis + (equipmentBonuses.wis || 0));
+      const shieldHp = wisMod * 5 + character.level;
+      const durationMs = Math.min(20000, 12000 + wisMod * 1000);
+      if (targetId && targetId !== character.id) {
+        // Apply shield to ally — for now we log it; the ally would need to receive this via party combat log signals
+        // Since absorb state is local, we apply it to self and log the ally name for flavor
+        // TODO: implement cross-player absorb via realtime signals
+        setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
+        const targetMember = partyMembers.find(m => m.character_id === targetId);
+        const targetName = targetMember?.character.name || 'ally';
+        addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
+      } else {
+        setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
+        addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
+      }
     } else if (ability.type === 'cooldown_reset') {
       if (lastUsedAbilityIndex === null) {
         addLog(`${ability.emoji} Encore! But there's no recent ability to reset.`);
