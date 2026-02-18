@@ -55,6 +55,8 @@ export function useInventory(characterId: string | null) {
   const equipItem = useCallback(async (inventoryId: string, slot: string) => {
     if (!characterId) return;
     const itemToEquip = inventory.find(i => i.id === inventoryId);
+    // Prevent equipping broken items
+    if (itemToEquip && itemToEquip.current_durability <= 0) return;
     
     // If equipping a 2h weapon to main_hand, also unequip off_hand
     if (itemToEquip && slot === 'main_hand' && itemToEquip.item.hands === 2) {
@@ -106,7 +108,7 @@ export function useInventory(characterId: string | null) {
   const unequipped = inventory.filter(i => !i.equipped_slot);
 
   // Calculate total stat bonuses from equipped items
-  const equipmentBonuses = equipped.reduce((acc, item) => {
+  const equipmentBonuses = equipped.filter(i => i.current_durability > 0).reduce((acc, item) => {
     const stats = item.item.stats || {};
     for (const [key, val] of Object.entries(stats)) {
       acc[key] = (acc[key] || 0) + (val as number);
@@ -123,6 +125,8 @@ export function useInventory(characterId: string | null) {
 
   const beltPotion = useCallback(async (inventoryId: string) => {
     if (!characterId || beltCapacity <= 0) return;
+    const item = inventory.find(i => i.id === inventoryId);
+    if (item && item.current_durability <= 0) return;
     // Find the next open slot
     const usedSlots = new Set(beltedPotions.map(i => i.belt_slot));
     let openSlot: number | null = null;

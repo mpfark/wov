@@ -345,10 +345,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       if (newDur <= 0) {
         if (item.item.rarity === 'unique') {
           addLog(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`);
+          await supabase.from('character_inventory').delete().eq('id', item.id);
+        } else if (item.item.rarity === 'rare') {
+          addLog(`💔 Your ${item.item.name} has broken beyond repair!`);
+          await supabase.from('character_inventory').delete().eq('id', item.id);
         } else {
-          addLog(`💔 Your ${item.item.name} has broken!`);
+          // Common/uncommon: keep in inventory but unequip
+          addLog(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`);
+          await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null, belt_slot: null } as any).eq('id', item.id);
         }
-        await supabase.from('character_inventory').delete().eq('id', item.id);
       } else {
         await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
       }
