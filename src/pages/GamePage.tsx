@@ -38,6 +38,8 @@ function getLogColor(log: string): string {
   if (log.startsWith('🌑')) return 'text-primary';
   if (log.startsWith('🦅')) return 'text-primary';
   if (log.startsWith('🎶') || log.startsWith('✨')) return 'text-elvish';
+  if (log.startsWith('🌿')) return 'text-elvish';
+  if (log.startsWith('🏹🏹')) return 'text-primary';
   if (log.startsWith('🛡️')) return 'text-dwarvish';
   if (log.includes('miss')) return 'text-muted-foreground';
   if (log.includes('damage')) return 'text-foreground/90';
@@ -77,6 +79,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [critBuff, setCritBuff] = useState<{ bonus: number; expiresAt: number }>({ bonus: 0, expiresAt: 0 });
   const [stealthBuff, setStealthBuff] = useState<{ expiresAt: number } | null>(null);
   const [damageBuff, setDamageBuff] = useState<{ expiresAt: number } | null>(null);
+  const [rootDebuff, setRootDebuff] = useState<{ damageReduction: number; expiresAt: number } | null>(null);
   const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -272,6 +275,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     stealthBuff,
     onClearStealthBuff: useCallback(() => setStealthBuff(null), []),
     damageBuff,
+    rootDebuff,
   });
 
   const handleAttack = useCallback((creatureId: string) => {
@@ -633,10 +637,55 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationMs = Math.min(25, 15 + intMod) * 1000;
       setDamageBuff({ expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'multi_attack') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Barrage!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Barrage.`);
+        return;
+      }
+      const combat = CLASS_COMBAT.ranger;
+      const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
+      const arrowCount = dexMod >= 3 ? 3 : 2;
+      let totalDmg = 0;
+      for (let i = 0; i < arrowCount; i++) {
+        const atkRoll = rollD20();
+        const totalAtk = atkRoll + dexMod;
+        if (atkRoll !== 1 && (atkRoll === 20 || totalAtk >= creature.ac)) {
+          const rawDmg = rollDamage(combat.diceMin, combat.diceMax) + dexMod;
+          const arrowDmg = Math.max(Math.floor(rawDmg * 0.7), 1);
+          totalDmg += arrowDmg;
+          addLog(`${ability.emoji} Arrow ${i + 1}: Hit! Rolled ${atkRoll}+${dexMod}=${totalAtk} vs AC ${creature.ac} — ${arrowDmg} damage.`);
+        } else {
+          addLog(`${ability.emoji} Arrow ${i + 1}: Miss! Rolled ${atkRoll}+${dexMod}=${totalAtk} vs AC ${creature.ac}.`);
+        }
+      }
+      if (totalDmg > 0) {
+        const newHp = Math.max((creatureHpOverrides[creature.id] ?? creature.hp) - totalDmg, 0);
+        await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
+        addLog(`${ability.emoji} Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`);
+      }
+    } else if (ability.type === 'root_debuff') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Nature's Snare!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Nature's Snare.`);
+        return;
+      }
+      const wisMod = getStatMod2(character.wis);
+      const durationSec = 10 + Math.min(wisMod, 5);
+      setRootDebuff({ damageReduction: 0.3, expiresAt: Date.now() + durationSec * 1000 });
+      addLog(`${ability.emoji} Nature's Snare! ${creature.name} is entangled — damage reduced by 30% for ${durationSec}s.`);
     }
 
     setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
-  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers]);
+  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides]);
 
 
   if (nodesLoading) {
