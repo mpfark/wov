@@ -4,7 +4,7 @@ import { GameNode } from '@/hooks/useNodes';
 export type Direction = 'N' | 'S' | 'E' | 'W' | 'NE' | 'NW' | 'SE' | 'SW';
 export type KeyBindings = Record<Direction, string[]>;
 
-export type ActionName = 'search' | 'ability1' | 'ability2' | 'ability3' | 'potion1' | 'potion2' | 'potion3' | 'potion4' | 'potion5' | 'potion6';
+export type ActionName = 'attack' | 'search' | 'ability1' | 'ability2' | 'ability3' | 'potion1' | 'potion2' | 'potion3' | 'potion4' | 'potion5' | 'potion6';
 export type ActionBindings = Record<ActionName, string[]>;
 
 const DIRECTIONS: Direction[] = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'];
@@ -21,11 +21,12 @@ const DEFAULT_BINDINGS: KeyBindings = {
 };
 
 const ACTION_NAMES: ActionName[] = [
-  'search', 'ability1', 'ability2', 'ability3',
+  'attack', 'search', 'ability1', 'ability2', 'ability3',
   'potion1', 'potion2', 'potion3', 'potion4', 'potion5', 'potion6',
 ];
 
 const ACTION_LABELS: Record<ActionName, string> = {
+  attack: 'Attack',
   search: 'Search',
   ability1: 'Ability 1', ability2: 'Ability 2', ability3: 'Ability 3',
   potion1: 'Potion 1', potion2: 'Potion 2', potion3: 'Potion 3',
@@ -33,6 +34,7 @@ const ACTION_LABELS: Record<ActionName, string> = {
 };
 
 const DEFAULT_ACTION_BINDINGS: ActionBindings = {
+  attack: [' '],
   search: ['s'],
   ability1: ['1'], ability2: ['2'], ability3: ['3'],
   potion1: ['!'], potion2: ['@'], potion3: ['#'],
@@ -100,12 +102,13 @@ interface UseKeyboardMovementOptions {
   nodes: GameNode[];
   onMove: (nodeId: string, direction?: Direction) => void;
   disabled: boolean;
+  onAttackFirst?: () => void;
   onSearch?: () => void;
   onUseAbility?: (index: number) => void;
   onUseBeltPotion?: (index: number) => void;
 }
 
-export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onSearch, onUseAbility, onUseBeltPotion }: UseKeyboardMovementOptions) {
+export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion }: UseKeyboardMovementOptions) {
   const [bindings, setBindingsState] = useState<KeyBindings>(loadBindings);
   const [actionBindings, setActionBindingsState] = useState<ActionBindings>(loadActionBindings);
   const bindingsRef = useRef(bindings);
@@ -113,6 +116,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onSe
   const currentNodeRef = useRef(currentNode);
   const onMoveRef = useRef(onMove);
   const disabledRef = useRef(disabled);
+  const onAttackFirstRef = useRef(onAttackFirst);
   const onSearchRef = useRef(onSearch);
   const onUseAbilityRef = useRef(onUseAbility);
   const onUseBeltPotionRef = useRef(onUseBeltPotion);
@@ -122,6 +126,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onSe
   useEffect(() => { currentNodeRef.current = currentNode; }, [currentNode]);
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
   useEffect(() => { disabledRef.current = disabled; }, [disabled]);
+  useEffect(() => { onAttackFirstRef.current = onAttackFirst; }, [onAttackFirst]);
   useEffect(() => { onSearchRef.current = onSearch; }, [onSearch]);
   useEffect(() => { onUseAbilityRef.current = onUseAbility; }, [onUseAbility]);
   useEffect(() => { onUseBeltPotionRef.current = onUseBeltPotion; }, [onUseBeltPotion]);
@@ -162,6 +167,12 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onSe
 
       // Check action bindings
       const ab = actionBindingsRef.current;
+
+      if (ab.attack.includes(key) && onAttackFirstRef.current) {
+        e.preventDefault();
+        onAttackFirstRef.current();
+        return;
+      }
 
       if (ab.search.includes(key) && onSearchRef.current) {
         e.preventDefault();
