@@ -44,11 +44,11 @@ export default function NodeView({
   beltedPotions = [], onUseBeltPotion,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
-  const [healTarget, setHealTarget] = useState<string>('self');
+  const [healTarget, setHealTarget] = useState<string>('');
   const [areaOpen, setAreaOpen] = useState(true);
 
-  // Check if any ability needs a target selector
-  const hasTargetedAbility = classAbilities.some(a => a.type === 'heal' || a.type === 'hp_transfer');
+  // Only hp_transfer needs a target selector (heal is self-only)
+  const hasTargetedAbility = classAbilities.some(a => a.type === 'hp_transfer');
 
   // Per-ability cooldown countdowns
   const [cooldownLefts, setCooldownLefts] = useState<Record<number, number>>({});
@@ -219,12 +219,9 @@ export default function NodeView({
               {hasTargetedAbility && healTargets.length > 0 && (
                 <Select value={healTarget} onValueChange={setHealTarget}>
                   <SelectTrigger className="h-6 text-[10px] font-display w-auto min-w-[80px] max-w-[120px]">
-                    <SelectValue />
+                    <SelectValue placeholder="Select ally" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="self" className="text-[10px]">
-                      Self ({character.hp}/{character.max_hp})
-                    </SelectItem>
                     {healTargets.map(t => (
                       <SelectItem key={t.id} value={t.id} className="text-[10px]">
                         {t.name} ({t.hp}/{t.max_hp})
@@ -236,8 +233,9 @@ export default function NodeView({
               {classAbilities.map((ability, idx) => {
                 const levelLocked = character.level < ability.levelRequired;
                 const cooldownLeft = cooldownLefts[idx] || 0;
-                const needsTarget = ability.type === 'heal' || ability.type === 'hp_transfer';
+                const needsTarget = ability.type === 'hp_transfer';
                 const resolvedTarget = needsTarget && healTarget !== 'self' ? healTarget : undefined;
+                const disableNoTarget = needsTarget && (!resolvedTarget || healTargets.length === 0);
                 return (
                   <Tooltip key={idx}>
                     <TooltipTrigger asChild>
@@ -246,7 +244,7 @@ export default function NodeView({
                           variant="outline"
                           size="sm"
                           onClick={() => onUseAbility(idx, resolvedTarget)}
-                          disabled={levelLocked || cooldownLeft > 0 || character.hp <= 0}
+                          disabled={levelLocked || cooldownLeft > 0 || character.hp <= 0 || disableNoTarget}
                           className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
                         >
                           {ability.emoji} {ability.label}
