@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff';
   tier: number;
   levelRequired: number;
 }
@@ -68,6 +68,24 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'crit_buff',
       tier: 1,
       levelRequired: 5,
+    },
+    {
+      label: 'Barrage',
+      emoji: '🏹🏹',
+      description: 'Fire a volley of 2-3 arrows at 70% damage each, scaling with DEX',
+      cooldownMs: 45000,
+      type: 'multi_attack',
+      tier: 2,
+      levelRequired: 10,
+    },
+    {
+      label: "Nature's Snare",
+      emoji: '🌿',
+      description: 'Entangle your target, reducing its damage by 30% for a duration scaling with WIS',
+      cooldownMs: 90000,
+      type: 'root_debuff',
+      tier: 3,
+      levelRequired: 15,
     },
   ],
   bard: [

@@ -39,6 +39,7 @@ interface UseCombatParams {
   stealthBuff?: { expiresAt: number } | null;
   onClearStealthBuff?: () => void;
   damageBuff?: { expiresAt: number } | null;
+  rootDebuff?: { damageReduction: number; expiresAt: number } | null;
 }
 
 export function useCombat({
@@ -57,6 +58,7 @@ export function useCombat({
   stealthBuff,
   onClearStealthBuff,
   damageBuff,
+  rootDebuff,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -78,6 +80,7 @@ export function useCombat({
   const stealthBuffRef = useRef(stealthBuff);
   const onClearStealthBuffRef = useRef(onClearStealthBuff);
   const damageBuffRef = useRef(damageBuff);
+  const rootDebuffRef = useRef(rootDebuff);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -96,6 +99,7 @@ export function useCombat({
   useEffect(() => { stealthBuffRef.current = stealthBuff; }, [stealthBuff]);
   useEffect(() => { onClearStealthBuffRef.current = onClearStealthBuff; }, [onClearStealthBuff]);
   useEffect(() => { damageBuffRef.current = damageBuff; }, [damageBuff]);
+  useEffect(() => { rootDebuffRef.current = rootDebuff; }, [rootDebuff]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -338,6 +342,10 @@ export function useCombat({
       }
 
       // Creature counterattack
+      // Root debuff — reduce creature damage by 30% if active
+      const _rootDebuff = rootDebuffRef.current;
+      const isRooted = _rootDebuff && Date.now() < _rootDebuff.expiresAt;
+
       const tankMember = _party && _party.tank_id && _party.tank_id !== char.id
         ? _partyMembers.find(m => m.character_id === _party.tank_id)
         : null;
@@ -346,9 +354,10 @@ export function useCombat({
         const tankAC = 10;
         if (creatureAtk >= tankAC) {
           const dmgDie = getCreatureDamageDie(creature.level, creature.rarity);
-          const creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
+          let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
+          if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
           const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
-          _addLog(`🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
+          _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
           await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
         } else {
           _addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
@@ -356,9 +365,10 @@ export function useCombat({
       } else {
         if (creatureAtk >= _effectiveAC) {
           const dmgDie2 = getCreatureDamageDie(creature.level, creature.rarity);
-          const creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(creature.stats.str || 10), 1);
+          let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(creature.stats.str || 10), 1);
+          if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
           const playerNewHp = Math.max(char.hp - creatureDmg, 0);
-          _addLog(`${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${_effectiveAC} — Hit! ${creatureDmg} damage.`);
+          _addLog(`${isRooted ? '🌿 ' : ''}${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${_effectiveAC} — Hit! ${creatureDmg} damage.`);
           await _updateCharacter({ hp: playerNewHp });
           await _degradeEquipment();
           if (playerNewHp <= 0) {
