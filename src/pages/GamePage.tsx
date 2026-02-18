@@ -1181,6 +1181,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               actionBindings={keyboardMovement.actionBindings}
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
+              sunderDebuff={sunderDebuff}
             />
           </div>
           {/* Event Log - docked at bottom of middle column, 1/3 height */}
