@@ -33,6 +33,7 @@ function getLogColor(log: string): string {
   if (log.startsWith('📈')) return 'text-primary';
   if (log.startsWith('⚠️')) return 'text-dwarvish';
   if (log.startsWith('💔')) return 'text-destructive/80';
+  if (log.startsWith('💉')) return 'text-blood font-semibold';
   if (log.startsWith('💚') || log.startsWith('💪') || log.includes('restore') || log.includes('recover')) return 'text-elvish';
   if (log.startsWith('🌑')) return 'text-primary';
   if (log.startsWith('🦅')) return 'text-primary';
