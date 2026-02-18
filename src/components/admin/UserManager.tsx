@@ -736,32 +736,29 @@ export default function UserManager({ isValar }: Props) {
           )}
         </div>
 
-        {/* COL 2 — Character Cards + Admin Actions */}
-        <div className="w-72 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+        {/* COL 2 — Character Cards */}
+        <div className="w-60 shrink-0 border-r border-border flex flex-col">
           {!selectedUser ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-[10px] text-muted-foreground">Select a user</p>
             </div>
           ) : (
-            <ScrollArea className="flex-1">
-              <div className="p-3 space-y-3">
-                {/* User info header */}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-display text-sm text-foreground truncate">
-                      {selectedUser.profile?.display_name || selectedUser.email.split('@')[0]}
-                    </h4>
-                    {roleBadge(selectedUser.role)}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground truncate">{selectedUser.email}</p>
-                  <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
-                    <span>Joined {formatDate(selectedUser.created_at)}</span>
-                    <span>Last {formatDate(selectedUser.last_sign_in_at)}</span>
-                  </div>
+            <>
+              {/* User info header */}
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-display text-sm text-foreground truncate">
+                    {selectedUser.profile?.display_name || selectedUser.email.split('@')[0]}
+                  </h4>
+                  {roleBadge(selectedUser.role)}
                 </div>
-
+                <p className="text-[10px] text-muted-foreground truncate">{selectedUser.email}</p>
+                <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
+                  <span>Joined {formatDate(selectedUser.created_at)}</span>
+                  <span>Last {formatDate(selectedUser.last_sign_in_at)}</span>
+                </div>
                 {/* Account action buttons */}
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 mt-2">
                   <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1"
                     onClick={() => handleResetPassword(selectedUser.email)}>
                     <KeyRound className="w-3 h-3" /> Reset PW
@@ -779,168 +776,175 @@ export default function UserManager({ isValar }: Props) {
                           <Ban className="w-3 h-3" /> Ban
                         </Button>
                       )}
+                      <Select value={selectedUser.role} onValueChange={(v) => handleSetRole(selectedUser.id, v)}>
+                        <SelectTrigger className="h-6 w-24 text-[10px]">
+                          <Shield className="w-3 h-3 mr-1" /><SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border-border z-50">
+                          <SelectItem value="player" className="text-xs">Player</SelectItem>
+                          <SelectItem value="steward" className="text-xs">Steward</SelectItem>
+                          <SelectItem value="overlord" className="text-xs">Overlord</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </>
                   )}
-                  {isValar && (
-                    <Select value={selectedUser.role} onValueChange={(v) => handleSetRole(selectedUser.id, v)}>
-                      <SelectTrigger className="h-6 w-24 text-[10px]">
-                        <Shield className="w-3 h-3 mr-1" /><SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50">
-                        <SelectItem value="player" className="text-xs">Player</SelectItem>
-                        <SelectItem value="steward" className="text-xs">Steward</SelectItem>
-                        <SelectItem value="overlord" className="text-xs">Overlord</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
                 </div>
+              </div>
 
-                {/* Character Cards */}
-                <div className="border-t border-border pt-3">
-                  <h4 className="font-display text-[10px] text-muted-foreground mb-2">Characters ({selectedUser.characters.length})</h4>
+              {/* Character Cards */}
+              <ScrollArea className="flex-1">
+                <div className="p-3 space-y-2">
+                  <h4 className="font-display text-[10px] text-muted-foreground">Characters ({selectedUser.characters.length})</h4>
                   {selectedUser.characters.length === 0 ? (
                     <p className="text-[10px] text-muted-foreground/50 italic">No characters</p>
                   ) : (
-                    <div className="space-y-2">
-                      {selectedUser.characters.map(char => {
-                        const isActive = selectedCharId === char.id;
-                        return (
-                          <div
-                            key={char.id}
-                            className={`ornate-border rounded-lg p-2.5 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 ${
-                              isActive ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'bg-card/90'
-                            }`}
-                            onClick={() => setSelectedCharId(char.id)}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h3 className={`font-display text-sm ${isActive ? 'text-primary text-glow' : 'text-foreground'}`}>
-                                  {char.name}
-                                </h3>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {RACE_LABELS[char.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[char.class as keyof typeof CLASS_LABELS]}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 text-[11px] mt-1.5">
-                              <span className="font-display text-foreground">Lvl {char.level}</span>
-                              <span className="text-blood">HP {char.hp}/{char.max_hp}</span>
-                              <span className="text-primary">Gold {char.gold}</span>
-                            </div>
-                            {/* Mini HP bar */}
-                            <div className="h-1 bg-background rounded-full overflow-hidden border border-border/50 mt-1.5">
-                              <div
-                                className="h-full transition-all duration-500"
-                                style={{
-                                  width: `${Math.round((char.hp / char.max_hp) * 100)}%`,
-                                  background: char.hp / char.max_hp > 0.5 ? 'hsl(var(--elvish))' : char.hp / char.max_hp > 0.25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
-                                }}
-                              />
+                    selectedUser.characters.map(char => {
+                      const isActive = selectedCharId === char.id;
+                      return (
+                        <div
+                          key={char.id}
+                          className={`ornate-border rounded-lg p-2.5 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 ${
+                            isActive ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'bg-card/90'
+                          }`}
+                          onClick={() => setSelectedCharId(char.id)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className={`font-display text-sm ${isActive ? 'text-primary text-glow' : 'text-foreground'}`}>
+                                {char.name}
+                              </h3>
+                              <p className="text-[10px] text-muted-foreground">
+                                {RACE_LABELS[char.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[char.class as keyof typeof CLASS_LABELS]}
+                              </p>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <div className="flex items-center gap-3 text-[11px] mt-1.5">
+                            <span className="font-display text-foreground">Lvl {char.level}</span>
+                            <span className="text-blood">HP {char.hp}/{char.max_hp}</span>
+                            <span className="text-primary">Gold {char.gold}</span>
+                          </div>
+                          <div className="h-1 bg-background rounded-full overflow-hidden border border-border/50 mt-1.5">
+                            <div
+                              className="h-full transition-all duration-500"
+                              style={{
+                                width: `${Math.round((char.hp / char.max_hp) * 100)}%`,
+                                background: char.hp / char.max_hp > 0.5 ? 'hsl(var(--elvish))' : char.hp / char.max_hp > 0.25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
+              </ScrollArea>
+            </>
+          )}
+        </div>
 
-                {/* Character-specific actions */}
-                {selectedChar && (
-                  <div className="border-t border-border pt-3 space-y-3">
-                    <h4 className="font-display text-[10px] text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="w-3 h-3" /> Actions — {selectedChar.name}
-                    </h4>
+        {/* COL 3 — Actions */}
+        <div className="w-56 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+          {!selectedChar ? (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-[10px] text-muted-foreground italic">
+                {!selectedUser ? 'Select a user' : 'Select a character'}
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-3">
+                <h4 className="font-display text-[10px] text-muted-foreground flex items-center gap-1.5">
+                  <Shield className="w-3 h-3" /> Actions — {selectedChar.name}
+                </h4>
 
-                    {/* Give Item */}
-                    <div className="space-y-1">
-                      <div className="flex gap-1">
-                        <Select value={giveItemId} onValueChange={setGiveItemId}>
-                          <SelectTrigger className="h-7 flex-1 text-[10px]">
-                            <SelectValue placeholder="Item..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border z-50 max-h-60">
-                            {allItems.map(item => (
-                              <SelectItem key={item.id} value={item.id} className="text-xs">
-                                <span className={rarityColor(item.rarity)}>{item.name}</span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
-                          disabled={!giveItemId || givingItem} onClick={() => handleGiveItem(selectedChar.id)}>
-                          <Gift className="w-3 h-3" /> Give
-                        </Button>
-                      </div>
-                    </div>
+                {/* Give Item */}
+                <div className="space-y-1">
+                  <div className="flex gap-1">
+                    <Select value={giveItemId} onValueChange={setGiveItemId}>
+                      <SelectTrigger className="h-7 flex-1 text-[10px]">
+                        <SelectValue placeholder="Item..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50 max-h-60">
+                        {allItems.map(item => (
+                          <SelectItem key={item.id} value={item.id} className="text-xs">
+                            <span className={rarityColor(item.rarity)}>{item.name}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
+                      disabled={!giveItemId || givingItem} onClick={() => handleGiveItem(selectedChar.id)}>
+                      <Gift className="w-3 h-3" /> Give
+                    </Button>
+                  </div>
+                </div>
 
-                    {/* Teleport */}
-                    <div className="space-y-1">
-                      <div className="flex gap-1">
-                        <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
-                          <SelectTrigger className="h-7 flex-1 text-[10px]">
-                            <SelectValue placeholder="Node..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border z-50 max-h-60">
-                            {allNodes.map(node => (
-                              <SelectItem key={node.id} value={node.id} className="text-xs">
-                                {node.name} <span className="text-muted-foreground">({node.region_name})</span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
-                          disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
-                          <MapPin className="w-3 h-3" /> Tp
-                        </Button>
-                      </div>
-                    </div>
+                {/* Teleport */}
+                <div className="space-y-1">
+                  <div className="flex gap-1">
+                    <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
+                      <SelectTrigger className="h-7 flex-1 text-[10px]">
+                        <SelectValue placeholder="Node..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50 max-h-60">
+                        {allNodes.map(node => (
+                          <SelectItem key={node.id} value={node.id} className="text-xs">
+                            {node.name} <span className="text-muted-foreground">({node.region_name})</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
+                      disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
+                      <MapPin className="w-3 h-3" /> Tp
+                    </Button>
+                  </div>
+                </div>
 
-                    {/* Grant XP */}
-                    <div className="flex gap-1">
-                      <Input type="number" min={1} value={grantXpAmount}
-                        onChange={e => setGrantXpAmount(parseInt(e.target.value) || 0)}
-                        className="h-7 text-[10px] w-20" placeholder="XP" />
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
-                        disabled={grantXpAmount <= 0} onClick={() => handleGrantXp(selectedChar.id)}>
-                        <Sparkles className="w-3 h-3" /> Grant XP
-                      </Button>
-                    </div>
+                {/* Grant XP */}
+                <div className="flex gap-1">
+                  <Input type="number" min={1} value={grantXpAmount}
+                    onChange={e => setGrantXpAmount(parseInt(e.target.value) || 0)}
+                    className="h-7 text-[10px] w-20" placeholder="XP" />
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
+                    disabled={grantXpAmount <= 0} onClick={() => handleGrantXp(selectedChar.id)}>
+                    <Sparkles className="w-3 h-3" /> Grant XP
+                  </Button>
+                </div>
 
-                    {/* Quick actions row */}
-                    <div className="flex flex-wrap gap-1">
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
-                        disabled={selectedChar.hp >= selectedChar.max_hp} onClick={() => handleRevive(selectedChar.id)}>
-                        <Heart className="w-3 h-3" /> Revive
-                        {selectedChar.hp < selectedChar.max_hp && <span className="text-blood">({selectedChar.hp}/{selectedChar.max_hp})</span>}
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
-                        onClick={() => handleResetStats(selectedChar.id)}>
-                        <RotateCcw className="w-3 h-3" /> Reset Stats
-                      </Button>
-                    </div>
+                {/* Quick actions */}
+                <div className="flex flex-wrap gap-1">
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
+                    disabled={selectedChar.hp >= selectedChar.max_hp} onClick={() => handleRevive(selectedChar.id)}>
+                    <Heart className="w-3 h-3" /> Revive
+                    {selectedChar.hp < selectedChar.max_hp && <span className="text-blood">({selectedChar.hp}/{selectedChar.max_hp})</span>}
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
+                    onClick={() => handleResetStats(selectedChar.id)}>
+                    <RotateCcw className="w-3 h-3" /> Reset Stats
+                  </Button>
+                </div>
 
-                    {/* Remove Item */}
-                    {selectedChar.inventory.length > 0 && (
-                      <div className="flex gap-1">
-                        <Select value={removeItemId} onValueChange={setRemoveItemId}>
-                          <SelectTrigger className="h-7 flex-1 text-[10px]">
-                            <SelectValue placeholder="Remove item..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border z-50 max-h-60">
-                            {selectedChar.inventory.map(inv => (
-                              <SelectItem key={inv.id} value={inv.id} className="text-xs">
-                                <span className={rarityColor(inv.item.rarity)}>{inv.item.name}</span>
-                                {inv.equipped_slot && <span className="text-muted-foreground ml-1">(eq)</span>}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 shrink-0"
-                          disabled={!removeItemId} onClick={handleRemoveItem}>
-                          <Trash2 className="w-3 h-3" /> Rm
-                        </Button>
-                      </div>
-                    )}
+                {/* Remove Item */}
+                {selectedChar.inventory.length > 0 && (
+                  <div className="flex gap-1">
+                    <Select value={removeItemId} onValueChange={setRemoveItemId}>
+                      <SelectTrigger className="h-7 flex-1 text-[10px]">
+                        <SelectValue placeholder="Remove item..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50 max-h-60">
+                        {selectedChar.inventory.map(inv => (
+                          <SelectItem key={inv.id} value={inv.id} className="text-xs">
+                            <span className={rarityColor(inv.item.rarity)}>{inv.item.name}</span>
+                            {inv.equipped_slot && <span className="text-muted-foreground ml-1">(eq)</span>}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 shrink-0"
+                      disabled={!removeItemId} onClick={handleRemoveItem}>
+                      <Trash2 className="w-3 h-3" /> Rm
+                    </Button>
                   </div>
                 )}
               </div>
