@@ -49,6 +49,9 @@ function getLogColor(log: string): string {
   if (log.startsWith('🔥🔥') || log.startsWith('🔥')) return 'text-dwarvish';
   if (log.startsWith('💥')) return 'text-primary font-semibold';
   if (log.startsWith('🛡️✨')) return 'text-primary';
+  if (log.startsWith('🎵💢')) return 'text-dwarvish';
+  if (log.startsWith('🎶✨')) return 'text-elvish';
+  if (log.startsWith('🔄🎭')) return 'text-primary font-semibold';
   if (log.includes('miss')) return 'text-muted-foreground';
   if (log.includes('damage')) return 'text-foreground/90';
   return 'text-foreground/80';
@@ -96,6 +99,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [igniteBuff, setIgniteBuff] = useState<{ expiresAt: number } | null>(null);
   const [igniteStacks, setIgniteStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
   const [absorbBuff, setAbsorbBuff] = useState<{ shieldHp: number; expiresAt: number } | null>(null);
+  const [partyRegenBuff, setPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number } | null>(null);
+  const [lastUsedAbilityIndex, setLastUsedAbilityIndex] = useState<number | null>(null);
   const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -421,6 +426,43 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }, 3000);
     return () => clearInterval(interval);
   }, [igniteStacks, creatures, creatureHpOverrides, addLog]);
+
+  // Crescendo party regen tick — heals self (and party members at same node) every 3s
+  useEffect(() => {
+    if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
+    const interval = setInterval(async () => {
+      if (Date.now() >= partyRegenBuff.expiresAt) {
+        setPartyRegenBuff(null);
+        clearInterval(interval);
+        return;
+      }
+      const charState = regenCharRef.current;
+      // Heal self
+      const selfNewHp = Math.min(charState.max_hp, charState.hp + partyRegenBuff.healPerTick);
+      if (selfNewHp > charState.hp) {
+        await updateCharacter({ hp: selfNewHp });
+      }
+      // Heal party members at same node
+      if (party) {
+        const membersHere = partyMembers.filter(m => m.character_id !== character.id && m.character?.current_node_id === charState.current_node_id);
+        for (const m of membersHere) {
+          await supabase.rpc('heal_party_member', {
+            _healer_id: character.id,
+            _target_id: m.character_id,
+            _heal_amount: partyRegenBuff.healPerTick,
+          });
+        }
+        if (membersHere.length > 0) {
+          addLog(`🎶✨ Crescendo heals ${membersHere.length + 1} allies for ${partyRegenBuff.healPerTick} HP!`);
+        } else {
+          addLog(`🎶✨ Crescendo heals you for ${partyRegenBuff.healPerTick} HP!`);
+        }
+      } else {
+        addLog(`🎶✨ Crescendo heals you for ${partyRegenBuff.healPerTick} HP!`);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [partyRegenBuff, party, partyMembers, character, addLog, updateCharacter]);
 
   const handleAttack = useCallback((creatureId: string) => {
     if (isDead) return;
@@ -814,18 +856,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
     } else if (ability.type === 'root_debuff') {
       if (!inCombat || !activeCombatCreatureId) {
-        addLog(`${ability.emoji} You must be in combat to use Nature's Snare!`);
+        addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`);
         return;
       }
       const creature = creatures.find(c => c.id === activeCombatCreatureId);
       if (!creature || !creature.is_alive || creature.hp <= 0) {
-        addLog(`${ability.emoji} No valid target for Nature's Snare.`);
+        addLog(`${ability.emoji} No valid target for ${ability.label}.`);
         return;
       }
-      const wisMod = getStatMod2(character.wis);
-      const durationSec = 10 + Math.min(wisMod, 5);
+      // Bard uses CHA, Ranger uses WIS
+      const scaleStat = character.class === 'bard'
+        ? getStatMod2(character.cha + (equipmentBonuses.cha || 0))
+        : getStatMod2(character.wis);
+      const durationSec = 10 + Math.min(scaleStat, 5);
       setRootDebuff({ damageReduction: 0.3, expiresAt: Date.now() + durationSec * 1000 });
-      addLog(`${ability.emoji} Nature's Snare! ${creature.name} is entangled — damage reduced by 30% for ${durationSec}s.`);
+      addLog(`${ability.emoji} ${ability.label}! ${creature.name} is weakened — damage reduced by 30% for ${durationSec}s.`);
     } else if (ability.type === 'battle_cry') {
       if (!inCombat) {
         addLog(`${ability.emoji} You must be in combat to use Battle Cry!`);
@@ -931,10 +976,30 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationMs = Math.min(20000, 10000 + intMod * 1000);
       setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'party_regen') {
+      const chaMod = getStatMod2(character.cha + (equipmentBonuses.cha || 0));
+      const healPerTick = Math.max(1, chaMod + 2);
+      const durationMs = Math.min(25000, 15000 + chaMod * 1000);
+      setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs });
+      const who = party ? 'your party' : 'you';
+      addLog(`${ability.emoji} Crescendo! A rising melody heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'cooldown_reset') {
+      if (lastUsedAbilityIndex === null) {
+        addLog(`${ability.emoji} Encore! But there's no recent ability to reset.`);
+      } else {
+        const abilities = CLASS_ABILITIES[character.class];
+        const resetAbility = abilities?.[lastUsedAbilityIndex];
+        setAbilityCooldownEnds(prev => ({ ...prev, [lastUsedAbilityIndex]: 0 }));
+        addLog(`${ability.emoji} Encore! ${resetAbility?.label || 'Ability'} cooldown reset!`);
+      }
     }
 
+    // Track last used ability (exclude cooldown_reset itself)
+    if (ability.type !== 'cooldown_reset') {
+      setLastUsedAbilityIndex(abilityIndex);
+    }
     setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
-  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks, igniteStacks]);
+  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks, igniteStacks, lastUsedAbilityIndex]);
 
   // Keyboard movement + action bindings
   const handleAbilityKey = useCallback((index: number) => {
@@ -1040,6 +1105,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             evasionBuff={evasionBuff}
             igniteBuff={igniteBuff}
             absorbBuff={absorbBuff}
+            partyRegenBuff={partyRegenBuff}
           />
         </div>
 

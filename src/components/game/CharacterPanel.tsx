@@ -30,6 +30,7 @@ interface Props {
   evasionBuff?: { dodgeChance: number; expiresAt: number } | null;
   igniteBuff?: { expiresAt: number } | null;
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
+  partyRegenBuff?: { healPerTick: number; expiresAt: number } | null;
   // Belt potion system
   beltedPotions?: InventoryItem[];
   beltCapacity?: number;
@@ -114,10 +115,10 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
-  Potion: 120_000, Inspire: 90_000, Food: 120_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000,
+  Potion: 120_000, Inspire: 90_000, Food: 120_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
 };
 
-function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null }) {
+function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
@@ -127,12 +128,13 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
   const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
   const igniteActive = igniteBuff && now < igniteBuff.expiresAt;
   const absorbActive = absorbBuff && now < absorbBuff.expiresAt;
+  const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
 
   useEffect(() => {
-    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !evasionActive && !igniteActive && !absorbActive) return;
+    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [buffActive, foodActive, isAtInn, critActive, acActive, poisonActive, evasionActive, igniteActive, absorbActive]);
+  }, [buffActive, foodActive, isAtInn, critActive, acActive, poisonActive, evasionActive, igniteActive, absorbActive, partyRegenActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
@@ -246,6 +248,19 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
     });
   }
 
+  if (partyRegenActive) {
+    const dur = BUFF_DURATIONS['Crescendo'] || 25_000;
+    const pct = Math.max(0, Math.min(100, ((partyRegenBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({
+      emoji: '🎶✨',
+      label: 'Crescendo',
+      detail: `+${partyRegenBuff!.healPerTick} HP/3s`,
+      color: 'text-elvish',
+      bgColor: 'bg-elvish/15',
+      pct,
+    });
+  }
+
   if (buffs.length === 0) return (
     <div className="text-[9px] text-muted-foreground/40 italic">No buffs</div>
   );
@@ -270,7 +285,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
-  poisonBuff, evasionBuff, igniteBuff, absorbBuff,
+  poisonBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
@@ -409,7 +424,7 @@ export default function CharacterPanel({
             {/* Right column: Active Buffs */}
             <div className="border-l border-border pl-2">
               <div className="text-[9px] text-muted-foreground/70 mb-0.5">Buffs</div>
-              <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} acBuff={acBuff} poisonBuff={poisonBuff} evasionBuff={evasionBuff} igniteBuff={igniteBuff} absorbBuff={absorbBuff} />
+              <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} acBuff={acBuff} poisonBuff={poisonBuff} evasionBuff={evasionBuff} igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff} />
             </div>
           </div>
           <div className="flex gap-3 justify-center text-xs mt-1.5">
