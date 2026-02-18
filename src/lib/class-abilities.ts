@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff';
   tier: number;
   levelRequired: number;
 }
@@ -164,6 +164,33 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'damage_buff',
       tier: 1,
       levelRequired: 5,
+    },
+    {
+      label: 'Ignite',
+      emoji: '🔥🔥',
+      description: 'Imbue your spells with fire — each hit has a 40% chance to apply a stackable burn DoT (max 5)',
+      cooldownMs: 60000,
+      type: 'ignite_buff',
+      tier: 2,
+      levelRequired: 10,
+    },
+    {
+      label: 'Conflagrate',
+      emoji: '💥',
+      description: 'Consume all burn stacks on your target for +50% bonus damage per stack',
+      cooldownMs: 45000,
+      type: 'ignite_consume',
+      tier: 3,
+      levelRequired: 15,
+    },
+    {
+      label: 'Force Shield',
+      emoji: '🛡️✨',
+      description: 'Create an arcane shield that absorbs incoming damage based on INT',
+      cooldownMs: 90000,
+      type: 'absorb_buff',
+      tier: 4,
+      levelRequired: 20,
     },
   ],
 };
