@@ -736,218 +736,223 @@ export default function UserManager({ isValar }: Props) {
           )}
         </div>
 
-        {/* COL 2 — Admin Actions */}
-        <div className="w-64 shrink-0 border-r border-border flex flex-col overflow-y-auto">
-          <div className="px-3 py-2 border-b border-border">
-            <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-              <h3 className="font-display text-xs text-muted-foreground">Admin Actions</h3>
-            </div>
-          </div>
-
+        {/* COL 2 — Character Cards + Admin Actions */}
+        <div className="w-72 shrink-0 border-r border-border flex flex-col overflow-y-auto">
           {!selectedUser ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-[10px] text-muted-foreground">Select a user</p>
             </div>
           ) : (
-            <div className="p-3 space-y-4">
-              {/* User info */}
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-display text-xs text-foreground truncate">
-                    {selectedUser.profile?.display_name || selectedUser.email.split('@')[0]}
-                  </h4>
-                  {roleBadge(selectedUser.role)}
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-3">
+                {/* User info header */}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-display text-sm text-foreground truncate">
+                      {selectedUser.profile?.display_name || selectedUser.email.split('@')[0]}
+                    </h4>
+                    {roleBadge(selectedUser.role)}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate">{selectedUser.email}</p>
+                  <div className="flex gap-3 mt-1 text-[10px] text-muted-foreground">
+                    <span>Joined {formatDate(selectedUser.created_at)}</span>
+                    <span>Last {formatDate(selectedUser.last_sign_in_at)}</span>
+                  </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground truncate">{selectedUser.email}</p>
-              </div>
 
-              {/* Account info */}
-              <div className="space-y-0.5 text-[10px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">Confirmed</span><span>{selectedUser.email_confirmed_at ? 'Yes' : 'No'}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Joined</span><span>{formatDate(selectedUser.created_at)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Last sign-in</span><span>{formatDate(selectedUser.last_sign_in_at)}</span></div>
-              </div>
+                {/* Account action buttons */}
+                <div className="flex flex-wrap gap-1">
+                  <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1"
+                    onClick={() => handleResetPassword(selectedUser.email)}>
+                    <KeyRound className="w-3 h-3" /> Reset PW
+                  </Button>
+                  {isValar && (
+                    <>
+                      {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() ? (
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1"
+                          onClick={() => handleBan(selectedUser.id, false)}>
+                          <UserCheck className="w-3 h-3" /> Unban
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="destructive" className="h-6 text-[10px] gap-1"
+                          onClick={() => handleBan(selectedUser.id, true)}>
+                          <Ban className="w-3 h-3" /> Ban
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  {isValar && (
+                    <Select value={selectedUser.role} onValueChange={(v) => handleSetRole(selectedUser.id, v)}>
+                      <SelectTrigger className="h-6 w-24 text-[10px]">
+                        <Shield className="w-3 h-3 mr-1" /><SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        <SelectItem value="player" className="text-xs">Player</SelectItem>
+                        <SelectItem value="steward" className="text-xs">Steward</SelectItem>
+                        <SelectItem value="overlord" className="text-xs">Overlord</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
 
-              {/* Account action buttons */}
-              <div className="space-y-1.5">
-                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full justify-start"
-                  onClick={() => handleResetPassword(selectedUser.email)}>
-                  <KeyRound className="w-3 h-3" /> Reset Password
-                </Button>
-
-                {isValar && (
-                  <>
-                    <div>
-                      <p className="text-[9px] text-muted-foreground mb-1">Role</p>
-                      <Select value={selectedUser.role} onValueChange={(v) => handleSetRole(selectedUser.id, v)}>
-                        <SelectTrigger className="h-7 w-full text-[10px]">
-                          <Shield className="w-3 h-3 mr-1" /><SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border z-50">
-                          <SelectItem value="player" className="text-xs">Player</SelectItem>
-                          <SelectItem value="steward" className="text-xs">Steward</SelectItem>
-                          <SelectItem value="overlord" className="text-xs">Overlord</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() ? (
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full justify-start"
-                        onClick={() => handleBan(selectedUser.id, false)}>
-                        <UserCheck className="w-3 h-3" /> Unban
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 w-full justify-start"
-                        onClick={() => handleBan(selectedUser.id, true)}>
-                        <Ban className="w-3 h-3" /> Ban
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Character Selector */}
-              {selectedUser.characters.length > 0 && (
+                {/* Character Cards */}
                 <div className="border-t border-border pt-3">
-                  <p className="text-[9px] text-muted-foreground mb-1">Character</p>
-                  <Select value={selectedCharId || ''} onValueChange={setSelectedCharId}>
-                    <SelectTrigger className="h-8 w-full text-xs">
-                      <SelectValue placeholder="Select character..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border z-50">
-                      {selectedUser.characters.map(c => (
-                        <SelectItem key={c.id} value={c.id} className="text-xs">
-                          {c.name} — {CLASS_LABELS[c.class as keyof typeof CLASS_LABELS]} Lvl {c.level}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <h4 className="font-display text-[10px] text-muted-foreground mb-2">Characters ({selectedUser.characters.length})</h4>
+                  {selectedUser.characters.length === 0 ? (
+                    <p className="text-[10px] text-muted-foreground/50 italic">No characters</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedUser.characters.map(char => {
+                        const isActive = selectedCharId === char.id;
+                        return (
+                          <div
+                            key={char.id}
+                            className={`ornate-border rounded-lg p-2.5 cursor-pointer transition-all hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10 ${
+                              isActive ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'bg-card/90'
+                            }`}
+                            onClick={() => setSelectedCharId(char.id)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h3 className={`font-display text-sm ${isActive ? 'text-primary text-glow' : 'text-foreground'}`}>
+                                  {char.name}
+                                </h3>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {RACE_LABELS[char.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[char.class as keyof typeof CLASS_LABELS]}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] mt-1.5">
+                              <span className="font-display text-foreground">Lvl {char.level}</span>
+                              <span className="text-blood">HP {char.hp}/{char.max_hp}</span>
+                              <span className="text-primary">Gold {char.gold}</span>
+                            </div>
+                            {/* Mini HP bar */}
+                            <div className="h-1 bg-background rounded-full overflow-hidden border border-border/50 mt-1.5">
+                              <div
+                                className="h-full transition-all duration-500"
+                                style={{
+                                  width: `${Math.round((char.hp / char.max_hp) * 100)}%`,
+                                  background: char.hp / char.max_hp > 0.5 ? 'hsl(var(--elvish))' : char.hp / char.max_hp > 0.25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* Character-specific actions (single selected character) */}
-              {selectedChar && (
-                <>
-                  {/* Give Item */}
-                  <div className="border-t border-border pt-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Gift className="w-3.5 h-3.5 text-primary" />
-                      <h4 className="font-display text-xs text-muted-foreground">Give Item</h4>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Select value={giveItemId} onValueChange={setGiveItemId}>
-                        <SelectTrigger className="h-7 w-full text-[10px]">
-                          <SelectValue placeholder="Select item..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border z-50 max-h-60">
-                          {allItems.map(item => (
-                            <SelectItem key={item.id} value={item.id} className="text-xs">
-                              <span className={rarityColor(item.rarity)}>{item.name}</span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                        disabled={!giveItemId || givingItem} onClick={() => handleGiveItem(selectedChar.id)}>
-                        <Gift className="w-3 h-3" /> Give to {selectedChar.name}
-                      </Button>
-                    </div>
-                  </div>
+                {/* Character-specific actions */}
+                {selectedChar && (
+                  <div className="border-t border-border pt-3 space-y-3">
+                    <h4 className="font-display text-[10px] text-muted-foreground flex items-center gap-1.5">
+                      <Shield className="w-3 h-3" /> Actions — {selectedChar.name}
+                    </h4>
 
-                  {/* Teleport */}
-                  <div className="border-t border-border pt-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <MapPin className="w-3.5 h-3.5 text-chart-2" />
-                      <h4 className="font-display text-xs text-muted-foreground">Teleport</h4>
+                    {/* Give Item */}
+                    <div className="space-y-1">
+                      <div className="flex gap-1">
+                        <Select value={giveItemId} onValueChange={setGiveItemId}>
+                          <SelectTrigger className="h-7 flex-1 text-[10px]">
+                            <SelectValue placeholder="Item..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50 max-h-60">
+                            {allItems.map(item => (
+                              <SelectItem key={item.id} value={item.id} className="text-xs">
+                                <span className={rarityColor(item.rarity)}>{item.name}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
+                          disabled={!giveItemId || givingItem} onClick={() => handleGiveItem(selectedChar.id)}>
+                          <Gift className="w-3 h-3" /> Give
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
-                        <SelectTrigger className="h-7 w-full text-[10px]">
-                          <SelectValue placeholder="Select node..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border-border z-50 max-h-60">
-                          {allNodes.map(node => (
-                            <SelectItem key={node.id} value={node.id} className="text-xs">
-                              {node.name} <span className="text-muted-foreground">({node.region_name})</span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                        disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
-                        <MapPin className="w-3 h-3" /> Teleport {selectedChar.name}
-                      </Button>
-                    </div>
-                  </div>
 
-                  {/* Grant XP */}
-                  <div className="border-t border-border pt-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Sparkles className="w-3.5 h-3.5 text-primary" />
-                      <h4 className="font-display text-xs text-muted-foreground">Grant XP</h4>
+                    {/* Teleport */}
+                    <div className="space-y-1">
+                      <div className="flex gap-1">
+                        <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
+                          <SelectTrigger className="h-7 flex-1 text-[10px]">
+                            <SelectValue placeholder="Node..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50 max-h-60">
+                            {allNodes.map(node => (
+                              <SelectItem key={node.id} value={node.id} className="text-xs">
+                                {node.name} <span className="text-muted-foreground">({node.region_name})</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
+                          disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
+                          <MapPin className="w-3 h-3" /> Tp
+                        </Button>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
+
+                    {/* Grant XP */}
+                    <div className="flex gap-1">
                       <Input type="number" min={1} value={grantXpAmount}
                         onChange={e => setGrantXpAmount(parseInt(e.target.value) || 0)}
-                        className="h-7 text-[10px]" placeholder="XP amount" />
-                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
+                        className="h-7 text-[10px] w-20" placeholder="XP" />
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
                         disabled={grantXpAmount <= 0} onClick={() => handleGrantXp(selectedChar.id)}>
-                        <Sparkles className="w-3 h-3" /> Grant XP to {selectedChar.name}
+                        <Sparkles className="w-3 h-3" /> Grant XP
                       </Button>
                     </div>
-                  </div>
 
-                  {/* Revive / Remove Item / Reset Stats */}
-                  <div className="border-t border-border pt-3 space-y-1.5">
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                      disabled={selectedChar.hp >= selectedChar.max_hp} onClick={() => handleRevive(selectedChar.id)}>
-                      <Heart className="w-3 h-3" /> Revive {selectedChar.name}
-                      {selectedChar.hp < selectedChar.max_hp && <span className="text-blood ml-1">({selectedChar.hp}/{selectedChar.max_hp})</span>}
-                    </Button>
+                    {/* Quick actions row */}
+                    <div className="flex flex-wrap gap-1">
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
+                        disabled={selectedChar.hp >= selectedChar.max_hp} onClick={() => handleRevive(selectedChar.id)}>
+                        <Heart className="w-3 h-3" /> Revive
+                        {selectedChar.hp < selectedChar.max_hp && <span className="text-blood">({selectedChar.hp}/{selectedChar.max_hp})</span>}
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1"
+                        onClick={() => handleResetStats(selectedChar.id)}>
+                        <RotateCcw className="w-3 h-3" /> Reset Stats
+                      </Button>
+                    </div>
 
+                    {/* Remove Item */}
                     {selectedChar.inventory.length > 0 && (
-                      <div className="space-y-1">
+                      <div className="flex gap-1">
                         <Select value={removeItemId} onValueChange={setRemoveItemId}>
-                          <SelectTrigger className="h-7 w-full text-[10px]">
-                            <SelectValue placeholder="Select item to remove..." />
+                          <SelectTrigger className="h-7 flex-1 text-[10px]">
+                            <SelectValue placeholder="Remove item..." />
                           </SelectTrigger>
                           <SelectContent className="bg-popover border-border z-50 max-h-60">
                             {selectedChar.inventory.map(inv => (
                               <SelectItem key={inv.id} value={inv.id} className="text-xs">
                                 <span className={rarityColor(inv.item.rarity)}>{inv.item.name}</span>
-                                {inv.equipped_slot && <span className="text-muted-foreground ml-1">(equipped)</span>}
+                                {inv.equipped_slot && <span className="text-muted-foreground ml-1">(eq)</span>}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 w-full"
+                        <Button size="sm" variant="destructive" className="h-7 text-[10px] gap-1 shrink-0"
                           disabled={!removeItemId} onClick={handleRemoveItem}>
-                          <Trash2 className="w-3 h-3" /> Remove Item
+                          <Trash2 className="w-3 h-3" /> Rm
                         </Button>
                       </div>
                     )}
-
-                    <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 w-full"
-                      onClick={() => handleResetStats(selectedChar.id)}>
-                      <RotateCcw className="w-3 h-3" /> Reset Stats
-                    </Button>
                   </div>
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            </ScrollArea>
           )}
         </div>
 
-        {/* COL 3 — Character Sheet (selected character only) */}
-        <div className="flex-1 overflow-y-auto min-h-0 border-r border-border">
-          {!selectedUser ? (
-            <div className="flex items-center justify-center h-full text-xs text-muted-foreground">
-              Select a user
-            </div>
-          ) : !selectedChar ? (
+        {/* COL 3 — Character Panel (400px, same as game UI) */}
+        <div className="w-[400px] shrink-0 overflow-y-auto min-h-0 border-r border-border">
+          {!selectedChar ? (
             <div className="flex items-center justify-center h-full text-xs text-muted-foreground italic">
-              {selectedUser.characters.length === 0 ? 'No characters' : 'Select a character'}
+              {!selectedUser ? 'Select a user' : selectedUser.characters.length === 0 ? 'No characters' : 'Select a character'}
             </div>
           ) : (
             <div className="p-3 space-y-3">
@@ -965,7 +970,7 @@ export default function UserManager({ isValar }: Props) {
           )}
         </div>
 
-        {/* COL 4 — Player Logs */}
+        {/* COL 4 — Player Logs (flex) */}
         <PlayerLogsColumn userId={selectedUser?.id ?? null} />
       </div>
     </TooltipProvider>
