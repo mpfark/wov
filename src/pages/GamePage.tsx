@@ -692,11 +692,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [beltedPotions, handleUseConsumable]);
 
+  const handleAttackFirst = useCallback(() => {
+    if (isDead) return;
+    if (inCombat) return; // already fighting
+    const firstCreature = creatures.find(c => c.is_alive);
+    if (firstCreature) {
+      startCombat(firstCreature.id);
+    }
+  }, [isDead, inCombat, creatures, startCombat]);
+
   const keyboardMovement = useKeyboardMovement({
     currentNode,
     nodes,
     onMove: handleMove,
     disabled: isDead,
+    onAttackFirst: handleAttackFirst,
     onSearch: handleSearch,
     onUseAbility: handleAbilityKey,
     onUseBeltPotion: handleBeltPotionKey,
