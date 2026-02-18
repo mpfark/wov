@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cooldown_reset' | 'ally_absorb' | 'sunder_debuff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cooldown_reset' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff';
   tier: number;
   levelRequired: number;
 }
@@ -131,6 +131,15 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'root_debuff',
       tier: 3,
       levelRequired: 15,
+    },
+    {
+      label: 'Disengage',
+      emoji: '🦘',
+      description: 'Leap backward — dodge all attacks briefly and deal 50% bonus damage on your next strike',
+      cooldownMs: 90000,
+      type: 'disengage_buff',
+      tier: 4,
+      levelRequired: 20,
     },
   ],
   bard: [

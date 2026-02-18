@@ -47,6 +47,7 @@ function getLogColor(log: string): string {
   if (log.startsWith('🔪')) return 'text-primary font-semibold';
   if (log.startsWith('🌫️')) return 'text-primary';
   if (log.startsWith('🔥🔥') || log.startsWith('🔥')) return 'text-dwarvish';
+  if (log.startsWith('🦘')) return 'text-elvish font-semibold';
   if (log.startsWith('💥')) return 'text-primary font-semibold';
   if (log.startsWith('🛡️✨')) return 'text-primary';
   if (log.startsWith('🎵💢')) return 'text-dwarvish';
@@ -97,6 +98,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [poisonBuff, setPoisonBuff] = useState<{ expiresAt: number } | null>(null);
   const [poisonStacks, setPoisonStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
   const [evasionBuff, setEvasionBuff] = useState<{ dodgeChance: number; expiresAt: number } | null>(null);
+  const [disengageNextHit, setDisengageNextHit] = useState<{ bonusMult: number; expiresAt: number } | null>(null);
   const [igniteBuff, setIgniteBuff] = useState<{ expiresAt: number } | null>(null);
   const [igniteStacks, setIgniteStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
   const [absorbBuff, setAbsorbBuff] = useState<{ shieldHp: number; expiresAt: number } | null>(null);
@@ -340,6 +342,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     absorbBuff,
     onAbsorbDamage: handleAbsorbDamage,
     sunderDebuff,
+    disengageNextHit,
+    onClearDisengage: useCallback(() => setDisengageNextHit(null), []),
   });
 
   // DoT (Rend bleed) tick effect
@@ -939,6 +943,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
       setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Cloak of Shadows! 50% dodge chance for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'disengage_buff') {
+      const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
+      const dodgeDurationMs = Math.min(8000, 5000 + dexMod * 500);
+      const nextHitDurationMs = 15000; // 15s window to land the empowered strike
+      setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs });
+      setDisengageNextHit({ bonusMult: 1.5, expiresAt: Date.now() + nextHitDurationMs });
+      addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals 50% bonus damage!`);
     } else if (ability.type === 'ignite_buff') {
       const intMod = getStatMod2(character.int + (equipmentBonuses.int || 0));
       const durationMs = Math.min(30000, 20000 + intMod * 1000);

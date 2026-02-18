@@ -49,6 +49,8 @@ interface UseCombatParams {
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   onAbsorbDamage?: (remaining: number) => void;
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
+  disengageNextHit?: { bonusMult: number; expiresAt: number } | null;
+  onClearDisengage?: () => void;
 }
 
 export function useCombat({
@@ -77,6 +79,8 @@ export function useCombat({
   absorbBuff,
   onAbsorbDamage,
   sunderDebuff,
+  disengageNextHit,
+  onClearDisengage,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -108,6 +112,8 @@ export function useCombat({
   const absorbBuffRef = useRef(absorbBuff);
   const onAbsorbDamageRef = useRef(onAbsorbDamage);
   const sunderDebuffRef = useRef(sunderDebuff);
+  const disengageNextHitRef = useRef(disengageNextHit);
+  const onClearDisengageRef = useRef(onClearDisengage);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -136,6 +142,8 @@ export function useCombat({
   useEffect(() => { absorbBuffRef.current = absorbBuff; }, [absorbBuff]);
   useEffect(() => { onAbsorbDamageRef.current = onAbsorbDamage; }, [onAbsorbDamage]);
   useEffect(() => { sunderDebuffRef.current = sunderDebuff; }, [sunderDebuff]);
+  useEffect(() => { disengageNextHitRef.current = disengageNextHit; }, [disengageNextHit]);
+  useEffect(() => { onClearDisengageRef.current = onClearDisengage; }, [onClearDisengage]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -270,12 +278,21 @@ export function useCombat({
           finalDmg = Math.floor(finalDmg * 1.5);
         }
 
+        // Disengage next-hit bonus — one-shot 50% bonus, consumed on use
+        const _disengageNextHit = disengageNextHitRef.current;
+        const isDisengageHit = _disengageNextHit && Date.now() < _disengageNextHit.expiresAt;
+        if (isDisengageHit) {
+          finalDmg = Math.floor(finalDmg * _disengageNextHit!.bonusMult);
+          onClearDisengageRef.current?.();
+        }
+
         const newHp = Math.max(creature.hp - finalDmg, 0);
 
         const ambushPrefix = isAmbush ? '🌑 AMBUSH! ' : '';
         const surgePrefix = isDmgBuffed ? '✨ ' : '';
+        const disengagePrefix = isDisengageHit ? '🦘 ' : '';
         _addLog(
-          `${ambushPrefix}${surgePrefix}${sunderReduction > 0 ? '🔨 ' : ''}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''} — ${finalDmg} damage.`
+          `${ambushPrefix}${disengagePrefix}${surgePrefix}${sunderReduction > 0 ? '🔨 ' : ''}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''} — ${finalDmg} damage.`
         );
 
         // Poison proc — 40% chance to add a poison stack if Envenom is active
