@@ -1,44 +1,42 @@
 
-# Add "Transfer Health" Ability for Healer
+# Add Barrage and Nature's Snare Abilities for Ranger
 
 ## Overview
-Add a new tier 1 healer ability called **Transfer Health** that lets the healer sacrifice their own HP to heal a targeted party member. The existing **Heal** ability moves to tier 2 (unlocking at a higher level). This requires restructuring the ability system to support multiple abilities per class.
+Add two new abilities to the Ranger class:
+- **Barrage** (Tier 2, Level 10): Fire 2-3 arrows at 70% damage each, scaling with DEX. A burst damage ability.
+- **Nature's Snare** (Tier 3, Level 15): Entangle the current combat target, reducing its damage by ~30% for 15 seconds. A defensive/utility ability.
 
-## What It Does
-- **Transfer Health**: The healer gives a portion of their own HP to a targeted ally. Short cooldown (15s). Unlocks at level 5.
-- **Heal** (existing): Moves to tier 2, unlocking at level 10 instead of 5.
+## Changes
+
+### 1. Data (`src/lib/class-abilities.ts`)
+- Add `'multi_attack'` and `'root_debuff'` to the `ClassAbility.type` union.
+- Add two new entries to the ranger's ability array:
+  - **Barrage**: emoji `🏹🏹`, tier 2, level 10, 45s cooldown, type `'multi_attack'`
+  - **Nature's Snare**: emoji `🌿`, tier 3, level 15, 90s cooldown, type `'root_debuff'`
+
+### 2. Ability Logic (`src/pages/GamePage.tsx`)
+- Add a new state: `rootDebuff` with `{ damageReduction: number, expiresAt: number }` (similar pattern to existing buffs).
+- Pass `rootDebuff` to `useCombat` so creature damage can be reduced.
+- **`multi_attack` handler**: Must be in combat. Roll 2-3 attacks (2 base, 3 if DEX modifier >= 3). Each hit deals 70% of normal Shoot damage (using the ranger's combat stats). Each arrow rolls independently to hit. Requires an active combat target.
+- **`root_debuff` handler**: Must be in combat. Applies a 30% damage reduction debuff on the current creature for 15 seconds (scales slightly with WIS: duration = 10 + min(wisMod, 5) seconds).
+
+### 3. Combat Integration (`src/hooks/useCombat.ts`)
+- Accept a new `rootDebuff` prop (same pattern as `critBuff`, `stealthBuff`, `damageBuff`).
+- In the creature counterattack section, if `rootDebuff` is active, reduce creature damage by 30% (multiply by 0.7, floor).
+
+### 4. No UI changes needed
+The existing multi-ability rendering in `NodeView.tsx` already handles arrays of abilities with independent cooldowns. Barrage and Nature's Snare are self/combat-targeted (no ally picker needed), so they work with the existing button system. The admin panel (`RaceClassManager.tsx`) also already loops through ability arrays.
 
 ## Technical Details
 
-### 1. Restructure ability data (`src/lib/class-abilities.ts`)
-- Add a new ability type `'hp_transfer'` to the `ClassAbility` type union.
-- Change `CLASS_ABILITIES` from `Record<string, ClassAbility>` (one per class) to `Record<string, ClassAbility[]>` (array per class).
-- Add the healer's Transfer Health entry as tier 1 (level 5, ~15s cooldown).
-- Move Heal to tier 2 (level 10).
-- All other classes get their existing ability wrapped in an array.
+### Barrage Formula
+- Arrow count: DEX modifier >= 3 ? 3 : 2
+- Per-arrow damage: `floor(rollDamage(1, 8) + dexMod) * 0.7`, minimum 1
+- Each arrow rolls to hit independently against creature AC
+- Can only be used while in combat
 
-### 2. Update `handleUseAbility` logic (`src/pages/GamePage.tsx`)
-- Accept an ability index or identifier so the player can choose which ability to use.
-- Add the `'hp_transfer'` handler: deduct HP from the healer, then heal the target using the existing `heal_party_member` RPC (or direct update for self-targeting -- though self-targeting would be pointless here). The transfer amount will scale with WIS and level.
-- Prevent the healer from killing themselves (enforce a minimum HP floor of 1).
-- Track separate cooldowns per ability.
-
-### 3. Update ability UI (`src/components/game/NodeView.tsx`)
-- Render multiple ability buttons when a class has more than one ability.
-- Each button has its own cooldown timer and level-lock check.
-- The target selector (party member dropdown) appears when either Transfer Health or Heal is selected, since both are targeted abilities.
-
-### 4. Update props and references
-- Update `GamePage.tsx` to pass the abilities array instead of a single ability.
-- Update `NodeView.tsx` props to accept `ClassAbility[]`.
-- Update `CharacterPanel.tsx` if it references ability data for buff display.
-- Update `RaceClassManager.tsx` admin panel to display the new multi-ability structure.
-
-### Transfer Health Formula
-- Transfer amount: `max(3, wisMod * 2 + floor(level / 2))`
-- The healer loses that exact amount of HP (capped so HP cannot go below 1).
-- The target gains that amount (capped at their max HP).
-- Cooldown: 15 seconds.
-
-### Cooldown Tracking
-- Change `abilityCooldownEnd` from a single number to a `Record<number, number>` (keyed by ability index) so each ability tracks its own cooldown independently.
+### Nature's Snare Formula
+- Damage reduction: 30% (creature deals 70% damage)
+- Duration: `(10 + min(wisMod, 5))` seconds, where wisMod is based on WIS
+- Can only be used while in combat
+- Applies to the currently targeted creature (affects all its attacks)
