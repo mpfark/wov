@@ -587,31 +587,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const targetName = targetMember?.character.name || 'ally';
       addLog(`${ability.emoji} ${character.name} sacrifices ${actualTransfer} HP to heal ${targetName} for ${restored ?? actualTransfer} HP!`);
     } else if (ability.type === 'heal') {
+      // Heal is self-only
       const wisMod = getStatMod2(character.wis);
       const healAmount = Math.max(3, wisMod * 3 + character.level);
-
-      if (targetId && targetId !== character.id) {
-        const { data: restored, error } = await supabase.rpc('heal_party_member', {
-          _healer_id: character.id,
-          _target_id: targetId,
-          _heal_amount: healAmount,
-        });
-        if (error) {
-          addLog(`${ability.emoji} Failed to heal: ${error.message}`);
-          return;
-        }
-        const targetMember = partyMembers.find(m => m.character_id === targetId);
-        const targetName = targetMember?.character.name || 'ally';
-        addLog(`${ability.emoji} ${character.name} casts Heal on ${targetName} and restores ${restored} HP!`);
+      const newHp = Math.min(character.max_hp, character.hp + healAmount);
+      const restored = newHp - character.hp;
+      if (restored > 0) {
+        await updateCharacter({ hp: newHp });
+        addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`);
       } else {
-        const newHp = Math.min(character.max_hp, character.hp + healAmount);
-        const restored = newHp - character.hp;
-        if (restored > 0) {
-          await updateCharacter({ hp: newHp });
-          addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`);
-        } else {
-          addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
-        }
+        addLog(`${ability.emoji} You cast Heal but you're already at full health.`);
       }
     } else if (ability.type === 'self_heal') {
       const conMod = getStatMod2(character.con);
