@@ -400,13 +400,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead, inCombat, stopCombatFn]);
 
-  // Keyboard movement bindings
-  const keyboardMovement = useKeyboardMovement({
-    currentNode,
-    nodes,
-    onMove: handleMove,
-    disabled: isDead,
-  });
+  // Keyboard movement bindings — declared after handleSearch/handleUseAbility/handleUseConsumable (see below)
 
   const handleSearch = useCallback(async () => {
     if (isDead) return;
@@ -687,6 +681,27 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
   }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides]);
 
+  // Keyboard movement + action bindings
+  const handleAbilityKey = useCallback((index: number) => {
+    handleUseAbility(index);
+  }, [handleUseAbility]);
+
+  const handleBeltPotionKey = useCallback((index: number) => {
+    if (beltedPotions[index]) {
+      handleUseConsumable(beltedPotions[index].id);
+    }
+  }, [beltedPotions, handleUseConsumable]);
+
+  const keyboardMovement = useKeyboardMovement({
+    currentNode,
+    nodes,
+    onMove: handleMove,
+    disabled: isDead,
+    onSearch: handleSearch,
+    onUseAbility: handleAbilityKey,
+    onUseBeltPotion: handleBeltPotionKey,
+  });
+
 
   if (nodesLoading) {
     return (
@@ -789,6 +804,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               }
               beltedPotions={beltedPotions}
               onUseBeltPotion={handleUseConsumable}
+              actionBindings={keyboardMovement.actionBindings}
             />
           </div>
           {/* Event Log - docked at bottom of middle column, 1/3 height */}

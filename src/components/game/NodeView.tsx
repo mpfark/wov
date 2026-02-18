@@ -7,6 +7,7 @@ import { PartyMember } from '@/hooks/useParty';
 import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
+import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
@@ -36,12 +37,13 @@ interface Props {
   healTargets?: { id: string; name: string; hp: number; max_hp: number }[];
   beltedPotions?: InventoryItem[];
   onUseBeltPotion?: (inventoryId: string) => void;
+  actionBindings?: ActionBindings;
 }
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
   inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbilities = [], abilityCooldownEnds = {}, onUseAbility, healTargets = [],
-  beltedPotions = [], onUseBeltPotion,
+  beltedPotions = [], onUseBeltPotion, actionBindings,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [healTarget, setHealTarget] = useState<string>('');
@@ -174,6 +176,9 @@ export default function NodeView({
               return (
                 <Button variant="secondary" size="sm" onClick={onSearch} className={`font-display text-[10px] h-6 px-2 ${hasDiscoverable ? 'ring-1 ring-primary/40 text-primary animate-pulse' : ''}`}>
                   <Search className="h-3 w-3 mr-0.5" /> Search
+                  {actionBindings?.search?.[0] && (
+                    <span className="ml-1 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings.search[0])}]</span>
+                  )}
                 </Button>
               );
             })()}
@@ -192,7 +197,7 @@ export default function NodeView({
           {/* Row 2: Belt Potions */}
           {beltedPotions.length > 0 && onUseBeltPotion && (
             <div className="flex flex-wrap gap-1 justify-center">
-              {beltedPotions.map(p => (
+              {beltedPotions.map((p, idx) => (
                 <Tooltip key={p.id}>
                   <TooltipTrigger asChild>
                     <Button
@@ -202,6 +207,9 @@ export default function NodeView({
                       className="font-display text-[10px] text-blood border-blood/30 h-5 px-1.5"
                     >
                       🧪 {p.item.name.length > 6 ? p.item.name.slice(0, 6) + '…' : p.item.name}
+                      {actionBindings?.[`potion${idx + 1}` as keyof ActionBindings]?.[0] && (
+                        <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`potion${idx + 1}` as keyof ActionBindings][0])}]</span>
+                      )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
@@ -249,6 +257,9 @@ export default function NodeView({
                         >
                           {ability.emoji} {ability.label}
                           {!levelLocked && cooldownLeft > 0 && <span className="ml-0.5 text-muted-foreground">({cooldownLeft}s)</span>}
+                          {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && cooldownLeft <= 0 && !levelLocked && (
+                            <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`ability${idx + 1}` as keyof ActionBindings][0])}]</span>
+                          )}
                         </Button>
                       </span>
                     </TooltipTrigger>
