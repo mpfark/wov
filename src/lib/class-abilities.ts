@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cooldown_reset' | 'ally_absorb';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cooldown_reset' | 'ally_absorb' | 'sunder_debuff';
   tier: number;
   levelRequired: number;
 }
@@ -93,6 +93,15 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'dot_debuff',
       tier: 3,
       levelRequired: 15,
+    },
+    {
+      label: 'Sunder Armor',
+      emoji: '🔨',
+      description: 'A crushing blow that reduces your target\'s AC based on STR, making it easier to hit',
+      cooldownMs: 90000,
+      type: 'sunder_debuff',
+      tier: 4,
+      levelRequired: 20,
     },
   ],
   ranger: [

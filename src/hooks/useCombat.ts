@@ -48,6 +48,7 @@ interface UseCombatParams {
   onAddIgniteStack?: (creatureId: string) => void;
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   onAbsorbDamage?: (remaining: number) => void;
+  sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
 }
 
 export function useCombat({
@@ -75,6 +76,7 @@ export function useCombat({
   onAddIgniteStack,
   absorbBuff,
   onAbsorbDamage,
+  sunderDebuff,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -105,6 +107,7 @@ export function useCombat({
   const onAddIgniteStackRef = useRef(onAddIgniteStack);
   const absorbBuffRef = useRef(absorbBuff);
   const onAbsorbDamageRef = useRef(onAbsorbDamage);
+  const sunderDebuffRef = useRef(sunderDebuff);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -132,6 +135,7 @@ export function useCombat({
   useEffect(() => { onAddIgniteStackRef.current = onAddIgniteStack; }, [onAddIgniteStack]);
   useEffect(() => { absorbBuffRef.current = absorbBuff; }, [absorbBuff]);
   useEffect(() => { onAbsorbDamageRef.current = onAbsorbDamage; }, [onAbsorbDamage]);
+  useEffect(() => { sunderDebuffRef.current = sunderDebuff; }, [sunderDebuff]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -241,7 +245,12 @@ export function useCombat({
       const critBonus = (_critBuff && Date.now() < _critBuff.expiresAt) ? _critBuff.bonus : 0;
       const effectiveCritRange = ability.critRange - critBonus;
 
-      if (atkRoll >= effectiveCritRange || (atkRoll !== 1 && totalAtk >= creature.ac)) {
+      // Sunder Armor — reduce creature AC if active on this target
+      const _sunderDebuff = sunderDebuffRef.current;
+      const sunderReduction = (_sunderDebuff && Date.now() < _sunderDebuff.expiresAt && _sunderDebuff.creatureId === creatureId) ? _sunderDebuff.acReduction : 0;
+      const effectiveCreatureAC = Math.max(creature.ac - sunderReduction, 0);
+
+      if (atkRoll >= effectiveCritRange || (atkRoll !== 1 && totalAtk >= effectiveCreatureAC)) {
         const dmg = rollDamage(ability.diceMin, ability.diceMax) + statMod;
         const isCrit = atkRoll >= effectiveCritRange;
         let finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1);
@@ -266,7 +275,7 @@ export function useCombat({
         const ambushPrefix = isAmbush ? '🌑 AMBUSH! ' : '';
         const surgePrefix = isDmgBuffed ? '✨ ' : '';
         _addLog(
-          `${ambushPrefix}${surgePrefix}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
+          `${ambushPrefix}${surgePrefix}${sunderReduction > 0 ? '🔨 ' : ''}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''} — ${finalDmg} damage.`
         );
 
         // Poison proc — 40% chance to add a poison stack if Envenom is active
@@ -384,7 +393,7 @@ export function useCombat({
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: false });
         }
       } else {
-        _addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac}.`);
+        _addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''}.`);
       }
 
       // Creature counterattack
