@@ -4,6 +4,9 @@ import { GameNode } from '@/hooks/useNodes';
 export type Direction = 'N' | 'S' | 'E' | 'W' | 'NE' | 'NW' | 'SE' | 'SW';
 export type KeyBindings = Record<Direction, string[]>;
 
+export type ActionName = 'search' | 'ability1' | 'ability2' | 'ability3' | 'potion1' | 'potion2' | 'potion3' | 'potion4' | 'potion5' | 'potion6';
+export type ActionBindings = Record<ActionName, string[]>;
+
 const DIRECTIONS: Direction[] = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'];
 
 const DIRECTION_LABELS: Record<Direction, string> = {
@@ -12,21 +15,44 @@ const DIRECTION_LABELS: Record<Direction, string> = {
 };
 
 const DEFAULT_BINDINGS: KeyBindings = {
-  N: ['w', 'ArrowUp'],
-  S: ['s', 'ArrowDown'],
-  E: ['d', 'ArrowRight'],
-  W: ['a', 'ArrowLeft'],
-  NE: [], NW: [], SE: [], SW: [],
+  NW: ['q'], N: ['w'], NE: ['e'],
+  W: ['a'],            E: ['d'],
+  SW: ['z'], S: ['x'], SE: ['c'],
+};
+
+const ACTION_NAMES: ActionName[] = [
+  'search', 'ability1', 'ability2', 'ability3',
+  'potion1', 'potion2', 'potion3', 'potion4', 'potion5', 'potion6',
+];
+
+const ACTION_LABELS: Record<ActionName, string> = {
+  search: 'Search',
+  ability1: 'Ability 1', ability2: 'Ability 2', ability3: 'Ability 3',
+  potion1: 'Potion 1', potion2: 'Potion 2', potion3: 'Potion 3',
+  potion4: 'Potion 4', potion5: 'Potion 5', potion6: 'Potion 6',
+};
+
+const DEFAULT_ACTION_BINDINGS: ActionBindings = {
+  search: ['s'],
+  ability1: ['1'], ability2: ['2'], ability3: ['3'],
+  potion1: ['!'], potion2: ['@'], potion3: ['#'],
+  potion4: ['$'], potion5: ['%'], potion6: ['^'],
 };
 
 const STORAGE_KEY = 'movement-keybindings';
+const ACTION_STORAGE_KEY = 'action-keybindings';
+
+// Map shift+number characters to friendly labels
+const SHIFT_NUM_MAP: Record<string, string> = {
+  '!': 'Sh+1', '@': 'Sh+2', '#': 'Sh+3',
+  '$': 'Sh+4', '%': 'Sh+5', '^': 'Sh+6',
+};
 
 function loadBindings(): KeyBindings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Validate shape
       for (const dir of DIRECTIONS) {
         if (!Array.isArray(parsed[dir])) return { ...DEFAULT_BINDINGS };
       }
@@ -36,13 +62,31 @@ function loadBindings(): KeyBindings {
   return { ...DEFAULT_BINDINGS };
 }
 
+function loadActionBindings(): ActionBindings {
+  try {
+    const raw = localStorage.getItem(ACTION_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      for (const name of ACTION_NAMES) {
+        if (!Array.isArray(parsed[name])) return { ...DEFAULT_ACTION_BINDINGS };
+      }
+      return parsed;
+    }
+  } catch { /* ignore */ }
+  return { ...DEFAULT_ACTION_BINDINGS };
+}
+
 function saveBindings(bindings: KeyBindings) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(bindings));
 }
 
+function saveActionBindings(bindings: ActionBindings) {
+  localStorage.setItem(ACTION_STORAGE_KEY, JSON.stringify(bindings));
+}
+
 export function getKeyLabel(key: string): string {
+  if (SHIFT_NUM_MAP[key]) return SHIFT_NUM_MAP[key];
   if (key === ' ') return 'Space';
-  if (key.startsWith('Arrow')) return key.replace('Arrow', '↑↓←→'.charAt(0)).length ? key.replace('Arrow', '') : key;
   if (key === 'ArrowUp') return '↑';
   if (key === 'ArrowDown') return '↓';
   if (key === 'ArrowLeft') return '←';
@@ -56,19 +100,31 @@ interface UseKeyboardMovementOptions {
   nodes: GameNode[];
   onMove: (nodeId: string, direction?: Direction) => void;
   disabled: boolean;
+  onSearch?: () => void;
+  onUseAbility?: (index: number) => void;
+  onUseBeltPotion?: (index: number) => void;
 }
 
-export function useKeyboardMovement({ currentNode, nodes, onMove, disabled }: UseKeyboardMovementOptions) {
+export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onSearch, onUseAbility, onUseBeltPotion }: UseKeyboardMovementOptions) {
   const [bindings, setBindingsState] = useState<KeyBindings>(loadBindings);
+  const [actionBindings, setActionBindingsState] = useState<ActionBindings>(loadActionBindings);
   const bindingsRef = useRef(bindings);
+  const actionBindingsRef = useRef(actionBindings);
   const currentNodeRef = useRef(currentNode);
   const onMoveRef = useRef(onMove);
   const disabledRef = useRef(disabled);
+  const onSearchRef = useRef(onSearch);
+  const onUseAbilityRef = useRef(onUseAbility);
+  const onUseBeltPotionRef = useRef(onUseBeltPotion);
 
   useEffect(() => { bindingsRef.current = bindings; }, [bindings]);
+  useEffect(() => { actionBindingsRef.current = actionBindings; }, [actionBindings]);
   useEffect(() => { currentNodeRef.current = currentNode; }, [currentNode]);
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
   useEffect(() => { disabledRef.current = disabled; }, [disabled]);
+  useEffect(() => { onSearchRef.current = onSearch; }, [onSearch]);
+  useEffect(() => { onUseAbilityRef.current = onUseAbility; }, [onUseAbility]);
+  useEffect(() => { onUseBeltPotionRef.current = onUseBeltPotion; }, [onUseBeltPotion]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,27 +137,55 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled }: Us
       // Skip if dialog/modal is open
       if (document.querySelector('[role="dialog"]')) return;
 
-      const node = currentNodeRef.current;
-      if (!node) return;
+      const key = e.key;
 
+      // Check movement bindings first
+      const node = currentNodeRef.current;
       const b = bindingsRef.current;
       let matchedDirection: Direction | null = null;
       for (const dir of DIRECTIONS) {
-        if (b[dir].includes(e.key)) {
+        if (b[dir].includes(key)) {
           matchedDirection = dir;
           break;
         }
       }
-      if (!matchedDirection) return;
+      if (matchedDirection && node) {
+        const conn = node.connections?.find(
+          c => c.direction === matchedDirection && !c.hidden
+        );
+        if (conn) {
+          e.preventDefault();
+          onMoveRef.current(conn.node_id, matchedDirection);
+          return;
+        }
+      }
 
-      // Find matching visible connection
-      const conn = node.connections?.find(
-        c => c.direction === matchedDirection && !c.hidden
-      );
-      if (!conn) return;
+      // Check action bindings
+      const ab = actionBindingsRef.current;
 
-      e.preventDefault();
-      onMoveRef.current(conn.node_id, matchedDirection);
+      if (ab.search.includes(key) && onSearchRef.current) {
+        e.preventDefault();
+        onSearchRef.current();
+        return;
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const name = `ability${i + 1}` as ActionName;
+        if (ab[name].includes(key) && onUseAbilityRef.current) {
+          e.preventDefault();
+          onUseAbilityRef.current(i);
+          return;
+        }
+      }
+
+      for (let i = 0; i < 6; i++) {
+        const name = `potion${i + 1}` as ActionName;
+        if (ab[name].includes(key) && onUseBeltPotionRef.current) {
+          e.preventDefault();
+          onUseBeltPotionRef.current(i);
+          return;
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
@@ -113,13 +197,26 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled }: Us
     saveBindings(newBindings);
   }, []);
 
+  const setActionBindings = useCallback((newBindings: ActionBindings) => {
+    setActionBindingsState(newBindings);
+    saveActionBindings(newBindings);
+  }, []);
+
   const resetBindings = useCallback(() => {
     const defaults = { ...DEFAULT_BINDINGS };
     setBindingsState(defaults);
     saveBindings(defaults);
+    const actionDefaults = { ...DEFAULT_ACTION_BINDINGS };
+    setActionBindingsState(actionDefaults);
+    saveActionBindings(actionDefaults);
   }, []);
 
-  return { bindings, setBindings, resetBindings, DIRECTIONS, DIRECTION_LABELS };
+  return {
+    bindings, setBindings, resetBindings,
+    actionBindings, setActionBindings,
+    DIRECTIONS, DIRECTION_LABELS,
+    ACTION_NAMES, ACTION_LABELS,
+  };
 }
 
-export { DEFAULT_BINDINGS };
+export { DEFAULT_BINDINGS, DEFAULT_ACTION_BINDINGS, ACTION_NAMES, ACTION_LABELS, SHIFT_NUM_MAP };

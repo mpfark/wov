@@ -9,7 +9,7 @@ import { Keyboard, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { type Direction, type KeyBindings, getKeyLabel, DEFAULT_BINDINGS } from '@/hooks/useKeyboardMovement';
+import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel, DEFAULT_BINDINGS, ACTION_NAMES, ACTION_LABELS } from '@/hooks/useKeyboardMovement';
 
 interface Props {
   regions: Region[];
@@ -40,9 +40,13 @@ interface Props {
   keyboardBindings?: {
     bindings: KeyBindings;
     setBindings: (b: KeyBindings) => void;
+    actionBindings: ActionBindings;
+    setActionBindings: (b: ActionBindings) => void;
     resetBindings: () => void;
     DIRECTIONS: readonly Direction[];
     DIRECTION_LABELS: Record<Direction, string>;
+    ACTION_NAMES: readonly ActionName[];
+    ACTION_LABELS: Record<ActionName, string>;
   };
 }
 
@@ -56,28 +60,73 @@ export default function MapPanel({
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
+  const [rebindingAction, setRebindingAction] = useState<ActionName | null>(null);
 
   const handleKeyCapture = useCallback((e: React.KeyboardEvent) => {
-    if (!rebindingDir || !keyboardBindings) return;
+    if (!keyboardBindings) return;
     e.preventDefault();
     e.stopPropagation();
     const key = e.key;
     if (key === 'Escape') {
       setRebindingDir(null);
+      setRebindingAction(null);
       return;
     }
-    // Remove this key from any other direction first
+
+    // Remove key from all movement bindings
     const newBindings = { ...keyboardBindings.bindings };
     for (const dir of keyboardBindings.DIRECTIONS) {
       newBindings[dir] = newBindings[dir].filter(k => k !== key);
     }
-    // Add to the target direction (max 2 keys per direction)
-    if (!newBindings[rebindingDir].includes(key)) {
-      newBindings[rebindingDir] = [...newBindings[rebindingDir].slice(-1), key];
+    // Remove key from all action bindings
+    const newActions = { ...keyboardBindings.actionBindings };
+    for (const name of keyboardBindings.ACTION_NAMES) {
+      newActions[name] = newActions[name].filter(k => k !== key);
     }
-    keyboardBindings.setBindings(newBindings);
-    setRebindingDir(null);
-  }, [rebindingDir, keyboardBindings]);
+
+    if (rebindingDir) {
+      if (!newBindings[rebindingDir].includes(key)) {
+        newBindings[rebindingDir] = [...newBindings[rebindingDir].slice(-1), key];
+      }
+      keyboardBindings.setBindings(newBindings);
+      keyboardBindings.setActionBindings(newActions);
+      setRebindingDir(null);
+    } else if (rebindingAction) {
+      if (!newActions[rebindingAction].includes(key)) {
+        newActions[rebindingAction] = [...newActions[rebindingAction].slice(-1), key];
+      }
+      keyboardBindings.setBindings(newBindings);
+      keyboardBindings.setActionBindings(newActions);
+      setRebindingAction(null);
+    }
+  }, [rebindingDir, rebindingAction, keyboardBindings]);
+
+  const renderActionKey = (name: ActionName) => {
+    if (!keyboardBindings) return null;
+    const keys = keyboardBindings.actionBindings[name];
+    const isBinding = rebindingAction === name;
+    return (
+      <button
+        key={name}
+        tabIndex={0}
+        onClick={() => { setRebindingAction(name); setRebindingDir(null); }}
+        onKeyDown={isBinding ? handleKeyCapture : undefined}
+        className={`h-8 rounded border text-[10px] flex flex-col items-center justify-center transition-colors
+          ${isBinding ? 'border-primary bg-primary/20 ring-1 ring-primary' : 'border-border bg-muted/30 hover:bg-muted/60'}`}
+      >
+        <span className="font-display text-muted-foreground leading-none">{keyboardBindings.ACTION_LABELS[name]}</span>
+        {isBinding ? (
+          <span className="text-primary text-[8px] animate-pulse">press key</span>
+        ) : keys.length > 0 ? (
+          <span className="text-foreground/70 text-[8px] leading-none">
+            {keys.map(getKeyLabel).join(' / ')}
+          </span>
+        ) : (
+          <span className="text-muted-foreground/50 text-[8px] leading-none">—</span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col p-3 space-y-3 overflow-y-auto">
@@ -114,10 +163,10 @@ export default function MapPanel({
                   <TooltipContent side="left"><p className="text-xs">Movement Keys</p></TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <PopoverContent className="w-56 p-3" align="end">
-                <div className="space-y-2">
+              <PopoverContent className="w-64 p-3 max-h-[70vh] overflow-y-auto" align="end">
+                <div className="space-y-2" onKeyDown={(rebindingDir || rebindingAction) ? handleKeyCapture : undefined}>
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-xs">Movement Keys</span>
+                    <span className="font-display text-xs">Keybindings</span>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -127,44 +176,63 @@ export default function MapPanel({
                       <RotateCcw className="h-3 w-3" />
                     </Button>
                   </div>
-                  {/* 3x3 compass grid (center empty) */}
-                  <div
-                    className="grid grid-cols-3 gap-1"
-                    onKeyDown={handleKeyCapture}
-                  >
-                    {DIRECTION_ORDER.map((dir, i) => {
-                      // Insert empty center cell after W (index 3) — E is index 4
-                      const cells: React.ReactNode[] = [];
-                      if (i === 4) {
-                        cells.push(<div key="center" className="h-8" />);
-                      }
-                      const keys = keyboardBindings.bindings[dir];
-                      const isBinding = rebindingDir === dir;
-                      cells.push(
-                        <button
-                          key={dir}
-                          tabIndex={0}
-                          onClick={() => setRebindingDir(dir)}
-                          onKeyDown={isBinding ? handleKeyCapture : undefined}
-                          className={`h-8 rounded border text-[10px] flex flex-col items-center justify-center transition-colors
-                            ${isBinding ? 'border-primary bg-primary/20 ring-1 ring-primary' : 'border-border bg-muted/30 hover:bg-muted/60'}`}
-                        >
-                          <span className="font-display text-muted-foreground leading-none">{dir}</span>
-                          {isBinding ? (
-                            <span className="text-primary text-[8px] animate-pulse">press key</span>
-                          ) : keys.length > 0 ? (
-                            <span className="text-foreground/70 text-[8px] leading-none">
-                              {keys.map(getKeyLabel).join(' / ')}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/50 text-[8px] leading-none">—</span>
-                          )}
-                        </button>
-                      );
-                      return cells;
-                    })}
+
+                  {/* Movement - 3x3 compass grid */}
+                  <div className="space-y-1">
+                    <span className="font-display text-[10px] text-muted-foreground">Movement</span>
+                    <div className="grid grid-cols-3 gap-1">
+                      {DIRECTION_ORDER.map((dir, i) => {
+                        const cells: React.ReactNode[] = [];
+                        if (i === 4) {
+                          cells.push(<div key="center" className="h-8" />);
+                        }
+                        const keys = keyboardBindings.bindings[dir];
+                        const isBinding = rebindingDir === dir;
+                        cells.push(
+                          <button
+                            key={dir}
+                            tabIndex={0}
+                            onClick={() => { setRebindingDir(dir); setRebindingAction(null); }}
+                            onKeyDown={isBinding ? handleKeyCapture : undefined}
+                            className={`h-8 rounded border text-[10px] flex flex-col items-center justify-center transition-colors
+                              ${isBinding ? 'border-primary bg-primary/20 ring-1 ring-primary' : 'border-border bg-muted/30 hover:bg-muted/60'}`}
+                          >
+                            <span className="font-display text-muted-foreground leading-none">{dir}</span>
+                            {isBinding ? (
+                              <span className="text-primary text-[8px] animate-pulse">press key</span>
+                            ) : keys.length > 0 ? (
+                              <span className="text-foreground/70 text-[8px] leading-none">
+                                {keys.map(getKeyLabel).join(' / ')}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/50 text-[8px] leading-none">—</span>
+                            )}
+                          </button>
+                        );
+                        return cells;
+                      })}
+                    </div>
                   </div>
-                  <p className="text-[9px] text-muted-foreground text-center">Click a direction, then press a key to bind</p>
+
+                  {/* Actions */}
+                  <div className="space-y-1 border-t border-border pt-2">
+                    <span className="font-display text-[10px] text-muted-foreground">Actions</span>
+                    {/* Search */}
+                    {renderActionKey('search')}
+                    {/* Abilities */}
+                    <div className="grid grid-cols-3 gap-1">
+                      {(['ability1', 'ability2', 'ability3'] as ActionName[]).map(name => renderActionKey(name))}
+                    </div>
+                    {/* Potions */}
+                    <div className="grid grid-cols-3 gap-1">
+                      {(['potion1', 'potion2', 'potion3'] as ActionName[]).map(name => renderActionKey(name))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {(['potion4', 'potion5', 'potion6'] as ActionName[]).map(name => renderActionKey(name))}
+                    </div>
+                  </div>
+
+                  <p className="text-[9px] text-muted-foreground text-center">Click a slot, then press a key to bind</p>
                 </div>
               </PopoverContent>
             </Popover>
