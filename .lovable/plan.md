@@ -1,43 +1,47 @@
 
 
-## Slow Down Leveling via Creature HP Increase
+## Scale Item Stat Caps with Level
 
 ### The Problem
-Creatures die too quickly, making leveling feel too fast. Currently a level 5 regular creature has only 35 HP.
+The fixed per-stat cap of 5 forces high-level items to spread their budget across many attributes. A level 20 Rare two-handed sword has a budget of 18 points but can only put 5 into STR, making it impossible to create focused, thematic gear without padding unrelated stats.
 
-### The Change
-Increase the base HP formula in `src/lib/game-data.ts` from:
+### The Solution
+Make stat caps scale with the item's level, so higher-level items can concentrate more points into their core stats.
 
-```text
-HP = (10 + level * 5) * rarity_multiplier
-```
+### New Formula
 
-to:
+**Primary stats (STR, DEX, CON, INT, WIS, CHA):**
 
 ```text
-HP = (15 + level * 8) * rarity_multiplier
+cap = 3 + floor(level / 5)
 ```
 
-### HP Comparison (Regular creatures)
+| Level | Cap |
+|-------|-----|
+| 1-4   | 3   |
+| 5-9   | 4   |
+| 10-14 | 5   |
+| 15-19 | 6   |
+| 20+   | 7   |
 
-| Level | Current HP | New HP |
-|-------|-----------|--------|
-| 1     | 15        | 23     |
-| 5     | 35        | 55     |
-| 10    | 60        | 95     |
-| 15    | 85        | 135    |
-| 20    | 110       | 175    |
+**Secondary stats (unchanged base, scaled similarly):**
 
-Rare creatures get 1.5x and Bosses get 2.5x these values, so a level 10 Boss goes from 150 to 238 HP.
+```text
+AC:       cap = 2 + floor(level / 10)    (2 at L1, 3 at L10, 4 at L20)
+HP:       cap = 6 + floor(level / 5) * 2 (6 at L1, 10 at L10, 14 at L20)
+HP Regen: cap = 2 + floor(level / 10)    (2 at L1, 3 at L10, 4 at L20)
+```
+
+This keeps low-level items modest while letting high-level gear feel powerful and specialized.
 
 ### Files to Change
 
-**`src/lib/game-data.ts`** (1 line change)
-- Update the HP calculation in `generateCreatureStats` from `(10 + level * 5)` to `(15 + level * 8)`
+**`src/lib/game-data.ts`**
+- Update `getItemStatCap` to accept a `level` parameter
+- Replace the flat lookup with the scaling formulas above
+- Keep `ITEM_STAT_CAPS` as a reference or remove it (no longer the source of truth)
 
-### Impact
-- Fights take roughly 1.5-2x longer
-- XP rate effectively halved since kills take longer
-- No changes needed to XP formulas, creature damage, or any other systems
-- Existing creatures in the database with manually set HP are unaffected (this only changes the auto-generate formula used by the admin creature editor)
+**`src/components/admin/ItemManager.tsx`**
+- Pass `form.level` to all `getItemStatCap(key, level)` calls (in `setStat` and in the input `max` attribute)
+- Caps will update live as the admin changes the item's level in the editor
 
