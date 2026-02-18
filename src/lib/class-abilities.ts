@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff';
   tier: number;
   levelRequired: number;
 }
@@ -57,6 +57,24 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'self_heal',
       tier: 1,
       levelRequired: 5,
+    },
+    {
+      label: 'Battle Cry',
+      emoji: '📯',
+      description: 'Let out a war cry that boosts your AC based on STR',
+      cooldownMs: 60000,
+      type: 'battle_cry',
+      tier: 2,
+      levelRequired: 10,
+    },
+    {
+      label: 'Rend',
+      emoji: '🩸',
+      description: 'Slice your target, applying a bleed that deals STR-based damage over time',
+      cooldownMs: 90000,
+      type: 'dot_debuff',
+      tier: 3,
+      levelRequired: 15,
     },
   ],
   ranger: [

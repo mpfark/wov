@@ -41,6 +41,8 @@ function getLogColor(log: string): string {
   if (log.startsWith('🌿')) return 'text-elvish';
   if (log.startsWith('🏹🏹')) return 'text-primary';
   if (log.startsWith('🛡️')) return 'text-dwarvish';
+  if (log.startsWith('📯')) return 'text-dwarvish';
+  if (log.startsWith('🩸')) return 'text-blood';
   if (log.includes('miss')) return 'text-muted-foreground';
   if (log.includes('damage')) return 'text-foreground/90';
   return 'text-foreground/80';
@@ -80,6 +82,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [stealthBuff, setStealthBuff] = useState<{ expiresAt: number } | null>(null);
   const [damageBuff, setDamageBuff] = useState<{ expiresAt: number } | null>(null);
   const [rootDebuff, setRootDebuff] = useState<{ damageReduction: number; expiresAt: number } | null>(null);
+  const [acBuff, setAcBuff] = useState<{ bonus: number; expiresAt: number } | null>(null);
+  const [dotDebuff, setDotDebuff] = useState<{ damagePerTick: number; intervalMs: number; expiresAt: number; creatureId: string } | null>(null);
   const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -183,6 +187,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, []); // stable — no deps, reads from refs
 
+
+
   // Refs for death respawn to avoid stale closures / cleanup races
   const deathGoldRef = useRef(character.gold);
   const deathNodeRef = useRef(startingNodeId || character.current_node_id);
@@ -234,7 +240,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
 
   // Effective AC including equipment
-  const effectiveAC = character.ac + (equipmentBonuses.ac || 0);
+  const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
+  const effectiveAC = character.ac + (equipmentBonuses.ac || 0) + acBuffBonus;
 
   // Track node entry to trigger aggressive creature auto-attacks only once per move
   const prevNodeRef = useRef<string | null>(null);
@@ -276,7 +283,30 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onClearStealthBuff: useCallback(() => setStealthBuff(null), []),
     damageBuff,
     rootDebuff,
+    acBuff,
   });
+
+  // DoT (Rend bleed) tick effect
+  useEffect(() => {
+    if (!dotDebuff || Date.now() >= dotDebuff.expiresAt) return;
+    const interval = setInterval(async () => {
+      if (Date.now() >= dotDebuff.expiresAt) {
+        setDotDebuff(null);
+        clearInterval(interval);
+        return;
+      }
+      const creature = creatures.find(c => c.id === dotDebuff.creatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        setDotDebuff(null);
+        clearInterval(interval);
+        return;
+      }
+      const newHp = Math.max((creatureHpOverrides[dotDebuff.creatureId] ?? creature.hp) - dotDebuff.damagePerTick, 0);
+      await supabase.rpc('damage_creature', { _creature_id: dotDebuff.creatureId, _new_hp: newHp, _killed: newHp <= 0 });
+      addLog(`🩸 ${creature.name} bleeds for ${dotDebuff.damagePerTick} damage!`);
+    }, dotDebuff.intervalMs);
+    return () => clearInterval(interval);
+  }, [dotDebuff, creatures, creatureHpOverrides, addLog]);
 
   const handleAttack = useCallback((creatureId: string) => {
     if (isDead) return;
@@ -676,6 +706,32 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationSec = 10 + Math.min(wisMod, 5);
       setRootDebuff({ damageReduction: 0.3, expiresAt: Date.now() + durationSec * 1000 });
       addLog(`${ability.emoji} Nature's Snare! ${creature.name} is entangled — damage reduced by 30% for ${durationSec}s.`);
+    } else if (ability.type === 'battle_cry') {
+      if (!inCombat) {
+        addLog(`${ability.emoji} You must be in combat to use Battle Cry!`);
+        return;
+      }
+      const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
+      const conMod = getStatMod2(character.con + (equipmentBonuses.con || 0));
+      const acBonus = Math.max(2, strMod);
+      const durationSec = 20 + Math.min(conMod, 10);
+      setAcBuff({ bonus: acBonus, expiresAt: Date.now() + durationSec * 1000 });
+      addLog(`${ability.emoji} Battle Cry! Your AC is boosted by +${acBonus} for ${durationSec}s.`);
+    } else if (ability.type === 'dot_debuff') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Rend!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Rend.`);
+        return;
+      }
+      const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
+      const dmgPerTick = Math.max(2, Math.floor(strMod * 1.5));
+      const durationSec = 12 + Math.min(strMod, 6);
+      setDotDebuff({ damagePerTick: dmgPerTick, intervalMs: 3000, expiresAt: Date.now() + durationSec * 1000, creatureId: creature.id });
+      addLog(`${ability.emoji} Rend! ${creature.name} is bleeding for ${dmgPerTick} damage every 3s for ${durationSec}s.`);
     }
 
     setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
@@ -780,6 +836,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             itemHpRegen={itemHpRegen}
             foodBuff={foodBuff}
             critBuff={critBuff}
+            acBuff={acBuff}
           />
         </div>
 

@@ -40,6 +40,7 @@ interface UseCombatParams {
   onClearStealthBuff?: () => void;
   damageBuff?: { expiresAt: number } | null;
   rootDebuff?: { damageReduction: number; expiresAt: number } | null;
+  acBuff?: { bonus: number; expiresAt: number } | null;
 }
 
 export function useCombat({
@@ -59,6 +60,7 @@ export function useCombat({
   onClearStealthBuff,
   damageBuff,
   rootDebuff,
+  acBuff,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -81,6 +83,7 @@ export function useCombat({
   const onClearStealthBuffRef = useRef(onClearStealthBuff);
   const damageBuffRef = useRef(damageBuff);
   const rootDebuffRef = useRef(rootDebuff);
+  const acBuffRef = useRef(acBuff);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -100,6 +103,7 @@ export function useCombat({
   useEffect(() => { onClearStealthBuffRef.current = onClearStealthBuff; }, [onClearStealthBuff]);
   useEffect(() => { damageBuffRef.current = damageBuff; }, [damageBuff]);
   useEffect(() => { rootDebuffRef.current = rootDebuff; }, [rootDebuff]);
+  useEffect(() => { acBuffRef.current = acBuff; }, [acBuff]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -349,6 +353,10 @@ export function useCombat({
       const tankMember = _party && _party.tank_id && _party.tank_id !== char.id
         ? _partyMembers.find(m => m.character_id === _party.tank_id)
         : null;
+      // AC buff from Battle Cry
+      const _acBuff = acBuffRef.current;
+      const acBuffBonus = (_acBuff && Date.now() < _acBuff.expiresAt) ? _acBuff.bonus : 0;
+      const buffedAC = _effectiveAC + acBuffBonus;
       const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
       if (tankMember) {
         const tankAC = 10;
@@ -363,12 +371,12 @@ export function useCombat({
           _addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
         }
       } else {
-        if (creatureAtk >= _effectiveAC) {
+        if (creatureAtk >= buffedAC) {
           const dmgDie2 = getCreatureDamageDie(creature.level, creature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(creature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
           const playerNewHp = Math.max(char.hp - creatureDmg, 0);
-          _addLog(`${isRooted ? '🌿 ' : ''}${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${_effectiveAC} — Hit! ${creatureDmg} damage.`);
+          _addLog(`${isRooted ? '🌿 ' : ''}${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${buffedAC} — Hit! ${creatureDmg} damage.`);
           await _updateCharacter({ hp: playerNewHp });
           await _degradeEquipment();
           if (playerNewHp <= 0) {
@@ -376,7 +384,7 @@ export function useCombat({
             stopCombat();
           }
         } else {
-          _addLog(`${creature.name} attacks ${who} — misses!`);
+          _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} attacks ${who} — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
         }
       }
     } finally {
