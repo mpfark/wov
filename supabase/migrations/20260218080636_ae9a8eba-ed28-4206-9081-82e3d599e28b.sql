@@ -1,0 +1,1 @@
+ALTER TABLE public.characters DROP CONSTRAINT characters_stats_range;
