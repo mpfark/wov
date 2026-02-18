@@ -1,42 +1,88 @@
 
-# Add Barrage and Nature's Snare Abilities for Ranger
+
+# Add Keybinds for Abilities, Potions, and Search + Update Movement Defaults
 
 ## Overview
-Add two new abilities to the Ranger class:
-- **Barrage** (Tier 2, Level 10): Fire 2-3 arrows at 70% damage each, scaling with DEX. A burst damage ability.
-- **Nature's Snare** (Tier 3, Level 15): Entangle the current combat target, reducing its damage by ~30% for 15 seconds. A defensive/utility ability.
+Expand the keyboard binding system to cover abilities (1, 2, 3), belt potions (Shift+1 through Shift+6), and Search (S), while updating the default movement keys to a compass layout (Q/W/E/A/D/Z/X/C).
 
 ## Changes
 
-### 1. Data (`src/lib/class-abilities.ts`)
-- Add `'multi_attack'` and `'root_debuff'` to the `ClassAbility.type` union.
-- Add two new entries to the ranger's ability array:
-  - **Barrage**: emoji `🏹🏹`, tier 2, level 10, 45s cooldown, type `'multi_attack'`
-  - **Nature's Snare**: emoji `🌿`, tier 3, level 15, 90s cooldown, type `'root_debuff'`
+### 1. Update Default Movement Bindings (`src/hooks/useKeyboardMovement.ts`)
 
-### 2. Ability Logic (`src/pages/GamePage.tsx`)
-- Add a new state: `rootDebuff` with `{ damageReduction: number, expiresAt: number }` (similar pattern to existing buffs).
-- Pass `rootDebuff` to `useCombat` so creature damage can be reduced.
-- **`multi_attack` handler**: Must be in combat. Roll 2-3 attacks (2 base, 3 if DEX modifier >= 3). Each hit deals 70% of normal Shoot damage (using the ranger's combat stats). Each arrow rolls independently to hit. Requires an active combat target.
-- **`root_debuff` handler**: Must be in combat. Applies a 30% damage reduction debuff on the current creature for 15 seconds (scales slightly with WIS: duration = 10 + min(wisMod, 5) seconds).
+Change `DEFAULT_BINDINGS` to the new compass layout:
 
-### 3. Combat Integration (`src/hooks/useCombat.ts`)
-- Accept a new `rootDebuff` prop (same pattern as `critBuff`, `stealthBuff`, `damageBuff`).
-- In the creature counterattack section, if `rootDebuff` is active, reduce creature damage by 30% (multiply by 0.7, floor).
+```text
+DEFAULT_BINDINGS = {
+  NW: ['q'],  N: ['w'],  NE: ['e'],
+  W:  ['a'],             E:  ['d'],
+  SW: ['z'],  S: ['x'],  SE: ['c'],
+}
+```
 
-### 4. No UI changes needed
-The existing multi-ability rendering in `NodeView.tsx` already handles arrays of abilities with independent cooldowns. Barrage and Nature's Snare are self/combat-targeted (no ally picker needed), so they work with the existing button system. The admin panel (`RaceClassManager.tsx`) also already loops through ability arrays.
+Arrow keys will be removed from defaults (users can re-add them via the rebind UI).
+
+### 2. Add Action Keybindings Type and Defaults (`src/hooks/useKeyboardMovement.ts`)
+
+Add a new exported type and defaults for non-movement actions:
+
+- **Search**: default key `s`
+- **Ability 1/2/3**: default keys `1`, `2`, `3`
+- **Potion 1-6**: default keys `Shift+1` (`!`), `Shift+2` (`@`), `Shift+3` (`#`), `Shift+4` (`$`), `Shift+5` (`%`), `Shift+6` (`^`)
+
+Note: Shift+number keys produce special characters in `e.key` (e.g., `!`, `@`, `#`, `$`, `%`, `^`), so we'll bind to those actual key values.
+
+A new `ActionBindings` type will map action names to their key(s), stored separately in localStorage under `action-keybindings`.
+
+### 3. Expand the Hook Return Value (`src/hooks/useKeyboardMovement.ts`)
+
+The hook will also accept callbacks for:
+- `onSearch`: fires when search key is pressed
+- `onUseAbility(index)`: fires when ability 1/2/3 key is pressed
+- `onUseBeltPotion(index)`: fires when potion 1-6 key is pressed
+
+The `keydown` handler will check action bindings after movement bindings. It will skip ability/potion keys if dead or in a dialog, same as movement.
+
+### 4. Wire Up Callbacks in GamePage (`src/pages/GamePage.tsx`)
+
+Pass `onSearch`, `onUseAbility`, and `onUseBeltPotion` callbacks to `useKeyboardMovement`:
+- `onSearch` calls existing `handleSearch`
+- `onUseAbility(index)` calls `handleUseAbility(index)` (with current heal target if applicable)
+- `onUseBeltPotion(index)` calls `handleUseConsumable(beltedPotions[index].id)` if that slot exists
+
+### 5. Update Keybindings UI in MapPanel (`src/components/game/MapPanel.tsx`)
+
+Add a second section below the compass grid in the keybind popover showing the action bindings:
+- A row for Search (S)
+- A row for Abilities (1, 2, 3)
+- A row for Potions (Shift+1 through Shift+6)
+
+Each cell is rebindable with the same click-then-press-key pattern used for movement.
+
+### 6. Show Keybind Hints in NodeView (`src/components/game/NodeView.tsx`)
+
+Display small keybind hints on the action bar buttons:
+- Search button shows `[S]`
+- Ability buttons show `[1]`, `[2]`, `[3]`
+- Belt potion buttons show `[!]`, `[@]`, etc. (or a cleaner label like `Sh+1`)
+
+---
 
 ## Technical Details
 
-### Barrage Formula
-- Arrow count: DEX modifier >= 3 ? 3 : 2
-- Per-arrow damage: `floor(rollDamage(1, 8) + dexMod) * 0.7`, minimum 1
-- Each arrow rolls to hit independently against creature AC
-- Can only be used while in combat
+### Shift+Number Key Values
+On standard US keyboards, `e.key` for Shift+1 is `!`, Shift+2 is `@`, Shift+3 is `#`, Shift+4 is `$`, Shift+5 is `%`, Shift+6 is `^`. The binding system will store and match these characters directly. The `getKeyLabel` function will be updated to display them as `Sh+1`, `Sh+2`, etc.
 
-### Nature's Snare Formula
-- Damage reduction: 30% (creature deals 70% damage)
-- Duration: `(10 + min(wisMod, 5))` seconds, where wisMod is based on WIS
-- Can only be used while in combat
-- Applies to the currently targeted creature (affects all its attacks)
+### localStorage
+- Movement bindings: `movement-keybindings` (existing)
+- Action bindings: `action-keybindings` (new)
+- Reset clears both to new defaults
+
+### Conflict Handling
+When a user binds a key that's already used (in either movement or action bindings), it will be removed from the old binding first, same as the current movement rebinding logic.
+
+### Files Modified
+- `src/hooks/useKeyboardMovement.ts` -- new defaults, action bindings, expanded keydown handler
+- `src/pages/GamePage.tsx` -- pass action callbacks to the hook
+- `src/components/game/MapPanel.tsx` -- expanded keybind UI
+- `src/components/game/NodeView.tsx` -- keybind hint labels on buttons
+
