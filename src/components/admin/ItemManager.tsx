@@ -48,8 +48,8 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   origin_type: null, origin_id: null,
 });
 
-function BudgetIndicator({ level, rarity, stats }: { level: number; rarity: string; stats: Record<string, number> }) {
-  const budget = getItemStatBudget(level, rarity);
+function BudgetIndicator({ level, rarity, stats, hands }: { level: number; rarity: string; stats: Record<string, number>; hands?: number }) {
+  const budget = getItemStatBudget(level, rarity, hands);
   const used = calculateItemStatCost(stats);
   const pct = budget > 0 ? Math.min((used / budget) * 100, 100) : 0;
   const over = used > budget;
@@ -162,7 +162,7 @@ export default function ItemManager() {
     if (!form.name.trim()) return toast.error('Name is required');
     if (form.name.length > 100) return toast.error('Name must be under 100 characters');
 
-    const budget = getItemStatBudget(form.level, form.rarity);
+    const budget = getItemStatBudget(form.level, form.rarity, form.hands ?? 1);
     const cost = calculateItemStatCost(form.stats);
     if (cost > budget) return toast.error(`Stat cost (${cost}) exceeds budget (${budget})`);
 
@@ -371,7 +371,7 @@ export default function ItemManager() {
                 </div>
               </div>
 
-              <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} />
+              <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} hands={form.hands ?? 1} />
 
               {(form.item_type === 'equipment' || form.item_type === 'shield') && (
                 <div>
