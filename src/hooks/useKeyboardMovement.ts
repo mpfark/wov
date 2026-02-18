@@ -4,7 +4,7 @@ import { GameNode } from '@/hooks/useNodes';
 export type Direction = 'N' | 'S' | 'E' | 'W' | 'NE' | 'NW' | 'SE' | 'SW';
 export type KeyBindings = Record<Direction, string[]>;
 
-export type ActionName = 'attack' | 'search' | 'ability1' | 'ability2' | 'ability3' | 'potion1' | 'potion2' | 'potion3' | 'potion4' | 'potion5' | 'potion6';
+export type ActionName = 'attack' | 'search' | 'ability1' | 'ability2' | 'ability3' | 'ability4' | 'potion1' | 'potion2' | 'potion3' | 'potion4' | 'potion5' | 'potion6';
 export type ActionBindings = Record<ActionName, string[]>;
 
 const DIRECTIONS: Direction[] = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'];
@@ -21,14 +21,14 @@ const DEFAULT_BINDINGS: KeyBindings = {
 };
 
 const ACTION_NAMES: ActionName[] = [
-  'attack', 'search', 'ability1', 'ability2', 'ability3',
+  'attack', 'search', 'ability1', 'ability2', 'ability3', 'ability4',
   'potion1', 'potion2', 'potion3', 'potion4', 'potion5', 'potion6',
 ];
 
 const ACTION_LABELS: Record<ActionName, string> = {
   attack: 'Attack',
   search: 'Search',
-  ability1: 'Ability 1', ability2: 'Ability 2', ability3: 'Ability 3',
+  ability1: 'Ability 1', ability2: 'Ability 2', ability3: 'Ability 3', ability4: 'Ability 4',
   potion1: 'Potion 1', potion2: 'Potion 2', potion3: 'Potion 3',
   potion4: 'Potion 4', potion5: 'Potion 5', potion6: 'Potion 6',
 };
@@ -36,7 +36,7 @@ const ACTION_LABELS: Record<ActionName, string> = {
 const DEFAULT_ACTION_BINDINGS: ActionBindings = {
   attack: [' '],
   search: ['s'],
-  ability1: ['1'], ability2: ['2'], ability3: ['3'],
+  ability1: ['1'], ability2: ['2'], ability3: ['3'], ability4: ['4'],
   potion1: ['!'], potion2: ['@'], potion3: ['#'],
   potion4: ['$'], potion5: ['%'], potion6: ['^'],
 };
@@ -180,7 +180,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
         return;
       }
 
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 4; i++) {
         const name = `ability${i + 1}` as ActionName;
         if (ab[name].includes(key) && onUseAbilityRef.current) {
           e.preventDefault();
