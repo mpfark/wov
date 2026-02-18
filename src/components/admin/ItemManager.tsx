@@ -206,7 +206,7 @@ export default function ItemManager() {
   };
 
   const setStat = (key: string, val: number) => {
-    const cap = getItemStatCap(key);
+    const cap = getItemStatCap(key, form.level);
     const clamped = Math.max(0, Math.min(val, cap));
     setForm(f => {
       const stats = { ...f.stats };
@@ -436,7 +436,7 @@ export default function ItemManager() {
                   {STAT_KEYS.map(key => (
                     <div key={key} className="flex items-center gap-1">
                       <span className={`text-[10px] uppercase w-8 ${key === 'hp_regen' ? 'text-elvish' : 'text-muted-foreground'}`}>{STAT_KEY_LABELS[key] || key}</span>
-                      <Input type="number" min={0} max={getItemStatCap(key)}
+                      <Input type="number" min={0} max={getItemStatCap(key, form.level)}
                         value={form.stats[key] || 0}
                         onChange={e => setStat(key, Math.max(0, +e.target.value))}
                         className="h-7 text-xs text-center" />

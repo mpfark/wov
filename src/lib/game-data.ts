@@ -122,8 +122,15 @@ export function calculateItemStatCost(stats: Record<string, number>): number {
   );
 }
 
-export function getItemStatCap(statKey: string): number {
-  return ITEM_STAT_CAPS[statKey] ?? 5;
+export function getItemStatCap(statKey: string, level: number = 1): number {
+  if (statKey === 'ac' || statKey === 'hp_regen') {
+    return 2 + Math.floor(level / 10);
+  }
+  if (statKey === 'hp') {
+    return 6 + Math.floor(level / 5) * 2;
+  }
+  // Primary stats: str, dex, con, int, wis, cha
+  return 3 + Math.floor(level / 5);
 }
 
 export function suggestItemGoldValue(level: number, rarity: string): number {
