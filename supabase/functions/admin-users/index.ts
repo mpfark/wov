@@ -145,11 +145,96 @@ Deno.serve(async (req) => {
     }
 
     // UPDATE CHARACTER (admin edit)
+    // SET LEVEL (with proper stat/HP recalculation)
+    if (action === "set-level" && req.method === "POST") {
+      const { character_id, new_level } = await req.json();
+      if (!character_id || !new_level || typeof new_level !== "number" || new_level < 1 || new_level > 100) {
+        throw new Error("character_id and valid new_level (1-100) required");
+      }
+
+      const { data: char, error: charErr } = await adminClient.from("characters").select("*").eq("id", character_id).single();
+      if (charErr || !char) throw new Error("Character not found");
+
+      const oldLevel = char.level;
+      if (new_level === oldLevel) return jsonResponse({ success: true, message: "No change" });
+
+      // Recalculate stats from scratch: base(8) + race + class + level-up bonuses
+      const RACE_STATS: Record<string, Record<string, number>> = {
+        human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
+        elf:      { str: 0, dex: 2, con: 0, int: 1, wis: 1, cha: 0 },
+        dwarf:    { str: 2, dex: 0, con: 2, int: 0, wis: 1, cha: -1 },
+        halfling: { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
+        edain:    { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
+        half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 2 },
+      };
+      const CLASS_STATS: Record<string, Record<string, number>> = {
+        warrior: { str: 3, dex: 1, con: 2, int: 0, wis: 0, cha: 0 },
+        wizard:  { str: 0, dex: 0, con: 0, int: 3, wis: 2, cha: 1 },
+        ranger:  { str: 1, dex: 3, con: 1, int: 0, wis: 2, cha: 0 },
+        rogue:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
+        healer:  { str: 0, dex: 0, con: 1, int: 1, wis: 3, cha: 2 },
+        bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
+      };
+      const CLASS_BASE_HP: Record<string, number> = {
+        warrior: 24, wizard: 14, ranger: 20, rogue: 16, healer: 18, bard: 16,
+      };
+
+      const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+      const raceBonus = RACE_STATS[char.race] || {};
+      const classBonus = CLASS_STATS[char.class] || {};
+      const levelBonuses = CLASS_LEVEL_BONUSES[char.class] || {};
+
+      // Calculate what stats SHOULD be at old level (base + automatic gains)
+      // Then figure out how many manual stat points were spent
+      const calcStatsAtLevel = (level: number) => {
+        const stats: Record<string, number> = {};
+        for (const s of statKeys) {
+          let val = 8 + (raceBonus[s] || 0) + (classBonus[s] || 0);
+          // +1 all stats per level (levels 2 through min(level, 29))
+          val += Math.max(0, Math.min(level, 29) - 1);
+          // Class bonus every 3 levels
+          if (levelBonuses[s]) {
+            let bonusCount = 0;
+            for (let l = 1; l <= level; l++) {
+              if (l % 3 === 0) bonusCount++;
+            }
+            val += levelBonuses[s] * bonusCount;
+          }
+          stats[s] = val;
+        }
+        return stats;
+      };
+
+      const oldBaseStats = calcStatsAtLevel(oldLevel);
+      const newBaseStats = calcStatsAtLevel(new_level);
+
+      // Preserve manually spent stat points
+      const updates: Record<string, any> = { level: new_level };
+      for (const s of statKeys) {
+        const manualPoints = Math.max(0, (char as any)[s] - oldBaseStats[s]);
+        updates[s] = newBaseStats[s] + manualPoints;
+      }
+
+      // HP: base class HP + 5 per level after 1 + con modifier
+      const baseHP = CLASS_BASE_HP[char.class] || 18;
+      const conMod = Math.floor((updates.con - 10) / 2);
+      const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
+      updates.max_hp = newMaxHp;
+      updates.hp = newMaxHp; // Full heal on level change
+
+      // Reset XP when setting level directly
+      updates.xp = 0;
+
+      const { error } = await adminClient.from("characters").update(updates).eq("id", character_id);
+      if (error) throw error;
+      return jsonResponse({ success: true, old_level: oldLevel, new_level });
+    }
+
     if (action === "update-character" && req.method === "POST") {
       const { character_id, updates } = await req.json();
       if (!character_id || !updates || typeof updates !== "object") throw new Error("character_id and updates required");
 
-      const allowedFields = ["name", "hp", "max_hp", "gold", "xp", "level",
+      const allowedFields = ["name", "hp", "max_hp", "gold", "xp",
         "str", "dex", "con", "int", "wis", "cha", "ac", "current_node_id", "unspent_stat_points"];
 
       const filteredUpdates: Record<string, any> = {};
@@ -170,7 +255,7 @@ Deno.serve(async (req) => {
       // Validate numeric ranges
       const numericRanges: Record<string, [number, number]> = {
         hp: [0, 10000], max_hp: [1, 10000], gold: [0, 1000000], xp: [0, 1000000],
-        level: [1, 100], str: [1, 999], dex: [1, 999], con: [1, 999],
+        str: [1, 999], dex: [1, 999], con: [1, 999],
         int: [1, 999], wis: [1, 999], cha: [1, 999], ac: [0, 100],
         unspent_stat_points: [0, 200],
       };
