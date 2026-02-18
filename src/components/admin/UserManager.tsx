@@ -577,7 +577,17 @@ export default function UserManager({ isValar }: Props) {
 
   const handleSaveCharacter = async (charId: string) => {
     try {
-      await callAdmin('update-character', 'POST', { character_id: charId, updates: charEdits });
+      // If level changed, use dedicated set-level action that recalculates stats/HP
+      if (charEdits.level !== undefined) {
+        await callAdmin('set-level', 'POST', { character_id: charId, new_level: charEdits.level });
+        // Remove level from remaining edits
+        const { level, ...remainingEdits } = charEdits;
+        if (Object.keys(remainingEdits).length > 0) {
+          await callAdmin('update-character', 'POST', { character_id: charId, updates: remainingEdits });
+        }
+      } else {
+        await callAdmin('update-character', 'POST', { character_id: charId, updates: charEdits });
+      }
       toast.success('Character updated');
       setEditingChar(null);
       setCharEdits({});
