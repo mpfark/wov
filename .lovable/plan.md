@@ -1,47 +1,60 @@
 
 
-## Scale Item Stat Caps with Level
+## Add Wizard Tier 2, 3, and 4 Abilities
 
-### The Problem
-The fixed per-stat cap of 5 forces high-level items to spread their budget across many attributes. A level 20 Rare two-handed sword has a budget of 18 points but can only put 5 into STR, making it impossible to create focused, thematic gear without padding unrelated stats.
+### New Abilities
 
-### The Solution
-Make stat caps scale with the item's level, so higher-level items can concentrate more points into their core stats.
+**Tier 2 -- Ignite (Level 10)**
+- Mirrors Rogue's Envenom/Eviscerate pattern but with fire
+- While active, each spell hit has a 40% chance to apply a stackable burn DoT (max 5 stacks)
+- Scales with INT: duration = 20s + INT modifier (capped at 30s)
+- Type: `ignite_buff` (new)
+- Cooldown: 60s
+- Emoji: `🔥🔥`
 
-### New Formula
+**Tier 3 -- Conflagrate (Level 15)**
+- Consumes all burn (ignite) stacks on the target for a burst of damage
+- +50% bonus damage per stack consumed (same multiplier as Rogue's Eviscerate)
+- Type: `ignite_consume` (new)
+- Cooldown: 45s
+- Emoji: `💥`
 
-**Primary stats (STR, DEX, CON, INT, WIS, CHA):**
-
-```text
-cap = 3 + floor(level / 5)
-```
-
-| Level | Cap |
-|-------|-----|
-| 1-4   | 3   |
-| 5-9   | 4   |
-| 10-14 | 5   |
-| 15-19 | 6   |
-| 20+   | 7   |
-
-**Secondary stats (unchanged base, scaled similarly):**
-
-```text
-AC:       cap = 2 + floor(level / 10)    (2 at L1, 3 at L10, 4 at L20)
-HP:       cap = 6 + floor(level / 5) * 2 (6 at L1, 10 at L10, 14 at L20)
-HP Regen: cap = 2 + floor(level / 10)    (2 at L1, 3 at L10, 4 at L20)
-```
-
-This keeps low-level items modest while letting high-level gear feel powerful and specialized.
+**Tier 4 -- Force Shield (Level 20)**
+- Creates an absorb shield that soaks incoming damage before HP
+- Shield amount = INT modifier * 4 + character level
+- Duration = 10s + INT modifier (capped at 20s)
+- Type: `absorb_buff` (new)
+- Cooldown: 90s
+- Emoji: `🛡️✨`
 
 ### Files to Change
 
-**`src/lib/game-data.ts`**
-- Update `getItemStatCap` to accept a `level` parameter
-- Replace the flat lookup with the scaling formulas above
-- Keep `ITEM_STAT_CAPS` as a reference or remove it (no longer the source of truth)
+**`src/lib/class-abilities.ts`**
+- Add `ignite_buff`, `ignite_consume`, and `absorb_buff` to the `type` union on `ClassAbility`
+- Add 3 new entries to `CLASS_ABILITIES.wizard` array (Tiers 2, 3, 4)
 
-**`src/components/admin/ItemManager.tsx`**
-- Pass `form.level` to all `getItemStatCap(key, level)` calls (in `setStat` and in the input `max` attribute)
-- Caps will update live as the admin changes the item's level in the editor
+**`src/pages/GamePage.tsx`**
+- Add new state variables: `igniteBuff`, `igniteStacks` (mirrors `poisonBuff`/`poisonStacks`), and `absorbBuff`
+- Add `onAddIgniteStack` callback (mirrors `onAddPoisonStack`)
+- Add ignite DoT tick effect (mirrors the poison DoT `useEffect`)
+- Add `ignite_buff` handler in `handleUseAbility` (mirrors `poison_buff`)
+- Add `ignite_consume` handler (mirrors `execute_attack`, consuming burn stacks)
+- Add `absorb_buff` handler: sets `absorbBuff` state with shield HP and expiry
+- Pass `igniteBuff`, `onAddIgniteStack`, and `absorbBuff` to `useCombat`
+
+**`src/hooks/useCombat.ts`**
+- Accept new props: `igniteBuff`, `onAddIgniteStack`, `absorbBuff`, `onAbsorbDamage`
+- In the player attack section: if `igniteBuff` is active, 40% chance to call `onAddIgniteStack(creatureId)` (mirrors poison proc logic)
+- In the creature counterattack section: if `absorbBuff` is active, subtract damage from shield first, remainder goes to HP. Call `onAbsorbDamage` to update the shield state. Log shield absorption.
+
+**`src/components/game/CharacterPanel.tsx`**
+- Display active ignite buff and force shield in the `ActiveBuffs` section (mirrors existing buff display)
+
+**`src/components/game/NodeView.tsx`**
+- Display ignite stack indicator on creatures (mirrors the poison stack `🧪 x N` indicator with a `🔥 x N` display)
+
+### Design Notes
+- Ignite mirrors the Rogue's Envenom/Eviscerate combo exactly, giving Wizards their own proc-and-consume playstyle themed around fire
+- Force Shield introduces a new defensive mechanic (damage absorption) that fits the Wizard's INT-scaling fantasy
+- Conflagrate is the payoff ability -- encourages building stacks before consuming them for burst damage
 
