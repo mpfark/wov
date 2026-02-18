@@ -30,9 +30,9 @@ interface Props {
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
   creatureHpOverrides?: Record<string, number>;
-  classAbility?: ClassAbility | null;
-  abilityCooldownEnd?: number;
-  onUseAbility?: (targetId?: string) => void;
+  classAbilities?: ClassAbility[];
+  abilityCooldownEnds?: Record<number, number>;
+  onUseAbility?: (abilityIndex: number, targetId?: string) => void;
   healTargets?: { id: string; name: string; hp: number; max_hp: number }[];
   beltedPotions?: InventoryItem[];
   onUseBeltPotion?: (inventoryId: string) => void;
@@ -40,34 +40,32 @@ interface Props {
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
-  inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbility, abilityCooldownEnd = 0, onUseAbility, healTargets = [],
+  inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbilities = [], abilityCooldownEnds = {}, onUseAbility, healTargets = [],
   beltedPotions = [], onUseBeltPotion,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [healTarget, setHealTarget] = useState<string>('self');
   const [areaOpen, setAreaOpen] = useState(true);
 
-  const isHealerWithTargets = classAbility?.type === 'heal' && healTargets.length > 0;
+  // Check if any ability needs a target selector
+  const hasTargetedAbility = classAbilities.some(a => a.type === 'heal' || a.type === 'hp_transfer');
 
-  // Cooldown countdown
-  const [cooldownLeft, setCooldownLeft] = useState(0);
+  // Per-ability cooldown countdowns
+  const [cooldownLefts, setCooldownLefts] = useState<Record<number, number>>({});
   useEffect(() => {
-    if (!abilityCooldownEnd || abilityCooldownEnd <= Date.now()) {
-      setCooldownLeft(0);
-      return;
-    }
-    setCooldownLeft(Math.ceil((abilityCooldownEnd - Date.now()) / 1000));
-    const interval = setInterval(() => {
-      const remaining = Math.ceil((abilityCooldownEnd - Date.now()) / 1000);
-      if (remaining <= 0) {
-        setCooldownLeft(0);
-        clearInterval(interval);
-      } else {
-        setCooldownLeft(remaining);
+    const update = () => {
+      const now = Date.now();
+      const newLefts: Record<number, number> = {};
+      for (const [idx, end] of Object.entries(abilityCooldownEnds)) {
+        const remaining = Math.ceil((end - now) / 1000);
+        if (remaining > 0) newLefts[Number(idx)] = remaining;
       }
-    }, 1000);
+      setCooldownLefts(newLefts);
+    };
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [abilityCooldownEnd]);
+  }, [abilityCooldownEnds]);
 
   const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0;
 
@@ -215,51 +213,58 @@ export default function NodeView({
           )}
 
           {/* Row 3: Abilities */}
-          {classAbility && onUseAbility && (() => {
-            const levelLocked = character.level < classAbility.levelRequired;
-            return (
-              <div className="flex flex-wrap items-center gap-1 justify-center">
-                {!levelLocked && isHealerWithTargets && (
-                  <Select value={healTarget} onValueChange={setHealTarget}>
-                    <SelectTrigger className="h-6 text-[10px] font-display w-auto min-w-[80px] max-w-[120px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="self" className="text-[10px]">
-                        Self ({character.hp}/{character.max_hp})
+          {classAbilities.length > 0 && onUseAbility && (
+            <div className="flex flex-wrap items-center gap-1 justify-center">
+              {/* Target selector — shown if any targeted ability exists and targets available */}
+              {hasTargetedAbility && healTargets.length > 0 && (
+                <Select value={healTarget} onValueChange={setHealTarget}>
+                  <SelectTrigger className="h-6 text-[10px] font-display w-auto min-w-[80px] max-w-[120px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="self" className="text-[10px]">
+                      Self ({character.hp}/{character.max_hp})
+                    </SelectItem>
+                    {healTargets.map(t => (
+                      <SelectItem key={t.id} value={t.id} className="text-[10px]">
+                        {t.name} ({t.hp}/{t.max_hp})
                       </SelectItem>
-                      {healTargets.map(t => (
-                        <SelectItem key={t.id} value={t.id} className="text-[10px]">
-                          {t.name} ({t.hp}/{t.max_hp})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onUseAbility(isHealerWithTargets && healTarget !== 'self' ? healTarget : undefined)}
-                        disabled={levelLocked || cooldownLeft > 0 || character.hp <= 0}
-                        className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
-                      >
-                        {classAbility.emoji} {classAbility.label}
-                        {!levelLocked && cooldownLeft > 0 && <span className="ml-0.5 text-muted-foreground">({cooldownLeft}s)</span>}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  {levelLocked && (
-                    <TooltipContent side="top" className="text-xs">
-                      Unlocks at level {classAbility.levelRequired}
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {classAbilities.map((ability, idx) => {
+                const levelLocked = character.level < ability.levelRequired;
+                const cooldownLeft = cooldownLefts[idx] || 0;
+                const needsTarget = ability.type === 'heal' || ability.type === 'hp_transfer';
+                const resolvedTarget = needsTarget && healTarget !== 'self' ? healTarget : undefined;
+                return (
+                  <Tooltip key={idx}>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onUseAbility(idx, resolvedTarget)}
+                          disabled={levelLocked || cooldownLeft > 0 || character.hp <= 0}
+                          className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
+                        >
+                          {ability.emoji} {ability.label}
+                          {!levelLocked && cooldownLeft > 0 && <span className="ml-0.5 text-muted-foreground">({cooldownLeft}s)</span>}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs max-w-[200px]">
+                      {levelLocked
+                        ? `Unlocks at level ${ability.levelRequired}`
+                        : `${ability.description} · ${ability.cooldownMs / 1000}s cooldown`
+                      }
                     </TooltipContent>
-                  )}
-                </Tooltip>
-              </div>
-            );
-          })()}
+                  </Tooltip>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </TooltipProvider>

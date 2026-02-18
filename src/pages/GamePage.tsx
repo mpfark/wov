@@ -76,7 +76,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [critBuff, setCritBuff] = useState<{ bonus: number; expiresAt: number }>({ bonus: 0, expiresAt: 0 });
   const [stealthBuff, setStealthBuff] = useState<{ expiresAt: number } | null>(null);
   const [damageBuff, setDamageBuff] = useState<{ expiresAt: number } | null>(null);
-  const [abilityCooldownEnd, setAbilityCooldownEnd] = useState(0);
+  const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -546,17 +546,46 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
 
-  const handleUseAbility = useCallback(async (targetId?: string) => {
+  const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
     if (isDead || character.hp <= 0) return;
-    const ability = CLASS_ABILITIES[character.class];
-    if (!ability) return;
+    const abilities = CLASS_ABILITIES[character.class];
+    if (!abilities || !abilities[abilityIndex]) return;
+    const ability = abilities[abilityIndex];
     if (character.level < ability.levelRequired) {
       addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
       return;
     }
-    if (Date.now() < abilityCooldownEnd) return;
+    if (Date.now() < (abilityCooldownEnds[abilityIndex] || 0)) return;
 
-    if (ability.type === 'heal') {
+    if (ability.type === 'hp_transfer') {
+      if (!targetId || targetId === character.id) {
+        addLog(`${ability.emoji} You must target an ally to transfer health.`);
+        return;
+      }
+      const wisMod = getStatMod2(character.wis);
+      const transferAmount = Math.max(3, wisMod * 2 + Math.floor(character.level / 2));
+      const maxTransfer = character.hp - 1; // cannot kill self
+      if (maxTransfer <= 0) {
+        addLog(`${ability.emoji} You don't have enough HP to transfer!`);
+        return;
+      }
+      const actualTransfer = Math.min(transferAmount, maxTransfer);
+      // Deduct HP from healer
+      await updateCharacter({ hp: character.hp - actualTransfer });
+      // Heal target
+      const { data: restored, error } = await supabase.rpc('heal_party_member', {
+        _healer_id: character.id,
+        _target_id: targetId,
+        _heal_amount: actualTransfer,
+      });
+      if (error) {
+        addLog(`${ability.emoji} Failed to transfer health: ${error.message}`);
+        return;
+      }
+      const targetMember = partyMembers.find(m => m.character_id === targetId);
+      const targetName = targetMember?.character.name || 'ally';
+      addLog(`${ability.emoji} ${character.name} sacrifices ${actualTransfer} HP to heal ${targetName} for ${restored ?? actualTransfer} HP!`);
+    } else if (ability.type === 'heal') {
       const wisMod = getStatMod2(character.wis);
       const healAmount = Math.max(3, wisMod * 3 + character.level);
 
@@ -620,8 +649,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     }
 
-    setAbilityCooldownEnd(Date.now() + ability.cooldownMs);
-  }, [isDead, character, abilityCooldownEnd, updateCharacter, addLog, party, partyMembers]);
+    setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
+  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers]);
 
 
   if (nodesLoading) {
@@ -713,8 +742,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               inCombat={inCombat}
               activeCombatCreatureId={activeCombatCreatureId}
               creatureHpOverrides={creatureHpOverrides}
-              classAbility={CLASS_ABILITIES[character.class] || null}
-              abilityCooldownEnd={abilityCooldownEnd}
+              classAbilities={CLASS_ABILITIES[character.class] || []}
+              abilityCooldownEnds={abilityCooldownEnds}
               onUseAbility={handleUseAbility}
               healTargets={
                 party && character.class === 'healer'

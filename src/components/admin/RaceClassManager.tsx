@@ -149,20 +149,24 @@ export default function RaceClassManager() {
                         </div>
                       )}
 
-                      {/* Class Ability */}
-                      {CLASS_ABILITIES[cls] && (
+                      {/* Class Abilities */}
+                      {CLASS_ABILITIES[cls] && CLASS_ABILITIES[cls].length > 0 && (
                         <div>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Class Ability</p>
-                          <div className="text-xs bg-secondary/50 rounded p-2 space-y-0.5">
-                            <div className="font-medium flex items-center gap-1">
-                              {CLASS_ABILITIES[cls].emoji} {CLASS_ABILITIES[cls].label}
-                              <Badge variant="outline" className="text-[9px] ml-auto">
-                                Tier {CLASS_ABILITIES[cls].tier} · Lvl {CLASS_ABILITIES[cls].levelRequired}
-                              </Badge>
-                            </div>
-                            <div className="text-muted-foreground">
-                              {CLASS_ABILITIES[cls].description} · {CLASS_ABILITIES[cls].cooldownMs / 1000}s cooldown
-                            </div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Class Abilities</p>
+                          <div className="space-y-1.5">
+                            {CLASS_ABILITIES[cls].map((ability, idx) => (
+                              <div key={idx} className="text-xs bg-secondary/50 rounded p-2 space-y-0.5">
+                                <div className="font-medium flex items-center gap-1">
+                                  {ability.emoji} {ability.label}
+                                  <Badge variant="outline" className="text-[9px] ml-auto">
+                                    Tier {ability.tier} · Lvl {ability.levelRequired}
+                                  </Badge>
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {ability.description} · {ability.cooldownMs / 1000}s cooldown
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}

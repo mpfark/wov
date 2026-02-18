@@ -22,64 +22,85 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer';
   tier: number;
   levelRequired: number;
 }
 
-export const CLASS_ABILITIES: Record<string, ClassAbility> = {
-  warrior: {
-    label: 'Second Wind',
-    emoji: '💪',
-    description: 'Catch your breath and recover HP based on CON',
-    cooldownMs: 45000,
-    type: 'self_heal',
-    tier: 1,
-    levelRequired: 5,
-  },
-  healer: {
-    label: 'Heal',
-    emoji: '💚',
-    description: 'Restore HP based on your Wisdom',
-    cooldownMs: 30000,
-    type: 'heal',
-    tier: 1,
-    levelRequired: 5,
-  },
-  ranger: {
-    label: 'Eagle Eye',
-    emoji: '🦅',
-    description: 'Sharpen your focus to widen your critical hit range based on DEX',
-    cooldownMs: 60000,
-    type: 'crit_buff',
-    tier: 1,
-    levelRequired: 5,
-  },
-  bard: {
-    label: 'Inspire',
-    emoji: '🎶',
-    description: 'A song that boosts HP regeneration',
-    cooldownMs: 60000,
-    type: 'regen_buff',
-    tier: 1,
-    levelRequired: 5,
-  },
-  rogue: {
-    label: 'Shadowstep',
-    emoji: '🌑',
-    description: 'Vanish into shadow — avoid attacks when fleeing and deal bonus damage on your next strike',
-    cooldownMs: 60000,
-    type: 'stealth_buff',
-    tier: 1,
-    levelRequired: 5,
-  },
-  wizard: {
-    label: 'Arcane Surge',
-    emoji: '✨',
-    description: 'Channel raw arcane energy to amplify your spell damage',
-    cooldownMs: 60000,
-    type: 'damage_buff',
-    tier: 1,
-    levelRequired: 5,
-  },
+export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
+  healer: [
+    {
+      label: 'Transfer Health',
+      emoji: '💉',
+      description: 'Sacrifice your own HP to heal a targeted ally',
+      cooldownMs: 15000,
+      type: 'hp_transfer',
+      tier: 1,
+      levelRequired: 5,
+    },
+    {
+      label: 'Heal',
+      emoji: '💚',
+      description: 'Restore HP based on your Wisdom',
+      cooldownMs: 30000,
+      type: 'heal',
+      tier: 2,
+      levelRequired: 10,
+    },
+  ],
+  warrior: [
+    {
+      label: 'Second Wind',
+      emoji: '💪',
+      description: 'Catch your breath and recover HP based on CON',
+      cooldownMs: 45000,
+      type: 'self_heal',
+      tier: 1,
+      levelRequired: 5,
+    },
+  ],
+  ranger: [
+    {
+      label: 'Eagle Eye',
+      emoji: '🦅',
+      description: 'Sharpen your focus to widen your critical hit range based on DEX',
+      cooldownMs: 60000,
+      type: 'crit_buff',
+      tier: 1,
+      levelRequired: 5,
+    },
+  ],
+  bard: [
+    {
+      label: 'Inspire',
+      emoji: '🎶',
+      description: 'A song that boosts HP regeneration',
+      cooldownMs: 60000,
+      type: 'regen_buff',
+      tier: 1,
+      levelRequired: 5,
+    },
+  ],
+  rogue: [
+    {
+      label: 'Shadowstep',
+      emoji: '🌑',
+      description: 'Vanish into shadow — avoid attacks when fleeing and deal bonus damage on your next strike',
+      cooldownMs: 60000,
+      type: 'stealth_buff',
+      tier: 1,
+      levelRequired: 5,
+    },
+  ],
+  wizard: [
+    {
+      label: 'Arcane Surge',
+      emoji: '✨',
+      description: 'Channel raw arcane energy to amplify your spell damage',
+      cooldownMs: 60000,
+      type: 'damage_buff',
+      tier: 1,
+      levelRequired: 5,
+    },
+  ],
 };
