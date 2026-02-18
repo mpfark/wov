@@ -40,6 +40,7 @@ interface Props {
   actionBindings?: ActionBindings;
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
+  sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
 }
 
 export default function NodeView({
@@ -48,6 +49,7 @@ export default function NodeView({
   beltedPotions = [], onUseBeltPotion, actionBindings,
   poisonStacks = {},
   igniteStacks = {},
+  sunderDebuff,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [healTarget, setHealTarget] = useState<string>('');
@@ -119,6 +121,7 @@ export default function NodeView({
                   const hasPoisonStacks = creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
                   const creatureIgniteStacks = igniteStacks[c.id];
                   const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
+                  const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
                   return (
                     <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
@@ -149,6 +152,18 @@ export default function NodeView({
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
                               Burn: {creatureIgniteStacks!.stacks} stack{creatureIgniteStacks!.stacks > 1 ? 's' : ''} — {creatureIgniteStacks!.stacks * creatureIgniteStacks!.damagePerTick} dmg/tick
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {isSundered && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-[10px] text-dwarvish font-display animate-pulse">
+                                🔨
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              Sundered: AC reduced by {sunderDebuff!.acReduction}
                             </TooltipContent>
                           </Tooltip>
                         )}
