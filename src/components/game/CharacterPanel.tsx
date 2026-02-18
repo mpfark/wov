@@ -83,7 +83,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
               <div className={`text-[10px] font-display truncate ${RARITY_COLORS[item.item.rarity]}`}>
                 {item.item.name}
               </div>
-              <div className="text-[9px] text-muted-foreground">{item.current_durability}%</div>
+              <div className="text-[9px] text-muted-foreground">{item.current_durability}</div>
             </>
           ) : (
             <div className="text-[10px] text-muted-foreground/50">Empty</div>
@@ -481,7 +481,7 @@ export default function CharacterPanel({
                           {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
                         </p>
                       ))}
-                      <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
+                      <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}/{inv.item.max_durability} | Value: {inv.item.value}g</p>
                       {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
                     </TooltipContent>
                   </Tooltip>

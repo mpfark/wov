@@ -340,25 +340,26 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [creatures, character.hp, addLog, startCombat]);
 
   const degradeEquipment = useCallback(async () => {
-    for (const item of equipped) {
-      const newDur = item.current_durability - 1;
-      if (newDur <= 0) {
-        if (item.item.rarity === 'unique') {
-          addLog(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`);
-          await supabase.from('character_inventory').delete().eq('id', item.id);
-        } else if (item.item.rarity === 'rare') {
-          addLog(`💔 Your ${item.item.name} has broken beyond repair!`);
-          await supabase.from('character_inventory').delete().eq('id', item.id);
-        } else {
-          // Common/uncommon: keep in inventory but unequip
-          addLog(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`);
-          await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null, belt_slot: null } as any).eq('id', item.id);
-        }
+    if (equipped.length === 0) return;
+    // Only 25% chance to degrade a single random equipped item per hit
+    if (Math.random() > 0.25) return;
+    const item = equipped[Math.floor(Math.random() * equipped.length)];
+    const newDur = item.current_durability - 1;
+    if (newDur <= 0) {
+      if (item.item.rarity === 'unique') {
+        addLog(`💔 Your ${item.item.name} shatters and its essence returns to its origin...`);
+        await supabase.from('character_inventory').delete().eq('id', item.id);
+      } else if (item.item.rarity === 'rare') {
+        addLog(`💔 Your ${item.item.name} has broken beyond repair!`);
+        await supabase.from('character_inventory').delete().eq('id', item.id);
       } else {
-        await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
+        addLog(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`);
+        await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null, belt_slot: null } as any).eq('id', item.id);
       }
+    } else {
+      await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);
     }
-    if (equipped.length > 0) fetchInventory();
+    fetchInventory();
   }, [equipped, addLog, fetchInventory]);
 
   const handleMove = useCallback(async (nodeId: string, direction?: string) => {
