@@ -43,6 +43,9 @@ function getLogColor(log: string): string {
   if (log.startsWith('🛡️')) return 'text-dwarvish';
   if (log.startsWith('📯')) return 'text-dwarvish';
   if (log.startsWith('🩸')) return 'text-blood';
+  if (log.startsWith('🧪')) return 'text-elvish';
+  if (log.startsWith('🔪')) return 'text-primary font-semibold';
+  if (log.startsWith('🌫️')) return 'text-primary';
   if (log.includes('miss')) return 'text-muted-foreground';
   if (log.includes('damage')) return 'text-foreground/90';
   return 'text-foreground/80';
@@ -84,6 +87,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [rootDebuff, setRootDebuff] = useState<{ damageReduction: number; expiresAt: number } | null>(null);
   const [acBuff, setAcBuff] = useState<{ bonus: number; expiresAt: number } | null>(null);
   const [dotDebuff, setDotDebuff] = useState<{ damagePerTick: number; intervalMs: number; expiresAt: number; creatureId: string } | null>(null);
+  const [poisonBuff, setPoisonBuff] = useState<{ expiresAt: number } | null>(null);
+  const [poisonStacks, setPoisonStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
+  const [evasionBuff, setEvasionBuff] = useState<{ dodgeChance: number; expiresAt: number } | null>(null);
   const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -261,6 +267,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const rollLootRef = useRef<(lootTable: any[], creatureName: string) => Promise<void>>(async () => {});
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
 
+  const handleAddPoisonStack = useCallback((creatureId: string) => {
+    const dexMod = getStatMod2(character.dex);
+    const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2));
+    setPoisonStacks(prev => {
+      const existing = prev[creatureId];
+      const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
+      return { ...prev, [creatureId]: { stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + 15000 } };
+    });
+  }, [character.dex]);
+
   // --- Auto-combat hook (must be before aggro effect) ---
   const { inCombat, activeCombatCreatureId, creatureHpOverrides, startCombat, stopCombat: stopCombatFn } = useCombat({
     character,
@@ -284,6 +300,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     damageBuff,
     rootDebuff,
     acBuff,
+    poisonBuff,
+    onAddPoisonStack: handleAddPoisonStack,
+    evasionBuff,
   });
 
   // DoT (Rend bleed) tick effect
@@ -307,6 +326,39 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }, dotDebuff.intervalMs);
     return () => clearInterval(interval);
   }, [dotDebuff, creatures, creatureHpOverrides, addLog]);
+
+  // Poison DoT tick effect — every 3 seconds, deal cumulative poison damage per creature
+  useEffect(() => {
+    const activeStacks = Object.entries(poisonStacks).filter(([, s]) => Date.now() < s.expiresAt);
+    if (activeStacks.length === 0) return;
+    const interval = setInterval(async () => {
+      const now = Date.now();
+      let anyExpired = false;
+      for (const [creatureId, stack] of Object.entries(poisonStacks)) {
+        if (now >= stack.expiresAt) { anyExpired = true; continue; }
+        const creature = creatures.find(c => c.id === creatureId);
+        if (!creature || !creature.is_alive || creature.hp <= 0) { anyExpired = true; continue; }
+        const totalDmg = stack.stacks * stack.damagePerTick;
+        const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
+        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
+        addLog(`🧪 ${creature.name} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+      }
+      if (anyExpired) {
+        setPoisonStacks(prev => {
+          const next = { ...prev };
+          for (const key of Object.keys(next)) {
+            if (Date.now() >= next[key].expiresAt) delete next[key];
+            else {
+              const c = creatures.find(cr => cr.id === key);
+              if (!c || !c.is_alive || c.hp <= 0) delete next[key];
+            }
+          }
+          return next;
+        });
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [poisonStacks, creatures, creatureHpOverrides, addLog]);
 
   const handleAttack = useCallback((creatureId: string) => {
     if (isDead) return;
@@ -738,10 +790,50 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationSec = 12 + Math.min(strMod, 6);
       setDotDebuff({ damagePerTick: dmgPerTick, intervalMs: 3000, expiresAt: Date.now() + durationSec * 1000, creatureId: creature.id });
       addLog(`${ability.emoji} Rend! ${creature.name} is bleeding for ${dmgPerTick} damage every 3s for ${durationSec}s.`);
+    } else if (ability.type === 'poison_buff') {
+      const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
+      const durationMs = Math.min(30000, 20000 + dexMod * 1000);
+      setPoisonBuff({ expiresAt: Date.now() + durationMs });
+      addLog(`${ability.emoji} Envenom! Your blade drips with poison for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'execute_attack') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Eviscerate!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Eviscerate.`);
+        return;
+      }
+      const stacks = poisonStacks[activeCombatCreatureId];
+      const stackCount = stacks?.stacks || 0;
+      const combat = CLASS_COMBAT.rogue;
+      const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
+      const baseDmg = rollDamage(combat.diceMin, combat.diceMax) + dexMod;
+      const multiplier = 1 + 0.5 * stackCount;
+      const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+      const newHp = Math.max((creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
+      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
+      // Consume all stacks
+      if (stackCount > 0) {
+        setPoisonStacks(prev => {
+          const next = { ...prev };
+          delete next[activeCombatCreatureId];
+          return next;
+        });
+        addLog(`${ability.emoji} Eviscerate! You rip through ${creature.name} consuming ${stackCount} poison stack${stackCount > 1 ? 's' : ''} for ${finalDmg} damage!`);
+      } else {
+        addLog(`${ability.emoji} Eviscerate! You strike ${creature.name} for ${finalDmg} damage. (No poison stacks to consume)`);
+      }
+    } else if (ability.type === 'evasion_buff') {
+      const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
+      const durationMs = Math.min(15000, 10000 + dexMod * 500);
+      setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs });
+      addLog(`${ability.emoji} Cloak of Shadows! 50% dodge chance for ${Math.round(durationMs / 1000)}s.`);
     }
 
     setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
-  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides]);
+  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks]);
 
   // Keyboard movement + action bindings
   const handleAbilityKey = useCallback((index: number) => {
@@ -843,6 +935,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             foodBuff={foodBuff}
             critBuff={critBuff}
             acBuff={acBuff}
+            poisonBuff={poisonBuff}
+            evasionBuff={evasionBuff}
           />
         </div>
 
