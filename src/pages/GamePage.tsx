@@ -52,6 +52,7 @@ function getLogColor(log: string): string {
   if (log.startsWith('🎵💢')) return 'text-dwarvish';
   if (log.startsWith('🎶✨')) return 'text-elvish';
   if (log.startsWith('🔄🎭')) return 'text-primary font-semibold';
+  if (log.startsWith('🔨')) return 'text-dwarvish font-semibold';
   if (log.includes('miss')) return 'text-muted-foreground';
   if (log.includes('damage')) return 'text-foreground/90';
   return 'text-foreground/80';
@@ -101,6 +102,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [absorbBuff, setAbsorbBuff] = useState<{ shieldHp: number; expiresAt: number } | null>(null);
   const [partyRegenBuff, setPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number } | null>(null);
   const [lastUsedAbilityIndex, setLastUsedAbilityIndex] = useState<number | null>(null);
+  const [sunderDebuff, setSunderDebuff] = useState<{ acReduction: number; expiresAt: number; creatureId: string } | null>(null);
   const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -337,6 +339,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onAddIgniteStack: handleAddIgniteStack,
     absorbBuff,
     onAbsorbDamage: handleAbsorbDamage,
+    sunderDebuff,
   });
 
   // DoT (Rend bleed) tick effect
@@ -1003,6 +1006,21 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
         addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
       }
+    } else if (ability.type === 'sunder_debuff') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Sunder Armor!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Sunder Armor.`);
+        return;
+      }
+      const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
+      const acReduction = Math.max(2, strMod);
+      const durationSec = Math.min(20, 12 + strMod);
+      setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: activeCombatCreatureId });
+      addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'cooldown_reset') {
       if (lastUsedAbilityIndex === null) {
         addLog(`${ability.emoji} Encore! But there's no recent ability to reset.`);
