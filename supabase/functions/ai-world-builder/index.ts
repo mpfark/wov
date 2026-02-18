@@ -133,7 +133,9 @@ RULES:
 - AC formula: 8 + floor(level / 3) for regular, +2 for rare, +4 for boss
 - Loot tables are arrays of {item_name, drop_chance (0-1), gold_min, gold_max}
 - NPC dialogue should be lore-appropriate and atmospheric
-- Use temp IDs like "node_1", "node_2" for internal references in connections
+- Use temp IDs like "node_1", "node_2" ONLY in the temp_id field and connection references — NEVER include temp IDs in the "name" field
+- Node "name" must be a clean, lore-appropriate place name only (e.g. "Thornwood Clearing", "Rivermist Bridge"). NEVER append temp IDs, booleans, field names, or any metadata to node names.
+- The is_inn, is_vendor, is_blacksmith fields are SEPARATE boolean fields — do NOT put "is_vendor", "vendor", "true/false" or similar text inside the name or description
 - For expanding existing regions, use "existing:<real_uuid>" in target_temp_id to connect to existing nodes
 - Connections between nodes you generate should be bidirectional
 - Generate 2-4 creatures per node (mix of aggressive and passive)
@@ -294,15 +296,26 @@ Call the generate_world tool with the structured output.`;
 
     // Sanitize: strip non-ASCII from all name fields
     const stripNonAscii = (s: string) => s.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
-    if (generated.region?.name) generated.region.name = stripNonAscii(generated.region.name);
+    // Also strip leaked temp IDs, boolean flags, and metadata from names
+    const cleanName = (s: string) => {
+      let cleaned = stripNonAscii(s);
+      // Remove patterns like "node_1", "node_2", "(is_vendor)", "is_vendor: true", etc.
+      cleaned = cleaned.replace(/\s*\(?node_\d+\)?/gi, '');
+      cleaned = cleaned.replace(/\s*\(?\s*is_(vendor|inn|blacksmith)\s*:?\s*(true|false)?\s*\)?/gi, '');
+      cleaned = cleaned.replace(/\s*\(?\s*(vendor|inn|blacksmith)\s*:?\s*(true|false)\s*\)?/gi, '');
+      // Remove trailing/leading punctuation artifacts
+      cleaned = cleaned.replace(/^[\s,\-–]+|[\s,\-–]+$/g, '').trim();
+      return cleaned;
+    };
+    if (generated.region?.name) generated.region.name = cleanName(generated.region.name);
     for (const node of (generated.nodes || [])) {
-      if (node.name) node.name = stripNonAscii(node.name);
+      if (node.name) node.name = cleanName(node.name);
     }
     for (const cr of (generated.creatures || [])) {
-      if (cr.name) cr.name = stripNonAscii(cr.name);
+      if (cr.name) cr.name = cleanName(cr.name);
     }
     for (const npc of (generated.npcs || [])) {
-      if (npc.name) npc.name = stripNonAscii(npc.name);
+      if (npc.name) npc.name = cleanName(npc.name);
     }
 
     return new Response(JSON.stringify(generated), {
