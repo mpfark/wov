@@ -46,6 +46,9 @@ function getLogColor(log: string): string {
   if (log.startsWith('🧪')) return 'text-elvish';
   if (log.startsWith('🔪')) return 'text-primary font-semibold';
   if (log.startsWith('🌫️')) return 'text-primary';
+  if (log.startsWith('🔥🔥') || log.startsWith('🔥')) return 'text-dwarvish';
+  if (log.startsWith('💥')) return 'text-primary font-semibold';
+  if (log.startsWith('🛡️✨')) return 'text-primary';
   if (log.includes('miss')) return 'text-muted-foreground';
   if (log.includes('damage')) return 'text-foreground/90';
   return 'text-foreground/80';
@@ -90,6 +93,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [poisonBuff, setPoisonBuff] = useState<{ expiresAt: number } | null>(null);
   const [poisonStacks, setPoisonStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
   const [evasionBuff, setEvasionBuff] = useState<{ dodgeChance: number; expiresAt: number } | null>(null);
+  const [igniteBuff, setIgniteBuff] = useState<{ expiresAt: number } | null>(null);
+  const [igniteStacks, setIgniteStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
+  const [absorbBuff, setAbsorbBuff] = useState<{ shieldHp: number; expiresAt: number } | null>(null);
   const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -277,6 +283,25 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     });
   }, [character.dex]);
 
+  const handleAddIgniteStack = useCallback((creatureId: string) => {
+    const intMod = getStatMod2(character.int);
+    const dmgPerTick = Math.max(1, Math.floor(intMod * 1.2));
+    setIgniteStacks(prev => {
+      const existing = prev[creatureId];
+      const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
+      const duration = Math.min(30000, 20000 + intMod * 1000);
+      return { ...prev, [creatureId]: { stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + duration } };
+    });
+  }, [character.int]);
+
+  const handleAbsorbDamage = useCallback((remaining: number) => {
+    setAbsorbBuff(prev => {
+      if (!prev) return null;
+      if (remaining <= 0) return null;
+      return { ...prev, shieldHp: remaining };
+    });
+  }, []);
+
   // --- Auto-combat hook (must be before aggro effect) ---
   const { inCombat, activeCombatCreatureId, creatureHpOverrides, startCombat, stopCombat: stopCombatFn } = useCombat({
     character,
@@ -303,6 +328,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     poisonBuff,
     onAddPoisonStack: handleAddPoisonStack,
     evasionBuff,
+    igniteBuff,
+    onAddIgniteStack: handleAddIgniteStack,
+    absorbBuff,
+    onAbsorbDamage: handleAbsorbDamage,
   });
 
   // DoT (Rend bleed) tick effect
@@ -359,6 +388,39 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }, 3000);
     return () => clearInterval(interval);
   }, [poisonStacks, creatures, creatureHpOverrides, addLog]);
+
+  // Ignite DoT tick effect — every 3 seconds, deal cumulative burn damage per creature
+  useEffect(() => {
+    const activeStacks = Object.entries(igniteStacks).filter(([, s]) => Date.now() < s.expiresAt);
+    if (activeStacks.length === 0) return;
+    const interval = setInterval(async () => {
+      const now = Date.now();
+      let anyExpired = false;
+      for (const [creatureId, stack] of Object.entries(igniteStacks)) {
+        if (now >= stack.expiresAt) { anyExpired = true; continue; }
+        const creature = creatures.find(c => c.id === creatureId);
+        if (!creature || !creature.is_alive || creature.hp <= 0) { anyExpired = true; continue; }
+        const totalDmg = stack.stacks * stack.damagePerTick;
+        const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
+        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
+        addLog(`🔥 ${creature.name} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+      }
+      if (anyExpired) {
+        setIgniteStacks(prev => {
+          const next = { ...prev };
+          for (const key of Object.keys(next)) {
+            if (Date.now() >= next[key].expiresAt) delete next[key];
+            else {
+              const c = creatures.find(cr => cr.id === key);
+              if (!c || !c.is_alive || c.hp <= 0) delete next[key];
+            }
+          }
+          return next;
+        });
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [igniteStacks, creatures, creatureHpOverrides, addLog]);
 
   const handleAttack = useCallback((creatureId: string) => {
     if (isDead) return;
@@ -814,7 +876,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
       const newHp = Math.max((creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
       await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-      // Consume all stacks
       if (stackCount > 0) {
         setPoisonStacks(prev => {
           const next = { ...prev };
@@ -830,10 +891,50 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
       setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Cloak of Shadows! 50% dodge chance for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'ignite_buff') {
+      const intMod = getStatMod2(character.int + (equipmentBonuses.int || 0));
+      const durationMs = Math.min(30000, 20000 + intMod * 1000);
+      setIgniteBuff({ expiresAt: Date.now() + durationMs });
+      addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'ignite_consume') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Conflagrate!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Conflagrate.`);
+        return;
+      }
+      const stacks = igniteStacks[activeCombatCreatureId];
+      const stackCount = stacks?.stacks || 0;
+      const combat = CLASS_COMBAT.wizard;
+      const intMod = getStatMod2(character.int + (equipmentBonuses.int || 0));
+      const baseDmg = rollDamage(combat.diceMin, combat.diceMax) + intMod;
+      const multiplier = 1 + 0.5 * stackCount;
+      const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+      const newHp = Math.max((creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
+      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
+      if (stackCount > 0) {
+        setIgniteStacks(prev => {
+          const next = { ...prev };
+          delete next[activeCombatCreatureId];
+          return next;
+        });
+        addLog(`${ability.emoji} Conflagrate! You detonate ${stackCount} burn stack${stackCount > 1 ? 's' : ''} on ${creature.name} for ${finalDmg} damage!`);
+      } else {
+        addLog(`${ability.emoji} Conflagrate! You blast ${creature.name} for ${finalDmg} damage. (No burn stacks to consume)`);
+      }
+    } else if (ability.type === 'absorb_buff') {
+      const intMod = getStatMod2(character.int + (equipmentBonuses.int || 0));
+      const shieldHp = intMod * 4 + character.level;
+      const durationMs = Math.min(20000, 10000 + intMod * 1000);
+      setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
+      addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
     }
 
     setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
-  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks]);
+  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks, igniteStacks]);
 
   // Keyboard movement + action bindings
   const handleAbilityKey = useCallback((index: number) => {
@@ -937,6 +1038,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             acBuff={acBuff}
             poisonBuff={poisonBuff}
             evasionBuff={evasionBuff}
+            igniteBuff={igniteBuff}
+            absorbBuff={absorbBuff}
           />
         </div>
 
@@ -973,6 +1076,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onUseBeltPotion={handleUseConsumable}
               actionBindings={keyboardMovement.actionBindings}
               poisonStacks={poisonStacks}
+              igniteStacks={igniteStacks}
             />
           </div>
           {/* Event Log - docked at bottom of middle column, 1/3 height */}

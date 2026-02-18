@@ -44,6 +44,10 @@ interface UseCombatParams {
   poisonBuff?: { expiresAt: number } | null;
   onAddPoisonStack?: (creatureId: string) => void;
   evasionBuff?: { dodgeChance: number; expiresAt: number } | null;
+  igniteBuff?: { expiresAt: number } | null;
+  onAddIgniteStack?: (creatureId: string) => void;
+  absorbBuff?: { shieldHp: number; expiresAt: number } | null;
+  onAbsorbDamage?: (remaining: number) => void;
 }
 
 export function useCombat({
@@ -67,6 +71,10 @@ export function useCombat({
   poisonBuff,
   onAddPoisonStack,
   evasionBuff,
+  igniteBuff,
+  onAddIgniteStack,
+  absorbBuff,
+  onAbsorbDamage,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -93,6 +101,10 @@ export function useCombat({
   const poisonBuffRef = useRef(poisonBuff);
   const onAddPoisonStackRef = useRef(onAddPoisonStack);
   const evasionBuffRef = useRef(evasionBuff);
+  const igniteBuffRef = useRef(igniteBuff);
+  const onAddIgniteStackRef = useRef(onAddIgniteStack);
+  const absorbBuffRef = useRef(absorbBuff);
+  const onAbsorbDamageRef = useRef(onAbsorbDamage);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -116,6 +128,10 @@ export function useCombat({
   useEffect(() => { poisonBuffRef.current = poisonBuff; }, [poisonBuff]);
   useEffect(() => { onAddPoisonStackRef.current = onAddPoisonStack; }, [onAddPoisonStack]);
   useEffect(() => { evasionBuffRef.current = evasionBuff; }, [evasionBuff]);
+  useEffect(() => { igniteBuffRef.current = igniteBuff; }, [igniteBuff]);
+  useEffect(() => { onAddIgniteStackRef.current = onAddIgniteStack; }, [onAddIgniteStack]);
+  useEffect(() => { absorbBuffRef.current = absorbBuff; }, [absorbBuff]);
+  useEffect(() => { onAbsorbDamageRef.current = onAbsorbDamage; }, [onAbsorbDamage]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -260,6 +276,13 @@ export function useCombat({
           _addLog(`🧪 Your poisoned blade leaves a toxic wound on ${creature.name}!`);
         }
 
+        // Ignite proc — 40% chance to add a burn stack if Ignite is active
+        const _igniteBuff = igniteBuffRef.current;
+        if (_igniteBuff && Date.now() < _igniteBuff.expiresAt && Math.random() < 0.4) {
+          onAddIgniteStackRef.current?.(creatureId);
+          _addLog(`🔥 Your spell sets ${creature.name} ablaze!`);
+        }
+
         if (newHp <= 0) {
           // Creature dies
           const baseXp = creature.level * 10;
@@ -399,13 +422,36 @@ export function useCombat({
           const dmgDie2 = getCreatureDamageDie(creature.level, creature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(creature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-          const playerNewHp = Math.max(char.hp - creatureDmg, 0);
-          _addLog(`${isRooted ? '🌿 ' : ''}${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${buffedAC} — Hit! ${creatureDmg} damage.`);
-          await _updateCharacter({ hp: playerNewHp });
-          await _degradeEquipment();
-          if (playerNewHp <= 0) {
-            _addLog(`💀 ${who} ${_party ? 'has' : 'have'} been defeated...`);
-            stopCombat();
+
+          // Force Shield absorb check
+          const _absorbBuff = absorbBuffRef.current;
+          const hasShield = _absorbBuff && Date.now() < _absorbBuff.expiresAt && _absorbBuff.shieldHp > 0;
+          if (hasShield) {
+            const absorbed = Math.min(creatureDmg, _absorbBuff!.shieldHp);
+            const remainingShield = _absorbBuff!.shieldHp - absorbed;
+            const remainingDmg = creatureDmg - absorbed;
+            onAbsorbDamageRef.current?.(remainingShield);
+            if (remainingDmg > 0) {
+              const playerNewHp = Math.max(char.hp - remainingDmg, 0);
+              _addLog(`🛡️✨ Force Shield absorbs ${absorbed} damage! ${remainingDmg} damage bleeds through. (Shield broken)`);
+              await _updateCharacter({ hp: playerNewHp });
+              await _degradeEquipment();
+              if (playerNewHp <= 0) {
+                _addLog(`💀 ${who} ${_party ? 'has' : 'have'} been defeated...`);
+                stopCombat();
+              }
+            } else {
+              _addLog(`🛡️✨ Force Shield absorbs all ${absorbed} damage! (${remainingShield} shield HP left)`);
+            }
+          } else {
+            const playerNewHp = Math.max(char.hp - creatureDmg, 0);
+            _addLog(`${isRooted ? '🌿 ' : ''}${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${buffedAC} — Hit! ${creatureDmg} damage.`);
+            await _updateCharacter({ hp: playerNewHp });
+            await _degradeEquipment();
+            if (playerNewHp <= 0) {
+              _addLog(`💀 ${who} ${_party ? 'has' : 'have'} been defeated...`);
+              stopCombat();
+            }
           }
         } else {
           _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} attacks ${who} — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
