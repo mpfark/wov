@@ -26,6 +26,8 @@ interface Props {
   foodBuff?: { flatRegen: number; expiresAt: number };
   critBuff?: { bonus: number; expiresAt: number };
   acBuff?: { bonus: number; expiresAt: number } | null;
+  poisonBuff?: { expiresAt: number } | null;
+  evasionBuff?: { dodgeChance: number; expiresAt: number } | null;
   // Belt potion system
   beltedPotions?: InventoryItem[];
   beltCapacity?: number;
@@ -110,21 +112,23 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
-  Potion: 120_000, Inspire: 90_000, Food: 120_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000,
+  Potion: 120_000, Inspire: 90_000, Food: 120_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Cloak of Shadows': 15_000,
 };
 
-function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null }) {
+function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, evasionBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number } | null }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
   const acActive = acBuff && now < acBuff.expiresAt;
+  const poisonActive = poisonBuff && now < poisonBuff.expiresAt;
+  const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
 
   useEffect(() => {
-    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive) return;
+    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !evasionActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [buffActive, foodActive, isAtInn, critActive, acActive]);
+  }, [buffActive, foodActive, isAtInn, critActive, acActive, poisonActive, evasionActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
@@ -186,6 +190,32 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff }: { isAtI
     });
   }
 
+  if (poisonActive) {
+    const dur = BUFF_DURATIONS['Envenom'] || 30_000;
+    const pct = Math.max(0, Math.min(100, ((poisonBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({
+      emoji: '🧪',
+      label: 'Envenom',
+      detail: '40% poison proc',
+      color: 'text-elvish',
+      bgColor: 'bg-elvish/15',
+      pct,
+    });
+  }
+
+  if (evasionActive) {
+    const dur = BUFF_DURATIONS['Cloak of Shadows'] || 15_000;
+    const pct = Math.max(0, Math.min(100, ((evasionBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({
+      emoji: '🌫️',
+      label: 'Cloak of Shadows',
+      detail: '50% dodge',
+      color: 'text-primary',
+      bgColor: 'bg-primary/15',
+      pct,
+    });
+  }
+
   if (buffs.length === 0) return (
     <div className="text-[9px] text-muted-foreground/40 italic">No buffs</div>
   );
@@ -210,6 +240,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff }: { isAtI
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
+  poisonBuff, evasionBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
@@ -348,7 +379,7 @@ export default function CharacterPanel({
             {/* Right column: Active Buffs */}
             <div className="border-l border-border pl-2">
               <div className="text-[9px] text-muted-foreground/70 mb-0.5">Buffs</div>
-              <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} acBuff={acBuff} />
+              <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} acBuff={acBuff} poisonBuff={poisonBuff} evasionBuff={evasionBuff} />
             </div>
           </div>
           <div className="flex gap-3 justify-center text-xs mt-1.5">

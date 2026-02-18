@@ -41,6 +41,9 @@ interface UseCombatParams {
   damageBuff?: { expiresAt: number } | null;
   rootDebuff?: { damageReduction: number; expiresAt: number } | null;
   acBuff?: { bonus: number; expiresAt: number } | null;
+  poisonBuff?: { expiresAt: number } | null;
+  onAddPoisonStack?: (creatureId: string) => void;
+  evasionBuff?: { dodgeChance: number; expiresAt: number } | null;
 }
 
 export function useCombat({
@@ -61,6 +64,9 @@ export function useCombat({
   damageBuff,
   rootDebuff,
   acBuff,
+  poisonBuff,
+  onAddPoisonStack,
+  evasionBuff,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -84,6 +90,9 @@ export function useCombat({
   const damageBuffRef = useRef(damageBuff);
   const rootDebuffRef = useRef(rootDebuff);
   const acBuffRef = useRef(acBuff);
+  const poisonBuffRef = useRef(poisonBuff);
+  const onAddPoisonStackRef = useRef(onAddPoisonStack);
+  const evasionBuffRef = useRef(evasionBuff);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -104,6 +113,9 @@ export function useCombat({
   useEffect(() => { damageBuffRef.current = damageBuff; }, [damageBuff]);
   useEffect(() => { rootDebuffRef.current = rootDebuff; }, [rootDebuff]);
   useEffect(() => { acBuffRef.current = acBuff; }, [acBuff]);
+  useEffect(() => { poisonBuffRef.current = poisonBuff; }, [poisonBuff]);
+  useEffect(() => { onAddPoisonStackRef.current = onAddPoisonStack; }, [onAddPoisonStack]);
+  useEffect(() => { evasionBuffRef.current = evasionBuff; }, [evasionBuff]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -241,6 +253,13 @@ export function useCombat({
           `${ambushPrefix}${surgePrefix}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage.`
         );
 
+        // Poison proc — 40% chance to add a poison stack if Envenom is active
+        const _poisonBuff = poisonBuffRef.current;
+        if (_poisonBuff && Date.now() < _poisonBuff.expiresAt && Math.random() < 0.4) {
+          onAddPoisonStackRef.current?.(creatureId);
+          _addLog(`🧪 Your poisoned blade leaves a toxic wound on ${creature.name}!`);
+        }
+
         if (newHp <= 0) {
           // Creature dies
           const baseXp = creature.level * 10;
@@ -371,7 +390,12 @@ export function useCombat({
           _addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
         }
       } else {
-        if (creatureAtk >= buffedAC) {
+        // Evasion check (Cloak of Shadows)
+        const _evasionBuff = evasionBuffRef.current;
+        const isEvading = _evasionBuff && Date.now() < _evasionBuff.expiresAt;
+        if (isEvading && Math.random() < _evasionBuff!.dodgeChance) {
+          _addLog(`🌫️ ${who} ${_party ? 'dodges' : 'dodge'} ${creature.name}'s attack from the shadows!`);
+        } else if (creatureAtk >= buffedAC) {
           const dmgDie2 = getCreatureDamageDie(creature.level, creature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(creature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);

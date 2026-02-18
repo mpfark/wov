@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cooldownMs: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff';
   tier: number;
   levelRequired: number;
 }
@@ -126,6 +126,33 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
       type: 'stealth_buff',
       tier: 1,
       levelRequired: 5,
+    },
+    {
+      label: 'Envenom',
+      emoji: '🧪',
+      description: 'Coat your blade in poison — each hit has a 40% chance to apply a stackable poison DoT (max 5)',
+      cooldownMs: 60000,
+      type: 'poison_buff',
+      tier: 2,
+      levelRequired: 10,
+    },
+    {
+      label: 'Eviscerate',
+      emoji: '🔪',
+      description: 'A vicious strike that consumes all poison stacks for +50% bonus damage per stack',
+      cooldownMs: 45000,
+      type: 'execute_attack',
+      tier: 3,
+      levelRequired: 15,
+    },
+    {
+      label: 'Cloak of Shadows',
+      emoji: '🌫️',
+      description: 'Wrap yourself in shadow, gaining a 50% chance to dodge incoming attacks',
+      cooldownMs: 90000,
+      type: 'evasion_buff',
+      tier: 4,
+      levelRequired: 20,
     },
   ],
   wizard: [
