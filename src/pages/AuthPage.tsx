@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { APP_VERSION } from '@/lib/version';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -36,7 +37,7 @@ export default function AuthPage() {
       <Card className="w-full max-w-md ornate-border bg-card/90 backdrop-blur">
         <CardHeader className="text-center">
           <h1 className="font-display text-2xl text-primary text-glow mb-2 leading-tight">
-            Wayfarers of Eldara <span className="text-sm text-muted-foreground font-body ml-1">v0.3.0</span>
+            Wayfarers of Eldara <span className="text-sm text-muted-foreground font-body ml-1">{APP_VERSION}</span>
           </h1>
           <CardTitle className="font-display text-xl text-foreground">
             {isLogin ? 'Enter the Realm' : 'Join the Fellowship'}
