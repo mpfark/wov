@@ -212,11 +212,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   // Refs for death respawn to avoid stale closures / cleanup races
   const deathGoldRef = useRef(character.gold);
-  const deathNodeRef = useRef(startingNodeId || character.current_node_id);
+  const deathNodeRef = useRef(startingNodeId);
   const updateCharRef = useRef(updateCharacter);
   const addLogRef = useRef(addLog);
   useEffect(() => { deathGoldRef.current = character.gold; }, [character.gold]);
-  useEffect(() => { deathNodeRef.current = startingNodeId || character.current_node_id; }, [startingNodeId, character.current_node_id]);
+  useEffect(() => { deathNodeRef.current = startingNodeId; }, [startingNodeId]);
   useEffect(() => { updateCharRef.current = updateCharacter; }, [updateCharacter]);
   useEffect(() => { addLogRef.current = addLog; }, [addLog]);
 
