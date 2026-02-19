@@ -51,6 +51,7 @@ interface UseCombatParams {
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
   disengageNextHit?: { bonusMult: number; expiresAt: number } | null;
   onClearDisengage?: () => void;
+  broadcastDamage?: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
 }
 
 export function useCombat({
@@ -81,6 +82,7 @@ export function useCombat({
   sunderDebuff,
   disengageNextHit,
   onClearDisengage,
+  broadcastDamage,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -115,6 +117,7 @@ export function useCombat({
   const sunderDebuffRef = useRef(sunderDebuff);
   const disengageNextHitRef = useRef(disengageNextHit);
   const onClearDisengageRef = useRef(onClearDisengage);
+  const broadcastDamageRef = useRef(broadcastDamage);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -145,6 +148,7 @@ export function useCombat({
   useEffect(() => { sunderDebuffRef.current = sunderDebuff; }, [sunderDebuff]);
   useEffect(() => { disengageNextHitRef.current = disengageNextHit; }, [disengageNextHit]);
   useEffect(() => { onClearDisengageRef.current = onClearDisengage; }, [onClearDisengage]);
+  useEffect(() => { broadcastDamageRef.current = broadcastDamage; }, [broadcastDamage]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -335,6 +339,7 @@ export function useCombat({
           }
 
           updateCreatureHp(creatureId, 0);
+          broadcastDamageRef.current?.(creatureId, 0, finalDmg, char.name, true);
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
 
           // Fresh query for party members at the same node to avoid stale ref data
@@ -437,6 +442,7 @@ export function useCombat({
           return;
         } else {
           updateCreatureHp(creatureId, newHp);
+          broadcastDamageRef.current?.(creatureId, newHp, finalDmg, char.name, false);
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: false });
         }
       } else {
