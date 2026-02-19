@@ -95,14 +95,32 @@ export function useParty(characterId: string | null) {
       .channel(`party-${characterId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'party_members' }, () => fetchParty())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'parties' }, () => fetchParty())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters' }, () => {
-        // Refresh when any character updates (e.g. position, hp) so party member data stays current
-        fetchParty();
-      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [characterId, fetchParty]);
+
+  // Separate subscription for party member character updates — only listen for members in the party
+  useEffect(() => {
+    if (!characterId || members.length === 0) return;
+
+    const memberCharIds = members.map(m => m.character_id);
+    const channels = memberCharIds
+      .filter(id => id !== characterId) // skip self — useCharacter handles own updates
+      .map(id =>
+        supabase
+          .channel(`party-char-${id}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'characters',
+            filter: `id=eq.${id}`,
+          }, () => fetchParty())
+          .subscribe()
+      );
+
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
+  }, [characterId, members.map(m => m.character_id).join(','), fetchParty]);
 
   const createParty = useCallback(async () => {
     if (!characterId || party) return;

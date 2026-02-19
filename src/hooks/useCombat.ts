@@ -337,9 +337,19 @@ export function useCombat({
           updateCreatureHp(creatureId, 0);
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
 
-          const membersHere = _party
-            ? _partyMembers.filter(m => m.character?.current_node_id === char.current_node_id)
-            : [];
+          // Fresh query for party members at the same node to avoid stale ref data
+          let membersHere: { character_id: string }[] = [];
+          if (_party) {
+            const { data: freshMembers } = await supabase
+              .from('party_members')
+              .select('character_id, character:characters(current_node_id)')
+              .eq('party_id', _party.id)
+              .eq('status', 'accepted');
+            
+            membersHere = (freshMembers || []).filter(
+              m => (m.character as any)?.current_node_id === char.current_node_id
+            );
+          }
           const splitCount = membersHere.length > 1 ? membersHere.length : 1;
           const xpShare = Math.floor(totalXp / splitCount);
           const goldShare = Math.floor(totalGold / splitCount);
@@ -350,11 +360,15 @@ export function useCombat({
             _addLog(`☠️ ${creature.name} has been slain! Rewards split ${splitCount} ways: +${xpShare} XP${goldNote} each.${penaltyNote}`);
             for (const m of membersHere) {
               if (m.character_id === char.id) continue;
-              await supabase.rpc('award_party_member', {
-                _character_id: m.character_id,
-                _xp: xpShare,
-                _gold: goldShare,
-              });
+              try {
+                await supabase.rpc('award_party_member', {
+                  _character_id: m.character_id,
+                  _xp: xpShare,
+                  _gold: goldShare,
+                });
+              } catch (e) {
+                console.error('Failed to award party member:', m.character_id, e);
+              }
             }
           } else {
             _addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
