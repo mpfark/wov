@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PartyMember {
@@ -87,6 +87,21 @@ export function useParty(characterId: string | null) {
     }
   }, [characterId]);
 
+  // Lightweight function that only refreshes member character data (HP, level, node, etc.)
+  const partyRef = useRef(party);
+  useEffect(() => { partyRef.current = party; }, [party]);
+
+  const fetchMemberStats = useCallback(async () => {
+    const currentParty = partyRef.current;
+    if (!currentParty) return;
+    const { data } = await supabase
+      .from('party_members')
+      .select('id, character_id, status, is_following, character:characters(id, name, race, class, level, hp, max_hp, current_node_id)')
+      .eq('party_id', currentParty.id)
+      .eq('status', 'accepted');
+    if (data) setMembers(data as unknown as PartyMember[]);
+  }, []);
+
   useEffect(() => {
     fetchParty();
     if (!characterId) return;
@@ -100,13 +115,13 @@ export function useParty(characterId: string | null) {
     return () => { supabase.removeChannel(channel); };
   }, [characterId, fetchParty]);
 
-  // Separate subscription for party member character updates — only listen for members in the party
+  // Separate subscription for party member character updates — use lightweight fetchMemberStats
   useEffect(() => {
     if (!characterId || members.length === 0) return;
 
     const memberCharIds = members.map(m => m.character_id);
     const channels = memberCharIds
-      .filter(id => id !== characterId) // skip self — useCharacter handles own updates
+      .filter(id => id !== characterId)
       .map(id =>
         supabase
           .channel(`party-char-${id}`)
@@ -115,12 +130,26 @@ export function useParty(characterId: string | null) {
             schema: 'public',
             table: 'characters',
             filter: `id=eq.${id}`,
-          }, () => fetchParty())
+          }, () => fetchMemberStats())
           .subscribe()
       );
 
     return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
-  }, [characterId, members.map(m => m.character_id).join(','), fetchParty]);
+  }, [characterId, members.map(m => m.character_id).join(','), fetchMemberStats]);
+
+  // Polling fallback — re-fetch member stats every 3 seconds to catch missed realtime events
+  useEffect(() => {
+    if (!party) return;
+    let active = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const poll = () => {
+      if (!active) return;
+      fetchMemberStats();
+      timeoutId = setTimeout(poll, 3000);
+    };
+    timeoutId = setTimeout(poll, 3000);
+    return () => { active = false; clearTimeout(timeoutId); };
+  }, [party?.id, fetchMemberStats]);
 
   const createParty = useCallback(async () => {
     if (!characterId || party) return;

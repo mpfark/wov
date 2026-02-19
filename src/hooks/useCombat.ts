@@ -339,7 +339,7 @@ export function useCombat({
 
           // Fresh query for party members at the same node to avoid stale ref data
           let membersHere: { character_id: string }[] = [];
-          if (_party) {
+          if (_party?.id) {
             const { data: freshMembers } = await supabase
               .from('party_members')
               .select('character_id, character:characters(current_node_id)')
@@ -360,6 +360,11 @@ export function useCombat({
             _addLog(`☠️ ${creature.name} has been slain! Rewards split ${splitCount} ways: +${xpShare} XP${goldNote} each.${penaltyNote}`);
             for (const m of membersHere) {
               if (m.character_id === char.id) continue;
+              // Guard against undefined character_id to prevent UUID errors
+              if (!m.character_id || m.character_id === 'undefined') {
+                console.error('Skipping award: invalid character_id', m.character_id);
+                continue;
+              }
               try {
                 await supabase.rpc('award_party_member', {
                   _character_id: m.character_id,
