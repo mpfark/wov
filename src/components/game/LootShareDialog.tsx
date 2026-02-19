@@ -8,6 +8,7 @@ export interface LootDrop {
   item_id: string;
   item_name: string;
   item_rarity: string;
+  item_type: string;
 }
 
 interface Props {
