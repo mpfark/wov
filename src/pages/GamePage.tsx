@@ -123,10 +123,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     setEventLog(prev => [...prev.slice(-49), displayMsg]);
     // Also write to party combat log if in a party, and track own IDs to prevent duplicates
     (async () => {
-      const id = await addPartyCombatLog(msg, character.current_node_id);
+      const id = await addPartyCombatLog(msg, character.current_node_id, character.name);
       if (id) ownLogIdsRef.current.add(id);
     })();
-  }, [addPartyCombatLog, character.current_node_id]);
+  }, [addPartyCombatLog, character.current_node_id, character.name]);
 
   // Merge party combat log entries from other players into event log
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -139,14 +139,33 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         if (ownLogIdsRef.current.has(entry.id)) continue;
         // Only show entries from the same node
         if (entry.node_id && entry.node_id !== character.current_node_id) continue;
+
+        // Replace "You" references with the character's name so it reads correctly for other players
+        let msg = entry.message;
+        const name = entry.character_name;
+        if (name) {
+          // Replace "You " at start or after emoji(s)
+          msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)You /u, `$1${name} `);
+          // Replace " you " mid-sentence (case-insensitive)
+          msg = msg.replace(/ you /gi, ` ${name} `);
+          // Replace "Your " at start or after emoji(s)
+          msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)Your /u, `$1${name}'s `);
+          // Replace " your " mid-sentence
+          msg = msg.replace(/ your /gi, ` ${name}'s `);
+          // Replace " you." at end
+          msg = msg.replace(/ you\./gi, ` ${name}.`);
+          // Replace " you!" at end
+          msg = msg.replace(/ you!/gi, ` ${name}!`);
+        }
+
         // Detect inspire buff signal from a party bard
-        if (entry.message.includes('[INSPIRE_BUFF]')) {
+        if (msg.includes('[INSPIRE_BUFF]')) {
           setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
-          const cleanMsg = entry.message.replace('[INSPIRE_BUFF]', '').trim();
+          const cleanMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
           setEventLog(prev => [...prev.slice(-49), cleanMsg]);
           continue;
         }
-        setEventLog(prev => [...prev.slice(-49), entry.message]);
+        setEventLog(prev => [...prev.slice(-49), msg]);
       }
     }
   }, [partyCombatEntries, party, character.current_node_id]);

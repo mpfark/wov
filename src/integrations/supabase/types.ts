@@ -448,6 +448,7 @@ export type Database = {
       }
       party_combat_log: {
         Row: {
+          character_name: string | null
           created_at: string
           id: string
           message: string
@@ -455,6 +456,7 @@ export type Database = {
           party_id: string
         }
         Insert: {
+          character_name?: string | null
           created_at?: string
           id?: string
           message: string
@@ -462,6 +464,7 @@ export type Database = {
           party_id: string
         }
         Update: {
+          character_name?: string | null
           created_at?: string
           id?: string
           message?: string
