@@ -314,7 +314,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, []);
 
   // --- Auto-combat hook (must be before aggro effect) ---
-  const { inCombat, activeCombatCreatureId, creatureHpOverrides, startCombat, stopCombat: stopCombatFn } = useCombat({
+  const { inCombat, activeCombatCreatureId, creatureHpOverrides, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = useCombat({
     character,
     creatures,
     updateCharacter,
@@ -364,6 +364,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         return;
       }
       const newHp = Math.max((creatureHpOverrides[dotDebuff.creatureId] ?? creature.hp) - dotDebuff.damagePerTick, 0);
+      updateCreatureHp(dotDebuff.creatureId, newHp);
       await supabase.rpc('damage_creature', { _creature_id: dotDebuff.creatureId, _new_hp: newHp, _killed: newHp <= 0 });
       addLog(`🩸 ${creature.name} bleeds for ${dotDebuff.damagePerTick} damage!`);
     }, dotDebuff.intervalMs);
@@ -383,6 +384,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         if (!creature || !creature.is_alive || creature.hp <= 0) { anyExpired = true; continue; }
         const totalDmg = stack.stacks * stack.damagePerTick;
         const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
+        updateCreatureHp(creatureId, newHp);
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         addLog(`🧪 ${creature.name} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
       }
@@ -416,6 +418,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         if (!creature || !creature.is_alive || creature.hp <= 0) { anyExpired = true; continue; }
         const totalDmg = stack.stacks * stack.damagePerTick;
         const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
+        updateCreatureHp(creatureId, newHp);
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         addLog(`🔥 ${creature.name} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
       }

@@ -554,6 +554,7 @@ export function useCombat({
     inCombat,
     activeCombatCreatureId,
     creatureHpOverrides,
+    updateCreatureHp,
     startCombat,
     stopCombat,
   };
