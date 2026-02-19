@@ -26,6 +26,11 @@ import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 
 function getLogColor(log: string): string {
+  // DoT tick messages — italic + dedicated colors to distinguish from ability procs
+  if (log.includes('bleeds for') && log.startsWith('🩸')) return 'text-dot-bleed italic';
+  if (log.includes('poison damage') && log.startsWith('🧪')) return 'text-dot-poison italic';
+  if (log.includes('burns for') && log.startsWith('🔥')) return 'text-dot-burn italic';
+
   if (log.includes('CRITICAL!')) return 'text-primary font-semibold';
   if (log.startsWith('💀') || log.includes('been defeated') || log.includes('struck down')) return 'text-destructive';
   if (log.startsWith('☠️')) return 'text-elvish';

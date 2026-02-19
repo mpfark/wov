@@ -72,6 +72,9 @@ export default {
         blood: "hsl(var(--blood))",
         elvish: "hsl(var(--elvish))",
         dwarvish: "hsl(var(--dwarvish))",
+        "dot-poison": "hsl(var(--dot-poison))",
+        "dot-burn": "hsl(var(--dot-burn))",
+        "dot-bleed": "hsl(var(--dot-bleed))",
       },
       borderRadius: {
         lg: "var(--radius)",

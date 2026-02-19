@@ -52,6 +52,9 @@
     --blood: 0 65% 40%;
     --elvish: 160 40% 40%;
     --dwarvish: 25 50% 40%;
+    --dot-poison: 120 50% 38%;
+    --dot-burn: 15 70% 45%;
+    --dot-bleed: 0 55% 48%;
   }
 }
 
