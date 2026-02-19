@@ -107,7 +107,11 @@ const DIRECTION_OPPOSITES: Record<string, string> = {
 
 type Mode = 'rulebook' | 'new' | 'expand' | 'populate';
 
-export default function WorldBuilderPanel() {
+interface WorldBuilderPanelProps {
+  onDataChanged?: () => void;
+}
+
+export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelProps = {}) {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -411,8 +415,34 @@ export default function WorldBuilderPanel() {
       toast.success(`${action} ${generated.region.name}: ${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs${itemCount ? `, ${itemCount} items` : ''}.`);
       setGenerated(null);
       setPrompt('');
-      const { data: newRegions } = await supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level');
-      setRegions(newRegions || []);
+      const [newRegRes, newNodeRes, newCrRes, newNpRes] = await Promise.all([
+        supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level'),
+        supabase.from('nodes').select('id, name, description, region_id, connections').order('name'),
+        supabase.from('creatures').select('id, node_id, is_aggressive, is_alive'),
+        supabase.from('npcs').select('id, node_id'),
+      ]);
+      const newRegs = newRegRes.data || [];
+      setRegions(newRegs);
+      setAllNodes((newNodeRes.data || []).map((n: any) => {
+        const r = newRegs.find((reg: any) => reg.id === n.region_id);
+        return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level, connections: (n.connections as any[]) || [] };
+      }));
+      const newCc = new Map<string, { total: number; aggressive: number }>();
+      for (const cr of (newCrRes.data || [])) {
+        if (!cr.node_id || !cr.is_alive) continue;
+        const entry = newCc.get(cr.node_id) || { total: 0, aggressive: 0 };
+        entry.total++;
+        if (cr.is_aggressive) entry.aggressive++;
+        newCc.set(cr.node_id, entry);
+      }
+      setCreatureCounts(newCc);
+      const newNc = new Map<string, number>();
+      for (const npc of (newNpRes.data || [])) {
+        if (!npc.node_id) continue;
+        newNc.set(npc.node_id, (newNc.get(npc.node_id) || 0) + 1);
+      }
+      setNPCCounts(newNc);
+      onDataChanged?.();
     } catch (e: any) {
       toast.error('Apply failed: ' + (e.message || 'Unknown error'));
     } finally {
