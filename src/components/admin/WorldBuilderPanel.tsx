@@ -9,9 +9,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug, Package } from 'lucide-react';
+import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug, Package, Book } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
 import PopulateNodeSelector from './PopulateNodeSelector';
+import WorldBuilderRulebook from './WorldBuilderRulebook';
 
 interface GeneratedRegion {
   name: string;
@@ -104,7 +105,7 @@ const DIRECTION_OPPOSITES: Record<string, string> = {
   NW: 'SE', SE: 'NW',
 };
 
-type Mode = 'new' | 'expand' | 'populate';
+type Mode = 'rulebook' | 'new' | 'expand' | 'populate';
 
 export default function WorldBuilderPanel() {
   const [prompt, setPrompt] = useState('');
@@ -454,6 +455,14 @@ export default function WorldBuilderPanel() {
         <div className="flex items-center gap-2">
           <Button
             size="sm"
+            variant={mode === 'rulebook' ? 'default' : 'outline'}
+            onClick={() => { setMode('rulebook'); setGenerated(null); }}
+            className="text-xs"
+          >
+            <Book className="w-3 h-3 mr-1" /> Rulebook
+          </Button>
+          <Button
+            size="sm"
             variant={mode === 'new' ? 'default' : 'outline'}
             onClick={() => { setMode('new'); setGenerated(null); }}
             className="text-xs"
@@ -478,7 +487,8 @@ export default function WorldBuilderPanel() {
           </Button>
         </div>
 
-        {/* Region picker for expand mode */}
+        {mode !== 'rulebook' && (
+          <>
         {mode === 'expand' && (
           <Select value={selectedRegionId} onValueChange={setSelectedRegionId}>
             <SelectTrigger className="text-xs h-8">
@@ -556,9 +566,13 @@ export default function WorldBuilderPanel() {
           </Button>
           <span className="text-[10px] text-muted-foreground">⌘+Enter to generate</span>
         </div>
+        </>
+        )}
       </div>
 
-      {/* Preview area */}
+      {mode === 'rulebook' ? (
+        <WorldBuilderRulebook />
+      ) : (
       <ScrollArea className="flex-1">
         {!generated && !loading && (
           <div className="flex items-center justify-center h-48 text-muted-foreground text-xs">
@@ -737,6 +751,7 @@ export default function WorldBuilderPanel() {
           </div>
         )}
       </ScrollArea>
+      )}
     </div>
   );
 }
