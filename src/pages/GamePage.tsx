@@ -118,10 +118,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     setEventLog(prev => [...prev.slice(-49), displayMsg]);
     // Also write to party combat log if in a party, and track own IDs to prevent duplicates
     (async () => {
-      const id = await addPartyCombatLog(msg);
+      const id = await addPartyCombatLog(msg, character.current_node_id);
       if (id) ownLogIdsRef.current.add(id);
     })();
-  }, [addPartyCombatLog]);
+  }, [addPartyCombatLog, character.current_node_id]);
 
   // Merge party combat log entries from other players into event log
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -132,6 +132,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         seenIdsRef.current.add(entry.id);
         // Skip entries we created ourselves
         if (ownLogIdsRef.current.has(entry.id)) continue;
+        // Only show entries from the same node
+        if (entry.node_id && entry.node_id !== character.current_node_id) continue;
         // Detect inspire buff signal from a party bard
         if (entry.message.includes('[INSPIRE_BUFF]')) {
           setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
@@ -142,7 +144,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         setEventLog(prev => [...prev.slice(-49), entry.message]);
       }
     }
-  }, [partyCombatEntries, party]);
+  }, [partyCombatEntries, party, character.current_node_id]);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
