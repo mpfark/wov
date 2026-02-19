@@ -43,7 +43,7 @@ interface Props {
   npcs: GeneratedNPC[];
   items: GeneratedItem[];
   existingAnchors?: ExistingAnchor[];
-  mode: 'new' | 'expand' | 'populate';
+  mode: 'rulebook' | 'new' | 'expand' | 'populate';
   populateNodeNames?: Map<string, string>;
 }
 
