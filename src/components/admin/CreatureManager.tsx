@@ -138,6 +138,7 @@ export default function CreatureManager() {
       loot_table,
     };
 
+    let savedId = selectedId;
     if (selectedId) {
       const { error } = await supabase.from('creatures').update(payload).eq('id', selectedId);
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -146,10 +147,15 @@ export default function CreatureManager() {
       const { data, error } = await supabase.from('creatures').insert(payload).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Creature created');
-      if (data) { setSelectedId(data.id); setIsNew(false); }
+      if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
-    loadData();
+    const { data: refreshed } = await supabase.from('creatures').select('*').order('name');
+    if (refreshed) {
+      setCreatures(refreshed as unknown as Creature[]);
+      const updated = refreshed.find((c: any) => c.id === savedId);
+      if (updated) openEdit(updated as unknown as Creature);
+    }
   };
 
   const handleDelete = async (id: string) => {

@@ -97,6 +97,7 @@ export default function NPCManager() {
       node_id: form.node_id || null,
     };
 
+    let savedId = selectedId;
     if (selectedId) {
       const { error } = await supabase.from('npcs').update(payload).eq('id', selectedId);
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -105,10 +106,15 @@ export default function NPCManager() {
       const { data, error } = await supabase.from('npcs').insert(payload).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('NPC created');
-      if (data) { setSelectedId(data.id); setIsNew(false); }
+      if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
-    loadData();
+    const { data: refreshed } = await supabase.from('npcs').select('*').order('name');
+    if (refreshed) {
+      setNPCs(refreshed as NPC[]);
+      const updated = refreshed.find((n: any) => n.id === savedId);
+      if (updated) openEdit(updated as NPC);
+    }
   };
 
   const handleDelete = async (id: string) => {
