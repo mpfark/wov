@@ -11,15 +11,25 @@ interface GeneratedNode {
 }
 
 interface GeneratedCreature {
+  temp_id?: string;
   name: string;
   node_temp_id: string;
   rarity: string;
   is_aggressive: boolean;
+  is_humanoid?: boolean;
 }
 
 interface GeneratedNPC {
   name: string;
   node_temp_id: string;
+}
+
+interface GeneratedItem {
+  temp_id: string;
+  name: string;
+  item_type: string;
+  rarity: string;
+  creature_temp_ids: string[];
 }
 
 interface ExistingAnchor {
@@ -31,6 +41,7 @@ interface Props {
   nodes: GeneratedNode[];
   creatures: GeneratedCreature[];
   npcs: GeneratedNPC[];
+  items: GeneratedItem[];
   existingAnchors?: ExistingAnchor[];
   mode: 'new' | 'expand' | 'populate';
   populateNodeNames?: Map<string, string>;
@@ -52,7 +63,6 @@ function layoutPreviewNodes(
   const nodeMap = new Map(nodes.map(n => [n.temp_id, n]));
   const existingIds = new Set(existingAnchors.map(a => `existing:${a.id}`));
 
-  // Start BFS from the first node
   if (nodes.length > 0) {
     const startId = nodes[0].temp_id;
     const queue: Array<{ id: string; x: number; y: number }> = [{ id: startId, x: 0, y: 0 }];
@@ -73,7 +83,6 @@ function layoutPreviewNodes(
         let nx = current.x + offset[0];
         let ny = current.y + offset[1];
 
-        // Collision avoidance
         while ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
           nx += offset[0] >= 0 ? 1 : -1;
         }
@@ -87,7 +96,6 @@ function layoutPreviewNodes(
       }
     }
 
-    // Place any unvisited nodes
     let row = 0;
     for (const node of nodes) {
       if (!positions.has(node.temp_id)) {
@@ -101,11 +109,10 @@ function layoutPreviewNodes(
 }
 
 export default function WorldBuilderPreviewGraph({
-  nodes, creatures, npcs, existingAnchors = [], mode, populateNodeNames,
+  nodes, creatures, npcs, items, existingAnchors = [], mode, populateNodeNames,
 }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-  // For populate mode, show existing nodes in a simple row
   const populatePositions = useMemo(() => {
     if (mode !== 'populate' || !populateNodeNames) return null;
     const pos = new Map<string, { x: number; y: number; isExisting: boolean }>();
@@ -122,13 +129,13 @@ export default function WorldBuilderPreviewGraph({
     return layoutPreviewNodes(nodes, existingAnchors);
   }, [nodes, existingAnchors, mode, populatePositions]);
 
-  // Creature & NPC counts per node
   const creatureCounts = useMemo(() => {
-    const counts = new Map<string, { total: number; aggressive: number }>();
+    const counts = new Map<string, { total: number; aggressive: number; humanoid: number }>();
     for (const cr of creatures) {
-      const entry = counts.get(cr.node_temp_id) || { total: 0, aggressive: 0 };
+      const entry = counts.get(cr.node_temp_id) || { total: 0, aggressive: 0, humanoid: 0 };
       entry.total++;
       if (cr.is_aggressive) entry.aggressive++;
+      if (cr.is_humanoid) entry.humanoid++;
       counts.set(cr.node_temp_id, entry);
     }
     return counts;
@@ -142,7 +149,20 @@ export default function WorldBuilderPreviewGraph({
     return counts;
   }, [npcs]);
 
-  // Edges between generated nodes
+  // Item counts per node (via creatures)
+  const itemCountsPerNode = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      for (const creatureTempId of item.creature_temp_ids) {
+        const creature = creatures.find(c => c.temp_id === creatureTempId);
+        if (creature) {
+          counts.set(creature.node_temp_id, (counts.get(creature.node_temp_id) || 0) + 1);
+        }
+      }
+    }
+    return counts;
+  }, [items, creatures]);
+
   const edges = useMemo(() => {
     const edgeSet = new Set<string>();
     const result: Array<{ from: string; to: string; toExisting: boolean }> = [];
@@ -162,15 +182,18 @@ export default function WorldBuilderPreviewGraph({
     return result;
   }, [nodes, positions]);
 
-  // Hovered node info (must be before early return to follow rules of hooks)
   const hoveredInfo = useMemo(() => {
     if (!hoveredNode) return null;
     const cc = creatureCounts.get(hoveredNode);
     const nc = npcCounts.get(hoveredNode) || 0;
+    const ic = itemCountsPerNode.get(hoveredNode) || 0;
     const node = nodes.find(n => n.temp_id === hoveredNode);
     const desc = node?.description;
     const crList = creatures.filter(c => c.node_temp_id === hoveredNode);
     const npcList = npcs.filter(n => n.node_temp_id === hoveredNode);
+    // Items for creatures at this node
+    const nodeCreatureTempIds = crList.map(c => c.temp_id).filter(Boolean) as string[];
+    const itemList = items.filter(item => item.creature_temp_ids.some(id => nodeCreatureTempIds.includes(id)));
     let name = hoveredNode;
     if (mode === 'populate' && populateNodeNames) {
       name = populateNodeNames.get(hoveredNode) || hoveredNode;
@@ -180,12 +203,11 @@ export default function WorldBuilderPreviewGraph({
     } else {
       name = nodes.find(n => n.temp_id === hoveredNode)?.name || hoveredNode;
     }
-    return { name, cc, nc, desc, crList, npcList };
-  }, [hoveredNode, nodes, creatures, npcs, creatureCounts, npcCounts, mode, populateNodeNames, existingAnchors]);
+    return { name, cc, nc, ic, desc, crList, npcList, itemList };
+  }, [hoveredNode, nodes, creatures, npcs, items, creatureCounts, npcCounts, itemCountsPerNode, mode, populateNodeNames, existingAnchors]);
 
   if (positions.size === 0) return null;
 
-  // Calculate viewBox
   const GAP = 90;
   const PAD = 60;
   const vals = [...positions.values()];
@@ -252,6 +274,7 @@ export default function WorldBuilderPreviewGraph({
           const flags = getNodeFlags(id);
           const cc = creatureCounts.get(id);
           const nc = npcCounts.get(id) || 0;
+          const ic = itemCountsPerNode.get(id) || 0;
 
           return (
             <g
@@ -260,7 +283,6 @@ export default function WorldBuilderPreviewGraph({
               onMouseLeave={() => setHoveredNode(null)}
               className="cursor-pointer"
             >
-              {/* Node circle */}
               <circle
                 cx={px} cy={py} r={26}
                 fill={isExisting
@@ -275,7 +297,6 @@ export default function WorldBuilderPreviewGraph({
                 strokeDasharray={isExisting ? '4 2' : 'none'}
               />
 
-              {/* Flags */}
               {flags && (
                 <text x={px} y={py - 12} textAnchor="middle"
                   className="text-[8px] select-none pointer-events-none">
@@ -283,21 +304,23 @@ export default function WorldBuilderPreviewGraph({
                 </text>
               )}
 
-              {/* Creature/NPC dots */}
               {cc && cc.aggressive > 0 && (
-                <circle cx={px - 6} cy={py + 16} r={3.5}
+                <circle cx={px - 10} cy={py + 16} r={3.5}
                   fill="hsl(0 70% 50%)" className="stroke-background" strokeWidth={1} />
               )}
               {cc && cc.total - cc.aggressive > 0 && (
-                <circle cx={px + (cc.aggressive > 0 ? 6 : 0)} cy={py + 16} r={3.5}
+                <circle cx={px + (cc.aggressive > 0 ? -2 : -4)} cy={py + 16} r={3.5}
                   fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} />
               )}
               {nc > 0 && (
-                <text x={px + 14} y={py + 20}
+                <text x={px + 6} y={py + 20}
                   className="text-[7px] select-none pointer-events-none">💬</text>
               )}
+              {ic > 0 && (
+                <text x={px + 14} y={py + 20}
+                  className="text-[7px] select-none pointer-events-none">📦</text>
+              )}
 
-              {/* Label */}
               <text
                 x={px} y={py + 3}
                 textAnchor="middle"
@@ -308,7 +331,6 @@ export default function WorldBuilderPreviewGraph({
                 {name.length > 12 ? name.slice(0, 11) + '…' : name}
               </text>
 
-              {/* "existing" label */}
               {isExisting && (
                 <text x={px} y={py + 36} textAnchor="middle"
                   className="fill-muted-foreground text-[7px] select-none pointer-events-none italic">
@@ -316,11 +338,10 @@ export default function WorldBuilderPreviewGraph({
                 </text>
               )}
 
-              {/* Count label */}
-              {(cc?.total || nc > 0) && (
+              {(cc?.total || nc > 0 || ic > 0) && (
                 <text x={px} y={py + (isExisting ? 46 : 36)} textAnchor="middle"
                   className="fill-muted-foreground text-[7px] select-none pointer-events-none">
-                  {cc?.total ? `${cc.total}c` : ''}{nc > 0 ? ` ${nc}n` : ''}
+                  {cc?.total ? `${cc.total}c` : ''}{nc > 0 ? ` ${nc}n` : ''}{ic > 0 ? ` ${ic}i` : ''}
                 </text>
               )}
             </g>
@@ -337,6 +358,7 @@ export default function WorldBuilderPreviewGraph({
           <text x={108} y={9} className="fill-muted-foreground text-[8px]">Aggro</text>
           <circle cx={140} cy={6} r={3} fill="hsl(35 60% 50%)" />
           <text x={148} y={9} className="fill-muted-foreground text-[8px]">Passive</text>
+          <text x={170} y={9} className="fill-muted-foreground text-[8px]">📦 Items</text>
         </g>
       </svg>
 
@@ -354,7 +376,17 @@ export default function WorldBuilderPreviewGraph({
               <span className="text-[9px] text-muted-foreground font-medium">Creatures:</span>
               {hoveredInfo.crList.map((cr, i) => (
                 <div key={i} className="text-[9px] text-muted-foreground">
-                  {cr.is_aggressive ? '⚔' : '🐾'} {cr.name} ({cr.rarity})
+                  {cr.is_aggressive ? '⚔' : '🐾'} {cr.name} ({cr.rarity}){cr.is_humanoid ? ' 🧑' : ''}
+                </div>
+              ))}
+            </div>
+          )}
+          {hoveredInfo.itemList.length > 0 && (
+            <div className="mt-1">
+              <span className="text-[9px] text-muted-foreground font-medium">Items:</span>
+              {hoveredInfo.itemList.map((item, i) => (
+                <div key={i} className="text-[9px] text-muted-foreground">
+                  📦 {item.name} ({item.rarity})
                 </div>
               ))}
             </div>
