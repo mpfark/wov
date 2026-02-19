@@ -27,7 +27,7 @@ interface Props {
   critBuff?: { bonus: number; expiresAt: number };
   acBuff?: { bonus: number; expiresAt: number } | null;
   poisonBuff?: { expiresAt: number } | null;
-  evasionBuff?: { dodgeChance: number; expiresAt: number } | null;
+  evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null;
   igniteBuff?: { expiresAt: number } | null;
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number } | null;
@@ -118,7 +118,7 @@ const BUFF_DURATIONS: Record<string, number> = {
   Potion: 120_000, Inspire: 90_000, Food: 120_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
 };
 
-function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null }) {
+function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
@@ -210,14 +210,15 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
   }
 
   if (evasionActive) {
-    const dur = BUFF_DURATIONS['Cloak of Shadows'] || 15_000;
+    const isDisengage = evasionBuff!.source === 'disengage';
+    const dur = isDisengage ? 8_000 : (BUFF_DURATIONS['Cloak of Shadows'] || 15_000);
     const pct = Math.max(0, Math.min(100, ((evasionBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🌫️',
-      label: 'Cloak of Shadows',
-      detail: '50% dodge',
-      color: 'text-primary',
-      bgColor: 'bg-primary/15',
+      emoji: isDisengage ? '🦘' : '🌫️',
+      label: isDisengage ? 'Disengage' : 'Cloak of Shadows',
+      detail: isDisengage ? '100% dodge + next hit bonus' : '50% dodge',
+      color: isDisengage ? 'text-accent' : 'text-primary',
+      bgColor: isDisengage ? 'bg-accent/15' : 'bg-primary/15',
       pct,
     });
   }
