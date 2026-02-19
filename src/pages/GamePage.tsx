@@ -11,6 +11,7 @@ import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
 import { useCreatures } from '@/hooks/useCreatures';
+import { useCreatureBroadcast } from '@/hooks/useCreatureBroadcast';
 import { useNPCs, NPC } from '@/hooks/useNPCs';
 import NPCDialogPanel from '@/components/game/NPCDialogPanel';
 import { useInventory } from '@/hooks/useInventory';
@@ -79,6 +80,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id, character);
   const { creatures } = useCreatures(character.current_node_id);
+  const { broadcastOverrides, broadcastDamage } = useCreatureBroadcast(character.current_node_id, character.id);
   const { npcs } = useNPCs(character.current_node_id);
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
@@ -371,6 +373,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     sunderDebuff,
     disengageNextHit,
     onClearDisengage: useCallback(() => setDisengageNextHit(null), []),
+    broadcastDamage,
   });
 
   // DoT (Rend bleed) tick effect
@@ -390,6 +393,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
       const newHp = Math.max((creatureHpOverrides[dotDebuff.creatureId] ?? creature.hp) - dotDebuff.damagePerTick, 0);
       updateCreatureHp(dotDebuff.creatureId, newHp);
+      broadcastDamage(dotDebuff.creatureId, newHp, dotDebuff.damagePerTick, character.name, newHp <= 0);
       await supabase.rpc('damage_creature', { _creature_id: dotDebuff.creatureId, _new_hp: newHp, _killed: newHp <= 0 });
       addLog(`🩸 ${creature.name} bleeds for ${dotDebuff.damagePerTick} damage!`);
     }, dotDebuff.intervalMs);
@@ -410,6 +414,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const totalDmg = stack.stacks * stack.damagePerTick;
         const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
         updateCreatureHp(creatureId, newHp);
+        broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         addLog(`🧪 ${creature.name} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
       }
@@ -444,6 +449,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const totalDmg = stack.stacks * stack.damagePerTick;
         const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
         updateCreatureHp(creatureId, newHp);
+        broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         addLog(`🔥 ${creature.name} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
       }
@@ -1286,7 +1292,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
               inCombat={inCombat}
               activeCombatCreatureId={activeCombatCreatureId}
-              creatureHpOverrides={creatureHpOverrides}
+              creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
               classAbilities={CLASS_ABILITIES[character.class] || []}
               abilityCooldownEnds={abilityCooldownEnds}
               onUseAbility={handleUseAbility}
