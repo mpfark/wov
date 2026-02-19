@@ -238,7 +238,7 @@ export default function WorldBuilderPanel() {
             hands: item.hands || null,
             stats: item.stats || {},
             value: item.value,
-            max_durability: item.max_durability,
+            max_durability: Math.max(item.max_durability || 50, 1),
           })
           .select('id')
           .single();
