@@ -20,7 +20,7 @@ export const CLASS_STATS: Record<string, Record<string, number>> = {
 
 // HP by class
 export const CLASS_BASE_HP: Record<string, number> = {
-  warrior: 24, wizard: 14, ranger: 20, rogue: 16, healer: 18, bard: 16,
+  warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
 };
 
 // AC by class
