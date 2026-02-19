@@ -1,90 +1,34 @@
 
 
-# AI World Builder: Auto-Generate Items for Humanoid Creatures
+# AI Rulebook Tab for World Builder
 
 ## Overview
-Extend the populate nodes AI to also generate loot items (equipment and consumables) for humanoid creatures. Only humanoids will receive items, with a maximum of 1-2 pieces each. Generated items will be inserted into the `items` table, then linked to the creature's `loot_table` using real item IDs.
+Add a "Rulebook" mode/tab to the World Builder panel that displays a formatted, read-only reference of all the rules the AI follows when generating content. This gives admins transparency into how the AI thinks without needing to read edge function code.
 
-## Current State
-- The AI generates creatures with a `loot_table` using `item_name` strings, but these are never linked to actual items in the database
-- The game's real loot system uses `{ item_id: UUID, chance: number }` references to the `items` table
-- There is no item generation in the populate flow
+## What It Shows
+The rulebook will be organized into clear sections:
 
-## Changes
+- **General Rules** -- naming conventions, ASCII-only names, no copyrighted content, directional codes (N/S/E/W)
+- **Region Rules** -- must have at least one inn, level range requirements
+- **Node Rules** -- naming standards, connection rules, bidirectional links, expansion syntax
+- **Creature Rules** -- 2-4 per node, stat ranges (5-30), HP/AC formulas by rarity, aggressive/passive mix, humanoid flagging
+- **NPC Rules** -- 1-2 per service node (inn/vendor/blacksmith), lore-appropriate dialogue
+- **Item Rules** -- only for humanoids, 1-2 max per creature, stat budget formula, rarity multipliers, valid slots, durability ranges, gold value formula, no unique items generated
+- **Populate Mode Rules** -- no new nodes/NPCs, real node IDs, level matching
+- **Expand Mode Rules** -- connect to existing nodes via `existing:<id>`, no duplicate names
 
-### 1. Edge Function: Add `items` array to AI tool schema
-**File:** `supabase/functions/ai-world-builder/index.ts`
-
-- Add a new `items` array to the `generate_world` tool parameters with fields: `temp_id`, `name`, `description`, `item_type` (equipment/consumable only), `rarity`, `slot`, `level`, `stats`, `value`, `max_durability`, `hands`, `creature_temp_ids` (which creatures carry this item)
-- Update the populate prompt rules to instruct:
-  - Only humanoid creatures can carry items
-  - Max 1-2 items per humanoid
-  - Only generate `equipment` and `consumable` types (no trash loot)
-  - Items must be level-appropriate for the region
-  - Item stats must follow the stat budget system (explained in prompt)
-  - Mark each creature as `is_humanoid: true/false` so the AI knows which ones qualify
-- Add `is_humanoid` to the creature schema so the AI can flag humanoids
-- Fetch existing items to provide context and avoid name duplication
-
-### 2. Edge Function: Update system prompt with item rules
-**File:** `supabase/functions/ai-world-builder/index.ts`
-
-Add item generation rules to the system prompt:
-- Items follow the stat budget: `floor(level * 0.3 * rarity_multiplier * hands_multiplier)`
-- Rarity multipliers: common (1.0), uncommon (1.5), rare (2.0), unique (3.0)
-- Valid equipment slots: main_hand, off_hand, head, chest, legs, feet, hands, belt, ring, neck, back, ammo
-- Consumables should be potions or food with hp/hp_regen stats
-- Max durability: 50-100 for common, 75-150 for uncommon, 100-200 for rare
-- Gold value suggestion: level * 2.5 * rarity_multiplier^2
-
-### 3. Frontend: Apply generated items during populate
-**File:** `src/components/admin/WorldBuilderPanel.tsx`
-
-Update the apply logic for populate mode:
-- First insert all generated items into the `items` table, collecting their real UUIDs
-- Map `creature_temp_ids` to build each creature's `loot_table` as `{ item_id: realUUID, chance: number }`
-- Set `is_humanoid` on creatures during insert
-- Display item count in the success toast
-
-### 4. Frontend: Show generated items in preview
-**File:** `src/components/admin/WorldBuilderPreviewGraph.tsx`
-
-- Add item counts per creature/node to the hover tooltip so admins can see what items were generated before applying
-- Show a small item indicator on humanoid creature nodes
-
-### 5. Edge Function: Update new region and expand modes too
-**File:** `supabase/functions/ai-world-builder/index.ts`
-
-Apply the same item generation capability to "new region" and "expand" modes (not just populate), so humanoid creatures in newly generated regions also come with appropriate loot.
+## UI Placement
+Add a "Rulebook" button before the existing New Region / Expand / Populate mode buttons. When selected, the generation input and preview area are replaced with a scrollable, styled reference document using existing Card and ScrollArea components.
 
 ## Technical Details
 
-**New tool schema field (`items` array):**
-```json
-{
-  "temp_id": "item_1",
-  "name": "Iron Shortsword",
-  "description": "A well-forged blade...",
-  "item_type": "equipment",
-  "rarity": "common",
-  "slot": "main_hand",
-  "level": 5,
-  "hands": 1,
-  "stats": { "str": 2, "dex": 1 },
-  "value": 12,
-  "max_durability": 80,
-  "creature_temp_ids": ["creature_1"],
-  "drop_chance": 0.3
-}
-```
+### File: `src/components/admin/WorldBuilderPanel.tsx`
+- Add `'rulebook'` to the `Mode` type
+- Add a `Book` icon button (from lucide-react) as the first option in the mode toggle row
+- When `mode === 'rulebook'`, render a `ScrollArea` with formatted rulebook content instead of the prompt/preview area
+- The rulebook content is static JSX -- no database calls needed
+- All rule values (formulas, multipliers, slot lists) match exactly what the edge function system prompt uses
 
-**Apply flow:**
-1. Insert each item into `items` table, get real UUID
-2. Build a map: creature_temp_id -> [{ item_id, chance }]
-3. When inserting creatures, merge the mapped loot entries into the creature's `loot_table`
-
-**Files modified:**
-- `supabase/functions/ai-world-builder/index.ts` -- item schema, prompt rules, is_humanoid
-- `src/components/admin/WorldBuilderPanel.tsx` -- apply logic for items
-- `src/components/admin/WorldBuilderPreviewGraph.tsx` -- item preview in tooltips
+### No other files need changes
+The edge function and preview graph remain untouched. This is a purely frontend, read-only reference panel.
 
