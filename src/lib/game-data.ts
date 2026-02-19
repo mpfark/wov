@@ -30,7 +30,7 @@ export const CLASS_BASE_AC: Record<string, number> = {
 
 // Class-based stat bonuses awarded every 3 levels
 export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
-  warrior: { str: 1, con: 1 },
+  warrior: { str: 1, dex: 1 },
   wizard:  { int: 1, wis: 1 },
   ranger:  { dex: 1, wis: 1 },
   rogue:   { dex: 1, cha: 1 },
