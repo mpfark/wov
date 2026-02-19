@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
+import { APP_VERSION } from '@/lib/version';
 
 function getLogColor(log: string): string {
   // DoT tick messages — italic + dedicated colors to distinguish from ability procs
@@ -1191,7 +1192,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     <div className="h-screen flex flex-col parchment-bg">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
-        <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Eldara <span className="text-xs text-muted-foreground font-body ml-1">v0.3.0</span></h1>
+        <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Eldara <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span></h1>
           <div className="flex items-center gap-2">
             {isAdmin && (
               <Button variant="outline" size="sm" onClick={onOpenAdmin} className="text-xs font-display">
