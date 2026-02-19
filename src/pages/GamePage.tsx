@@ -634,17 +634,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         if (Math.random() <= (entry.chance || 0.5)) {
           const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
           if (item) {
-            // Unique item exclusivity check
+            // Unique item: use atomic RPC to prevent race conditions
             if (item.rarity === 'unique') {
-              const { data: held } = await supabase.from('character_inventory').select('id').eq('item_id', entry.item_id).limit(1);
-              if (held && held.length > 0) {
+              const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
+                p_character_id: character.id, p_item_id: entry.item_id,
+              });
+              if (!acquired) {
                 addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — The unique power of ${item.name} is already claimed by another...`);
                 return;
               }
+            } else {
+              await supabase.from('character_inventory').insert({
+                character_id: character.id, item_id: entry.item_id, current_durability: 100,
+              });
             }
-            await supabase.from('character_inventory').insert({
-              character_id: character.id, item_id: entry.item_id, current_durability: 100,
-            });
             addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You found ${item.name}!`);
             logActivity(character.user_id, character.id, 'item_found', `Found ${item.name} while searching`, { item_name: item.name });
             fetchInventory();
@@ -676,10 +679,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       if (Math.random() <= (entry.chance || 0.1)) {
         const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
         if (item) {
-          // Unique item exclusivity check
+          // Unique item exclusivity check (pre-filter before loot dialog)
           if (item.rarity === 'unique') {
-            const { data: held } = await supabase.from('character_inventory').select('id').eq('item_id', entry.item_id).limit(1);
-            if (held && held.length > 0) {
+            const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', entry.item_id);
+            if (count && count > 0) {
               addLog(`✨ The unique power of ${item.name} is already claimed by another...`);
               continue;
             }
@@ -696,9 +699,19 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       setPendingLoot({ loot: droppedItems, creatureName });
     } else {
       for (const drop of droppedItems) {
-        await supabase.from('character_inventory').insert({
-          character_id: character.id, item_id: drop.item_id, current_durability: 100,
-        });
+        if (drop.item_rarity === 'unique') {
+          const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
+            p_character_id: character.id, p_item_id: drop.item_id,
+          });
+          if (!acquired) {
+            addLog(`✨ The unique power of ${drop.item_name} is already claimed by another...`);
+            continue;
+          }
+        } else {
+          await supabase.from('character_inventory').insert({
+            character_id: character.id, item_id: drop.item_id, current_durability: 100,
+          });
+        }
       }
       fetchInventory();
     }
@@ -706,10 +719,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const handleLootDistribute = useCallback(async (assignments: Record<string, string>) => {
     for (const [itemId, charId] of Object.entries(assignments)) {
-      await supabase.from('character_inventory').insert({
-        character_id: charId, item_id: itemId, current_durability: 100,
-      });
       const lootItem = pendingLoot?.loot.find(l => l.item_id === itemId);
+      if (lootItem && lootItem.item_rarity === 'unique') {
+        const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
+          p_character_id: charId, p_item_id: itemId,
+        });
+        if (!acquired) {
+          addLog(`✨ The unique power of ${lootItem.item_name} is already claimed by another...`);
+          continue;
+        }
+      } else {
+        await supabase.from('character_inventory').insert({
+          character_id: charId, item_id: itemId, current_durability: 100,
+        });
+      }
       const member = partyMembers.find(m => m.character_id === charId);
       if (lootItem && member) {
         addLog(`📦 ${lootItem.item_name} → ${member.character.name}`);

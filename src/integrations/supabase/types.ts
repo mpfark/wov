@@ -697,6 +697,10 @@ export type Database = {
       regen_creature_hp: { Args: never; Returns: undefined }
       respawn_creatures: { Args: never; Returns: undefined }
       return_unique_items: { Args: never; Returns: undefined }
+      try_acquire_unique_item: {
+        Args: { p_character_id: string; p_item_id: string }
+        Returns: boolean
+      }
       update_party_member_hp: {
         Args: { _character_id: string; _new_hp: number }
         Returns: undefined
