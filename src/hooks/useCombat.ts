@@ -431,7 +431,7 @@ export function useCombat({
 
       const effectiveTankId = _party ? (_party.tank_id ?? _party.leader_id) : null;
       const tankMember = _party && effectiveTankId && effectiveTankId !== char.id
-        ? _partyMembers.find(m => m.character_id === effectiveTankId)
+        ? _partyMembers.find(m => m.character_id === effectiveTankId && m.character.current_node_id === char.current_node_id)
         : null;
       // AC buff from Battle Cry
       const _acBuff = acBuffRef.current;
