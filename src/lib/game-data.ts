@@ -25,7 +25,7 @@ export const CLASS_BASE_HP: Record<string, number> = {
 
 // AC by class
 export const CLASS_BASE_AC: Record<string, number> = {
-  warrior: 14, wizard: 10, ranger: 12, rogue: 12, healer: 11, bard: 11,
+  warrior: 14, wizard: 11, ranger: 12, rogue: 12, healer: 11, bard: 11,
 };
 
 // Class-based stat bonuses awarded every 3 levels
