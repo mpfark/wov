@@ -464,7 +464,7 @@ export default function WorldBuilderPanel() {
               ? 'e.g. "Add lore-appropriate creatures to these nodes, mix of aggressive and passive"'
               : mode === 'expand'
               ? 'e.g. "Add 10 more nodes to the south, including a dark forest with wolves and a hidden cave with a boss"'
-              : 'e.g. "Create the Rivendell region for levels 15-25 with 6 nodes including Elrond\'s House as an inn"'
+              : 'e.g. "Create the Silvergrove region for levels 15-25 with 6 nodes including a Wanderer\'s Lodge as an inn"'
           }
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
