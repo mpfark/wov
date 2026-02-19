@@ -192,7 +192,8 @@ export function useParty(characterId: string | null) {
   }, [party, characterId, members, fetchParty]);
 
   const isLeader = party?.leader_id === characterId;
-  const isTank = party?.tank_id === characterId;
+  const effectiveTankId = party ? (party.tank_id ?? party.leader_id) : null;
+  const isTank = effectiveTankId === characterId;
   const myMembership = members.find(m => m.character_id === characterId);
 
   return {
