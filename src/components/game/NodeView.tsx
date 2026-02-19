@@ -167,9 +167,10 @@ export default function NodeView({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <div className="flex-1 h-1.5 bg-background rounded-full overflow-hidden border border-border">
+                        <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
+                        <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
                           <div
-                            className={`h-full rounded-full transition-all duration-300`}
+                            className={`h-full rounded-full transition-all duration-200`}
                             style={{
                               width: `${hpPct}%`,
                               backgroundColor: hasIgniteStacks
