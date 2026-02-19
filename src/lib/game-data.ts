@@ -113,7 +113,7 @@ export function getBaseRegen(con: number): number {
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   const handsMult = hands === 2 ? 1.5 : 1;
-  return Math.max(1, Math.floor(level * 0.3 * mult * handsMult));
+  return Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
 }
 
 export function calculateItemStatCost(stats: Record<string, number>): number {
