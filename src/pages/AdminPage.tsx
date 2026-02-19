@@ -205,7 +205,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         </TabsContent>
 
         <TabsContent value="world-builder" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <WorldBuilderPanel />
+          <WorldBuilderPanel onDataChanged={loadData} />
         </TabsContent>
       </Tabs>
     </div>

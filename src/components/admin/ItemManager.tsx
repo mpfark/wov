@@ -198,6 +198,7 @@ export default function ItemManager() {
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
     };
 
+    let savedId = selectedId;
     if (selectedId) {
       const { error } = await supabase.from('items').update(payload).eq('id', selectedId);
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -206,10 +207,17 @@ export default function ItemManager() {
       const { data, error } = await supabase.from('items').insert(payload).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Item created');
-      if (data) { setSelectedId(data.id); setIsNew(false); }
+      if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
-    loadItems();
+    const { data: refreshed } = await supabase.from('items').select('*').order('name');
+    if (refreshed) {
+      setItems(refreshed as Item[]);
+      const updated = refreshed.find((i: any) => i.id === savedId);
+      if (updated) {
+        openEdit(updated as Item);
+      }
+    }
   };
 
   const handleDelete = async (id: string) => {
