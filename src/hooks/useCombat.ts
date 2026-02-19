@@ -447,6 +447,7 @@ export function useCombat({
           const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
           _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
           await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
+          await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
         } else {
           _addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
         }

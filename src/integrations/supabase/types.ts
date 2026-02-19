@@ -687,6 +687,10 @@ export type Database = {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
         Returns: undefined
       }
+      degrade_party_member_equipment: {
+        Args: { _character_id: string }
+        Returns: undefined
+      }
       get_character_name: { Args: { _character_id: string }; Returns: string }
       has_role: {
         Args: {
