@@ -30,20 +30,20 @@ export interface ClassAbility {
 export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   healer: [
     {
-      label: 'Transfer Health',
-      emoji: '💉',
-      description: 'Sacrifice your own HP to heal a targeted ally',
-      cooldownMs: 15000,
-      type: 'hp_transfer',
-      tier: 1,
-      levelRequired: 5,
-    },
-    {
       label: 'Heal',
       emoji: '💚',
       description: 'Restore HP based on your Wisdom',
       cooldownMs: 30000,
       type: 'heal',
+      tier: 1,
+      levelRequired: 5,
+    },
+    {
+      label: 'Transfer Health',
+      emoji: '💉',
+      description: 'Sacrifice your own HP to heal a targeted ally',
+      cooldownMs: 15000,
+      type: 'hp_transfer',
       tier: 2,
       levelRequired: 10,
     },
