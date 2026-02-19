@@ -102,7 +102,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [dotDebuff, setDotDebuff] = useState<{ damagePerTick: number; intervalMs: number; expiresAt: number; creatureId: string } | null>(null);
   const [poisonBuff, setPoisonBuff] = useState<{ expiresAt: number } | null>(null);
   const [poisonStacks, setPoisonStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
-  const [evasionBuff, setEvasionBuff] = useState<{ dodgeChance: number; expiresAt: number } | null>(null);
+  const [evasionBuff, setEvasionBuff] = useState<{ dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null>(null);
   const [disengageNextHit, setDisengageNextHit] = useState<{ bonusMult: number; expiresAt: number } | null>(null);
   const [igniteBuff, setIgniteBuff] = useState<{ expiresAt: number } | null>(null);
   const [igniteStacks, setIgniteStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
@@ -1027,13 +1027,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
-      setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs });
+      setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
       addLog(`${ability.emoji} Cloak of Shadows! 50% dodge chance for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'disengage_buff') {
       const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
       const dodgeDurationMs = Math.min(8000, 5000 + dexMod * 500);
       const nextHitDurationMs = 15000; // 15s window to land the empowered strike
-      setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs });
+      setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs, source: 'disengage' as const });
       setDisengageNextHit({ bonusMult: 1.5, expiresAt: Date.now() + nextHitDurationMs });
       addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals 50% bonus damage!`);
     } else if (ability.type === 'ignite_buff') {
