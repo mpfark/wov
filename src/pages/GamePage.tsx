@@ -679,7 +679,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     for (const entry of lootTable) {
       if (entry.type === 'gold') continue; // Gold handled separately in kill rewards
       if (Math.random() <= (entry.chance || 0.1)) {
-        const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
+        const { data: item } = await supabase.from('items').select('name, rarity, item_type').eq('id', entry.item_id).single();
         if (item) {
           // Unique item exclusivity check (pre-filter before loot dialog)
           if (item.rarity === 'unique') {
@@ -689,18 +689,50 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               continue;
             }
           }
-          droppedItems.push({ item_id: entry.item_id, item_name: item.name, item_rarity: item.rarity });
+          droppedItems.push({ item_id: entry.item_id, item_name: item.name, item_rarity: item.rarity, item_type: item.item_type });
           addLog(`💎 ${creatureName} dropped ${item.name}!`);
         }
       }
     }
     if (droppedItems.length === 0) return;
 
-    // If in a party, show loot sharing dialog; otherwise auto-assign
-    if (party && partyMembers.length > 1) {
-      setPendingLoot({ loot: droppedItems, creatureName });
-    } else {
-      for (const drop of droppedItems) {
+    // Filter party members at the same node
+    const sameNodeMembers = partyMembers.filter(m => m.character.current_node_id === character.current_node_id);
+    const hasPartyAtNode = party && sameNodeMembers.length > 1;
+
+    // Split equipment vs non-equipment
+    const equipmentDrops = droppedItems.filter(d => d.item_type === 'equipment');
+    const nonEquipmentDrops = droppedItems.filter(d => d.item_type !== 'equipment');
+
+    // Round-robin non-equipment items among same-node party members (or self if solo)
+    const recipients = hasPartyAtNode
+      ? sameNodeMembers
+      : [{ character_id: character.id, character: { name: character.name } } as any];
+    for (let i = 0; i < nonEquipmentDrops.length; i++) {
+      const drop = nonEquipmentDrops[i];
+      const recipient = recipients[i % recipients.length];
+      if (drop.item_rarity === 'unique') {
+        const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
+          p_character_id: recipient.character_id, p_item_id: drop.item_id,
+        });
+        if (!acquired) {
+          addLog(`✨ The unique power of ${drop.item_name} is already claimed by another...`);
+          continue;
+        }
+      } else {
+        await supabase.from('character_inventory').insert({
+          character_id: recipient.character_id, item_id: drop.item_id, current_durability: 100,
+        });
+      }
+      addLog(`📦 ${drop.item_name} → ${recipient.character.name}`);
+    }
+
+    // Show loot dialog only for equipment drops when party members are at the same node
+    if (equipmentDrops.length > 0 && hasPartyAtNode) {
+      setPendingLoot({ loot: equipmentDrops, creatureName });
+    } else if (equipmentDrops.length > 0) {
+      // Solo or no party at node — auto-assign equipment to self
+      for (const drop of equipmentDrops) {
         if (drop.item_rarity === 'unique') {
           const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
             p_character_id: character.id, p_item_id: drop.item_id,
@@ -716,8 +748,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         }
       }
       fetchInventory();
+    } else {
+      fetchInventory();
     }
-  }, [character.id, addLog, fetchInventory, party, partyMembers]);
+  }, [character.id, character.current_node_id, character.name, addLog, fetchInventory, party, partyMembers]);
 
   const handleLootDistribute = useCallback(async (assignments: Record<string, string>) => {
     for (const [itemId, charId] of Object.entries(assignments)) {
@@ -1297,12 +1331,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         />
       )}
 
-      {/* Loot Share Dialog */}
+      {/* Loot Share Dialog — only equipment, only same-node members */}
       {pendingLoot && party && (
         <LootShareDialog
           open={true}
           loot={pendingLoot.loot}
-          partyMembers={partyMembers}
+          partyMembers={partyMembers.filter(m => m.character.current_node_id === character.current_node_id)}
           creatureName={pendingLoot.creatureName}
           onConfirm={handleLootDistribute}
         />
