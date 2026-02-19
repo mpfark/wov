@@ -36,7 +36,7 @@ export default function AuthPage() {
       <Card className="w-full max-w-md ornate-border bg-card/90 backdrop-blur">
         <CardHeader className="text-center">
           <h1 className="font-display text-2xl text-primary text-glow mb-2 leading-tight">
-            Wayfarers of Eldara
+            Wayfarers of Eldara <span className="text-sm text-muted-foreground font-body ml-1">v0.3.0</span>
           </h1>
           <CardTitle className="font-display text-xl text-foreground">
             {isLogin ? 'Enter the Realm' : 'Join the Fellowship'}
