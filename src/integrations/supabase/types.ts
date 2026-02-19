@@ -451,21 +451,31 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          node_id: string | null
           party_id: string
         }
         Insert: {
           created_at?: string
           id?: string
           message: string
+          node_id?: string | null
           party_id: string
         }
         Update: {
           created_at?: string
           id?: string
           message?: string
+          node_id?: string | null
           party_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "party_combat_log_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "party_combat_log_party_id_fkey"
             columns: ["party_id"]

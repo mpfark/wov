@@ -5,6 +5,7 @@ export interface CombatLogEntry {
   id: string;
   party_id: string;
   message: string;
+  node_id: string | null;
   created_at: string;
 }
 
@@ -43,9 +44,9 @@ export function usePartyCombatLog(partyId: string | null) {
     return () => { supabase.removeChannel(channel); };
   }, [partyId]);
 
-  const addPartyCombatLog = useCallback(async (message: string): Promise<string | null> => {
+  const addPartyCombatLog = useCallback(async (message: string, nodeId?: string | null): Promise<string | null> => {
     if (!partyId) return null;
-    const { data } = await supabase.from('party_combat_log').insert({ party_id: partyId, message }).select('id').single();
+    const { data } = await supabase.from('party_combat_log').insert({ party_id: partyId, message, node_id: nodeId ?? null } as any).select('id').single();
     return data?.id ?? null;
   }, [partyId]);
 
