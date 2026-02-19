@@ -41,17 +41,19 @@ serve(async (req) => {
     }
 
     // Fetch current world state for context
-    const [regRes, nodeRes, creatureRes, npcRes] = await Promise.all([
+    const [regRes, nodeRes, creatureRes, npcRes, itemRes] = await Promise.all([
       supabase.from("regions").select("id, name, description, min_level, max_level").order("min_level"),
       supabase.from("nodes").select("id, name, region_id, is_inn, is_vendor, is_blacksmith, connections"),
       supabase.from("creatures").select("name, node_id, rarity, level"),
       supabase.from("npcs").select("name, node_id"),
+      supabase.from("items").select("name, item_type, rarity, level").limit(200),
     ]);
 
     const regions = regRes.data || [];
     const nodes = nodeRes.data || [];
     const creatures = creatureRes.data || [];
     const npcs = npcRes.data || [];
+    const existingItems = itemRes.data || [];
 
     const worldSummary = regions.map((r: any) => {
       const regionNodes = nodes.filter((n: any) => n.region_id === r.id);
@@ -61,6 +63,8 @@ serve(async (req) => {
       }).join(", ");
       return `- ${r.name} (Lvl ${r.min_level}-${r.max_level}): ${nodeNames || "no nodes yet"}`;
     }).join("\n");
+
+    const existingItemNames = existingItems.map((i: any) => i.name).join(", ");
 
     // Build expand-specific or populate-specific context
     let expandContext = "";
@@ -83,7 +87,9 @@ IMPORTANT RULES FOR POPULATING:
 - Generate 2-4 creatures per node (mix of aggressive and passive)
 - Creature levels must match each node's region level range
 - Do NOT duplicate existing creature names on the same node
-- The "region" field should use name "Populate" with description "Populating existing nodes" min_level 1 max_level 1 (placeholder)`;
+- The "region" field should use name "Populate" with description "Populating existing nodes" min_level 1 max_level 1 (placeholder)
+- Mark each creature as is_humanoid: true or false (humanoids are bandits, soldiers, cultists, mages, etc. — anything with a roughly human form)
+- For humanoid creatures, generate 1-2 items each in the "items" array. Non-humanoids should NOT have items.`;
     } else if (expand_region) {
       const targetRegion = regions.find((r: any) => r.id === expand_region.id);
       if (targetRegion) {
@@ -112,7 +118,9 @@ IMPORTANT RULES FOR EXPANSION:
 - Use "existing:<node_id>" format in target_temp_id to reference existing nodes (e.g. "existing:abc-123")
 - New nodes can also connect to other new nodes using temp_ids as usual
 - Creature levels must stay within ${targetRegion.min_level}-${targetRegion.max_level}
-- Do NOT duplicate existing node names or NPC names`;
+- Do NOT duplicate existing node names or NPC names
+- Mark each creature as is_humanoid: true or false
+- For humanoid creatures, generate 1-2 items each in the "items" array. Non-humanoids should NOT have items.`;
       }
     }
 
@@ -121,6 +129,8 @@ IMPORTANT RULES FOR EXPANSION:
 CURRENT WORLD STATE:
 ${worldSummary || "No regions exist yet."}
 ${expandContext}
+
+EXISTING ITEMS (avoid duplicating these names): ${existingItemNames || "none"}
 
 RULES:
 - Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
@@ -141,6 +151,25 @@ RULES:
 - Generate 2-4 creatures per node (mix of aggressive and passive)
 - Generate 1-2 NPCs for inn/vendor/blacksmith nodes
 - Create original fantasy names that evoke a sense of ancient, mythic world-building
+- Mark creatures as is_humanoid: true if they have a roughly human form (bandits, soldiers, cultists, mages, knights, etc.) or false for beasts/monsters/animals
+
+ITEM GENERATION RULES:
+- Only humanoid creatures (is_humanoid: true) can carry items
+- Generate 1-2 items per humanoid creature, max
+- Only generate "equipment" or "consumable" item types — NO trash loot
+- Item temp_ids should be like "item_1", "item_2", etc.
+- creature_temp_ids links which creatures carry this item (use creature temp_ids or real node IDs for populate mode creatures)
+- drop_chance should be between 0.1 and 0.5
+- Item stats follow a budget: floor(level * 0.3 * rarity_multiplier * hands_multiplier)
+  - Rarity multipliers: common=1.0, uncommon=1.5, rare=2.0, unique=3.0
+  - hands_multiplier: 1.0 for one-handed, 1.5 for two-handed (hands=2)
+- Valid equipment slots: main_hand, off_hand, head, chest, gloves, belt, pants, ring, trinket, boots, amulet, shoulders
+- Consumables should have slot: null and stats with hp (restore amount) or hp_regen
+- Valid stat keys for equipment: str, dex, con, int, wis, cha, ac, hp, hp_regen
+- Max durability: 50-100 for common, 75-150 for uncommon, 100-200 for rare
+- Gold value suggestion: floor(level * 2.5 * rarity_multiplier^2)
+- Item rarity should be "common" or "uncommon" for regular creatures, up to "rare" for rare/boss creatures. Never generate "unique" items.
+- Do NOT duplicate existing item names
 
 Call the generate_world tool with the structured output.`;
 
@@ -164,7 +193,7 @@ Call the generate_world tool with the structured output.`;
             type: "function",
             function: {
               name: "generate_world",
-              description: "Generate world content including region, nodes, creatures, and NPCs",
+              description: "Generate world content including region, nodes, creatures, NPCs, and items",
               parameters: {
                 type: "object",
                 properties: {
@@ -209,6 +238,7 @@ Call the generate_world tool with the structured output.`;
                     items: {
                       type: "object",
                       properties: {
+                        temp_id: { type: "string", description: "Temporary ID like creature_1, creature_2" },
                         name: { type: "string" },
                         description: { type: "string" },
                         node_temp_id: { type: "string" },
@@ -218,6 +248,7 @@ Call the generate_world tool with the structured output.`;
                         ac: { type: "integer" },
                         rarity: { type: "string", enum: ["regular", "rare", "boss"] },
                         is_aggressive: { type: "boolean" },
+                        is_humanoid: { type: "boolean", description: "true for human-like creatures (bandits, mages, soldiers), false for beasts/monsters" },
                         respawn_seconds: { type: "integer" },
                         stats: {
                           type: "object",
@@ -240,7 +271,7 @@ Call the generate_world tool with the structured output.`;
                           },
                         },
                       },
-                      required: ["name", "description", "node_temp_id", "level", "hp", "max_hp", "ac", "rarity", "is_aggressive", "stats"],
+                      required: ["temp_id", "name", "description", "node_temp_id", "level", "hp", "max_hp", "ac", "rarity", "is_aggressive", "is_humanoid", "stats"],
                     },
                   },
                   npcs: {
@@ -256,8 +287,38 @@ Call the generate_world tool with the structured output.`;
                       required: ["name", "description", "dialogue", "node_temp_id"],
                     },
                   },
+                  items: {
+                    type: "array",
+                    description: "Items carried by humanoid creatures. Only equipment and consumable types.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        temp_id: { type: "string", description: "Temporary ID like item_1, item_2" },
+                        name: { type: "string" },
+                        description: { type: "string" },
+                        item_type: { type: "string", enum: ["equipment", "consumable"] },
+                        rarity: { type: "string", enum: ["common", "uncommon", "rare"] },
+                        slot: { type: "string", enum: ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"], description: "null for consumables" },
+                        level: { type: "integer" },
+                        hands: { type: "integer", description: "1 or 2 for weapons, null for non-weapons" },
+                        stats: {
+                          type: "object",
+                          description: "Stat bonuses: str, dex, con, int, wis, cha, ac, hp, hp_regen",
+                        },
+                        value: { type: "integer", description: "Gold value" },
+                        max_durability: { type: "integer" },
+                        creature_temp_ids: {
+                          type: "array",
+                          items: { type: "string" },
+                          description: "Which creatures carry this item (use creature temp_ids)",
+                        },
+                        drop_chance: { type: "number", description: "Drop chance 0.1-0.5" },
+                      },
+                      required: ["temp_id", "name", "description", "item_type", "rarity", "level", "stats", "value", "max_durability", "creature_temp_ids", "drop_chance"],
+                    },
+                  },
                 },
-                required: ["region", "nodes", "creatures", "npcs"],
+                required: ["region", "nodes", "creatures", "npcs", "items"],
               },
             },
           },
@@ -299,11 +360,9 @@ Call the generate_world tool with the structured output.`;
     // Also strip leaked temp IDs, boolean flags, and metadata from names
     const cleanName = (s: string) => {
       let cleaned = stripNonAscii(s);
-      // Remove patterns like "node_1", "node_2", "(is_vendor)", "is_vendor: true", etc.
       cleaned = cleaned.replace(/\s*\(?node_\d+\)?/gi, '');
       cleaned = cleaned.replace(/\s*\(?\s*is_(vendor|inn|blacksmith)\s*:?\s*(true|false)?\s*\)?/gi, '');
       cleaned = cleaned.replace(/\s*\(?\s*(vendor|inn|blacksmith)\s*:?\s*(true|false)\s*\)?/gi, '');
-      // Remove trailing/leading punctuation artifacts
       cleaned = cleaned.replace(/^[\s,\-–]+|[\s,\-–]+$/g, '').trim();
       return cleaned;
     };
@@ -317,6 +376,12 @@ Call the generate_world tool with the structured output.`;
     for (const npc of (generated.npcs || [])) {
       if (npc.name) npc.name = cleanName(npc.name);
     }
+    for (const item of (generated.items || [])) {
+      if (item.name) item.name = cleanName(item.name);
+    }
+
+    // Ensure items array exists
+    if (!generated.items) generated.items = [];
 
     return new Response(JSON.stringify(generated), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

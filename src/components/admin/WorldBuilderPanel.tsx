@@ -9,11 +9,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug } from 'lucide-react';
+import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug, Package } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
 import PopulateNodeSelector from './PopulateNodeSelector';
 
-// ... keep existing code (interfaces GeneratedRegion through ExistingRegion, lines 13-65)
 interface GeneratedRegion {
   name: string;
   description: string;
@@ -32,6 +31,7 @@ interface GeneratedNode {
 }
 
 interface GeneratedCreature {
+  temp_id?: string;
   name: string;
   description: string;
   node_temp_id: string;
@@ -41,6 +41,7 @@ interface GeneratedCreature {
   ac: number;
   rarity: string;
   is_aggressive: boolean;
+  is_humanoid?: boolean;
   respawn_seconds?: number;
   stats: Record<string, number>;
   loot_table?: any[];
@@ -53,11 +54,28 @@ interface GeneratedNPC {
   node_temp_id: string;
 }
 
+interface GeneratedItem {
+  temp_id: string;
+  name: string;
+  description: string;
+  item_type: string;
+  rarity: string;
+  slot?: string | null;
+  level: number;
+  hands?: number | null;
+  stats: Record<string, number>;
+  value: number;
+  max_durability: number;
+  creature_temp_ids: string[];
+  drop_chance: number;
+}
+
 interface GeneratedWorld {
   region: GeneratedRegion;
   nodes: GeneratedNode[];
   creatures: GeneratedCreature[];
   npcs: GeneratedNPC[];
+  items: GeneratedItem[];
 }
 
 interface ExistingRegion {
@@ -187,7 +205,10 @@ export default function WorldBuilderPanel() {
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setGenerated(data as GeneratedWorld);
+      // Ensure items array exists
+      const world = data as GeneratedWorld;
+      if (!world.items) world.items = [];
+      setGenerated(world);
       toast.success('Content generated! Review below.');
     } catch (e: any) {
       toast.error(e.message || 'Generation failed');
@@ -201,10 +222,45 @@ export default function WorldBuilderPanel() {
     setApplying(true);
 
     try {
+      // Step 1: Insert generated items and collect real IDs
+      const itemTempToReal = new Map<string, string>();
+      for (const item of (generated.items || [])) {
+        const { data: itemData, error: itemErr } = await supabase
+          .from('items')
+          .insert({
+            name: item.name,
+            description: item.description,
+            item_type: item.item_type,
+            rarity: item.rarity as any,
+            slot: item.slot as any || null,
+            level: item.level,
+            hands: item.hands || null,
+            stats: item.stats || {},
+            value: item.value,
+            max_durability: item.max_durability,
+          })
+          .select('id')
+          .single();
+        if (itemErr) throw itemErr;
+        itemTempToReal.set(item.temp_id, itemData.id);
+      }
+
+      // Step 2: Build creature loot tables from items
+      const creatureLootMap = new Map<string, Array<{ item_id: string; chance: number }>>();
+      for (const item of (generated.items || [])) {
+        const realItemId = itemTempToReal.get(item.temp_id);
+        if (!realItemId) continue;
+        for (const creatureTempId of item.creature_temp_ids) {
+          if (!creatureLootMap.has(creatureTempId)) creatureLootMap.set(creatureTempId, []);
+          creatureLootMap.get(creatureTempId)!.push({ item_id: realItemId, chance: item.drop_chance });
+        }
+      }
+
       if (mode === 'populate') {
         // Populate mode: only insert creatures, using real node IDs directly
         for (const creature of generated.creatures) {
           const nodeId = creature.node_temp_id; // Already a real UUID
+          const lootTable = creatureLootMap.get(creature.temp_id || '') || [];
           await supabase.from('creatures').insert({
             name: creature.name,
             description: creature.description,
@@ -215,12 +271,14 @@ export default function WorldBuilderPanel() {
             ac: creature.ac,
             rarity: creature.rarity as any,
             is_aggressive: creature.is_aggressive,
+            is_humanoid: creature.is_humanoid || false,
             respawn_seconds: creature.respawn_seconds || 300,
             stats: creature.stats,
-            loot_table: creature.loot_table || [],
+            loot_table: lootTable,
           });
         }
-        toast.success(`Populated ${generated.creatures.length} creatures across ${selectedNodeIds.size} nodes.`);
+        const itemCount = generated.items?.length || 0;
+        toast.success(`Populated ${generated.creatures.length} creatures${itemCount ? ` with ${itemCount} items` : ''} across ${selectedNodeIds.size} nodes.`);
         setGenerated(null);
         setPrompt('');
         setApplying(false);
@@ -317,6 +375,7 @@ export default function WorldBuilderPanel() {
       for (const creature of generated.creatures) {
         const nodeId = resolveTarget(creature.node_temp_id);
         if (!nodeId) continue;
+        const lootTable = creatureLootMap.get(creature.temp_id || '') || [];
         await supabase.from('creatures').insert({
           name: creature.name,
           description: creature.description,
@@ -327,9 +386,10 @@ export default function WorldBuilderPanel() {
           ac: creature.ac,
           rarity: creature.rarity as any,
           is_aggressive: creature.is_aggressive,
+          is_humanoid: creature.is_humanoid || false,
           respawn_seconds: creature.respawn_seconds || 300,
           stats: creature.stats,
-          loot_table: creature.loot_table || [],
+          loot_table: lootTable,
         });
       }
 
@@ -346,7 +406,8 @@ export default function WorldBuilderPanel() {
       }
 
       const action = mode === 'expand' ? 'Expanded' : 'Created';
-      toast.success(`${action} ${generated.region.name}: ${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs.`);
+      const itemCount = generated.items?.length || 0;
+      toast.success(`${action} ${generated.region.name}: ${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs${itemCount ? `, ${itemCount} items` : ''}.`);
       setGenerated(null);
       setPrompt('');
       const { data: newRegions } = await supabase.from('regions').select('id, name, description, min_level, max_level').order('min_level');
@@ -364,6 +425,12 @@ export default function WorldBuilderPanel() {
     return 'outline';
   };
 
+  const itemRarityColor = (r: string) => {
+    if (r === 'rare') return 'secondary';
+    if (r === 'uncommon') return 'default';
+    return 'outline';
+  };
+
   // For populate mode, map node IDs to names for the preview
   const getNodeNameForCreature = (nodeTempId: string) => {
     if (mode === 'populate') {
@@ -371,6 +438,12 @@ export default function WorldBuilderPanel() {
       return node?.name || nodeTempId;
     }
     return generated?.nodes.find(n => n.temp_id === nodeTempId)?.name || nodeTempId;
+  };
+
+  // Get items for a given creature temp_id
+  const getItemsForCreature = (creatureTempId?: string) => {
+    if (!creatureTempId || !generated?.items) return [];
+    return generated.items.filter(item => item.creature_temp_ids.includes(creatureTempId));
   };
 
   return (
@@ -513,6 +586,7 @@ export default function WorldBuilderPanel() {
               nodes={generated.nodes}
               creatures={generated.creatures}
               npcs={generated.npcs}
+              items={generated.items || []}
               mode={mode}
               existingAnchors={
                 mode === 'expand'
@@ -561,18 +635,64 @@ export default function WorldBuilderPanel() {
                   <Swords className="w-3 h-3" /> Creatures ({generated.creatures.length})
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-1 mt-1">
-                  {generated.creatures.map((cr, i) => (
+                  {generated.creatures.map((cr, i) => {
+                    const crItems = getItemsForCreature(cr.temp_id);
+                    return (
+                      <Card key={i} className="p-2">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-xs font-medium">{cr.name}</span>
+                          <Badge variant={rarityColor(cr.rarity)} className="text-[9px]">{cr.rarity}</Badge>
+                          <span className="text-[9px] text-muted-foreground">Lvl {cr.level}</span>
+                          <span className="text-[9px] text-muted-foreground">HP {cr.hp}</span>
+                          {cr.is_aggressive && <Badge variant="destructive" className="text-[9px]">⚔ Aggressive</Badge>}
+                          {cr.is_humanoid && <Badge variant="outline" className="text-[9px]">🧑 Humanoid</Badge>}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{cr.description}</p>
+                        <div className="text-[9px] text-muted-foreground">
+                          📍 {getNodeNameForCreature(cr.node_temp_id)}
+                        </div>
+                        {crItems.length > 0 && (
+                          <div className="mt-1 pl-2 border-l border-border">
+                            {crItems.map((item, j) => (
+                              <div key={j} className="text-[9px] text-muted-foreground flex items-center gap-1">
+                                <Package className="w-2.5 h-2.5" />
+                                <span className="font-medium">{item.name}</span>
+                                <Badge variant={itemRarityColor(item.rarity)} className="text-[8px] px-1 py-0">{item.rarity}</Badge>
+                                <span>({Math.round(item.drop_chance * 100)}%)</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Items summary */}
+            {(generated.items?.length || 0) > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
+                  <ChevronDown className="w-3 h-3" />
+                  <Package className="w-3 h-3" /> Items ({generated.items.length})
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {generated.items.map((item, i) => (
                     <Card key={i} className="p-2">
                       <div className="flex items-center gap-1 flex-wrap">
-                        <span className="text-xs font-medium">{cr.name}</span>
-                        <Badge variant={rarityColor(cr.rarity)} className="text-[9px]">{cr.rarity}</Badge>
-                        <span className="text-[9px] text-muted-foreground">Lvl {cr.level}</span>
-                        <span className="text-[9px] text-muted-foreground">HP {cr.hp}</span>
-                        {cr.is_aggressive && <Badge variant="destructive" className="text-[9px]">⚔ Aggressive</Badge>}
+                        <span className="text-xs font-medium">{item.name}</span>
+                        <Badge variant={itemRarityColor(item.rarity)} className="text-[9px]">{item.rarity}</Badge>
+                        <Badge variant="outline" className="text-[9px]">{item.item_type}</Badge>
+                        <span className="text-[9px] text-muted-foreground">Lvl {item.level}</span>
+                        {item.slot && <span className="text-[9px] text-muted-foreground">{item.slot}</span>}
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{cr.description}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{item.description}</p>
                       <div className="text-[9px] text-muted-foreground">
-                        📍 {getNodeNameForCreature(cr.node_temp_id)}
+                        💰 {item.value}g · 🛡 {item.max_durability} dur
+                        {Object.keys(item.stats).length > 0 && (
+                          <span> · {Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(' ')}</span>
+                        )}
                       </div>
                     </Card>
                   ))}
@@ -609,8 +729,8 @@ export default function WorldBuilderPanel() {
                 {applying
                   ? 'Applying…'
                   : mode === 'populate'
-                  ? `Apply ${generated.creatures.length} Creatures`
-                  : `Apply All (${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs)`
+                  ? `Apply ${generated.creatures.length} Creatures${(generated.items?.length || 0) > 0 ? ` + ${generated.items.length} Items` : ''}`
+                  : `Apply All (${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs${(generated.items?.length || 0) > 0 ? `, ${generated.items.length} items` : ''})`
                 }
               </Button>
             </div>
