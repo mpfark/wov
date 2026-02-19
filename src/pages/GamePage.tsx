@@ -755,9 +755,32 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`📦 ${drop.item_name} → ${recipient.character.name}`);
     }
 
-    // Show loot dialog only for equipment drops when party members are at the same node
+    // Show loot dialog only for the party leader; non-leaders auto round-robin equipment
     if (equipmentDrops.length > 0 && hasPartyAtNode) {
-      setPendingLoot({ loot: equipmentDrops, creatureName });
+      if (party && party.leader_id === character.id) {
+        setPendingLoot({ loot: equipmentDrops, creatureName });
+      } else {
+        // Non-leader: auto round-robin equipment to same-node members
+        for (let i = 0; i < equipmentDrops.length; i++) {
+          const drop = equipmentDrops[i];
+          const recipient = sameNodeMembers[i % sameNodeMembers.length];
+          if (drop.item_rarity === 'unique') {
+            const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
+              p_character_id: recipient.character_id, p_item_id: drop.item_id,
+            });
+            if (!acquired) {
+              addLog(`✨ The unique power of ${drop.item_name} is already claimed by another...`);
+              continue;
+            }
+          } else {
+            await supabase.from('character_inventory').insert({
+              character_id: recipient.character_id, item_id: drop.item_id, current_durability: 100,
+            });
+          }
+          addLog(`📦 ${drop.item_name} → ${recipient.character.name}`);
+        }
+        fetchInventory();
+      }
     } else if (equipmentDrops.length > 0) {
       // Solo or no party at node — auto-assign equipment to self
       for (const drop of equipmentDrops) {
