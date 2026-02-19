@@ -61,7 +61,8 @@ export default function PartyPanel({
           {members.map(m => {
             if (!m.character) return null;
             const isMe = m.character_id === character.id;
-            const isMemberTank = party.tank_id === m.character_id;
+            const effectiveTankId = party.tank_id ?? party.leader_id;
+            const isMemberTank = effectiveTankId === m.character_id;
             const isMemberLeader = party.leader_id === m.character_id;
             return (
               <div key={m.id} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">

@@ -429,8 +429,9 @@ export function useCombat({
       const _rootDebuff = rootDebuffRef.current;
       const isRooted = _rootDebuff && Date.now() < _rootDebuff.expiresAt;
 
-      const tankMember = _party && _party.tank_id && _party.tank_id !== char.id
-        ? _partyMembers.find(m => m.character_id === _party.tank_id)
+      const effectiveTankId = _party ? (_party.tank_id ?? _party.leader_id) : null;
+      const tankMember = _party && effectiveTankId && effectiveTankId !== char.id
+        ? _partyMembers.find(m => m.character_id === effectiveTankId)
         : null;
       // AC buff from Battle Cry
       const _acBuff = acBuffRef.current;
