@@ -88,6 +88,7 @@ export default function ItemManager() {
     creatures: { id: string; name: string; chance: number }[];
     searchNodes: { id: string; name: string; chance: number }[];
     vendors: { id: string; name: string; node_name: string; price: number }[];
+    holder?: { character_name: string; character_id: string } | null;
   } | null>(null);
 
   const loadItems = async () => {
@@ -95,7 +96,7 @@ export default function ItemManager() {
     if (data) setItems(data as Item[]);
   };
 
-  const loadItemUsage = async (itemId: string) => {
+  const loadItemUsage = async (itemId: string, itemRarity?: string) => {
     const [creaturesRes, nodesRes, vendorRes] = await Promise.all([
       supabase.from('creatures').select('id, name, loot_table'),
       supabase.from('nodes').select('id, name, searchable_items'),
@@ -124,7 +125,21 @@ export default function ItemManager() {
       price: v.price,
     }));
 
-    setItemUsage({ creatures, searchNodes, vendors });
+    // Check if unique item is currently held by a player
+    let holder: { character_name: string; character_id: string } | null = null;
+    if (itemRarity === 'unique') {
+      const { data: held } = await supabase
+        .from('character_inventory')
+        .select('character_id, character:characters(name)')
+        .eq('item_id', itemId)
+        .limit(1);
+      if (held && held.length > 0) {
+        const h = held[0] as any;
+        holder = { character_id: h.character_id, character_name: h.character?.name || 'Unknown' };
+      }
+    }
+
+    setItemUsage({ creatures, searchNodes, vendors, holder });
   };
 
   useEffect(() => {
@@ -149,7 +164,7 @@ export default function ItemManager() {
       level: item.level ?? 1,
       origin_type: item.origin_type, origin_id: item.origin_id,
     });
-    loadItemUsage(item.id);
+    loadItemUsage(item.id, item.rarity);
   };
 
   const closePanel = () => {
@@ -449,6 +464,28 @@ export default function ItemManager() {
               {form.rarity === 'unique' && (
                 <div className="space-y-2 border-t border-border pt-3">
                   <label className="text-[10px] text-muted-foreground font-display">Unique Item Origin (where it returns when broken/offline)</label>
+                  
+                  {/* Holder indicator */}
+                  {selectedId && itemUsage && (
+                    <div className={`flex items-center gap-2 px-2 py-1.5 rounded border text-xs font-display ${
+                      itemUsage.holder 
+                        ? 'border-primary/40 bg-primary/10 text-primary' 
+                        : 'border-chart-2/40 bg-chart-2/10 text-chart-2'
+                    }`}>
+                      {itemUsage.holder ? (
+                        <>
+                          <span className="text-[10px] uppercase tracking-wider opacity-70">Held by</span>
+                          <span className="font-semibold">{itemUsage.holder.character_name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[10px] uppercase tracking-wider opacity-70">Status</span>
+                          <span className="font-semibold">Available — not held by any player</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-[10px] text-muted-foreground">Origin Type</label>
