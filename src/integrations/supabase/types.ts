@@ -103,6 +103,7 @@ export type Database = {
           cha: number
           class: Database["public"]["Enums"]["character_class"]
           con: number
+          cp: number
           created_at: string
           current_node_id: string | null
           dex: number
@@ -112,6 +113,7 @@ export type Database = {
           int: number
           last_online: string
           level: number
+          max_cp: number
           max_hp: number
           name: string
           race: Database["public"]["Enums"]["character_race"]
@@ -127,6 +129,7 @@ export type Database = {
           cha?: number
           class: Database["public"]["Enums"]["character_class"]
           con?: number
+          cp?: number
           created_at?: string
           current_node_id?: string | null
           dex?: number
@@ -136,6 +139,7 @@ export type Database = {
           int?: number
           last_online?: string
           level?: number
+          max_cp?: number
           max_hp?: number
           name: string
           race: Database["public"]["Enums"]["character_race"]
@@ -151,6 +155,7 @@ export type Database = {
           cha?: number
           class?: Database["public"]["Enums"]["character_class"]
           con?: number
+          cp?: number
           created_at?: string
           current_node_id?: string | null
           dex?: number
@@ -160,6 +165,7 @@ export type Database = {
           int?: number
           last_online?: string
           level?: number
+          max_cp?: number
           max_hp?: number
           name?: string
           race?: Database["public"]["Enums"]["character_race"]

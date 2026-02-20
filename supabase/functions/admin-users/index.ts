@@ -220,7 +220,9 @@ Deno.serve(async (req) => {
       const conMod = Math.floor((updates.con - 10) / 2);
       const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
       updates.max_hp = newMaxHp;
-      updates.hp = newMaxHp; // Full heal on level change
+      updates.hp = newMaxHp;
+      updates.max_cp = 100 + (new_level - 1) * 3;
+      updates.cp = updates.max_cp;
 
       // Reset XP when setting level directly
       updates.xp = 0;
@@ -353,6 +355,7 @@ Deno.serve(async (req) => {
 
       const updates: Record<string, any> = {
         xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
+        max_cp: 100 + (newLevel - 1) * 3, cp: 100 + (newLevel - 1) * 3,
       };
 
       // Apply accumulated stat increases
@@ -438,9 +441,12 @@ Deno.serve(async (req) => {
       // Total unspent = current unspent + spent points (refunded)
       const newUnspent = char.unspent_stat_points + Math.max(totalSpentPoints, 0);
 
+      const newMaxCp = 100 + (char.level - 1) * 3;
       const { error } = await adminClient.from("characters").update({
         ...baseStats,
         unspent_stat_points: newUnspent,
+        max_cp: newMaxCp,
+        cp: newMaxCp,
       }).eq("id", character_id);
       if (error) throw error;
       return jsonResponse({ success: true, refunded_points: Math.max(totalSpentPoints, 0) });

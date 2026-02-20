@@ -33,7 +33,6 @@ interface Props {
   activeCombatCreatureId?: string | null;
   creatureHpOverrides?: Record<string, number>;
   classAbilities?: ClassAbility[];
-  abilityCooldownEnds?: Record<number, number>;
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
   healTargets?: { id: string; name: string; hp: number; max_hp: number }[];
   beltedPotions?: InventoryItem[];
@@ -48,7 +47,7 @@ interface Props {
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
-  inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbilities = [], abilityCooldownEnds = {}, onUseAbility, healTargets = [],
+  inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbilities = [], onUseAbility, healTargets = [],
   beltedPotions = [], onUseBeltPotion, actionBindings,
   poisonStacks = {},
   igniteStacks = {},
@@ -63,22 +62,7 @@ export default function NodeView({
   // Only hp_transfer needs a target selector (heal is self-only)
   const hasTargetedAbility = classAbilities.some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb');
 
-  // Per-ability cooldown countdowns
-  const [cooldownLefts, setCooldownLefts] = useState<Record<number, number>>({});
-  useEffect(() => {
-    const update = () => {
-      const now = Date.now();
-      const newLefts: Record<number, number> = {};
-      for (const [idx, end] of Object.entries(abilityCooldownEnds)) {
-        const remaining = Math.ceil((end - now) / 1000);
-        if (remaining > 0) newLefts[Number(idx)] = remaining;
-      }
-      setCooldownLefts(newLefts);
-    };
-    update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [abilityCooldownEnds]);
+  // No longer need cooldown tracking — CP system handles availability
 
   const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0;
 
@@ -329,7 +313,7 @@ export default function NodeView({
               )}
               {classAbilities.map((ability, idx) => {
                 const levelLocked = character.level < ability.levelRequired;
-                const cooldownLeft = cooldownLefts[idx] || 0;
+                const notEnoughCp = (character.cp ?? 0) < ability.cpCost;
                 const needsTarget = ability.type === 'hp_transfer' || ability.type === 'ally_absorb';
                 const resolvedTarget = needsTarget && healTarget !== 'self' ? healTarget : undefined;
                 const disableNoTarget = ability.type === 'hp_transfer' && (!resolvedTarget || healTargets.length === 0);
@@ -341,12 +325,12 @@ export default function NodeView({
                           variant="outline"
                           size="sm"
                           onClick={() => onUseAbility(idx, resolvedTarget)}
-                          disabled={levelLocked || cooldownLeft > 0 || character.hp <= 0 || disableNoTarget}
+                          disabled={levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
                           className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
                         >
                           {ability.emoji} {ability.label}
-                          {!levelLocked && cooldownLeft > 0 && <span className="ml-0.5 text-muted-foreground">({cooldownLeft}s)</span>}
-                          {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && cooldownLeft <= 0 && !levelLocked && (
+                          {!levelLocked && <span className="ml-0.5 text-muted-foreground">({ability.cpCost})</span>}
+                          {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && !levelLocked && !notEnoughCp && (
                             <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`ability${idx + 1}` as keyof ActionBindings][0])}]</span>
                           )}
                         </Button>
@@ -355,7 +339,7 @@ export default function NodeView({
                     <TooltipContent side="top" className="text-xs max-w-[200px]">
                       {levelLocked
                         ? `Unlocks at level ${ability.levelRequired}`
-                        : `${ability.description} · ${ability.cooldownMs / 1000}s cooldown`
+                        : `${ability.description} · ${ability.cpCost} CP`
                       }
                     </TooltipContent>
                   </Tooltip>
