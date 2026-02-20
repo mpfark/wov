@@ -10,7 +10,8 @@ import {
   RACE_LABELS, CLASS_LABELS, STAT_LABELS, ITEM_RARITY_MULTIPLIER,
   ITEM_STAT_COSTS, calculateStats, getBaseRegen, getItemStatBudget,
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
-  XP_RARITY_MULTIPLIER,
+  XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
+  CLASS_PRIMARY_STAT,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
@@ -217,6 +218,100 @@ export default function GameManual() {
                   ))}
                 </TableBody>
               </Table>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 3b. Concentration Points (CP) */}
+          <AccordionItem value="cp-system" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🔮 Concentration Points (CP)
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>CP is the resource that powers class abilities. It replaces cooldown timers — abilities cost CP to use and are disabled when you don't have enough.</p>
+                <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">100 + (level − 1) × 3</code></p>
+                <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 6 seconds</code> + bonus from primary stat</p>
+                <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/6s for every 2 points of primary stat modifier</p>
+                <p><strong className="text-foreground">Inn Rest</strong> = Fully restores CP (alongside HP)</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Ability CP Costs by Tier</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Tier</TableHead>
+                      <TableHead className="text-xs">Level</TableHead>
+                      <TableHead className="text-xs">CP Cost</TableHead>
+                      <TableHead className="text-xs">Design Intent</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { tier: 1, level: 5, cost: 15, intent: 'Bread-and-butter, usable frequently' },
+                      { tier: 2, level: 10, cost: 25, intent: 'Moderate cost, tactical choice' },
+                      { tier: 3, level: 15, cost: 40, intent: 'Expensive, meaningful commitment' },
+                      { tier: 4, level: 20, cost: 60, intent: 'Very expensive, fight-defining' },
+                    ].map(row => (
+                      <TableRow key={row.tier}>
+                        <TableCell className="text-xs font-display">T{row.tier}</TableCell>
+                        <TableCell className="text-xs">{row.level}</TableCell>
+                        <TableCell className="text-xs">{row.cost} CP</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{row.intent}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Max CP by Level</p>
+                <div className="grid grid-cols-4 gap-1 text-xs text-muted-foreground">
+                  {[1, 5, 10, 15, 20, 25, 30, 40].map(lv => (
+                    <div key={lv}>
+                      Lv {lv}: <span className="text-primary">{getMaxCp(lv)} CP</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">CP Regen by Class (Primary Stat)</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Class</TableHead>
+                      <TableHead className="text-xs">Primary</TableHead>
+                      <TableHead className="text-xs">Regen @ 10</TableHead>
+                      <TableHead className="text-xs">Regen @ 14</TableHead>
+                      <TableHead className="text-xs">Regen @ 18</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(CLASS_PRIMARY_STAT).map(([cls, stat]) => (
+                      <TableRow key={cls}>
+                        <TableCell className="text-xs font-display">{CLASS_LABELS[cls]}</TableCell>
+                        <TableCell className="text-xs">{STAT_LABELS[stat]}</TableCell>
+                        <TableCell className="text-xs">{getCpRegenRate(10)} CP/6s</TableCell>
+                        <TableCell className="text-xs">{getCpRegenRate(14)} CP/6s</TableCell>
+                        <TableCell className="text-xs">{getCpRegenRate(18)} CP/6s</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Card className="bg-card/30">
+                <CardContent className="p-3">
+                  <p className="text-xs font-display text-primary mb-1">Tactical Example (Level 20, 157 max CP)</p>
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    <p>• T4 ability (60 CP) + T2 ability (25 CP) = 85 CP spent → 72 CP remaining</p>
+                    <p>• Need ~72 seconds to regenerate back to full (at base rate)</p>
+                    <p>• Or rest at an Inn for instant full restore</p>
+                    <p>• Bard's "Encore" refunds the CP cost of the last used ability</p>
+                  </div>
+                </CardContent>
+              </Card>
             </AccordionContent>
           </AccordionItem>
 
