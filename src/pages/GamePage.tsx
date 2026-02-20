@@ -883,9 +883,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
         addLog(`✨ HP regeneration boosted for 2 minutes!`);
       } else if (result.hpRegen > 0) {
-        addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} HP & CP regen for 2 minutes.`);
+        addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} HP & CP regen for 5 minutes.`);
         logActivity(character.user_id, character.id, 'general', `Consumed ${result.itemName} (+${result.hpRegen} regen)`);
-        setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 120000 });
+        setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 300000 });
       }
     }
   }, [useConsumable, character.id, character.hp, character.max_hp, updateCharacter, addLog]);
