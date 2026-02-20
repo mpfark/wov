@@ -156,7 +156,6 @@ export default function NodeView({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                         <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
                           <div
                             className={`h-full rounded-full transition-all duration-200`}
@@ -170,7 +169,7 @@ export default function NodeView({
                             }}
                           />
                         </div>
-                        <span className="text-[9px] text-muted-foreground whitespace-nowrap">{displayHp}/{c.max_hp}</span>
+                        <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                         {isActiveTarget ? (
                           <span className="text-[10px] font-display text-destructive animate-pulse">⚔️</span>
                         ) : (
