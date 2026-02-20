@@ -1,71 +1,82 @@
 
 
-# Creature XP Rewards, Rarity Multipliers & XP Curve Adjustment
+# Ground Loot System -- Drop Items on the Ground Instead of Direct Distribution
 
 ## Overview
-Three changes: (1) add rarity-based XP multipliers to creature kills, (2) adjust the XP curve so higher levels require progressively more effort, and (3) document all of this in the Game Manual.
 
-## 1. XP Curve Change
+Replace the current loot assignment/round-robin system with a "ground loot" model. When a creature dies, its loot drops onto the ground at that node. Any party member present can pick items up. Players can also drop items from their inventory onto the ground for others to grab.
 
-**Current:** XP to next level = `level * 100` (linear -- always 10 same-level kills)
+## How It Works
 
-**New:** XP to next level = `floor(level^1.5 * 50)` (progressive -- early levels stay fast, late levels require more grinding)
+1. **Creature dies** -- loot rolls happen as before, but instead of inserting into `character_inventory`, items are inserted into a new `node_ground_loot` table tied to the node.
+2. **NodeView shows ground loot** -- a new collapsible section "On the Ground" displays dropped items. Each item has a "Pick Up" button.
+3. **Pick up** -- clicking it moves the item from `node_ground_loot` into `character_inventory` for that character. Unique items still use the `try_acquire_unique_item` RPC.
+4. **Drop to ground** -- the existing `dropItem` function (currently deletes the item permanently) is changed to move items to `node_ground_loot` instead, so other players can pick them up.
+5. **Cleanup** -- ground loot expires after a configurable time (e.g. 10 minutes) to prevent clutter. A database function handles this.
 
-| Level | Old XP Req | New XP Req | Same-Level Regular Kills (old) | Same-Level Regular Kills (new) |
-|-------|-----------|-----------|-------------------------------|-------------------------------|
-| 1     | 100       | 50        | 10                            | 5                             |
-| 5     | 500       | 559       | 10                            | 11                            |
-| 10    | 1,000     | 1,581     | 10                            | 16                            |
-| 20    | 2,000     | 4,472     | 10                            | 22                            |
-| 30    | 3,000     | 8,216     | 10                            | 27                            |
-| 40    | 4,000     | 12,649    | 10                            | 32                            |
+## What Gets Removed
 
-This makes early levels feel snappy while late-game progression requires real commitment.
+- **LootShareDialog** -- no longer needed since loot goes to ground instead of being assigned by the leader.
+- **Round-robin logic** in `rollLoot` -- replaced with simple inserts into `node_ground_loot`.
+- **`pendingLoot` state** in GamePage -- no longer needed.
 
-## 2. Rarity XP Multipliers
+## Database Changes
 
-Add multipliers to creature XP rewards based on rarity:
+### New table: `node_ground_loot`
 
-| Rarity  | Multiplier | Level 10 Regular Kills Equivalent |
-|---------|-----------|----------------------------------|
-| Regular | 1.0x      | baseline                         |
-| Rare    | 1.5x      | worth 1.5 regulars               |
-| Boss    | 2.5x      | worth 2.5 regulars               |
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid (PK) | Default `gen_random_uuid()` |
+| node_id | uuid (NOT NULL) | FK to nodes |
+| item_id | uuid (NOT NULL) | FK to items |
+| dropped_by | uuid | Character who dropped it (null for creature drops) |
+| dropped_at | timestamptz | Default `now()`, used for expiration |
+| creature_name | text | For display ("Loot from Goblin") |
 
-Formula becomes: `baseXp = creature.level * 10 * rarityMult`
+### RLS Policies
+- **SELECT**: Anyone authenticated can view ground loot (items are visible to all at a node).
+- **INSERT**: Authenticated users can insert (for dropping items).
+- **DELETE**: Authenticated users can delete (for picking up items -- delete from ground, insert into inventory).
 
-## 3. Game Manual Updates
+### Realtime
+- Enable realtime on `node_ground_loot` so all players at the node see drops/pickups instantly.
 
-Add a new "XP & Rewards" section (or expand Combat) showing:
-- The XP curve formula
-- Creature XP by rarity with example table
-- Kills-to-level reference at key milestones
-- Level penalty reminder
+### Cleanup function
+- `cleanup_ground_loot()`: Deletes rows older than 10 minutes. Called periodically (can piggyback on existing cron-like mechanisms or be called client-side).
 
 ---
 
 ## Technical Details
 
-### File: `src/lib/game-data.ts`
-- Add `XP_RARITY_MULTIPLIER` constant: `{ regular: 1, rare: 1.5, boss: 2.5 }`
-- Add `getXpForLevel(level)` function: `Math.floor(Math.pow(level, 1.5) * 50)`
-- Add `getCreatureXp(level, rarity)` function: `Math.floor(level * 10 * (XP_RARITY_MULTIPLIER[rarity] || 1))`
+### File: New migration
+- Create `node_ground_loot` table with columns above.
+- Add RLS policies.
+- Enable realtime.
+- Create `cleanup_ground_loot()` function.
 
-### File: `src/hooks/useCombat.ts`
-- Import `XP_RARITY_MULTIPLIER` from game-data
-- Change line 337 from `const baseXp = creature.level * 10` to use the rarity multiplier: `const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1))`
+### File: New hook `src/hooks/useGroundLoot.ts`
+- Subscribes to `node_ground_loot` filtered by the current `node_id`.
+- Provides `groundLoot` array, `pickUpItem(groundLootId)`, and `dropItemToGround(inventoryId)` functions.
+- `pickUpItem`: Deletes from `node_ground_loot`, inserts into `character_inventory` (with unique item guard).
+- `dropItemToGround`: Deletes from `character_inventory`, inserts into `node_ground_loot` at the character's current node.
 
-### File: `src/hooks/useCharacter.ts` (or wherever level-up XP threshold is checked)
-- Replace `level * 100` with the new `getXpForLevel(level)` function
+### File: `src/pages/GamePage.tsx`
+- Import and use `useGroundLoot(character.current_node_id, character.id)`.
+- Remove `pendingLoot` state, `handleLootDistribute`, and `LootShareDialog` rendering.
+- Update `rollLoot` to insert drops into `node_ground_loot` instead of `character_inventory`.
+- Pass `groundLoot`, `onPickUp`, `onDropToGround` to `NodeView`.
 
-### File: `src/components/admin/GameManual.tsx`
-- Update the level progression table to use the new `getXpForLevel` function for XP Required and Total XP columns
-- Add a new accordion section "XP & Creature Rewards" between Combat and Class Abilities, containing:
-  - XP curve formula
-  - Rarity XP multiplier table
-  - Kills-to-level examples at levels 1, 5, 10, 20, 30, 40
-  - Level penalty formula reminder
+### File: `src/components/game/NodeView.tsx`
+- Add a new "On the Ground" collapsible section (similar to "In the Area").
+- Each item shows name (colored by rarity), creature source if any, and a "Pick Up" button.
 
-### File: `src/components/admin/CreatureManager.tsx`
-- Optionally show the XP reward value in the creature properties panel for reference
+### File: `src/hooks/useInventory.ts`
+- Change `dropItem` to call the ground loot hook's drop function instead of permanently deleting the item. (Or expose both options: "Drop" puts on ground, "Destroy" permanently removes.)
+
+### File: `src/components/game/CharacterPanel.tsx`
+- Update the "Drop" button behavior to drop to ground instead of destroy.
+- Optionally add a "Destroy" option for when players want to permanently remove junk.
+
+### File: `src/components/game/LootShareDialog.tsx`
+- Remove this file entirely (no longer needed).
 
