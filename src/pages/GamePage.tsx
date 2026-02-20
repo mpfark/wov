@@ -645,7 +645,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       stopCombatFn();
     }
 
-    // Attack of Opportunity — each living creature gets a free strike (unless stealthed)
+    // Attack of Opportunity — each living creature gets a free strike against ALL party members at this node
     const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0 && (c.is_aggressive || c.id === activeCombatCreatureId));
     let currentHp = character.hp;
     const isStealthed = stealthBuff && Date.now() < stealthBuff.expiresAt;
@@ -653,15 +653,46 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog('🌑 You slip through the shadows unnoticed...');
       setStealthBuff(null);
     } else {
+      // Opportunity attack against the fleeing player
       for (const creature of livingCreatures) {
         if (currentHp <= 0) break;
         const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
         if (atkRoll >= effectiveAC) {
           const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
           currentHp = Math.max(currentHp - dmg, 0);
-          addLog(`⚔️ ${creature.name} strikes as you flee! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${dmg} damage!`);
+          addLog(`⚔️ ${creature.name} strikes ${party ? character.name : 'you'} while fleeing! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${dmg} damage!`);
         } else {
-          addLog(`${creature.name} swipes at you as you flee — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
+          addLog(`${creature.name} swipes at ${party ? character.name : 'you'} while fleeing — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
+        }
+      }
+      // Opportunity attacks against party members at the same node (excluding self)
+      if (party && livingCreatures.length > 0) {
+        const membersHere = partyMembers.filter(
+          m => m.character_id !== character.id && m.character.current_node_id === character.current_node_id && m.character.hp > 0
+        );
+        for (const member of membersHere) {
+          for (const creature of livingCreatures) {
+            const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
+            // Use a basic AC of 10 for party members (we don't have their full AC here)
+            const memberAC = 10;
+            if (atkRoll >= memberAC) {
+              const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+              addLog(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing! (Rolled ${atkRoll}) — ${dmg} damage!`);
+              try {
+                const { data: newHp } = await supabase.rpc('damage_party_member', {
+                  _character_id: member.character_id,
+                  _damage: dmg,
+                });
+                if (newHp !== null) {
+                  broadcastHp?.(member.character_id, newHp, member.character.hp, creature.name);
+                }
+              } catch (e) {
+                console.error('Failed to apply opportunity attack to party member:', e);
+              }
+            } else {
+              addLog(`${creature.name} swipes at ${member.character.name} while fleeing — misses!`);
+            }
+          }
         }
       }
     }
