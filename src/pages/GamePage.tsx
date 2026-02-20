@@ -97,9 +97,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     hpOverrides: partyHpOverrides,
     moveEvents: partyMoveEvents,
     broadcastLogEntries,
+    rewardEvents: partyRewardEvents,
     broadcastHp,
     broadcastMove,
     broadcastCombatMsg,
+    broadcastReward,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Merge broadcast HP/movement overrides into party members for instant display
@@ -278,6 +280,26 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, []); // stable — no deps, reads from refs
 
+  // When a party reward broadcast arrives for this character, refetch character data from DB
+  const lastRewardCountRef = useRef(0);
+  useEffect(() => {
+    if (partyRewardEvents.length === 0 || partyRewardEvents.length === lastRewardCountRef.current) return;
+    lastRewardCountRef.current = partyRewardEvents.length;
+    // Refetch character from DB to pick up gold/xp/level changes from award_party_member RPC
+    (async () => {
+      const { data } = await supabase
+        .from('characters')
+        .select('*')
+        .eq('id', character.id)
+        .single();
+      if (data) {
+        // Update local state with fresh DB values for reward-related fields
+        await updateCharacter({ gold: data.gold, xp: data.xp, level: data.level, hp: data.hp, max_hp: data.max_hp,
+          str: data.str, dex: data.dex, con: data.con, int: data.int, wis: data.wis, cha: data.cha });
+      }
+    })();
+  }, [partyRewardEvents, character.id, updateCharacter]);
+
 
 
   // Refs for death respawn to avoid stale closures / cleanup races
@@ -416,6 +438,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onClearDisengage: useCallback(() => setDisengageNextHit(null), []),
     broadcastDamage,
     broadcastHp,
+    broadcastReward,
   });
 
   // DoT (Rend bleed) tick effect

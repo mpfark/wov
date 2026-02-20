@@ -53,6 +53,7 @@ interface UseCombatParams {
   onClearDisengage?: () => void;
   broadcastDamage?: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
   broadcastHp?: (characterId: string, hp: number, maxHp: number, source: string) => void;
+  broadcastReward?: (characterId: string, xp: number, gold: number, source: string) => void;
 }
 
 export function useCombat({
@@ -85,6 +86,7 @@ export function useCombat({
   onClearDisengage,
   broadcastDamage,
   broadcastHp,
+  broadcastReward,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -121,6 +123,7 @@ export function useCombat({
   const onClearDisengageRef = useRef(onClearDisengage);
   const broadcastDamageRef = useRef(broadcastDamage);
   const broadcastHpRef = useRef(broadcastHp);
+  const broadcastRewardRef = useRef(broadcastReward);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -153,6 +156,7 @@ export function useCombat({
   useEffect(() => { onClearDisengageRef.current = onClearDisengage; }, [onClearDisengage]);
   useEffect(() => { broadcastDamageRef.current = broadcastDamage; }, [broadcastDamage]);
   useEffect(() => { broadcastHpRef.current = broadcastHp; }, [broadcastHp]);
+  useEffect(() => { broadcastRewardRef.current = broadcastReward; }, [broadcastReward]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -380,6 +384,8 @@ export function useCombat({
                   _xp: xpShare,
                   _gold: goldShare,
                 });
+                // Broadcast reward so the member's client refetches character data instantly
+                broadcastRewardRef.current?.(m.character_id, xpShare, goldShare, creature.name);
               } catch (e) {
                 console.error('Failed to award party member:', m.character_id, e);
               }
