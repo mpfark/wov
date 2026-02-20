@@ -246,8 +246,8 @@ export default function NodeView({
               const hasLoot = node.searchable_items && node.searchable_items.length > 0;
               const hasDiscoverable = hasHidden || hasLoot;
               return (
-                <Button variant="secondary" size="sm" onClick={onSearch} className={`font-display text-[10px] h-6 px-2 ${hasDiscoverable ? 'ring-1 ring-primary/40 text-primary animate-pulse' : ''}`}>
-                  <Search className="h-3 w-3 mr-0.5" /> Search
+                <Button variant="secondary" size="sm" onClick={onSearch} disabled={character.cp < 5} className={`font-display text-[10px] h-6 px-2 ${hasDiscoverable ? 'ring-1 ring-primary/40 text-primary animate-pulse' : ''}`}>
+                  <Search className="h-3 w-3 mr-0.5" /> Search <span className="ml-0.5 text-muted-foreground">(5)</span>
                   {actionBindings?.search?.[0] && (
                     <span className="ml-1 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings.search[0])}]</span>
                   )}

@@ -767,9 +767,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   // Keyboard movement bindings — declared after handleSearch/handleUseAbility/handleUseConsumable (see below)
 
+  const SEARCH_CP_COST = 5;
+
   const handleSearch = useCallback(async () => {
     if (isDead) return;
     if (!currentNode) return;
+    if ((character.cp ?? 0) < SEARCH_CP_COST) {
+      addLog('❌ Not enough CP to search! (Need 5 CP)');
+      return;
+    }
+    // Deduct CP
+    const newCp = (character.cp ?? 0) - SEARCH_CP_COST;
+    await supabase.from('characters').update({ cp: newCp }).eq('id', character.id);
+    updateCharacter({ cp: newCp });
+
     const roll = rollD20();
     const searchStat = character.class === 'wizard' ? character.int : character.wis;
     const searchMod = getStatModifier(searchStat);
