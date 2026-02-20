@@ -82,6 +82,8 @@ export default function ItemManager() {
   const [typeTab, setTypeTab] = useState<string>('all');
   const [slotTab, setSlotTab] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const [showUnassigned, setShowUnassigned] = useState(false);
+  const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
   const [itemUsage, setItemUsage] = useState<{
@@ -142,8 +144,32 @@ export default function ItemManager() {
     setItemUsage({ creatures, searchNodes, vendors, holder });
   };
 
+  const loadUsedItemIds = async () => {
+    const [creaturesRes, nodesRes, vendorRes, startingGearRes] = await Promise.all([
+      supabase.from('creatures').select('loot_table'),
+      supabase.from('nodes').select('searchable_items'),
+      supabase.from('vendor_inventory').select('item_id'),
+      supabase.from('class_starting_gear').select('item_id'),
+    ]);
+    const ids = new Set<string>();
+    for (const c of (creaturesRes.data || [])) {
+      for (const e of ((c.loot_table as any[]) || [])) {
+        if (e.item_id) ids.add(e.item_id);
+      }
+    }
+    for (const n of (nodesRes.data || [])) {
+      for (const e of ((n.searchable_items as any[]) || [])) {
+        if (e.item_id) ids.add(e.item_id);
+      }
+    }
+    for (const v of (vendorRes.data || [])) ids.add(v.item_id);
+    for (const g of (startingGearRes.data || [])) ids.add(g.item_id);
+    setUsedItemIds(ids);
+  };
+
   useEffect(() => {
     loadItems();
+    loadUsedItemIds();
     supabase.from('creatures').select('id, name').order('name').then(({ data }) => { if (data) setAllCreatures(data); });
     supabase.from('nodes').select('id, name').order('name').then(({ data }) => { if (data) setAllNodes(data); });
   }, []);
@@ -240,7 +266,10 @@ export default function ItemManager() {
 
   const panelOpen = isNew || selectedId !== null;
 
+  const unassignedCount = items.filter(i => !usedItemIds.has(i.id)).length;
+
   const filtered = items.filter(i => {
+    if (showUnassigned && usedItemIds.has(i.id)) return false;
     if (typeTab !== 'all' && i.item_type !== typeTab) return false;
     if ((typeTab === 'equipment' || typeTab === 'shield') && slotTab !== 'all') {
       if (i.slot !== slotTab) return false;
@@ -260,6 +289,16 @@ export default function ItemManager() {
           <span className="text-xs text-muted-foreground">({filtered.length})</span>
           <div className="flex-1" />
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
+          <button
+            onClick={() => setShowUnassigned(v => !v)}
+            className={`px-2 py-0.5 rounded text-[10px] font-display transition-colors ${
+              showUnassigned
+                ? 'bg-destructive/20 text-destructive border border-destructive/50'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            }`}
+          >
+            Unassigned ({unassignedCount})
+          </button>
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
