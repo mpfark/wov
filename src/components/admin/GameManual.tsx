@@ -9,7 +9,8 @@ import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC, CLASS_LEVEL_BONUSES,
   RACE_LABELS, CLASS_LABELS, STAT_LABELS, ITEM_RARITY_MULTIPLIER,
   ITEM_STAT_COSTS, calculateStats, getBaseRegen, getItemStatBudget,
-  generateCreatureStats, getCreatureDamageDie,
+  generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
+  XP_RARITY_MULTIPLIER,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
@@ -35,8 +36,8 @@ export default function GameManual() {
   // Generate level progression data
   const levelData = Array.from({ length: MAX_LEVEL }, (_, i) => {
     const level = i + 1;
-    const xpRequired = level * 100;
-    const totalXp = Array.from({ length: level }, (_, l) => (l + 1) * 100).reduce((a, b) => a + b, 0);
+    const xpRequired = getXpForLevel(level);
+    const totalXp = Array.from({ length: level }, (_, l) => getXpForLevel(l + 1)).reduce((a, b) => a + b, 0);
     const statGain = level <= 29 ? '+1 all stats' : '—';
     const classBonus = level > 1 && level % 3 === 0;
     return { level, xpRequired, totalXp, statGain, classBonus, players: playerCounts[level] || 0 };
@@ -55,7 +56,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                XP per level = <code className="text-primary">level × 100</code>. All stats +1 per level up to 29. Levels 30+ gain class bonuses only (every 3 levels).
+                XP per level = <code className="text-primary">floor(level^1.5 × 50)</code>. All stats +1 per level up to 29. Levels 30+ gain class bonuses only (every 3 levels).
               </p>
               <div className="max-h-[400px] overflow-auto">
                 <Table>
@@ -258,6 +259,83 @@ export default function GameManual() {
                   ))}
                 </TableBody>
               </Table>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 4b. XP & Creature Rewards */}
+          <AccordionItem value="xp-rewards" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🏆 XP & Creature Rewards
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">XP Curve:</strong> XP to next level = <code className="text-primary">floor(level^1.5 × 50)</code></p>
+                <p><strong className="text-foreground">Creature XP:</strong> <code className="text-primary">creature_level × 10 × rarity_mult</code></p>
+                <p><strong className="text-foreground">Level Penalty:</strong> −20% per player level above creature (minimum 10% reward)</p>
+                <p><strong className="text-foreground">Party Split:</strong> XP divided equally among party members at the node</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Rarity XP Multipliers</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Rarity</TableHead>
+                      <TableHead className="text-xs">Multiplier</TableHead>
+                      <TableHead className="text-xs">Lv 10 XP</TableHead>
+                      <TableHead className="text-xs">Lv 20 XP</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(XP_RARITY_MULTIPLIER).map(([r, m]) => (
+                      <TableRow key={r}>
+                        <TableCell className="text-xs font-display capitalize">{r}</TableCell>
+                        <TableCell className="text-xs">{m}×</TableCell>
+                        <TableCell className="text-xs">{getCreatureXp(10, r)}</TableCell>
+                        <TableCell className="text-xs">{getCreatureXp(20, r)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Accordion type="single" collapsible>
+                <AccordionItem value="kills-to-level" className="border-none">
+                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
+                    Kills-to-Level Milestones (same-level regular creatures, solo)
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Level</TableHead>
+                          <TableHead className="text-xs">XP Needed</TableHead>
+                          <TableHead className="text-xs">Regular Kills</TableHead>
+                          <TableHead className="text-xs">Rare Kills</TableHead>
+                          <TableHead className="text-xs">Boss Kills</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[1, 5, 10, 15, 20, 25, 30, 35, 40].map(lv => {
+                          const xpNeeded = getXpForLevel(lv);
+                          const regXp = getCreatureXp(lv, 'regular');
+                          const rareXp = getCreatureXp(lv, 'rare');
+                          const bossXp = getCreatureXp(lv, 'boss');
+                          return (
+                            <TableRow key={lv}>
+                              <TableCell className="text-xs font-display">{lv}</TableCell>
+                              <TableCell className="text-xs">{xpNeeded.toLocaleString()}</TableCell>
+                              <TableCell className="text-xs">{Math.ceil(xpNeeded / regXp)}</TableCell>
+                              <TableCell className="text-xs">{Math.ceil(xpNeeded / rareXp)}</TableCell>
+                              <TableCell className="text-xs">{Math.ceil(xpNeeded / bossXp)}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </AccordionContent>
           </AccordionItem>
 

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
-import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -334,7 +334,7 @@ export function useCombat({
 
         if (newHp <= 0) {
           // Creature dies
-          const baseXp = creature.level * 10;
+          const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
           const levelDiff = Math.max(char.level - creature.level, 0);
           const xpPenalty = Math.max(1 - levelDiff * 0.2, 0.1);
           const totalXp = Math.floor(baseXp * xpPenalty);
@@ -400,7 +400,7 @@ export function useCombat({
 
           const newXp = char.xp + xpShare;
           const newGold = char.gold + goldShare;
-          const xpForNext = char.level * 100;
+          const xpForNext = getXpForLevel(char.level);
           if (newXp >= xpForNext) {
             const newLevel = char.level + 1;
             const levelUpUpdates: Partial<Character> = {

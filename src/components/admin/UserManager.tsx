@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
-import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
+import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier, getXpForLevel } from '@/lib/game-data';
 
 interface AdminInventoryItem {
   id: string;
@@ -170,7 +170,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
   const name = isEditing ? (charEdits.name ?? c.name) : c.name;
 
   const hpPercent = Math.round((c.hp / c.max_hp) * 100);
-  const xpForNext = c.level * 100;
+  const xpForNext = getXpForLevel(c.level);
   const xpPercent = Math.round((c.xp / xpForNext) * 100);
   const totalAC = c.ac + (equipmentBonuses.ac || 0);
 
