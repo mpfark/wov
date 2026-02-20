@@ -155,7 +155,7 @@ export const XP_RARITY_MULTIPLIER: Record<string, number> = {
 };
 
 export function getXpForLevel(level: number): number {
-  return Math.floor(Math.pow(level, 1.8) * 50);
+  return Math.floor(Math.pow(level, 2.0) * 50);
 }
 
 export function getCreatureXp(level: number, rarity: string): number {
