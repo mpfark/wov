@@ -1,74 +1,71 @@
 
-# Admin Game Manual
+
+# Creature XP Rewards, Rarity Multipliers & XP Curve Adjustment
 
 ## Overview
-Add a new "Manual" tab to the Admin page with a comprehensive, expandable game mechanics reference. It pulls constants directly from game-data.ts and class-abilities.ts so it stays in sync with balance changes. A live player distribution is fetched from the database.
+Three changes: (1) add rarity-based XP multipliers to creature kills, (2) adjust the XP curve so higher levels require progressively more effort, and (3) document all of this in the Game Manual.
 
-## Sections
+## 1. XP Curve Change
 
-### 1. Level Progression Table (Levels 1--40)
-- Columns: Level | XP Required | Total XP | Stat Gains | Class Bonus | Players at Level
-- XP per level = level * 100
-- All stats +1 per level up to level 29; levels 30+ get class bonuses only (every 3 levels)
-- Player count column fetched live from the database
+**Current:** XP to next level = `level * 100` (linear -- always 10 same-level kills)
 
-### 2. Character Stats and Creation
-- Base stats (8 across the board)
-- Race modifier table (all 6 races)
-- Class modifier table (all 6 classes)
-- Expandable: example starting stats for each race/class combination
+**New:** XP to next level = `floor(level^1.5 * 50)` (progressive -- early levels stay fast, late levels require more grinding)
 
-### 3. HP, AC, and Regeneration
-- Max HP = Base Class HP + floor((CON-10)/2) + (level-1) * 5
-- AC = Base Class AC + floor((DEX-10)/2)
-- Passive HP Regen (every 15s) = 1 + floor((CON-10)/4) + gear bonuses
-- Base HP/AC tables per class
+| Level | Old XP Req | New XP Req | Same-Level Regular Kills (old) | Same-Level Regular Kills (new) |
+|-------|-----------|-----------|-------------------------------|-------------------------------|
+| 1     | 100       | 50        | 10                            | 5                             |
+| 5     | 500       | 559       | 10                            | 11                            |
+| 10    | 1,000     | 1,581     | 10                            | 16                            |
+| 20    | 2,000     | 4,472     | 10                            | 22                            |
+| 30    | 3,000     | 8,216     | 10                            | 27                            |
+| 40    | 4,000     | 12,649    | 10                            | 32                            |
 
-### 4. Combat
-- Attack roll: d20 + stat modifier vs target AC
-- Damage: class dice + stat modifier
-- Creature counterattack: d20 + STR mod vs player AC
-- Creature damage: 1d(base_die + level/2) + STR mod
-- Party combat: tank absorbs all hits, single counterattack per round
-- Opportunity attacks on flee (all party members)
-- 25% durability degradation chance per hit taken
-- XP penalty: 20% reduction per level above the creature (minimum 10% reward)
+This makes early levels feel snappy while late-game progression requires real commitment.
 
-### 5. Class Abilities
-- Full table per class: ability name, tier, level requirement, cooldown, description
-- Expandable per class
+## 2. Rarity XP Multipliers
 
-### 6. Creature Scaling
-- Base stat: 8 + floor(level * 0.7), multiplied by rarity
-- HP: (15 + level * 8) * rarity HP multiplier
-- AC: 8 + floor(level * 0.6) + rarity AC bonus
-- Damage die: rarity_base + floor(level/2)
-- Rarity multiplier reference table (Regular / Rare / Boss)
-- Humanoid gold drops: min = level * mult, max = level * 3 * mult
+Add multipliers to creature XP rewards based on rarity:
 
-### 7. Items and Economy
-- Stat budget: floor(1 + (level-1) * 0.3 * rarity_mult * hands_mult)
-- Stat costs and caps tables
-- Repair costs: ceil((max_dur - cur_dur) * value * rarity_mult / 100)
-- Rare/unique unrepairable; unique destroyed at 0 durability
-- Gold value suggestion: round(level * 2.5 * rarity^2)
+| Rarity  | Multiplier | Level 10 Regular Kills Equivalent |
+|---------|-----------|----------------------------------|
+| Regular | 1.0x      | baseline                         |
+| Rare    | 1.5x      | worth 1.5 regulars               |
+| Boss    | 2.5x      | worth 2.5 regulars               |
 
-### 8. Death and Respawn
-- 3s incapacitation, respawn at starting node with 1 HP
-- 10% gold penalty on death
+Formula becomes: `baseXp = creature.level * 10 * rarityMult`
+
+## 3. Game Manual Updates
+
+Add a new "XP & Rewards" section (or expand Combat) showing:
+- The XP curve formula
+- Creature XP by rarity with example table
+- Kills-to-level reference at key milestones
+- Level penalty reminder
 
 ---
 
 ## Technical Details
 
-### New file: src/components/admin/GameManual.tsx
-- Single component using Accordion (from radix) for expandable sections
-- Imports constants from game-data.ts and class-abilities.ts directly (no hardcoding)
-- On mount, queries: `SELECT level, count(*) FROM characters GROUP BY level ORDER BY level`
-- Generates the level 1--40 progression table programmatically
-- Styled with existing parchment/fantasy theme (font-display, muted-foreground, card backgrounds)
-- Tables use the existing Table/TableHeader/TableRow/TableCell components
+### File: `src/lib/game-data.ts`
+- Add `XP_RARITY_MULTIPLIER` constant: `{ regular: 1, rare: 1.5, boss: 2.5 }`
+- Add `getXpForLevel(level)` function: `Math.floor(Math.pow(level, 1.5) * 50)`
+- Add `getCreatureXp(level, rarity)` function: `Math.floor(level * 10 * (XP_RARITY_MULTIPLIER[rarity] || 1))`
 
-### Modified file: src/pages/AdminPage.tsx
-- Add a "Manual" tab (with a book icon) to the TabsList
-- Add corresponding TabsContent rendering the GameManual component
+### File: `src/hooks/useCombat.ts`
+- Import `XP_RARITY_MULTIPLIER` from game-data
+- Change line 337 from `const baseXp = creature.level * 10` to use the rarity multiplier: `const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1))`
+
+### File: `src/hooks/useCharacter.ts` (or wherever level-up XP threshold is checked)
+- Replace `level * 100` with the new `getXpForLevel(level)` function
+
+### File: `src/components/admin/GameManual.tsx`
+- Update the level progression table to use the new `getXpForLevel` function for XP Required and Total XP columns
+- Add a new accordion section "XP & Creature Rewards" between Combat and Class Abilities, containing:
+  - XP curve formula
+  - Rarity XP multiplier table
+  - Kills-to-level examples at levels 1, 5, 10, 20, 30, 40
+  - Level penalty formula reminder
+
+### File: `src/components/admin/CreatureManager.tsx`
+- Optionally show the XP reward value in the creature properties panel for reference
+
