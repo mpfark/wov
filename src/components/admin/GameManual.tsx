@@ -1,0 +1,471 @@
+import { useState, useEffect } from 'react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC, CLASS_LEVEL_BONUSES,
+  RACE_LABELS, CLASS_LABELS, STAT_LABELS, ITEM_RARITY_MULTIPLIER,
+  ITEM_STAT_COSTS, calculateStats, getBaseRegen, getItemStatBudget,
+  generateCreatureStats, getCreatureDamageDie,
+} from '@/lib/game-data';
+import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
+
+const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+const MAX_LEVEL = 40;
+
+export default function GameManual() {
+  const [playerCounts, setPlayerCounts] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('characters')
+        .select('level');
+      if (data) {
+        const counts: Record<number, number> = {};
+        data.forEach(c => { counts[c.level] = (counts[c.level] || 0) + 1; });
+        setPlayerCounts(counts);
+      }
+    })();
+  }, []);
+
+  // Generate level progression data
+  const levelData = Array.from({ length: MAX_LEVEL }, (_, i) => {
+    const level = i + 1;
+    const xpRequired = level * 100;
+    const totalXp = Array.from({ length: level }, (_, l) => (l + 1) * 100).reduce((a, b) => a + b, 0);
+    const statGain = level <= 29 ? '+1 all stats' : '—';
+    const classBonus = level > 1 && level % 3 === 0;
+    return { level, xpRequired, totalXp, statGain, classBonus, players: playerCounts[level] || 0 };
+  });
+
+  return (
+    <ScrollArea className="h-full">
+      <div className="p-4 max-w-4xl mx-auto space-y-2">
+        <h2 className="font-display text-lg text-primary text-glow mb-3">📖 Game Manual</h2>
+
+        <Accordion type="multiple" className="space-y-1">
+          {/* 1. Level Progression */}
+          <AccordionItem value="levels" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              📊 Level Progression (1–{MAX_LEVEL})
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <p className="text-xs text-muted-foreground mb-2">
+                XP per level = <code className="text-primary">level × 100</code>. All stats +1 per level up to 29. Levels 30+ gain class bonuses only (every 3 levels).
+              </p>
+              <div className="max-h-[400px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs w-12">Lv</TableHead>
+                      <TableHead className="text-xs">XP Req</TableHead>
+                      <TableHead className="text-xs">Total XP</TableHead>
+                      <TableHead className="text-xs">Stats</TableHead>
+                      <TableHead className="text-xs">Class Bonus</TableHead>
+                      <TableHead className="text-xs">Players</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {levelData.map(row => (
+                      <TableRow key={row.level} className={row.players > 0 ? 'bg-primary/5' : ''}>
+                        <TableCell className="text-xs font-display">{row.level}</TableCell>
+                        <TableCell className="text-xs">{row.xpRequired}</TableCell>
+                        <TableCell className="text-xs">{row.totalXp.toLocaleString()}</TableCell>
+                        <TableCell className="text-xs">{row.statGain}</TableCell>
+                        <TableCell className="text-xs">{row.classBonus ? '✦ Yes' : '—'}</TableCell>
+                        <TableCell className="text-xs">
+                          {row.players > 0 ? <Badge variant="secondary" className="text-xs">{row.players}</Badge> : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <Card className="mt-3 bg-card/30">
+                <CardContent className="p-3">
+                  <p className="text-xs font-display text-primary mb-1">Class Level Bonuses (every 3 levels)</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {Object.entries(CLASS_LEVEL_BONUSES).map(([cls, bonuses]) => (
+                      <div key={cls} className="text-xs">
+                        <span className="font-display text-foreground">{CLASS_LABELS[cls]}: </span>
+                        <span className="text-muted-foreground">
+                          {Object.entries(bonuses).map(([s, v]) => `${STAT_LABELS[s]} +${v}`).join(', ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 2. Character Stats & Creation */}
+          <AccordionItem value="stats" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🎭 Character Stats & Creation
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Base stats: <code className="text-primary">8</code> in all attributes. Final = Base + Race + Class modifiers.
+              </p>
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Race Modifiers</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Race</TableHead>
+                      {STAT_KEYS.map(s => <TableHead key={s} className="text-xs">{STAT_LABELS[s]}</TableHead>)}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(RACE_STATS).map(([race, stats]) => (
+                      <TableRow key={race}>
+                        <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
+                        {STAT_KEYS.map(s => (
+                          <TableCell key={s} className={`text-xs ${stats[s] > 0 ? 'text-green-400' : stats[s] < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                            {stats[s] > 0 ? `+${stats[s]}` : stats[s] || '—'}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Class Modifiers</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Class</TableHead>
+                      {STAT_KEYS.map(s => <TableHead key={s} className="text-xs">{STAT_LABELS[s]}</TableHead>)}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(CLASS_STATS).map(([cls, stats]) => (
+                      <TableRow key={cls}>
+                        <TableCell className="text-xs font-display">{CLASS_LABELS[cls]}</TableCell>
+                        {STAT_KEYS.map(s => (
+                          <TableCell key={s} className={`text-xs ${stats[s] > 0 ? 'text-green-400' : 'text-muted-foreground'}`}>
+                            {stats[s] > 0 ? `+${stats[s]}` : '—'}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Example combos */}
+              <Accordion type="single" collapsible>
+                <AccordionItem value="combos" className="border-none">
+                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
+                    Example Starting Stats (all combos)
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-1 gap-1 max-h-[300px] overflow-auto">
+                      {Object.keys(RACE_STATS).map(race =>
+                        Object.keys(CLASS_STATS).map(cls => {
+                          const s = calculateStats(race, cls);
+                          return (
+                            <div key={`${race}-${cls}`} className="flex items-center gap-2 text-xs">
+                              <span className="font-display w-28 shrink-0">{RACE_LABELS[race]} {CLASS_LABELS[cls]}</span>
+                              {STAT_KEYS.map(k => (
+                                <span key={k} className="text-muted-foreground w-10 text-center">{STAT_LABELS[k]} {s[k]}</span>
+                              ))}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 3. HP, AC & Regen */}
+          <AccordionItem value="hp-ac" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              ❤️ HP, AC & Regeneration
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
+                <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
+                <p><strong className="text-foreground">Passive HP Regen</strong> (every 15s) = 1 + floor((CON − 10) / 4) + gear bonuses</p>
+                <p className="mt-1">Example: CON 14 → regen = 1 + floor(4/4) = <code className="text-primary">{getBaseRegen(14)}</code>/tick</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Class</TableHead>
+                    <TableHead className="text-xs">Base HP</TableHead>
+                    <TableHead className="text-xs">Base AC</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.keys(CLASS_BASE_HP).map(cls => (
+                    <TableRow key={cls}>
+                      <TableCell className="text-xs font-display">{CLASS_LABELS[cls]}</TableCell>
+                      <TableCell className="text-xs">{CLASS_BASE_HP[cls]}</TableCell>
+                      <TableCell className="text-xs">{CLASS_BASE_AC[cls]}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 4. Combat */}
+          <AccordionItem value="combat" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              ⚔️ Combat
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Attack Roll:</strong> d20 + stat modifier ≥ target AC → hit</p>
+                <p><strong className="text-foreground">Damage:</strong> class dice (min–max) + stat modifier</p>
+                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage</p>
+                <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod vs player AC</p>
+                <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level/2)) + STR mod</p>
+                <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
+                <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
+                <p><strong className="text-foreground">Durability:</strong> 25% chance per hit taken to degrade a random equipped item</p>
+                <p><strong className="text-foreground">XP Penalty:</strong> −20% per level above creature (minimum 10% reward)</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Class</TableHead>
+                    <TableHead className="text-xs">Attack</TableHead>
+                    <TableHead className="text-xs">Stat</TableHead>
+                    <TableHead className="text-xs">Dice</TableHead>
+                    <TableHead className="text-xs">Crit</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(CLASS_COMBAT).map(([cls, c]) => (
+                    <TableRow key={cls}>
+                      <TableCell className="text-xs font-display">{CLASS_LABELS[cls]}</TableCell>
+                      <TableCell className="text-xs">{c.emoji} {c.label}</TableCell>
+                      <TableCell className="text-xs">{STAT_LABELS[c.stat]}</TableCell>
+                      <TableCell className="text-xs">{c.diceMin}–{c.diceMax}</TableCell>
+                      <TableCell className="text-xs">{c.critRange}+</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 5. Class Abilities */}
+          <AccordionItem value="abilities" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              ✨ Class Abilities
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <p className="text-xs text-muted-foreground mb-2">
+                Abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20).
+              </p>
+              <Accordion type="multiple">
+                {Object.entries(CLASS_ABILITIES).map(([cls, abilities]) => (
+                  <AccordionItem key={cls} value={`ability-${cls}`} className="border-none">
+                    <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
+                      {CLASS_LABELS[cls]}
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">Ability</TableHead>
+                            <TableHead className="text-xs">Tier</TableHead>
+                            <TableHead className="text-xs">Level</TableHead>
+                            <TableHead className="text-xs">Cooldown</TableHead>
+                            <TableHead className="text-xs">Description</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {abilities.map(a => (
+                            <TableRow key={a.label}>
+                              <TableCell className="text-xs font-display">{a.emoji} {a.label}</TableCell>
+                              <TableCell className="text-xs">{a.tier}</TableCell>
+                              <TableCell className="text-xs">{a.levelRequired}</TableCell>
+                              <TableCell className="text-xs">{a.cooldownMs / 1000}s</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{a.description}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 6. Creature Scaling */}
+          <AccordionItem value="creatures" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🐉 Creature Scaling
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Base Stat:</strong> 8 + floor(level × 0.7), multiplied by rarity</p>
+                <p><strong className="text-foreground">HP:</strong> (15 + level × 8) × rarity HP multiplier</p>
+                <p><strong className="text-foreground">AC:</strong> 8 + floor(level × 0.6) + rarity AC bonus</p>
+                <p><strong className="text-foreground">Damage Die:</strong> rarity_base + floor(level / 2)</p>
+                <p><strong className="text-foreground">Humanoid Gold:</strong> min = level × mult, max = level × 3 × mult</p>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Rarity</TableHead>
+                    <TableHead className="text-xs">Stat ×</TableHead>
+                    <TableHead className="text-xs">HP ×</TableHead>
+                    <TableHead className="text-xs">AC +</TableHead>
+                    <TableHead className="text-xs">Dmg Base</TableHead>
+                    <TableHead className="text-xs">Gold ×</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[
+                    { r: 'Regular', stat: 1, hp: 1, ac: 0, dmg: 4, gold: 1 },
+                    { r: 'Rare', stat: 1.3, hp: 1.5, ac: 2, dmg: 6, gold: 1.5 },
+                    { r: 'Boss', stat: 1.6, hp: 2.5, ac: 4, dmg: 8, gold: 3 },
+                  ].map(row => (
+                    <TableRow key={row.r}>
+                      <TableCell className="text-xs font-display">{row.r}</TableCell>
+                      <TableCell className="text-xs">{row.stat}×</TableCell>
+                      <TableCell className="text-xs">{row.hp}×</TableCell>
+                      <TableCell className="text-xs">+{row.ac}</TableCell>
+                      <TableCell className="text-xs">d{row.dmg}</TableCell>
+                      <TableCell className="text-xs">{row.gold}×</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {/* Example creatures */}
+              <Accordion type="single" collapsible>
+                <AccordionItem value="creature-examples" className="border-none">
+                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
+                    Example Creatures (Lv 1, 10, 20, 30)
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2">
+                      {[1, 10, 20, 30].map(lv => {
+                        const reg = generateCreatureStats(lv, 'regular');
+                        const boss = generateCreatureStats(lv, 'boss');
+                        return (
+                          <div key={lv} className="text-xs">
+                            <span className="font-display text-foreground">Level {lv}:</span>{' '}
+                            <span className="text-muted-foreground">
+                              Regular HP {reg.hp} AC {reg.ac} STR {reg.stats.str} (d{getCreatureDamageDie(lv, 'regular')}) · 
+                              Boss HP {boss.hp} AC {boss.ac} STR {boss.stats.str} (d{getCreatureDamageDie(lv, 'boss')})
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 7. Items & Economy */}
+          <AccordionItem value="items" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🎒 Items & Economy
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Stat Budget:</strong> floor(1 + (level − 1) × 0.3 × rarity_mult × hands_mult)</p>
+                <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5</p>
+                <p><strong className="text-foreground">Repair Cost:</strong> ceil((max_dur − cur_dur) × value × rarity_mult / 100)</p>
+                <p><strong className="text-foreground">Rare/Unique:</strong> Cannot be repaired. Unique items destroyed at 0 durability.</p>
+                <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs font-display text-primary mb-1">Rarity Multipliers</p>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Rarity</TableHead>
+                        <TableHead className="text-xs">Mult</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Object.entries(ITEM_RARITY_MULTIPLIER).map(([r, m]) => (
+                        <TableRow key={r}>
+                          <TableCell className="text-xs capitalize">{r}</TableCell>
+                          <TableCell className="text-xs">{m}×</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div>
+                  <p className="text-xs font-display text-primary mb-1">Stat Costs</p>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Stat</TableHead>
+                        <TableHead className="text-xs">Cost</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Object.entries(ITEM_STAT_COSTS).map(([s, c]) => (
+                        <TableRow key={s}>
+                          <TableCell className="text-xs uppercase">{s}</TableCell>
+                          <TableCell className="text-xs">{c}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              {/* Budget examples */}
+              <Accordion type="single" collapsible>
+                <AccordionItem value="budget-examples" className="border-none">
+                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
+                    Stat Budget Examples
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                      {['common', 'uncommon', 'rare', 'unique'].map(rarity =>
+                        [1, 5, 10, 20].map(lv => (
+                          <div key={`${rarity}-${lv}`}>
+                            <span className="capitalize">{rarity}</span> Lv{lv} 1h: <span className="text-primary">{getItemStatBudget(lv, rarity, 1)}</span>{' '}
+                            2h: <span className="text-primary">{getItemStatBudget(lv, rarity, 2)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 8. Death & Respawn */}
+          <AccordionItem value="death" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              💀 Death & Respawn
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Incapacitation:</strong> 3 seconds before respawn</p>
+                <p><strong className="text-foreground">Respawn Location:</strong> Starting node with 1 HP</p>
+                <p><strong className="text-foreground">Gold Penalty:</strong> 10% of current gold lost on death</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </ScrollArea>
+  );
+}

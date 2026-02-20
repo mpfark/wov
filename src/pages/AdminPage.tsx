@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
@@ -15,6 +15,7 @@ import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import WorldBuilderPanel from '@/components/admin/WorldBuilderPanel';
+import GameManual from '@/components/admin/GameManual';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -128,6 +129,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
             <TabsTrigger value="world-builder" className="font-display text-xs">🧙 World Builder</TabsTrigger>
+            <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
           </TabsList>
         </div>
 
@@ -206,6 +208,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="world-builder" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <WorldBuilderPanel onDataChanged={loadData} />
+        </TabsContent>
+
+        <TabsContent value="manual" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          <GameManual />
         </TabsContent>
       </Tabs>
     </div>
