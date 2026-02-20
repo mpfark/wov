@@ -479,11 +479,17 @@ export function useCombat({
           const dmgDie = getCreatureDamageDie(creature.level, creature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-          const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
           _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
           try {
-            broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, creature.name);
-            await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
+            // Use atomic damage RPC to avoid race conditions when multiple party members
+            // each redirect creature counterattacks to the same tank
+            const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
+              _character_id: tankMember.character_id,
+              _damage: creatureDmg,
+            });
+            if (!dmgError && tankNewHp !== null) {
+              broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, creature.name);
+            }
             await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
           } catch (e) {
             console.error('Failed to update tank HP/equipment:', e);
