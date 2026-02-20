@@ -328,6 +328,55 @@ export type Database = {
         }
         Relationships: []
       }
+      node_ground_loot: {
+        Row: {
+          creature_name: string | null
+          dropped_at: string
+          dropped_by: string | null
+          id: string
+          item_id: string
+          node_id: string
+        }
+        Insert: {
+          creature_name?: string | null
+          dropped_at?: string
+          dropped_by?: string | null
+          id?: string
+          item_id: string
+          node_id: string
+        }
+        Update: {
+          creature_name?: string | null
+          dropped_at?: string
+          dropped_by?: string | null
+          id?: string
+          item_id?: string
+          node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "node_ground_loot_dropped_by_fkey"
+            columns: ["dropped_by"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_ground_loot_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "node_ground_loot_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nodes: {
         Row: {
           connections: Json
@@ -686,6 +735,7 @@ export type Database = {
         Args: { _character_id: string; _gold: number; _xp: number }
         Returns: undefined
       }
+      cleanup_ground_loot: { Args: never; Returns: undefined }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
         Returns: undefined
