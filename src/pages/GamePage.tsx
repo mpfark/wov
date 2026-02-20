@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import CharacterPanel from '@/components/game/CharacterPanel';
 import NodeView from '@/components/game/NodeView';
@@ -12,6 +12,7 @@ import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
 import { useCreatures } from '@/hooks/useCreatures';
 import { useCreatureBroadcast } from '@/hooks/useCreatureBroadcast';
+import { usePartyBroadcast } from '@/hooks/usePartyBroadcast';
 import { useNPCs, NPC } from '@/hooks/useNPCs';
 import NPCDialogPanel from '@/components/game/NPCDialogPanel';
 import { useInventory } from '@/hooks/useInventory';
@@ -84,12 +85,42 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { npcs } = useNPCs(character.current_node_id);
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
+  // Party broadcast must be initialized before useParty merge, but needs partyId
+  // Solution: useParty returns raw party first, broadcast hooks use it, then useParty merges
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
   const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
+  const {
+    hpOverrides: partyHpOverrides,
+    moveEvents: partyMoveEvents,
+    broadcastLogEntries,
+    broadcastHp,
+    broadcastMove,
+    broadcastCombatMsg,
+  } = usePartyBroadcast(party?.id ?? null, character.id);
+
+  // Merge broadcast HP/movement overrides into party members for instant display
+  const mergedPartyMembers = useMemo(() => {
+    if (!partyHpOverrides && partyMoveEvents.length === 0) return partyMembers;
+    return partyMembers.map(m => {
+      const hpOvr = partyHpOverrides[m.character_id];
+      const moveMatches = partyMoveEvents.filter(e => e.character_id === m.character_id);
+      const moveOvr = moveMatches.length > 0 ? moveMatches[moveMatches.length - 1] : undefined;
+      if (!hpOvr && !moveOvr) return m;
+      return {
+        ...m,
+        character: {
+          ...m.character,
+          ...(hpOvr ? { hp: hpOvr.hp, max_hp: hpOvr.max_hp } : {}),
+          ...(moveOvr ? { current_node_id: moveOvr.node_id } : {}),
+        },
+      };
+    });
+  }, [partyMembers, partyHpOverrides, partyMoveEvents]);
+
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
@@ -127,51 +158,61 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     // Also write to party combat log if in a party, and track own IDs to prevent duplicates
     (async () => {
       const id = await addPartyCombatLog(msg, character.current_node_id, character.name);
-      if (id) ownLogIdsRef.current.add(id);
+      if (id) {
+        ownLogIdsRef.current.add(id);
+        // Broadcast for instant delivery to party members (~50ms vs ~300ms DB)
+        broadcastCombatMsg(id, msg, character.current_node_id, character.name);
+      }
     })();
-  }, [addPartyCombatLog, character.current_node_id, character.name]);
+  }, [addPartyCombatLog, character.current_node_id, character.name, broadcastCombatMsg]);
 
-  // Merge party combat log entries from other players into event log
+  // Helper to process incoming log messages from other players
+  const processIncomingLog = useCallback((message: string, characterName: string | null, nodeId: string | null) => {
+    // Only show entries from the same node
+    if (nodeId && nodeId !== character.current_node_id) return;
+
+    let msg = message;
+    const name = characterName;
+    if (name) {
+      msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)You /u, `$1${name} `);
+      msg = msg.replace(/ you /gi, ` ${name} `);
+      msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)Your /u, `$1${name}'s `);
+      msg = msg.replace(/ your /gi, ` ${name}'s `);
+      msg = msg.replace(/ you\./gi, ` ${name}.`);
+      msg = msg.replace(/ you!/gi, ` ${name}!`);
+    }
+
+    if (msg.includes('[INSPIRE_BUFF]')) {
+      setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
+      const cleanMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
+      setEventLog(prev => [...prev.slice(-49), cleanMsg]);
+      return;
+    }
+    setEventLog(prev => [...prev.slice(-49), msg]);
+  }, [character.current_node_id]);
+
+  // Merge broadcast log entries (instant, ~50ms)
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!party) return;
-    for (const entry of partyCombatEntries) {
-      if (!seenIdsRef.current.has(entry.id)) {
-        seenIdsRef.current.add(entry.id);
-        // Skip entries we created ourselves
-        if (ownLogIdsRef.current.has(entry.id)) continue;
-        // Only show entries from the same node
-        if (entry.node_id && entry.node_id !== character.current_node_id) continue;
-
-        // Replace "You" references with the character's name so it reads correctly for other players
-        let msg = entry.message;
-        const name = entry.character_name;
-        if (name) {
-          // Replace "You " at start or after emoji(s)
-          msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)You /u, `$1${name} `);
-          // Replace " you " mid-sentence (case-insensitive)
-          msg = msg.replace(/ you /gi, ` ${name} `);
-          // Replace "Your " at start or after emoji(s)
-          msg = msg.replace(/^((?:[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]+\s*)*)Your /u, `$1${name}'s `);
-          // Replace " your " mid-sentence
-          msg = msg.replace(/ your /gi, ` ${name}'s `);
-          // Replace " you." at end
-          msg = msg.replace(/ you\./gi, ` ${name}.`);
-          // Replace " you!" at end
-          msg = msg.replace(/ you!/gi, ` ${name}!`);
-        }
-
-        // Detect inspire buff signal from a party bard
-        if (msg.includes('[INSPIRE_BUFF]')) {
-          setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
-          const cleanMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
-          setEventLog(prev => [...prev.slice(-49), cleanMsg]);
-          continue;
-        }
-        setEventLog(prev => [...prev.slice(-49), msg]);
-      }
+    for (const entry of broadcastLogEntries) {
+      if (seenIdsRef.current.has(entry.id)) continue;
+      seenIdsRef.current.add(entry.id);
+      if (ownLogIdsRef.current.has(entry.id)) continue;
+      processIncomingLog(entry.message, entry.character_name, entry.node_id);
     }
-  }, [partyCombatEntries, party, character.current_node_id]);
+  }, [broadcastLogEntries, party, processIncomingLog]);
+
+  // Merge Postgres Changes log entries (correction layer, ~300ms) — skip already-seen
+  useEffect(() => {
+    if (!party) return;
+    for (const entry of partyCombatEntries) {
+      if (seenIdsRef.current.has(entry.id)) continue;
+      seenIdsRef.current.add(entry.id);
+      if (ownLogIdsRef.current.has(entry.id)) continue;
+      processIncomingLog(entry.message, entry.character_name, entry.node_id);
+    }
+  }, [partyCombatEntries, party, processIncomingLog]);
 
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -374,6 +415,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     disengageNextHit,
     onClearDisengage: useCallback(() => setDisengageNextHit(null), []),
     broadcastDamage,
+    broadcastHp,
   });
 
   // DoT (Rend bleed) tick effect
@@ -616,6 +658,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         addLog('You break away from the party leader.');
       }
       await updateCharacter({ current_node_id: nodeId });
+      // Broadcast movement instantly to party members
+      broadcastMove(character.id, character.name, nodeId);
       addLog(`You travel to ${targetNode.name}.`);
       logActivity(character.user_id, character.id, 'move', `Traveled to ${targetNode.name}`, { node_id: nodeId });
       // Move followers if I'm the party leader
@@ -1298,7 +1342,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onUseAbility={handleUseAbility}
               healTargets={
                 party && character.class === 'healer'
-                  ? partyMembers
+                  ? mergedPartyMembers
                       .filter(m => m.character_id !== character.id && m.status === 'accepted' && m.character.current_node_id === character.current_node_id)
                       .map(m => ({ id: m.character_id, name: m.character.name, hp: m.character.hp, max_hp: m.character.max_hp }))
                   : []
@@ -1336,7 +1380,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             currentRegionId={currentNode.region_id}
             characterLevel={character.level}
             onNodeClick={handleMove}
-            partyMembers={partyMembers}
+            partyMembers={mergedPartyMembers}
             myCharacterId={character.id}
             character={character}
             party={party}
@@ -1393,7 +1437,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         <LootShareDialog
           open={true}
           loot={pendingLoot.loot}
-          partyMembers={partyMembers.filter(m => m.character.current_node_id === character.current_node_id)}
+          partyMembers={mergedPartyMembers.filter(m => m.character.current_node_id === character.current_node_id)}
           creatureName={pendingLoot.creatureName}
           onConfirm={handleLootDistribute}
         />

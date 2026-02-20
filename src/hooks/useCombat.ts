@@ -52,6 +52,7 @@ interface UseCombatParams {
   disengageNextHit?: { bonusMult: number; expiresAt: number } | null;
   onClearDisengage?: () => void;
   broadcastDamage?: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
+  broadcastHp?: (characterId: string, hp: number, maxHp: number, source: string) => void;
 }
 
 export function useCombat({
@@ -83,6 +84,7 @@ export function useCombat({
   disengageNextHit,
   onClearDisengage,
   broadcastDamage,
+  broadcastHp,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -118,6 +120,7 @@ export function useCombat({
   const disengageNextHitRef = useRef(disengageNextHit);
   const onClearDisengageRef = useRef(onClearDisengage);
   const broadcastDamageRef = useRef(broadcastDamage);
+  const broadcastHpRef = useRef(broadcastHp);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -149,6 +152,7 @@ export function useCombat({
   useEffect(() => { disengageNextHitRef.current = disengageNextHit; }, [disengageNextHit]);
   useEffect(() => { onClearDisengageRef.current = onClearDisengage; }, [onClearDisengage]);
   useEffect(() => { broadcastDamageRef.current = broadcastDamage; }, [broadcastDamage]);
+  useEffect(() => { broadcastHpRef.current = broadcastHp; }, [broadcastHp]);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const combatBusyRef = useRef(false);
@@ -472,6 +476,7 @@ export function useCombat({
           const tankNewHp = Math.max(tankMember.character.hp - creatureDmg, 0);
           _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
           try {
+            broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, creature.name);
             await supabase.rpc('update_party_member_hp', { _character_id: tankMember.character_id, _new_hp: tankNewHp });
             await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
           } catch (e) {
