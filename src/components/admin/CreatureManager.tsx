@@ -57,6 +57,7 @@ export default function CreatureManager() {
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
+  const [showUnassigned, setShowUnassigned] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const loadData = async () => {
@@ -183,12 +184,15 @@ export default function CreatureManager() {
   };
 
   const filtered = creatures.filter(c => {
+    if (showUnassigned && c.node_id) return false;
     const matchesText = c.name.toLowerCase().includes(filter.toLowerCase()) ||
       c.rarity.includes(filter.toLowerCase()) ||
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
     const matchesRegion = regionFilter === 'all' || getNodeRegion(c.node_id) === regionFilter;
     return matchesText && matchesRegion;
   });
+
+  const unassignedCount = creatures.filter(c => !c.node_id).length;
 
   return (
     <div className="h-full flex">
@@ -209,6 +213,16 @@ export default function CreatureManager() {
             </SelectContent>
           </Select>
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
+          <button
+            onClick={() => setShowUnassigned(v => !v)}
+            className={`px-2 py-0.5 rounded text-[10px] font-display transition-colors ${
+              showUnassigned
+                ? 'bg-destructive/20 text-destructive border border-destructive/50'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            }`}
+          >
+            Unassigned ({unassignedCount})
+          </button>
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
