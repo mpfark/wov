@@ -15,6 +15,7 @@ interface Props {
   onEquip: (inventoryId: string, slot: string) => void;
   onUnequip: (inventoryId: string) => void;
   onDrop: (inventoryId: string) => void;
+  onDestroy?: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
   
   // Regen info
@@ -284,7 +285,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
 }
 
 export default function CharacterPanel({
-  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onUseConsumable,
+  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable,
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
@@ -581,10 +582,26 @@ export default function CharacterPanel({
                         <Shield className="w-3 h-3 text-primary" />
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                      onClick={() => onDrop(all[0].id)}>
-                      <Trash2 className="w-3 h-3 text-destructive" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                          onClick={() => onDrop(all[0].id)}>
+                          <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">Drop on ground</TooltipContent>
+                    </Tooltip>
+                    {onDestroy && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                            onClick={() => onDestroy(all[0].id)}>
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">Destroy permanently</TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
                 );

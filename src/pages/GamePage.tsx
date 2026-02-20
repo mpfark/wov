@@ -5,7 +5,7 @@ import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
 import BlacksmithPanel from '@/components/game/BlacksmithPanel';
-import LootShareDialog, { LootDrop } from '@/components/game/LootShareDialog';
+import { useGroundLoot } from '@/hooks/useGroundLoot';
 
 import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
@@ -126,7 +126,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
-  const [pendingLoot, setPendingLoot] = useState<{ loot: LootDrop[]; creatureName: string } | null>(null);
+  const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(character.current_node_id, character.id);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [foodBuff, setFoodBuff] = useState<{ flatRegen: number; expiresAt: number }>({ flatRegen: 0, expiresAt: 0 });
   const [isDead, setIsDead] = useState(false);
@@ -807,13 +807,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const rollLoot = useCallback(async (lootTable: any[], creatureName: string) => {
     if (!lootTable || lootTable.length === 0) return;
-    const droppedItems: LootDrop[] = [];
+    if (!character.current_node_id) return;
     for (const entry of lootTable) {
-      if (entry.type === 'gold') continue; // Gold handled separately in kill rewards
+      if (entry.type === 'gold') continue;
       if (Math.random() <= (entry.chance || 0.1)) {
-        const { data: item } = await supabase.from('items').select('name, rarity, item_type').eq('id', entry.item_id).single();
+        const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
         if (item) {
-          // Unique item exclusivity check (pre-filter before loot dialog)
+          // Unique item exclusivity check
           if (item.rarity === 'unique') {
             const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', entry.item_id);
             if (count && count > 0) {
@@ -821,117 +821,19 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               continue;
             }
           }
-          droppedItems.push({ item_id: entry.item_id, item_name: item.name, item_rarity: item.rarity, item_type: item.item_type });
+          // Drop on the ground
+          await supabase.from('node_ground_loot' as any).insert({
+            node_id: character.current_node_id,
+            item_id: entry.item_id,
+            creature_name: creatureName,
+          });
           addLog(`💎 ${creatureName} dropped ${item.name}!`);
         }
       }
     }
-    if (droppedItems.length === 0) return;
+    fetchGroundLoot();
+  }, [character.current_node_id, addLog, fetchGroundLoot]);
 
-    // Filter party members at the same node
-    const sameNodeMembers = partyMembers.filter(m => m.character.current_node_id === character.current_node_id);
-    const hasPartyAtNode = party && sameNodeMembers.length > 1;
-
-    // Split equipment vs non-equipment
-    const equipmentDrops = droppedItems.filter(d => d.item_type === 'equipment');
-    const nonEquipmentDrops = droppedItems.filter(d => d.item_type !== 'equipment');
-
-    // Round-robin non-equipment items among same-node party members (or self if solo)
-    const recipients = hasPartyAtNode
-      ? sameNodeMembers
-      : [{ character_id: character.id, character: { name: character.name } } as any];
-    for (let i = 0; i < nonEquipmentDrops.length; i++) {
-      const drop = nonEquipmentDrops[i];
-      const recipient = recipients[i % recipients.length];
-      if (drop.item_rarity === 'unique') {
-        const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
-          p_character_id: recipient.character_id, p_item_id: drop.item_id,
-        });
-        if (!acquired) {
-          addLog(`✨ The unique power of ${drop.item_name} is already claimed by another...`);
-          continue;
-        }
-      } else {
-        await supabase.from('character_inventory').insert({
-          character_id: recipient.character_id, item_id: drop.item_id, current_durability: 100,
-        });
-      }
-      addLog(`📦 ${drop.item_name} → ${recipient.character.name}`);
-    }
-
-    // Show loot dialog only for the party leader; non-leaders auto round-robin equipment
-    if (equipmentDrops.length > 0 && hasPartyAtNode) {
-      if (party && party.leader_id === character.id) {
-        setPendingLoot({ loot: equipmentDrops, creatureName });
-      } else {
-        // Non-leader: auto round-robin equipment to same-node members
-        for (let i = 0; i < equipmentDrops.length; i++) {
-          const drop = equipmentDrops[i];
-          const recipient = sameNodeMembers[i % sameNodeMembers.length];
-          if (drop.item_rarity === 'unique') {
-            const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
-              p_character_id: recipient.character_id, p_item_id: drop.item_id,
-            });
-            if (!acquired) {
-              addLog(`✨ The unique power of ${drop.item_name} is already claimed by another...`);
-              continue;
-            }
-          } else {
-            await supabase.from('character_inventory').insert({
-              character_id: recipient.character_id, item_id: drop.item_id, current_durability: 100,
-            });
-          }
-          addLog(`📦 ${drop.item_name} → ${recipient.character.name}`);
-        }
-        fetchInventory();
-      }
-    } else if (equipmentDrops.length > 0) {
-      // Solo or no party at node — auto-assign equipment to self
-      for (const drop of equipmentDrops) {
-        if (drop.item_rarity === 'unique') {
-          const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
-            p_character_id: character.id, p_item_id: drop.item_id,
-          });
-          if (!acquired) {
-            addLog(`✨ The unique power of ${drop.item_name} is already claimed by another...`);
-            continue;
-          }
-        } else {
-          await supabase.from('character_inventory').insert({
-            character_id: character.id, item_id: drop.item_id, current_durability: 100,
-          });
-        }
-      }
-      fetchInventory();
-    } else {
-      fetchInventory();
-    }
-  }, [character.id, character.current_node_id, character.name, addLog, fetchInventory, party, partyMembers]);
-
-  const handleLootDistribute = useCallback(async (assignments: Record<string, string>) => {
-    for (const [itemId, charId] of Object.entries(assignments)) {
-      const lootItem = pendingLoot?.loot.find(l => l.item_id === itemId);
-      if (lootItem && lootItem.item_rarity === 'unique') {
-        const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
-          p_character_id: charId, p_item_id: itemId,
-        });
-        if (!acquired) {
-          addLog(`✨ The unique power of ${lootItem.item_name} is already claimed by another...`);
-          continue;
-        }
-      } else {
-        await supabase.from('character_inventory').insert({
-          character_id: charId, item_id: itemId, current_durability: 100,
-        });
-      }
-      const member = partyMembers.find(m => m.character_id === charId);
-      if (lootItem && member) {
-        addLog(`📦 ${lootItem.item_name} → ${member.character.name}`);
-      }
-    }
-    setPendingLoot(null);
-    fetchInventory();
-  }, [pendingLoot, partyMembers, addLog, fetchInventory]);
 
   // Wire up refs for forward-declared callbacks
   useEffect(() => { rollLootRef.current = rollLoot; }, [rollLoot]);
@@ -1348,9 +1250,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             equipmentBonuses={equipmentBonuses}
             onEquip={equipItem}
             onUnequip={unequipItem}
-            onDrop={dropItem}
+            onDrop={(inventoryId) => {
+              const inv = [...equipped, ...unequipped].find(i => i.id === inventoryId);
+              if (inv && character.current_node_id) {
+                dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
+                addLog(`You dropped ${inv.item.name} on the ground.`);
+              }
+            }}
+            onDestroy={dropItem}
             onUseConsumable={handleUseConsumable}
-            
             isAtInn={currentNode?.is_inn ?? false}
             regenBuff={regenBuff}
             regenTick={regenTick}
@@ -1407,6 +1315,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
               sunderDebuff={sunderDebuff}
+              groundLoot={groundLoot}
+              onPickUpLoot={async (id) => {
+                const result = await pickUpItem(id);
+                if (result === false) addLog('✨ That unique item is already claimed by another...');
+                else { addLog('📦 You pick up an item.'); fetchInventory(); }
+              }}
             />
           </div>
           {/* Event Log - docked at bottom of middle column, 1/3 height */}
@@ -1486,16 +1400,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         />
       )}
 
-      {/* Loot Share Dialog — only equipment, only same-node members */}
-      {pendingLoot && party && (
-        <LootShareDialog
-          open={true}
-          loot={pendingLoot.loot}
-          partyMembers={mergedPartyMembers.filter(m => m.character.current_node_id === character.current_node_id)}
-          creatureName={pendingLoot.creatureName}
-          onConfirm={handleLootDistribute}
-        />
-      )}
 
       {/* NPC Dialog */}
       <NPCDialogPanel npc={talkingToNPC} open={!!talkingToNPC} onClose={() => setTalkingToNPC(null)} />

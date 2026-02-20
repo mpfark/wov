@@ -5,6 +5,7 @@ import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
 import { PartyMember } from '@/hooks/useParty';
 import { InventoryItem } from '@/hooks/useInventory';
+import { GroundLootItem } from '@/hooks/useGroundLoot';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
@@ -41,6 +42,8 @@ interface Props {
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
+  groundLoot?: GroundLootItem[];
+  onPickUpLoot?: (groundLootId: string) => void;
 }
 
 export default function NodeView({
@@ -50,6 +53,8 @@ export default function NodeView({
   poisonStacks = {},
   igniteStacks = {},
   sunderDebuff,
+  groundLoot = [],
+  onPickUpLoot,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [healTarget, setHealTarget] = useState<string>('');
@@ -212,6 +217,38 @@ export default function NodeView({
                     </span>
                   </div>
                 ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+
+        {/* Ground Loot */}
+        {groundLoot.length > 0 && (
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
+              <h3 className="font-display text-xs text-muted-foreground">On the Ground ({groundLoot.length})</h3>
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {groundLoot.map(g => {
+                  const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
+                    g.item.rarity === 'rare' ? 'text-dwarvish' :
+                    g.item.rarity === 'uncommon' ? 'text-chart-2' : 'text-foreground';
+                  return (
+                    <div key={g.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-border">
+                      <div className="min-w-0 flex-1">
+                        <span className={`text-xs font-display truncate ${rarityColor}`}>{g.item.name}</span>
+                        {g.creature_name && (
+                          <span className="text-[9px] text-muted-foreground ml-1">from {g.creature_name}</span>
+                        )}
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => onPickUpLoot?.(g.id)} className="font-display text-[10px] h-5 px-1.5 ml-1 shrink-0">
+                        Pick Up
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>
