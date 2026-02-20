@@ -217,11 +217,15 @@ export default function MapPanel({
                   {/* Actions */}
                   <div className="space-y-1 border-t border-border pt-2">
                     <span className="font-display text-[10px] text-muted-foreground">Actions</span>
-                    {/* Search */}
-                    {renderActionKey('search')}
-                    {/* Abilities */}
+                    {/* Attack & Search & Pickup */}
                     <div className="grid grid-cols-3 gap-1">
-                      {(['ability1', 'ability2', 'ability3'] as ActionName[]).map(name => renderActionKey(name))}
+                      {renderActionKey('attack')}
+                      {renderActionKey('search')}
+                      {renderActionKey('pickup')}
+                    </div>
+                    {/* Abilities */}
+                    <div className="grid grid-cols-4 gap-1">
+                      {(['ability1', 'ability2', 'ability3', 'ability4'] as ActionName[]).map(name => renderActionKey(name))}
                     </div>
                     {/* Potions */}
                     <div className="grid grid-cols-3 gap-1">

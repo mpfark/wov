@@ -1268,6 +1268,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [beltedPotions, handleUseConsumable]);
 
+  const handlePickUpFirst = useCallback(async () => {
+    if (isDead) return;
+    if (groundLoot.length === 0) return;
+    const first = groundLoot[0];
+    const result = await pickUpItem(first.id);
+    if (result === false) addLog('✨ That unique item is already claimed by another...');
+    else { addLog('📦 You pick up an item.'); fetchInventory(); }
+  }, [isDead, groundLoot, pickUpItem, addLog, fetchInventory]);
+
   const handleAttackFirst = useCallback(() => {
     if (isDead) return;
     if (inCombat) return; // already fighting
@@ -1286,6 +1295,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onSearch: handleSearch,
     onUseAbility: handleAbilityKey,
     onUseBeltPotion: handleBeltPotionKey,
+    onPickUpLoot: handlePickUpFirst,
   });
 
 
