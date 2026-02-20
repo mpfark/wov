@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.ai-world-builder]
 verify_jwt = false
+
+[functions.ai-item-forge]
+verify_jwt = false

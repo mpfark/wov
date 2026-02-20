@@ -16,6 +16,7 @@ import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
 import WorldBuilderPanel from '@/components/admin/WorldBuilderPanel';
+import ItemForgePanel from '@/components/admin/ItemForgePanel';
 import GameManual from '@/components/admin/GameManual';
 
 interface AdminPageProps {
@@ -131,6 +132,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
             <TabsTrigger value="world-builder" className="font-display text-xs">🧙 World Builder</TabsTrigger>
+            <TabsTrigger value="item-forge" className="font-display text-xs">🪄 Item Forge</TabsTrigger>
             <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
           </TabsList>
         </div>
@@ -214,6 +216,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="world-builder" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <WorldBuilderPanel onDataChanged={loadData} />
+        </TabsContent>
+
+        <TabsContent value="item-forge" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          <ItemForgePanel onDataChanged={loadData} />
         </TabsContent>
 
         <TabsContent value="manual" className="flex-1 min-h-0 mt-0 overflow-hidden">
