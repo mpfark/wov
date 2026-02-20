@@ -68,6 +68,7 @@ export default function CreatureManager() {
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
   const [showUnassigned, setShowUnassigned] = useState(false);
+  const [showNoLoot, setShowNoLoot] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
   const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
@@ -222,8 +223,16 @@ export default function CreatureManager() {
     return nodes.find(n => n.id === nodeId)?.region_name || '';
   };
 
+  const hasNoLoot = (c: Creature) => {
+    if (c.loot_table_id) return false;
+    const loot = Array.isArray(c.loot_table) ? c.loot_table : [];
+    const itemLoot = loot.filter((e: any) => e.type !== 'gold');
+    return itemLoot.length === 0;
+  };
+
   const filtered = creatures.filter(c => {
     if (showUnassigned && c.node_id) return false;
+    if (showNoLoot && !hasNoLoot(c)) return false;
     const matchesText = c.name.toLowerCase().includes(filter.toLowerCase()) ||
       c.rarity.includes(filter.toLowerCase()) ||
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
@@ -232,6 +241,7 @@ export default function CreatureManager() {
   });
 
   const unassignedCount = creatures.filter(c => !c.node_id).length;
+  const noLootCount = creatures.filter(hasNoLoot).length;
 
   return (
     <div className="h-full flex">
@@ -261,6 +271,16 @@ export default function CreatureManager() {
             }`}
           >
             Unassigned ({unassignedCount})
+          </button>
+          <button
+            onClick={() => setShowNoLoot(v => !v)}
+            className={`px-2 py-0.5 rounded text-[10px] font-display transition-colors ${
+              showNoLoot
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            }`}
+          >
+            No Loot ({noLootCount})
           </button>
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
