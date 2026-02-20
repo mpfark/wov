@@ -30,7 +30,7 @@ interface UseCombatParams {
   equipmentBonuses: EquipmentBonuses;
   effectiveAC: number;
   addLog: (msg: string) => void;
-  rollLoot: (lootTable: any[], creatureName: string) => Promise<void>;
+  rollLoot: (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => Promise<void>;
   degradeEquipment: () => Promise<void>;
   party: Party | null;
   partyMembers: PartyMember[];
@@ -445,7 +445,7 @@ export function useCombat({
             await _updateCharacter({ xp: newXp, gold: newGold });
           }
 
-          await _rollLoot(creature.loot_table as any[], creature.name);
+          await _rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
           // Stop combat immediately after kill — the useEffect watching creatures
           // will auto-start combat with the next aggressive creature if any
           stopCombat();

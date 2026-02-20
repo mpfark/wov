@@ -221,6 +221,7 @@ export type Database = {
           created_at: string
           description: string
           died_at: string | null
+          drop_chance: number
           hp: number
           id: string
           is_aggressive: boolean
@@ -228,6 +229,7 @@ export type Database = {
           is_humanoid: boolean
           level: number
           loot_table: Json
+          loot_table_id: string | null
           max_hp: number
           name: string
           node_id: string | null
@@ -240,6 +242,7 @@ export type Database = {
           created_at?: string
           description?: string
           died_at?: string | null
+          drop_chance?: number
           hp?: number
           id?: string
           is_aggressive?: boolean
@@ -247,6 +250,7 @@ export type Database = {
           is_humanoid?: boolean
           level?: number
           loot_table?: Json
+          loot_table_id?: string | null
           max_hp?: number
           name: string
           node_id?: string | null
@@ -259,6 +263,7 @@ export type Database = {
           created_at?: string
           description?: string
           died_at?: string | null
+          drop_chance?: number
           hp?: number
           id?: string
           is_aggressive?: boolean
@@ -266,6 +271,7 @@ export type Database = {
           is_humanoid?: boolean
           level?: number
           loot_table?: Json
+          loot_table_id?: string | null
           max_hp?: number
           name?: string
           node_id?: string | null
@@ -274,6 +280,13 @@ export type Database = {
           stats?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "creatures_loot_table_id_fkey"
+            columns: ["loot_table_id"]
+            isOneToOne: false
+            referencedRelation: "loot_tables"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "creatures_node_id_fkey"
             columns: ["node_id"]
@@ -331,6 +344,63 @@ export type Database = {
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
           value?: number
+        }
+        Relationships: []
+      }
+      loot_table_entries: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          loot_table_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          loot_table_id: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          loot_table_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loot_table_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loot_table_entries_loot_table_id_fkey"
+            columns: ["loot_table_id"]
+            isOneToOne: false
+            referencedRelation: "loot_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loot_tables: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }

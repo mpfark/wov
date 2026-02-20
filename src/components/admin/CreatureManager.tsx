@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Save, X, Skull } from 'lucide-react';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
+import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
 
 interface Creature {
@@ -25,6 +26,13 @@ interface Creature {
   loot_table: any[];
   respawn_seconds: number;
   is_alive: boolean;
+  loot_table_id: string | null;
+  drop_chance: number;
+}
+
+interface LootTableOption {
+  id: string;
+  name: string;
 }
 
 interface NodeOption {
@@ -47,6 +55,8 @@ const defaultForm = () => ({
   is_aggressive: false, is_humanoid: false, respawn_seconds: 300,
   loot_table: [] as { item_id: string; chance: number }[],
   gold_min: 0, gold_max: 0, gold_chance: 0.5,
+  loot_table_id: null as string | null,
+  drop_chance: 0.5,
 });
 
 export default function CreatureManager() {
@@ -59,13 +69,17 @@ export default function CreatureManager() {
   const [regionFilter, setRegionFilter] = useState('all');
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
+  const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
 
   const loadData = async () => {
-    const [c, n, r] = await Promise.all([
+    const [c, n, r, lt] = await Promise.all([
       supabase.from('creatures').select('*').order('name'),
       supabase.from('nodes').select('id, name, region_id').order('name'),
       supabase.from('regions').select('id, name'),
+      supabase.from('loot_tables').select('id, name').order('name'),
     ]);
+    if (lt.data) setLootTables(lt.data as LootTableOption[]);
     if (c.data) setCreatures(c.data as unknown as Creature[]);
     if (n.data && r.data) {
       const regionMap = Object.fromEntries(r.data.map(reg => [reg.id, reg.name]));
@@ -105,12 +119,35 @@ export default function CreatureManager() {
       gold_min: goldEntry?.min || 0,
       gold_max: goldEntry?.max || 0,
       gold_chance: goldEntry?.chance ?? 0.5,
+      loot_table_id: c.loot_table_id || null,
+      drop_chance: c.drop_chance ?? 0.5,
     });
+    // Load entries for selected loot table
+    if (c.loot_table_id) {
+      loadLootTableEntries(c.loot_table_id);
+    } else {
+      setLootTableEntries([]);
+    }
   };
 
   const closePanel = () => {
     setSelectedId(null);
     setIsNew(false);
+    setLootTableEntries([]);
+  };
+
+  const loadLootTableEntries = async (tableId: string) => {
+    const { data } = await supabase
+      .from('loot_table_entries')
+      .select('item_id, weight')
+      .eq('loot_table_id', tableId);
+    if (data) {
+      // Fetch item names
+      const itemIds = data.map(e => e.item_id);
+      const { data: itemsData } = await supabase.from('items').select('id, name').in('id', itemIds);
+      const nameMap = Object.fromEntries((itemsData || []).map(i => [i.id, i.name]));
+      setLootTableEntries(data.map(e => ({ item_id: e.item_id, weight: e.weight, item_name: nameMap[e.item_id] || 'Unknown' })));
+    }
   };
 
   const handleSave = async () => {
@@ -137,6 +174,8 @@ export default function CreatureManager() {
       is_humanoid: form.is_humanoid,
       respawn_seconds: Math.max(0, form.respawn_seconds),
       loot_table,
+      loot_table_id: form.loot_table_id || null,
+      drop_chance: form.drop_chance,
     };
 
     let savedId = selectedId;
@@ -389,8 +428,57 @@ export default function CreatureManager() {
                 </div>
               </div>
 
-              <ItemPickerList label="Loot Table" value={form.loot_table}
-                onChange={v => setForm(f => ({ ...f, loot_table: v }))} />
+              {/* Loot Table selector */}
+              <div className="space-y-1.5">
+                <p className="font-display text-xs text-primary">Loot Table</p>
+                <Select value={form.loot_table_id || 'none'} onValueChange={v => {
+                  const tableId = v === 'none' ? null : v;
+                  setForm(f => ({ ...f, loot_table_id: tableId }));
+                  if (tableId) loadLootTableEntries(tableId);
+                  else setLootTableEntries([]);
+                }}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select loot table" /></SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50 max-h-60">
+                    <SelectItem value="none" className="text-xs text-muted-foreground">None (legacy inline)</SelectItem>
+                    {lootTables.map(lt => (
+                      <SelectItem key={lt.id} value={lt.id} className="text-xs">{lt.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {form.loot_table_id && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] text-muted-foreground">Drop Chance</label>
+                      <span className="text-xs font-mono text-primary">{Math.round(form.drop_chance * 100)}%</span>
+                    </div>
+                    <Slider
+                      value={[form.drop_chance * 100]}
+                      onValueChange={([v]) => setForm(f => ({ ...f, drop_chance: v / 100 }))}
+                      min={1} max={100} step={1}
+                    />
+                    {lootTableEntries.length > 0 && (
+                      <div className="p-2 bg-background/50 rounded border border-border mt-1">
+                        <p className="text-[10px] text-muted-foreground mb-1">Items in table:</p>
+                        {(() => {
+                          const totalWeight = lootTableEntries.reduce((s, e) => s + e.weight, 0);
+                          return lootTableEntries.map((e, i) => (
+                            <div key={i} className="flex justify-between text-[10px]">
+                              <span>{e.item_name}</span>
+                              <span className="text-primary font-mono">{((e.weight / totalWeight) * form.drop_chance * 100).toFixed(1)}%</span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!form.loot_table_id && (
+                  <ItemPickerList label="Legacy Loot (per-item chance)" value={form.loot_table}
+                    onChange={v => setForm(f => ({ ...f, loot_table: v }))} />
+                )}
+              </div>
 
               {/* Gold drop config */}
               <div className="space-y-1.5">
