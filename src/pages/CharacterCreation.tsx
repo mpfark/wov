@@ -12,11 +12,12 @@ import {
 
 interface Props {
   onCreateCharacter: (data: any) => Promise<any>;
+  onCharacterReady?: (id: string) => void;
   startingNodeId: string;
   onBack?: () => void;
 }
 
-export default function CharacterCreation({ onCreateCharacter, startingNodeId, onBack }: Props) {
+export default function CharacterCreation({ onCreateCharacter, onCharacterReady, startingNodeId, onBack }: Props) {
   const [name, setName] = useState('');
   const [race, setRace] = useState('');
   const [charClass, setCharClass] = useState('');
@@ -77,6 +78,8 @@ export default function CharacterCreation({ onCreateCharacter, startingNodeId, o
           }));
           await supabase.from('character_inventory').insert(inserts);
         }
+        // All gear granted — now select the character so GamePage mounts with full inventory
+        onCharacterReady?.(char.id);
       }
       toast.success(`${name} has begun their adventure!`);
     } catch (err: any) {

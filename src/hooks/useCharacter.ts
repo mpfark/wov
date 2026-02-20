@@ -102,14 +102,20 @@ export function useCharacter(user: User | null) {
   }, []);
 
   const deleteCharacter = useCallback(async (id: string) => {
+    // Optimistically remove from UI immediately
+    setCharacters(prev => prev.filter(c => c.id !== id));
+    setSelectedCharacterId(prev => prev === id ? null : prev);
     // Clean up related data first
     await supabase.from('character_inventory').delete().eq('character_id', id);
     await supabase.from('party_members').delete().eq('character_id', id);
     const { error } = await supabase.from('characters').delete().eq('id', id);
     if (error) {
+      // Revert on failure — refetch
+      const { data } = await supabase.from('characters').select('*').eq('user_id', user!.id).order('created_at', { ascending: true });
+      if (data) setCharacters(data as Character[]);
       throw error;
     }
-  }, []);
+  }, [user]);
 
   const createCharacter = async (charData: {
     name: string; race: string; class: string;
@@ -134,9 +140,13 @@ export function useCharacter(user: User | null) {
     if (error) throw error;
     const char = data as Character;
     setCharacters(prev => [...prev, char]);
-    setSelectedCharacterId(char.id);
+    // Don't select yet — let the caller finish setup (e.g. granting gear) first
     return data;
   };
+
+  const selectCharacterAfterCreate = useCallback((id: string) => {
+    setSelectedCharacterId(id);
+  }, []);
 
   const updateCharacter = async (updates: Partial<Character>) => {
     if (!selectedCharacter) return;
@@ -175,5 +185,6 @@ export function useCharacter(user: User | null) {
     deleteCharacter,
     createCharacter,
     updateCharacter,
+    selectCharacterAfterCreate,
   };
 }

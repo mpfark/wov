@@ -16,7 +16,7 @@ const Index = () => {
   const {
     characters, character, loading: charLoading,
     selectCharacter, clearSelectedCharacter, deleteCharacter,
-    createCharacter, updateCharacter,
+    createCharacter, updateCharacter, selectCharacterAfterCreate,
   } = useCharacter(user);
   const { nodes, loading: nodesLoading } = useNodes(!!user);
   const { isAdmin, isValar } = useRole(user);
@@ -81,6 +81,7 @@ const Index = () => {
           setShowCreateNew(false);
           return result;
         }}
+        onCharacterReady={(id: string) => selectCharacterAfterCreate(id)}
         startingNodeId={startingNode.id}
         onBack={characters.length > 0 ? () => setShowCreateNew(false) : undefined}
       />
