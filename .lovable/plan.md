@@ -1,88 +1,39 @@
 
+## Boss Rarity Multiplier Buff
 
-## Predefined Loot Tables
+### What's Changing
 
-### Current System
-Each creature has an inline `loot_table` JSON array where every entry rolls independently. A creature with 5 items at 10% each can drop 0, 1, 2, or even all 5. Tables are duplicated per creature and can't be shared.
+One file, three constants updated in `src/lib/game-data.ts`.
 
-### Proposed System
-Create named **Loot Tables** that are shared, reusable pools of items. When a creature dies:
-1. Roll once to see if loot drops at all (based on a `drop_chance` on the creature)
-2. If yes, pick **one item** from the table using weighted random selection
+**`RARITY_MULTIPLIER` (lines 209-213)**
+| Stat | Before | After |
+|------|--------|-------|
+| HP multiplier | 2.5x | 4.0x |
+| Stat multiplier | 1.6x | 2.0x |
+| AC bonus | +4 | +6 |
 
-### Database Changes
+**`CREATURE_DAMAGE_BASE` (line 217)**
+| Rarity | Before | After |
+|--------|--------|-------|
+| boss base die | d8 | d10 |
 
-**New table: `loot_tables`**
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK |
-| name | text | e.g. "Forest Beasts Lvl 1-5", "Goblin Warriors" |
-| created_at | timestamptz | default now() |
+### What a Level 40 Boss Looks Like (before vs after)
 
-**New table: `loot_table_entries`**
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK |
-| loot_table_id | uuid | FK to loot_tables |
-| item_id | uuid | FK to items |
-| weight | integer | Higher = more likely to be picked (default 10) |
+Using `generateCreatureStats(40, 'boss')`:
 
-**Creatures table changes:**
-- Add `loot_table_id` (uuid, nullable, FK to loot_tables)
-- Add `drop_chance` (numeric, default 0.5 -- 50% chance to drop anything)
-- Keep existing `loot_table` JSON column for backward compatibility / gold config
+- **HP**: `(15 + 40*8) * mult` → 335 × 2.5 = **838 HP** → 335 × 4.0 = **1,340 HP**
+- **Primary stat (STR)**: `(8 + 28) * mult` → 36 × 1.6 = **~58** → 36 × 2.0 = **~72**
+- **AC**: `8 + floor(40*0.6) + ac_bonus` → 8 + 24 + 4 = **36** → 8 + 24 + 6 = **38**
+- **Base damage die**: d8 + floor(40/2) = **d28** → d10 + 20 = **d30** (slightly higher ceiling + floor)
 
-When a creature has a `loot_table_id`, the new system is used. The old inline JSON remains for gold drops only.
+### Rare stays untouched
 
-### How Weighted Selection Works
+`rare: { stat: 1.3, hp: 1.5, ac: 2 }` and `rare: 6` damage base are unchanged. Only `boss` entries are modified.
 
-If a loot table has:
-- Iron Sword (weight 10)
-- Steel Shield (weight 5)  
-- Rare Ring (weight 1)
+### Files to Edit
 
-Total weight = 16. Iron Sword has 62.5% chance, Shield 31.25%, Ring 6.25%. The creature rolls once and drops exactly one of these (or nothing if the initial `drop_chance` roll fails).
+- `src/lib/game-data.ts` — 2 constants modified (3 values total):
+  - `RARITY_MULTIPLIER.boss`: `{ stat: 2.0, hp: 4.0, ac: 6 }`
+  - `CREATURE_DAMAGE_BASE.boss`: `10`
 
-### Code Changes
-
-1. **New admin component: `LootTableManager.tsx`**
-   - List/create/edit/delete loot tables
-   - Add/remove items with weight sliders
-   - Show calculated drop percentages
-   - Accessible from Admin page as a new tab
-
-2. **Update `CreatureManager.tsx`**
-   - Add a loot table selector dropdown (pick from predefined tables)
-   - Add a `drop_chance` slider (0-100%)
-   - Keep gold drop config as-is (still inline)
-
-3. **Update `rollLoot` in `GamePage.tsx`**
-   - If creature has `loot_table_id`: fetch entries, do weighted random pick of one item
-   - If creature has old inline `loot_table`: use existing logic (backward compatible)
-   - Gold drops still processed from inline JSON
-
-4. **Update `NodeEditorPanel.tsx` creature section**
-   - Replace inline loot picker with loot table selector + drop chance
-
-5. **Update `WorldBuilderPanel.tsx`**
-   - AI-generated creatures reference loot tables instead of inline items
-
-### Technical Details
-
-**Weighted selection algorithm (in rollLoot):**
-```text
-1. Fetch loot_table_entries for creature's loot_table_id
-2. Roll Math.random() against creature's drop_chance -- if fail, no drop
-3. Sum all weights, pick random number 0..totalWeight
-4. Walk entries, subtracting weight until <= 0 -- that's the picked item
-5. Drop that single item to ground loot
-```
-
-**Admin tab addition in AdminPage.tsx:**
-- Add "Loot Tables" tab between Items and Users
-
-**CreatureManager changes:**
-- Dropdown to select a loot table (or "None")
-- Numeric input for drop_chance (0.0 - 1.0)
-- Preview showing items in the selected table with their % chances
-
+No database changes, no migrations, no UI changes required. The functions `generateCreatureStats` and `getCreatureDamageDie` already consume these constants correctly, so the runtime behaviour updates immediately for any creature with `rarity = 'boss'`.
