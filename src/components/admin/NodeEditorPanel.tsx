@@ -7,8 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus, Pencil, X } from 'lucide-react';
-import { generateCreatureStats } from '@/lib/game-data';
+import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Swords, Clock } from 'lucide-react';
 import ItemPickerList from './ItemPickerList';
 
 interface VendorEntry {
@@ -36,6 +35,26 @@ const REVERSE_DIR: Record<string, string> = {
   NE: 'SW', SW: 'NE', NW: 'SE', SE: 'NW',
 };
 
+const RARITY_COLORS: Record<string, string> = {
+  regular: 'text-foreground',
+  rare: 'text-blue-400',
+  boss: 'text-primary',
+};
+
+const ITEM_RARITY_COLORS: Record<string, string> = {
+  common: 'text-muted-foreground',
+  uncommon: 'text-green-400',
+  rare: 'text-blue-400',
+  unique: 'text-primary',
+};
+
+function formatRespawn(seconds: number) {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+}
+
+/* ─── ConnectionsManager ─────────────────────────────── */
 function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: {
   nodeId: string;
   connections: string;
@@ -74,14 +93,12 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
         : c
     );
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
-    // Update reverse direction on target node
     const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', editingConnId).single();
     if (targetNode) {
       const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
       const reverseIdx = targetConns.findIndex((c: any) => c.node_id === nodeId);
       if (reverseIdx >= 0) {
         targetConns[reverseIdx] = { ...targetConns[reverseIdx], direction: REVERSE_DIR[editDir] || targetConns[reverseIdx].direction, ...(editHidden ? { hidden: true } : { hidden: undefined }) };
-        // Clean undefined
         if (!targetConns[reverseIdx].hidden) delete targetConns[reverseIdx].hidden;
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', editingConnId);
       }
@@ -175,8 +192,8 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
                 <span className="text-xs text-muted-foreground font-mono">{c.direction}</span>
                 {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
                 {c.hidden && <span className="text-[10px] text-primary/70 font-mono">🔒 Hidden</span>}
-                <Button size="sm" variant="ghost" disabled={saving} onClick={() => startEditConnection(c)} className="h-6 w-6 p-0">
-                  <Pencil className="w-3 h-3" />
+                <Button size="sm" variant="ghost" disabled={saving} onClick={() => startEditConnection(c)} className="h-6 px-2 text-[10px]">
+                  Edit
                 </Button>
                 <Button size="sm" variant="destructive" disabled={saving} onClick={() => removeConnection(c.node_id)} className="h-6 w-6 p-0">
                   <Trash2 className="w-3 h-3" />
@@ -226,12 +243,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
   );
 }
 
-const defaultCreatureForm = () => ({
-  name: '', description: '', level: 1, rarity: 'regular',
-  is_aggressive: false, respawn_seconds: 300,
-  loot_table: [] as { item_id: string; chance: number }[],
-  gold_min: 0, gold_max: 0, gold_chance: 0.5,
-});
+/* ─── Main component ────────────────────────────────── */
 
 export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId,
@@ -243,22 +255,39 @@ export default function NodeEditorPanel({
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
   const [creatures, setCreatures] = useState<any[]>([]);
   const [npcs, setNpcs] = useState<any[]>([]);
-  const [creatureForm, setCreatureForm] = useState(defaultCreatureForm());
-  const [npcForm, setNpcForm] = useState({ name: '', description: '', dialogue: '' });
-  const [editingNpcId, setEditingNpcId] = useState<string | null>(null);
-  const [editingCreatureId, setEditingCreatureId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [vendorItems, setVendorItems] = useState<VendorEntry[]>([]);
   const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; value: number }[]>([]);
   const [vendorForm, setVendorForm] = useState({ item_id: '', price: 10, stock: -1 });
-  // Track the actual ID after creation so we can switch to edit mode
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodeId);
+
+  // For assigning existing entities
+  const [allCreatures, setAllCreatures] = useState<any[]>([]);
+  const [allNpcs, setAllNpcs] = useState<any[]>([]);
+  const [assignCreatureId, setAssignCreatureId] = useState('');
+  const [assignNpcId, setAssignNpcId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+
+  // Loot table info for creature display
+  const [lootTableMap, setLootTableMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setActiveNodeId(nodeId);
     setSelectedRegionId(initialRegionId);
     supabase.from('items').select('id, name, rarity, value').order('name').then(({ data }) => {
       if (data) setAllItems(data);
+    });
+    // Load all unassigned creatures and NPCs for the picker
+    Promise.all([
+      supabase.from('creatures').select('id, name, level, rarity, is_aggressive, is_humanoid, hp, max_hp, ac, node_id').order('name'),
+      supabase.from('npcs').select('id, name, description, dialogue, node_id').order('name'),
+      supabase.from('loot_tables').select('id, name'),
+    ]).then(([cr, np, lt]) => {
+      setAllCreatures(cr.data || []);
+      setAllNpcs(np.data || []);
+      const map: Record<string, string> = {};
+      for (const t of (lt.data || [])) map[t.id] = t.name;
+      setLootTableMap(map);
     });
     if (nodeId) {
       loadNode(nodeId);
@@ -271,10 +300,8 @@ export default function NodeEditorPanel({
       setNpcs([]);
       setVendorItems([]);
     }
-    setEditingCreatureId(null);
-    setEditingNpcId(null);
-    setCreatureForm(defaultCreatureForm());
-    setNpcForm({ name: '', description: '', dialogue: '' });
+    setAssignCreatureId('');
+    setAssignNpcId('');
     setVendorForm({ item_id: '', price: 10, stock: -1 });
   }, [nodeId, initialRegionId]);
 
@@ -293,7 +320,11 @@ export default function NodeEditorPanel({
   };
 
   const loadCreatures = async (id: string) => {
-    const { data } = await supabase.from('creatures').select('*').eq('node_id', id).order('name');
+    const { data } = await supabase
+      .from('creatures')
+      .select('id, name, level, rarity, is_aggressive, is_humanoid, hp, max_hp, ac, loot_table_id, loot_table, drop_chance, respawn_seconds, is_alive, stats')
+      .eq('node_id', id)
+      .order('name');
     setCreatures(data || []);
   };
 
@@ -302,40 +333,58 @@ export default function NodeEditorPanel({
     setNpcs(data || []);
   };
 
-  const saveNpc = async () => {
-    if (!activeNodeId || !npcForm.name) return toast.error('Save the node first and provide an NPC name');
-    const payload = { name: npcForm.name, description: npcForm.description, dialogue: npcForm.dialogue, node_id: activeNodeId };
-    if (editingNpcId) {
-      const { error } = await supabase.from('npcs').update(payload).eq('id', editingNpcId);
-      if (error) return toast.error(error.message);
-      toast.success('NPC updated');
-    } else {
-      const { error } = await supabase.from('npcs').insert(payload);
-      if (error) return toast.error(error.message);
-      toast.success('NPC added');
-    }
-    setNpcForm({ name: '', description: '', dialogue: '' });
-    setEditingNpcId(null);
+  /* ── Assign existing creature to this node ── */
+  const assignCreature = async () => {
+    if (!activeNodeId || !assignCreatureId) return;
+    setAssigning(true);
+    const { error } = await supabase.from('creatures').update({ node_id: activeNodeId }).eq('id', assignCreatureId);
+    if (error) { toast.error(error.message); setAssigning(false); return; }
+    const name = allCreatures.find(c => c.id === assignCreatureId)?.name || 'Creature';
+    toast.success(`${name} assigned to node`);
+    setAssignCreatureId('');
+    setAssigning(false);
+    loadCreatures(activeNodeId);
+    // Refresh global creature list
+    const { data } = await supabase.from('creatures').select('id, name, level, rarity, is_aggressive, is_humanoid, hp, max_hp, ac, node_id').order('name');
+    if (data) setAllCreatures(data);
+  };
+
+  /* ── Unassign creature from node (set node_id = null) ── */
+  const unassignCreature = async (id: string, name: string) => {
+    const { error } = await supabase.from('creatures').update({ node_id: null }).eq('id', id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${name} unassigned`);
+    if (activeNodeId) loadCreatures(activeNodeId);
+    const { data } = await supabase.from('creatures').select('id, name, level, rarity, is_aggressive, is_humanoid, hp, max_hp, ac, node_id').order('name');
+    if (data) setAllCreatures(data);
+  };
+
+  /* ── Assign existing NPC to this node ── */
+  const assignNpc = async () => {
+    if (!activeNodeId || !assignNpcId) return;
+    setAssigning(true);
+    const { error } = await supabase.from('npcs').update({ node_id: activeNodeId }).eq('id', assignNpcId);
+    if (error) { toast.error(error.message); setAssigning(false); return; }
+    const name = allNpcs.find(n => n.id === assignNpcId)?.name || 'NPC';
+    toast.success(`${name} assigned to node`);
+    setAssignNpcId('');
+    setAssigning(false);
     loadNpcs(activeNodeId);
+    const { data } = await supabase.from('npcs').select('id, name, description, dialogue, node_id').order('name');
+    if (data) setAllNpcs(data);
   };
 
-  const editNpc = (n: any) => {
-    setEditingNpcId(n.id);
-    setNpcForm({ name: n.name, description: n.description || '', dialogue: n.dialogue || '' });
-  };
-
-  const cancelEditNpc = () => {
-    setEditingNpcId(null);
-    setNpcForm({ name: '', description: '', dialogue: '' });
-  };
-
-  const removeNpc = async (id: string) => {
-    const { error } = await supabase.from('npcs').delete().eq('id', id);
-    if (error) return toast.error(error.message);
-    toast.success('NPC removed');
+  /* ── Unassign NPC from node ── */
+  const unassignNpc = async (id: string, name: string) => {
+    const { error } = await supabase.from('npcs').update({ node_id: null }).eq('id', id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`${name} unassigned`);
     if (activeNodeId) loadNpcs(activeNodeId);
+    const { data } = await supabase.from('npcs').select('id, name, description, dialogue, node_id').order('name');
+    if (data) setAllNpcs(data);
   };
 
+  /* ── Vendor ── */
   const loadVendorInventory = async (id: string) => {
     const { data } = await supabase
       .from('vendor_inventory')
@@ -371,6 +420,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) loadVendorInventory(activeNodeId);
   };
 
+  /* ── Save node ── */
   const saveNode = async () => {
     if (!form.name) return toast.error('Name required');
     if (!selectedRegionId) return toast.error('Select a region');
@@ -387,7 +437,6 @@ export default function NodeEditorPanel({
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
     } else {
-      // New node
       if (adjacentToNodeId) {
         const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
         if (parentNode) {
@@ -410,7 +459,6 @@ export default function NodeEditorPanel({
       }
 
       toast.success('Node created');
-      // Switch to edit mode so connections/creatures tabs become available
       if (inserted) {
         setActiveNodeId(inserted.id);
         loadNode(inserted.id);
@@ -422,7 +470,6 @@ export default function NodeEditorPanel({
 
   const deleteNode = async () => {
     if (!activeNodeId) return;
-    // Remove this node from all other nodes' connections
     const { data: allNodes } = await supabase.from('nodes').select('id, connections');
     if (allNodes) {
       for (const n of allNodes) {
@@ -441,71 +488,11 @@ export default function NodeEditorPanel({
     onClose();
   };
 
-  const saveCreature = async () => {
-    if (!activeNodeId || !creatureForm.name) return toast.error('Save the node first and provide a creature name');
-    const loot_table: any[] = [...creatureForm.loot_table];
-    // Add gold drop entry if configured
-    if (creatureForm.gold_max > 0) {
-      loot_table.push({ type: 'gold', min: creatureForm.gold_min, max: creatureForm.gold_max, chance: creatureForm.gold_chance });
-    }
-    const generated = generateCreatureStats(creatureForm.level, creatureForm.rarity);
-    const payload = {
-      name: creatureForm.name, description: creatureForm.description,
-      node_id: activeNodeId, level: creatureForm.level,
-      hp: generated.hp, max_hp: generated.hp, ac: generated.ac,
-      rarity: creatureForm.rarity as any, is_aggressive: creatureForm.is_aggressive,
-      respawn_seconds: creatureForm.respawn_seconds, stats: generated.stats, loot_table,
-    };
-    if (editingCreatureId) {
-      const { error } = await supabase.from('creatures').update(payload).eq('id', editingCreatureId);
-      if (error) return toast.error(error.message);
-      toast.success('Creature updated');
-    } else {
-      const { error } = await supabase.from('creatures').insert(payload);
-      if (error) return toast.error(error.message);
-      toast.success('Creature added');
-    }
-    setCreatureForm(defaultCreatureForm());
-    setEditingCreatureId(null);
-    loadCreatures(activeNodeId);
-  };
+  /* ── Pickers: only show entities not already assigned to THIS node ── */
+  const unassignedCreatures = allCreatures.filter(c => c.node_id !== activeNodeId);
+  const unassignedNpcs = allNpcs.filter(n => n.node_id !== activeNodeId);
 
-  const editCreature = (c: any) => {
-    setEditingCreatureId(c.id);
-    const rawLoot = Array.isArray(c.loot_table) ? c.loot_table as any[] : [];
-    const goldEntry = rawLoot.find((e: any) => e.type === 'gold');
-    const itemLoot = rawLoot.filter((e: any) => e.type !== 'gold');
-    setCreatureForm({
-      name: c.name, description: c.description || '', level: c.level,
-      rarity: c.rarity, is_aggressive: c.is_aggressive,
-      respawn_seconds: c.respawn_seconds,
-      loot_table: itemLoot,
-      gold_min: goldEntry?.min || 0,
-      gold_max: goldEntry?.max || 0,
-      gold_chance: goldEntry?.chance ?? 0.5,
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingCreatureId(null);
-    setCreatureForm(defaultCreatureForm());
-  };
-
-  const removeCreature = async (id: string) => {
-    const { error } = await supabase.from('creatures').delete().eq('id', id);
-    if (error) return toast.error(error.message);
-    toast.success('Creature removed');
-    if (activeNodeId) loadCreatures(activeNodeId);
-  };
-
-  const previewStats = generateCreatureStats(creatureForm.level, creatureForm.rarity);
-
-  const formatRespawn = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
-    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-  };
-
+  /* ─── Render ──────────────────────────────────────── */
   return (
     <div className="h-full flex flex-col bg-card/50">
       {/* Header */}
@@ -523,13 +510,18 @@ export default function NodeEditorPanel({
           <Tabs defaultValue="details">
             <TabsList className="mb-3 h-8">
               <TabsTrigger value="details" className="font-display text-xs">Details</TabsTrigger>
-              {activeNodeId && <TabsTrigger value="creatures" className="font-display text-xs">Creatures & NPCs</TabsTrigger>}
+              {activeNodeId && <TabsTrigger value="creatures" className="font-display text-xs">
+                Creatures {creatures.length > 0 && <span className="ml-1 text-[9px] bg-primary/20 text-primary rounded px-1">{creatures.length}</span>}
+              </TabsTrigger>}
+              {activeNodeId && <TabsTrigger value="npcs" className="font-display text-xs">
+                NPCs {npcs.length > 0 && <span className="ml-1 text-[9px] bg-primary/20 text-primary rounded px-1">{npcs.length}</span>}
+              </TabsTrigger>}
               {activeNodeId && form.is_vendor && <TabsTrigger value="vendor" className="font-display text-xs">Vendor Stock</TabsTrigger>}
               {activeNodeId && <TabsTrigger value="connections" className="font-display text-xs">Connections</TabsTrigger>}
             </TabsList>
 
+            {/* ── Details ── */}
             <TabsContent value="details" className="space-y-3">
-              {/* Region selector */}
               <div>
                 <label className="text-[10px] text-muted-foreground">Region</label>
                 <Select value={selectedRegionId} onValueChange={setSelectedRegionId}>
@@ -537,7 +529,7 @@ export default function NodeEditorPanel({
                   <SelectContent className="bg-popover border-border z-50 max-h-60">
                     {regions.map(r => (
                       <SelectItem key={r.id} value={r.id} className="text-xs">
-                        {r.name} <span className="text-muted-foreground">(Lvl {r.min_level}–{r.max_level})</span>
+                        {r.name} <span className="text-muted-foreground">(Lv {r.min_level}–{r.max_level})</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -550,21 +542,26 @@ export default function NodeEditorPanel({
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="text-xs" />
               <ItemPickerList label="Searchable Items" value={form.searchable_items}
                 onChange={v => setForm(f => ({ ...f, searchable_items: v }))} />
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                <input type="checkbox" checked={form.is_vendor}
-                  onChange={e => setForm(f => ({ ...f, is_vendor: e.target.checked }))} />
-                Is Vendor
-              </label>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                <input type="checkbox" checked={form.is_inn}
-                  onChange={e => setForm(f => ({ ...f, is_inn: e.target.checked }))} />
-                Is Inn (3× HP regen)
-              </label>
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                <input type="checkbox" checked={form.is_blacksmith}
-                  onChange={e => setForm(f => ({ ...f, is_blacksmith: e.target.checked }))} />
-                Is Blacksmith (repair items)
-              </label>
+
+              <div className="space-y-1.5">
+                <p className="font-display text-[10px] text-muted-foreground">Node Services</p>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_vendor}
+                    onChange={e => setForm(f => ({ ...f, is_vendor: e.target.checked }))} />
+                  🛒 Is Vendor
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_inn}
+                    onChange={e => setForm(f => ({ ...f, is_inn: e.target.checked }))} />
+                  🏨 Is Inn (3× HP regen)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_blacksmith}
+                    onChange={e => setForm(f => ({ ...f, is_blacksmith: e.target.checked }))} />
+                  🔨 Is Blacksmith (repair items)
+                </label>
+              </div>
+
               <div className="flex gap-2">
                 <Button onClick={saveNode} disabled={loading} className="font-display text-xs">
                   <Save className="w-3 h-3 mr-1" /> {activeNodeId ? 'Save' : 'Create'}
@@ -577,188 +574,189 @@ export default function NodeEditorPanel({
               </div>
             </TabsContent>
 
+            {/* ── Creatures ── */}
             {activeNodeId && (
               <TabsContent value="creatures" className="space-y-3">
+                {/* Assigned creatures list */}
                 <div className="space-y-2">
-                  {creatures.map(c => (
-                    <div key={c.id} className={`flex items-center justify-between p-2 rounded border ${
-                      editingCreatureId === c.id ? 'border-primary bg-primary/10' : 'border-border bg-background/40'
-                    }`}>
-                      <div>
-                        <span className={`font-display text-sm ${c.rarity === 'boss' ? 'text-primary text-glow' : c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'}`}>
-                          {c.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-2">
-                          Lvl {c.level} | HP {c.hp}/{c.max_hp} | AC {c.ac} | ⏱ {formatRespawn(c.respawn_seconds)} | {c.is_alive ? '✅' : '💀'}
-                        </span>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => editCreature(c)} className="text-xs h-6 px-2">
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => removeCreature(c.id)} className="text-xs h-6 px-2">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
                   {creatures.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">No creatures spawned here.</p>
+                    <p className="text-xs text-muted-foreground italic">No creatures spawned at this node.</p>
                   )}
+                  {creatures.map(c => {
+                    const lootName = c.loot_table_id ? lootTableMap[c.loot_table_id] : null;
+                    const legacyLoot = Array.isArray(c.loot_table) ? (c.loot_table as any[]).filter((e: any) => e.type !== 'gold') : [];
+                    return (
+                      <div key={c.id} className="rounded border border-border bg-background/40 p-2.5 space-y-1.5">
+                        {/* Header row */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Skull className={`w-3.5 h-3.5 shrink-0 ${RARITY_COLORS[c.rarity] || 'text-foreground'}`} />
+                            <span className={`font-display text-sm leading-none ${RARITY_COLORS[c.rarity] || 'text-foreground'} ${c.rarity === 'boss' ? 'text-glow' : ''}`}>
+                              {c.name}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground capitalize">{c.rarity}</span>
+                            {c.is_aggressive && (
+                              <span className="text-[9px] px-1 rounded bg-destructive/20 text-destructive">aggressive</span>
+                            )}
+                            {c.is_humanoid && (
+                              <span className="text-[9px] px-1 rounded bg-muted/50 text-muted-foreground">humanoid</span>
+                            )}
+                          </div>
+                          <Button
+                            size="sm" variant="ghost"
+                            onClick={() => unassignCreature(c.id, c.name)}
+                            className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                            title="Unassign from node"
+                          >
+                            <Unlink className="w-3 h-3" />
+                          </Button>
+                        </div>
+
+                        {/* Stats row */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-0.5">
+                            <span className="text-destructive">Lv {c.level}</span>
+                          </span>
+                          <span className="flex items-center gap-0.5">
+                            HP <strong className="text-foreground ml-0.5">{c.max_hp}</strong>
+                          </span>
+                          <span className="flex items-center gap-0.5">
+                            <Shield className="w-2.5 h-2.5" /> AC <strong className="text-foreground ml-0.5">{c.ac}</strong>
+                          </span>
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="w-2.5 h-2.5" /> {formatRespawn(c.respawn_seconds)}
+                          </span>
+                          <span>{c.is_alive ? '✅ alive' : '💀 dead'}</span>
+                        </div>
+
+                        {/* Stats */}
+                        {c.stats && (
+                          <div className="flex flex-wrap gap-x-2 gap-y-0 text-[9px] font-mono text-muted-foreground">
+                            {['str','dex','con','int','wis','cha'].map(s => (
+                              <span key={s}>{s.toUpperCase()} {(c.stats as any)[s] ?? '?'}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Loot */}
+                        <div className="text-[10px] text-muted-foreground">
+                          {lootName ? (
+                            <span>🎲 <span className="text-foreground">{lootName}</span> · {Math.round(c.drop_chance * 100)}% drop</span>
+                          ) : legacyLoot.length > 0 ? (
+                            <span>🎲 {legacyLoot.length} legacy item{legacyLoot.length !== 1 ? 's' : ''}</span>
+                          ) : (
+                            <span className="text-destructive/80">⚠ No loot configured</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
+                {/* Assign existing creature */}
                 <div className="border-t border-border pt-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="font-display text-xs text-primary">
-                      {editingCreatureId ? 'Edit Creature' : 'Add Creature'}
-                    </p>
-                    {editingCreatureId && (
-                      <Button size="sm" variant="ghost" onClick={cancelEdit} className="text-xs h-6 px-2">
-                        <X className="w-3 h-3 mr-1" /> Cancel
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="Name" value={creatureForm.name}
-                      onChange={e => setCreatureForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" />
-                    <Select value={creatureForm.rarity} onValueChange={v => setCreatureForm(f => ({ ...f, rarity: v }))}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="regular">Regular</SelectItem>
-                        <SelectItem value="rare">Rare</SelectItem>
-                        <SelectItem value="boss">Boss</SelectItem>
+                  <p className="font-display text-xs text-primary">Assign Creature to Node</p>
+                  <p className="text-[10px] text-muted-foreground">Pick an existing creature from the Creature Manager to spawn here.</p>
+                  <div className="flex gap-2">
+                    <Select value={assignCreatureId} onValueChange={setAssignCreatureId}>
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="Select creature…" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50 max-h-60">
+                        {unassignedCreatures.length === 0 ? (
+                          <div className="px-2 py-3 text-xs text-muted-foreground text-center">All creatures are assigned</div>
+                        ) : unassignedCreatures.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id} className="text-xs">
+                            <span className={RARITY_COLORS[c.rarity]}>{c.name}</span>
+                            <span className="text-muted-foreground ml-1">Lv {c.level} {c.rarity}</span>
+                            {c.node_id && <span className="text-[9px] text-muted-foreground/60 ml-1">(currently elsewhere)</span>}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <Textarea placeholder="Description" value={creatureForm.description}
-                    onChange={e => setCreatureForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" />
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-muted-foreground">Level</label>
-                      <Input type="number" min={1} value={creatureForm.level}
-                        onChange={e => setCreatureForm(f => ({ ...f, level: Math.max(1, +e.target.value) }))} className="h-8 text-xs" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-muted-foreground">Respawn Timer</label>
-                      <div className="flex gap-1 items-center">
-                        <Input type="number" min={0} value={creatureForm.respawn_seconds}
-                          onChange={e => setCreatureForm(f => ({ ...f, respawn_seconds: Math.max(0, +e.target.value) }))} className="h-8 text-xs" />
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                          ({formatRespawn(creatureForm.respawn_seconds)})
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-2 bg-background/50 rounded border border-border">
-                    <p className="text-[10px] text-muted-foreground mb-1">Auto-generated stats (Lvl {creatureForm.level} {creatureForm.rarity})</p>
-                    <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-xs">
-                      <span>HP: <strong>{previewStats.hp}</strong></span>
-                      <span>AC: <strong>{previewStats.ac}</strong></span>
-                      <span>STR: <strong>{previewStats.stats.str}</strong></span>
-                      <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
-                      <span>CON: <strong>{previewStats.stats.con}</strong></span>
-                      <span>INT: <strong>{previewStats.stats.int}</strong></span>
-                      <span>WIS: <strong>{previewStats.stats.wis}</strong></span>
-                      <span>CHA: <strong>{previewStats.stats.cha}</strong></span>
-                    </div>
-                  </div>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <input type="checkbox" checked={creatureForm.is_aggressive}
-                      onChange={e => setCreatureForm(f => ({ ...f, is_aggressive: e.target.checked }))} />
-                    Aggressive
-                  </label>
-                  <ItemPickerList label="Loot Table" value={creatureForm.loot_table}
-                    onChange={v => setCreatureForm(f => ({ ...f, loot_table: v }))} />
-                  {/* Gold drop config */}
-                  <div className="space-y-1.5">
-                    <p className="font-display text-xs text-primary">Gold Drop</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-[10px] text-muted-foreground">Min</label>
-                        <Input type="number" min={0} value={creatureForm.gold_min}
-                          onChange={e => setCreatureForm(f => ({ ...f, gold_min: Math.max(0, +e.target.value) }))}
-                          className="h-7 text-xs" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-muted-foreground">Max</label>
-                        <Input type="number" min={0} value={creatureForm.gold_max}
-                          onChange={e => setCreatureForm(f => ({ ...f, gold_max: Math.max(0, +e.target.value) }))}
-                          className="h-7 text-xs" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-muted-foreground">Chance</label>
-                        <Input type="number" min={0} max={1} step={0.05} value={creatureForm.gold_chance}
-                          onChange={e => setCreatureForm(f => ({ ...f, gold_chance: Math.min(1, Math.max(0, +e.target.value)) }))}
-                          className="h-7 text-xs" />
-                      </div>
-                    </div>
-                    <p className="text-[9px] text-muted-foreground">Set max &gt; 0 to enable gold drops. Chance is 0–1.</p>
-                  </div>
-                  <Button onClick={saveCreature} className="font-display text-xs">
-                    {editingCreatureId ? (
-                      <><Save className="w-3 h-3 mr-1" /> Update Creature</>
-                    ) : (
-                      <><Plus className="w-3 h-3 mr-1" /> Add Creature</>
-                    )}
-                  </Button>
-                </div>
-
-                {/* NPCs Section */}
-                <div className="border-t border-border pt-3 mt-4 space-y-2">
-                  <p className="font-display text-xs text-primary">💬 NPCs ({npcs.length})</p>
-                  {npcs.map(n => (
-                    <div key={n.id} className={`flex items-center justify-between p-2 rounded border ${
-                      editingNpcId === n.id ? 'border-primary bg-primary/10' : 'border-border bg-background/40'
-                    }`}>
-                      <div className="min-w-0 flex-1">
-                        <span className="font-display text-sm text-foreground">{n.name}</span>
-                        {n.dialogue && (
-                          <p className="text-[10px] text-muted-foreground truncate">"{n.dialogue.slice(0, 60)}{n.dialogue.length > 60 ? '...' : ''}"</p>
-                        )}
-                      </div>
-                      <div className="flex gap-1 shrink-0 ml-2">
-                        <Button size="sm" variant="outline" onClick={() => editNpc(n)} className="text-xs h-6 px-2">
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => removeNpc(n.id)} className="text-xs h-6 px-2">
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {npcs.length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">No NPCs at this location.</p>
-                  )}
-
-                  <div className="border-t border-border pt-2 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="font-display text-xs text-primary">
-                        {editingNpcId ? 'Edit NPC' : 'Add NPC'}
-                      </p>
-                      {editingNpcId && (
-                        <Button size="sm" variant="ghost" onClick={cancelEditNpc} className="text-xs h-6 px-2">
-                          <X className="w-3 h-3 mr-1" /> Cancel
-                        </Button>
-                      )}
-                    </div>
-                    <Input placeholder="NPC name" value={npcForm.name}
-                      onChange={e => setNpcForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" />
-                    <Textarea placeholder="Description (optional)" value={npcForm.description}
-                      onChange={e => setNpcForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" />
-                    <Textarea placeholder="Dialogue — what does this NPC say?" value={npcForm.dialogue}
-                      onChange={e => setNpcForm(f => ({ ...f, dialogue: e.target.value }))} rows={3} className="text-xs" />
-                    <Button onClick={saveNpc} className="font-display text-xs">
-                      {editingNpcId ? (
-                        <><Save className="w-3 h-3 mr-1" /> Update NPC</>
-                      ) : (
-                        <><Plus className="w-3 h-3 mr-1" /> Add NPC</>
-                      )}
+                    <Button
+                      size="sm"
+                      disabled={!assignCreatureId || assigning}
+                      onClick={assignCreature}
+                      className="font-display text-xs h-8"
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Assign
                     </Button>
                   </div>
                 </div>
               </TabsContent>
             )}
 
+            {/* ── NPCs ── */}
+            {activeNodeId && (
+              <TabsContent value="npcs" className="space-y-3">
+                {/* Assigned NPCs list */}
+                <div className="space-y-2">
+                  {npcs.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No NPCs at this location.</p>
+                  )}
+                  {npcs.map(n => (
+                    <div key={n.id} className="rounded border border-border bg-background/40 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <MessageSquare className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                          <span className="font-display text-sm text-foreground truncate">{n.name}</span>
+                        </div>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => unassignNpc(n.id, n.name)}
+                          className="h-6 w-6 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                          title="Unassign from node"
+                        >
+                          <Unlink className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      {n.description && (
+                        <p className="text-[10px] text-muted-foreground italic leading-snug">{n.description}</p>
+                      )}
+                      {n.dialogue && (
+                        <p className="text-[10px] text-foreground/70 leading-snug border-l-2 border-primary/30 pl-2">
+                          "{n.dialogue.length > 120 ? n.dialogue.slice(0, 120) + '…' : n.dialogue}"
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Assign existing NPC */}
+                <div className="border-t border-border pt-3 space-y-2">
+                  <p className="font-display text-xs text-primary">Assign NPC to Node</p>
+                  <p className="text-[10px] text-muted-foreground">Pick an existing NPC from the NPC Manager to place here.</p>
+                  <div className="flex gap-2">
+                    <Select value={assignNpcId} onValueChange={setAssignNpcId}>
+                      <SelectTrigger className="h-8 text-xs flex-1">
+                        <SelectValue placeholder="Select NPC…" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50 max-h-60">
+                        {unassignedNpcs.length === 0 ? (
+                          <div className="px-2 py-3 text-xs text-muted-foreground text-center">All NPCs are assigned</div>
+                        ) : unassignedNpcs.map((n: any) => (
+                          <SelectItem key={n.id} value={n.id} className="text-xs">
+                            {n.name}
+                            {n.node_id && <span className="text-[9px] text-muted-foreground/60 ml-1">(currently elsewhere)</span>}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      disabled={!assignNpcId || assigning}
+                      onClick={assignNpc}
+                      className="font-display text-xs h-8"
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Assign
+                    </Button>
+                  </div>
+                </div>
+              </TabsContent>
+            )}
+
+            {/* ── Vendor Stock ── */}
             {activeNodeId && form.is_vendor && (
               <TabsContent value="vendor" className="space-y-3">
                 <div className="space-y-2">
@@ -766,11 +764,9 @@ export default function NodeEditorPanel({
                     <p className="text-xs text-muted-foreground italic">No items stocked. Add items below.</p>
                   ) : vendorItems.map(v => (
                     <div key={v.id} className="flex items-center gap-2 p-2 rounded border border-border bg-background/40">
-                      <span className={`font-display text-sm flex-1 ${
-                        v.item?.rarity === 'unique' ? 'text-primary text-glow' :
-                        v.item?.rarity === 'rare' ? 'text-dwarvish' :
-                        v.item?.rarity === 'uncommon' ? 'text-chart-2' : 'text-foreground'
-                      }`}>{v.item?.name || v.item_id}</span>
+                      <span className={`font-display text-sm flex-1 ${ITEM_RARITY_COLORS[v.item?.rarity || 'common']}`}>
+                        {v.item?.name || v.item_id}
+                      </span>
                       <div className="flex items-center gap-1">
                         <label className="text-[10px] text-muted-foreground">Price:</label>
                         <Input type="number" min={0} value={v.price}
@@ -830,6 +826,7 @@ export default function NodeEditorPanel({
               </TabsContent>
             )}
 
+            {/* ── Connections ── */}
             {activeNodeId && (
               <TabsContent value="connections" className="space-y-3">
                 <ConnectionsManager
