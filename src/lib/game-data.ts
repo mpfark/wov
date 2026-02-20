@@ -149,6 +149,19 @@ export function calculateRepairCost(maxDurability: number, currentDurability: nu
   return Math.max(1, Math.ceil((maxDurability - currentDurability) * value * mult / 100));
 }
 
+// XP curve and rarity multipliers
+export const XP_RARITY_MULTIPLIER: Record<string, number> = {
+  regular: 1, rare: 1.5, boss: 2.5,
+};
+
+export function getXpForLevel(level: number): number {
+  return Math.floor(Math.pow(level, 1.5) * 50);
+}
+
+export function getCreatureXp(level: number, rarity: string): number {
+  return Math.floor(level * 10 * (XP_RARITY_MULTIPLIER[rarity] || 1));
+}
+
 // Dice rolling
 export function rollD20(): number {
   return Math.floor(Math.random() * 20) + 1;

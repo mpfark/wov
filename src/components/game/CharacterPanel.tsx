@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
@@ -290,7 +290,7 @@ export default function CharacterPanel({
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
-  const xpForNext = character.level * 100;
+  const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
   const totalAC = character.ac + (equipmentBonuses.ac || 0);
 
