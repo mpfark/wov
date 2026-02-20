@@ -82,10 +82,11 @@ export default function WorldBuilderRulebook() {
             <li>Only <strong>humanoid creatures</strong> (<code className="text-[10px] bg-muted px-1 rounded">is_humanoid: true</code>) can carry items.</li>
             <li>Max <strong>1–2 items</strong> per humanoid creature.</li>
             <li>Only <Badge variant="outline" className="text-[9px] px-1 py-0">equipment</Badge> and <Badge variant="outline" className="text-[9px] px-1 py-0">consumable</Badge> types — no trash loot.</li>
-            <li>Drop chance: <strong>0.1 – 0.5</strong></li>
+            <li>Drop chance: <strong>0.1 – 0.5</strong> — stored as the creature's <code className="text-[10px] bg-muted px-1 rounded">drop_chance</code> field.</li>
             <li>Never generate <Badge variant="secondary" className="text-[9px] px-1 py-0">unique</Badge> rarity items.</li>
             <li>Rarity: <Badge variant="outline" className="text-[9px] px-1 py-0">common</Badge> / <Badge variant="outline" className="text-[9px] px-1 py-0">uncommon</Badge> for regular creatures, up to <Badge variant="secondary" className="text-[9px] px-1 py-0">rare</Badge> for rare/boss.</li>
             <li>Do not duplicate existing item names.</li>
+            <li>Items are written to the <strong>shared Loot Table system</strong> — a named <code className="text-[10px] bg-muted px-1 rounded">loot_tables</code> row ("<em>Creature Name</em> Drops") with weighted <code className="text-[10px] bg-muted px-1 rounded">loot_table_entries</code>. The creature's <code className="text-[10px] bg-muted px-1 rounded">loot_table_id</code> is set accordingly and the legacy inline <code className="text-[10px] bg-muted px-1 rounded">loot_table</code> JSON is left empty.</li>
           </ul>
           <div className="text-[11px] text-muted-foreground mt-1">
             <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Budget:</p>
@@ -155,6 +156,7 @@ export default function WorldBuilderRulebook() {
             <li>Use <strong>real node IDs</strong> (UUIDs) as <code className="text-[10px] bg-muted px-1 rounded">node_temp_id</code> for creatures.</li>
             <li>Creature levels must match each node's region level range.</li>
             <li>Do not duplicate existing creature names on the same node.</li>
+            <li>Generated humanoid items are saved to the <strong>shared Loot Table system</strong> — a dedicated <code className="text-[10px] bg-muted px-1 rounded">loot_tables</code> row per creature with entries written to <code className="text-[10px] bg-muted px-1 rounded">loot_table_entries</code>.</li>
           </ul>
         </Card>
 
@@ -167,6 +169,7 @@ export default function WorldBuilderRulebook() {
             <li>New nodes can also connect to other new nodes using temp IDs.</li>
             <li>Creature levels must stay within the region's level range.</li>
             <li>Do not duplicate existing node names or NPC names.</li>
+            <li>Generated humanoid items are saved to the <strong>shared Loot Table system</strong> — a dedicated <code className="text-[10px] bg-muted px-1 rounded">loot_tables</code> row per creature with entries written to <code className="text-[10px] bg-muted px-1 rounded">loot_table_entries</code>.</li>
           </ul>
         </Card>
       </div>
