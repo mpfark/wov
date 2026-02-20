@@ -166,7 +166,7 @@ ITEM GENERATION RULES:
 - Valid equipment slots: main_hand, off_hand, head, chest, gloves, belt, pants, ring, trinket, boots, amulet, shoulders
 - Consumables should have slot: null and stats with hp (restore amount) or hp_regen
 - Valid stat keys for equipment: str, dex, con, int, wis, cha, ac, hp, hp_regen
-- Max durability: 50-100 for common, 75-150 for uncommon, 100-200 for rare
+- Max durability: always 100 (fixed for all items)
 - Gold value suggestion: floor(level * 2.5 * rarity_multiplier^2)
 - Item rarity should be "common" or "uncommon" for regular creatures, up to "rare" for rare/boss creatures. Never generate "unique" items.
 - Do NOT duplicate existing item names

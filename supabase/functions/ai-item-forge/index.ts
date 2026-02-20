@@ -106,7 +106,7 @@ GENERATION RULES:
 - Valid stat keys: str, dex, con, int, wis, cha, ac, hp, hp_regen
 - Stat value caps: str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
 - drop_chance: 0.1–0.5 (rare items lower, consumables 0.3–0.5)
-- max_durability: 50–100 common, 75–150 uncommon, 100–200 rare
+- max_durability: always 100 (fixed for all items)
 - Gold value: floor(level × 2.5 × rarity_multiplier²)
 - Do NOT generate items with names from this list: ${existingItemNames || "none"}
 - Generate items with creative, lore-fitting names and evocative 1-sentence descriptions.

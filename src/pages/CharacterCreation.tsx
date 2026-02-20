@@ -46,16 +46,11 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
           .eq('class', charClass as any)
           .maybeSingle();
         if (classGear?.item_id) {
-          const { data: item } = await supabase
-            .from('items')
-            .select('max_durability')
-            .eq('id', classGear.item_id)
-            .maybeSingle();
           await supabase.from('character_inventory').insert({
             character_id: char.id,
             item_id: classGear.item_id,
             equipped_slot: 'main_hand' as any,
-            current_durability: item?.max_durability ?? 100,
+            current_durability: 100,
           });
         }
         // Universal starting gear (shared across all classes)
@@ -63,18 +58,11 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
           .from('universal_starting_gear')
           .select('item_id, equipped_slot');
         if (universalGear && universalGear.length > 0) {
-          const itemIds = universalGear.map(g => g.item_id);
-          const { data: items } = await supabase
-            .from('items')
-            .select('id, max_durability')
-            .in('id', itemIds);
-          const durabilityMap: Record<string, number> = {};
-          (items || []).forEach(i => { durabilityMap[i.id] = i.max_durability; });
           const inserts = universalGear.map(g => ({
             character_id: char.id,
             item_id: g.item_id,
             equipped_slot: g.equipped_slot as any,
-            current_durability: durabilityMap[g.item_id] ?? 100,
+            current_durability: 100,
           }));
           await supabase.from('character_inventory').insert(inserts);
         }

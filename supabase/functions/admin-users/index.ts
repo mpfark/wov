@@ -289,10 +289,8 @@ Deno.serve(async (req) => {
     if (action === "give-item" && req.method === "POST") {
       const { character_id, item_id } = await req.json();
       if (!character_id || !item_id) throw new Error("character_id and item_id required");
-      const { data: item } = await adminClient.from("items").select("max_durability").eq("id", item_id).single();
-      const durability = item?.max_durability ?? 100;
       const { error } = await adminClient.from("character_inventory").insert({
-        character_id, item_id, current_durability: durability,
+        character_id, item_id, current_durability: 100,
       });
       if (error) throw error;
       return jsonResponse({ success: true });
