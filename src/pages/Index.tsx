@@ -63,7 +63,7 @@ const Index = () => {
     return <AdminPage onBack={() => setShowAdmin(false)} isValar={isValar} />;
   }
 
-  const startingNode = nodes[0];
+  const startingNode = nodes.find(n => n.name === 'Hearthvale Square') ?? nodes[0];
 
   // Character creation flow (no characters yet, or explicitly creating new)
   if (characters.length === 0 || showCreateNew) {
