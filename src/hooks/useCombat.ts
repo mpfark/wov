@@ -459,23 +459,31 @@ export function useCombat({
         _addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''}.`);
       }
 
-      // Creature counterattack
+      // Creature counterattack — only fires once per round from the tank's combat loop.
+      // Non-tank party members only deal damage; they don't trigger creature retaliation.
+      const effectiveTankId = _party ? (_party.tank_id ?? _party.leader_id) : null;
+      const iAmTheTank = !_party || effectiveTankId === char.id;
+
+      if (!iAmTheTank) {
+        // Non-tank members skip creature counterattack entirely
+      } else {
       // Root debuff — reduce creature damage by 30% if active
       const _rootDebuff = rootDebuffRef.current;
       const isRooted = _rootDebuff && Date.now() < _rootDebuff.expiresAt;
 
-      const effectiveTankId = _party ? (_party.tank_id ?? _party.leader_id) : null;
-      const tankMember = _party && effectiveTankId && effectiveTankId !== char.id
-        ? _partyMembers.find(m => m.character_id === effectiveTankId && m.character.current_node_id === char.current_node_id)
-        : null;
       // AC buff from Battle Cry
       const _acBuff = acBuffRef.current;
       const acBuffBonus = (_acBuff && Date.now() < _acBuff.expiresAt) ? _acBuff.bonus : 0;
       const buffedAC = _effectiveAC + acBuffBonus;
       const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
-      if (tankMember) {
-        const tankAC = 10;
-        if (creatureAtk >= tankAC) {
+
+      // When I am the tank in a party, creature hits me directly
+      const tankMember = _party && effectiveTankId
+        ? _partyMembers.find(m => m.character_id === effectiveTankId && m.character.current_node_id === char.current_node_id)
+        : null;
+      if (_party && tankMember) {
+        // Use tank's actual AC (buffedAC since I am the tank)
+        if (creatureAtk >= buffedAC) {
           const dmgDie = getCreatureDamageDie(creature.level, creature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
@@ -542,6 +550,7 @@ export function useCombat({
           _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} attacks ${who} — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
         }
       }
+      } // end iAmTheTank
     } finally {
       combatBusyRef.current = false;
     }
