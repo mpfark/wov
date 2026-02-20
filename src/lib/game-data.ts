@@ -110,6 +110,22 @@ export function getBaseRegen(con: number): number {
   return 1 + Math.floor((con - 10) / 4);
 }
 
+// CP (Concentration Points) system
+export function getMaxCp(level: number): number {
+  return 100 + (level - 1) * 3;
+}
+
+// Primary stat mapping per class for CP regen bonus
+export const CLASS_PRIMARY_STAT: Record<string, string> = {
+  warrior: 'con', wizard: 'int', ranger: 'dex',
+  rogue: 'dex', healer: 'wis', bard: 'cha',
+};
+
+export function getCpRegenRate(primaryStatValue: number): number {
+  const mod = getStatModifier(primaryStatValue);
+  return 1 + Math.floor(mod / 2) * 0.5;
+}
+
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   const handsMult = hands === 2 ? 1.5 : 1;

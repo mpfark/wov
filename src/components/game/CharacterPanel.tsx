@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
@@ -358,6 +358,43 @@ export default function CharacterPanel({
             })()}
           </TooltipContent>
         </Tooltip>
+
+        {/* CP Bar */}
+        {(() => {
+          const cp = character.cp ?? 100;
+          const maxCp = character.max_cp ?? 100;
+          const cpPercent = Math.round((cp / maxCp) * 100);
+          const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
+          const primaryVal = (character as any)[primaryStat] ?? 10;
+          const cpRegen = getCpRegenRate(primaryVal);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">CP</span>
+                    <span className="text-[hsl(var(--primary))]">{cp}/{maxCp}</span>
+                  </div>
+                  <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
+                    <div
+                      className="h-full transition-all duration-500 rounded-full"
+                      style={{
+                        width: `${cpPercent}%`,
+                        background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
+                      }}
+                    />
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-popover border-border z-50 space-y-1">
+                <p className="font-display text-sm">Concentration Points</p>
+                <p className="text-xs text-muted-foreground">Regen: <span className="text-primary">{cpRegen} CP</span> every <span className="text-foreground">6s</span></p>
+                <p className="text-xs text-muted-foreground">Abilities cost CP to use.</p>
+                {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× CP regen</p>}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })()}
 
         {/* XP Bar */}
         <div>

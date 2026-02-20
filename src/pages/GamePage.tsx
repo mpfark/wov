@@ -19,7 +19,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -144,9 +144,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [igniteStacks, setIgniteStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
   const [absorbBuff, setAbsorbBuff] = useState<{ shieldHp: number; expiresAt: number } | null>(null);
   const [partyRegenBuff, setPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number } | null>(null);
-  const [lastUsedAbilityIndex, setLastUsedAbilityIndex] = useState<number | null>(null);
+  const [lastUsedAbilityCost, setLastUsedAbilityCost] = useState<number>(0);
   const [sunderDebuff, setSunderDebuff] = useState<{ acReduction: number; expiresAt: number; creatureId: string } | null>(null);
-  const [abilityCooldownEnds, setAbilityCooldownEnds] = useState<Record<number, number>>({});
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -280,12 +279,37 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, []); // stable — no deps, reads from refs
 
+  // CP regeneration — 1 CP per 6 seconds, scaling with primary stat
+  const cpCharRef = useRef({ cp: character.cp ?? 100, max_cp: character.max_cp ?? 100, class: character.class });
+  useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, max_cp: character.max_cp ?? 100, class: character.class }; }, [character.cp, character.max_cp, character.class]);
+  const cpStatRef = useRef(character);
+  useEffect(() => { cpStatRef.current = character; }, [character]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const { cp, max_cp, class: charClass } = cpCharRef.current;
+      if (cp >= max_cp) return;
+      const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
+      const primaryVal = (cpStatRef.current as any)[primaryStat] ?? 10;
+      const baseRegen = getCpRegenRate(primaryVal);
+      // Inn gives 3x CP regen too
+      const nodeId = regenCharRef.current.current_node_id;
+      const node = nodeId ? getNodeRef.current(nodeId) : null;
+      const innMult = node?.is_inn ? 3 : 1;
+      const regenAmount = baseRegen * innMult;
+      const newCp = Math.min(Math.floor(cp + regenAmount), max_cp);
+      if (newCp > cp) {
+        updateCharRegenRef.current({ cp: newCp });
+      }
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
   // When a party reward broadcast arrives for this character, refetch character data from DB
   const lastRewardCountRef = useRef(0);
   useEffect(() => {
     if (partyRewardEvents.length === 0 || partyRewardEvents.length === lastRewardCountRef.current) return;
     lastRewardCountRef.current = partyRewardEvents.length;
-    // Refetch character from DB to pick up gold/xp/level changes from award_party_member RPC
     (async () => {
       const { data } = await supabase
         .from('characters')
@@ -293,9 +317,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         .eq('id', character.id)
         .single();
       if (data) {
-        // Update local state with fresh DB values for reward-related fields
         await updateCharacter({ gold: data.gold, xp: data.xp, level: data.level, hp: data.hp, max_hp: data.max_hp,
-          str: data.str, dex: data.dex, con: data.con, int: data.int, wis: data.wis, cha: data.cha });
+          str: data.str, dex: data.dex, con: data.con, int: data.int, wis: data.wis, cha: data.cha,
+          cp: data.cp, max_cp: data.max_cp });
       }
     })();
   }, [partyRewardEvents, character.id, updateCharacter]);
@@ -869,7 +893,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
       return;
     }
-    if (Date.now() < (abilityCooldownEnds[abilityIndex] || 0)) return;
+    if ((character.cp ?? 0) < ability.cpCost) {
+      addLog(`⚠️ Not enough CP for ${ability.label}! (${ability.cpCost} CP needed, ${character.cp ?? 0} available)`);
+      return;
+    }
 
     if (ability.type === 'hp_transfer') {
       if (!targetId || targetId === character.id) {
@@ -1148,23 +1175,26 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationSec = Math.min(20, 12 + strMod);
       setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: activeCombatCreatureId });
       addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
-    } else if (ability.type === 'cooldown_reset') {
-      if (lastUsedAbilityIndex === null) {
-        addLog(`${ability.emoji} Encore! But there's no recent ability to reset.`);
+    } else if (ability.type === 'cp_refund') {
+      if (lastUsedAbilityCost <= 0) {
+        addLog(`${ability.emoji} Encore! But there's no recent ability to refund.`);
       } else {
-        const abilities = CLASS_ABILITIES[character.class];
-        const resetAbility = abilities?.[lastUsedAbilityIndex];
-        setAbilityCooldownEnds(prev => ({ ...prev, [lastUsedAbilityIndex]: 0 }));
-        addLog(`${ability.emoji} Encore! ${resetAbility?.label || 'Ability'} cooldown reset!`);
+        const refund = lastUsedAbilityCost;
+        const newCp = Math.min((character.cp ?? 0) + refund, character.max_cp ?? 100);
+        await updateCharacter({ cp: newCp });
+        addLog(`${ability.emoji} Encore! Refunded ${refund} CP!`);
       }
     }
 
-    // Track last used ability (exclude cooldown_reset itself)
-    if (ability.type !== 'cooldown_reset') {
-      setLastUsedAbilityIndex(abilityIndex);
+    // Deduct CP cost
+    const newCp = Math.max((character.cp ?? 0) - ability.cpCost, 0);
+    await updateCharacter({ cp: newCp });
+
+    // Track last used ability cost (exclude cp_refund itself)
+    if (ability.type !== 'cp_refund') {
+      setLastUsedAbilityCost(ability.cpCost);
     }
-    setAbilityCooldownEnds(prev => ({ ...prev, [abilityIndex]: Date.now() + ability.cooldownMs }));
-  }, [isDead, character, abilityCooldownEnds, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks, igniteStacks, lastUsedAbilityIndex]);
+  }, [isDead, character, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks, igniteStacks, lastUsedAbilityCost]);
 
   // Keyboard movement + action bindings
   const handleAbilityKey = useCallback((index: number) => {
@@ -1300,7 +1330,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               activeCombatCreatureId={activeCombatCreatureId}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
               classAbilities={CLASS_ABILITIES[character.class] || []}
-              abilityCooldownEnds={abilityCooldownEnds}
               onUseAbility={handleUseAbility}
               healTargets={
                 party && character.class === 'healer'

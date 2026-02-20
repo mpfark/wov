@@ -346,7 +346,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                Abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20).
+                Abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
               </p>
               <Accordion type="multiple">
                 {Object.entries(CLASS_ABILITIES).map(([cls, abilities]) => (
@@ -361,7 +361,7 @@ export default function GameManual() {
                             <TableHead className="text-xs">Ability</TableHead>
                             <TableHead className="text-xs">Tier</TableHead>
                             <TableHead className="text-xs">Level</TableHead>
-                            <TableHead className="text-xs">Cooldown</TableHead>
+                            <TableHead className="text-xs">CP Cost</TableHead>
                             <TableHead className="text-xs">Description</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -371,7 +371,7 @@ export default function GameManual() {
                               <TableCell className="text-xs font-display">{a.emoji} {a.label}</TableCell>
                               <TableCell className="text-xs">{a.tier}</TableCell>
                               <TableCell className="text-xs">{a.levelRequired}</TableCell>
-                              <TableCell className="text-xs">{a.cooldownMs / 1000}s</TableCell>
+                              <TableCell className="text-xs">{a.cpCost} CP</TableCell>
                               <TableCell className="text-xs text-muted-foreground">{a.description}</TableCell>
                             </TableRow>
                           ))}

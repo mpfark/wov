@@ -163,7 +163,7 @@ export default function RaceClassManager() {
                                   </Badge>
                                 </div>
                                 <div className="text-muted-foreground">
-                                  {ability.description} · {ability.cooldownMs / 1000}s cooldown
+                                  {ability.description} · {ability.cpCost} CP
                                 </div>
                               </div>
                             ))}
