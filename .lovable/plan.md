@@ -1,65 +1,88 @@
 
 
-## Gear-Focused Character Progression
+## Predefined Loot Tables
 
-### Problem
-Currently, characters gain +1 to ALL 6 stats every level (up to level 29), resulting in massive base stat inflation. A level 40 healer has 53 WIS from leveling alone -- making gear bonuses of +3-5 feel insignificant. The goal is to shift power so that **gear is the primary source of character strength**, with leveling providing a foundation that gear builds on.
+### Current System
+Each creature has an inline `loot_table` JSON array where every entry rolls independently. A creature with 5 items at 10% each can drop 0, 1, 2, or even all 5. Tables are duplicated per creature and can't be shared.
 
-### Current vs Proposed Stat Growth
+### Proposed System
+Create named **Loot Tables** that are shared, reusable pools of items. When a creature dies:
+1. Roll once to see if loot drops at all (based on a `drop_chance` on the creature)
+2. If yes, pick **one item** from the table using weighted random selection
 
-Using a level 40 Elf Healer as an example (starting WIS = 12):
+### Database Changes
 
-| Source | Current | Proposed |
-|--------|---------|----------|
-| Base + Race + Class | 12 | 12 |
-| Level-up all-stat gains | +28 (every level to 29) | +5 (every 5 levels: 5,10,15,20,25) |
-| Class bonus (WIS every 3 levels) | +13 | +13 |
-| **Total (naked)** | **53** | **30** |
-| Good gear (+8 WIS) | 61 (15% boost) | 38 (27% boost) |
+**New table: `loot_tables`**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| name | text | e.g. "Forest Beasts Lvl 1-5", "Goblin Warriors" |
+| created_at | timestamptz | default now() |
 
-Gear goes from a minor bonus to a **meaningful power source**.
+**New table: `loot_table_entries`**
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK |
+| loot_table_id | uuid | FK to loot_tables |
+| item_id | uuid | FK to items |
+| weight | integer | Higher = more likely to be picked (default 10) |
 
-### Changes
+**Creatures table changes:**
+- Add `loot_table_id` (uuid, nullable, FK to loot_tables)
+- Add `drop_chance` (numeric, default 0.5 -- 50% chance to drop anything)
+- Keep existing `loot_table` JSON column for backward compatibility / gold config
 
-#### 1. Stat Gain Formula
-- **Old**: +1 to all 6 stats every level (level 2-29)
-- **New**: +1 to all 6 stats every 5th level (levels 5, 10, 15, 20, 25, 30, 35, 40...) -- uncapped
-- Class bonuses every 3 levels remain unchanged
+When a creature has a `loot_table_id`, the new system is used. The old inline JSON remains for gold drops only.
 
-#### 2. Code Updates (4 locations handle level-ups)
-- **`src/hooks/useCombat.ts`** -- client-side solo level-up logic
-- **`award_party_member` DB function** -- server-side party level-up
-- **`supabase/functions/admin-users/index.ts`** -- admin grant-xp and set-level actions
-- **`src/components/admin/GameManual.tsx`** -- documentation
+### How Weighted Selection Works
 
-#### 3. Migrate Existing Characters
-A database migration will recalculate every character's stats using the new formula:
-- For each character, compute what their stats *should* be: base (8) + race bonus + class bonus + (floor(level/5) for all-stat gains) + (class level bonuses for each 3rd level)
-- Add back any unspent stat points
-- Recalculate max_hp and ac based on new stats
+If a loot table has:
+- Iron Sword (weight 10)
+- Steel Shield (weight 5)  
+- Rare Ring (weight 1)
 
-#### 4. Item Stat Budget Adjustments
-Since stats from leveling are lower, item stat caps may need a small bump so higher-level gear can provide more meaningful bonuses. This ensures there is enough gear headroom to compensate for the reduced base stats:
-- Primary stat caps: `4 + floor(level/4)` (up from `3 + floor(level/5)`)
-- This gives level 20 gear a cap of 9 instead of 7, and level 40 gear a cap of 14 instead of 11
+Total weight = 16. Iron Sword has 62.5% chance, Shield 31.25%, Ring 6.25%. The creature rolls once and drops exactly one of these (or nothing if the initial `drop_chance` roll fails).
+
+### Code Changes
+
+1. **New admin component: `LootTableManager.tsx`**
+   - List/create/edit/delete loot tables
+   - Add/remove items with weight sliders
+   - Show calculated drop percentages
+   - Accessible from Admin page as a new tab
+
+2. **Update `CreatureManager.tsx`**
+   - Add a loot table selector dropdown (pick from predefined tables)
+   - Add a `drop_chance` slider (0-100%)
+   - Keep gold drop config as-is (still inline)
+
+3. **Update `rollLoot` in `GamePage.tsx`**
+   - If creature has `loot_table_id`: fetch entries, do weighted random pick of one item
+   - If creature has old inline `loot_table`: use existing logic (backward compatible)
+   - Gold drops still processed from inline JSON
+
+4. **Update `NodeEditorPanel.tsx` creature section**
+   - Replace inline loot picker with loot table selector + drop chance
+
+5. **Update `WorldBuilderPanel.tsx`**
+   - AI-generated creatures reference loot tables instead of inline items
 
 ### Technical Details
 
-**useCombat.ts level-up change** (line ~417):
-```
-// Old: if (newLevel < 30)
-// New: if (newLevel % 5 === 0)
-```
-
-**award_party_member DB function** level-up change:
-```sql
--- Old: IF _new_level < 30 THEN +1 all stats
--- New: IF _new_level % 5 = 0 THEN +1 all stats
+**Weighted selection algorithm (in rollLoot):**
+```text
+1. Fetch loot_table_entries for creature's loot_table_id
+2. Roll Math.random() against creature's drop_chance -- if fail, no drop
+3. Sum all weights, pick random number 0..totalWeight
+4. Walk entries, subtracting weight until <= 0 -- that's the picked item
+5. Drop that single item to ground loot
 ```
 
-**Existing character migration SQL** -- recalculate all stats from scratch based on race, class, and level using the new formula.
+**Admin tab addition in AdminPage.tsx:**
+- Add "Loot Tables" tab between Items and Users
 
-**admin-users edge function** -- update grant-xp and set-level handlers to use the new every-5-levels rule.
-
-**GameManual** -- update the stat gain column to show "+1 all stats" only on levels divisible by 5.
+**CreatureManager changes:**
+- Dropdown to select a loot table (or "None")
+- Numeric input for drop_chance (0.0 - 1.0)
+- Preview showing items in the selected table with their % chances
 
