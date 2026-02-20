@@ -401,7 +401,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [character.current_node_id, character.hp]);
 
   // Refs for forward-declared callbacks used by useCombat
-  const rollLootRef = useRef<(lootTable: any[], creatureName: string) => Promise<void>>(async () => {});
+  const rollLootRef = useRef<(lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => Promise<void>>(async () => {});
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
 
   const handleAddPoisonStack = useCallback((creatureId: string) => {
@@ -441,8 +441,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     equipmentBonuses,
     effectiveAC,
     addLog,
-    rollLoot: useCallback(async (lootTable: any[], creatureName: string) => {
-      await rollLootRef.current(lootTable, creatureName);
+    rollLoot: useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => {
+      await rollLootRef.current(lootTable, creatureName, lootTableId, dropChance);
     }, []),
     degradeEquipment: useCallback(async () => {
       await degradeEquipmentRef.current();
@@ -835,15 +835,58 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [currentNode, character, addLog, fetchInventory, isDead, getNode, updateCharacter]);
 
-  const rollLoot = useCallback(async (lootTable: any[], creatureName: string) => {
-    if (!lootTable || lootTable.length === 0) return;
+  const rollLoot = useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => {
     if (!character.current_node_id) return;
+
+    // New loot table system: weighted single-item drop
+    if (lootTableId) {
+      const chance = dropChance ?? 0.5;
+      if (Math.random() > chance) return; // No drop
+
+      const { data: tableEntries } = await supabase
+        .from('loot_table_entries')
+        .select('item_id, weight')
+        .eq('loot_table_id', lootTableId);
+
+      if (!tableEntries || tableEntries.length === 0) return;
+
+      const totalWeight = tableEntries.reduce((s, e) => s + e.weight, 0);
+      let roll = Math.random() * totalWeight;
+      let pickedItemId: string | null = null;
+      for (const entry of tableEntries) {
+        roll -= entry.weight;
+        if (roll <= 0) { pickedItemId = entry.item_id; break; }
+      }
+      if (!pickedItemId) pickedItemId = tableEntries[tableEntries.length - 1].item_id;
+
+      const { data: item } = await supabase.from('items').select('name, rarity').eq('id', pickedItemId).single();
+      if (item) {
+        if (item.rarity === 'unique') {
+          const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', pickedItemId);
+          if (count && count > 0) {
+            addLog(`✨ The unique power of ${item.name} is already claimed by another...`);
+            fetchGroundLoot();
+            return;
+          }
+        }
+        await supabase.from('node_ground_loot' as any).insert({
+          node_id: character.current_node_id,
+          item_id: pickedItemId,
+          creature_name: creatureName,
+        });
+        addLog(`💎 ${creatureName} dropped ${item.name}!`);
+      }
+      fetchGroundLoot();
+      return;
+    }
+
+    // Legacy inline loot table
+    if (!lootTable || lootTable.length === 0) return;
     for (const entry of lootTable) {
       if (entry.type === 'gold') continue;
       if (Math.random() <= (entry.chance || 0.1)) {
         const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
         if (item) {
-          // Unique item exclusivity check
           if (item.rarity === 'unique') {
             const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', entry.item_id);
             if (count && count > 0) {
@@ -851,7 +894,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               continue;
             }
           }
-          // Drop on the ground
           await supabase.from('node_ground_loot' as any).insert({
             node_id: character.current_node_id,
             item_id: entry.item_id,

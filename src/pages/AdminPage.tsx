@@ -14,6 +14,7 @@ import UserManager from '@/components/admin/UserManager';
 import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
+import LootTableManager from '@/components/admin/LootTableManager';
 import WorldBuilderPanel from '@/components/admin/WorldBuilderPanel';
 import GameManual from '@/components/admin/GameManual';
 
@@ -125,6 +126,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
             <TabsTrigger value="npcs" className="font-display text-xs">NPCs</TabsTrigger>
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
+            <TabsTrigger value="loot-tables" className="font-display text-xs">Loot Tables</TabsTrigger>
             <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
@@ -192,6 +194,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="items" className="flex-1 min-h-0 mt-0 overflow-hidden">
           <ItemManager />
+        </TabsContent>
+
+        <TabsContent value="loot-tables" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          <LootTableManager />
         </TabsContent>
 
         <TabsContent value="users" className="flex-1 min-h-0 mt-0 overflow-hidden">

@@ -17,6 +17,8 @@ export interface Creature {
   is_alive: boolean;
   respawn_seconds: number;
   died_at: string | null;
+  loot_table_id: string | null;
+  drop_chance: number;
 }
 
 export function useCreatures(nodeId: string | null) {
