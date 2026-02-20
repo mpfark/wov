@@ -367,6 +367,12 @@ export default function CharacterPanel({
           const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
           const primaryVal = (character as any)[primaryStat] ?? 10;
           const cpRegen = getCpRegenRate(primaryVal);
+          const hasInspire = regenBuff && Date.now() < regenBuff.expiresAt;
+          const inspireMult = hasInspire ? regenBuff.multiplier : 1;
+          const hasFood = foodBuff && Date.now() < foodBuff.expiresAt;
+          const foodCpRegen = hasFood ? foodBuff.flatRegen * 0.5 : 0;
+          const innMult = isAtInn ? 3 : 1;
+          const effectiveRegen = (cpRegen + foodCpRegen) * innMult * inspireMult;
           return (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -388,9 +394,14 @@ export default function CharacterPanel({
               </TooltipTrigger>
               <TooltipContent className="bg-popover border-border z-50 space-y-1">
                 <p className="font-display text-sm">Concentration Points</p>
-                <p className="text-xs text-muted-foreground">Regen: <span className="text-primary">{cpRegen} CP</span> every <span className="text-foreground">6s</span></p>
+                <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">6s</span></p>
+                {(hasInspire || hasFood || isAtInn) && (
+                  <p className="text-xs text-muted-foreground">Effective: <span className="text-primary">{effectiveRegen.toFixed(1)} CP</span> / <span className="text-foreground">6s</span></p>
+                )}
                 <p className="text-xs text-muted-foreground">Abilities cost CP to use.</p>
                 {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× CP regen</p>}
+                {hasInspire && <p className="text-xs text-elvish">🎶 Inspire: 2× CP regen</p>}
+                {hasFood && <p className="text-xs text-elvish">🍞 Food: +{(foodCpRegen).toFixed(1)} CP/6s</p>}
               </TooltipContent>
             </Tooltip>
           );

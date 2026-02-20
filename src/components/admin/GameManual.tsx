@@ -233,6 +233,8 @@ export default function GameManual() {
                 <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 6 seconds</code> + bonus from primary stat</p>
                 <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/6s for every 2 points of primary stat modifier</p>
                 <p><strong className="text-foreground">Inn Rest</strong> = Fully restores CP (alongside HP)</p>
+                <p><strong className="text-foreground">🎶 Inspire</strong> = Doubles CP regen rate (alongside HP regen) for 90 seconds</p>
+                <p><strong className="text-foreground">🍞 Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 2 minutes</p>
               </div>
 
               <div>
