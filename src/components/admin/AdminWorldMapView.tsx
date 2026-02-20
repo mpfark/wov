@@ -121,11 +121,26 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   const containerRef = useRef<HTMLDivElement>(null);
   const allNodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
 
+  const zoomAroundPoint = useCallback((centerX: number, centerY: number, newZoom: number) => {
+    setZoom(prevZoom => {
+      const clampedZoom = Math.min(Math.max(newZoom, 0.2), 3);
+      setPan(prevPan => ({
+        x: centerX - ((centerX - prevPan.x) / prevZoom) * clampedZoom,
+        y: centerY - ((centerY - prevPan.y) / prevZoom) * clampedZoom,
+      }));
+      return clampedZoom;
+    });
+  }, []);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setZoom(z => Math.min(Math.max(z * delta, 0.2), 3));
-  }, []);
+    zoomAroundPoint(cx, cy, zoom * delta);
+  }, [zoom, zoomAroundPoint]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -479,9 +494,17 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
         >
           {/* Zoom controls */}
           <div className="absolute top-2 right-2 z-10 flex gap-1">
-            <button onClick={() => setZoom(z => Math.min(z * 1.2, 3))}
+            <button onClick={() => {
+              if (!containerRef.current) return;
+              const rect = containerRef.current.getBoundingClientRect();
+              zoomAroundPoint(rect.width / 2, rect.height / 2, zoom * 1.2);
+            }}
               className="w-7 h-7 rounded bg-card border border-border text-xs font-bold hover:bg-accent transition-colors">+</button>
-            <button onClick={() => setZoom(z => Math.max(z * 0.8, 0.2))}
+            <button onClick={() => {
+              if (!containerRef.current) return;
+              const rect = containerRef.current.getBoundingClientRect();
+              zoomAroundPoint(rect.width / 2, rect.height / 2, zoom * 0.8);
+            }}
               className="w-7 h-7 rounded bg-card border border-border text-xs font-bold hover:bg-accent transition-colors">−</button>
             <button onClick={resetView}
               className="h-7 px-2 rounded bg-card border border-border text-[10px] hover:bg-accent transition-colors">Reset</button>
