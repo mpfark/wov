@@ -27,18 +27,18 @@ const RARITY_COLORS: Record<string, string> = {
 export default function BlacksmithPanel({ open, onClose, characterId, gold, inventory, onGoldChange, onInventoryChange, addLog }: Props) {
   const [repairing, setRepairing] = useState(false);
 
-  const damagedItems = inventory.filter(i => i.current_durability < i.item.max_durability);
+  const damagedItems = inventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique' || rarity === 'rare';
 
   const repairItem = async (inv: InventoryItem) => {
     if (isUnrepairable(inv.item.rarity)) return;
-    const cost = calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity);
+    const cost = calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
     if (gold < cost) {
       addLog('❌ Not enough gold!');
       return;
     }
     setRepairing(true);
-    await supabase.from('character_inventory').update({ current_durability: inv.item.max_durability }).eq('id', inv.id);
+    await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
     const newGold = gold - cost;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
@@ -50,14 +50,14 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
   const repairAll = async () => {
     const repairableItems = damagedItems.filter(i => !isUnrepairable(i.item.rarity));
     const totalCost = repairableItems.reduce((sum, inv) =>
-      sum + calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity), 0);
+      sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
     if (gold < totalCost) {
       addLog('❌ Not enough gold to repair all!');
       return;
     }
     setRepairing(true);
     for (const inv of repairableItems) {
-      await supabase.from('character_inventory').update({ current_durability: inv.item.max_durability }).eq('id', inv.id);
+      await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
     }
     const newGold = gold - totalCost;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
@@ -69,7 +69,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
 
   const totalRepairCost = damagedItems
     .filter(i => !isUnrepairable(i.item.rarity))
-    .reduce((sum, inv) => sum + calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity), 0);
+    .reduce((sum, inv) => sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -98,8 +98,8 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
             <p className="text-xs text-muted-foreground italic">All your equipment is in good condition.</p>
           ) : damagedItems.map(inv => {
             const cantRepair = isUnrepairable(inv.item.rarity);
-            const cost = cantRepair ? 0 : calculateRepairCost(inv.item.max_durability, inv.current_durability, inv.item.value, inv.item.rarity);
-            const durPct = Math.round((inv.current_durability / inv.item.max_durability) * 100);
+            const cost = cantRepair ? 0 : calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
+            const durPct = inv.current_durability;
 
             return (
               <div key={inv.id} className={`p-2 rounded border border-border bg-background/40 space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
@@ -132,7 +132,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
                       }}
                     />
                   </div>
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{inv.current_durability}/{inv.item.max_durability}</span>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">{inv.current_durability}%</span>
                 </div>
               </div>
             );

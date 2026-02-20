@@ -331,7 +331,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level/2)) + STR mod</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
-                <p><strong className="text-foreground">Durability:</strong> 25% chance per hit taken to degrade a random equipped item</p>
+                <p><strong className="text-foreground">Durability:</strong> Every combat round, 2 random equipped items each lose 1 durability</p>
                 <p><strong className="text-foreground">XP Penalty:</strong> −20% per level above creature (minimum 10% reward)</p>
               </div>
               <Table>
@@ -559,8 +559,8 @@ export default function GameManual() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Stat Budget:</strong> floor(1 + (level − 1) × 0.3 × rarity_mult × hands_mult)</p>
                 <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5</p>
-                <p><strong className="text-foreground">Repair Cost:</strong> ceil((max_dur − cur_dur) × value × rarity_mult / 100)</p>
-                <p><strong className="text-foreground">Rare/Unique:</strong> Cannot be repaired. Unique items destroyed at 0 durability.</p>
+                <p><strong className="text-foreground">Repair Cost:</strong> ceil((100 − cur_dur) × value × rarity_mult / 100)</p>
+                <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Rare/Unique are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
                 <p><strong className="text-foreground">Creature Loot:</strong> Drops are resolved via the shared <strong>Loot Table system</strong> — each creature has a <code className="text-primary">drop_chance</code> (0.0–1.0) and a linked <code className="text-primary">loot_table_id</code>. On kill, if the drop roll succeeds, one item is selected from the table using weighted random selection. Gold drops from humanoids use a separate inline configuration.</p>
               </div>

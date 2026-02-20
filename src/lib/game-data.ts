@@ -162,7 +162,8 @@ const REPAIR_RARITY_MULT: Record<string, number> = {
 export function calculateRepairCost(maxDurability: number, currentDurability: number, value: number, rarity: string): number {
   const mult = REPAIR_RARITY_MULT[rarity] ?? 1;
   if (mult === 0) return 0; // unique = unrepairable
-  return Math.max(1, Math.ceil((maxDurability - currentDurability) * value * mult / 100));
+  // All items have a fixed max durability of 100
+  return Math.max(1, Math.ceil((100 - currentDurability) * value * mult / 100));
 }
 
 // XP curve and rarity multipliers

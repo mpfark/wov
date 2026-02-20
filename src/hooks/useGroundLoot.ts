@@ -74,7 +74,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId);
       // Insert into inventory
       await supabase.from('character_inventory').insert({
-        character_id: characterId, item_id: item.item_id, current_durability: item.item.max_durability,
+        character_id: characterId, item_id: item.item_id, current_durability: 100,
       });
     }
     fetchGroundLoot();

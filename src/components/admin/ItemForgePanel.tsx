@@ -181,7 +181,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
             hands: item.hands || null,
             stats: item.stats || {},
             value: item.value,
-            max_durability: Math.max(item.max_durability || 50, 1),
+            max_durability: 100,
           })
           .select('id')
           .single();

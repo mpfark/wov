@@ -487,8 +487,8 @@ export default function ItemManager() {
                 </div>
                 <div>
                   <label className="text-[10px] text-muted-foreground">Max Durability</label>
-                  <Input type="number" min={1} value={form.max_durability}
-                    onChange={e => setForm(f => ({ ...f, max_durability: Math.max(1, +e.target.value) }))} className="h-8 text-xs" />
+                  <Input type="number" min={1} value={100} disabled className="h-8 text-xs opacity-50" />
+                  <p className="text-[9px] text-muted-foreground mt-0.5">Fixed at 100</p>
                 </div>
               </div>
 
