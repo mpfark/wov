@@ -165,7 +165,7 @@ export default function NodeView({
                                 ? 'hsl(var(--dwarvish))'
                                 : hasPoisonStacks
                                 ? 'hsl(var(--elvish))'
-                                : hpPct > 50 ? 'hsl(var(--chart-2))' : hpPct > 25 ? 'hsl(var(--chart-4))' : 'hsl(var(--destructive))',
+                                : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
                             }}
                           />
                         </div>
