@@ -21,6 +21,13 @@ interface PartyCombatMsgEvent {
   character_name: string | null;
 }
 
+interface PartyRewardEvent {
+  character_id: string; // the character who should refetch
+  xp: number;
+  gold: number;
+  source: string; // e.g. creature name
+}
+
 /**
  * Hybrid Broadcast channels for party-level events:
  * 1. Party member HP changes — instant HP bar updates across party
@@ -33,6 +40,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   const [hpOverrides, setHpOverrides] = useState<Record<string, { hp: number; max_hp: number }>>({});
   const [moveEvents, setMoveEvents] = useState<PartyMoveEvent[]>([]);
   const [broadcastLogEntries, setBroadcastLogEntries] = useState<PartyCombatMsgEvent[]>([]);
+  const [rewardEvents, setRewardEvents] = useState<PartyRewardEvent[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Reset when party changes
@@ -40,6 +48,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     setHpOverrides({});
     setMoveEvents([]);
     setBroadcastLogEntries([]);
+    setRewardEvents([]);
   }, [partyId]);
 
   useEffect(() => {
@@ -67,6 +76,12 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
         const data = payload.payload as PartyCombatMsgEvent;
         if (!data?.id) return;
         setBroadcastLogEntries(prev => [...prev.slice(-49), data]);
+      })
+      .on('broadcast', { event: 'party_reward' }, (payload) => {
+        const data = payload.payload as PartyRewardEvent;
+        if (!data?.character_id || data.character_id !== characterId) return;
+        // This character received a reward — trigger refetch
+        setRewardEvents(prev => [...prev.slice(-9), data]);
       })
       .subscribe();
 
@@ -100,12 +115,22 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
+  const broadcastReward = useCallback((charId: string, xp: number, gold: number, source: string) => {
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'party_reward',
+      payload: { character_id: charId, xp, gold, source } satisfies PartyRewardEvent,
+    });
+  }, []);
+
   return {
     hpOverrides,
     moveEvents,
     broadcastLogEntries,
+    rewardEvents,
     broadcastHp,
     broadcastMove,
     broadcastCombatMsg,
+    broadcastReward,
   };
 }
