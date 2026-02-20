@@ -265,7 +265,32 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
         // Populate mode: only insert creatures, using real node IDs directly
         for (const creature of generated.creatures) {
           const nodeId = creature.node_temp_id; // Already a real UUID
-          const lootTable = creatureLootMap.get(creature.temp_id || '') || [];
+          const lootEntries = creatureLootMap.get(creature.temp_id || '') || [];
+
+          let lootTableId: string | null = null;
+          let maxDropChance = 0;
+
+          if (lootEntries.length > 0) {
+            // Create a shared loot table for this creature
+            const { data: ltData, error: ltErr } = await supabase
+              .from('loot_tables')
+              .insert({ name: `${creature.name} Drops` })
+              .select('id')
+              .single();
+            if (ltErr) throw ltErr;
+            lootTableId = ltData.id;
+
+            // Insert loot table entries with weight derived from drop_chance
+            for (const entry of lootEntries) {
+              const weight = Math.round(entry.chance * 100);
+              const { error: lteErr } = await supabase
+                .from('loot_table_entries')
+                .insert({ loot_table_id: lootTableId, item_id: entry.item_id, weight });
+              if (lteErr) throw lteErr;
+              if (entry.chance > maxDropChance) maxDropChance = entry.chance;
+            }
+          }
+
           await supabase.from('creatures').insert({
             name: creature.name,
             description: creature.description,
@@ -279,7 +304,9 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
             is_humanoid: creature.is_humanoid || false,
             respawn_seconds: creature.respawn_seconds || 300,
             stats: creature.stats,
-            loot_table: lootTable,
+            loot_table: [],
+            loot_table_id: lootTableId,
+            drop_chance: maxDropChance,
           });
         }
         const itemCount = generated.items?.length || 0;
@@ -380,7 +407,32 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
       for (const creature of generated.creatures) {
         const nodeId = resolveTarget(creature.node_temp_id);
         if (!nodeId) continue;
-        const lootTable = creatureLootMap.get(creature.temp_id || '') || [];
+        const lootEntries = creatureLootMap.get(creature.temp_id || '') || [];
+
+        let lootTableId: string | null = null;
+        let maxDropChance = 0;
+
+        if (lootEntries.length > 0) {
+          // Create a shared loot table for this creature
+          const { data: ltData, error: ltErr } = await supabase
+            .from('loot_tables')
+            .insert({ name: `${creature.name} Drops` })
+            .select('id')
+            .single();
+          if (ltErr) throw ltErr;
+          lootTableId = ltData.id;
+
+          // Insert loot table entries with weight derived from drop_chance
+          for (const entry of lootEntries) {
+            const weight = Math.round(entry.chance * 100);
+            const { error: lteErr } = await supabase
+              .from('loot_table_entries')
+              .insert({ loot_table_id: lootTableId, item_id: entry.item_id, weight });
+            if (lteErr) throw lteErr;
+            if (entry.chance > maxDropChance) maxDropChance = entry.chance;
+          }
+        }
+
         await supabase.from('creatures').insert({
           name: creature.name,
           description: creature.description,
@@ -394,7 +446,9 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
           is_humanoid: creature.is_humanoid || false,
           respawn_seconds: creature.respawn_seconds || 300,
           stats: creature.stats,
-          loot_table: lootTable,
+          loot_table: [],
+          loot_table_id: lootTableId,
+          drop_chance: maxDropChance,
         });
       }
 
