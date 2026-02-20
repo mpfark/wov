@@ -190,8 +190,8 @@ Deno.serve(async (req) => {
         const stats: Record<string, number> = {};
         for (const s of statKeys) {
           let val = 8 + (raceBonus[s] || 0) + (classBonus[s] || 0);
-          // +1 all stats per level (levels 2 through min(level, 29))
-          val += Math.max(0, Math.min(level, 29) - 1);
+          // +1 all stats every 5th level (5, 10, 15, 20, ...)
+          val += Math.floor(level / 5);
           // Class bonus every 3 levels
           if (levelBonuses[s]) {
             let bonusCount = 0;
@@ -337,8 +337,8 @@ Deno.serve(async (req) => {
         newMaxHp += 5;
         newHp = newMaxHp; // Full heal on level up
 
-        // +1 all stats only before level 30
-        if (newLevel < 30) {
+        // +1 all stats every 5th level
+        if (newLevel % 5 === 0) {
           for (const s of statKeys) statIncreases[s]++;
         }
 
@@ -426,6 +426,8 @@ Deno.serve(async (req) => {
 
       for (const stat of statKeys) {
         let base = 8 + (raceBonus[stat] || 0) + (classBonus[stat] || 0);
+        // +1 all stats every 5th level
+        base += Math.floor(char.level / 5);
         // Add class level bonuses (every 3 levels)
         if (levelBonuses[stat]) {
           let bonusCount = 0;

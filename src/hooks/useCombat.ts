@@ -413,8 +413,8 @@ export function useCombat({
 
             const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
-            // Only increase all stats by +1 before level 30
-            if (newLevel < 30) {
+            // Only increase all stats by +1 every 5th level
+            if (newLevel % 5 === 0) {
               const boostedStats: string[] = [];
               for (const stat of statKeys) {
                 const current = (char as any)[stat] || 10;
