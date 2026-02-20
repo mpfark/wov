@@ -7,6 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const ALL_SLOTS = ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"] as const;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -35,80 +37,80 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { prompt, creature_ids } = await req.json();
-    if (!creature_ids || !Array.isArray(creature_ids) || creature_ids.length === 0) {
-      return new Response(JSON.stringify({ error: "creature_ids array is required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Fetch selected creatures with their region info
-    const { data: creatures, error: crErr } = await supabase
-      .from("creatures")
-      .select("id, name, description, level, rarity, is_humanoid, is_aggressive, loot_table_id, node_id")
-      .in("id", creature_ids);
-
-    if (crErr || !creatures?.length) {
-      return new Response(JSON.stringify({ error: "Failed to fetch creatures" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Fetch nodes to get region context
-    const nodeIds = [...new Set(creatures.map((c: any) => c.node_id).filter(Boolean))];
-    const { data: nodes } = await supabase.from("nodes").select("id, name, region_id").in("id", nodeIds);
-    const { data: regions } = await supabase.from("regions").select("id, name, min_level, max_level");
-
-    const nodeMap = new Map((nodes || []).map((n: any) => [n.id, n]));
-    const regionMap = new Map((regions || []).map((r: any) => [r.id, r]));
-
-    const creatureDetails = creatures.map((c: any) => {
-      const node = nodeMap.get(c.node_id);
-      const region = node ? regionMap.get(node.region_id) : null;
-      return {
-        id: c.id,
-        name: c.name,
-        description: c.description,
-        level: c.level,
-        rarity: c.rarity,
-        is_humanoid: c.is_humanoid,
-        node_name: node?.name || "Unknown",
-        region_name: region?.name || "Unknown",
-        region_min_level: region?.min_level || 1,
-        region_max_level: region?.max_level || 10,
-      };
-    });
+    const body = await req.json();
+    const {
+      prompt,
+      count = 5,
+      level_min = 1,
+      level_max = 10,
+      item_type = "random",       // "equipment" | "consumable" | "random"
+      slot = "random",            // specific slot | "random" | "any_weapon" | "any_armor"
+      rarity = "random",          // "common" | "uncommon" | "rare" | "random"
+      stats_focus = "random",     // "random" | "offensive" | "defensive" | "utility"
+    } = body;
 
     // Fetch existing item names to avoid duplicates
     const { data: existingItems } = await supabase.from("items").select("name").limit(500);
     const existingItemNames = (existingItems || []).map((i: any) => i.name).join(", ");
 
-    const creatureList = creatureDetails.map((c: any) => {
-      const budget = Math.floor(1 + (c.level - 1) * 0.3);
-      return `- ${c.name} [id: ${c.id}] (${c.rarity}, level ${c.level}, ${c.is_humanoid ? "humanoid" : "non-humanoid"}, region: ${c.region_name} Lv${c.region_min_level}-${c.region_max_level}, node: ${c.node_name}) — stat budget ~${budget}`;
-    }).join("\n");
+    // Build slot constraint
+    const weaponSlots = ["main_hand", "off_hand"];
+    const armorSlots = ["head", "chest", "gloves", "belt", "pants", "boots", "shoulders"];
+    const accessorySlots = ["ring", "trinket", "amulet"];
 
-    const systemPrompt = `You are an item generator for "Wayfarers of Eldara", a text-based high-fantasy RPG. Your job is to generate level-appropriate, lore-consistent items for the given creatures.
+    let slotInstruction = "";
+    if (slot === "random") {
+      slotInstruction = "Choose slots freely across all equipment types for variety.";
+    } else if (slot === "any_weapon") {
+      slotInstruction = `Slots must be one of: ${weaponSlots.join(", ")}.`;
+    } else if (slot === "any_armor") {
+      slotInstruction = `Slots must be one of: ${armorSlots.join(", ")}.`;
+    } else if (slot === "any_accessory") {
+      slotInstruction = `Slots must be one of: ${accessorySlots.join(", ")}.`;
+    } else if (slot !== "random") {
+      slotInstruction = `All items must use slot: ${slot}.`;
+    }
 
-CREATURES TO EQUIP:
-${creatureList}
+    // Build stats focus instruction
+    let statsFocusInstruction = "";
+    if (stats_focus === "offensive") statsFocusInstruction = "Focus stats on: str, dex, int — offensive power.";
+    else if (stats_focus === "defensive") statsFocusInstruction = "Focus stats on: con, ac, hp, hp_regen — survivability.";
+    else if (stats_focus === "utility") statsFocusInstruction = "Focus stats on: wis, cha, int — utility and support.";
+    else statsFocusInstruction = "Mix stat types freely for variety across the batch.";
 
-EXISTING ITEMS (avoid duplicating these names): ${existingItemNames || "none"}
+    // Build rarity instruction
+    let rarityInstruction = "";
+    if (rarity === "random") rarityInstruction = "Vary rarity freely: mostly common, some uncommon, occasional rare.";
+    else rarityInstruction = `All items must have rarity: ${rarity}.`;
 
-RULES:
+    // Build item type instruction
+    let typeInstruction = "";
+    if (item_type === "random") typeInstruction = "Mix equipment and consumables, leaning toward equipment.";
+    else if (item_type === "equipment") typeInstruction = "All items must be equipment (no consumables).";
+    else typeInstruction = "All items must be consumables (slot = null, stats provide hp or hp_regen).";
+
+    const systemPrompt = `You are an item generator for "Wayfarers of Eldara", a text-based high-fantasy RPG.
+Generate a batch of ${count} distinct, lore-consistent items for a level ${level_min}–${level_max} world.
+
+GENERATION RULES:
 - ALL item names must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters or special Unicode.
-- Only generate items for humanoid creatures (is_humanoid: true). Non-humanoid creatures must not receive items.
-- Generate 1–3 items per humanoid creature: 1 for regular, 1–2 for rare, 2–3 for boss.
-- Only generate "equipment" or "consumable" types. NO trash loot.
-- Rarity caps: regular creatures → common/uncommon; rare/boss → uncommon/rare. NEVER generate unique items.
-- drop_chance: 0.1–0.5 (lower for better items)
+- Item type: ${typeInstruction}
+- Slot: ${slotInstruction}
+- Rarity: ${rarityInstruction}
+- Stats focus: ${statsFocusInstruction}
+- Level: pick a level between ${level_min} and ${level_max} for each item.
 - Stat budget formula: floor(1 + (level - 1) * 0.3 * rarity_multiplier * hands_multiplier)
   - Rarity multipliers: common=1.0, uncommon=1.5, rare=2.0
-  - hands_multiplier: 1.0 for 1h, 1.5 for 2h (hands=2)
-- Valid equipment slots: main_hand, off_hand, head, chest, gloves, belt, pants, ring, trinket, boots, amulet, shoulders
+  - hands_multiplier: 1.0 for 1h, 1.5 for 2h (hands=2, main_hand only)
+- ALWAYS include at least one stat bonus per item. Never leave stats empty. Distribute the budget.
 - Valid stat keys: str, dex, con, int, wis, cha, ac, hp, hp_regen
-- Consumables: slot = null, stats with hp (restore amount) or hp_regen
+- Stat value caps: str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
+- drop_chance: 0.1–0.5 (rare items lower, consumables 0.3–0.5)
 - max_durability: 50–100 common, 75–150 uncommon, 100–200 rare
 - Gold value: floor(level × 2.5 × rarity_multiplier²)
-- Do NOT duplicate existing item names
-- creature_id must be the REAL UUID of the creature (given in the list above)
-- Items should be thematically appropriate to the creature (a bandit might drop a worn dagger, a cultist a ritual staff, a soldier chainmail, etc.)
+- Do NOT generate items with names from this list: ${existingItemNames || "none"}
+- Generate items with creative, lore-fitting names and evocative 1-sentence descriptions.
+- Ensure variety within the batch: don't repeat the same slot/stat combo.
 
 ${prompt ? `FLAVOR CONTEXT: ${prompt}` : ""}
 
@@ -127,14 +129,14 @@ Call the generate_items tool with the structured output.`;
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate items for the ${creatureDetails.length} listed creatures. Focus on thematic variety and level-appropriate stats.` },
+          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. Ensure every item has stat bonuses.` },
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "generate_items",
-              description: "Generate items for humanoid creatures",
+              description: "Generate a batch of items for a loot table",
               parameters: {
                 type: "object",
                 properties: {
@@ -143,7 +145,6 @@ Call the generate_items tool with the structured output.`;
                     items: {
                       type: "object",
                       properties: {
-                        creature_id: { type: "string", description: "Real UUID of the creature this item belongs to" },
                         name: { type: "string" },
                         description: { type: "string" },
                         item_type: { type: "string", enum: ["equipment", "consumable"] },
@@ -151,19 +152,19 @@ Call the generate_items tool with the structured output.`;
                         slot: {
                           type: "string",
                           enum: ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"],
-                          description: "null for consumables"
+                          description: "null for consumables",
                         },
                         level: { type: "integer" },
-                        hands: { type: "integer", description: "1 or 2 for weapons, null for others" },
+                        hands: { type: "integer", description: "1 or 2 for main_hand weapons, null otherwise" },
                         stats: {
                           type: "object",
-                          description: "Stat bonuses: str, dex, con, int, wis, cha, ac, hp, hp_regen",
+                          description: "Must not be empty. Stat bonuses using valid keys: str, dex, con, int, wis, cha, ac, hp, hp_regen",
                         },
                         value: { type: "integer" },
                         max_durability: { type: "integer" },
                         drop_chance: { type: "number", description: "0.1 to 0.5" },
                       },
-                      required: ["creature_id", "name", "description", "item_type", "rarity", "level", "stats", "value", "max_durability", "drop_chance"],
+                      required: ["name", "description", "item_type", "rarity", "level", "stats", "value", "max_durability", "drop_chance"],
                     },
                   },
                 },
@@ -179,14 +180,12 @@ Call the generate_items tool with the structured output.`;
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a moment before trying again." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds to your workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await response.text();
@@ -201,27 +200,20 @@ Call the generate_items tool with the structured output.`;
     }
 
     const parsed = JSON.parse(toolCall.function.arguments);
-    const items = parsed.items || [];
+    const items = (parsed.items || []).map((item: any) => ({
+      ...item,
+      // Ensure stats is never empty — fallback if AI fails
+      stats: (item.stats && Object.keys(item.stats).length > 0) ? item.stats : { str: 1 },
+      slot: item.item_type === "consumable" ? null : (item.slot || null),
+    }));
 
-    // Attach creature context to each item for preview
-    const itemsWithContext = items.map((item: any) => {
-      const creature = creatureDetails.find((c: any) => c.id === item.creature_id);
-      return {
-        ...item,
-        creature_name: creature?.name || "Unknown",
-        creature_rarity: creature?.rarity || "regular",
-        creature_level: creature?.level || 1,
-      };
-    });
-
-    return new Response(JSON.stringify({ items: itemsWithContext }), {
+    return new Response(JSON.stringify({ items }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
     console.error("ai-item-forge error:", e);
     return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
