@@ -1,82 +1,114 @@
 
 
-# Ground Loot System -- Drop Items on the Ground Instead of Direct Distribution
+# Concentration Points (CP) System
 
 ## Overview
 
-Replace the current loot assignment/round-robin system with a "ground loot" model. When a creature dies, its loot drops onto the ground at that node. Any party member present can pick items up. Players can also drop items from their inventory onto the ground for others to grab.
+Replace time-based cooldowns with a resource system called **Concentration Points (CP)**. Each ability costs CP to use. CP regenerates over time and is persisted in the database, so refreshing the page won't reset your resource pool.
 
 ## How It Works
 
-1. **Creature dies** -- loot rolls happen as before, but instead of inserting into `character_inventory`, items are inserted into a new `node_ground_loot` table tied to the node.
-2. **NodeView shows ground loot** -- a new collapsible section "On the Ground" displays dropped items. Each item has a "Pick Up" button.
-3. **Pick up** -- clicking it moves the item from `node_ground_loot` into `character_inventory` for that character. Unique items still use the `try_acquire_unique_item` RPC.
-4. **Drop to ground** -- the existing `dropItem` function (currently deletes the item permanently) is changed to move items to `node_ground_loot` instead, so other players can pick them up.
-5. **Cleanup** -- ground loot expires after a configurable time (e.g. 10 minutes) to prevent clutter. A database function handles this.
+- Every character has a **CP** and **max_cp** value stored in the database.
+- Using an ability deducts its CP cost. If you don't have enough CP, the ability is greyed out.
+- CP regenerates passively at **1 CP every 6 seconds** (10/minute), scaling slightly with the class's primary stat modifier.
+- Resting at an Inn fully restores CP (like it restores HP).
+- No more cooldown timers on abilities -- resource management replaces them.
 
-## What Gets Removed
+## CP Costs by Tier
 
-- **LootShareDialog** -- no longer needed since loot goes to ground instead of being assigned by the leader.
-- **Round-robin logic** in `rollLoot` -- replaced with simple inserts into `node_ground_loot`.
-- **`pendingLoot` state** in GamePage -- no longer needed.
+| Tier | Level | CP Cost | Design Intent |
+|------|-------|---------|---------------|
+| T1 | 5 | 15 | Bread-and-butter, usable frequently |
+| T2 | 10 | 25 | Moderate cost, tactical choice |
+| T3 | 15 | 40 | Expensive, meaningful commitment |
+| T4 | 20 | 60 | Very expensive, fight-defining |
 
-## Database Changes
+## Max CP Scaling
 
-### New table: `node_ground_loot`
+- **Base max CP**: 100
+- **Per level**: +3 CP (so level 20 = 100 + 57 = 157 max CP)
+- This means at level 20, you can use one T4 ability (60) and one T2 (25) before needing to regenerate, which creates real tactical decisions.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid (PK) | Default `gen_random_uuid()` |
-| node_id | uuid (NOT NULL) | FK to nodes |
-| item_id | uuid (NOT NULL) | FK to items |
-| dropped_by | uuid | Character who dropped it (null for creature drops) |
-| dropped_at | timestamptz | Default `now()`, used for expiration |
-| creature_name | text | For display ("Loot from Goblin") |
+## CP Regen Rate
 
-### RLS Policies
-- **SELECT**: Anyone authenticated can view ground loot (items are visible to all at a node).
-- **INSERT**: Authenticated users can insert (for dropping items).
-- **DELETE**: Authenticated users can delete (for picking up items -- delete from ground, insert into inventory).
+- **Base**: 1 CP per 6 seconds
+- **Bonus**: +0.5 CP per 6s for every 2 points of primary stat modifier (WIS for healer, INT for wizard, CHA for bard, CON for warrior, DEX for ranger/rogue)
+- **Inn rest**: Restores CP to max (alongside HP)
+- Bard's "Inspire" could also grant a temporary CP regen buff
 
-### Realtime
-- Enable realtime on `node_ground_loot` so all players at the node see drops/pickups instantly.
+## What Changes for Abilities
 
-### Cleanup function
-- `cleanup_ground_loot()`: Deletes rows older than 10 minutes. Called periodically (can piggyback on existing cron-like mechanisms or be called client-side).
+- The `cooldownMs` field in `ClassAbility` is replaced with `cpCost`.
+- Ability buttons show their CP cost instead of a countdown timer.
+- Buttons are disabled when the character doesn't have enough CP.
+- The Bard's "Encore" (cooldown reset) changes to "Encore: refund the CP cost of your last used ability".
 
 ---
 
 ## Technical Details
 
-### File: New migration
-- Create `node_ground_loot` table with columns above.
-- Add RLS policies.
-- Enable realtime.
-- Create `cleanup_ground_loot()` function.
+### Database Migration
 
-### File: New hook `src/hooks/useGroundLoot.ts`
-- Subscribes to `node_ground_loot` filtered by the current `node_id`.
-- Provides `groundLoot` array, `pickUpItem(groundLootId)`, and `dropItemToGround(inventoryId)` functions.
-- `pickUpItem`: Deletes from `node_ground_loot`, inserts into `character_inventory` (with unique item guard).
-- `dropItemToGround`: Deletes from `character_inventory`, inserts into `node_ground_loot` at the character's current node.
+Add two columns to the `characters` table:
+
+```text
+cp      integer NOT NULL DEFAULT 100
+max_cp  integer NOT NULL DEFAULT 100
+```
+
+Update the `restrict_party_leader_updates` trigger to also protect `cp` and `max_cp` from non-owner updates.
+
+Update the `award_party_member` function to increase `max_cp` by 3 on level-up.
+
+### File: `src/lib/class-abilities.ts`
+
+- Replace `cooldownMs: number` with `cpCost: number` in the `ClassAbility` interface.
+- Update all ability definitions with their CP costs (T1: 15, T2: 25, T3: 40, T4: 60).
+
+### File: `src/hooks/useCharacter.ts`
+
+- Add `cp` and `max_cp` to the `Character` interface.
 
 ### File: `src/pages/GamePage.tsx`
-- Import and use `useGroundLoot(character.current_node_id, character.id)`.
-- Remove `pendingLoot` state, `handleLootDistribute`, and `LootShareDialog` rendering.
-- Update `rollLoot` to insert drops into `node_ground_loot` instead of `character_inventory`.
-- Pass `groundLoot`, `onPickUp`, `onDropToGround` to `NodeView`.
+
+- Remove all `abilityCooldownEnds` state and related `setCooldown` logic.
+- Remove `lastUsedAbilityIndex` (Encore changes to CP refund of last ability's cost).
+- Track `lastUsedAbilityCost` instead (a number, for Encore refund).
+- In `handleUseAbility`: check `character.cp >= ability.cpCost`, then deduct CP via `updateCharacter({ cp: character.cp - ability.cpCost })`.
+- Add a CP regen effect (useEffect with setInterval) that ticks every 6 seconds, adding CP up to max_cp.
+- For Encore: refund `lastUsedAbilityCost` CP instead of resetting a timer.
+- Remove cooldown-related props passed to NodeView.
 
 ### File: `src/components/game/NodeView.tsx`
-- Add a new "On the Ground" collapsible section (similar to "In the Area").
-- Each item shows name (colored by rarity), creature source if any, and a "Pick Up" button.
 
-### File: `src/hooks/useInventory.ts`
-- Change `dropItem` to call the ground loot hook's drop function instead of permanently deleting the item. (Or expose both options: "Drop" puts on ground, "Destroy" permanently removes.)
+- Remove cooldown countdown display logic (`cooldownLefts` state, the interval effect).
+- Show CP cost on each ability button instead of a countdown.
+- Disable buttons when `character.cp < ability.cpCost` instead of when on cooldown.
 
 ### File: `src/components/game/CharacterPanel.tsx`
-- Update the "Drop" button behavior to drop to ground instead of destroy.
-- Optionally add a "Destroy" option for when players want to permanently remove junk.
 
-### File: `src/components/game/LootShareDialog.tsx`
-- Remove this file entirely (no longer needed).
+- Add a **CP bar** below the HP bar (similar styling, perhaps blue/purple).
+- Show current CP / max CP with regen rate in tooltip.
 
+### File: `src/lib/game-data.ts`
+
+- Add `getMaxCp(level: number): number` -- returns `100 + (level - 1) * 3`.
+- Add `getCpRegenRate(classPrimaryStat: number): number` -- returns base + bonus from stat modifier.
+
+### File: `src/components/admin/GameManual.tsx`
+
+- Replace the cooldown column in the abilities table with a CP cost column.
+- Add a new section explaining the CP system, regen rates, and max CP scaling.
+
+### File: `supabase/functions/admin-users/index.ts`
+
+- Update "set-level" and "reset-stats" actions to recalculate `max_cp` and set `cp` to `max_cp`.
+- Update "grant-xp" level-up logic to increase `max_cp` by 3.
+
+### Inn Rest Logic (in GamePage)
+
+- When resting at an inn (already restores HP), also set `cp` to `max_cp`.
+
+### Character Creation
+
+- New characters start with `cp = 100, max_cp = 100` (the database defaults handle this).
