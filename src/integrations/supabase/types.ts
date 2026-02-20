@@ -690,6 +690,10 @@ export type Database = {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
         Returns: undefined
       }
+      damage_party_member: {
+        Args: { _character_id: string; _damage: number }
+        Returns: number
+      }
       degrade_party_member_equipment: {
         Args: { _character_id: string }
         Returns: undefined
