@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Sword } from 'lucide-react';
+import { Sword, Shield } from 'lucide-react';
 import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC,
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
@@ -26,10 +26,26 @@ function StatBadge({ value }: { value: number }) {
   );
 }
 
+const EQUIP_SLOTS = [
+  { key: 'head', label: 'Head' },
+  { key: 'amulet', label: 'Amulet' },
+  { key: 'shoulders', label: 'Shoulders' },
+  { key: 'chest', label: 'Chest' },
+  { key: 'gloves', label: 'Gloves' },
+  { key: 'belt', label: 'Belt' },
+  { key: 'pants', label: 'Pants' },
+  { key: 'boots', label: 'Boots' },
+  { key: 'ring', label: 'Ring' },
+  { key: 'trinket', label: 'Trinket' },
+  { key: 'off_hand', label: 'Off Hand' },
+] as const;
+
 export default function RaceClassManager() {
   const [tab, setTab] = useState('classes');
+  const [allItems, setAllItems] = useState<any[]>([]);
   const [weapons, setWeapons] = useState<any[]>([]);
   const [startingGear, setStartingGear] = useState<Record<string, string>>({});
+  const [universalGear, setUniversalGear] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,15 +53,20 @@ export default function RaceClassManager() {
   }, []);
 
   const loadData = async () => {
-    const [itemsRes, gearRes] = await Promise.all([
+    const [itemsRes, gearRes, uGearRes] = await Promise.all([
       supabase.from('items').select('id, name, slot, item_type, rarity').order('name'),
       supabase.from('class_starting_gear').select('*'),
+      supabase.from('universal_starting_gear').select('*'),
     ]);
-    // Filter to weapons (main_hand slot)
-    setWeapons((itemsRes.data || []).filter((i: any) => i.slot === 'main_hand'));
+    const items = itemsRes.data || [];
+    setAllItems(items);
+    setWeapons(items.filter((i: any) => i.slot === 'main_hand'));
     const gearMap: Record<string, string> = {};
     (gearRes.data || []).forEach((g: any) => { gearMap[g.class] = g.item_id; });
     setStartingGear(gearMap);
+    const uMap: Record<string, string> = {};
+    (uGearRes.data || []).forEach((g: any) => { uMap[g.equipped_slot] = g.item_id; });
+    setUniversalGear(uMap);
   };
 
   const handleSetWeapon = async (cls: string, itemId: string) => {
@@ -80,6 +101,38 @@ export default function RaceClassManager() {
 
   const getWeaponName = (itemId: string) => weapons.find(w => w.id === itemId)?.name || 'Unknown';
 
+  const handleSetUniversalGear = async (slot: string, itemId: string) => {
+    setSaving(`u_${slot}`);
+    const existing = universalGear[slot];
+    let error;
+    if (existing) {
+      ({ error } = await supabase.from('universal_starting_gear').update({ item_id: itemId }).eq('equipped_slot', slot));
+    } else {
+      ({ error } = await supabase.from('universal_starting_gear').insert({ item_id: itemId, equipped_slot: slot }));
+    }
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setUniversalGear(prev => ({ ...prev, [slot]: itemId }));
+      toast.success(`Universal ${slot} gear set`);
+    }
+    setSaving(null);
+  };
+
+  const handleClearUniversalGear = async (slot: string) => {
+    setSaving(`u_${slot}`);
+    const { error } = await supabase.from('universal_starting_gear').delete().eq('equipped_slot', slot);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setUniversalGear(prev => { const n = { ...prev }; delete n[slot]; return n; });
+      toast.success(`Universal ${slot} gear cleared`);
+    }
+    setSaving(null);
+  };
+
+  const getItemsForSlot = (slot: string) => allItems.filter(i => i.slot === slot);
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
@@ -87,6 +140,7 @@ export default function RaceClassManager() {
           <TabsList className="h-8">
             <TabsTrigger value="classes" className="font-display text-xs">Classes</TabsTrigger>
             <TabsTrigger value="races" className="font-display text-xs">Races</TabsTrigger>
+            <TabsTrigger value="starter-gear" className="font-display text-xs">Starter Gear</TabsTrigger>
           </TabsList>
         </div>
 
@@ -237,6 +291,70 @@ export default function RaceClassManager() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="starter-gear" className="flex-1 min-h-0 mt-0">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-3">
+              <div className="mb-2">
+                <h3 className="font-display text-sm text-foreground flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> Universal Starting Gear
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Equipment assigned here is given to ALL new characters regardless of class. Weapons are set per-class on the Classes tab.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {EQUIP_SLOTS.map(({ key, label }) => {
+                  const slotItems = getItemsForSlot(key);
+                  const currentItemId = universalGear[key];
+                  const currentItem = currentItemId ? allItems.find(i => i.id === currentItemId) : null;
+                  return (
+                    <Card key={key} className="bg-card/80 border-border">
+                      <CardContent className="p-3 space-y-2">
+                        <p className="text-xs font-display text-foreground">{label}</p>
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={currentItemId || ''}
+                            onValueChange={(val) => handleSetUniversalGear(key, val)}
+                            disabled={saving === `u_${key}`}
+                          >
+                            <SelectTrigger className="h-7 text-xs flex-1">
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {slotItems.map(w => (
+                                <SelectItem key={w.id} value={w.id} className="text-xs">
+                                  {w.name}
+                                  <span className="text-muted-foreground ml-1">({w.rarity})</span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {currentItemId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-destructive"
+                              onClick={() => handleClearUniversalGear(key)}
+                              disabled={saving === `u_${key}`}
+                            >
+                              Clear
+                            </Button>
+                          )}
+                        </div>
+                        {currentItem && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {currentItem.name} ({currentItem.rarity})
+                          </Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
           </ScrollArea>
         </TabsContent>

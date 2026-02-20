@@ -672,6 +672,35 @@ export type Database = {
         }
         Relationships: []
       }
+      universal_starting_gear: {
+        Row: {
+          created_at: string
+          equipped_slot: string
+          id: string
+          item_id: string
+        }
+        Insert: {
+          created_at?: string
+          equipped_slot: string
+          id?: string
+          item_id: string
+        }
+        Update: {
+          created_at?: string
+          equipped_slot?: string
+          id?: string
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "universal_starting_gear_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
