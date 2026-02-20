@@ -209,12 +209,12 @@ export function calculateHumanoidGold(level: number, rarity: string): { min: num
 const RARITY_MULTIPLIER: Record<string, { stat: number; hp: number; ac: number }> = {
   regular: { stat: 1, hp: 1, ac: 0 },
   rare:    { stat: 1.3, hp: 1.5, ac: 2 },
-  boss:    { stat: 1.6, hp: 2.5, ac: 4 },
+  boss:    { stat: 2.0, hp: 4.0, ac: 6 },
 };
 
 // Creature damage dice base by rarity
 const CREATURE_DAMAGE_BASE: Record<string, number> = {
-  regular: 4, rare: 6, boss: 8,
+  regular: 4, rare: 6, boss: 10,
 };
 
 export function getCreatureDamageDie(level: number, rarity: string): number {
