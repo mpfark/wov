@@ -75,7 +75,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={`w-[6.5rem] p-1 border rounded text-center cursor-pointer transition-colors ${
+          className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center cursor-pointer transition-colors ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
             item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
           }`}
