@@ -292,11 +292,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
       const primaryVal = (cpStatRef.current as any)[primaryStat] ?? 10;
       const baseRegen = getCpRegenRate(primaryVal);
-      // Inn gives 3x CP regen too
+      // Inn gives 3x CP regen
       const nodeId = regenCharRef.current.current_node_id;
       const node = nodeId ? getNodeRef.current(nodeId) : null;
       const innMult = node?.is_inn ? 3 : 1;
-      const regenAmount = baseRegen * innMult;
+      // Inspire buff doubles CP regen too
+      const buff = regenBuffRef.current;
+      const inspireMult = Date.now() < buff.expiresAt ? buff.multiplier : 1;
+      // Food buff adds flat CP regen
+      const food = foodBuffRef.current;
+      const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
+      const regenAmount = (baseRegen + foodCpRegen) * innMult * inspireMult;
       const newCp = Math.min(Math.floor(cp + regenAmount), max_cp);
       if (newCp > cp) {
         updateCharRegenRef.current({ cp: newCp });
@@ -877,7 +883,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
         addLog(`✨ HP regeneration boosted for 2 minutes!`);
       } else if (result.hpRegen > 0) {
-        addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} regen for 2 minutes.`);
+        addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} HP & CP regen for 2 minutes.`);
         logActivity(character.user_id, character.id, 'general', `Consumed ${result.itemName} (+${result.hpRegen} regen)`);
         setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 120000 });
       }
@@ -951,7 +957,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
     } else if (ability.type === 'regen_buff') {
       setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
-      const inspireMsg = `${ability.emoji} ${character.name} plays an inspiring song! HP regeneration doubled for 90 seconds.`;
+      const inspireMsg = `${ability.emoji} ${character.name} plays an inspiring song! HP & CP regeneration doubled for 90 seconds.`;
       if (party) {
         addLog(`${inspireMsg}[INSPIRE_BUFF]`);
       } else {
