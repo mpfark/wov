@@ -146,7 +146,7 @@ export function getItemStatCap(statKey: string, level: number = 1): number {
     return 6 + Math.floor(level / 5) * 2;
   }
   // Primary stats: str, dex, con, int, wis, cha
-  return 3 + Math.floor(level / 5);
+  return 4 + Math.floor(level / 4);
 }
 
 export function suggestItemGoldValue(level: number, rarity: string): number {
