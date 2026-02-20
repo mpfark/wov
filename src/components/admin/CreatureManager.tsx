@@ -23,6 +23,7 @@ interface Creature {
   ac: number;
   stats: Record<string, number>;
   is_aggressive: boolean;
+  is_humanoid: boolean;
   loot_table: any[];
   respawn_seconds: number;
   is_alive: boolean;
@@ -114,7 +115,7 @@ export default function CreatureManager() {
     setForm({
       name: c.name, description: c.description, node_id: c.node_id,
       level: c.level, rarity: c.rarity,
-      is_aggressive: c.is_aggressive, is_humanoid: (c as any).is_humanoid ?? false,
+      is_aggressive: c.is_aggressive, is_humanoid: c.is_humanoid ?? false,
       respawn_seconds: c.respawn_seconds,
       loot_table: itemLoot,
       gold_min: goldEntry?.min || 0,
@@ -450,7 +451,12 @@ export default function CreatureManager() {
 
               {/* Loot Table selector */}
               <div className="space-y-1.5">
-                <p className="font-display text-xs text-primary">Loot Table</p>
+                <div className="flex items-center justify-between">
+                  <p className="font-display text-xs text-primary">Shared Loot Table</p>
+                  {form.loot_table_id && (
+                    <span className="text-[9px] text-dwarvish border border-dwarvish/40 rounded px-1 py-0.5">linked</span>
+                  )}
+                </div>
                 <Select value={form.loot_table_id || 'none'} onValueChange={v => {
                   const tableId = v === 'none' ? null : v;
                   setForm(f => ({ ...f, loot_table_id: tableId }));
@@ -459,17 +465,17 @@ export default function CreatureManager() {
                 }}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select loot table" /></SelectTrigger>
                   <SelectContent className="bg-popover border-border z-50 max-h-60">
-                    <SelectItem value="none" className="text-xs text-muted-foreground">None (legacy inline)</SelectItem>
+                    <SelectItem value="none" className="text-xs text-muted-foreground">None — use per-item loot below</SelectItem>
                     {lootTables.map(lt => (
                       <SelectItem key={lt.id} value={lt.id} className="text-xs">{lt.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
-                {form.loot_table_id && (
+                {form.loot_table_id ? (
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <label className="text-[10px] text-muted-foreground">Drop Chance</label>
+                      <label className="text-[10px] text-muted-foreground">Overall Drop Chance</label>
                       <span className="text-xs font-mono text-primary">{Math.round(form.drop_chance * 100)}%</span>
                     </div>
                     <Slider
@@ -477,9 +483,9 @@ export default function CreatureManager() {
                       onValueChange={([v]) => setForm(f => ({ ...f, drop_chance: v / 100 }))}
                       min={1} max={100} step={1}
                     />
-                    {lootTableEntries.length > 0 && (
+                    {lootTableEntries.length > 0 ? (
                       <div className="p-2 bg-background/50 rounded border border-border mt-1">
-                        <p className="text-[10px] text-muted-foreground mb-1">Items in table:</p>
+                        <p className="text-[10px] text-muted-foreground mb-1">Items (weighted — edit in Loot Tables tab):</p>
                         {(() => {
                           const totalWeight = lootTableEntries.reduce((s, e) => s + e.weight, 0);
                           return lootTableEntries.map((e, i) => (
@@ -490,12 +496,12 @@ export default function CreatureManager() {
                           ));
                         })()}
                       </div>
+                    ) : (
+                      <p className="text-[9px] text-muted-foreground italic">No items in this table yet. Add them via the Loot Tables tab.</p>
                     )}
                   </div>
-                )}
-
-                {!form.loot_table_id && (
-                  <ItemPickerList label="Legacy Loot (per-item chance)" value={form.loot_table}
+                ) : (
+                  <ItemPickerList label="Per-item loot (individual chance per item)" value={form.loot_table}
                     onChange={v => setForm(f => ({ ...f, loot_table: v }))} />
                 )}
               </div>
