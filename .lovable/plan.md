@@ -1,98 +1,74 @@
 
+# Admin Game Manual
 
-## Fix Party Synchronization: HP, XP/Gold, and Loot Distribution
+## Overview
+Add a new "Manual" tab to the Admin page with a comprehensive, expandable game mechanics reference. It pulls constants directly from game-data.ts and class-abilities.ts so it stays in sync with balance changes. A live player distribution is fetched from the database.
 
-### Problems Identified
+## Sections
 
-1. **HP changes not visible between party members**: The realtime subscription triggers a full `fetchParty()` which does 3-4 sequential database queries. This is slow and can miss rapid updates. Additionally, the `fetchParty` function replaces all member data at once, which can cause visual flickering.
+### 1. Level Progression Table (Levels 1--40)
+- Columns: Level | XP Required | Total XP | Stat Gains | Class Bonus | Players at Level
+- XP per level = level * 100
+- All stats +1 per level up to level 29; levels 30+ get class bonuses only (every 3 levels)
+- Player count column fetched live from the database
 
-2. **XP/Gold not shared**: The fresh query fix from the previous change should work, but there may be a timing issue -- the `award_party_member` RPC requires the caller to be an accepted party mate, and the RPC checks use `auth.uid()`. This should be fine. However, the DB logs show an error: **"invalid input syntax for type uuid: undefined"**, meaning somewhere a value of `undefined` is being passed as a UUID. This could be corrupting the award flow.
+### 2. Character Stats and Creation
+- Base stats (8 across the board)
+- Race modifier table (all 6 races)
+- Class modifier table (all 6 classes)
+- Expandable: example starting stats for each race/class combination
 
-3. **Loot not always distributed by leader**: Currently, the loot dialog only appears on the **killer's** screen (whoever lands the killing blow). Any party member can kill a creature, so any member can get the loot dialog -- not just the leader. This is a design issue.
+### 3. HP, AC, and Regeneration
+- Max HP = Base Class HP + floor((CON-10)/2) + (level-1) * 5
+- AC = Base Class AC + floor((DEX-10)/2)
+- Passive HP Regen (every 15s) = 1 + floor((CON-10)/4) + gear bonuses
+- Base HP/AC tables per class
 
-### Plan
+### 4. Combat
+- Attack roll: d20 + stat modifier vs target AC
+- Damage: class dice + stat modifier
+- Creature counterattack: d20 + STR mod vs player AC
+- Creature damage: 1d(base_die + level/2) + STR mod
+- Party combat: tank absorbs all hits, single counterattack per round
+- Opportunity attacks on flee (all party members)
+- 25% durability degradation chance per hit taken
+- XP penalty: 20% reduction per level above the creature (minimum 10% reward)
 
-#### 1. Add polling fallback for party member data (src/hooks/useParty.ts)
-- Keep the realtime subscriptions as the primary mechanism
-- Add a lightweight polling fallback (every 3 seconds) that re-fetches party member HP/level/node data
-- Use exponential backoff when no changes are detected (up to 10s)
-- This ensures HP/XP/gold updates are always visible within a few seconds, even if realtime misses events
+### 5. Class Abilities
+- Full table per class: ability name, tier, level requirement, cooldown, description
+- Expandable per class
 
-#### 2. Optimize fetchParty to do targeted member updates (src/hooks/useParty.ts)
-- Add a separate `fetchMemberStats()` function that only queries party member character data (HP, level, XP, gold, node)
-- Use this lighter function for the polling and character update subscriptions instead of the full `fetchParty()` which also re-queries party structure and pending invites
-- This reduces DB load and makes updates faster
+### 6. Creature Scaling
+- Base stat: 8 + floor(level * 0.7), multiplied by rarity
+- HP: (15 + level * 8) * rarity HP multiplier
+- AC: 8 + floor(level * 0.6) + rarity AC bonus
+- Damage die: rarity_base + floor(level/2)
+- Rarity multiplier reference table (Regular / Rare / Boss)
+- Humanoid gold drops: min = level * mult, max = level * 3 * mult
 
-#### 3. Guard against undefined UUIDs in combat (src/hooks/useCombat.ts)
-- Add a guard check before calling `award_party_member` to ensure `character_id` is a valid string
-- Add a guard on the fresh party members query to ensure `party.id` is defined
-- This prevents the "invalid input syntax for type uuid: undefined" database error
+### 7. Items and Economy
+- Stat budget: floor(1 + (level-1) * 0.3 * rarity_mult * hands_mult)
+- Stat costs and caps tables
+- Repair costs: ceil((max_dur - cur_dur) * value * rarity_mult / 100)
+- Rare/unique unrepairable; unique destroyed at 0 durability
+- Gold value suggestion: round(level * 2.5 * rarity^2)
 
-#### 4. Restrict loot dialog to party leader (src/pages/GamePage.tsx)
-- When a creature is killed and there are party members at the same node, only show the loot distribution dialog if the killer is the party leader
-- If a non-leader kills a creature, use the existing round-robin distribution automatically instead of showing the dialog
-- This ensures the leader always controls equipment distribution
+### 8. Death and Respawn
+- 3s incapacitation, respawn at starting node with 1 HP
+- 10% gold penalty on death
 
-### Technical Details
+---
 
-**Polling fallback in useParty.ts:**
-```text
-// New lightweight function that only refreshes member character data
-const fetchMemberStats = async () => {
-  if (!party) return;
-  const { data } = await supabase
-    .from('party_members')
-    .select('id, character_id, status, is_following, character:characters(id, name, race, class, level, hp, max_hp, current_node_id)')
-    .eq('party_id', party.id)
-    .eq('status', 'accepted');
-  if (data) setMembers(data as unknown as PartyMember[]);
-};
+## Technical Details
 
-// Polling effect with backoff
-useEffect(() => {
-  if (!party) return;
-  let interval = 3000;
-  let timeoutId: ReturnType<typeof setTimeout>;
-  let active = true;
-  const poll = () => {
-    fetchMemberStats();
-    if (active) timeoutId = setTimeout(poll, interval);
-  };
-  timeoutId = setTimeout(poll, interval);
-  return () => { active = false; clearTimeout(timeoutId); };
-}, [party?.id]);
-```
+### New file: src/components/admin/GameManual.tsx
+- Single component using Accordion (from radix) for expandable sections
+- Imports constants from game-data.ts and class-abilities.ts directly (no hardcoding)
+- On mount, queries: `SELECT level, count(*) FROM characters GROUP BY level ORDER BY level`
+- Generates the level 1--40 progression table programmatically
+- Styled with existing parchment/fantasy theme (font-display, muted-foreground, card backgrounds)
+- Tables use the existing Table/TableHeader/TableRow/TableCell components
 
-**UUID guard in useCombat.ts:**
-```text
-if (_party?.id) {
-  // ... fresh query
-}
-// And before each award:
-if (m.character_id && m.character_id !== 'undefined') {
-  // ... call RPC
-}
-```
-
-**Loot leader restriction in GamePage.tsx:**
-```text
-// Only show loot dialog for leader; non-leaders auto-distribute via round-robin
-if (equipmentDrops.length > 0 && hasPartyAtNode) {
-  if (isLeader) {
-    setPendingLoot({ loot: equipmentDrops, creatureName });
-  } else {
-    // Auto round-robin for non-leaders
-    for (let i = 0; i < equipmentDrops.length; i++) {
-      const drop = equipmentDrops[i];
-      const recipient = sameNodeMembers[i % sameNodeMembers.length];
-      // ... insert logic
-    }
-  }
-}
-```
-
-### Files to Modify
-- **src/hooks/useParty.ts** -- Add polling fallback, optimize member refresh
-- **src/hooks/useCombat.ts** -- Guard against undefined UUIDs
-- **src/pages/GamePage.tsx** -- Restrict loot dialog to party leader
-
+### Modified file: src/pages/AdminPage.tsx
+- Add a "Manual" tab (with a book icon) to the TabsList
+- Add corresponding TabsContent rendering the GameManual component
