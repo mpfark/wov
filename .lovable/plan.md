@@ -1,114 +1,65 @@
 
 
-# Concentration Points (CP) System
+## Gear-Focused Character Progression
 
-## Overview
+### Problem
+Currently, characters gain +1 to ALL 6 stats every level (up to level 29), resulting in massive base stat inflation. A level 40 healer has 53 WIS from leveling alone -- making gear bonuses of +3-5 feel insignificant. The goal is to shift power so that **gear is the primary source of character strength**, with leveling providing a foundation that gear builds on.
 
-Replace time-based cooldowns with a resource system called **Concentration Points (CP)**. Each ability costs CP to use. CP regenerates over time and is persisted in the database, so refreshing the page won't reset your resource pool.
+### Current vs Proposed Stat Growth
 
-## How It Works
+Using a level 40 Elf Healer as an example (starting WIS = 12):
 
-- Every character has a **CP** and **max_cp** value stored in the database.
-- Using an ability deducts its CP cost. If you don't have enough CP, the ability is greyed out.
-- CP regenerates passively at **1 CP every 6 seconds** (10/minute), scaling slightly with the class's primary stat modifier.
-- Resting at an Inn fully restores CP (like it restores HP).
-- No more cooldown timers on abilities -- resource management replaces them.
+| Source | Current | Proposed |
+|--------|---------|----------|
+| Base + Race + Class | 12 | 12 |
+| Level-up all-stat gains | +28 (every level to 29) | +5 (every 5 levels: 5,10,15,20,25) |
+| Class bonus (WIS every 3 levels) | +13 | +13 |
+| **Total (naked)** | **53** | **30** |
+| Good gear (+8 WIS) | 61 (15% boost) | 38 (27% boost) |
 
-## CP Costs by Tier
+Gear goes from a minor bonus to a **meaningful power source**.
 
-| Tier | Level | CP Cost | Design Intent |
-|------|-------|---------|---------------|
-| T1 | 5 | 15 | Bread-and-butter, usable frequently |
-| T2 | 10 | 25 | Moderate cost, tactical choice |
-| T3 | 15 | 40 | Expensive, meaningful commitment |
-| T4 | 20 | 60 | Very expensive, fight-defining |
+### Changes
 
-## Max CP Scaling
+#### 1. Stat Gain Formula
+- **Old**: +1 to all 6 stats every level (level 2-29)
+- **New**: +1 to all 6 stats every 5th level (levels 5, 10, 15, 20, 25, 30, 35, 40...) -- uncapped
+- Class bonuses every 3 levels remain unchanged
 
-- **Base max CP**: 100
-- **Per level**: +3 CP (so level 20 = 100 + 57 = 157 max CP)
-- This means at level 20, you can use one T4 ability (60) and one T2 (25) before needing to regenerate, which creates real tactical decisions.
+#### 2. Code Updates (4 locations handle level-ups)
+- **`src/hooks/useCombat.ts`** -- client-side solo level-up logic
+- **`award_party_member` DB function** -- server-side party level-up
+- **`supabase/functions/admin-users/index.ts`** -- admin grant-xp and set-level actions
+- **`src/components/admin/GameManual.tsx`** -- documentation
 
-## CP Regen Rate
+#### 3. Migrate Existing Characters
+A database migration will recalculate every character's stats using the new formula:
+- For each character, compute what their stats *should* be: base (8) + race bonus + class bonus + (floor(level/5) for all-stat gains) + (class level bonuses for each 3rd level)
+- Add back any unspent stat points
+- Recalculate max_hp and ac based on new stats
 
-- **Base**: 1 CP per 6 seconds
-- **Bonus**: +0.5 CP per 6s for every 2 points of primary stat modifier (WIS for healer, INT for wizard, CHA for bard, CON for warrior, DEX for ranger/rogue)
-- **Inn rest**: Restores CP to max (alongside HP)
-- Bard's "Inspire" could also grant a temporary CP regen buff
+#### 4. Item Stat Budget Adjustments
+Since stats from leveling are lower, item stat caps may need a small bump so higher-level gear can provide more meaningful bonuses. This ensures there is enough gear headroom to compensate for the reduced base stats:
+- Primary stat caps: `4 + floor(level/4)` (up from `3 + floor(level/5)`)
+- This gives level 20 gear a cap of 9 instead of 7, and level 40 gear a cap of 14 instead of 11
 
-## What Changes for Abilities
+### Technical Details
 
-- The `cooldownMs` field in `ClassAbility` is replaced with `cpCost`.
-- Ability buttons show their CP cost instead of a countdown timer.
-- Buttons are disabled when the character doesn't have enough CP.
-- The Bard's "Encore" (cooldown reset) changes to "Encore: refund the CP cost of your last used ability".
-
----
-
-## Technical Details
-
-### Database Migration
-
-Add two columns to the `characters` table:
-
-```text
-cp      integer NOT NULL DEFAULT 100
-max_cp  integer NOT NULL DEFAULT 100
+**useCombat.ts level-up change** (line ~417):
+```
+// Old: if (newLevel < 30)
+// New: if (newLevel % 5 === 0)
 ```
 
-Update the `restrict_party_leader_updates` trigger to also protect `cp` and `max_cp` from non-owner updates.
+**award_party_member DB function** level-up change:
+```sql
+-- Old: IF _new_level < 30 THEN +1 all stats
+-- New: IF _new_level % 5 = 0 THEN +1 all stats
+```
 
-Update the `award_party_member` function to increase `max_cp` by 3 on level-up.
+**Existing character migration SQL** -- recalculate all stats from scratch based on race, class, and level using the new formula.
 
-### File: `src/lib/class-abilities.ts`
+**admin-users edge function** -- update grant-xp and set-level handlers to use the new every-5-levels rule.
 
-- Replace `cooldownMs: number` with `cpCost: number` in the `ClassAbility` interface.
-- Update all ability definitions with their CP costs (T1: 15, T2: 25, T3: 40, T4: 60).
+**GameManual** -- update the stat gain column to show "+1 all stats" only on levels divisible by 5.
 
-### File: `src/hooks/useCharacter.ts`
-
-- Add `cp` and `max_cp` to the `Character` interface.
-
-### File: `src/pages/GamePage.tsx`
-
-- Remove all `abilityCooldownEnds` state and related `setCooldown` logic.
-- Remove `lastUsedAbilityIndex` (Encore changes to CP refund of last ability's cost).
-- Track `lastUsedAbilityCost` instead (a number, for Encore refund).
-- In `handleUseAbility`: check `character.cp >= ability.cpCost`, then deduct CP via `updateCharacter({ cp: character.cp - ability.cpCost })`.
-- Add a CP regen effect (useEffect with setInterval) that ticks every 6 seconds, adding CP up to max_cp.
-- For Encore: refund `lastUsedAbilityCost` CP instead of resetting a timer.
-- Remove cooldown-related props passed to NodeView.
-
-### File: `src/components/game/NodeView.tsx`
-
-- Remove cooldown countdown display logic (`cooldownLefts` state, the interval effect).
-- Show CP cost on each ability button instead of a countdown.
-- Disable buttons when `character.cp < ability.cpCost` instead of when on cooldown.
-
-### File: `src/components/game/CharacterPanel.tsx`
-
-- Add a **CP bar** below the HP bar (similar styling, perhaps blue/purple).
-- Show current CP / max CP with regen rate in tooltip.
-
-### File: `src/lib/game-data.ts`
-
-- Add `getMaxCp(level: number): number` -- returns `100 + (level - 1) * 3`.
-- Add `getCpRegenRate(classPrimaryStat: number): number` -- returns base + bonus from stat modifier.
-
-### File: `src/components/admin/GameManual.tsx`
-
-- Replace the cooldown column in the abilities table with a CP cost column.
-- Add a new section explaining the CP system, regen rates, and max CP scaling.
-
-### File: `supabase/functions/admin-users/index.ts`
-
-- Update "set-level" and "reset-stats" actions to recalculate `max_cp` and set `cp` to `max_cp`.
-- Update "grant-xp" level-up logic to increase `max_cp` by 3.
-
-### Inn Rest Logic (in GamePage)
-
-- When resting at an inn (already restores HP), also set `cp` to `max_cp`.
-
-### Character Creation
-
-- New characters start with `cp = 100, max_cp = 100` (the database defaults handle this).
