@@ -487,9 +487,23 @@ export default function CharacterPanel({
                     <span className="text-muted-foreground text-[9px] w-4">{slot}.</span>
                     {potion ? (
                       <>
-                        <span className={`font-display truncate flex-1 ${RARITY_COLORS[potion.item.rarity]}`}>
-                          {potion.item.name}
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[potion.item.rarity]}`}>
+                              {potion.item.name}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-popover border-border z-50">
+                            <p className={`font-display ${RARITY_COLORS[potion.item.rarity]}`}>{potion.item.name}</p>
+                            <p className="text-xs text-muted-foreground">{potion.item.description}</p>
+                            {Object.entries(potion.item.stats || {}).map(([k, v]) => (
+                              <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
+                                {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
+                              </p>
+                            ))}
+                            <p className="text-[10px] text-muted-foreground mt-1">Value: {potion.item.value}g</p>
+                          </TooltipContent>
+                        </Tooltip>
                         <div className="flex gap-0.5 shrink-0 ml-1">
                           {onUseConsumable && (
                             <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
