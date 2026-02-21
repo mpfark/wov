@@ -8,7 +8,7 @@ import { GameNode, Region } from '@/hooks/useNodes';
 interface TeleportDestination {
   node: GameNode;
   region: Region;
-  cost: number;
+  cpCost: number;
 }
 
 interface Props {
@@ -18,28 +18,27 @@ interface Props {
   currentRegion: Region | undefined;
   regions: Region[];
   nodes: GameNode[];
-  playerGold: number;
-  onTeleport: (nodeId: string, cost: number) => void;
+  playerCp: number;
+  playerMaxCp: number;
+  onTeleport: (nodeId: string, cpCost: number) => void;
 }
 
-function calculateTeleportCost(fromRegion: Region | undefined, toRegion: Region, toNode: GameNode): number {
-  if (!fromRegion) return 50;
-  if (fromRegion.id === toRegion.id) return 25;
-  // Cost scales with level difference between regions
+function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Region): number {
+  if (!fromRegion) return 15;
+  if (fromRegion.id === toRegion.id) return 10;
   const levelDiff = Math.abs(toRegion.min_level - fromRegion.min_level);
-  return Math.max(25, 25 + levelDiff * 10);
+  return Math.min(10 + levelDiff * 2, 30);
 }
 
-export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, playerGold, onTeleport }: Props) {
+export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, playerCp, playerMaxCp, onTeleport }: Props) {
   const destinations: TeleportDestination[] = nodes
     .filter(n => n.is_teleport && n.id !== currentNode.id)
     .map(n => {
       const region = regions.find(r => r.id === n.region_id);
-      return region ? { node: n, region, cost: calculateTeleportCost(currentRegion, region, n) } : null;
+      return region ? { node: n, region, cpCost: calculateTeleportCpCost(currentRegion, region) } : null;
     })
     .filter(Boolean) as TeleportDestination[];
 
-  // Sort by region level then node name
   destinations.sort((a, b) => a.region.min_level - b.region.min_level || a.node.name.localeCompare(b.node.name));
 
   return (
@@ -49,7 +48,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
           <DialogTitle className="font-display text-primary text-glow">🌀 Teleport</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Travel instantly to another teleport point. Your gold: <span className="text-primary font-display">{playerGold}</span>
+          Travel instantly to another teleport point. Your CP: <span className="text-primary font-display">{playerCp}/{playerMaxCp}</span>
         </p>
         <ScrollArea className="max-h-64">
           <div className="space-y-1.5 pr-2">
@@ -57,7 +56,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
               <p className="text-xs text-muted-foreground italic py-4 text-center">No teleport destinations available.</p>
             )}
             {destinations.map(d => {
-              const canAfford = playerGold >= d.cost;
+              const canAfford = playerCp >= d.cpCost;
               return (
                 <div key={d.node.id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40 hover:bg-background/60 transition-colors">
                   <div className="min-w-0 flex-1">
@@ -70,10 +69,10 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
                     size="sm"
                     variant="outline"
                     disabled={!canAfford}
-                    onClick={() => onTeleport(d.node.id, d.cost)}
+                    onClick={() => onTeleport(d.node.id, d.cpCost)}
                     className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
                   >
-                    🪙 {d.cost}g
+                    ⚡ {d.cpCost} CP
                   </Button>
                 </div>
               );

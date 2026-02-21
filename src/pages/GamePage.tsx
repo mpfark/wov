@@ -774,16 +774,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead, inCombat, stopCombatFn]);
 
-  const handleTeleport = useCallback(async (nodeId: string, cost: number) => {
+  const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
     if (isDead) return;
     if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
-    if (character.gold < cost) { addLog('💰 Not enough gold to teleport.'); return; }
+    if ((character.cp ?? 0) < cpCost) { addLog('⚠️ Not enough CP to teleport.'); return; }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
-    await updateCharacter({ current_node_id: nodeId, gold: character.gold - cost });
+    await updateCharacter({ current_node_id: nodeId, cp: (character.cp ?? 0) - cpCost });
     broadcastMove(character.id, character.name, nodeId);
-    addLog(`🌀 You teleport to ${targetNode.name} for ${cost} gold.`);
-    logActivity(character.user_id, character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cost });
+    addLog(`🌀 You teleport to ${targetNode.name} for ${cpCost} CP.`);
+    logActivity(character.user_id, character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
     // Move followers if party leader
     if (party && isLeader) {
@@ -1615,7 +1615,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           currentRegion={currentRegion}
           regions={regions}
           nodes={nodes}
-          playerGold={character.gold}
+          playerCp={character.cp ?? 0}
+          playerMaxCp={character.max_cp ?? 60}
           onTeleport={handleTeleport}
         />
       )}
