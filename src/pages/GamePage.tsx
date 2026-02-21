@@ -775,7 +775,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead, inCombat, stopCombatFn]);
 
   const handleTeleport = useCallback(async (nodeId: string, cost: number) => {
-    if (isDead || inCombat) return;
+    if (isDead) return;
+    if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
     if (character.gold < cost) { addLog('💰 Not enough gold to teleport.'); return; }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
@@ -1498,7 +1499,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onTalkToNPC={npc => setTalkingToNPC(npc)}
               onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
               onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
-              onOpenTeleport={currentNode.is_teleport ? () => setTeleportOpen(true) : undefined}
+              onOpenTeleport={currentNode.is_teleport ? () => {
+                if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
+                setTeleportOpen(true);
+              } : undefined}
               inCombat={inCombat}
               activeCombatCreatureId={activeCombatCreatureId}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
