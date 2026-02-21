@@ -22,10 +22,15 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cpCost: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cp_refund' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cp_refund' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff' | 'punch';
   tier: number;
   levelRequired: number;
 }
+
+// Universal Tier 0 ability available to all classes from level 1
+export const UNIVERSAL_ABILITIES: ClassAbility[] = [
+  { label: 'Punch', emoji: '👊', description: 'A desperate unarmed strike scaling with STR', cpCost: 10, type: 'punch', tier: 0, levelRequired: 1 },
+];
 
 export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   healer: [

@@ -443,7 +443,8 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                Abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
+                All classes have access to <strong>Punch</strong> (Tier 0, 10 CP) from level 1 — a basic unarmed strike scaling with STR.
+                Class abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
               </p>
               <Accordion type="multiple">
                 {Object.entries(CLASS_ABILITIES).map(([cls, abilities]) => (
