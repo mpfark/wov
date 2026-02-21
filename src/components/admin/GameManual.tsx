@@ -7,8 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC, CLASS_LEVEL_BONUSES,
-  RACE_LABELS, CLASS_LABELS, STAT_LABELS, ITEM_RARITY_MULTIPLIER,
-  ITEM_STAT_COSTS, calculateStats, getBaseRegen, getItemStatBudget,
+  RACE_LABELS, CLASS_LABELS, STAT_LABELS, RACE_DESCRIPTIONS, ITEM_RARITY_MULTIPLIER,
+  ITEM_STAT_COSTS, calculateStats, calculateHP, calculateAC, getBaseRegen, getItemStatBudget,
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
   XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
   CLASS_PRIMARY_STAT,
@@ -113,7 +113,79 @@ export default function GameManual() {
             <AccordionContent className="px-4 space-y-3">
               <p className="text-xs text-muted-foreground">
                 Base stats: <code className="text-primary">8</code> in all attributes. Final = Base + Race + Class modifiers.
+                Race choice has a <strong className="text-foreground">major impact</strong> on derived stats — tough races (Dwarf, Edain) provide significantly more HP via CON, while wise/mental races (Elf, Half-Elf) provide larger CP pools via INT/WIS/CHA.
               </p>
+
+              {/* Race-Class Synergy Guide */}
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">⚔️ Race-Class Synergy Guide</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong className="text-foreground">Tank Races</strong> (high CON → more HP):</p>
+                    <p className="ml-3">🛡️ <strong>Dwarf</strong> (+4 CON) — Best for Warriors, Healers who want to survive the frontline</p>
+                    <p className="ml-3">🏰 <strong>Edain</strong> (+3 CON) — Strong for any melee class, good all-rounder</p>
+                    <p className="mt-1"><strong className="text-foreground">Caster Races</strong> (high mental stats → more CP):</p>
+                    <p className="ml-3">🌿 <strong>Elf</strong> (+3 WIS, +2 INT) — Best for Wizards, Healers, Rangers who use abilities heavily</p>
+                    <p className="ml-3">✨ <strong>Half-Elf</strong> (+3 CHA, +2 WIS) — Ideal for Bards, Healers, Rogues with large CP pools</p>
+                    <p className="mt-1"><strong className="text-foreground">Balanced / Agile</strong>:</p>
+                    <p className="ml-3">🤸 <strong>Halfling</strong> (+3 DEX) — Best for Rogues, Rangers who need high accuracy/evasion</p>
+                    <p className="ml-3">⚖️ <strong>Human</strong> (+1 all) — Versatile, no weaknesses, good for any class</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* HP/CP comparison by race-class combo */}
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Starting HP & CP by Race-Class Combo</p>
+                <div className="max-h-[250px] overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Combo</TableHead>
+                        <TableHead className="text-xs">HP</TableHead>
+                        <TableHead className="text-xs">AC</TableHead>
+                        <TableHead className="text-xs">CP</TableHead>
+                        <TableHead className="text-xs">Synergy</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const combos = Object.keys(RACE_STATS).flatMap(race =>
+                          Object.keys(CLASS_STATS).map(cls => {
+                            const s = calculateStats(race, cls);
+                            const hp = calculateHP(cls, s.con);
+                            const ac = calculateAC(cls, s.dex);
+                            const cp = getMaxCp(1, s.int, s.wis, s.cha);
+                            return { race, cls, s, hp, ac, cp };
+                          })
+                        );
+                        const maxHp = Math.max(...combos.map(c => c.hp));
+                        const maxCp = Math.max(...combos.map(c => c.cp));
+                        const minHp = Math.min(...combos.map(c => c.hp));
+                        const minCp = Math.min(...combos.map(c => c.cp));
+                        return combos.map(({ race, cls, hp, ac, cp }) => {
+                          let synergy = '';
+                          if (hp >= maxHp - 2 && cp >= maxCp - 5) synergy = '🌟 Excellent';
+                          else if (hp >= maxHp - 2) synergy = '🛡️ Tank';
+                          else if (cp >= maxCp - 5) synergy = '🔮 Caster';
+                          else if (hp <= minHp + 2) synergy = '⚠️ Fragile';
+                          else synergy = '⚖️ Balanced';
+                          return (
+                            <TableRow key={`${race}-${cls}`}>
+                              <TableCell className="text-xs font-display">{RACE_LABELS[race]} {CLASS_LABELS[cls]}</TableCell>
+                              <TableCell className={`text-xs ${hp >= maxHp - 2 ? 'text-green-400 font-bold' : hp <= minHp + 2 ? 'text-red-400' : ''}`}>{hp}</TableCell>
+                              <TableCell className="text-xs">{ac}</TableCell>
+                              <TableCell className={`text-xs ${cp >= maxCp - 5 ? 'text-blue-400 font-bold' : cp <= minCp + 5 ? 'text-orange-400' : ''}`}>{cp}</TableCell>
+                              <TableCell className="text-xs">{synergy}</TableCell>
+                            </TableRow>
+                          );
+                        });
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
               <div>
                 <p className="text-xs font-display text-primary mb-1">Race Modifiers</p>
                 <Table>
@@ -121,19 +193,27 @@ export default function GameManual() {
                     <TableRow>
                       <TableHead className="text-xs">Race</TableHead>
                       {STAT_KEYS.map(s => <TableHead key={s} className="text-xs">{STAT_LABELS[s]}</TableHead>)}
+                      <TableHead className="text-xs">Strength</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.entries(RACE_STATS).map(([race, stats]) => (
-                      <TableRow key={race}>
-                        <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
-                        {STAT_KEYS.map(s => (
-                          <TableCell key={s} className={`text-xs ${stats[s] > 0 ? 'text-green-400' : stats[s] < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
-                            {stats[s] > 0 ? `+${stats[s]}` : stats[s] || '—'}
+                    {Object.entries(RACE_STATS).map(([race, stats]) => {
+                      const totalBonus = Object.values(stats).reduce((a, b) => a + (b as number), 0);
+                      const topStat = Object.entries(stats).sort(([,a], [,b]) => (b as number) - (a as number))[0];
+                      return (
+                        <TableRow key={race}>
+                          <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
+                          {STAT_KEYS.map(s => (
+                            <TableCell key={s} className={`text-xs ${stats[s] > 0 ? 'text-green-400' : stats[s] < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                              {stats[s] > 0 ? `+${stats[s]}` : stats[s] || '—'}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-xs text-muted-foreground">
+                            {STAT_LABELS[topStat[0]]} focused (+{totalBonus} total)
                           </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
