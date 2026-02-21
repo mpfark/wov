@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
   STAT_LABELS, RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC,
-  calculateStats, calculateHP, calculateAC,
+  calculateStats, calculateHP, calculateAC, getMaxCp,
 } from '@/lib/game-data';
 
 interface Props {
@@ -32,10 +32,12 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
     if (!stats) return;
     setLoading(true);
     try {
+      const maxCp = getMaxCp(1, stats.int, stats.wis, stats.cha);
       const char = await onCreateCharacter({
         name, race, class: charClass,
         ...stats, hp, max_hp: hp, ac,
         current_node_id: startingNodeId,
+        cp: maxCp, max_cp: maxCp,
       });
       // Grant starting gear if configured
       if (char?.id) {

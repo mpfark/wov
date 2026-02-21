@@ -111,8 +111,14 @@ export function getBaseRegen(con: number): number {
 }
 
 // CP (Concentration Points) system
-export function getMaxCp(level: number): number {
-  return 100 + (level - 1) * 3;
+export function getMaxCp(level: number, int: number = 10, wis: number = 10, cha: number = 10): number {
+  const mentalMod = Math.max(
+    Math.floor((int - 10) / 2),
+    Math.floor((wis - 10) / 2),
+    Math.floor((cha - 10) / 2),
+    0
+  );
+  return 60 + (level - 1) * 3 + mentalMod * 5;
 }
 
 // Primary stat mapping per class for CP regen bonus

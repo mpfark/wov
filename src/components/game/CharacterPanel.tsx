@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
@@ -394,6 +394,17 @@ export default function CharacterPanel({
               </TooltipTrigger>
               <TooltipContent className="bg-popover border-border z-50 space-y-1">
                 <p className="font-display text-sm">Concentration Points</p>
+                {(() => {
+                  const mentalMod = Math.max(
+                    Math.floor((character.int - 10) / 2),
+                    Math.floor((character.wis - 10) / 2),
+                    Math.floor((character.cha - 10) / 2),
+                    0
+                  );
+                  const levelPart = (character.level - 1) * 3;
+                  const mentalPart = mentalMod * 5;
+                  return <p className="text-xs text-muted-foreground">Max: <span className="text-primary">60</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> mental</p>;
+                })()}
                 <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">6s</span></p>
                 {(hasInspire || hasFood || isAtInn) && (
                   <p className="text-xs text-muted-foreground">Effective: <span className="text-primary">{effectiveRegen.toFixed(1)} CP</span> / <span className="text-foreground">6s</span></p>
