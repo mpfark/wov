@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
-import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier, getXpForLevel } from '@/lib/game-data';
+import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate } from '@/lib/game-data';
 
 interface AdminInventoryItem {
   id: string;
@@ -49,6 +49,8 @@ interface AdminCharacter {
   cha: number;
   ac: number;
   xp: number;
+  cp: number;
+  max_cp: number;
   unspent_stat_points: number;
   inventory: AdminInventoryItem[];
 }
@@ -231,6 +233,51 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
         </div>
       </div>
 
+      {/* CP Bar */}
+      {(() => {
+        const cp = c.cp ?? 60;
+        const maxCp = c.max_cp ?? 60;
+        const cpPercent = Math.round((cp / maxCp) * 100);
+        const primaryStat = CLASS_PRIMARY_STAT[c.class] || 'con';
+        const primaryVal = (c as any)[primaryStat] ?? 10;
+        const cpRegen = getCpRegenRate(primaryVal);
+        const mentalMod = Math.max(
+          Math.floor((c.int - 10) / 2),
+          Math.floor((c.wis - 10) / 2),
+          Math.floor((c.cha - 10) / 2),
+          0
+        );
+        const levelPart = (c.level - 1) * 3;
+        const mentalPart = mentalMod * 5;
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="cursor-help">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">CP</span>
+                  <span className="text-[hsl(var(--primary))]">{cp}/{maxCp}</span>
+                </div>
+                <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
+                  <div
+                    className="h-full transition-all duration-500 rounded-full"
+                    style={{
+                      width: `${cpPercent}%`,
+                      background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
+                    }}
+                  />
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-popover border-border z-50 space-y-1">
+              <p className="font-display text-sm">Concentration Points</p>
+              <p className="text-xs text-muted-foreground">Max: <span className="text-primary">60</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> mental</p>
+              <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">6s</span></p>
+              <p className="text-xs text-muted-foreground">Primary stat: {STAT_LABELS[primaryStat]}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      })()}
+
       {/* XP Bar */}
       <div>
         <div className="flex justify-between text-xs mb-1">
@@ -245,21 +292,29 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
       {/* Stats */}
       <div>
         <h3 className="font-display text-xs text-muted-foreground mb-1.5">Attributes</h3>
-        <div className="flex items-center justify-between text-[9px] text-muted-foreground/70 px-1 mb-0.5">
-          <span className="w-20">Stat</span>
+        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5 gap-x-2">
+          <span>Stat</span>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="flex-1 text-center cursor-help underline decoration-dotted">Base <span className="text-chart-2">+Gear</span></span>
+              <span className="cursor-help underline decoration-dotted text-right">Base</span>
             </TooltipTrigger>
             <TooltipContent className="bg-popover border-border z-50">
-              <p className="font-display text-sm">Base + Gear</p>
-              <p className="text-xs text-muted-foreground"><strong>Base</strong> — Natural stat from race, class, and level-up points.</p>
-              <p className="text-xs text-muted-foreground"><strong>Gear</strong> — Bonus from equipped items (shown in green).</p>
+              <p className="font-display text-sm">Base</p>
+              <p className="text-xs text-muted-foreground">Natural stat from race, class, and level-up points.</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="w-8 text-right cursor-help underline decoration-dotted">Mod</span>
+              <span className="cursor-help underline decoration-dotted text-chart-2 text-right">Gear</span>
+            </TooltipTrigger>
+            <TooltipContent className="bg-popover border-border z-50">
+              <p className="font-display text-sm">Gear</p>
+              <p className="text-xs text-muted-foreground">Bonus from equipped items.</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help underline decoration-dotted text-right w-8">Mod</span>
             </TooltipTrigger>
             <TooltipContent className="bg-popover border-border z-50">
               <p className="font-display text-sm">Modifier</p>
@@ -276,12 +331,10 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
             return (
               <Tooltip key={key}>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help">
-                    <span className="font-display text-foreground w-20">{STAT_FULL_NAMES[key]}</span>
-                    <span className="text-muted-foreground flex-1 text-center tabular-nums">
-                      <span className="text-foreground">{base}</span>
-                      {bonus > 0 && <span className="text-chart-2 ml-1">+{bonus}</span>}
-                    </span>
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help gap-x-2">
+                    <span className="font-display text-foreground">{STAT_FULL_NAMES[key]}</span>
+                    <span className="tabular-nums text-foreground text-right">{base}</span>
+                    <span className="tabular-nums text-chart-2 text-right w-6">{bonus > 0 ? `+${bonus}` : ''}</span>
                     <span className="text-primary text-[10px] w-8 text-right">
                       ({mod >= 0 ? `+${mod}` : mod})
                     </span>
