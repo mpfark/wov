@@ -5,6 +5,7 @@ import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
 import BlacksmithPanel from '@/components/game/BlacksmithPanel';
+import TeleportDialog from '@/components/game/TeleportDialog';
 import { useGroundLoot } from '@/hooks/useGroundLoot';
 
 import { Character } from '@/hooks/useCharacter';
@@ -130,6 +131,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  const [teleportOpen, setTeleportOpen] = useState(false);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(character.current_node_id, character.id);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [foodBuff, setFoodBuff] = useState<{ flatRegen: number; expiresAt: number }>({ flatRegen: 0, expiresAt: 0 });
@@ -771,6 +773,26 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog('Failed to move.');
     }
   }, [character, getNode, getRegion, updateCharacter, addLog, party, isLeader, partyMembers, creatures, effectiveAC, degradeEquipment, fetchParty, isDead, inCombat, stopCombatFn]);
+
+  const handleTeleport = useCallback(async (nodeId: string, cost: number) => {
+    if (isDead || inCombat) return;
+    if (character.gold < cost) { addLog('💰 Not enough gold to teleport.'); return; }
+    const targetNode = getNode(nodeId);
+    if (!targetNode) return;
+    await updateCharacter({ current_node_id: nodeId, gold: character.gold - cost });
+    broadcastMove(character.id, character.name, nodeId);
+    addLog(`🌀 You teleport to ${targetNode.name} for ${cost} gold.`);
+    logActivity(character.user_id, character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cost });
+    setTeleportOpen(false);
+    // Move followers if party leader
+    if (party && isLeader) {
+      const followers = partyMembers.filter(m => m.is_following && m.character_id !== character.id);
+      for (const f of followers) {
+        await supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id);
+      }
+      if (followers.length > 0) { addLog('Your party follows you.'); fetchParty(); }
+    }
+  }, [character, getNode, updateCharacter, addLog, broadcastMove, party, isLeader, partyMembers, fetchParty, isDead, inCombat]);
 
   // Keyboard movement bindings — declared after handleSearch/handleUseAbility/handleUseConsumable (see below)
 
@@ -1476,6 +1498,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onTalkToNPC={npc => setTalkingToNPC(npc)}
               onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
               onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
+              onOpenTeleport={currentNode.is_teleport ? () => setTeleportOpen(true) : undefined}
               inCombat={inCombat}
               activeCombatCreatureId={activeCombatCreatureId}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
@@ -1576,6 +1599,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
+        />
+      )}
+
+      {/* Teleport Dialog */}
+      {currentNode.is_teleport && (
+        <TeleportDialog
+          open={teleportOpen}
+          onClose={() => setTeleportOpen(false)}
+          currentNode={currentNode}
+          currentRegion={currentRegion}
+          regions={regions}
+          nodes={nodes}
+          playerGold={character.gold}
+          onTeleport={handleTeleport}
         />
       )}
 

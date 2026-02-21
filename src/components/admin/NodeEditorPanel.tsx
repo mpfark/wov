@@ -249,7 +249,7 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false,
+    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
@@ -295,7 +295,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, connections: '[]', searchable_items: [] });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, connections: '[]', searchable_items: [] });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -312,6 +312,7 @@ export default function NodeEditorPanel({
         name: data.name, description: data.description, is_vendor: data.is_vendor,
         is_inn: data.is_inn ?? false,
         is_blacksmith: (data as any).is_blacksmith ?? false,
+        is_teleport: (data as any).is_teleport ?? false,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
       });
@@ -432,7 +433,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, connections, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, connections, searchable_items, region_id: selectedRegionId,
       } as any).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
@@ -445,7 +446,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, connections, searchable_items,
       }).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
 
@@ -559,6 +560,11 @@ export default function NodeEditorPanel({
                   <input type="checkbox" checked={form.is_blacksmith}
                     onChange={e => setForm(f => ({ ...f, is_blacksmith: e.target.checked }))} />
                   🔨 Is Blacksmith (repair items)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_teleport}
+                    onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
+                  🌀 Is Teleport Point (fast travel destination)
                 </label>
               </div>
 

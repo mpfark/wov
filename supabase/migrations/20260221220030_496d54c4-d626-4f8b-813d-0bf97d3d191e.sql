@@ -1,0 +1,1 @@
+ALTER TABLE public.nodes ADD COLUMN is_teleport boolean NOT NULL DEFAULT false;

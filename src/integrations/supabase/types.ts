@@ -461,6 +461,7 @@ export type Database = {
           id: string
           is_blacksmith: boolean
           is_inn: boolean
+          is_teleport: boolean
           is_vendor: boolean
           name: string
           region_id: string
@@ -473,6 +474,7 @@ export type Database = {
           id?: string
           is_blacksmith?: boolean
           is_inn?: boolean
+          is_teleport?: boolean
           is_vendor?: boolean
           name: string
           region_id: string
@@ -485,6 +487,7 @@ export type Database = {
           id?: string
           is_blacksmith?: boolean
           is_inn?: boolean
+          is_teleport?: boolean
           is_vendor?: boolean
           name?: string
           region_id?: string

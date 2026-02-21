@@ -29,6 +29,7 @@ interface Props {
   onTalkToNPC?: (npc: NPC) => void;
   onOpenVendor?: () => void;
   onOpenBlacksmith?: () => void;
+  onOpenTeleport?: () => void;
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
   creatureHpOverrides?: Record<string, number>;
@@ -46,7 +47,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith,
+  node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith, onOpenTeleport,
   inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbilities = [], onUseAbility, healTargets = [],
   beltedPotions = [], onUseBeltPotion, actionBindings,
   poisonStacks = {},
@@ -84,6 +85,9 @@ export default function NodeView({
             )}
             {node.is_blacksmith && (
               <p className="text-xs text-dwarvish mt-0.5">🔨 Blacksmith — Repair your equipment here</p>
+            )}
+            {node.is_teleport && (
+              <p className="text-xs text-primary mt-0.5">🌀 Teleport Point — Fast travel available</p>
             )}
           </div>
 
@@ -262,6 +266,11 @@ export default function NodeView({
             {onOpenBlacksmith && (
               <Button variant="outline" size="sm" onClick={onOpenBlacksmith} className="font-display text-[10px] h-6 px-2 text-dwarvish">
                 <Hammer className="h-3 w-3 mr-0.5" /> Smithy
+              </Button>
+            )}
+            {onOpenTeleport && (
+              <Button variant="outline" size="sm" onClick={onOpenTeleport} className="font-display text-[10px] h-6 px-2 text-primary">
+                🌀 Teleport
               </Button>
             )}
           </div>
