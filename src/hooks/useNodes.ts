@@ -11,6 +11,7 @@ export interface GameNode {
   is_vendor: boolean;
   is_inn: boolean;
   is_blacksmith: boolean;
+  is_teleport: boolean;
 }
 
 export interface Region {
