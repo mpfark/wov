@@ -221,7 +221,14 @@ Deno.serve(async (req) => {
       const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
       updates.max_hp = newMaxHp;
       updates.hp = newMaxHp;
-      updates.max_cp = 100 + (new_level - 1) * 3;
+      // Calculate max_cp with mental stat scaling
+      const mentalMod = Math.max(
+        Math.floor((updates.int - 10) / 2),
+        Math.floor((updates.wis - 10) / 2),
+        Math.floor((updates.cha - 10) / 2),
+        0
+      );
+      updates.max_cp = 60 + (new_level - 1) * 3 + mentalMod * 5;
       updates.cp = updates.max_cp;
 
       // Reset XP when setting level directly
@@ -351,9 +358,20 @@ Deno.serve(async (req) => {
         xpForNext = newLevel * 100;
       }
 
+      // Calculate max_cp with mental stat scaling using final stats after level-ups
+      const grantFinalInt = (char as any).int + (statIncreases.int || 0);
+      const grantFinalWis = (char as any).wis + (statIncreases.wis || 0);
+      const grantFinalCha = (char as any).cha + (statIncreases.cha || 0);
+      const grantMentalMod = Math.max(
+        Math.floor((grantFinalInt - 10) / 2),
+        Math.floor((grantFinalWis - 10) / 2),
+        Math.floor((grantFinalCha - 10) / 2),
+        0
+      );
+      const grantMaxCp = 60 + (newLevel - 1) * 3 + grantMentalMod * 5;
       const updates: Record<string, any> = {
         xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
-        max_cp: 100 + (newLevel - 1) * 3, cp: 100 + (newLevel - 1) * 3,
+        max_cp: grantMaxCp, cp: grantMaxCp,
       };
 
       // Apply accumulated stat increases
@@ -441,7 +459,14 @@ Deno.serve(async (req) => {
       // Total unspent = current unspent + spent points (refunded)
       const newUnspent = char.unspent_stat_points + Math.max(totalSpentPoints, 0);
 
-      const newMaxCp = 100 + (char.level - 1) * 3;
+      // Calculate max_cp with mental stat scaling
+      const resetMentalMod = Math.max(
+        Math.floor(((baseStats.int || 10) - 10) / 2),
+        Math.floor(((baseStats.wis || 10) - 10) / 2),
+        Math.floor(((baseStats.cha || 10) - 10) / 2),
+        0
+      );
+      const newMaxCp = 60 + (char.level - 1) * 3 + resetMentalMod * 5;
       const { error } = await adminClient.from("characters").update({
         ...baseStats,
         unspent_stat_points: newUnspent,

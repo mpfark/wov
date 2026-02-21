@@ -21,7 +21,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -1115,9 +1115,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           const xpForNext = getXpForLevel(character.level);
           if (newXp >= xpForNext) {
             const newLevel = character.level + 1;
+            const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
+            const oldMaxCp = character.max_cp ?? 60;
             const levelUpUpdates: Partial<Character> = {
               xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5,
               hp: character.max_hp + 5, gold: newGold,
+              max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
             };
             addLog(`🎉 Level Up! You are now level ${newLevel}!`);
             await updateCharacter(levelUpUpdates);
@@ -1353,8 +1356,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           const xpForNext = getXpForLevel(character.level);
           if (newXp >= xpForNext) {
             const newLevel = character.level + 1;
+            const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
+            const oldMaxCp = character.max_cp ?? 60;
             addLog(`🎉 Level Up! You are now level ${newLevel}!`);
-            await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold });
+            await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold, max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp) });
           } else {
             await updateCharacter({ xp: newXp, gold: newGold });
           }

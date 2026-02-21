@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
-import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -410,6 +410,8 @@ export function useCombat({
               gold: newGold,
             };
 
+            // Recalculate max_cp with mental stat scaling after applying stat bonuses
+
             const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
             // Only increase all stats by +1 every 5th level
@@ -436,6 +438,15 @@ export function useCombat({
                 _addLog(`📈 ${CLASS_LABELS[char.class] || char.class} bonus: ${bonusNames.join(', ')}!`);
               }
             }
+
+            // Recalculate max_cp with mental stat scaling
+            const finalInt = (levelUpUpdates as any).int ?? char.int;
+            const finalWis = (levelUpUpdates as any).wis ?? char.wis;
+            const finalCha = (levelUpUpdates as any).cha ?? char.cha;
+            const newMaxCp = getMaxCp(newLevel, finalInt, finalWis, finalCha);
+            const oldMaxCp = char.max_cp ?? 60;
+            levelUpUpdates.max_cp = newMaxCp;
+            levelUpUpdates.cp = Math.min((char.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp);
 
             _addLog(`🎉 Level Up! ${who} ${_party ? 'is' : 'are'} now level ${newLevel}!`);
             logActivity(char.user_id, char.id, 'level_up', `Reached level ${newLevel}`, { level: newLevel });

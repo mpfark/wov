@@ -229,12 +229,50 @@ export default function GameManual() {
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p>CP is the resource that powers class abilities. It replaces cooldown timers — abilities cost CP to use and are disabled when you don't have enough.</p>
-                <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">100 + (level − 1) × 3</code></p>
+                <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">60 + (level − 1) × 3 + mentalMod × 5</code></p>
+                <p className="ml-4 text-[10px]"><code>mentalMod = max(modifier(INT), modifier(WIS), modifier(CHA), 0)</code> where modifier = floor((stat − 10) / 2)</p>
                 <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 6 seconds</code> + bonus from primary stat</p>
                 <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/6s for every 2 points of primary stat modifier</p>
                 <p><strong className="text-foreground">Inn Rest</strong> = Fully restores CP (alongside HP)</p>
                 <p><strong className="text-foreground">🎶 Inspire</strong> = Doubles CP regen rate (alongside HP regen) for 90 seconds</p>
                 <p><strong className="text-foreground">🍞 Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 5 minutes</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Mental Stat Scaling — Class Comparison</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Class</TableHead>
+                      <TableHead className="text-xs">Best Mental (Lv1)</TableHead>
+                      <TableHead className="text-xs">CP Lv1</TableHead>
+                      <TableHead className="text-xs">~Best Mental (Lv10)</TableHead>
+                      <TableHead className="text-xs">CP Lv10</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[
+                      { cls: 'Warrior', lv1: 8, lv10: 10 },
+                      { cls: 'Ranger', lv1: 10, lv10: 13 },
+                      { cls: 'Rogue', lv1: 10, lv10: 12 },
+                      { cls: 'Wizard', lv1: 11, lv10: 15 },
+                      { cls: 'Healer', lv1: 11, lv10: 15 },
+                      { cls: 'Bard', lv1: 11, lv10: 15 },
+                    ].map(row => {
+                      const mod1 = Math.max(Math.floor((row.lv1 - 10) / 2), 0);
+                      const mod10 = Math.max(Math.floor((row.lv10 - 10) / 2), 0);
+                      return (
+                        <TableRow key={row.cls}>
+                          <TableCell className="text-xs font-display">{row.cls}</TableCell>
+                          <TableCell className="text-xs">{row.lv1} (mod {mod1})</TableCell>
+                          <TableCell className="text-xs text-primary">{60 + mod1 * 5}</TableCell>
+                          <TableCell className="text-xs">{row.lv10} (mod {mod10})</TableCell>
+                          <TableCell className="text-xs text-primary">{60 + 9 * 3 + mod10 * 5}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
 
               <div>
@@ -267,11 +305,11 @@ export default function GameManual() {
               </div>
 
               <div>
-                <p className="text-xs font-display text-primary mb-1">Max CP by Level</p>
+                <p className="text-xs font-display text-primary mb-1">Max CP by Level (base, no mental bonus)</p>
                 <div className="grid grid-cols-4 gap-1 text-xs text-muted-foreground">
                   {[1, 5, 10, 15, 20, 25, 30, 40].map(lv => (
                     <div key={lv}>
-                      Lv {lv}: <span className="text-primary">{getMaxCp(lv)} CP</span>
+                      Lv {lv}: <span className="text-primary">{getMaxCp(lv, 10, 10, 10)} CP</span>
                     </div>
                   ))}
                 </div>
@@ -305,11 +343,11 @@ export default function GameManual() {
 
               <Card className="bg-card/30">
                 <CardContent className="p-3">
-                  <p className="text-xs font-display text-primary mb-1">Tactical Example (Level 20, 157 max CP)</p>
+                  <p className="text-xs font-display text-primary mb-1">Tactical Example (Level 20 Wizard, ~142 max CP)</p>
                   <div className="text-xs text-muted-foreground space-y-0.5">
-                    <p>• T4 ability (60 CP) + T2 ability (25 CP) = 85 CP spent → 72 CP remaining</p>
-                    <p>• Need ~72 seconds to regenerate back to full (at base rate)</p>
-                    <p>• Or rest at an Inn for instant full restore</p>
+                    <p>• T4 ability (60 CP) + T2 ability (25 CP) = 85 CP spent → 57 CP remaining</p>
+                    <p>• A Warrior at level 20 would have ~122 max CP — 20 less than the Wizard</p>
+                    <p>• Mental stat scaling rewards casters with a bigger CP pool to compensate for lower HP/AC</p>
                     <p>• Bard's "Encore" refunds the CP cost of the last used ability</p>
                   </div>
                 </CardContent>
