@@ -103,13 +103,14 @@ GENERATION RULES:
   - For consumables: budget is 3x the normal formula
   - Rarity multipliers: common=1.0, uncommon=1.5, rare=2.0
   - hands_multiplier: 1.0 for 1h, 1.5 for 2h (hands=2, main_hand only)
-- ALWAYS include at least one stat bonus per item. Never leave stats empty. Distribute the budget.
+- CRITICAL: Distribute the FULL stat budget across MULTIPLE stats (at least 2-3 different stats per item). Never put all points into a single stat. Spread the budget for interesting, varied items.
 - Valid stat keys for equipment: str, dex, con, int, wis, cha, ac, hp, hp_regen
 - Valid stat keys for consumables: hp, hp_regen ONLY (no other stats allowed, no caps)
+- For equipment: always use at least 2 different stat keys, preferably 3+. Single-stat items are FORBIDDEN.
 - Stat value caps (equipment only): str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
 - drop_chance: 0.1–0.5 (rare items lower, consumables 0.3–0.5)
 - max_durability: always 100 (fixed for all items)
-- Gold value: floor(level × 2.5 × rarity_multiplier²)
+- Gold value: DO NOT set this, it will be auto-calculated.
 - Do NOT generate items with names from this list: ${existingItemNames || "none"}
 - Generate items with creative, lore-fitting names and evocative 1-sentence descriptions.
 - Ensure variety within the batch: don't repeat the same slot/stat combo.
@@ -162,7 +163,7 @@ Call the generate_items tool with the structured output.`;
                           type: "object",
                           description: "Must not be empty. Stat bonuses using valid keys: str, dex, con, int, wis, cha, ac, hp, hp_regen",
                         },
-                        value: { type: "integer" },
+                        value: { type: "integer", description: "Set to 0, will be auto-calculated" },
                         max_durability: { type: "integer" },
                         drop_chance: { type: "number", description: "0.1 to 0.5" },
                       },
@@ -201,13 +202,19 @@ Call the generate_items tool with the structured output.`;
       throw new Error("No tool call in AI response");
     }
 
+    const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5, rare: 2.0, unique: 3.0 };
+
     const parsed = JSON.parse(toolCall.function.arguments);
-    const items = (parsed.items || []).map((item: any) => ({
-      ...item,
-      // Ensure stats is never empty — fallback if AI fails
-      stats: (item.stats && Object.keys(item.stats).length > 0) ? item.stats : { str: 1 },
-      slot: item.item_type === "consumable" ? null : (item.slot || null),
-    }));
+    const items = (parsed.items || []).map((item: any) => {
+      const mult = RARITY_MULT[item.rarity] || 1;
+      const autoGold = Math.round((item.level || 1) * 2.5 * mult * mult);
+      return {
+        ...item,
+        stats: (item.stats && Object.keys(item.stats).length > 0) ? item.stats : { str: 1 },
+        slot: item.item_type === "consumable" ? null : (item.slot || null),
+        value: autoGold,
+      };
+    });
 
     return new Response(JSON.stringify({ items }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
