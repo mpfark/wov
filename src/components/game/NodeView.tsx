@@ -270,7 +270,7 @@ export default function NodeView({
             )}
             {onOpenTeleport && (
               <Button variant="outline" size="sm" onClick={onOpenTeleport} className="font-display text-[10px] h-6 px-2 text-primary">
-                🌀 Teleport
+                🌀 {character.level >= 25 && !node.is_teleport ? 'Recall' : 'Teleport'}
               </Button>
             )}
           </div>
