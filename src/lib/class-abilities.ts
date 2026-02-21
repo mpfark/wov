@@ -22,7 +22,7 @@ export interface ClassAbility {
   emoji: string;
   description: string;
   cpCost: number;
-  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'cp_refund' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff' | 'focus_strike';
+  type: 'heal' | 'regen_buff' | 'self_heal' | 'crit_buff' | 'stealth_buff' | 'damage_buff' | 'hp_transfer' | 'multi_attack' | 'root_debuff' | 'battle_cry' | 'dot_debuff' | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume' | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff' | 'focus_strike' | 'burst_damage';
   tier: number;
   levelRequired: number;
 }
@@ -55,7 +55,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
     { label: 'Inspire', emoji: '🎶', description: 'A song that doubles HP and CP regeneration for 90 seconds', cpCost: 15, type: 'regen_buff', tier: 1, levelRequired: 5 },
     { label: 'Dissonance', emoji: '🎵💢', description: "A discordant note that reduces your target's damage by 30%", cpCost: 25, type: 'root_debuff', tier: 2, levelRequired: 10 },
     { label: 'Crescendo', emoji: '🎶✨', description: 'A rising melody that heals all nearby allies over time, scaling with CHA', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
-    { label: 'Encore', emoji: '🔄🎭', description: 'Refund the CP cost of your most recently used ability', cpCost: 60, type: 'cp_refund', tier: 4, levelRequired: 20 },
+    { label: 'Grand Finale', emoji: '🎵💥', description: 'Unleash a devastating crescendo of sound, dealing massive CHA-scaling damage to your target', cpCost: 60, type: 'burst_damage', tier: 4, levelRequired: 20 },
   ],
   rogue: [
     { label: 'Shadowstep', emoji: '🌑', description: 'Vanish into shadow — avoid attacks when fleeing and deal bonus damage on your next strike', cpCost: 15, type: 'stealth_buff', tier: 1, levelRequired: 5 },
