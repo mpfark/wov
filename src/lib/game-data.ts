@@ -126,10 +126,12 @@ export function getCpRegenRate(primaryStatValue: number): number {
   return 1 + Math.floor(mod / 2) * 0.5;
 }
 
-export function getItemStatBudget(level: number, rarity: string, hands: number = 1): number {
+export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   const handsMult = hands === 2 ? 1.5 : 1;
-  return Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
+  const base = Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
+  // Consumables get 3x budget since they're single-use
+  return itemType === 'consumable' ? base * 3 : base;
 }
 
 export function calculateItemStatCost(stats: Record<string, number>): number {
@@ -138,7 +140,9 @@ export function calculateItemStatCost(stats: Record<string, number>): number {
   );
 }
 
-export function getItemStatCap(statKey: string, level: number = 1): number {
+export function getItemStatCap(statKey: string, level: number = 1, itemType: string = 'equipment'): number {
+  // Consumables have no stat caps (single-use)
+  if (itemType === 'consumable') return 9999;
   if (statKey === 'ac' || statKey === 'hp_regen') {
     return 2 + Math.floor(level / 10);
   }
@@ -148,6 +152,9 @@ export function getItemStatCap(statKey: string, level: number = 1): number {
   // Primary stats: str, dex, con, int, wis, cha
   return 4 + Math.floor(level / 4);
 }
+
+// Stats allowed per item type
+export const CONSUMABLE_ALLOWED_STATS = ['hp', 'hp_regen'];
 
 export function suggestItemGoldValue(level: number, rarity: string): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;

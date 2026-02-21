@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, X, Package, MapPin, Skull, ShoppingBag, Search } from 'lucide-react';
-import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue } from '@/lib/game-data';
+import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS } from '@/lib/game-data';
 
 interface Item {
   id: string;
@@ -48,8 +48,8 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   origin_type: null, origin_id: null,
 });
 
-function BudgetIndicator({ level, rarity, stats, hands }: { level: number; rarity: string; stats: Record<string, number>; hands?: number }) {
-  const budget = getItemStatBudget(level, rarity, hands);
+function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
+  const budget = getItemStatBudget(level, rarity, hands, itemType);
   const used = calculateItemStatCost(stats);
   const pct = budget > 0 ? Math.min((used / budget) * 100, 100) : 0;
   const over = used > budget;
@@ -203,7 +203,7 @@ export default function ItemManager() {
     if (!form.name.trim()) return toast.error('Name is required');
     if (form.name.length > 100) return toast.error('Name must be under 100 characters');
 
-    const budget = getItemStatBudget(form.level, form.rarity, form.hands ?? 1);
+    const budget = getItemStatBudget(form.level, form.rarity, form.hands ?? 1, form.item_type);
     const cost = calculateItemStatCost(form.stats);
     if (cost > budget) return toast.error(`Stat cost (${cost}) exceeds budget (${budget})`);
 
@@ -255,7 +255,7 @@ export default function ItemManager() {
   };
 
   const setStat = (key: string, val: number) => {
-    const cap = getItemStatCap(key, form.level);
+    const cap = getItemStatCap(key, form.level, form.item_type);
     const clamped = Math.max(0, Math.min(val, cap));
     setForm(f => {
       const stats = { ...f.stats };
@@ -433,7 +433,7 @@ export default function ItemManager() {
                 </div>
               </div>
 
-              <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} hands={form.hands ?? 1} />
+              <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} hands={form.hands ?? 1} itemType={form.item_type} />
 
               {(form.item_type === 'equipment' || form.item_type === 'shield') && (
                 <div>
@@ -493,12 +493,14 @@ export default function ItemManager() {
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground">Stat Bonuses (capped per stat)</label>
+                <label className="text-[10px] text-muted-foreground">
+                  Stat Bonuses {form.item_type === 'consumable' ? '(HP & Regen only, no caps)' : '(capped per stat)'}
+                </label>
                 <div className="grid grid-cols-4 gap-1.5 mt-1">
-                  {STAT_KEYS.map(key => (
+                  {STAT_KEYS.filter(key => form.item_type !== 'consumable' || CONSUMABLE_ALLOWED_STATS.includes(key)).map(key => (
                     <div key={key} className="flex items-center gap-1">
                       <span className={`text-[10px] uppercase w-8 ${key === 'hp_regen' ? 'text-elvish' : 'text-muted-foreground'}`}>{STAT_KEY_LABELS[key] || key}</span>
-                      <Input type="number" min={0} max={getItemStatCap(key, form.level)}
+                      <Input type="number" min={0} max={getItemStatCap(key, form.level, form.item_type)}
                         value={form.stats[key] || 0}
                         onChange={e => setStat(key, Math.max(0, +e.target.value))}
                         className="h-7 text-xs text-center" />

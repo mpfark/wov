@@ -87,7 +87,7 @@ serve(async (req) => {
     let typeInstruction = "";
     if (item_type === "random") typeInstruction = "Mix equipment and consumables, leaning toward equipment.";
     else if (item_type === "equipment") typeInstruction = "All items must be equipment (no consumables).";
-    else typeInstruction = "All items must be consumables (slot = null, stats provide hp or hp_regen).";
+    else typeInstruction = "All items must be consumables (slot = null, stats can ONLY use hp and hp_regen, budget is 3x normal, no stat caps).";
 
     const systemPrompt = `You are an item generator for "Wayfarers of Eldara", a text-based high-fantasy RPG.
 Generate a batch of ${count} distinct, lore-consistent items for a level ${level_min}–${level_max} world.
@@ -100,11 +100,13 @@ GENERATION RULES:
 - Stats focus: ${statsFocusInstruction}
 - Level: pick a level between ${level_min} and ${level_max} for each item.
 - Stat budget formula: floor(1 + (level - 1) * 0.3 * rarity_multiplier * hands_multiplier)
+  - For consumables: budget is 3x the normal formula
   - Rarity multipliers: common=1.0, uncommon=1.5, rare=2.0
   - hands_multiplier: 1.0 for 1h, 1.5 for 2h (hands=2, main_hand only)
 - ALWAYS include at least one stat bonus per item. Never leave stats empty. Distribute the budget.
-- Valid stat keys: str, dex, con, int, wis, cha, ac, hp, hp_regen
-- Stat value caps: str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
+- Valid stat keys for equipment: str, dex, con, int, wis, cha, ac, hp, hp_regen
+- Valid stat keys for consumables: hp, hp_regen ONLY (no other stats allowed, no caps)
+- Stat value caps (equipment only): str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
 - drop_chance: 0.1–0.5 (rare items lower, consumables 0.3–0.5)
 - max_durability: always 100 (fixed for all items)
 - Gold value: floor(level × 2.5 × rarity_multiplier²)
