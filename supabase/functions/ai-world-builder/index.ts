@@ -41,19 +41,34 @@ serve(async (req) => {
     }
 
     // Fetch current world state for context
-    const [regRes, nodeRes, creatureRes, npcRes, itemRes] = await Promise.all([
+    const [regRes, nodeRes, creatureRes, npcRes, ltRes, lteRes] = await Promise.all([
       supabase.from("regions").select("id, name, description, min_level, max_level").order("min_level"),
       supabase.from("nodes").select("id, name, region_id, is_inn, is_vendor, is_blacksmith, connections"),
       supabase.from("creatures").select("name, node_id, rarity, level"),
       supabase.from("npcs").select("name, node_id"),
-      supabase.from("items").select("name, item_type, rarity, level").limit(200),
+      supabase.from("loot_tables").select("id, name"),
+      supabase.from("loot_table_entries").select("loot_table_id, item_id, weight, items:item_id(name, level, rarity)"),
     ]);
 
     const regions = regRes.data || [];
     const nodes = nodeRes.data || [];
     const creatures = creatureRes.data || [];
     const npcs = npcRes.data || [];
-    const existingItems = itemRes.data || [];
+    const lootTables = ltRes.data || [];
+    const lootTableEntries = lteRes.data || [];
+
+    // Build loot table summary for AI context
+    const lootTableSummary = lootTables.map((lt: any) => {
+      const entries = lootTableEntries.filter((e: any) => e.loot_table_id === lt.id);
+      if (entries.length === 0) return null;
+      const levels = entries.map((e: any) => e.items?.level).filter(Boolean);
+      const rarities = entries.map((e: any) => e.items?.rarity).filter(Boolean);
+      const minLevel = levels.length > 0 ? Math.min(...levels) : 0;
+      const maxLevel = levels.length > 0 ? Math.max(...levels) : 0;
+      const uniqueRarities = [...new Set(rarities)];
+      const itemNames = entries.map((e: any) => e.items?.name).filter(Boolean).slice(0, 5).join(", ");
+      return `  - "${lt.name}" [id: ${lt.id}] (items lvl ${minLevel}-${maxLevel}, rarities: ${uniqueRarities.join("/")}, ${entries.length} items: ${itemNames}${entries.length > 5 ? "..." : ""})`;
+    }).filter(Boolean).join("\n");
 
     const worldSummary = regions.map((r: any) => {
       const regionNodes = nodes.filter((n: any) => n.region_id === r.id);
@@ -63,8 +78,6 @@ serve(async (req) => {
       }).join(", ");
       return `- ${r.name} (Lvl ${r.min_level}-${r.max_level}): ${nodeNames || "no nodes yet"}`;
     }).join("\n");
-
-    const existingItemNames = existingItems.map((i: any) => i.name).join(", ");
 
     // Build expand-specific or populate-specific context
     let expandContext = "";
@@ -88,8 +101,7 @@ IMPORTANT RULES FOR POPULATING:
 - Creature levels must match each node's region level range
 - Do NOT duplicate existing creature names on the same node
 - The "region" field should use name "Populate" with description "Populating existing nodes" min_level 1 max_level 1 (placeholder)
-- Mark each creature as is_humanoid: true or false (humanoids are bandits, soldiers, cultists, mages, etc. — anything with a roughly human form)
-- For humanoid creatures, generate 1-2 items each in the "items" array. Non-humanoids should NOT have items.`;
+- Mark each creature as is_humanoid: true or false (humanoids are bandits, soldiers, cultists, mages, etc. — anything with a roughly human form)`;
     } else if (expand_region) {
       const targetRegion = regions.find((r: any) => r.id === expand_region.id);
       if (targetRegion) {
@@ -119,8 +131,7 @@ IMPORTANT RULES FOR EXPANSION:
 - New nodes can also connect to other new nodes using temp_ids as usual
 - Creature levels must stay within ${targetRegion.min_level}-${targetRegion.max_level}
 - Do NOT duplicate existing node names or NPC names
-- Mark each creature as is_humanoid: true or false
-- For humanoid creatures, generate 1-2 items each in the "items" array. Non-humanoids should NOT have items.`;
+- Mark each creature as is_humanoid: true or false`;
       }
     }
 
@@ -130,18 +141,18 @@ CURRENT WORLD STATE:
 ${worldSummary || "No regions exist yet."}
 ${expandContext}
 
-EXISTING ITEMS (avoid duplicating these names): ${existingItemNames || "none"}
+AVAILABLE LOOT TABLES (assign these to humanoid creatures based on matching level range and rarity):
+${lootTableSummary || "No loot tables exist yet."}
 
 RULES:
 - Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
-- ALL names (region, node, creature, NPC, item) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead.
+- ALL names (region, node, creature, NPC) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead.
 - Every region should have at least one inn node for resting
 - Creature levels must match the region's level range
 - Creature stats use: str, dex, con, int, wis, cha (range 5-30 based on level)
 - Creature rarity: "regular", "rare", or "boss" — each region should have mostly regulars, a few rares, and 1-2 bosses
 - HP formula: base 10 + (level * 3) for regular, *1.5 for rare, *3 for boss
 - AC formula: 8 + floor(level / 3) for regular, +2 for rare, +4 for boss
-- Loot tables are arrays of {item_name, drop_chance (0-1), gold_min, gold_max}
 - NPC dialogue should be lore-appropriate and atmospheric
 - Use temp IDs like "node_1", "node_2" ONLY in the temp_id field and connection references — NEVER include temp IDs in the "name" field
 - Node "name" must be a clean, lore-appropriate place name only (e.g. "Thornwood Clearing", "Rivermist Bridge"). NEVER append temp IDs, booleans, field names, or any metadata to node names.
@@ -153,23 +164,14 @@ RULES:
 - Create original fantasy names that evoke a sense of ancient, mythic world-building
 - Mark creatures as is_humanoid: true if they have a roughly human form (bandits, soldiers, cultists, mages, knights, etc.) or false for beasts/monsters/animals
 
-ITEM GENERATION RULES:
-- Only humanoid creatures (is_humanoid: true) can carry items
-- Generate 1-2 items per humanoid creature, max
-- Only generate "equipment" or "consumable" item types — NO trash loot
-- Item temp_ids should be like "item_1", "item_2", etc.
-- creature_temp_ids links which creatures carry this item (use creature temp_ids or real node IDs for populate mode creatures)
-- drop_chance should be between 0.1 and 0.5
-- Item stats follow a budget: floor(level * 0.3 * rarity_multiplier * hands_multiplier)
-  - Rarity multipliers: common=1.0, uncommon=1.5, rare=2.0, unique=3.0
-  - hands_multiplier: 1.0 for one-handed, 1.5 for two-handed (hands=2)
-- Valid equipment slots: main_hand, off_hand, head, chest, gloves, belt, pants, ring, trinket, boots, amulet, shoulders
-- Consumables should have slot: null and stats with hp (restore amount) or hp_regen
-- Valid stat keys for equipment: str, dex, con, int, wis, cha, ac, hp, hp_regen
-- Max durability: always 100 (fixed for all items)
-- Gold value suggestion: floor(level * 2.5 * rarity_multiplier^2)
-- Item rarity should be "common" or "uncommon" for regular creatures, up to "rare" for rare/boss creatures. Never generate "unique" items.
-- Do NOT duplicate existing item names
+LOOT TABLE ASSIGNMENT RULES:
+- Do NOT generate any items. Items are managed separately via the Item Forge.
+- Instead, assign existing loot tables to humanoid creatures using the loot_table_id field.
+- Pick a loot table whose item levels are within the creature's level range (±3 levels) and whose item rarities match appropriately.
+- Regular creatures should get tables with common/uncommon items. Rare/boss creatures can get tables with uncommon/rare items.
+- Non-humanoid creatures should have loot_table_id: null.
+- If no suitable loot table exists, set loot_table_id to null. Do NOT invent loot table IDs.
+- Set drop_chance between 0.1 and 0.5 (rare items lower).
 
 Call the generate_world tool with the structured output.`;
 
@@ -193,7 +195,7 @@ Call the generate_world tool with the structured output.`;
             type: "function",
             function: {
               name: "generate_world",
-              description: "Generate world content including region, nodes, creatures, NPCs, and items",
+              description: "Generate world content including region, nodes, creatures, and NPCs. Assign existing loot tables to creatures — do NOT generate items.",
               parameters: {
                 type: "object",
                 properties: {
@@ -258,13 +260,13 @@ Call the generate_world tool with the structured output.`;
                             wis: { type: "integer" }, cha: { type: "integer" },
                           },
                         },
+                        loot_table_id: { type: "string", description: "ID of an existing loot table to assign. Use null if no suitable table exists or for non-humanoid creatures." },
+                        drop_chance: { type: "number", description: "0.1-0.5, chance of dropping loot on kill" },
                         loot_table: {
                           type: "array",
                           items: {
                             type: "object",
                             properties: {
-                              item_name: { type: "string" },
-                              drop_chance: { type: "number" },
                               gold_min: { type: "integer" },
                               gold_max: { type: "integer" },
                             },
@@ -287,38 +289,8 @@ Call the generate_world tool with the structured output.`;
                       required: ["name", "description", "dialogue", "node_temp_id"],
                     },
                   },
-                  items: {
-                    type: "array",
-                    description: "Items carried by humanoid creatures. Only equipment and consumable types.",
-                    items: {
-                      type: "object",
-                      properties: {
-                        temp_id: { type: "string", description: "Temporary ID like item_1, item_2" },
-                        name: { type: "string" },
-                        description: { type: "string" },
-                        item_type: { type: "string", enum: ["equipment", "consumable"] },
-                        rarity: { type: "string", enum: ["common", "uncommon", "rare"] },
-                        slot: { type: "string", enum: ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"], description: "null for consumables" },
-                        level: { type: "integer" },
-                        hands: { type: "integer", description: "1 or 2 for weapons, null for non-weapons" },
-                        stats: {
-                          type: "object",
-                          description: "Stat bonuses: str, dex, con, int, wis, cha, ac, hp, hp_regen",
-                        },
-                        value: { type: "integer", description: "Gold value" },
-                        max_durability: { type: "integer" },
-                        creature_temp_ids: {
-                          type: "array",
-                          items: { type: "string" },
-                          description: "Which creatures carry this item (use creature temp_ids)",
-                        },
-                        drop_chance: { type: "number", description: "Drop chance 0.1-0.5" },
-                      },
-                      required: ["temp_id", "name", "description", "item_type", "rarity", "level", "stats", "value", "max_durability", "creature_temp_ids", "drop_chance"],
-                    },
-                  },
                 },
-                required: ["region", "nodes", "creatures", "npcs", "items"],
+                required: ["region", "nodes", "creatures", "npcs"],
               },
             },
           },
@@ -357,7 +329,6 @@ Call the generate_world tool with the structured output.`;
 
     // Sanitize: strip non-ASCII from all name fields
     const stripNonAscii = (s: string) => s.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
-    // Also strip leaked temp IDs, boolean flags, and metadata from names
     const cleanName = (s: string) => {
       let cleaned = stripNonAscii(s);
       cleaned = cleaned.replace(/\s*\(?node_\d+\)?/gi, '');
@@ -372,16 +343,15 @@ Call the generate_world tool with the structured output.`;
     }
     for (const cr of (generated.creatures || [])) {
       if (cr.name) cr.name = cleanName(cr.name);
+      // Validate loot_table_id — only allow IDs that actually exist
+      if (cr.loot_table_id) {
+        const validLt = lootTables.find((lt: any) => lt.id === cr.loot_table_id);
+        if (!validLt) cr.loot_table_id = null;
+      }
     }
     for (const npc of (generated.npcs || [])) {
       if (npc.name) npc.name = cleanName(npc.name);
     }
-    for (const item of (generated.items || [])) {
-      if (item.name) item.name = cleanName(item.name);
-    }
-
-    // Ensure items array exists
-    if (!generated.items) generated.items = [];
 
     return new Response(JSON.stringify(generated), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
