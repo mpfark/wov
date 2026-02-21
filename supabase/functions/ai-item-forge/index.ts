@@ -103,10 +103,11 @@ GENERATION RULES:
   - For consumables: budget is 3x the normal formula
   - Rarity multipliers: common=1.0, uncommon=1.5, rare=2.0
   - hands_multiplier: 1.0 for 1h, 1.5 for 2h (hands=2, main_hand only)
-- CRITICAL: Distribute the FULL stat budget across MULTIPLE stats (at least 2-3 different stats per item). Never put all points into a single stat. Spread the budget for interesting, varied items.
+- ABSOLUTE RULE: Equipment items MUST have AT LEAST 2 different stat keys. Items with only 1 stat will be REJECTED.
+- Distribute the full budget across multiple stats. Example for budget=2: {"str":1,"con":1}. Example for budget=4: {"str":2,"dex":1,"con":1}. Example for budget=6: {"str":2,"dex":2,"wis":1,"hp":2}.
 - Valid stat keys for equipment: str, dex, con, int, wis, cha, ac, hp, hp_regen
 - Valid stat keys for consumables: hp, hp_regen ONLY (no other stats allowed, no caps)
-- For equipment: always use at least 2 different stat keys, preferably 3+. Single-stat items are FORBIDDEN.
+- Even for budget=1 items, split across 2 stats like {"str":1,"dex":1} (going slightly over budget is fine for variety).
 - Stat value caps (equipment only): str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
 - drop_chance: 0.1–0.5 (rare items lower, consumables 0.3–0.5)
 - max_durability: always 100 (fixed for all items)
@@ -129,10 +130,10 @@ Call the generate_items tool with the structured output.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. Ensure every item has stat bonuses.` },
+          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. IMPORTANT: Calculate the stat budget for each item using the formula and spend ALL of it across multiple stats. A level 10 uncommon item has budget floor(1+9*0.3*1.5)=5, so its stats should total ~5 points spread across 2-3 keys. A level 14 rare item has budget floor(1+13*0.3*2)=8, so spread 8 points across 3-4 keys. Never leave budget unspent.` },
         ],
         tools: [
           {
@@ -203,14 +204,69 @@ Call the generate_items tool with the structured output.`;
     }
 
     const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5, rare: 2.0, unique: 3.0 };
+    const STAT_COSTS: Record<string, number> = { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2 };
+    const PRIMARY_STATS = ["str", "dex", "con", "int", "wis", "cha"];
+
+    function calcBudget(level: number, rarity: string, hands: number = 1): number {
+      const mult = RARITY_MULT[rarity] || 1;
+      const handsMult = hands === 2 ? 1.5 : 1;
+      return Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
+    }
+
+    function calcStatCost(stats: Record<string, number>): number {
+      return Object.entries(stats).reduce((sum, [k, v]) => sum + v * (STAT_COSTS[k] || 1), 0);
+    }
+
+    function getStatCap(key: string, level: number): number {
+      if (key === "ac" || key === "hp_regen") return 2 + Math.floor(level / 10);
+      if (key === "hp") return 6 + Math.floor(level / 5) * 2;
+      return 4 + Math.floor(level / 4);
+    }
 
     const parsed = JSON.parse(toolCall.function.arguments);
     const items = (parsed.items || []).map((item: any) => {
       const mult = RARITY_MULT[item.rarity] || 1;
       const autoGold = Math.round((item.level || 1) * 2.5 * mult * mult);
+      let stats = (item.stats && Object.keys(item.stats).length > 0) ? { ...item.stats } : {};
+      const level = item.level || 1;
+
+      if (item.item_type === "equipment") {
+        const budget = calcBudget(level, item.rarity, item.hands || 1);
+        let spent = calcStatCost(stats);
+
+        // If AI underspent the budget, top up with random stats
+        let attempts = 0;
+        while (spent < budget && attempts < 50) {
+          const pick = PRIMARY_STATS[Math.floor(Math.random() * PRIMARY_STATS.length)];
+          const cap = getStatCap(pick, level);
+          const current = stats[pick] || 0;
+          if (current < cap) {
+            stats[pick] = current + 1;
+            spent++;
+          }
+          attempts++;
+        }
+
+        // Ensure at least 2 different stats
+        if (Object.keys(stats).length < 2) {
+          const usedKeys = Object.keys(stats);
+          const available = PRIMARY_STATS.filter(k => !usedKeys.includes(k));
+          if (available.length > 0) {
+            const pick = available[Math.floor(Math.random() * available.length)];
+            stats[pick] = 1;
+          }
+        }
+
+        // If still empty
+        if (Object.keys(stats).length === 0) stats = { str: 1, con: 1 };
+      } else {
+        // Consumable fallback
+        if (Object.keys(stats).length === 0) stats = { hp: 3 };
+      }
+
       return {
         ...item,
-        stats: (item.stats && Object.keys(item.stats).length > 0) ? item.stats : { str: 1 },
+        stats,
         slot: item.item_type === "consumable" ? null : (item.slot || null),
         value: autoGold,
       };
