@@ -186,6 +186,15 @@ export function getCreatureXp(level: number, rarity: string): number {
   return Math.floor(level * 10 * (XP_RARITY_MULTIPLIER[rarity] || 1));
 }
 
+// Graduated XP penalty: lenient at low levels, harsh at high levels
+export function getXpPenalty(playerLevel: number, creatureLevel: number): number {
+  const levelDiff = Math.max(playerLevel - creatureLevel, 0);
+  let penaltyRate = 0.20;
+  if (playerLevel <= 5) penaltyRate = 0.10;
+  else if (playerLevel <= 10) penaltyRate = 0.15;
+  return Math.max(1 - levelDiff * penaltyRate, 0.10);
+}
+
 // Dice rolling
 export function rollD20(): number {
   return Math.floor(Math.random() * 20) + 1;
