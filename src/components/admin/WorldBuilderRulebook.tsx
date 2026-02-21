@@ -75,76 +75,21 @@ export default function WorldBuilderRulebook() {
           </ul>
         </Card>
 
-        {/* Item Rules */}
+        {/* Loot Table Assignment Rules */}
         <Card className="p-3 space-y-1.5">
-          <h3 className="font-display text-sm text-primary">Item Rules</h3>
+          <h3 className="font-display text-sm text-primary">Loot Table Assignment</h3>
+          <p className="text-[11px] text-muted-foreground">
+            The World Builder does <strong>not</strong> generate items. Items are created separately via the <strong>Item Forge</strong>. Instead, the AI assigns existing loot tables to creatures.
+          </p>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
-            <li>Only <strong>humanoid creatures</strong> (<code className="text-[10px] bg-muted px-1 rounded">is_humanoid: true</code>) can carry items.</li>
-            <li>Max <strong>1–2 items</strong> per humanoid creature.</li>
-            <li>Only <Badge variant="outline" className="text-[9px] px-1 py-0">equipment</Badge> and <Badge variant="outline" className="text-[9px] px-1 py-0">consumable</Badge> types — no trash loot.</li>
+            <li>Only <strong>humanoid creatures</strong> (<code className="text-[10px] bg-muted px-1 rounded">is_humanoid: true</code>) should be assigned loot tables.</li>
+            <li>Non-humanoid creatures (beasts, monsters) get <code className="text-[10px] bg-muted px-1 rounded">loot_table_id: null</code>.</li>
+            <li>The AI picks a loot table whose <strong>item levels are within ±3 levels</strong> of the creature's level.</li>
+            <li>Item rarities in the table should match the creature: <Badge variant="outline" className="text-[9px] px-1 py-0">common</Badge> / <Badge variant="outline" className="text-[9px] px-1 py-0">uncommon</Badge> for regular creatures, up to <Badge variant="secondary" className="text-[9px] px-1 py-0">rare</Badge> for rare/boss.</li>
+            <li>If no suitable loot table exists, the creature gets <code className="text-[10px] bg-muted px-1 rounded">loot_table_id: null</code> — the AI never invents IDs.</li>
             <li>Drop chance: <strong>0.1 – 0.5</strong> — stored as the creature's <code className="text-[10px] bg-muted px-1 rounded">drop_chance</code> field.</li>
-            <li>Never generate <Badge variant="secondary" className="text-[9px] px-1 py-0">unique</Badge> rarity items.</li>
-            <li>Rarity: <Badge variant="outline" className="text-[9px] px-1 py-0">common</Badge> / <Badge variant="outline" className="text-[9px] px-1 py-0">uncommon</Badge> for regular creatures, up to <Badge variant="secondary" className="text-[9px] px-1 py-0">rare</Badge> for rare/boss.</li>
-            <li>Do not duplicate existing item names.</li>
-            <li>Items are written to the <strong>shared Loot Table system</strong> — a named <code className="text-[10px] bg-muted px-1 rounded">loot_tables</code> row ("<em>Creature Name</em> Drops") with weighted <code className="text-[10px] bg-muted px-1 rounded">loot_table_entries</code>. The creature's <code className="text-[10px] bg-muted px-1 rounded">loot_table_id</code> is set accordingly and the legacy inline <code className="text-[10px] bg-muted px-1 rounded">loot_table</code> JSON is left empty.</li>
+            <li>Loot table IDs are validated server-side — any non-existent ID is silently set to null.</li>
           </ul>
-          <div className="text-[11px] text-muted-foreground mt-1">
-            <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Budget:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">floor(level × 0.3 × rarity_multiplier × hands_multiplier)</code>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-1.5 text-[10px]">
-            <div>
-              <p className="font-medium text-foreground mb-0.5">Rarity Multipliers</p>
-              <div className="text-muted-foreground space-y-0.5">
-                <div>Common: <strong>1.0</strong></div>
-                <div>Uncommon: <strong>1.5</strong></div>
-                <div>Rare: <strong>2.0</strong></div>
-                <div>Unique: <strong>3.0</strong></div>
-              </div>
-            </div>
-            <div>
-              <p className="font-medium text-foreground mb-0.5">Hands Multiplier</p>
-              <div className="text-muted-foreground space-y-0.5">
-                <div>One-handed: <strong>1.0</strong></div>
-                <div>Two-handed (hands=2): <strong>1.5</strong></div>
-              </div>
-            </div>
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-1.5">
-            <p className="font-medium text-foreground text-[11px] mb-0.5">Valid Equipment Slots:</p>
-            <div className="flex flex-wrap gap-1">
-              {['main_hand', 'off_hand', 'head', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'boots', 'amulet', 'shoulders'].map(s => (
-                <Badge key={s} variant="outline" className="text-[9px] px-1 py-0">{s}</Badge>
-              ))}
-            </div>
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-1.5">
-            <p className="font-medium text-foreground text-[11px] mb-0.5">Valid Stat Keys:</p>
-            <div className="flex flex-wrap gap-1">
-              {['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'].map(s => (
-                <Badge key={s} variant="outline" className="text-[9px] px-1 py-0">{s}</Badge>
-              ))}
-            </div>
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-1.5">
-            <p className="font-medium text-foreground text-[11px] mb-0.5">Durability Ranges:</p>
-            <div className="text-[10px] space-y-0.5">
-              <div>Common: <strong>50–100</strong></div>
-              <div>Uncommon: <strong>75–150</strong></div>
-              <div>Rare: <strong>100–200</strong></div>
-            </div>
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-1.5">
-            <p className="font-medium text-foreground text-[11px] mb-0.5">Gold Value:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">floor(level × 2.5 × rarity_multiplier²)</code>
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-1.5">
-            <p className="font-medium text-foreground text-[11px] mb-0.5">Consumables:</p>
-            <ul className="list-disc pl-4 text-[10px] space-y-0.5">
-              <li>Slot: <code className="bg-muted px-1 rounded">null</code></li>
-              <li>Stats: <code className="bg-muted px-1 rounded">hp</code> (restore amount) or <code className="bg-muted px-1 rounded">hp_regen</code></li>
-            </ul>
-          </div>
         </Card>
 
         {/* Populate Mode Rules */}
@@ -156,7 +101,7 @@ export default function WorldBuilderRulebook() {
             <li>Use <strong>real node IDs</strong> (UUIDs) as <code className="text-[10px] bg-muted px-1 rounded">node_temp_id</code> for creatures.</li>
             <li>Creature levels must match each node's region level range.</li>
             <li>Do not duplicate existing creature names on the same node.</li>
-            <li>Generated humanoid items are saved to the <strong>shared Loot Table system</strong> — a dedicated <code className="text-[10px] bg-muted px-1 rounded">loot_tables</code> row per creature with entries written to <code className="text-[10px] bg-muted px-1 rounded">loot_table_entries</code>.</li>
+            <li>Humanoid creatures are assigned existing loot tables matching their level and rarity.</li>
           </ul>
         </Card>
 
@@ -169,7 +114,7 @@ export default function WorldBuilderRulebook() {
             <li>New nodes can also connect to other new nodes using temp IDs.</li>
             <li>Creature levels must stay within the region's level range.</li>
             <li>Do not duplicate existing node names or NPC names.</li>
-            <li>Generated humanoid items are saved to the <strong>shared Loot Table system</strong> — a dedicated <code className="text-[10px] bg-muted px-1 rounded">loot_tables</code> row per creature with entries written to <code className="text-[10px] bg-muted px-1 rounded">loot_table_entries</code>.</li>
+            <li>Humanoid creatures are assigned existing loot tables matching their level and rarity.</li>
           </ul>
         </Card>
       </div>
