@@ -482,7 +482,7 @@ export default function GameManual() {
                     <p>• T4 ability (60 CP) + T2 ability (25 CP) = 85 CP spent → 57 CP remaining</p>
                     <p>• A Warrior at level 20 would have ~122 max CP — 20 less than the Wizard</p>
                     <p>• Mental stat scaling rewards casters with a bigger CP pool to compensate for lower HP/AC</p>
-                    <p>• Bard's "Encore" refunds the CP cost of the last used ability</p>
+                    <p>• Bard's "Grand Finale" deals massive CHA-scaling burst damage to a single target</p>
                   </div>
                 </CardContent>
               </Card>

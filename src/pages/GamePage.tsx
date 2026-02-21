@@ -1370,14 +1370,27 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const durationSec = Math.min(20, 12 + strMod);
       setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: activeCombatCreatureId });
       addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
-    } else if (ability.type === 'cp_refund') {
-      if (lastUsedAbilityCost <= 0) {
-        addLog(`${ability.emoji} Encore! But there's no recent ability to refund.`);
-      } else {
-        const refund = lastUsedAbilityCost;
-        const newCp = Math.min((character.cp ?? 0) + refund, character.max_cp ?? 100);
-        await updateCharacter({ cp: newCp });
-        addLog(`${ability.emoji} Encore! Refunded ${refund} CP!`);
+    } else if (ability.type === 'burst_damage') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Grand Finale!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Grand Finale.`);
+        return;
+      }
+      const chaMod = getStatMod2(character.cha + (equipmentBonuses.cha || 0));
+      const baseDmg = Math.max(8, chaMod * 4 + Math.floor(character.level * 1.5));
+      const damage = baseDmg + rollDamage(1, Math.max(1, chaMod * 2));
+      const creatureCurrentHp = creatureHpOverrides[creature.id] ?? creature.hp;
+      const newHp = Math.max(0, creatureCurrentHp - damage);
+      const killed = newHp <= 0;
+      updateCreatureHp(creature.id, newHp);
+      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: killed });
+      addLog(`${ability.emoji} Grand Finale! A devastating blast of sound strikes ${creature.name} for ${damage} damage!`);
+      if (killed) {
+        addLog(`💀 ${creature.name} has been slain!`);
       }
     } else if (ability.type === 'focus_strike') {
       const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
@@ -1390,10 +1403,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const newCp = Math.max((character.cp ?? 0) - ability.cpCost, 0);
     await updateCharacter({ cp: newCp });
 
-    // Track last used ability cost (exclude cp_refund itself)
-    if (ability.type !== 'cp_refund') {
-      setLastUsedAbilityCost(ability.cpCost);
-    }
+    // Track last used ability cost
+    setLastUsedAbilityCost(ability.cpCost);
   }, [isDead, character, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks, igniteStacks, lastUsedAbilityCost]);
 
   // Keyboard movement + action bindings
