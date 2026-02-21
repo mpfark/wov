@@ -265,23 +265,24 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   />
                 );
               })()}
+              {/* Service icons positioned outside the node circle */}
               {node.is_vendor && (
-                <text x={pos.px - 20} y={pos.py - 18} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                <text x={pos.px - 26} y={pos.py - 26} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
                   🪙
                 </text>
               )}
               {node.is_inn && (
-                <text x={pos.px + 20} y={pos.py - 18} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                <text x={pos.px + 26} y={pos.py - 26} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
                   🏨
                 </text>
               )}
               {node.is_blacksmith && (
-                <text x={pos.px} y={pos.py - 38} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                <text x={pos.px - 26} y={pos.py + 30} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
                   🔨
                 </text>
               )}
               {node.is_teleport && (
-                <text x={pos.px + (node.is_blacksmith ? -20 : 0)} y={pos.py - 38} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                <text x={pos.px + 26} y={pos.py + 30} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
                   🌀
                 </text>
               )}
