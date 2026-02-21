@@ -298,6 +298,51 @@ export default function GameManual() {
                   ))}
                 </TableBody>
               </Table>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Starting HP by Race & Class (Level 1)</p>
+                <div className="max-h-[300px] overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Race \ Class</TableHead>
+                        {Object.keys(CLASS_STATS).map(cls => (
+                          <TableHead key={cls} className="text-xs">{CLASS_LABELS[cls]}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const allHp = Object.keys(RACE_STATS).flatMap(race =>
+                          Object.keys(CLASS_STATS).map(cls => {
+                            const s = calculateStats(race, cls);
+                            return calculateHP(cls, s.con);
+                          })
+                        );
+                        const maxHp = Math.max(...allHp);
+                        const minHp = Math.min(...allHp);
+                        return Object.keys(RACE_STATS).map(race => (
+                          <TableRow key={race}>
+                            <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
+                            {Object.keys(CLASS_STATS).map(cls => {
+                              const s = calculateStats(race, cls);
+                              const hp = calculateHP(cls, s.con);
+                              return (
+                                <TableCell key={cls} className={`text-xs ${hp >= maxHp - 2 ? 'text-green-400 font-bold' : hp <= minHp + 2 ? 'text-red-400' : ''}`}>
+                                  {hp}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ));
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  <span className="text-green-400">■</span> High HP (tank-optimal) · <span className="text-red-400">■</span> Low HP (fragile combo)
+                </p>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
