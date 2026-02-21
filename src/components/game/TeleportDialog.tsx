@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/integrations/supabase/client';
 import { GameNode, Region } from '@/hooks/useNodes';
 
 interface TeleportDestination {
@@ -20,7 +18,10 @@ interface Props {
   nodes: GameNode[];
   playerCp: number;
   playerMaxCp: number;
+  characterLevel: number;
   onTeleport: (nodeId: string, cpCost: number) => void;
+  waymark?: { node: GameNode; region: Region | undefined } | null;
+  onReturnToWaymark?: (cpCost: number) => void;
 }
 
 function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Region): number {
@@ -30,7 +31,7 @@ function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Regio
   return Math.min(10 + levelDiff * 2, 30);
 }
 
-export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, playerCp, playerMaxCp, onTeleport }: Props) {
+export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, playerCp, playerMaxCp, characterLevel, onTeleport, waymark, onReturnToWaymark }: Props) {
   const destinations: TeleportDestination[] = nodes
     .filter(n => n.is_teleport && n.id !== currentNode.id)
     .map(n => {
@@ -41,6 +42,9 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
 
   destinations.sort((a, b) => a.region.min_level - b.region.min_level || a.node.name.localeCompare(b.node.name));
 
+  const waymarkCpCost = waymark?.region ? calculateTeleportCpCost(currentRegion, waymark.region) : 15;
+  const canAffordWaymark = playerCp >= waymarkCpCost;
+
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-sm bg-card border-border">
@@ -48,11 +52,36 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
           <DialogTitle className="font-display text-primary text-glow">🌀 Teleport</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
+          {characterLevel >= 25 && !currentNode.is_teleport && (
+            <span className="text-primary font-display">⚡ Arcane Recall active — </span>
+          )}
           Travel instantly to another teleport point. Your CP: <span className="text-primary font-display">{playerCp}/{playerMaxCp}</span>
         </p>
         <ScrollArea className="max-h-64">
           <div className="space-y-1.5 pr-2">
-            {destinations.length === 0 && (
+            {/* Waymark Return Option */}
+            {waymark && onReturnToWaymark && (
+              <div className="flex items-center justify-between p-2 rounded border-2 border-primary/60 bg-primary/10 hover:bg-primary/20 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-sm text-primary truncate">📍 Return to Waymark</p>
+                  <p className="text-[10px] text-primary/80 truncate">
+                    {waymark.node.name}
+                    {waymark.region && <span> — {waymark.region.name}</span>}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canAffordWaymark}
+                  onClick={() => onReturnToWaymark(waymarkCpCost)}
+                  className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAffordWaymark ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
+                >
+                  ⚡ {waymarkCpCost} CP
+                </Button>
+              </div>
+            )}
+
+            {destinations.length === 0 && !waymark && (
               <p className="text-xs text-muted-foreground italic py-4 text-center">No teleport destinations available.</p>
             )}
             {destinations.map(d => {

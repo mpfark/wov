@@ -132,6 +132,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [teleportOpen, setTeleportOpen] = useState(false);
+  const [waymarkNodeId, setWaymarkNodeId] = useState<string | null>(null);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(character.current_node_id, character.id);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [foodBuff, setFoodBuff] = useState<{ flatRegen: number; expiresAt: number }>({ flatRegen: 0, expiresAt: 0 });
@@ -780,20 +781,58 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if ((character.cp ?? 0) < cpCost) { addLog('⚠️ Not enough CP to teleport.'); return; }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
+    const currentNodeObj = getNode(character.current_node_id!);
+    // Save waymark if teleporting from a non-teleport node (level 25+ perk)
+    if (currentNodeObj && !currentNodeObj.is_teleport && character.level >= 25) {
+      setWaymarkNodeId(character.current_node_id!);
+      addLog(`📍 You leave a hidden waymark at ${currentNodeObj.name}.`);
+    }
     await updateCharacter({ current_node_id: nodeId, cp: (character.cp ?? 0) - cpCost });
     broadcastMove(character.id, character.name, nodeId);
     addLog(`🌀 You teleport to ${targetNode.name} for ${cpCost} CP.`);
     logActivity(character.user_id, character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
-    // Move followers if party leader
+    // Move all co-located party members (followers always, all co-located if level 25+ recall)
     if (party && isLeader) {
-      const followers = partyMembers.filter(m => m.is_following && m.character_id !== character.id);
-      for (const f of followers) {
+      const coLocated = partyMembers.filter(m =>
+        m.character_id !== character.id &&
+        m.status === 'accepted' &&
+        m.character.current_node_id === character.current_node_id
+      );
+      const toMove = character.level >= 25 ? coLocated : coLocated.filter(m => m.is_following);
+      for (const f of toMove) {
         await supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id);
       }
-      if (followers.length > 0) { addLog('Your party follows you.'); fetchParty(); }
+      if (toMove.length > 0) { addLog('Your party follows you.'); fetchParty(); }
     }
   }, [character, getNode, updateCharacter, addLog, broadcastMove, party, isLeader, partyMembers, fetchParty, isDead, inCombat]);
+
+  const handleReturnToWaymark = useCallback(async (cpCost: number) => {
+    if (!waymarkNodeId) return;
+    const waymarkNode = getNode(waymarkNodeId);
+    if (!waymarkNode) { addLog('⚠️ Your waymark has faded.'); setWaymarkNodeId(null); return; }
+    if (isDead) return;
+    if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
+    if ((character.cp ?? 0) < cpCost) { addLog('⚠️ Not enough CP to return to waymark.'); return; }
+    await updateCharacter({ current_node_id: waymarkNodeId, cp: (character.cp ?? 0) - cpCost });
+    broadcastMove(character.id, character.name, waymarkNodeId);
+    addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${cpCost} CP.`);
+    logActivity(character.user_id, character.id, 'teleport', `Returned to waymark at ${waymarkNode.name}`, { node_id: waymarkNodeId, cpCost });
+    setWaymarkNodeId(null);
+    setTeleportOpen(false);
+    // Move co-located party members
+    if (party && isLeader) {
+      const coLocated = partyMembers.filter(m =>
+        m.character_id !== character.id &&
+        m.status === 'accepted' &&
+        m.character.current_node_id === character.current_node_id
+      );
+      for (const f of coLocated) {
+        await supabase.from('characters').update({ current_node_id: waymarkNodeId }).eq('id', f.character_id);
+      }
+      if (coLocated.length > 0) { addLog('Your party follows you.'); fetchParty(); }
+    }
+  }, [waymarkNodeId, character, getNode, updateCharacter, addLog, broadcastMove, party, isLeader, partyMembers, fetchParty, isDead, inCombat]);
 
   // Keyboard movement bindings — declared after handleSearch/handleUseAbility/handleUseConsumable (see below)
 
@@ -1499,7 +1538,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onTalkToNPC={npc => setTalkingToNPC(npc)}
               onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
               onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
-              onOpenTeleport={currentNode.is_teleport ? () => {
+              onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
                 if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
                 setTeleportOpen(true);
               } : undefined}
@@ -1607,7 +1646,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       )}
 
       {/* Teleport Dialog */}
-      {currentNode.is_teleport && (
+      {(currentNode.is_teleport || character.level >= 25) && (
         <TeleportDialog
           open={teleportOpen}
           onClose={() => setTeleportOpen(false)}
@@ -1617,7 +1656,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           nodes={nodes}
           playerCp={character.cp ?? 0}
           playerMaxCp={character.max_cp ?? 60}
+          characterLevel={character.level}
           onTeleport={handleTeleport}
+          waymark={waymarkNodeId ? { node: getNode(waymarkNodeId)!, region: getRegion(getNode(waymarkNodeId)?.region_id ?? '') } : null}
+          onReturnToWaymark={waymarkNodeId ? handleReturnToWaymark : undefined}
         />
       )}
 
