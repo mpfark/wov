@@ -10,6 +10,8 @@ import { useGroundLoot } from '@/hooks/useGroundLoot';
 import { Character } from '@/hooks/useCharacter';
 import { useNodes } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
+import { useGlobalPresence } from '@/hooks/useGlobalPresence';
+import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/hooks/useCreatures';
 import { useCreatureBroadcast } from '@/hooks/useCreatureBroadcast';
 import { usePartyBroadcast } from '@/hooks/usePartyBroadcast';
@@ -80,6 +82,7 @@ interface Props {
 export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id, character);
+  const { onlinePlayers } = useGlobalPresence(character);
   const { creatures } = useCreatures(character.current_node_id);
   const { broadcastOverrides, broadcastDamage } = useCreatureBroadcast(character.current_node_id, character.id);
   const { npcs } = useNPCs(character.current_node_id);
@@ -1387,6 +1390,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
         <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Eldara <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span></h1>
           <div className="flex items-center gap-2">
+            <OnlinePlayersDialog onlinePlayers={onlinePlayers} myCharacterId={character.id} />
             {isAdmin && (
               <Button variant="outline" size="sm" onClick={onOpenAdmin} className="text-xs font-display">
                 ⚡ Admin
