@@ -21,7 +21,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -1072,8 +1072,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         if (newHp <= 0) {
           // Award XP & gold for Barrage kill
           const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
-          const levelDiff = Math.max(character.level - creature.level, 0);
-          const xpPenalty = Math.max(1 - levelDiff * 0.2, 0.1);
+          const xpPenalty = getXpPenalty(character.level, creature.level);
           const totalXp = Math.floor(baseXp * xpPenalty);
 
           const lootTable = creature.loot_table as any[];

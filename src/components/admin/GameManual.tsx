@@ -332,7 +332,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
                 <p><strong className="text-foreground">Durability:</strong> Every combat round, 2 random equipped items each lose 1 durability</p>
-                <p><strong className="text-foreground">XP Penalty:</strong> −20% per level above creature (minimum 10% reward)</p>
+                <p><strong className="text-foreground">XP Penalty:</strong> Graduated: −10%/lvl (Lv1-5), −15%/lvl (Lv6-10), −20%/lvl (Lv11+). Min 10% reward.</p>
               </div>
               <Table>
                 <TableHeader>
@@ -368,7 +368,7 @@ export default function GameManual() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">XP Curve:</strong> XP to next level = <code className="text-primary">floor(level^1.5 × 50)</code></p>
                 <p><strong className="text-foreground">Creature XP:</strong> <code className="text-primary">creature_level × 10 × rarity_mult</code></p>
-                <p><strong className="text-foreground">Level Penalty:</strong> −20% per player level above creature (minimum 10% reward)</p>
+                <p><strong className="text-foreground">Level Penalty:</strong> Graduated: −10%/lvl (Lv1-5), −15%/lvl (Lv6-10), −20%/lvl (Lv11+). Min 10% reward.</p>
                 <p><strong className="text-foreground">Party Split:</strong> XP divided equally among party members at the node</p>
               </div>
 
