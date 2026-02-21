@@ -51,6 +51,8 @@ interface UseCombatParams {
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
   disengageNextHit?: { bonusMult: number; expiresAt: number } | null;
   onClearDisengage?: () => void;
+  focusStrikeBuff?: { bonusDmg: number } | null;
+  onClearFocusStrike?: () => void;
   broadcastDamage?: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
   broadcastHp?: (characterId: string, hp: number, maxHp: number, source: string) => void;
   broadcastReward?: (characterId: string, xp: number, gold: number, source: string) => void;
@@ -84,6 +86,8 @@ export function useCombat({
   sunderDebuff,
   disengageNextHit,
   onClearDisengage,
+  focusStrikeBuff,
+  onClearFocusStrike,
   broadcastDamage,
   broadcastHp,
   broadcastReward,
@@ -121,6 +125,8 @@ export function useCombat({
   const sunderDebuffRef = useRef(sunderDebuff);
   const disengageNextHitRef = useRef(disengageNextHit);
   const onClearDisengageRef = useRef(onClearDisengage);
+  const focusStrikeBuffRef = useRef(focusStrikeBuff);
+  const onClearFocusStrikeRef = useRef(onClearFocusStrike);
   const broadcastDamageRef = useRef(broadcastDamage);
   const broadcastHpRef = useRef(broadcastHp);
   const broadcastRewardRef = useRef(broadcastReward);
@@ -154,6 +160,8 @@ export function useCombat({
   useEffect(() => { sunderDebuffRef.current = sunderDebuff; }, [sunderDebuff]);
   useEffect(() => { disengageNextHitRef.current = disengageNextHit; }, [disengageNextHit]);
   useEffect(() => { onClearDisengageRef.current = onClearDisengage; }, [onClearDisengage]);
+  useEffect(() => { focusStrikeBuffRef.current = focusStrikeBuff; }, [focusStrikeBuff]);
+  useEffect(() => { onClearFocusStrikeRef.current = onClearFocusStrike; }, [onClearFocusStrike]);
   useEffect(() => { broadcastDamageRef.current = broadcastDamage; }, [broadcastDamage]);
   useEffect(() => { broadcastHpRef.current = broadcastHp; }, [broadcastHp]);
   useEffect(() => { broadcastRewardRef.current = broadcastReward; }, [broadcastReward]);
@@ -308,14 +316,23 @@ export function useCombat({
           onClearDisengageRef.current?.();
         }
 
+        // Focus Strike — one-shot bonus damage, consumed on use
+        const _focusStrike = focusStrikeBuffRef.current;
+        const isFocusStrike = !!_focusStrike;
+        if (isFocusStrike) {
+          finalDmg += _focusStrike!.bonusDmg;
+          onClearFocusStrikeRef.current?.();
+        }
+
         const currentCreatureHp = creatureHpOverridesRef.current[creatureId] ?? creature.hp;
         const newHp = Math.max(currentCreatureHp - finalDmg, 0);
 
         const ambushPrefix = isAmbush ? '🌑 AMBUSH! ' : '';
         const surgePrefix = isDmgBuffed ? '✨ ' : '';
         const disengagePrefix = isDisengageHit ? '🦘 ' : '';
+        const focusPrefix = isFocusStrike ? '🎯 ' : '';
         _addLog(
-          `${ambushPrefix}${disengagePrefix}${surgePrefix}${sunderReduction > 0 ? '🔨 ' : ''}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''} — ${finalDmg} damage.`
+          `${ambushPrefix}${disengagePrefix}${focusPrefix}${surgePrefix}${sunderReduction > 0 ? '🔨 ' : ''}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''} — ${finalDmg} damage.`
         );
 
         // Poison proc — 40% chance to add a poison stack if Envenom is active

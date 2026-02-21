@@ -58,6 +58,7 @@ function getLogColor(log: string): string {
   if (log.startsWith('🌫️')) return 'text-primary';
   if (log.startsWith('🔥🔥') || log.startsWith('🔥')) return 'text-dwarvish';
   if (log.startsWith('🦘')) return 'text-elvish font-semibold';
+  if (log.startsWith('🎯')) return 'text-primary font-semibold';
   if (log.startsWith('💥')) return 'text-primary font-semibold';
   if (log.startsWith('🛡️✨')) return 'text-primary';
   if (log.startsWith('🎵💢')) return 'text-dwarvish';
@@ -149,6 +150,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [partyRegenBuff, setPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number } | null>(null);
   const [lastUsedAbilityCost, setLastUsedAbilityCost] = useState<number>(0);
   const [sunderDebuff, setSunderDebuff] = useState<{ acReduction: number; expiresAt: number; creatureId: string } | null>(null);
+  const [focusStrikeBuff, setFocusStrikeBuff] = useState<{ bonusDmg: number } | null>(null);
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -469,6 +471,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     sunderDebuff,
     disengageNextHit,
     onClearDisengage: useCallback(() => setDisengageNextHit(null), []),
+    focusStrikeBuff,
+    onClearFocusStrike: useCallback(() => setFocusStrikeBuff(null), []),
     broadcastDamage,
     broadcastHp,
     broadcastReward,
@@ -1313,61 +1317,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         await updateCharacter({ cp: newCp });
         addLog(`${ability.emoji} Encore! Refunded ${refund} CP!`);
       }
-    } else if (ability.type === 'punch') {
-      if (!inCombat || !activeCombatCreatureId) {
-        addLog(`${ability.emoji} You must be in combat to use Punch!`);
-        return;
-      }
-      const creature = creatures.find(c => c.id === activeCombatCreatureId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) {
-        addLog(`${ability.emoji} No valid target for Punch.`);
-        return;
-      }
+    } else if (ability.type === 'focus_strike') {
       const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
-      const atkRoll = rollD20();
-      const totalAtk = atkRoll + strMod;
-      if (atkRoll === 1 || (atkRoll < 20 && totalAtk < creature.ac)) {
-        addLog(`${ability.emoji} Punch! Rolled ${atkRoll}+${strMod}=${totalAtk} vs AC ${creature.ac} — Miss!`);
-      } else {
-        const baseDmg = rollDamage(1, 4) + strMod;
-        const isCrit = atkRoll === 20;
-        const finalDmg = Math.max(isCrit ? baseDmg * 2 : baseDmg, 1);
-        const currentHp = creatureHpOverrides[creature.id] ?? creature.hp;
-        const newHp = Math.max(currentHp - finalDmg, 0);
-        updateCreatureHp(creature.id, newHp);
-        await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-        addLog(`${ability.emoji}${isCrit ? ' CRITICAL!' : ''} Punch! Rolled ${atkRoll}+${strMod}=${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage!`);
-        if (newHp <= 0) {
-          // Award XP & gold for Punch kill
-          const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
-          const xpPenalty = getXpPenalty(character.level, creature.level);
-          const totalXp = Math.floor(baseXp * xpPenalty);
-          const lootTable = creature.loot_table as any[];
-          const goldEntry = lootTable?.find((e: any) => e.type === 'gold');
-          let totalGold = 0;
-          if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-            totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-          }
-          const goldNote = totalGold > 0 ? `, +${totalGold} gold` : '';
-          const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
-          addLog(`☠️ ${creature.name} has been slain! (+${totalXp} XP${goldNote})${penaltyNote}`);
-          const newXp = character.xp + totalXp;
-          const newGold = character.gold + totalGold;
-          const xpForNext = getXpForLevel(character.level);
-          if (newXp >= xpForNext) {
-            const newLevel = character.level + 1;
-            const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
-            const oldMaxCp = character.max_cp ?? 60;
-            addLog(`🎉 Level Up! You are now level ${newLevel}!`);
-            await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold, max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp) });
-          } else {
-            await updateCharacter({ xp: newXp, gold: newGold });
-          }
-          await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
-          stopCombatFn();
-          return;
-        }
-      }
+      const bonusDmg = Math.max(3, Math.floor(strMod * 2) + Math.floor(character.level / 2));
+      setFocusStrikeBuff({ bonusDmg });
+      addLog(`${ability.emoji} Focus Strike! Your next attack will deal +${bonusDmg} bonus damage.`);
     }
 
     // Deduct CP cost
@@ -1502,6 +1456,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             igniteBuff={igniteBuff}
             absorbBuff={absorbBuff}
             partyRegenBuff={partyRegenBuff}
+            focusStrikeBuff={focusStrikeBuff}
           />
         </div>
 
