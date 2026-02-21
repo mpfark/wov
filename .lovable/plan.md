@@ -1,46 +1,83 @@
 
 
-# Reduced XP Penalty at Lower Levels
+# Max CP: Lower Base, Steeper Mental Stat Scaling
 
-## Problem
-The current XP level penalty is a flat 20% reduction per level above the creature, with a minimum of 10% reward. At low levels (1-5), players quickly outlevel the starting creatures and get heavily penalized before they can reasonably move to higher-level areas or unlock abilities.
+## Concept
+Instead of the current flat `100 + (level - 1) * 3` for all classes, start CP lower and scale it more aggressively with mental stats (INT, WIS, CHA). This creates a meaningful gap between casters (who invest in mental stats) and martial classes (who don't).
 
-## Solution
-Introduce a **graduated penalty system** that is lenient at low levels and scales to the current harshness at higher levels:
+## Formula
 
-- **Levels 1-5**: 10% penalty per level difference (half the current rate)
-- **Levels 6-10**: 15% penalty per level difference
-- **Levels 11+**: 20% penalty per level difference (current behavior)
+```
+Max CP = 60 + (level - 1) * 3 + mentalMod * 5
+```
 
-The minimum reward floor stays at 10%.
+Where `mentalMod = max(modifier(INT), modifier(WIS), modifier(CHA), 0)` and modifier = `floor((stat - 10) / 2)`.
 
-## Example Impact
+- **Base lowered** from 100 to 60
+- **Mental stat multiplier** set to 5 (up from the previously proposed 3)
 
-| Player Lvl | Creature Lvl | Current XP% | New XP% |
-|------------|-------------|-------------|---------|
-| 3          | 1           | 60%         | 80%     |
-| 5          | 2           | 40%         | 70%     |
-| 5          | 3           | 60%         | 80%     |
-| 8          | 5           | 40%         | 55%     |
-| 15         | 10          | 10%         | 10%     |
+## Class Comparison
+
+Starting stats (level 1):
+
+| Class   | Best Mental Stat | Modifier | Bonus | Max CP |
+|---------|-----------------|----------|-------|--------|
+| Warrior | 8               | -1 (floored to 0) | 0  | 60     |
+| Ranger  | 10 (WIS)        | 0        | 0     | 60     |
+| Rogue   | 10 (CHA)        | 0        | 0     | 60     |
+| Wizard  | 11 (INT)        | 0        | 0     | 60     |
+| Healer  | 11 (WIS)        | 0        | 0     | 60     |
+| Bard    | 11 (CHA)        | 0        | 0     | 60     |
+
+At level 1 everyone starts even at 60 CP. But as casters gain mental stat bonuses every 3 levels and from gear, the gap opens up:
+
+| Class   | Approx Best Mental at Lv 10 | Mod | Bonus | Max CP |
+|---------|----------------------------|-----|-------|--------|
+| Warrior | ~10                        | 0   | 0     | 87     |
+| Ranger  | ~13 (WIS)                  | +1  | +5    | 92     |
+| Wizard  | ~15 (INT)                  | +2  | +10   | 97     |
+| Healer  | ~15 (WIS)                  | +2  | +10   | 97     |
+| Bard    | ~15 (CHA)                  | +2  | +10   | 97     |
+
+| Class   | Approx Best Mental at Lv 20 | Mod | Bonus | Max CP |
+|---------|----------------------------|-----|-------|--------|
+| Warrior | ~12                        | +1  | +5    | 122    |
+| Wizard  | ~20 (INT)                  | +5  | +25   | 142    |
+| Bard    | ~20 (CHA)                  | +5  | +25   | 142    |
+
+A Wizard at level 20 gets roughly **20 more CP** than a Warrior -- enough for one extra Tier 2 ability or two extra Punches. Warriors compensate with higher HP, AC, and physical damage.
+
+## Gameplay Impact
+- **Punch (10 CP)**: Warriors get 6 punches at level 1, casters also 6. By level 10, warriors still have ~8 while wizards have ~9.
+- **Tier 1 abilities (15 CP)**: At level 5, everyone can use their first ability ~4 times. By level 15, casters can squeeze out 1-2 extra casts.
+- **Search (5 CP)**: Still affordable for all classes.
+- CP regen (already class-primary-stat-based) remains unchanged, further reinforcing caster advantage.
 
 ## Technical Details
 
-Three locations need updating:
-
-1. **`src/hooks/useCombat.ts`** (~line 338-339): Extract penalty calculation into a helper or inline the graduated formula.
-
-2. **`src/pages/GamePage.tsx`** (~line 1075-1076): Same update for the Barrage ability kill reward logic.
-
-3. **`src/lib/game-data.ts`**: Add a new exported function `getXpPenalty(playerLevel, creatureLevel)` to centralize the logic and avoid duplication:
+### 1. `src/lib/game-data.ts`
+Update `getMaxCp` signature and formula:
 ```
-function getXpPenalty(playerLevel, creatureLevel):
-  levelDiff = max(playerLevel - creatureLevel, 0)
-  if playerLevel <= 5: penaltyRate = 0.10
-  else if playerLevel <= 10: penaltyRate = 0.15
-  else: penaltyRate = 0.20
-  return max(1 - levelDiff * penaltyRate, 0.10)
+getMaxCp(level, int, wis, cha) ->
+  mentalMod = max(floor((int-10)/2), floor((wis-10)/2), floor((cha-10)/2), 0)
+  return 60 + (level - 1) * 3 + mentalMod * 5
 ```
 
-4. **`src/components/admin/GameManual.tsx`** (~line 335, 371): Update the documentation text to reflect the graduated penalty system.
+### 2. `src/pages/CharacterCreation.tsx`
+Calculate initial `max_cp` and `cp` using the new formula with the character's starting stats.
+
+### 3. `src/hooks/useCombat.ts` (level-up logic, ~line 405)
+After computing new stats on level-up, recalculate `max_cp` with the new formula. Adjust current `cp` upward by the difference.
+
+### 4. `src/pages/GamePage.tsx` (Barrage and Punch kill level-up paths)
+Same level-up recalculation as above in the two alternative XP-grant code paths.
+
+### 5. `supabase/functions/admin-users/index.ts` (3 locations)
+Update the three hardcoded `100 + (level - 1) * 3` references to fetch the character's mental stats and apply the new formula.
+
+### 6. `src/components/game/CharacterPanel.tsx`
+Update the CP bar tooltip to show the mental stat contribution (e.g. "Max CP: 60 base + 27 level + 10 mental").
+
+### 7. `src/components/admin/GameManual.tsx`
+Update the CP documentation section with the new formula, scaling table, and class comparison.
 
