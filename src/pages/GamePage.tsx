@@ -22,7 +22,7 @@ import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
 import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty } from '@/lib/game-data';
-import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
+import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -950,9 +950,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
     if (isDead || character.hp <= 0) return;
-    const abilities = CLASS_ABILITIES[character.class];
-    if (!abilities || !abilities[abilityIndex]) return;
-    const ability = abilities[abilityIndex];
+    const allAbilities = [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])];
+    if (!allAbilities[abilityIndex]) return;
+    const ability = allAbilities[abilityIndex];
     if (character.level < ability.levelRequired) {
       addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
       return;
@@ -1310,6 +1310,59 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         await updateCharacter({ cp: newCp });
         addLog(`${ability.emoji} Encore! Refunded ${refund} CP!`);
       }
+    } else if (ability.type === 'punch') {
+      if (!inCombat || !activeCombatCreatureId) {
+        addLog(`${ability.emoji} You must be in combat to use Punch!`);
+        return;
+      }
+      const creature = creatures.find(c => c.id === activeCombatCreatureId);
+      if (!creature || !creature.is_alive || creature.hp <= 0) {
+        addLog(`${ability.emoji} No valid target for Punch.`);
+        return;
+      }
+      const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
+      const atkRoll = rollD20();
+      const totalAtk = atkRoll + strMod;
+      if (atkRoll === 1 || (atkRoll < 20 && totalAtk < creature.ac)) {
+        addLog(`${ability.emoji} Punch! Rolled ${atkRoll}+${strMod}=${totalAtk} vs AC ${creature.ac} — Miss!`);
+      } else {
+        const baseDmg = rollDamage(1, 4) + strMod;
+        const isCrit = atkRoll === 20;
+        const finalDmg = Math.max(isCrit ? baseDmg * 2 : baseDmg, 1);
+        const currentHp = creatureHpOverrides[creature.id] ?? creature.hp;
+        const newHp = Math.max(currentHp - finalDmg, 0);
+        updateCreatureHp(creature.id, newHp);
+        await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
+        addLog(`${ability.emoji}${isCrit ? ' CRITICAL!' : ''} Punch! Rolled ${atkRoll}+${strMod}=${totalAtk} vs AC ${creature.ac} — ${finalDmg} damage!`);
+        if (newHp <= 0) {
+          // Award XP & gold for Punch kill
+          const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
+          const xpPenalty = getXpPenalty(character.level, creature.level);
+          const totalXp = Math.floor(baseXp * xpPenalty);
+          const lootTable = creature.loot_table as any[];
+          const goldEntry = lootTable?.find((e: any) => e.type === 'gold');
+          let totalGold = 0;
+          if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+            totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+          }
+          const goldNote = totalGold > 0 ? `, +${totalGold} gold` : '';
+          const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
+          addLog(`☠️ ${creature.name} has been slain! (+${totalXp} XP${goldNote})${penaltyNote}`);
+          const newXp = character.xp + totalXp;
+          const newGold = character.gold + totalGold;
+          const xpForNext = getXpForLevel(character.level);
+          if (newXp >= xpForNext) {
+            const newLevel = character.level + 1;
+            addLog(`🎉 Level Up! You are now level ${newLevel}!`);
+            await updateCharacter({ xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5, hp: character.max_hp + 5, gold: newGold });
+          } else {
+            await updateCharacter({ xp: newXp, gold: newGold });
+          }
+          await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
+          stopCombatFn();
+          return;
+        }
+      }
     }
 
     // Deduct CP cost
@@ -1466,7 +1519,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               inCombat={inCombat}
               activeCombatCreatureId={activeCombatCreatureId}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
-              classAbilities={CLASS_ABILITIES[character.class] || []}
+              classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
               onUseAbility={handleUseAbility}
               healTargets={
                 party && character.class === 'healer'
