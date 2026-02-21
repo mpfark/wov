@@ -5,6 +5,7 @@ import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
+import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 
 interface EquipmentBonuses {
   [key: string]: number;
@@ -166,7 +167,7 @@ export function useCombat({
   useEffect(() => { broadcastHpRef.current = broadcastHp; }, [broadcastHp]);
   useEffect(() => { broadcastRewardRef.current = broadcastReward; }, [broadcastReward]);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const combatBusyRef = useRef(false);
 
   const updateCreatureHp = useCallback((creatureId: string, hp: number) => {
@@ -179,7 +180,7 @@ export function useCombat({
 
   const stopCombat = useCallback(() => {
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
     combatCreatureIdRef.current = null;
@@ -593,7 +594,7 @@ export function useCombat({
 
     // Stop any existing combat first
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
 
@@ -610,8 +611,8 @@ export function useCombat({
     // First tick immediately
     doCombatTick();
 
-    // Then loop
-    intervalRef.current = setInterval(() => {
+    // Then loop — uses Web Worker timer to avoid background tab throttling
+    intervalRef.current = setWorkerInterval(() => {
       doCombatTick();
     }, attackInterval);
   }, [doCombatTick]);
@@ -623,7 +624,7 @@ export function useCombat({
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+        clearWorkerInterval(intervalRef.current);
       }
     };
   }, []);
