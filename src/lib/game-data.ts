@@ -1,11 +1,11 @@
 // D&D-style stat modifiers by race
 export const RACE_STATS: Record<string, Record<string, number>> = {
   human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-  elf:      { str: 0, dex: 2, con: 0, int: 1, wis: 1, cha: 0 },
-  dwarf:    { str: 2, dex: 0, con: 2, int: 0, wis: 1, cha: -1 },
-  halfling: { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
-  edain:    { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
-  half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 2 },
+  elf:      { str: -1, dex: 2, con: -1, int: 2, wis: 3, cha: 0 },
+  dwarf:    { str: 2, dex: -1, con: 4, int: 0, wis: 1, cha: -2 },
+  halfling: { str: -2, dex: 3, con: 1, int: 0, wis: 1, cha: 2 },
+  edain:    { str: 1, dex: 0, con: 3, int: 1, wis: 1, cha: 1 },
+  half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 2, cha: 3 },
 };
 
 // Base stats by class
