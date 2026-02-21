@@ -19,7 +19,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -1062,8 +1062,71 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
       if (totalDmg > 0) {
         const newHp = Math.max((creatureHpOverrides[creature.id] ?? creature.hp) - totalDmg, 0);
+        updateCreatureHp(creature.id, newHp);
         await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
         addLog(`${ability.emoji} Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`);
+
+        if (newHp <= 0) {
+          // Award XP & gold for Barrage kill
+          const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
+          const levelDiff = Math.max(character.level - creature.level, 0);
+          const xpPenalty = Math.max(1 - levelDiff * 0.2, 0.1);
+          const totalXp = Math.floor(baseXp * xpPenalty);
+
+          const lootTable = creature.loot_table as any[];
+          const goldEntry = lootTable?.find((e: any) => e.type === 'gold');
+          let totalGold = 0;
+          if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+            totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+          }
+
+          // Party split
+          let splitCount = 1;
+          if (party?.id) {
+            const { data: freshMembers } = await supabase
+              .from('party_members')
+              .select('character_id, character:characters(current_node_id)')
+              .eq('party_id', party.id)
+              .eq('status', 'accepted');
+            const membersHere = (freshMembers || []).filter(
+              (m: any) => m.character?.current_node_id === character.current_node_id
+            );
+            splitCount = membersHere.length > 1 ? membersHere.length : 1;
+            const xpShare = Math.floor(totalXp / splitCount);
+            const goldShare = Math.floor(totalGold / splitCount);
+            for (const m of membersHere) {
+              if (m.character_id === character.id || !m.character_id) continue;
+              try {
+                await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: xpShare, _gold: goldShare });
+              } catch (e) { console.error('Failed to award party member:', e); }
+            }
+          }
+
+          const xpShare = Math.floor(totalXp / splitCount);
+          const goldShare = Math.floor(totalGold / splitCount);
+          const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
+          const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
+          addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
+
+          const newXp = character.xp + xpShare;
+          const newGold = character.gold + goldShare;
+          const xpForNext = getXpForLevel(character.level);
+          if (newXp >= xpForNext) {
+            const newLevel = character.level + 1;
+            const levelUpUpdates: Partial<Character> = {
+              xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5,
+              hp: character.max_hp + 5, gold: newGold,
+            };
+            addLog(`🎉 Level Up! You are now level ${newLevel}!`);
+            await updateCharacter(levelUpUpdates);
+          } else {
+            await updateCharacter({ xp: newXp, gold: newGold });
+          }
+
+          await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
+          stopCombatFn();
+          return;
+        }
       }
     } else if (ability.type === 'root_debuff') {
       if (!inCombat || !activeCombatCreatureId) {
