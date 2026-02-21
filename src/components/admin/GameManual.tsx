@@ -311,6 +311,7 @@ export default function GameManual() {
                 <p>CP is the resource that powers class abilities. It replaces cooldown timers — abilities cost CP to use and are disabled when you don't have enough.</p>
                 <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">60 + (level − 1) × 3 + mentalMod × 5</code></p>
                 <p className="ml-4 text-[10px]"><code>mentalMod = max(modifier(INT), modifier(WIS), modifier(CHA), 0)</code> where modifier = floor((stat − 10) / 2)</p>
+                <p className="mt-1"><strong className="text-foreground">Race Impact:</strong> Caster races like <strong>Elf</strong> (+3 WIS, +2 INT) and <strong>Half-Elf</strong> (+3 CHA, +2 WIS) start with significantly higher CP pools than tank races like <strong>Dwarf</strong> (+4 CON but −2 CHA). Choose a race whose mental stats complement your class's primary resource needs.</p>
                 <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 6 seconds</code> + bonus from primary stat</p>
                 <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/6s for every 2 points of primary stat modifier</p>
                 <p><strong className="text-foreground">Inn Rest</strong> = Fully restores CP (alongside HP)</p>
@@ -319,40 +320,48 @@ export default function GameManual() {
               </div>
 
               <div>
-                <p className="text-xs font-display text-primary mb-1">Mental Stat Scaling — Class Comparison</p>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Class</TableHead>
-                      <TableHead className="text-xs">Best Mental (Lv1)</TableHead>
-                      <TableHead className="text-xs">CP Lv1</TableHead>
-                      <TableHead className="text-xs">~Best Mental (Lv10)</TableHead>
-                      <TableHead className="text-xs">CP Lv10</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[
-                      { cls: 'Warrior', lv1: 8, lv10: 10 },
-                      { cls: 'Ranger', lv1: 10, lv10: 13 },
-                      { cls: 'Rogue', lv1: 10, lv10: 12 },
-                      { cls: 'Wizard', lv1: 11, lv10: 15 },
-                      { cls: 'Healer', lv1: 11, lv10: 15 },
-                      { cls: 'Bard', lv1: 11, lv10: 15 },
-                    ].map(row => {
-                      const mod1 = Math.max(Math.floor((row.lv1 - 10) / 2), 0);
-                      const mod10 = Math.max(Math.floor((row.lv10 - 10) / 2), 0);
-                      return (
-                        <TableRow key={row.cls}>
-                          <TableCell className="text-xs font-display">{row.cls}</TableCell>
-                          <TableCell className="text-xs">{row.lv1} (mod {mod1})</TableCell>
-                          <TableCell className="text-xs text-primary">{60 + mod1 * 5}</TableCell>
-                          <TableCell className="text-xs">{row.lv10} (mod {mod10})</TableCell>
-                          <TableCell className="text-xs text-primary">{60 + 9 * 3 + mod10 * 5}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <p className="text-xs font-display text-primary mb-1">Starting CP by Race & Class (Level 1)</p>
+                <div className="max-h-[300px] overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Race \ Class</TableHead>
+                        {Object.keys(CLASS_STATS).map(cls => (
+                          <TableHead key={cls} className="text-xs">{CLASS_LABELS[cls]}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const allCp = Object.keys(RACE_STATS).flatMap(race =>
+                          Object.keys(CLASS_STATS).map(cls => {
+                            const s = calculateStats(race, cls);
+                            return getMaxCp(1, s.int, s.wis, s.cha);
+                          })
+                        );
+                        const maxCp = Math.max(...allCp);
+                        const minCp = Math.min(...allCp);
+                        return Object.keys(RACE_STATS).map(race => (
+                          <TableRow key={race}>
+                            <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
+                            {Object.keys(CLASS_STATS).map(cls => {
+                              const s = calculateStats(race, cls);
+                              const cp = getMaxCp(1, s.int, s.wis, s.cha);
+                              return (
+                                <TableCell key={cls} className={`text-xs ${cp >= maxCp - 5 ? 'text-blue-400 font-bold' : cp <= minCp + 5 ? 'text-orange-400' : ''}`}>
+                                  {cp}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        ));
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  <span className="text-blue-400">■</span> High CP (caster-optimal) · <span className="text-orange-400">■</span> Low CP (tank-focused race)
+                </p>
               </div>
 
               <div>
