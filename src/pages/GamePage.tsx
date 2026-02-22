@@ -1650,6 +1650,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             onSetTank={setTank}
             onToggleFollow={toggleFollow}
             keyboardBindings={keyboardMovement}
+            activeBuffs={{
+              stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
+              damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
+              acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
+              acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
+              poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
+              evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
+              ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
+              absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
+              absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
+              root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
+              sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
+              focusStrike: !!focusStrikeBuff,
+            }}
           />
         </div>
       </div>

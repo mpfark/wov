@@ -11,6 +11,21 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel, DEFAULT_BINDINGS, ACTION_NAMES, ACTION_LABELS } from '@/hooks/useKeyboardMovement';
 
+export interface ActiveBuffs {
+  stealth?: boolean;
+  damageBuff?: boolean;
+  acBuff?: boolean;
+  acBuffBonus?: number;
+  poison?: boolean;
+  evasion?: boolean;
+  ignite?: boolean;
+  absorb?: boolean;
+  absorbHp?: number;
+  root?: boolean;
+  sunder?: boolean;
+  focusStrike?: boolean;
+}
+
 interface Props {
   regions: Region[];
   nodes: GameNode[];
@@ -36,6 +51,7 @@ interface Props {
   onKick: (charId: string) => void;
   onSetTank: (charId: string | null) => void;
   onToggleFollow: (following: boolean) => void;
+  activeBuffs?: ActiveBuffs;
   // Keyboard bindings
   keyboardBindings?: {
     bindings: KeyBindings;
@@ -56,7 +72,7 @@ export default function MapPanel({
   regions, nodes, currentNodeId, currentRegionId, characterLevel, onNodeClick, partyMembers, myCharacterId,
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
-  keyboardBindings,
+  keyboardBindings, activeBuffs,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -305,6 +321,7 @@ export default function MapPanel({
           onKick={onKick}
           onSetTank={onSetTank}
           onToggleFollow={onToggleFollow}
+          activeBuffs={activeBuffs}
         />
       </div>
     </div>

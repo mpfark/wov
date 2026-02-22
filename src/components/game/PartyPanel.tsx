@@ -4,6 +4,8 @@ import { Character } from '@/hooks/useCharacter';
 import { Button } from '@/components/ui/button';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
 import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import type { ActiveBuffs } from './MapPanel';
 
 interface Props {
   character: Character;
@@ -22,19 +24,34 @@ interface Props {
   onKick: (charId: string) => void;
   onSetTank: (charId: string | null) => void;
   onToggleFollow: (following: boolean) => void;
+  activeBuffs?: ActiveBuffs;
 }
 
 export default function PartyPanel({
   character, party, members, pendingInvites, isLeader, isTank, myMembership,
   playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite,
-  onLeave, onKick, onSetTank, onToggleFollow,
+  onLeave, onKick, onSetTank, onToggleFollow, activeBuffs,
 }: Props) {
   // Players at same node who aren't in the party
   const invitablePlayers = playersHere.filter(
     p => p.id !== character.id && !members.some(m => m.character_id === p.id)
   );
 
+  const BUFF_ICONS: { key: keyof ActiveBuffs; emoji: string; label: string; color: string }[] = [
+    { key: 'focusStrike', emoji: '🎯', label: 'Focus Strike', color: 'text-primary' },
+    { key: 'stealth', emoji: '🌑', label: 'Shadowstep', color: 'text-primary' },
+    { key: 'damageBuff', emoji: '✨', label: 'Arcane Surge', color: 'text-elvish' },
+    { key: 'acBuff', emoji: '📯', label: 'Battle Cry', color: 'text-dwarvish' },
+    { key: 'poison', emoji: '🧪', label: 'Envenom', color: 'text-elvish' },
+    { key: 'evasion', emoji: '🌫️', label: 'Evasion', color: 'text-primary' },
+    { key: 'ignite', emoji: '🔥', label: 'Ignite', color: 'text-dwarvish' },
+    { key: 'absorb', emoji: '🛡️✨', label: 'Force Shield', color: 'text-primary' },
+    { key: 'root', emoji: '🌿', label: 'Entangle', color: 'text-elvish' },
+    { key: 'sunder', emoji: '🔨', label: 'Sunder', color: 'text-dwarvish' },
+  ];
+
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-2">
       <h3 className="font-display text-xs text-muted-foreground flex items-center gap-1">
         <Users className="w-3 h-3" /> Party
@@ -65,30 +82,53 @@ export default function PartyPanel({
             const isMemberTank = effectiveTankId === m.character_id;
             const isMemberLeader = party.leader_id === m.character_id;
             return (
-              <div key={m.id} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
-                <div className="flex items-center gap-1 truncate">
-                  {isMemberLeader && <Crown className="w-3 h-3 text-primary shrink-0" />}
-                  {isMemberTank && <Shield className="w-3 h-3 text-chart-2 shrink-0" />}
-                  {m.is_following && <Footprints className="w-3 h-3 text-muted-foreground shrink-0" />}
-                  <span className={`font-display truncate ${isMe ? 'text-primary' : 'text-foreground'}`}>
-                    {m.character.name}
-                  </span>
-                  <span className="text-muted-foreground text-[10px]">L{m.character.level}</span>
+              <div key={m.id} className="space-y-0.5">
+                <div className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                  <div className="flex items-center gap-1 truncate">
+                    {isMemberLeader && <Crown className="w-3 h-3 text-primary shrink-0" />}
+                    {isMemberTank && <Shield className="w-3 h-3 text-chart-2 shrink-0" />}
+                    {m.is_following && <Footprints className="w-3 h-3 text-muted-foreground shrink-0" />}
+                    <span className={`font-display truncate ${isMe ? 'text-primary' : 'text-foreground'}`}>
+                      {m.character.name}
+                    </span>
+                    <span className="text-muted-foreground text-[10px]">L{m.character.level}</span>
+                  </div>
+                  <div className="flex gap-0.5 shrink-0">
+                    {isLeader && !isMe && (
+                      <>
+                        <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Set as Tank"
+                          onClick={() => onSetTank(isMemberTank ? null : m.character_id)}>
+                          <Shield className={`w-3 h-3 ${isMemberTank ? 'text-chart-2' : 'text-muted-foreground'}`} />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Kick"
+                          onClick={() => onKick(m.character_id)}>
+                          <X className="w-3 h-3 text-destructive" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-0.5 shrink-0">
-                  {isLeader && !isMe && (
-                    <>
-                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Set as Tank"
-                        onClick={() => onSetTank(isMemberTank ? null : m.character_id)}>
-                        <Shield className={`w-3 h-3 ${isMemberTank ? 'text-chart-2' : 'text-muted-foreground'}`} />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Kick"
-                        onClick={() => onKick(m.character_id)}>
-                        <X className="w-3 h-3 text-destructive" />
-                      </Button>
-                    </>
-                  )}
-                </div>
+                {/* Active buffs on the tank (only shown for "me" since buffs are local) */}
+                {isMe && isMemberTank && activeBuffs && (() => {
+                  const active = BUFF_ICONS.filter(b => activeBuffs[b.key]);
+                  if (active.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-0.5 pl-6">
+                      {active.map(b => (
+                        <Tooltip key={b.key}>
+                          <TooltipTrigger asChild>
+                            <span className={`text-[10px] ${b.color} cursor-default`}>{b.emoji}</span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            {b.label}
+                            {b.key === 'acBuff' && activeBuffs.acBuffBonus ? ` (AC+${activeBuffs.acBuffBonus})` : ''}
+                            {b.key === 'absorb' && activeBuffs.absorbHp ? ` (${activeBuffs.absorbHp} HP)` : ''}
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
@@ -128,5 +168,6 @@ export default function PartyPanel({
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }
