@@ -488,12 +488,32 @@ export function useCombat({
       }
 
       // Creature counterattack — only fires once per round from the tank's combat loop.
-      // Non-tank party members only deal damage; they don't trigger creature retaliation.
+      // Non-tank party members only deal damage; they don't trigger creature retaliation
+      // UNLESS the tank is not at the same node (then creature hits the attacker).
       const effectiveTankId = _party ? (_party.tank_id ?? _party.leader_id) : null;
       const iAmTheTank = !_party || effectiveTankId === char.id;
 
-      if (!iAmTheTank) {
-        // Non-tank members skip creature counterattack entirely
+      // Check if tank is actually present at this node
+      let tankPresentAtNode = false;
+      if (_party && effectiveTankId && effectiveTankId !== char.id) {
+        const localTankMember = _partyMembers.find(m => m.character_id === effectiveTankId && m.character.current_node_id === char.current_node_id);
+        if (localTankMember) {
+          try {
+            const { data: freshTank } = await supabase
+              .from('characters')
+              .select('current_node_id')
+              .eq('id', effectiveTankId)
+              .single();
+            tankPresentAtNode = !!(freshTank && freshTank.current_node_id === char.current_node_id);
+          } catch {
+            tankPresentAtNode = false;
+          }
+        }
+      }
+
+      // Skip counterattack only if I'm not the tank AND the tank is actually here
+      if (!iAmTheTank && tankPresentAtNode) {
+        // Non-tank members skip creature counterattack when tank is present
       } else {
       // Root debuff — reduce creature damage by 30% if active
       const _rootDebuff = rootDebuffRef.current;
