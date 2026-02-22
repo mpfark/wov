@@ -28,7 +28,22 @@ export interface Character {
 
 export function useCharacter(user: User | null) {
   const [characters, setCharacters] = useState<Character[]>([]);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
+  const [selectedCharacterId, _setSelectedCharacterId] = useState<string | null>(
+    () => sessionStorage.getItem('selectedCharacterId')
+  );
+
+  // Wrapper that syncs to sessionStorage
+  const setSelectedCharacterId = useCallback((valOrFn: string | null | ((prev: string | null) => string | null)) => {
+    _setSelectedCharacterId(prev => {
+      const next = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
+      if (next) {
+        sessionStorage.setItem('selectedCharacterId', next);
+      } else {
+        sessionStorage.removeItem('selectedCharacterId');
+      }
+      return next;
+    });
+  }, []);
   const [loading, setLoading] = useState(true);
 
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
