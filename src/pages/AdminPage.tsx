@@ -101,6 +101,12 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   };
 
   const deleteRegion = async (id: string) => {
+    const region = regions.find(r => r.id === id);
+    const nodeCount = nodes.filter(n => n.region_id === id).length;
+    const confirmed = window.confirm(
+      `Delete region "${region?.name || 'Unknown'}"?${nodeCount > 0 ? ` It has ${nodeCount} node(s) that will also be affected.` : ''}`
+    );
+    if (!confirmed) return;
     const { error } = await supabase.from('regions').delete().eq('id', id);
     if (error) return toast.error(error.message);
     toast.success('Region deleted');
