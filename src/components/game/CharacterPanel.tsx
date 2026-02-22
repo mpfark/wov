@@ -295,17 +295,21 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
   );
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-wrap gap-1">
       {buffs.map(b => (
-        <span
-          key={b.label}
-          className={`relative inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border overflow-hidden text-[10px] font-display ${b.color}`}
-        >
-          <span className={`absolute inset-0 ${b.bgColor} origin-left transition-transform duration-1000 ease-linear`} style={{ transform: `scaleX(${b.pct / 100})` }} />
-          <span className="relative z-10">{b.emoji}</span>
-          <span className="relative z-10">{b.label}</span>
-          <span className="relative z-10 text-muted-foreground">{b.detail}</span>
-        </span>
+        <Tooltip key={b.label}>
+          <TooltipTrigger asChild>
+            <span
+              className={`relative inline-flex items-center gap-0.5 px-1 py-0.5 rounded border border-border overflow-hidden text-[10px] font-display ${b.color} cursor-default`}
+            >
+              <span className={`absolute inset-0 ${b.bgColor} origin-left transition-transform duration-1000 ease-linear`} style={{ transform: `scaleX(${b.pct / 100})` }} />
+              <span className="relative z-10">{b.emoji}</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            <span className="font-display">{b.label}</span> — {b.detail}
+          </TooltipContent>
+        </Tooltip>
       ))}
     </div>
   );
