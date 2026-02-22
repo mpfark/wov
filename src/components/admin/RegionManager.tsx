@@ -2,14 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const HEARTHLANDS_ID = '00000000-0000-0000-0000-000000000001';
-const DIRECTIONS = ['N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'] as const;
 
 interface Region {
   id: string;
@@ -17,8 +15,6 @@ interface Region {
   description: string;
   min_level: number;
   max_level: number;
-  direction?: string | null;
-  sort_order?: number;
 }
 
 interface Props {
@@ -32,16 +28,19 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
-  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10, direction: '', sort_order: 0 });
+  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10 });
 
   const create = async () => {
     if (!form.name) return toast.error('Name required');
-    const payload: any = { name: form.name, description: form.description, min_level: form.min_level, max_level: form.max_level, sort_order: form.sort_order };
-    if (form.direction) payload.direction = form.direction;
-    const { error } = await supabase.from('regions').insert(payload);
+    const { error } = await supabase.from('regions').insert({
+      name: form.name,
+      description: form.description,
+      min_level: form.min_level,
+      max_level: form.max_level,
+    });
     if (error) return toast.error(error.message);
     toast.success('Region created');
-    setForm({ name: '', description: '', min_level: 1, max_level: 10, direction: '', sort_order: 0 });
+    setForm({ name: '', description: '', min_level: 1, max_level: 10 });
     setCreateOpen(false);
     onCreated();
   };
@@ -58,8 +57,6 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
       description: editingRegion.description,
       min_level: editingRegion.min_level,
       max_level: editingRegion.max_level,
-      direction: editingRegion.direction || null,
-      sort_order: editingRegion.sort_order ?? 0,
     }).eq('id', editingRegion.id);
     if (error) return toast.error(error.message);
     toast.success('Region updated');
@@ -68,15 +65,12 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
     onCreated();
   };
 
-  const isHearthlands = (id: string) => id === HEARTHLANDS_ID;
-
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)} className="font-display text-xs">
         <Plus className="w-3 h-3 mr-1" /> New Region
       </Button>
 
-      {/* Edit buttons for each region */}
       {regions.map(r => (
         <Button key={r.id} variant="ghost" size="sm" onClick={() => openEdit(r)} className="text-xs h-6 px-1.5">
           <Pencil className="w-3 h-3 mr-0.5" />
@@ -101,19 +95,6 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
               <Input type="number" placeholder="Max level" value={form.max_level}
                 onChange={e => setForm(f => ({ ...f, max_level: +e.target.value }))} />
             </div>
-            <Select value={form.direction} onValueChange={v => setForm(f => ({ ...f, direction: v === '_none' ? '' : v }))}>
-              <SelectTrigger className="text-xs">
-                <SelectValue placeholder="Direction from Hearthlands" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">No direction</SelectItem>
-                {DIRECTIONS.map(d => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input type="number" placeholder="Sort order (lower = closer)" value={form.sort_order}
-              onChange={e => setForm(f => ({ ...f, sort_order: +e.target.value }))} />
             <Button onClick={create} className="font-display text-xs w-full">
               <Plus className="w-3 h-3 mr-1" /> Create Region
             </Button>
@@ -139,24 +120,6 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
                 <Input type="number" placeholder="Max level" value={editingRegion.max_level}
                   onChange={e => setEditingRegion(r => r ? { ...r, max_level: +e.target.value } : r)} />
               </div>
-              {!isHearthlands(editingRegion.id) && (
-                <Select
-                  value={editingRegion.direction || '_none'}
-                  onValueChange={v => setEditingRegion(r => r ? { ...r, direction: v === '_none' ? null : v } : r)}
-                >
-                  <SelectTrigger className="text-xs">
-                    <SelectValue placeholder="Direction from Hearthlands" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">No direction</SelectItem>
-                    {DIRECTIONS.map(d => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Input type="number" placeholder="Sort order (lower = closer)" value={editingRegion.sort_order ?? 0}
-                onChange={e => setEditingRegion(r => r ? { ...r, sort_order: +e.target.value } : r)} />
               <Button onClick={saveEdit} className="font-display text-xs w-full">
                 Save Changes
               </Button>
