@@ -660,6 +660,16 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
               const isSelected = selectedRegionId === regionId;
               const { bbox } = hullData;
               const rNodes = nodesByRegion.get(regionId) || [];
+
+              // Compute label position from actual node positions (more stable than bbox)
+              const nodePositions = rNodes.map(n => allNodePositions.get(n.id)).filter(Boolean) as Array<{ px: number; py: number }>;
+              const labelX = nodePositions.length > 0
+                ? nodePositions.reduce((s, p) => s + p.px, 0) / nodePositions.length
+                : bbox.cx;
+              const labelY = nodePositions.length > 0
+                ? Math.min(...nodePositions.map(p => p.py)) - OUTLINE_RADIUS - 10
+                : bbox.minY - 8;
+
               return (
                 <g key={regionId}>
                   <path
@@ -670,14 +680,14 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
                     strokeDasharray="8 4"
                   />
                   <text
-                    x={bbox.cx} y={bbox.minY - 8}
+                    x={labelX} y={labelY}
                     textAnchor="middle"
                     className="fill-primary font-display text-xs"
                   >
                     {hullData.region.name}
                   </text>
                   <text
-                    x={bbox.cx} y={bbox.minY + 6}
+                    x={labelX} y={labelY + 14}
                     textAnchor="middle"
                     className="fill-muted-foreground text-[9px]"
                   >
