@@ -261,7 +261,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   // ---- Connection-driven layout + convex hull ----
   const { regionHulls, allNodePositions, canvasW, canvasH } = useMemo(() => {
     const MIN_NODE_GAP = 90;
-    const HULL_PAD = 60;
+    const HULL_PAD = 35;
 
     // 1. Layout nodes within each region (local coords)
     const regionLocalLayouts = new Map<string, {
@@ -324,7 +324,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       regionSizes.set(region.id, size);
     }
 
-    const BUFFER = 60;
+    const BUFFER = 20;
     const placed = new Set<string>();
 
     // Place Hearthlands at center
@@ -413,49 +413,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       }
     }
 
-    // 4. Collision resolution
-    const regionList = regions.map(r => r.id);
-    for (let iter = 0; iter < 80; iter++) {
-      let moved = false;
-      for (let i = 0; i < regionList.length; i++) {
-        for (let j = i + 1; j < regionList.length; j++) {
-          const aId = regionList[i];
-          const bId = regionList[j];
-          const a = regionCenters.get(aId)!;
-          const b = regionCenters.get(bId)!;
-          const aR = regionSizes.get(aId) || 160;
-          const bR = regionSizes.get(bId) || 160;
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const minDist = aR + bR + 30;
-          if (dist < minDist && dist > 0) {
-            const overlap = (minDist - dist) / 2;
-            const nx = dx / dist;
-            const ny = dy / dist;
-            // Don't move Hearthlands
-            if (aId === HEARTHLANDS_ID) {
-              b.x += nx * overlap * 2;
-              b.y += ny * overlap * 2;
-            } else if (bId === HEARTHLANDS_ID) {
-              a.x -= nx * overlap * 2;
-              a.y -= ny * overlap * 2;
-            } else {
-              a.x -= nx * overlap;
-              a.y -= ny * overlap;
-              b.x += nx * overlap;
-              b.y += ny * overlap;
-            }
-            moved = true;
-          } else if (dist === 0) {
-            a.x -= 50;
-            b.x += 50;
-            moved = true;
-          }
-        }
-      }
-      if (!moved) break;
-    }
+    // 4. No collision resolution — regions may overlap based on connections
 
     // 5. Normalize so nothing is negative
     const MARGIN = 40;
