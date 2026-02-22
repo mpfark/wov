@@ -532,8 +532,12 @@ export function useCombat({
       }
 
       if (_party && tankMember) {
-        // Use tank's actual AC (buffedAC since I am the tank)
-        if (creatureAtk >= buffedAC) {
+        // Evasion check for tank (Cloak of Shadows)
+        const _evasionBuff = evasionBuffRef.current;
+        const isEvading = _evasionBuff && Date.now() < _evasionBuff.expiresAt;
+        if (isEvading && Math.random() < _evasionBuff!.dodgeChance) {
+          _addLog(`🌫️ ${tankMember.character.name} dodges ${creature.name}'s attack from the shadows!`);
+        } else if (creatureAtk >= buffedAC) {
           const dmgDie = getCreatureDamageDie(creature.level, creature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
