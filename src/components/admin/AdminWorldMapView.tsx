@@ -18,8 +18,6 @@ interface Region {
   name: string;
   min_level: number;
   max_level: number;
-  direction?: string | null;
-  sort_order?: number;
 }
 
 interface Props {
@@ -475,7 +473,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   }, [nodes, allNodePositions, allNodeMap]);
 
   // Sort regions by min_level for sidebar
-  const sortedRegions = useMemo(() => [...regions].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)), [regions]);
+  const sortedRegions = useMemo(() => [...regions].sort((a, b) => a.min_level - b.min_level), [regions]);
 
   if (regions.length === 0) {
     return (
