@@ -35,6 +35,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [isNewNode, setIsNewNode] = useState(false);
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('world');
 
   const loadData = useCallback(async () => {
     const [r, n, c, np] = await Promise.all([
@@ -127,7 +128,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         <div className="flex-1" />
       </div>
 
-      <Tabs defaultValue="world" className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <Tabs defaultValue="world" value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="px-4 pt-2 border-b border-border bg-card/30 shrink-0">
           <TabsList className="h-8">
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
@@ -198,43 +199,43 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         </TabsContent>
 
         <TabsContent value="creatures" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <CreatureManager />
+          {activeTab === 'creatures' && <CreatureManager />}
         </TabsContent>
 
         <TabsContent value="npcs" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <NPCManager />
+          {activeTab === 'npcs' && <NPCManager />}
         </TabsContent>
 
         <TabsContent value="items" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <ItemManager />
+          {activeTab === 'items' && <ItemManager />}
         </TabsContent>
 
         <TabsContent value="loot-tables" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <LootTableManager />
+          {activeTab === 'loot-tables' && <LootTableManager />}
         </TabsContent>
 
         <TabsContent value="users" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <UserManager isValar={isValar} />
+          {activeTab === 'users' && <UserManager isValar={isValar} />}
         </TabsContent>
 
         <TabsContent value="races-classes" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <RaceClassManager />
+          {activeTab === 'races-classes' && <RaceClassManager />}
         </TabsContent>
 
         <TabsContent value="roadmap" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <RoadmapManager />
+          {activeTab === 'roadmap' && <RoadmapManager />}
         </TabsContent>
 
         <TabsContent value="world-builder" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <WorldBuilderPanel onDataChanged={loadData} />
+          {activeTab === 'world-builder' && <WorldBuilderPanel onDataChanged={loadData} />}
         </TabsContent>
 
         <TabsContent value="item-forge" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <ItemForgePanel onDataChanged={loadData} />
+          {activeTab === 'item-forge' && <ItemForgePanel onDataChanged={loadData} />}
         </TabsContent>
 
         <TabsContent value="manual" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          <GameManual />
+          {activeTab === 'manual' && <GameManual />}
         </TabsContent>
       </Tabs>
     </div>
