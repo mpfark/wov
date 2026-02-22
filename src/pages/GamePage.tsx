@@ -1556,6 +1556,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             evasionBuff={evasionBuff}
             igniteBuff={igniteBuff}
             absorbBuff={absorbBuff}
+            damageBuff={damageBuff}
             partyRegenBuff={partyRegenBuff}
             focusStrikeBuff={focusStrikeBuff}
           />
