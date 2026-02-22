@@ -411,6 +411,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // Refs for forward-declared callbacks used by useCombat
   const rollLootRef = useRef<(lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => Promise<void>>(async () => {});
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
+  const awardKillRewardsRef = useRef<(creature: any, opts?: { stopCombat?: boolean }) => Promise<void>>(async () => {});
 
   const handleAddPoisonStack = useCallback((creatureId: string) => {
     const dexMod = getStatMod2(character.dex);
@@ -501,6 +502,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       broadcastDamage(dotDebuff.creatureId, newHp, dotDebuff.damagePerTick, character.name, newHp <= 0);
       await supabase.rpc('damage_creature', { _creature_id: dotDebuff.creatureId, _new_hp: newHp, _killed: newHp <= 0 });
       addLog(`🩸 ${creature.name} bleeds for ${dotDebuff.damagePerTick} damage!`);
+      if (newHp <= 0) {
+        setDotDebuff(null);
+        clearInterval(interval);
+        await awardKillRewardsRef.current(creature, { stopCombat: true });
+        return;
+      }
     }, dotDebuff.intervalMs);
     return () => clearInterval(interval);
   }, [dotDebuff, creatures, creatureHpOverrides, addLog]);
@@ -522,6 +529,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         addLog(`🧪 ${creature.name} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+        if (newHp <= 0) {
+          await awardKillRewardsRef.current(creature, { stopCombat: true });
+        }
       }
       if (anyExpired) {
         setPoisonStacks(prev => {
@@ -557,6 +567,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         addLog(`🔥 ${creature.name} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+        if (newHp <= 0) {
+          await awardKillRewardsRef.current(creature, { stopCombat: true });
+        }
       }
       if (anyExpired) {
         setIgniteStacks(prev => {
@@ -988,10 +1001,73 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     fetchGroundLoot();
   }, [character.current_node_id, addLog, fetchGroundLoot]);
 
+  // Shared reward helper for ability/DoT kills
+  const awardKillRewards = useCallback(async (creature: any, opts?: { stopCombat?: boolean }) => {
+    const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
+    const xpPenalty = getXpPenalty(character.level, creature.level);
+    const totalXp = Math.floor(baseXp * xpPenalty);
+
+    const lootTableData = creature.loot_table as any[];
+    const goldEntry = lootTableData?.find((e: any) => e.type === 'gold');
+    let totalGold = 0;
+    if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+      totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+    }
+
+    let splitCount = 1;
+    if (party?.id) {
+      const { data: freshMembers } = await supabase
+        .from('party_members')
+        .select('character_id, character:characters(current_node_id)')
+        .eq('party_id', party.id)
+        .eq('status', 'accepted');
+      const membersHere = (freshMembers || []).filter(
+        (m: any) => m.character?.current_node_id === character.current_node_id
+      );
+      splitCount = membersHere.length > 1 ? membersHere.length : 1;
+      const xpShare = Math.floor(totalXp / splitCount);
+      const goldShare = Math.floor(totalGold / splitCount);
+      for (const m of membersHere) {
+        if (m.character_id === character.id || !m.character_id) continue;
+        try {
+          await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: xpShare, _gold: goldShare });
+        } catch (e) { console.error('Failed to award party member:', e); }
+      }
+    }
+
+    const xpShare = Math.floor(totalXp / splitCount);
+    const goldShare = Math.floor(totalGold / splitCount);
+    const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
+    const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
+    addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
+
+    const newXp = character.xp + xpShare;
+    const newGold = character.gold + goldShare;
+    const xpForNext = getXpForLevel(character.level);
+    if (newXp >= xpForNext) {
+      const newLevel = character.level + 1;
+      const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
+      const oldMaxCp = character.max_cp ?? 60;
+      const levelUpUpdates: Partial<Character> = {
+        xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5,
+        hp: character.max_hp + 5, gold: newGold,
+        max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
+      };
+      addLog(`🎉 Level Up! You are now level ${newLevel}!`);
+      await updateCharacter(levelUpUpdates);
+    } else {
+      await updateCharacter({ xp: newXp, gold: newGold });
+    }
+
+    await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
+    if (opts?.stopCombat) stopCombatFn();
+  }, [character, party, addLog, updateCharacter, rollLoot, stopCombatFn]);
+
 
   // Wire up refs for forward-declared callbacks
   useEffect(() => { rollLootRef.current = rollLoot; }, [rollLoot]);
   useEffect(() => { degradeEquipmentRef.current = degradeEquipment; }, [degradeEquipment]);
+  useEffect(() => { awardKillRewardsRef.current = awardKillRewards; }, [awardKillRewards]);
 
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
     const result = await useConsumable(inventoryId, character.id, character.hp, character.max_hp, updateCharacter);
@@ -1136,66 +1212,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         addLog(`${ability.emoji} Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`);
 
         if (newHp <= 0) {
-          // Award XP & gold for Barrage kill
-          const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
-          const xpPenalty = getXpPenalty(character.level, creature.level);
-          const totalXp = Math.floor(baseXp * xpPenalty);
-
-          const lootTable = creature.loot_table as any[];
-          const goldEntry = lootTable?.find((e: any) => e.type === 'gold');
-          let totalGold = 0;
-          if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-            totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-          }
-
-          // Party split
-          let splitCount = 1;
-          if (party?.id) {
-            const { data: freshMembers } = await supabase
-              .from('party_members')
-              .select('character_id, character:characters(current_node_id)')
-              .eq('party_id', party.id)
-              .eq('status', 'accepted');
-            const membersHere = (freshMembers || []).filter(
-              (m: any) => m.character?.current_node_id === character.current_node_id
-            );
-            splitCount = membersHere.length > 1 ? membersHere.length : 1;
-            const xpShare = Math.floor(totalXp / splitCount);
-            const goldShare = Math.floor(totalGold / splitCount);
-            for (const m of membersHere) {
-              if (m.character_id === character.id || !m.character_id) continue;
-              try {
-                await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: xpShare, _gold: goldShare });
-              } catch (e) { console.error('Failed to award party member:', e); }
-            }
-          }
-
-          const xpShare = Math.floor(totalXp / splitCount);
-          const goldShare = Math.floor(totalGold / splitCount);
-          const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
-          const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
-          addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
-
-          const newXp = character.xp + xpShare;
-          const newGold = character.gold + goldShare;
-          const xpForNext = getXpForLevel(character.level);
-          if (newXp >= xpForNext) {
-            const newLevel = character.level + 1;
-            const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
-            const oldMaxCp = character.max_cp ?? 60;
-            const levelUpUpdates: Partial<Character> = {
-              xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5,
-              hp: character.max_hp + 5, gold: newGold,
-              max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
-            };
-            addLog(`🎉 Level Up! You are now level ${newLevel}!`);
-            await updateCharacter(levelUpUpdates);
-          } else {
-            await updateCharacter({ xp: newXp, gold: newGold });
-          }
-
-          await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
-          stopCombatFn();
+          await awardKillRewards(creature, { stopCombat: true });
           return;
         }
       }
@@ -1265,6 +1282,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const multiplier = 1 + 0.5 * stackCount;
       const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
       const newHp = Math.max((creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
+      updateCreatureHp(creature.id, newHp);
       await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
       if (stackCount > 0) {
         setPoisonStacks(prev => {
@@ -1275,6 +1293,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         addLog(`${ability.emoji} Eviscerate! You rip through ${creature.name} consuming ${stackCount} poison stack${stackCount > 1 ? 's' : ''} for ${finalDmg} damage!`);
       } else {
         addLog(`${ability.emoji} Eviscerate! You strike ${creature.name} for ${finalDmg} damage. (No poison stacks to consume)`);
+      }
+      if (newHp <= 0) {
+        await awardKillRewards(creature, { stopCombat: true });
+        return;
       }
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
@@ -1311,6 +1333,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const multiplier = 1 + 0.5 * stackCount;
       const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
       const newHp = Math.max((creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
+      updateCreatureHp(creature.id, newHp);
       await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
       if (stackCount > 0) {
         setIgniteStacks(prev => {
@@ -1321,6 +1344,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         addLog(`${ability.emoji} Conflagrate! You detonate ${stackCount} burn stack${stackCount > 1 ? 's' : ''} on ${creature.name} for ${finalDmg} damage!`);
       } else {
         addLog(`${ability.emoji} Conflagrate! You blast ${creature.name} for ${finalDmg} damage. (No burn stacks to consume)`);
+      }
+      if (newHp <= 0) {
+        await awardKillRewards(creature, { stopCombat: true });
+        return;
       }
     } else if (ability.type === 'absorb_buff') {
       const intMod = getStatMod2(character.int + (equipmentBonuses.int || 0));
@@ -1390,65 +1417,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: killed });
       addLog(`${ability.emoji} Grand Finale! A devastating blast of sound strikes ${creature.name} for ${damage} damage!`);
       if (killed) {
-        // Award XP & gold for Grand Finale kill
-        const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
-        const xpPenalty = getXpPenalty(character.level, creature.level);
-        const totalXp = Math.floor(baseXp * xpPenalty);
-
-        const lootTableData = creature.loot_table as any[];
-        const goldEntry = lootTableData?.find((e: any) => e.type === 'gold');
-        let totalGold = 0;
-        if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-          totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-        }
-
-        let splitCount = 1;
-        if (party?.id) {
-          const { data: freshMembers } = await supabase
-            .from('party_members')
-            .select('character_id, character:characters(current_node_id)')
-            .eq('party_id', party.id)
-            .eq('status', 'accepted');
-          const membersHere = (freshMembers || []).filter(
-            (m: any) => m.character?.current_node_id === character.current_node_id
-          );
-          splitCount = membersHere.length > 1 ? membersHere.length : 1;
-          const xpShare = Math.floor(totalXp / splitCount);
-          const goldShare = Math.floor(totalGold / splitCount);
-          for (const m of membersHere) {
-            if (m.character_id === character.id || !m.character_id) continue;
-            try {
-              await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: xpShare, _gold: goldShare });
-            } catch (e) { console.error('Failed to award party member:', e); }
-          }
-        }
-
-        const xpShare = Math.floor(totalXp / splitCount);
-        const goldShare = Math.floor(totalGold / splitCount);
-        const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
-        const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
-        addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
-
-        const newXp = character.xp + xpShare;
-        const newGold = character.gold + goldShare;
-        const xpForNext = getXpForLevel(character.level);
-        if (newXp >= xpForNext) {
-          const newLevel = character.level + 1;
-          const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
-          const oldMaxCp = character.max_cp ?? 60;
-          const levelUpUpdates: Partial<Character> = {
-            xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5,
-            hp: character.max_hp + 5, gold: newGold,
-            max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
-          };
-          addLog(`🎉 Level Up! You are now level ${newLevel}!`);
-          await updateCharacter(levelUpUpdates);
-        } else {
-          await updateCharacter({ xp: newXp, gold: newGold });
-        }
-
-        await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
-        stopCombatFn();
+        await awardKillRewards(creature, { stopCombat: true });
         return;
       }
     } else if (ability.type === 'focus_strike') {
