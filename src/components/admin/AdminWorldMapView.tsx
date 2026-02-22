@@ -445,10 +445,32 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     for (const region of regions) {
       const rNodes = nodesByRegion.get(region.id) || [];
       const regionCircles: Circle[] = [];
+      const regionNodeIds = new Set(rNodes.map(n => n.id));
 
+      // Add circles at each node position
       for (const n of rNodes) {
         const pos = nodePos.get(n.id);
         if (pos) regionCircles.push({ cx: pos.px, cy: pos.py, r: OUTLINE_RADIUS });
+      }
+
+      // Add circles along intra-region edges so the border wraps paths too
+      const edgeSpacing = OUTLINE_RADIUS * 1.4; // keep circles overlapping
+      for (const n of rNodes) {
+        for (const conn of n.connections) {
+          if (!regionNodeIds.has(conn.node_id)) continue; // skip cross-region
+          if (conn.node_id < n.id) continue; // avoid duplicates
+          const fromPos = nodePos.get(n.id);
+          const toPos = nodePos.get(conn.node_id);
+          if (!fromPos || !toPos) continue;
+          const dx = toPos.px - fromPos.px;
+          const dy = toPos.py - fromPos.py;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const steps = Math.ceil(dist / edgeSpacing);
+          for (let s = 1; s < steps; s++) {
+            const t = s / steps;
+            regionCircles.push({ cx: fromPos.px + dx * t, cy: fromPos.py + dy * t, r: OUTLINE_RADIUS });
+          }
+        }
       }
 
       if (regionCircles.length === 0) continue;
