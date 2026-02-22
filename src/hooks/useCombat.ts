@@ -537,10 +537,35 @@ export function useCombat({
           const dmgDie = getCreatureDamageDie(creature.level, creature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
+
+          // Force Shield absorb check for tank
+          const _absorbBuff = absorbBuffRef.current;
+          const hasShield = _absorbBuff && Date.now() < _absorbBuff.expiresAt && _absorbBuff.shieldHp > 0;
+          if (hasShield) {
+            const absorbed = Math.min(creatureDmg, _absorbBuff!.shieldHp);
+            const remainingShield = _absorbBuff!.shieldHp - absorbed;
+            const remainingDmg = creatureDmg - absorbed;
+            onAbsorbDamageRef.current?.(remainingShield);
+            if (remainingDmg > 0) {
+              _addLog(`🛡️✨ Force Shield absorbs ${absorbed} damage! ${remainingDmg} damage bleeds through. (Shield broken)`);
+              try {
+                const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
+                  _character_id: tankMember.character_id,
+                  _damage: remainingDmg,
+                });
+                if (!dmgError && tankNewHp !== null) {
+                  broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, creature.name);
+                }
+                await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
+              } catch (e) {
+                console.error('Failed to update tank HP/equipment:', e);
+              }
+            } else {
+              _addLog(`🛡️✨ Force Shield absorbs all ${absorbed} damage! (${remainingShield} shield HP left)`);
+            }
+          } else {
           _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
           try {
-            // Use atomic damage RPC to avoid race conditions when multiple party members
-            // each redirect creature counterattacks to the same tank
             const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
               _character_id: tankMember.character_id,
               _damage: creatureDmg,
@@ -551,6 +576,7 @@ export function useCombat({
             await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
           } catch (e) {
             console.error('Failed to update tank HP/equipment:', e);
+          }
           }
         } else {
           _addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
