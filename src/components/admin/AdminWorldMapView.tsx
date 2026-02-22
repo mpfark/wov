@@ -32,7 +32,7 @@ interface Props {
   onAddNodeAdjacent: (fromId: string) => void;
 }
 
-const HEARTHLANDS_ID = '00000000-0000-0000-0000-000000000001';
+const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
@@ -293,206 +293,111 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     return map;
   }, [regions, nodes]);
 
-  // ---- Connection-driven layout + convex hull ----
+  // ---- Global node layout from center + convex hull per region ----
   const { regionHulls, allNodePositions, canvasW, canvasH } = useMemo(() => {
     const MIN_NODE_GAP = 90;
     const HULL_PAD = 35;
 
-    // 1. Layout nodes within each region (local coords)
-    const regionLocalLayouts = new Map<string, {
-      positions: Map<string, { x: number; y: number }>;
-      bbox: { minX: number; minY: number; maxX: number; maxY: number; w: number; h: number };
-    }>();
+    // 1. Global BFS layout from Hearthvale Square using connection directions
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    const globalPositions = new Map<string, { x: number; y: number }>();
+    const visited = new Set<string>();
 
-    for (const region of regions) {
-      const rNodes = nodesByRegion.get(region.id) || [];
-      if (rNodes.length === 0) {
-        regionLocalLayouts.set(region.id, {
-          positions: new Map(),
-          bbox: { minX: 0, minY: 0, maxX: 0, maxY: 0, w: 0, h: 0 },
-        });
-        continue;
-      }
-      const gridPos = layoutNodes(rNodes);
-      const pixPos = new Map<string, { x: number; y: number }>();
-      gridPos.forEach((pos, id) => {
-        pixPos.set(id, { x: pos.x * MIN_NODE_GAP, y: pos.y * MIN_NODE_GAP });
-      });
-      const vals = [...pixPos.values()];
-      const minX = Math.min(...vals.map(p => p.x));
-      const minY = Math.min(...vals.map(p => p.y));
-      const maxX = Math.max(...vals.map(p => p.x));
-      const maxY = Math.max(...vals.map(p => p.y));
-      regionLocalLayouts.set(region.id, {
-        positions: pixPos,
-        bbox: { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY },
-      });
+    // Find center node
+    const centerNode = nodeMap.get(CENTER_NODE_ID);
+    const startId = centerNode ? CENTER_NODE_ID : (nodes.length > 0 ? nodes[0].id : null);
+    if (!startId) {
+      return { regionHulls: new Map(), allNodePositions: new Map(), canvasW: CANVAS_W, canvasH: CANVAS_H };
     }
 
-    // 2. Build region adjacency from cross-region edges
-    // adjacency[regionA][regionB] = { fromNodes: nodeIds in A, toNodes: nodeIds in B }
-    const adjacency = new Map<string, Map<string, { from: string[]; to: string[] }>>();
-    const nodeRegionMap = new Map<string, string>();
-    for (const n of nodes) nodeRegionMap.set(n.id, n.region_id);
+    // BFS from center
+    const queue: Array<{ id: string; x: number; y: number }> = [{ id: startId, x: 0, y: 0 }];
+    visited.add(startId);
+    globalPositions.set(startId, { x: 0, y: 0 });
 
-    for (const node of nodes) {
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const node = nodeMap.get(current.id);
+      if (!node) continue;
+
       for (const conn of node.connections) {
-        const toRegion = nodeRegionMap.get(conn.node_id);
-        if (!toRegion || toRegion === node.region_id) continue;
-        // Add edge A->B
-        if (!adjacency.has(node.region_id)) adjacency.set(node.region_id, new Map());
-        const aMap = adjacency.get(node.region_id)!;
-        if (!aMap.has(toRegion)) aMap.set(toRegion, { from: [], to: [] });
-        const entry = aMap.get(toRegion)!;
-        if (!entry.from.includes(node.id)) entry.from.push(node.id);
-        if (!entry.to.includes(conn.node_id)) entry.to.push(conn.node_id);
-      }
-    }
+        if (visited.has(conn.node_id) || !nodeMap.has(conn.node_id)) continue;
+        visited.add(conn.node_id);
 
-    // 3. BFS from Hearthlands to place regions
-    const regionCenters = new Map<string, { x: number; y: number }>();
-    const regionSizes = new Map<string, number>(); // "radius" approximation
+        const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+        let nx = current.x + offset[0];
+        let ny = current.y + offset[1];
 
-    for (const region of regions) {
-      const layout = regionLocalLayouts.get(region.id);
-      const size = layout ? Math.max(160, Math.max(layout.bbox.w, layout.bbox.h) / 2 + HULL_PAD) : 160;
-      regionSizes.set(region.id, size);
-    }
-
-    const BUFFER = 20;
-    const placed = new Set<string>();
-
-    // Place Hearthlands at center
-    const hearthExists = regions.some(r => r.id === HEARTHLANDS_ID);
-    if (hearthExists) {
-      regionCenters.set(HEARTHLANDS_ID, { x: CANVAS_W / 2, y: CANVAS_H / 2 });
-      placed.add(HEARTHLANDS_ID);
-    }
-
-    // BFS queue
-    const bfsQueue: string[] = hearthExists ? [HEARTHLANDS_ID] : [];
-
-    // If no Hearthlands, start from first region
-    if (!hearthExists && regions.length > 0) {
-      regionCenters.set(regions[0].id, { x: CANVAS_W / 2, y: CANVAS_H / 2 });
-      placed.add(regions[0].id);
-      bfsQueue.push(regions[0].id);
-    }
-
-    while (bfsQueue.length > 0) {
-      const currentRegionId = bfsQueue.shift()!;
-      const neighbors = adjacency.get(currentRegionId);
-      if (!neighbors) continue;
-
-      const currentCenter = regionCenters.get(currentRegionId)!;
-      const currentLayout = regionLocalLayouts.get(currentRegionId);
-      const currentSize = regionSizes.get(currentRegionId) || 160;
-
-      for (const [neighborId, gateway] of neighbors) {
-        if (placed.has(neighborId)) continue;
-
-        // Compute direction vector from gateway nodes
-        let dirX = 0, dirY = 0;
-        if (currentLayout && currentLayout.positions.size > 0) {
-          // Average position of gateway "from" nodes (in current region's local coords)
-          const centerOfLayout = {
-            x: (currentLayout.bbox.minX + currentLayout.bbox.maxX) / 2,
-            y: (currentLayout.bbox.minY + currentLayout.bbox.maxY) / 2,
-          };
-          for (const fromNodeId of gateway.from) {
-            const pos = currentLayout.positions.get(fromNodeId);
-            if (pos) {
-              dirX += pos.x - centerOfLayout.x;
-              dirY += pos.y - centerOfLayout.y;
+        // Collision avoidance
+        if ([...globalPositions.values()].some(p => p.x === nx && p.y === ny)) {
+          const primaryAxis = Math.abs(offset[0]) >= Math.abs(offset[1]) ? 'x' : 'y';
+          let attempt = 1;
+          let placed = false;
+          while (!placed && attempt < 20) {
+            const candidates = primaryAxis === 'x'
+              ? [
+                  { x: nx, y: ny + attempt },
+                  { x: nx, y: ny - attempt },
+                  { x: nx + (offset[0] >= 0 ? attempt : -attempt), y: ny },
+                ]
+              : [
+                  { x: nx + attempt, y: ny },
+                  { x: nx - attempt, y: ny },
+                  { x: nx, y: ny + (offset[1] >= 0 ? attempt : -attempt) },
+                ];
+            for (const c of candidates) {
+              if (![...globalPositions.values()].some(p => p.x === c.x && p.y === c.y)) {
+                nx = c.x;
+                ny = c.y;
+                placed = true;
+                break;
+              }
             }
+            attempt++;
           }
         }
 
-        // Normalize direction, fallback to a spread pattern
-        const len = Math.sqrt(dirX * dirX + dirY * dirY);
-        if (len > 0.01) {
-          dirX /= len;
-          dirY /= len;
-        } else {
-          // Fallback: spread based on index among unplaced neighbors
-          const idx = [...neighbors.keys()].indexOf(neighborId);
-          const angle = (idx / neighbors.size) * 2 * Math.PI - Math.PI / 2;
-          dirX = Math.cos(angle);
-          dirY = Math.sin(angle);
-        }
-
-        const neighborSize = regionSizes.get(neighborId) || 160;
-        const dist = currentSize + neighborSize + BUFFER;
-
-        regionCenters.set(neighborId, {
-          x: currentCenter.x + dirX * dist,
-          y: currentCenter.y + dirY * dist,
-        });
-        placed.add(neighborId);
-        bfsQueue.push(neighborId);
+        globalPositions.set(conn.node_id, { x: nx, y: ny });
+        queue.push({ id: conn.node_id, x: nx, y: ny });
       }
     }
 
-    // Place any unconnected regions in a row below
-    let unplacedIdx = 0;
-    for (const region of regions) {
-      if (!placed.has(region.id)) {
-        const col = unplacedIdx % 5;
-        const row = Math.floor(unplacedIdx / 5);
-        regionCenters.set(region.id, {
-          x: 300 + col * 400,
-          y: (regionCenters.size > 0 ? Math.max(...[...regionCenters.values()].map(c => c.y)) + 400 : CANVAS_H / 2) + row * 300,
-        });
-        placed.add(region.id);
-        unplacedIdx++;
+    // Place disconnected nodes
+    let disconnectedRow = 0;
+    for (const node of nodes) {
+      if (!globalPositions.has(node.id)) {
+        const maxX = Math.max(0, ...[...globalPositions.values()].map(p => p.x));
+        globalPositions.set(node.id, { x: maxX + 2, y: disconnectedRow++ });
       }
     }
 
-    // 4. No collision resolution — regions may overlap based on connections
-
-    // 5. Normalize so nothing is negative
-    const MARGIN = 40;
-    let shiftX = 0, shiftY = 0;
-    for (const [rId, center] of regionCenters) {
-      const size = regionSizes.get(rId) || 160;
-      shiftX = Math.max(shiftX, MARGIN + size - center.x);
-      shiftY = Math.max(shiftY, MARGIN + size - center.y);
-    }
-    if (shiftX > 0 || shiftY > 0) {
-      for (const center of regionCenters.values()) {
-        center.x += shiftX;
-        center.y += shiftY;
-      }
-    }
-
-    // 6. Compute final node positions and hulls
+    // 2. Convert grid coords to pixel coords
+    const MARGIN = 60;
     const nodePos = new Map<string, { px: number; py: number }>();
+    const vals = [...globalPositions.values()];
+    const minGX = Math.min(...vals.map(p => p.x));
+    const minGY = Math.min(...vals.map(p => p.y));
+
+    globalPositions.forEach((pos, id) => {
+      nodePos.set(id, {
+        px: (pos.x - minGX) * MIN_NODE_GAP + MARGIN,
+        py: (pos.y - minGY) * MIN_NODE_GAP + MARGIN,
+      });
+    });
+
+    // 3. Compute convex hulls per region
     const hulls = new Map<string, { hull: Array<{ x: number; y: number }>; path: string; bbox: ReturnType<typeof hullBBox>; region: Region }>();
 
     for (const region of regions) {
-      const center = regionCenters.get(region.id);
-      if (!center) continue;
-      const layout = regionLocalLayouts.get(region.id);
-      if (!layout) continue;
-
-      const layoutCenter = {
-        x: (layout.bbox.minX + layout.bbox.maxX) / 2,
-        y: (layout.bbox.minY + layout.bbox.maxY) / 2,
-      };
-
+      const rNodes = nodesByRegion.get(region.id) || [];
       const hullPoints: Array<{ x: number; y: number }> = [];
 
-      if (layout.positions.size > 0) {
-        layout.positions.forEach((pos, id) => {
-          const px = center.x + (pos.x - layoutCenter.x);
-          const py = center.y + (pos.y - layoutCenter.y);
-          nodePos.set(id, { px, py });
-          hullPoints.push({ x: px, y: py });
-        });
-      } else {
-        // Empty region - just use center
-        hullPoints.push({ x: center.x, y: center.y });
+      for (const n of rNodes) {
+        const pos = nodePos.get(n.id);
+        if (pos) hullPoints.push({ x: pos.px, y: pos.py });
       }
+
+      if (hullPoints.length === 0) continue;
 
       const hull = convexHull(hullPoints);
       const expanded = expandHull(hull, HULL_PAD);
@@ -503,6 +408,10 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
 
     // Canvas size
     let maxRight = 0, maxBottom = 0;
+    for (const pos of nodePos.values()) {
+      maxRight = Math.max(maxRight, pos.px + MARGIN);
+      maxBottom = Math.max(maxBottom, pos.py + MARGIN);
+    }
     for (const h of hulls.values()) {
       maxRight = Math.max(maxRight, h.bbox.maxX + MARGIN);
       maxBottom = Math.max(maxBottom, h.bbox.maxY + MARGIN);
