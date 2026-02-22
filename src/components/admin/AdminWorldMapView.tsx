@@ -32,12 +32,7 @@ interface Props {
   onAddNodeAdjacent: (fromId: string) => void;
 }
 
-// Dynamic region placement — direction-based from The Hearthlands
 const HEARTHLANDS_ID = '00000000-0000-0000-0000-000000000001';
-const REGION_DIR_OFFSETS: Record<string, { x: number; y: number }> = {
-  N: { x: 0, y: -400 }, S: { x: 0, y: 400 }, E: { x: 400, y: 0 }, W: { x: -400, y: 0 },
-  NE: { x: 280, y: -280 }, NW: { x: -280, y: -280 }, SE: { x: 280, y: 280 }, SW: { x: -280, y: 280 },
-};
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
@@ -104,6 +99,92 @@ function layoutNodes(nodes: GraphNode[]) {
     }
   }
   return positions;
+}
+
+// ---- Convex Hull (Graham Scan) ----
+function convexHull(points: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
+  if (points.length <= 1) return [...points];
+  if (points.length === 2) return [...points];
+
+  const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+
+  const cross = (o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) =>
+    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+
+  const lower: Array<{ x: number; y: number }> = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper: Array<{ x: number; y: number }> = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+
+function expandHull(hull: Array<{ x: number; y: number }>, padding: number): Array<{ x: number; y: number }> {
+  if (hull.length < 3) {
+    // For 1-2 points, create a circle-like polygon
+    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
+    const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
+    const steps = 12;
+    return Array.from({ length: steps }, (_, i) => {
+      const angle = (2 * Math.PI * i) / steps;
+      return { x: cx + Math.cos(angle) * padding, y: cy + Math.sin(angle) * padding };
+    });
+  }
+
+  // Compute centroid
+  const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
+  const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
+
+  return hull.map(p => {
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    return { x: p.x + (dx / len) * padding, y: p.y + (dy / len) * padding };
+  });
+}
+
+function hullToPath(hull: Array<{ x: number; y: number }>): string {
+  if (hull.length === 0) return '';
+  // Smooth path using cubic bezier through hull points
+  if (hull.length < 3) {
+    return `M ${hull.map(p => `${p.x},${p.y}`).join(' L ')} Z`;
+  }
+  // Create smooth closed path
+  let d = `M ${hull[0].x},${hull[0].y}`;
+  for (let i = 0; i < hull.length; i++) {
+    const p0 = hull[(i - 1 + hull.length) % hull.length];
+    const p1 = hull[i];
+    const p2 = hull[(i + 1) % hull.length];
+    const p3 = hull[(i + 2) % hull.length];
+
+    const tension = 0.3;
+    const cp1x = p1.x + (p2.x - p0.x) * tension;
+    const cp1y = p1.y + (p2.y - p0.y) * tension;
+    const cp2x = p2.x - (p3.x - p1.x) * tension;
+    const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+  }
+  d += ' Z';
+  return d;
+}
+
+function hullBBox(hull: Array<{ x: number; y: number }>) {
+  const xs = hull.map(p => p.x);
+  const ys = hull.map(p => p.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  return { minX, minY, maxX, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, w: maxX - minX, h: maxY - minY };
 }
 
 // Canvas dimensions
@@ -177,161 +258,198 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     return map;
   }, [regions, nodes]);
 
-  // Get geographic coordinate for a region based on direction from Hearthlands
-  // NOTE: This provides a rough initial position; the useMemo below repositions
-  // direction groups using actual radii for proper spacing.
-  const getRegionCoord = useCallback((region: Region, _index: number, _allRegions: Region[]) => {
-    const centerX = CANVAS_W / 2;
-    const centerY = CANVAS_H / 2;
-    
-    // Hearthlands is always at center
-    if (region.id === HEARTHLANDS_ID) return { x: centerX, y: centerY };
-    
-    // Initial rough placement (will be overridden for directional regions)
-    if (region.direction && REGION_DIR_OFFSETS[region.direction]) {
-      const base = REGION_DIR_OFFSETS[region.direction];
-      return { x: centerX + base.x, y: centerY + base.y };
-    }
-    
-    // Fallback: place undirected regions in a grid below
-    const undirected = _allRegions.filter(r => !r.direction && r.id !== HEARTHLANDS_ID);
-    const uIdx = undirected.findIndex(r => r.id === region.id);
-    const col = uIdx % 5;
-    const row = Math.floor(uIdx / 5);
-    return { x: 200 + col * 350, y: centerY + 500 + row * 250 };
-  }, [regions]);
-
-  // Compute region bubbles and node positions using geographic coordinates
-  const { regionBubbles, allNodePositions, canvasW, canvasH } = useMemo(() => {
+  // ---- Connection-driven layout + convex hull ----
+  const { regionHulls, allNodePositions, canvasW, canvasH } = useMemo(() => {
     const MIN_NODE_GAP = 90;
-    const BUBBLE_PAD = 60;
+    const HULL_PAD = 60;
 
-    const bubbles: Array<{
-      region: Region;
-      cx: number;
-      cy: number;
-      radius: number;
-      nodeCount: number;
-    }> = [];
+    // 1. Layout nodes within each region (local coords)
+    const regionLocalLayouts = new Map<string, {
+      positions: Map<string, { x: number; y: number }>;
+      bbox: { minX: number; minY: number; maxX: number; maxY: number; w: number; h: number };
+    }>();
 
-    const nodePos = new Map<string, { px: number; py: number }>();
-
-    // First pass: compute bubble sizes and initial positions
-    const bubbleData: Array<{
-      region: Region;
-      cx: number;
-      cy: number;
-      radius: number;
-      nodeCount: number;
-      nodeLayout: Map<string, { x: number; y: number }> | null;
-      centerX: number;
-      centerY: number;
-    }> = [];
-
-    regions.forEach((region, idx) => {
-      const coord = getRegionCoord(region, idx, regions);
+    for (const region of regions) {
       const rNodes = nodesByRegion.get(region.id) || [];
-
-      if (rNodes.length > 0) {
-        const positions = layoutNodes(rNodes);
-        const pixelPositions = new Map<string, { x: number; y: number }>();
-        positions.forEach((pos, id) => {
-          pixelPositions.set(id, { x: pos.x * MIN_NODE_GAP, y: pos.y * MIN_NODE_GAP });
+      if (rNodes.length === 0) {
+        regionLocalLayouts.set(region.id, {
+          positions: new Map(),
+          bbox: { minX: 0, minY: 0, maxX: 0, maxY: 0, w: 0, h: 0 },
         });
-
-        const pVals = [...pixelPositions.values()];
-        const minX = Math.min(...pVals.map(p => p.x));
-        const minY = Math.min(...pVals.map(p => p.y));
-        const maxX = Math.max(...pVals.map(p => p.x));
-        const maxY = Math.max(...pVals.map(p => p.y));
-        const bboxW = maxX - minX;
-        const bboxH = maxY - minY;
-
-        const radius = Math.max(160, Math.max(bboxW, bboxH) / 2 + BUBBLE_PAD);
-        bubbleData.push({
-          region, cx: coord.x, cy: coord.y, radius, nodeCount: rNodes.length,
-          nodeLayout: pixelPositions,
-          centerX: (minX + maxX) / 2,
-          centerY: (minY + maxY) / 2,
-        });
-      } else {
-        bubbleData.push({
-          region, cx: coord.x, cy: coord.y, radius: 160, nodeCount: 0,
-          nodeLayout: null, centerX: 0, centerY: 0,
-        });
+        continue;
       }
-    });
-
-    // Radius-aware directional placement: position regions along their
-    // direction axis using cumulative radii so they never overlap.
-    const BUFFER = 40; // gap between bubble edges
-    const hearthBubble = bubbleData.find(bd => bd.region.id === HEARTHLANDS_ID);
-    const hx = hearthBubble ? hearthBubble.cx : CANVAS_W / 2;
-    const hy = hearthBubble ? hearthBubble.cy : CANVAS_H / 2;
-    const hearthRadius = hearthBubble ? hearthBubble.radius : 160;
-
-    // Group directional regions
-    const dirGroups = new Map<string, typeof bubbleData>();
-    for (const bd of bubbleData) {
-      const dir = bd.region.direction;
-      if (!dir || bd.region.id === HEARTHLANDS_ID) continue;
-      if (!dirGroups.has(dir)) dirGroups.set(dir, []);
-      dirGroups.get(dir)!.push(bd);
-    }
-
-    for (const [dir, group] of dirGroups) {
-      const offset = REGION_DIR_OFFSETS[dir];
-      if (!offset) continue;
-      const dirLen = Math.sqrt(offset.x * offset.x + offset.y * offset.y);
-      const ux = offset.x / dirLen;
-      const uy = offset.y / dirLen;
-
-      // Sort by sort_order
-      group.sort((a, b) => {
-        const aOrder = typeof a.region.sort_order === 'number' ? a.region.sort_order : 0;
-        const bOrder = typeof b.region.sort_order === 'number' ? b.region.sort_order : 0;
-        return aOrder - bOrder;
+      const gridPos = layoutNodes(rNodes);
+      const pixPos = new Map<string, { x: number; y: number }>();
+      gridPos.forEach((pos, id) => {
+        pixPos.set(id, { x: pos.x * MIN_NODE_GAP, y: pos.y * MIN_NODE_GAP });
       });
+      const vals = [...pixPos.values()];
+      const minX = Math.min(...vals.map(p => p.x));
+      const minY = Math.min(...vals.map(p => p.y));
+      const maxX = Math.max(...vals.map(p => p.x));
+      const maxY = Math.max(...vals.map(p => p.y));
+      regionLocalLayouts.set(region.id, {
+        positions: pixPos,
+        bbox: { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY },
+      });
+    }
 
-      // Place each region: distance = sum of previous radii + own radius + buffers
-      let edgeDist = hearthRadius + BUFFER; // distance from center to first bubble edge
-      for (const bd of group) {
-        const centerDist = edgeDist + bd.radius; // center of this bubble
-        bd.cx = hx + ux * centerDist;
-        bd.cy = hy + uy * centerDist;
-        edgeDist = centerDist + bd.radius + BUFFER; // far edge + buffer for next
+    // 2. Build region adjacency from cross-region edges
+    // adjacency[regionA][regionB] = { fromNodes: nodeIds in A, toNodes: nodeIds in B }
+    const adjacency = new Map<string, Map<string, { from: string[]; to: string[] }>>();
+    const nodeRegionMap = new Map<string, string>();
+    for (const n of nodes) nodeRegionMap.set(n.id, n.region_id);
+
+    for (const node of nodes) {
+      for (const conn of node.connections) {
+        const toRegion = nodeRegionMap.get(conn.node_id);
+        if (!toRegion || toRegion === node.region_id) continue;
+        // Add edge A->B
+        if (!adjacency.has(node.region_id)) adjacency.set(node.region_id, new Map());
+        const aMap = adjacency.get(node.region_id)!;
+        if (!aMap.has(toRegion)) aMap.set(toRegion, { from: [], to: [] });
+        const entry = aMap.get(toRegion)!;
+        if (!entry.from.includes(node.id)) entry.from.push(node.id);
+        if (!entry.to.includes(conn.node_id)) entry.to.push(conn.node_id);
       }
     }
 
-    // Collision resolution for non-directional overlaps (e.g. cross-direction bubbles)
-    const PADDING = 30;
-    for (let iter = 0; iter < 50; iter++) {
+    // 3. BFS from Hearthlands to place regions
+    const regionCenters = new Map<string, { x: number; y: number }>();
+    const regionSizes = new Map<string, number>(); // "radius" approximation
+
+    for (const region of regions) {
+      const layout = regionLocalLayouts.get(region.id);
+      const size = layout ? Math.max(160, Math.max(layout.bbox.w, layout.bbox.h) / 2 + HULL_PAD) : 160;
+      regionSizes.set(region.id, size);
+    }
+
+    const BUFFER = 60;
+    const placed = new Set<string>();
+
+    // Place Hearthlands at center
+    const hearthExists = regions.some(r => r.id === HEARTHLANDS_ID);
+    if (hearthExists) {
+      regionCenters.set(HEARTHLANDS_ID, { x: CANVAS_W / 2, y: CANVAS_H / 2 });
+      placed.add(HEARTHLANDS_ID);
+    }
+
+    // BFS queue
+    const bfsQueue: string[] = hearthExists ? [HEARTHLANDS_ID] : [];
+
+    // If no Hearthlands, start from first region
+    if (!hearthExists && regions.length > 0) {
+      regionCenters.set(regions[0].id, { x: CANVAS_W / 2, y: CANVAS_H / 2 });
+      placed.add(regions[0].id);
+      bfsQueue.push(regions[0].id);
+    }
+
+    while (bfsQueue.length > 0) {
+      const currentRegionId = bfsQueue.shift()!;
+      const neighbors = adjacency.get(currentRegionId);
+      if (!neighbors) continue;
+
+      const currentCenter = regionCenters.get(currentRegionId)!;
+      const currentLayout = regionLocalLayouts.get(currentRegionId);
+      const currentSize = regionSizes.get(currentRegionId) || 160;
+
+      for (const [neighborId, gateway] of neighbors) {
+        if (placed.has(neighborId)) continue;
+
+        // Compute direction vector from gateway nodes
+        let dirX = 0, dirY = 0;
+        if (currentLayout && currentLayout.positions.size > 0) {
+          // Average position of gateway "from" nodes (in current region's local coords)
+          const centerOfLayout = {
+            x: (currentLayout.bbox.minX + currentLayout.bbox.maxX) / 2,
+            y: (currentLayout.bbox.minY + currentLayout.bbox.maxY) / 2,
+          };
+          for (const fromNodeId of gateway.from) {
+            const pos = currentLayout.positions.get(fromNodeId);
+            if (pos) {
+              dirX += pos.x - centerOfLayout.x;
+              dirY += pos.y - centerOfLayout.y;
+            }
+          }
+        }
+
+        // Normalize direction, fallback to a spread pattern
+        const len = Math.sqrt(dirX * dirX + dirY * dirY);
+        if (len > 0.01) {
+          dirX /= len;
+          dirY /= len;
+        } else {
+          // Fallback: spread based on index among unplaced neighbors
+          const idx = [...neighbors.keys()].indexOf(neighborId);
+          const angle = (idx / neighbors.size) * 2 * Math.PI - Math.PI / 2;
+          dirX = Math.cos(angle);
+          dirY = Math.sin(angle);
+        }
+
+        const neighborSize = regionSizes.get(neighborId) || 160;
+        const dist = currentSize + neighborSize + BUFFER;
+
+        regionCenters.set(neighborId, {
+          x: currentCenter.x + dirX * dist,
+          y: currentCenter.y + dirY * dist,
+        });
+        placed.add(neighborId);
+        bfsQueue.push(neighborId);
+      }
+    }
+
+    // Place any unconnected regions in a row below
+    let unplacedIdx = 0;
+    for (const region of regions) {
+      if (!placed.has(region.id)) {
+        const col = unplacedIdx % 5;
+        const row = Math.floor(unplacedIdx / 5);
+        regionCenters.set(region.id, {
+          x: 300 + col * 400,
+          y: (regionCenters.size > 0 ? Math.max(...[...regionCenters.values()].map(c => c.y)) + 400 : CANVAS_H / 2) + row * 300,
+        });
+        placed.add(region.id);
+        unplacedIdx++;
+      }
+    }
+
+    // 4. Collision resolution
+    const regionList = regions.map(r => r.id);
+    for (let iter = 0; iter < 80; iter++) {
       let moved = false;
-      for (let i = 0; i < bubbleData.length; i++) {
-        for (let j = i + 1; j < bubbleData.length; j++) {
-          const a = bubbleData[i];
-          const b = bubbleData[j];
-          const dx = b.cx - a.cx;
-          const dy = b.cy - a.cy;
+      for (let i = 0; i < regionList.length; i++) {
+        for (let j = i + 1; j < regionList.length; j++) {
+          const aId = regionList[i];
+          const bId = regionList[j];
+          const a = regionCenters.get(aId)!;
+          const b = regionCenters.get(bId)!;
+          const aR = regionSizes.get(aId) || 160;
+          const bR = regionSizes.get(bId) || 160;
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const minDist = a.radius + b.radius + PADDING;
+          const minDist = aR + bR + 30;
           if (dist < minDist && dist > 0) {
             const overlap = (minDist - dist) / 2;
             const nx = dx / dist;
             const ny = dy / dist;
-            // Only nudge perpendicular to avoid breaking directional ordering
-            // For same-direction pairs, skip (already placed correctly)
-            const aDir = a.region.direction;
-            const bDir = b.region.direction;
-            if (aDir && bDir && aDir === bDir) continue;
-            a.cx -= nx * overlap;
-            a.cy -= ny * overlap;
-            b.cx += nx * overlap;
-            b.cy += ny * overlap;
+            // Don't move Hearthlands
+            if (aId === HEARTHLANDS_ID) {
+              b.x += nx * overlap * 2;
+              b.y += ny * overlap * 2;
+            } else if (bId === HEARTHLANDS_ID) {
+              a.x -= nx * overlap * 2;
+              a.y -= ny * overlap * 2;
+            } else {
+              a.x -= nx * overlap;
+              a.y -= ny * overlap;
+              b.x += nx * overlap;
+              b.y += ny * overlap;
+            }
             moved = true;
           } else if (dist === 0) {
-            a.cx -= 50;
-            b.cx += 50;
+            a.x -= 50;
+            b.x += 50;
             moved = true;
           }
         }
@@ -339,78 +457,102 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       if (!moved) break;
     }
 
-    // Normalize: ensure no bubble extends past the viewBox origin
-    const MARGIN = 20;
-    let shiftX = 0;
-    let shiftY = 0;
-    for (const bd of bubbleData) {
-      shiftX = Math.max(shiftX, MARGIN + bd.radius - bd.cx);
-      shiftY = Math.max(shiftY, MARGIN + bd.radius - bd.cy);
+    // 5. Normalize so nothing is negative
+    const MARGIN = 40;
+    let shiftX = 0, shiftY = 0;
+    for (const [rId, center] of regionCenters) {
+      const size = regionSizes.get(rId) || 160;
+      shiftX = Math.max(shiftX, MARGIN + size - center.x);
+      shiftY = Math.max(shiftY, MARGIN + size - center.y);
     }
     if (shiftX > 0 || shiftY > 0) {
-      for (const bd of bubbleData) {
-        bd.cx += shiftX;
-        bd.cy += shiftY;
+      for (const center of regionCenters.values()) {
+        center.x += shiftX;
+        center.y += shiftY;
       }
     }
 
-    // Compute dynamic canvas size from resolved positions
-    let maxRight = 0;
-    let maxBottom = 0;
-    for (const bd of bubbleData) {
-      maxRight = Math.max(maxRight, bd.cx + bd.radius + MARGIN);
-      maxBottom = Math.max(maxBottom, bd.cy + bd.radius + MARGIN);
-    }
+    // 6. Compute final node positions and hulls
+    const nodePos = new Map<string, { px: number; py: number }>();
+    const hulls = new Map<string, { hull: Array<{ x: number; y: number }>; path: string; bbox: ReturnType<typeof hullBBox>; region: Region }>();
 
-    // Build final bubbles and node positions from resolved coordinates
-    for (const bd of bubbleData) {
-      bubbles.push({ region: bd.region, cx: bd.cx, cy: bd.cy, radius: bd.radius, nodeCount: bd.nodeCount });
-      if (bd.nodeLayout) {
-        bd.nodeLayout.forEach((pos, id) => {
-          nodePos.set(id, {
-            px: bd.cx + (pos.x - bd.centerX),
-            py: bd.cy + (pos.y - bd.centerY),
-          });
+    for (const region of regions) {
+      const center = regionCenters.get(region.id);
+      if (!center) continue;
+      const layout = regionLocalLayouts.get(region.id);
+      if (!layout) continue;
+
+      const layoutCenter = {
+        x: (layout.bbox.minX + layout.bbox.maxX) / 2,
+        y: (layout.bbox.minY + layout.bbox.maxY) / 2,
+      };
+
+      const hullPoints: Array<{ x: number; y: number }> = [];
+
+      if (layout.positions.size > 0) {
+        layout.positions.forEach((pos, id) => {
+          const px = center.x + (pos.x - layoutCenter.x);
+          const py = center.y + (pos.y - layoutCenter.y);
+          nodePos.set(id, { px, py });
+          hullPoints.push({ x: px, y: py });
         });
+      } else {
+        // Empty region - just use center
+        hullPoints.push({ x: center.x, y: center.y });
       }
+
+      const hull = convexHull(hullPoints);
+      const expanded = expandHull(hull, HULL_PAD);
+      const path = hullToPath(expanded);
+      const bbox = hullBBox(expanded);
+      hulls.set(region.id, { hull: expanded, path, bbox, region });
     }
 
-    return { regionBubbles: bubbles, allNodePositions: nodePos, canvasW: Math.max(maxRight, CANVAS_W), canvasH: Math.max(maxBottom, CANVAS_H) };
-  }, [regions, nodesByRegion, getRegionCoord]);
+    // Canvas size
+    let maxRight = 0, maxBottom = 0;
+    for (const h of hulls.values()) {
+      maxRight = Math.max(maxRight, h.bbox.maxX + MARGIN);
+      maxBottom = Math.max(maxBottom, h.bbox.maxY + MARGIN);
+    }
+
+    return {
+      regionHulls: hulls,
+      allNodePositions: nodePos,
+      canvasW: Math.max(maxRight, CANVAS_W),
+      canvasH: Math.max(maxBottom, CANVAS_H),
+    };
+  }, [regions, nodes, nodesByRegion]);
 
   // Zoom to a specific region
   const zoomToRegion = useCallback((regionId: string) => {
-    const bubble = regionBubbles.find(b => b.region.id === regionId);
-    if (!bubble || !containerRef.current) return;
+    const hullData = regionHulls.get(regionId);
+    if (!hullData || !containerRef.current) return;
 
     const container = containerRef.current;
     const cw = container.clientWidth;
     const ch = container.clientHeight;
 
-    // Account for SVG viewBox mapping (preserveAspectRatio: xMidYMid meet)
     const svgScale = Math.min(cw / canvasW, ch / canvasH);
     const svgOffsetX = (cw - canvasW * svgScale) / 2;
     const svgOffsetY = (ch - canvasH * svgScale) / 2;
 
-    // Bubble position in screen pixels (before CSS transform)
-    const bubbleScreenX = svgOffsetX + bubble.cx * svgScale;
-    const bubbleScreenY = svgOffsetY + bubble.cy * svgScale;
+    const { cx, cy, w, h } = hullData.bbox;
+    const screenX = svgOffsetX + cx * svgScale;
+    const screenY = svgOffsetY + cy * svgScale;
 
-    // Calculate zoom so region fills ~60% of viewport
-    const regionScreenSize = bubble.radius * 2 * svgScale;
-    const targetZoom = Math.min(cw, ch) * 0.6 / regionScreenSize;
+    const regionScreenSize = Math.max(w, h) * svgScale;
+    const targetZoom = Math.min(cw, ch) * 0.6 / Math.max(regionScreenSize, 1);
     const clampedZoom = Math.min(Math.max(targetZoom, 0.3), 3);
 
-    // Calculate pan to center the bubble in viewport
-    const targetPanX = cw / 2 - bubbleScreenX * clampedZoom;
-    const targetPanY = ch / 2 - bubbleScreenY * clampedZoom;
+    const targetPanX = cw / 2 - screenX * clampedZoom;
+    const targetPanY = ch / 2 - screenY * clampedZoom;
 
     setIsAnimating(true);
     setZoom(clampedZoom);
     setPan({ x: targetPanX, y: targetPanY });
     setSelectedRegionId(regionId);
     setTimeout(() => setIsAnimating(false), 450);
-  }, [regionBubbles, canvasW, canvasH]);
+  }, [regionHulls, canvasW, canvasH]);
 
   // Collect all edges
   const edges = useMemo(() => {
@@ -467,9 +609,6 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
                       <span className="font-display truncate">{region.name}</span>
-                      {(region as any).direction && (
-                        <span className="text-[9px] text-muted-foreground ml-auto">{(region as any).direction}</span>
-                      )}
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5 pl-[18px]">
                       Lvl {region.min_level}–{region.max_level} · {nodeCount} nodes
@@ -520,40 +659,42 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
               transition: isAnimating ? 'transform 0.4s ease' : 'none',
             }}
           >
-            {/* Region bubbles */}
-            {regionBubbles.map(b => {
-              const isSelected = selectedRegionId === b.region.id;
+            {/* Region hulls */}
+            {[...regionHulls.entries()].map(([regionId, hullData]) => {
+              const isSelected = selectedRegionId === regionId;
+              const { bbox } = hullData;
+              const rNodes = nodesByRegion.get(regionId) || [];
               return (
-                <g key={b.region.id}>
-                  <circle
-                    cx={b.cx} cy={b.cy} r={b.radius}
+                <g key={regionId}>
+                  <path
+                    d={hullData.path}
                     fill={isSelected ? 'hsl(35 20% 25% / 0.2)' : 'hsl(35 20% 25% / 0.12)'}
                     stroke={isSelected ? 'hsl(35 40% 55% / 0.7)' : 'hsl(35 20% 40% / 0.4)'}
                     strokeWidth={isSelected ? 2.5 : 1.5}
                     strokeDasharray="8 4"
                   />
                   <text
-                    x={b.cx} y={b.cy - b.radius - 8}
+                    x={bbox.cx} y={bbox.minY - 8}
                     textAnchor="middle"
                     className="fill-primary font-display text-xs"
                   >
-                    {b.region.name}
+                    {hullData.region.name}
                   </text>
                   <text
-                    x={b.cx} y={b.cy - b.radius + 6}
+                    x={bbox.cx} y={bbox.minY + 6}
                     textAnchor="middle"
                     className="fill-muted-foreground text-[9px]"
                   >
-                    Lvl {b.region.min_level}–{b.region.max_level} · {b.nodeCount} nodes
+                    Lvl {hullData.region.min_level}–{hullData.region.max_level} · {rNodes.length} nodes
                   </text>
 
-                  {b.nodeCount === 0 && (
+                  {rNodes.length === 0 && (
                     <g className="cursor-pointer" onClick={() => onAddNodeAdjacent('')}>
-                      <circle cx={b.cx} cy={b.cy} r={14}
+                      <circle cx={bbox.cx} cy={bbox.cy} r={14}
                         className="fill-background stroke-primary/50 hover:stroke-primary hover:fill-primary/10 transition-colors"
                         strokeWidth={1.5}
                       />
-                      <text x={b.cx} y={b.cy + 4} textAnchor="middle"
+                      <text x={bbox.cx} y={bbox.cy + 4} textAnchor="middle"
                         className="fill-primary text-xs font-bold pointer-events-none select-none">+</text>
                     </g>
                   )}
