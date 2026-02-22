@@ -506,9 +506,31 @@ export function useCombat({
       const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
 
       // When I am the tank in a party, creature hits me directly
-      const tankMember = _party && effectiveTankId
+      // Use fresh node check: stale partyMembers ref may show the tank at the old node
+      // even after they've moved away
+      let tankMember = _party && effectiveTankId
         ? _partyMembers.find(m => m.character_id === effectiveTankId && m.character.current_node_id === char.current_node_id)
         : null;
+
+      // Double-check tank is actually still at this node via a fresh DB query
+      // to avoid hitting a tank that has already left
+      if (tankMember && tankMember.character_id !== char.id) {
+        try {
+          const { data: freshTank } = await supabase
+            .from('characters')
+            .select('current_node_id')
+            .eq('id', tankMember.character_id)
+            .single();
+          if (!freshTank || freshTank.current_node_id !== char.current_node_id) {
+            // Tank has left this node — creature attacks the current player instead
+            tankMember = null;
+          }
+        } catch {
+          // On error, fall through to attack current player
+          tankMember = null;
+        }
+      }
+
       if (_party && tankMember) {
         // Use tank's actual AC (buffedAC since I am the tank)
         if (creatureAtk >= buffedAC) {
