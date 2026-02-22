@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,13 +22,34 @@ interface Props {
   onCreated: () => void;
   isValar: boolean;
   onDelete: (id: string) => void;
+  editingRegionId?: string | null;
+  onEditDone?: () => void;
 }
 
-export default function RegionManager({ regions, onCreated, isValar, onDelete }: Props) {
+export default function RegionManager({ regions, onCreated, isValar, onDelete, editingRegionId, onEditDone }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
   const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10 });
+
+  // Open edit dialog when editingRegionId changes from parent
+  useState(() => {});
+  // Use effect to react to editingRegionId prop
+  const prevEditId = useRef<string | null>(null);
+  if (editingRegionId && editingRegionId !== prevEditId.current) {
+    const region = regions.find(r => r.id === editingRegionId);
+    if (region) {
+      prevEditId.current = editingRegionId;
+      // Schedule state updates
+      setTimeout(() => {
+        setEditingRegion(region);
+        setEditOpen(true);
+      }, 0);
+    }
+  }
+  if (!editingRegionId && prevEditId.current) {
+    prevEditId.current = null;
+  }
 
   const create = async () => {
     if (!form.name) return toast.error('Name required');
@@ -62,6 +83,8 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
     toast.success('Region updated');
     setEditOpen(false);
     setEditingRegion(null);
+    prevEditId.current = null;
+    onEditDone?.();
     onCreated();
   };
 
@@ -70,13 +93,6 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
       <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)} className="font-display text-xs">
         <Plus className="w-3 h-3 mr-1" /> New Region
       </Button>
-
-      {regions.map(r => (
-        <Button key={r.id} variant="ghost" size="sm" onClick={() => openEdit(r)} className="text-xs h-6 px-1.5">
-          <Pencil className="w-3 h-3 mr-0.5" />
-          {r.name.length > 10 ? r.name.slice(0, 9) + '…' : r.name}
-        </Button>
-      ))}
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -103,7 +119,7 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete }:
       </Dialog>
 
       {/* Edit dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog open={editOpen} onOpenChange={(open) => { setEditOpen(open); if (!open) { prevEditId.current = null; onEditDone?.(); } }}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display text-primary">Edit Region</DialogTitle>

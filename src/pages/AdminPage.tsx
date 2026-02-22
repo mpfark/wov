@@ -34,6 +34,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [isNewNode, setIsNewNode] = useState(false);
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
+  const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const [r, n, c, np] = await Promise.all([
@@ -145,6 +146,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               onCreated={loadData}
               isValar={isValar}
               onDelete={deleteRegion}
+              editingRegionId={editingRegionId}
+              onEditDone={() => setEditingRegionId(null)}
             />
             <span className="text-xs text-muted-foreground ml-2">
               {regions.length} regions · {nodes.length} nodes
@@ -163,6 +166,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   onNodeClick={handleNodeClick}
                   onAddNodeBetween={handleAddNodeBetween}
                   onAddNodeAdjacent={handleAddNodeAdjacent}
+                  onEditRegion={(region) => setEditingRegionId(region.id)}
+                  onDeleteRegion={deleteRegion}
                 />
               </ResizablePanel>
               {panelOpen && (

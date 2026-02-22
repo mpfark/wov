@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin } from 'lucide-react';
+import { MapPin, Pencil, Trash2 } from 'lucide-react';
 
 interface GraphNode {
   id: string;
@@ -28,6 +28,8 @@ interface Props {
   onNodeClick: (nodeId: string) => void;
   onAddNodeBetween: (fromId: string, toId: string) => void;
   onAddNodeAdjacent: (fromId: string) => void;
+  onEditRegion?: (region: Region) => void;
+  onDeleteRegion?: (regionId: string) => void;
 }
 
 const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
@@ -280,7 +282,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
+export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent, onEditRegion, onDeleteRegion }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -573,23 +575,41 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
                 const nodeCount = nodesByRegion.get(region.id)?.length || 0;
                 const isSelected = selectedRegionId === region.id;
                 return (
-                  <button
+                  <div
                     key={region.id}
-                    onClick={() => zoomToRegion(region.id)}
-                    className={`w-full text-left px-2.5 py-2 rounded text-xs transition-colors ${
+                    className={`group w-full text-left px-2.5 py-2 rounded text-xs transition-colors cursor-pointer ${
                       isSelected
                         ? 'bg-primary/15 text-primary'
                         : 'hover:bg-accent text-foreground'
                     }`}
+                    onClick={() => zoomToRegion(region.id)}
                   >
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
-                      <span className="font-display truncate">{region.name}</span>
+                      <span className="font-display truncate flex-1">{region.name}</span>
+                      <div className="hidden group-hover:flex items-center gap-0.5">
+                        {onEditRegion && (
+                          <button
+                            onClick={e => { e.stopPropagation(); onEditRegion(region); }}
+                            className="p-0.5 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                        {onDeleteRegion && (
+                          <button
+                            onClick={e => { e.stopPropagation(); onDeleteRegion(region.id); }}
+                            className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5 pl-[18px]">
                       Lvl {region.min_level}–{region.max_level} · {nodeCount} nodes
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
