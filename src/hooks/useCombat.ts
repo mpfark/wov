@@ -583,7 +583,7 @@ export function useCombat({
           }
           }
         } else {
-          _addLog(`${creature.name} attacks ${tankMember.character.name} (Tank) — misses!`);
+          _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} attacks ${tankMember.character.name} (Tank) — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
         }
       } else {
         // Evasion check (Cloak of Shadows)
