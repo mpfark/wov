@@ -102,6 +102,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
         <TooltipContent className="bg-popover border-border z-50">
           <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
+          {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
           {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
           {Object.entries(item.item.stats || {}).map(([k, v]) => (
             <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
@@ -586,6 +587,7 @@ export default function CharacterPanel({
                           <TooltipContent className="bg-popover border-border z-50">
                             <p className={`font-display ${RARITY_COLORS[potion.item.rarity]}`}>{potion.item.name}</p>
                             <p className="text-xs text-muted-foreground">{potion.item.description}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
                             {Object.entries(potion.item.stats || {}).map(([k, v]) => (
                               <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
                                 {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
@@ -658,6 +660,8 @@ export default function CharacterPanel({
                       <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
                       {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
                       <p className="text-xs text-muted-foreground">{inv.item.description}</p>
+                      {inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[inv.item.slot] || inv.item.slot} · {inv.item.item_type}</p>}
+                      {!inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>}
                       {Object.entries(inv.item.stats || {}).map(([k, v]) => (
                         <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
                           {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
