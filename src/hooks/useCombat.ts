@@ -97,6 +97,7 @@ export function useCombat({
   const [inCombat, setInCombat] = useState(false);
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
+  const tankAbsentWarnedRef = useRef(false);
 
   // Use refs for values accessed inside the interval to avoid stale closures
   const characterRef = useRef(character);
@@ -189,6 +190,7 @@ export function useCombat({
     setInCombat(false);
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
+    tankAbsentWarnedRef.current = false;
   }, []);
 
   // Stop combat when player dies or node changes
@@ -515,6 +517,11 @@ export function useCombat({
       if (!iAmTheTank && tankPresentAtNode) {
         // Non-tank members skip creature counterattack when tank is present
       } else {
+      // Warn once if tank is absent and creature is retargeting this player
+      if (_party && !iAmTheTank && !tankPresentAtNode && !tankAbsentWarnedRef.current) {
+        tankAbsentWarnedRef.current = true;
+        _addLog(`⚠️ Tank is not here — ${creature.name} targets you directly!`);
+      }
       // Root debuff — reduce creature damage by 30% if active
       const _rootDebuff = rootDebuffRef.current;
       const isRooted = _rootDebuff && Date.now() < _rootDebuff.expiresAt;
