@@ -99,125 +99,181 @@ function layoutNodes(nodes: GraphNode[]) {
   return positions;
 }
 
-// ---- Convex Hull (Graham Scan) ----
-function convexHull(points: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
-  if (points.length <= 1) return [...points];
-  if (points.length === 2) return [...points];
+// ---- Union-of-Circles Region Outline ----
+const NODE_DRAW_RADIUS = 28;
+const BORDER_PAD = 20;
+const OUTLINE_RADIUS = NODE_DRAW_RADIUS + BORDER_PAD;
 
-  const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
-
-  const cross = (o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) =>
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
-
-  const lower: Array<{ x: number; y: number }> = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper: Array<{ x: number; y: number }> = [];
-  for (let i = pts.length - 1; i >= 0; i--) {
-    const p = pts[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-  lower.pop();
-  upper.pop();
-  return lower.concat(upper);
+interface Circle { cx: number; cy: number; r: number; }
+interface ExposedArc {
+  circleIdx: number;
+  startAngle: number;
+  endAngle: number;
+  startPt: { x: number; y: number };
+  endPt: { x: number; y: number };
 }
 
-function expandHull(hull: Array<{ x: number; y: number }>, padding: number): Array<{ x: number; y: number }> {
-  if (hull.length < 3) {
-    // For 1-2 points, create a circle-like polygon
-    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
-    const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
-    const steps = 12;
-    return Array.from({ length: steps }, (_, i) => {
-      const angle = (2 * Math.PI * i) / steps;
-      return { x: cx + Math.cos(angle) * padding, y: cy + Math.sin(angle) * padding };
-    });
+function normalizeAngle(a: number): number {
+  a = a % (2 * Math.PI);
+  if (a < 0) a += 2 * Math.PI;
+  return a;
+}
+
+function ptOnCircle(c: Circle, angle: number): { x: number; y: number } {
+  return { x: c.cx + c.r * Math.cos(angle), y: c.cy + c.r * Math.sin(angle) };
+}
+
+function ptDist(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+type OutlineBBox = { minX: number; minY: number; maxX: number; maxY: number; cx: number; cy: number; w: number; h: number };
+
+function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: OutlineBBox } {
+  const emptyBBox: OutlineBBox = { minX: 0, minY: 0, maxX: 0, maxY: 0, cx: 0, cy: 0, w: 0, h: 0 };
+  if (circles.length === 0) return { paths: [], bbox: emptyBBox };
+
+  // Compute bbox from circles
+  let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+  for (const c of circles) {
+    bMinX = Math.min(bMinX, c.cx - c.r);
+    bMinY = Math.min(bMinY, c.cy - c.r);
+    bMaxX = Math.max(bMaxX, c.cx + c.r);
+    bMaxY = Math.max(bMaxY, c.cy + c.r);
+  }
+  const bbox: OutlineBBox = { minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY, cx: (bMinX + bMaxX) / 2, cy: (bMinY + bMaxY) / 2, w: bMaxX - bMinX, h: bMaxY - bMinY };
+
+  if (circles.length === 1) {
+    const c = circles[0];
+    return { paths: [`M ${c.cx + c.r},${c.cy} A ${c.r},${c.r} 0 1,1 ${c.cx - c.r},${c.cy} A ${c.r},${c.r} 0 1,1 ${c.cx + c.r},${c.cy} Z`], bbox };
   }
 
-  // Offset each edge outward by `padding` along its outward normal, then intersect adjacent offset edges
-  const n = hull.length;
-  const offsetEdges: Array<{ ax: number; ay: number; bx: number; by: number }> = [];
+  // Find exposed arcs for each circle
+  const arcs: ExposedArc[] = [];
 
-  for (let i = 0; i < n; i++) {
-    const p1 = hull[i];
-    const p2 = hull[(i + 1) % n];
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    // Outward normal (for CCW hull, outward is to the right of the edge direction)
-    const nx = dy / len;
-    const ny = -dx / len;
-    offsetEdges.push({
-      ax: p1.x + nx * padding,
-      ay: p1.y + ny * padding,
-      bx: p2.x + nx * padding,
-      by: p2.y + ny * padding,
-    });
-  }
+  for (let i = 0; i < circles.length; i++) {
+    const ci = circles[i];
 
-  // Intersect consecutive offset edges to get new vertices
-  const result: Array<{ x: number; y: number }> = [];
-  for (let i = 0; i < n; i++) {
-    const e1 = offsetEdges[i];
-    const e2 = offsetEdges[(i + 1) % n];
-    const pt = lineIntersection(e1.ax, e1.ay, e1.bx, e1.by, e2.ax, e2.ay, e2.bx, e2.by);
-    if (pt) {
-      result.push(pt);
-    } else {
-      // Parallel edges, just use the endpoint
-      result.push({ x: e1.bx, y: e1.by });
+    // Skip if entirely inside another circle
+    let skip = false;
+    for (let j = 0; j < circles.length; j++) {
+      if (i === j) continue;
+      const d = ptDist({ x: ci.cx, y: ci.cy }, { x: circles[j].cx, y: circles[j].cy });
+      if (d + ci.r <= circles[j].r + 1e-6) { skip = true; break; }
+    }
+    if (skip) continue;
+
+    // Collect intersection angles with other circles
+    const angles: number[] = [];
+    for (let j = 0; j < circles.length; j++) {
+      if (i === j) continue;
+      const cj = circles[j];
+      const dx = cj.cx - ci.cx;
+      const dy = cj.cy - ci.cy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d >= ci.r + cj.r - 1e-9) continue; // no overlap
+      if (d + cj.r <= ci.r + 1e-9) continue; // cj inside ci
+
+      const a = Math.atan2(dy, dx);
+      const cosH = (d * d + ci.r * ci.r - cj.r * cj.r) / (2 * d * ci.r);
+      const h = Math.acos(Math.max(-1, Math.min(1, cosH)));
+      angles.push(normalizeAngle(a - h));
+      angles.push(normalizeAngle(a + h));
+    }
+
+    if (angles.length === 0) {
+      // Isolated circle — fully exposed
+      arcs.push({ circleIdx: i, startAngle: 0, endAngle: 2 * Math.PI, startPt: ptOnCircle(ci, 0), endPt: ptOnCircle(ci, 0) });
+      continue;
+    }
+
+    // Deduplicate very close angles
+    angles.sort((a, b) => a - b);
+    const uniqueAngles: number[] = [angles[0]];
+    for (let k = 1; k < angles.length; k++) {
+      if (angles[k] - uniqueAngles[uniqueAngles.length - 1] > 1e-9) uniqueAngles.push(angles[k]);
+    }
+
+    // For each arc segment between consecutive angles, check if midpoint is outside all other circles
+    for (let k = 0; k < uniqueAngles.length; k++) {
+      const start = uniqueAngles[k];
+      const end = uniqueAngles[(k + 1) % uniqueAngles.length];
+      const span = k + 1 < uniqueAngles.length ? end - start : (end + 2 * Math.PI - start);
+      if (span < 1e-9) continue;
+      const mid = start + span / 2;
+
+      const mx = ci.cx + ci.r * Math.cos(mid);
+      const my = ci.cy + ci.r * Math.sin(mid);
+
+      let inside = false;
+      for (let j = 0; j < circles.length; j++) {
+        if (i === j) continue;
+        const dd = (mx - circles[j].cx) ** 2 + (my - circles[j].cy) ** 2;
+        if (dd < circles[j].r * circles[j].r - 1e-6) { inside = true; break; }
+      }
+
+      if (!inside) {
+        arcs.push({
+          circleIdx: i, startAngle: start, endAngle: end,
+          startPt: ptOnCircle(ci, start), endPt: ptOnCircle(ci, end),
+        });
+      }
     }
   }
-  return result;
-}
 
-function lineIntersection(
-  x1: number, y1: number, x2: number, y2: number,
-  x3: number, y3: number, x4: number, y4: number
-): { x: number; y: number } | null {
-  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-  if (Math.abs(denom) < 1e-10) return null;
-  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
-  return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
-}
+  if (arcs.length === 0) return { paths: [], bbox };
 
-function hullToPath(hull: Array<{ x: number; y: number }>): string {
-  if (hull.length === 0) return '';
-  // Smooth path using cubic bezier through hull points
-  if (hull.length < 3) {
-    return `M ${hull.map(p => `${p.x},${p.y}`).join(' L ')} Z`;
+  // Chain arcs into closed paths by matching endpoints
+  const used = new Array(arcs.length).fill(false);
+  const paths: string[] = [];
+
+  for (let startIdx = 0; startIdx < arcs.length; startIdx++) {
+    if (used[startIdx]) continue;
+    const firstArc = arcs[startIdx];
+
+    // Full isolated circle
+    if (Math.abs(firstArc.endAngle - firstArc.startAngle - 2 * Math.PI) < 1e-6 ||
+        (firstArc.startAngle === 0 && Math.abs(firstArc.endAngle - 2 * Math.PI) < 1e-6)) {
+      used[startIdx] = true;
+      const c = circles[firstArc.circleIdx];
+      paths.push(`M ${c.cx + c.r},${c.cy} A ${c.r},${c.r} 0 1,1 ${c.cx - c.r},${c.cy} A ${c.r},${c.r} 0 1,1 ${c.cx + c.r},${c.cy} Z`);
+      continue;
+    }
+
+    // Chain connected arcs
+    used[startIdx] = true;
+    const chain: ExposedArc[] = [firstArc];
+    let current = firstArc;
+
+    for (let iter = 0; iter < arcs.length; iter++) {
+      let bestIdx = -1;
+      let bestDist = Infinity;
+      for (let j = 0; j < arcs.length; j++) {
+        if (used[j]) continue;
+        const d = ptDist(current.endPt, arcs[j].startPt);
+        if (d < bestDist) { bestDist = d; bestIdx = j; }
+      }
+      if (bestIdx === -1 || bestDist > 3) break;
+      used[bestIdx] = true;
+      chain.push(arcs[bestIdx]);
+      current = arcs[bestIdx];
+      if (ptDist(current.endPt, firstArc.startPt) < 3) break;
+    }
+
+    // Build SVG path with arc commands
+    let d = `M ${chain[0].startPt.x.toFixed(2)},${chain[0].startPt.y.toFixed(2)}`;
+    for (const arc of chain) {
+      const ci = circles[arc.circleIdx];
+      let span = arc.endAngle - arc.startAngle;
+      if (span < 0) span += 2 * Math.PI;
+      const largeArc = span > Math.PI ? 1 : 0;
+      d += ` A ${ci.r.toFixed(2)},${ci.r.toFixed(2)} 0 ${largeArc},1 ${arc.endPt.x.toFixed(2)},${arc.endPt.y.toFixed(2)}`;
+    }
+    d += ' Z';
+    paths.push(d);
   }
-  // Create smooth closed path
-  let d = `M ${hull[0].x},${hull[0].y}`;
-  for (let i = 0; i < hull.length; i++) {
-    const p0 = hull[(i - 1 + hull.length) % hull.length];
-    const p1 = hull[i];
-    const p2 = hull[(i + 1) % hull.length];
-    const p3 = hull[(i + 2) % hull.length];
 
-    const tension = 0.3;
-    const cp1x = p1.x + (p2.x - p0.x) * tension;
-    const cp1y = p1.y + (p2.y - p0.y) * tension;
-    const cp2x = p2.x - (p3.x - p1.x) * tension;
-    const cp2y = p2.y - (p3.y - p1.y) * tension;
-
-    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
-  }
-  d += ' Z';
-  return d;
-}
-
-function hullBBox(hull: Array<{ x: number; y: number }>) {
-  const xs = hull.map(p => p.x);
-  const ys = hull.map(p => p.y);
-  const minX = Math.min(...xs);
-  const minY = Math.min(...ys);
-  const maxX = Math.max(...xs);
-  const maxY = Math.max(...ys);
-  return { minX, minY, maxX, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, w: maxX - minX, h: maxY - minY };
+  return { paths, bbox };
 }
 
 // Canvas dimensions
@@ -294,7 +350,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   // ---- Global node layout from center + convex hull per region ----
   const { regionHulls, allNodePositions, canvasW, canvasH } = useMemo(() => {
     const MIN_NODE_GAP = 90;
-    const HULL_PAD = 35;
+    // OUTLINE_RADIUS is defined at module level
 
     // 1. Global BFS layout from Hearthvale Square using connection directions
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
@@ -383,25 +439,23 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       });
     });
 
-    // 3. Compute convex hulls per region
-    const hulls = new Map<string, { hull: Array<{ x: number; y: number }>; path: string; bbox: ReturnType<typeof hullBBox>; region: Region }>();
+    // 3. Compute union-of-circles outlines per region
+    const hulls = new Map<string, { path: string; paths: string[]; bbox: OutlineBBox; region: Region }>();
 
     for (const region of regions) {
       const rNodes = nodesByRegion.get(region.id) || [];
-      const hullPoints: Array<{ x: number; y: number }> = [];
+      const regionCircles: Circle[] = [];
 
       for (const n of rNodes) {
         const pos = nodePos.get(n.id);
-        if (pos) hullPoints.push({ x: pos.px, y: pos.py });
+        if (pos) regionCircles.push({ cx: pos.px, cy: pos.py, r: OUTLINE_RADIUS });
       }
 
-      if (hullPoints.length === 0) continue;
+      if (regionCircles.length === 0) continue;
 
-      const hull = convexHull(hullPoints);
-      const expanded = expandHull(hull, HULL_PAD);
-      const path = hullToPath(expanded);
-      const bbox = hullBBox(expanded);
-      hulls.set(region.id, { hull: expanded, path, bbox, region });
+      const { paths, bbox } = computeRegionOutline(regionCircles);
+      const path = paths.join(' ');
+      hulls.set(region.id, { path, paths, bbox, region });
     }
 
     // Canvas size
