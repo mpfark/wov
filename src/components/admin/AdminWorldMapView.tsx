@@ -139,16 +139,51 @@ function expandHull(hull: Array<{ x: number; y: number }>, padding: number): Arr
     });
   }
 
-  // Compute centroid
-  const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
-  const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
+  // Offset each edge outward by `padding` along its outward normal, then intersect adjacent offset edges
+  const n = hull.length;
+  const offsetEdges: Array<{ ax: number; ay: number; bx: number; by: number }> = [];
 
-  return hull.map(p => {
-    const dx = p.x - cx;
-    const dy = p.y - cy;
+  for (let i = 0; i < n; i++) {
+    const p1 = hull[i];
+    const p2 = hull[(i + 1) % n];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    return { x: p.x + (dx / len) * padding, y: p.y + (dy / len) * padding };
-  });
+    // Outward normal (for CCW hull, outward is to the right of the edge direction)
+    const nx = dy / len;
+    const ny = -dx / len;
+    offsetEdges.push({
+      ax: p1.x + nx * padding,
+      ay: p1.y + ny * padding,
+      bx: p2.x + nx * padding,
+      by: p2.y + ny * padding,
+    });
+  }
+
+  // Intersect consecutive offset edges to get new vertices
+  const result: Array<{ x: number; y: number }> = [];
+  for (let i = 0; i < n; i++) {
+    const e1 = offsetEdges[i];
+    const e2 = offsetEdges[(i + 1) % n];
+    const pt = lineIntersection(e1.ax, e1.ay, e1.bx, e1.by, e2.ax, e2.ay, e2.bx, e2.by);
+    if (pt) {
+      result.push(pt);
+    } else {
+      // Parallel edges, just use the endpoint
+      result.push({ x: e1.bx, y: e1.by });
+    }
+  }
+  return result;
+}
+
+function lineIntersection(
+  x1: number, y1: number, x2: number, y2: number,
+  x3: number, y3: number, x4: number, y4: number
+): { x: number; y: number } | null {
+  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(denom) < 1e-10) return null;
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+  return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
 }
 
 function hullToPath(hull: Array<{ x: number; y: number }>): string {
