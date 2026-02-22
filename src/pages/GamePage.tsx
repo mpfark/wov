@@ -1390,7 +1390,66 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: killed });
       addLog(`${ability.emoji} Grand Finale! A devastating blast of sound strikes ${creature.name} for ${damage} damage!`);
       if (killed) {
-        addLog(`💀 ${creature.name} has been slain!`);
+        // Award XP & gold for Grand Finale kill
+        const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
+        const xpPenalty = getXpPenalty(character.level, creature.level);
+        const totalXp = Math.floor(baseXp * xpPenalty);
+
+        const lootTableData = creature.loot_table as any[];
+        const goldEntry = lootTableData?.find((e: any) => e.type === 'gold');
+        let totalGold = 0;
+        if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+          totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+        }
+
+        let splitCount = 1;
+        if (party?.id) {
+          const { data: freshMembers } = await supabase
+            .from('party_members')
+            .select('character_id, character:characters(current_node_id)')
+            .eq('party_id', party.id)
+            .eq('status', 'accepted');
+          const membersHere = (freshMembers || []).filter(
+            (m: any) => m.character?.current_node_id === character.current_node_id
+          );
+          splitCount = membersHere.length > 1 ? membersHere.length : 1;
+          const xpShare = Math.floor(totalXp / splitCount);
+          const goldShare = Math.floor(totalGold / splitCount);
+          for (const m of membersHere) {
+            if (m.character_id === character.id || !m.character_id) continue;
+            try {
+              await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: xpShare, _gold: goldShare });
+            } catch (e) { console.error('Failed to award party member:', e); }
+          }
+        }
+
+        const xpShare = Math.floor(totalXp / splitCount);
+        const goldShare = Math.floor(totalGold / splitCount);
+        const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
+        const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
+        addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
+
+        const newXp = character.xp + xpShare;
+        const newGold = character.gold + goldShare;
+        const xpForNext = getXpForLevel(character.level);
+        if (newXp >= xpForNext) {
+          const newLevel = character.level + 1;
+          const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
+          const oldMaxCp = character.max_cp ?? 60;
+          const levelUpUpdates: Partial<Character> = {
+            xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5,
+            hp: character.max_hp + 5, gold: newGold,
+            max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
+          };
+          addLog(`🎉 Level Up! You are now level ${newLevel}!`);
+          await updateCharacter(levelUpUpdates);
+        } else {
+          await updateCharacter({ xp: newXp, gold: newGold });
+        }
+
+        await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
+        stopCombatFn();
+        return;
       }
     } else if (ability.type === 'focus_strike') {
       const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
