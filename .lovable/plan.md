@@ -1,47 +1,53 @@
 
+# Admin World Map: Region Outlines and Connection-Based Layout
 
-# Teleport From Anywhere (Level 25+ Perk)
+## What Changes
 
-## Overview
-Players who reach level 25 unlock the ability to teleport from **any node** to any teleport point, not just from teleport nodes. When they do, a hidden "waymark" is saved at their departure location that they can return to. Party members at the same node also teleport along, regardless of their level.
+### 1. Region shapes become convex hull outlines instead of circles
+Currently each region is drawn as a circular bubble. Instead, the region boundary will be computed as a **convex hull** (tight polygon outline) around all the nodes belonging to that region, with padding. This gives each region an organic shape that matches its actual node spread.
 
-## How It Works
+### 2. Region positioning becomes connection-driven
+Currently regions are placed using their `direction` field (N, S, E, NE, etc.) relative to The Hearthlands. Instead, regions will be positioned based on **which nodes connect them to other regions**. The layout algorithm will:
+- Place The Hearthlands at the center
+- Find cross-region edges (nodes in one region connected to nodes in another)
+- Position connected regions so that the "gateway" nodes between them are close together
+- Use a force-directed or BFS-based approach radiating outward from Hearthlands
 
-1. **Level 25+ unlock**: A "Teleport" button appears in the NodeView action bar for any node (not just teleport nodes) if the character is level 25+.
+### 3. Region `direction` field no longer used for map layout
+The `direction` column on the `regions` table stays (no schema change needed), but the map view will ignore it. The sidebar will also stop showing the direction badge.
 
-2. **Waymark system**: When a level 25+ player teleports from a non-teleport node, their departure node ID is saved as a "waymark" (stored in component state -- no DB needed since it's session-scoped). The TeleportDialog then shows a special "Return to Waymark" option at the top.
+---
 
-3. **Returning to waymark**: Clicking "Return to Waymark" teleports the player back to their saved departure location (same CP cost formula applies). The waymark is cleared after use.
+## Technical Approach
 
-4. **Party teleportation**: When a level 25+ player teleports (from anywhere), all party members at the same node are moved along -- regardless of their level. This extends the existing follower logic to also include non-following accepted party members who are co-located.
+### File: `src/components/admin/AdminWorldMapView.tsx`
 
-## Technical Details
+**Layout algorithm rewrite** (the large `useMemo` block, lines 205-379):
 
-### TeleportDialog.tsx changes
-- Add new props: `characterLevel`, `waymark` (node object or null), `onReturnToWaymark` callback
-- If `waymark` is set, render a highlighted "Return to Waymark" row at the top of the destination list showing the waymark node name and CP cost
-- The dialog remains unchanged for players below level 25 (they only see it at teleport nodes)
+1. **Build a region adjacency graph** from cross-region node connections. Each edge records which nodes serve as "gateways."
 
-### NodeView.tsx changes
-- Show the Teleport button if `node.is_teleport` OR `character.level >= 25`
-- Pass an `onOpenTeleport` callback in both cases
+2. **BFS from Hearthlands** to assign region positions:
+   - Start with Hearthlands at origin
+   - For each neighboring region, compute a direction vector from the average position of the gateway nodes in the current region toward their connected nodes
+   - Place the neighbor region offset in that direction, at a distance based on both regions' sizes
 
-### GamePage.tsx changes
-- Add `waymark` state: `useState<string | null>(null)` storing the departure node ID
-- When `onOpenTeleport` is triggered from a non-teleport node (level 25+ feature), allow opening the dialog
-- Modify `handleTeleport`: if the current node is NOT a teleport point, save `character.current_node_id` as the waymark before moving
-- Add `handleReturnToWaymark`: teleports back to the waymark node, clears the waymark, costs CP
-- Extend party teleport logic: when teleporting from anywhere, move all accepted party members at the same node (not just followers)
-- Pass `characterLevel`, `waymark` data, and return callback to TeleportDialog
-- Update the `onOpenTeleport` prop passed to NodeView: provide it whenever `currentNode.is_teleport` OR `character.level >= 25`
-- Keep the existing combat check
+3. **Layout nodes within each region** using the existing `layoutNodes()` BFS (unchanged).
 
-### TeleportDialog rendering for waymark
-- A "Return to Waymark" entry appears only when `waymark` is set
-- It shows the waymark node name, region info, and CP cost
-- Styled distinctly (e.g., a golden/highlighted border) so it stands out
+4. **Compute convex hull** for each region's node positions (with ~60px padding) to get an irregular polygon outline.
 
-### No database changes needed
-- The waymark is session-scoped state (resets on page reload) which keeps it simple and avoids schema changes
-- This is intentional: waymarks are temporary tactical tools, not persistent save points
+5. **Render `<polygon>` or `<path>`** instead of `<circle>` for each region bubble.
 
+**Convex hull helper**: Add a small function implementing the Graham scan or gift-wrapping algorithm to compute the hull from a set of 2D points. The hull points will be expanded outward by the padding amount.
+
+**Rendering changes**:
+- Replace `<circle cx={b.cx} cy={b.cy} r={b.radius} .../>` with `<path d={hullPath} .../>` using the computed convex hull polygon
+- Region labels positioned at the centroid of the hull (or top of bounding box)
+- The `zoomToRegion` function updated to use the hull's bounding box instead of radius
+
+**Sidebar**: Remove the direction badge display (line 470-472).
+
+### No database or schema changes needed
+The `direction` and `sort_order` columns remain on the `regions` table -- they just won't drive the map layout anymore.
+
+### No changes to other files
+The player map view, RegionGraphView, RegionManager, and other components remain unchanged.
