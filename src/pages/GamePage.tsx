@@ -1530,10 +1530,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             equipmentBonuses={equipmentBonuses}
             onEquip={equipItem}
             onUnequip={unequipItem}
-            onDrop={(inventoryId) => {
+            onDrop={async (inventoryId) => {
               const inv = [...equipped, ...unequipped].find(i => i.id === inventoryId);
               if (inv && character.current_node_id) {
-                dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
+                await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
+                fetchInventory();
                 addLog(`You dropped ${inv.item.name} on the ground.`);
               }
             }}
