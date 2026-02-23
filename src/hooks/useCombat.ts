@@ -99,6 +99,10 @@ export function useCombat({
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const tankAbsentWarnedRef = useRef(false);
 
+  // Multi-creature engagement tracking
+  const engagedCreatureIdsRef = useRef<Set<string>>(new Set());
+  const [engagedCreatureIds, setEngagedCreatureIds] = useState<string[]>([]);
+
   // Use refs for values accessed inside the interval to avoid stale closures
   const characterRef = useRef(character);
   const creaturesRef = useRef(creatures);
@@ -186,6 +190,8 @@ export function useCombat({
     }
     combatCreatureIdRef.current = null;
     inCombatRef.current = false;
+    engagedCreatureIdsRef.current = new Set();
+    setEngagedCreatureIds([]);
     setActiveCombatCreatureId(null);
     setInCombat(false);
     setCreatureHpOverrides({});
@@ -207,20 +213,45 @@ export function useCombat({
     }
   }, [character.current_node_id, stopCombat]);
 
-  // If active creature dies (from realtime update), auto-target next aggressive or stop
+  // If active creature dies (from realtime update), remove from engaged set and pick next target
   useEffect(() => {
     if (!inCombat || !activeCombatCreatureId) return;
     const target = creatures.find(c => c.id === activeCombatCreatureId);
     if (!target || !target.is_alive || target.hp <= 0) {
-      // Target is dead — find next aggressive creature
-      const nextAggro = creatures.find(c => c.id !== activeCombatCreatureId && c.is_alive && c.hp > 0 && c.is_aggressive);
-      if (nextAggro) {
-        combatCreatureIdRef.current = nextAggro.id;
-        setActiveCombatCreatureId(nextAggro.id);
+      // Remove dead creature from engaged set
+      engagedCreatureIdsRef.current.delete(activeCombatCreatureId);
+      setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
+
+      // Pick next engaged creature, or next aggressive, or stop
+      const nextEngaged = [...engagedCreatureIdsRef.current].find(id => {
+        const c = creatures.find(cr => cr.id === id);
+        return c && c.is_alive && c.hp > 0;
+      });
+      if (nextEngaged) {
+        combatCreatureIdRef.current = nextEngaged;
+        setActiveCombatCreatureId(nextEngaged);
       } else {
-        stopCombat();
+        const nextAggro = creatures.find(c => c.id !== activeCombatCreatureId && c.is_alive && c.hp > 0 && c.is_aggressive);
+        if (nextAggro) {
+          engagedCreatureIdsRef.current.add(nextAggro.id);
+          setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
+          combatCreatureIdRef.current = nextAggro.id;
+          setActiveCombatCreatureId(nextAggro.id);
+        } else {
+          stopCombat();
+        }
       }
     }
+    // Also clean up any dead creatures from the engaged set
+    let changed = false;
+    for (const id of [...engagedCreatureIdsRef.current]) {
+      const c = creatures.find(cr => cr.id === id);
+      if (!c || !c.is_alive || c.hp <= 0) {
+        engagedCreatureIdsRef.current.delete(id);
+        changed = true;
+      }
+    }
+    if (changed) setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
   }, [creatures, inCombat, activeCombatCreatureId, stopCombat]);
 
   // After combat stops (e.g. creature killed), auto-engage next aggressive creature
@@ -245,6 +276,18 @@ export function useCombat({
         startCombatRef.current(nextAggro.id);
       }, 500);
       return () => clearTimeout(timeout);
+    }
+  }, [creatures, inCombat]);
+
+  // Auto-aggro: when aggressive creatures appear at the node while in combat, add them to engaged set
+  useEffect(() => {
+    if (!inCombat) return;
+    for (const c of creatures) {
+      if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.has(c.id)) {
+        engagedCreatureIdsRef.current.add(c.id);
+        setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
+        addLogRef.current(`⚠️ ${c.name} joins the fight!`);
+      }
     }
   }, [creatures, inCombat]);
 
@@ -476,9 +519,22 @@ export function useCombat({
           }
 
           await _rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
-          // Stop combat immediately after kill — the useEffect watching creatures
-          // will auto-start combat with the next aggressive creature if any
-          stopCombat();
+
+          // Remove dead creature from engaged set
+          engagedCreatureIdsRef.current.delete(creatureId);
+          setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
+
+          // Pick next engaged creature as active target, or stop combat
+          const nextEngaged = [...engagedCreatureIdsRef.current].find(id => {
+            const c = creaturesRef.current.find(cr => cr.id === id);
+            return c && c.is_alive && c.hp > 0;
+          });
+          if (nextEngaged) {
+            combatCreatureIdRef.current = nextEngaged;
+            setActiveCombatCreatureId(nextEngaged);
+          } else {
+            stopCombat();
+          }
           return;
         } else {
           updateCreatureHp(creatureId, newHp);
@@ -489,13 +545,13 @@ export function useCombat({
         _addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''}.`);
       }
 
-      // Creature counterattack — only fires once per round from the tank's combat loop.
+      // Creature counterattack — ALL engaged creatures attack, not just the active target.
       // Non-tank party members only deal damage; they don't trigger creature retaliation
       // UNLESS the tank is not at the same node (then creature hits the attacker).
       const effectiveTankId = _party ? (_party.tank_id ?? _party.leader_id) : null;
       const iAmTheTank = !_party || effectiveTankId === char.id;
 
-      // Check if tank is actually present at this node
+      // Check if tank is actually present at this node (do this once for all creatures)
       let tankPresentAtNode = false;
       if (_party && effectiveTankId && effectiveTankId !== char.id) {
         const localTankMember = _partyMembers.find(m => m.character_id === effectiveTankId && m.character.current_node_id === char.current_node_id);
@@ -520,8 +576,22 @@ export function useCombat({
       // Warn once if tank is absent and creature is retargeting this player
       if (_party && !iAmTheTank && !tankPresentAtNode && !tankAbsentWarnedRef.current) {
         tankAbsentWarnedRef.current = true;
-        _addLog(`⚠️ Tank is not here — ${creature.name} targets you directly!`);
+        _addLog(`⚠️ Tank is not here — creatures target you directly!`);
       }
+
+      // Loop over ALL engaged creatures for counterattacks
+      const engagedIds = [...engagedCreatureIdsRef.current];
+      for (const engagedId of engagedIds) {
+        // Re-check player HP each iteration — might have died from a previous creature's hit
+        const currentChar = characterRef.current;
+        if (currentChar.hp <= 0) break;
+
+        const engagedCreature = creaturesRef.current.find(c => c.id === engagedId);
+        if (!engagedCreature || !engagedCreature.is_alive || engagedCreature.hp <= 0) continue;
+        // Check override HP too
+        const overrideHp = creatureHpOverridesRef.current[engagedId];
+        if (overrideHp !== undefined && overrideHp <= 0) continue;
+
       // Root debuff — reduce creature damage by 30% if active
       const _rootDebuff = rootDebuffRef.current;
       const isRooted = _rootDebuff && Date.now() < _rootDebuff.expiresAt;
@@ -530,17 +600,14 @@ export function useCombat({
       const _acBuff = acBuffRef.current;
       const acBuffBonus = (_acBuff && Date.now() < _acBuff.expiresAt) ? _acBuff.bonus : 0;
       const buffedAC = _effectiveAC + acBuffBonus;
-      const creatureAtk = rollD20() + getStatModifier(creature.stats.str || 10);
+      const creatureAtk = rollD20() + getStatModifier(engagedCreature.stats.str || 10);
 
       // When I am the tank in a party, creature hits me directly
-      // Use fresh node check: stale partyMembers ref may show the tank at the old node
-      // even after they've moved away
       let tankMember = _party && effectiveTankId
         ? _partyMembers.find(m => m.character_id === effectiveTankId && m.character.current_node_id === char.current_node_id)
         : null;
 
-      // Double-check tank is actually still at this node via a fresh DB query
-      // to avoid hitting a tank that has already left
+      // Double-check tank is actually still at this node
       if (tankMember && tankMember.character_id !== char.id) {
         try {
           const { data: freshTank } = await supabase
@@ -549,11 +616,9 @@ export function useCombat({
             .eq('id', tankMember.character_id)
             .single();
           if (!freshTank || freshTank.current_node_id !== char.current_node_id) {
-            // Tank has left this node — creature attacks the current player instead
             tankMember = null;
           }
         } catch {
-          // On error, fall through to attack current player
           tankMember = null;
         }
       }
@@ -563,10 +628,10 @@ export function useCombat({
         const _evasionBuff = evasionBuffRef.current;
         const isEvading = _evasionBuff && Date.now() < _evasionBuff.expiresAt;
         if (isEvading && Math.random() < _evasionBuff!.dodgeChance) {
-          _addLog(`🌫️ ${tankMember.character.name} dodges ${creature.name}'s attack from the shadows!`);
+          _addLog(`🌫️ ${tankMember.character.name} dodges ${engagedCreature.name}'s attack from the shadows!`);
         } else if (creatureAtk >= buffedAC) {
-          const dmgDie = getCreatureDamageDie(creature.level, creature.rarity);
-          let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creature.stats.str || 10), 1);
+          const dmgDie = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
+          let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
 
           // Force Shield absorb check for tank
@@ -585,7 +650,7 @@ export function useCombat({
                   _damage: remainingDmg,
                 });
                 if (!dmgError && tankNewHp !== null) {
-                  broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, creature.name);
+                  broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, engagedCreature.name);
                 }
                 await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
               } catch (e) {
@@ -595,14 +660,14 @@ export function useCombat({
               _addLog(`🛡️✨ Force Shield absorbs all ${absorbed} damage! (${remainingShield} shield HP left)`);
             }
           } else {
-          _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${creature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
+          _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${engagedCreature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
           try {
             const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
               _character_id: tankMember.character_id,
               _damage: creatureDmg,
             });
             if (!dmgError && tankNewHp !== null) {
-              broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, creature.name);
+              broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, engagedCreature.name);
             }
             await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
           } catch (e) {
@@ -610,17 +675,17 @@ export function useCombat({
           }
           }
         } else {
-          _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} attacks ${tankMember.character.name} (Tank) — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
+          _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${engagedCreature.name} attacks ${tankMember.character.name} (Tank) — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
         }
       } else {
         // Evasion check (Cloak of Shadows)
         const _evasionBuff = evasionBuffRef.current;
         const isEvading = _evasionBuff && Date.now() < _evasionBuff.expiresAt;
         if (isEvading && Math.random() < _evasionBuff!.dodgeChance) {
-          _addLog(`🌫️ ${who} ${_party ? 'dodges' : 'dodge'} ${creature.name}'s attack from the shadows!`);
+          _addLog(`🌫️ ${who} ${_party ? 'dodges' : 'dodge'} ${engagedCreature.name}'s attack from the shadows!`);
         } else if (creatureAtk >= buffedAC) {
-          const dmgDie2 = getCreatureDamageDie(creature.level, creature.rarity);
-          let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(creature.stats.str || 10), 1);
+          const dmgDie2 = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
+          let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
 
           // Force Shield absorb check
@@ -632,31 +697,34 @@ export function useCombat({
             const remainingDmg = creatureDmg - absorbed;
             onAbsorbDamageRef.current?.(remainingShield);
             if (remainingDmg > 0) {
-              const playerNewHp = Math.max(char.hp - remainingDmg, 0);
+              const playerNewHp = Math.max(currentChar.hp - remainingDmg, 0);
               _addLog(`🛡️✨ Force Shield absorbs ${absorbed} damage! ${remainingDmg} damage bleeds through. (Shield broken)`);
               await _updateCharacter({ hp: playerNewHp });
               await _degradeEquipment();
               if (playerNewHp <= 0) {
                 _addLog(`💀 ${who} ${_party ? 'has' : 'have'} been defeated...`);
                 stopCombat();
+                break;
               }
             } else {
               _addLog(`🛡️✨ Force Shield absorbs all ${absorbed} damage! (${remainingShield} shield HP left)`);
             }
           } else {
-            const playerNewHp = Math.max(char.hp - creatureDmg, 0);
-            _addLog(`${isRooted ? '🌿 ' : ''}${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${buffedAC} — Hit! ${creatureDmg} damage.`);
+            const playerNewHp = Math.max(currentChar.hp - creatureDmg, 0);
+            _addLog(`${isRooted ? '🌿 ' : ''}${acBuffBonus > 0 ? '📯 ' : ''}${engagedCreature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${buffedAC} — Hit! ${creatureDmg} damage.`);
             await _updateCharacter({ hp: playerNewHp });
             await _degradeEquipment();
             if (playerNewHp <= 0) {
               _addLog(`💀 ${who} ${_party ? 'has' : 'have'} been defeated...`);
               stopCombat();
+              break;
             }
           }
         } else {
-          _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${creature.name} attacks ${who} — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
+          _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${engagedCreature.name} attacks ${who} — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
         }
       }
+      } // end engaged creature loop
       } // end iAmTheTank
     } finally {
       combatBusyRef.current = false;
@@ -676,6 +744,10 @@ export function useCombat({
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
+
+    // Add to engaged set (don't clear previous entries)
+    engagedCreatureIdsRef.current.add(creatureId);
+    setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
 
     combatCreatureIdRef.current = creatureId;
     inCombatRef.current = true;
@@ -711,6 +783,7 @@ export function useCombat({
   return {
     inCombat,
     activeCombatCreatureId,
+    engagedCreatureIds,
     creatureHpOverrides,
     updateCreatureHp,
     startCombat,

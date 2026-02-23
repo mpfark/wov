@@ -32,6 +32,7 @@ interface Props {
   onOpenTeleport?: () => void;
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
+  engagedCreatureIds?: string[];
   creatureHpOverrides?: Record<string, number>;
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
@@ -48,7 +49,7 @@ interface Props {
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith, onOpenTeleport,
-  inCombat, activeCombatCreatureId, creatureHpOverrides = {}, classAbilities = [], onUseAbility, healTargets = [],
+  inCombat, activeCombatCreatureId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, healTargets = [],
   beltedPotions = [], onUseBeltPotion, actionBindings,
   poisonStacks = {},
   igniteStacks = {},
@@ -108,6 +109,7 @@ export default function NodeView({
               <div className="space-y-1">
                 {creatures.map(c => {
                   const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
+                  const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
                   const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
                   const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
                   const creaturePoisonStacks = poisonStacks[c.id];
@@ -116,7 +118,7 @@ export default function NodeView({
                   const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
                   const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
                   return (
-                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : 'border-border'}`}>
+                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
                         <span className={`text-xs font-display truncate ${
                           c.rarity === 'boss' ? 'text-primary text-glow' :
@@ -176,6 +178,8 @@ export default function NodeView({
                         <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                         {isActiveTarget ? (
                           <span className="text-[10px] font-display text-destructive animate-pulse">⚔️</span>
+                        ) : isEngaged ? (
+                          <span className="text-[10px] font-display text-dwarvish animate-pulse">⚔️</span>
                         ) : (
                           <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
                             {CLASS_COMBAT[character.class]?.label || 'Atk'}
