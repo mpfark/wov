@@ -97,11 +97,12 @@ IMPORTANT RULES FOR POPULATING:
 - Do NOT generate any new nodes — the "nodes" array must be empty []
 - Do NOT generate any NPCs — the "npcs" array must be empty []
 - Use the real node IDs (e.g. "${populate_nodes[0].id}") as the node_temp_id for creatures
-- Generate 2-4 creatures per node (mix of aggressive and passive)
+- Generate 1-4 creatures per node (mix of aggressive and passive)
 - Creature levels must match each node's region level range
 - Do NOT duplicate existing creature names on the same node
 - The "region" field should use name "Populate" with description "Populating existing nodes" min_level 1 max_level 1 (placeholder)
-- Mark each creature as is_humanoid: true or false (humanoids are bandits, soldiers, cultists, mages, etc. — anything with a roughly human form)`;
+- Mark each creature as is_humanoid: true or false (humanoids are bandits, soldiers, cultists, mages, etc. — anything with a roughly human form)
+- USE THE CREATURE STAT FORMULAS specified in the main rules section. Do NOT invent stat values.`;
     } else if (expand_region) {
       const targetRegion = regions.find((r: any) => r.id === expand_region.id);
       if (targetRegion) {
@@ -135,6 +136,17 @@ IMPORTANT RULES FOR EXPANSION:
       }
     }
 
+    // Determine if the region already has an inn
+    let regionHasInn = false;
+    if (expand_region) {
+      const regionNodes = nodes.filter((n: any) => n.region_id === expand_region.id);
+      regionHasInn = regionNodes.some((n: any) => n.is_inn);
+    }
+
+    const innInstruction = regionHasInn
+      ? "This region ALREADY HAS an inn. Do NOT generate any new inn nodes (is_inn must be false for all new nodes)."
+      : "This region does not have an inn yet. Generate exactly one inn node.";
+
     const systemPrompt = `You are a high-fantasy world builder for a text-based RPG called "Wayfarers of Eldara". You generate regions, nodes, creatures, and NPCs that fit the world's lore. Generate original names and content inspired by classic high-fantasy settings but NOT taken directly from any copyrighted works (e.g. do not use names from Tolkien, D&D, or other franchises).
 
 CURRENT WORLD STATE:
@@ -144,25 +156,31 @@ ${expandContext}
 AVAILABLE LOOT TABLES (assign these to humanoid creatures based on matching level range and rarity):
 ${lootTableSummary || "No loot tables exist yet."}
 
+INN RULE: ${innInstruction}
+
 RULES:
 - Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
 - ALL names (region, node, creature, NPC) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead.
-- Every region should have at least one inn node for resting
 - Creature levels must match the region's level range
-- Creature stats use: str, dex, con, int, wis, cha (range 5-30 based on level)
-- Creature rarity: "regular", "rare", or "boss" — each region should have mostly regulars, a few rares, and 1-2 bosses
-- HP formula: base 10 + (level * 3) for regular, *1.5 for rare, *3 for boss
-- AC formula: 8 + floor(level / 3) for regular, +2 for rare, +4 for boss
+- Generate 1-4 creatures per node (mix of aggressive and passive). Each region should have mostly regulars, a few rares, and at most 1 boss.
 - NPC dialogue should be lore-appropriate and atmospheric
 - Use temp IDs like "node_1", "node_2" ONLY in the temp_id field and connection references — NEVER include temp IDs in the "name" field
 - Node "name" must be a clean, lore-appropriate place name only (e.g. "Thornwood Clearing", "Rivermist Bridge"). NEVER append temp IDs, booleans, field names, or any metadata to node names.
 - The is_inn, is_vendor, is_blacksmith fields are SEPARATE boolean fields — do NOT put "is_vendor", "vendor", "true/false" or similar text inside the name or description
 - For expanding existing regions, use "existing:<real_uuid>" in target_temp_id to connect to existing nodes
 - Connections between nodes you generate should be bidirectional
-- Generate 2-4 creatures per node (mix of aggressive and passive)
 - Generate 1-2 NPCs for inn/vendor/blacksmith nodes
 - Create original fantasy names that evoke a sense of ancient, mythic world-building
 - Mark creatures as is_humanoid: true if they have a roughly human form (bandits, soldiers, cultists, mages, knights, etc.) or false for beasts/monsters/animals
+
+CREATURE STAT FORMULAS (YOU MUST USE THESE EXACTLY):
+- Base stats (str, dex, con, int, wis, cha): round(10 + level * 0.7). For bosses, multiply by 2.0.
+- HP: round((15 + level * 8) * rarity_multiplier). Rarity multipliers: regular=1.0, rare=1.5, boss=4.0. Set hp = max_hp.
+- AC: round(10 + level * 0.6 + rarity_ac_bonus). Rarity AC bonus: regular=+2, rare=+2, boss=+6.
+- respawn_seconds: regular=120, rare=300, boss=600
+- Example: A level 5 regular creature: stats=round(10+5*0.7)=14 each, HP=round((15+40)*1.0)=55, AC=round(10+3+2)=15
+- Example: A level 10 boss creature: stats=round(10+7)*2=34 each, HP=round((15+80)*4.0)=380, AC=round(10+6+6)=22
+- IMPORTANT: Do NOT invent your own stat values. Calculate them from these formulas.
 
 LOOT TABLE ASSIGNMENT RULES:
 - Do NOT generate any items. Items are managed separately via the Item Forge.
