@@ -1,68 +1,51 @@
 
 
-# Concave Region Borders (Tight Node-Wrapping Outlines)
+# Multi-Creature Combat Fix
 
 ## Problem
-The current convex hull algorithm always creates outward-bulging polygons. Your reference image shows borders that wrap **tightly around each node**, following concavities and indentations in the node layout -- like shrink-wrap around the actual node positions.
+The combat system only tracks a single active creature (`activeCombatCreatureId`). When a player switches targets (e.g., clicking Attack on a passive creature), the previous aggressive creature stops counterattacking entirely. Both creatures should hit the player if the player has engaged both.
 
-## Solution: Union-of-Circles Approach
+## Solution
+Track a **set of engaged creature IDs** alongside the single active (player-targeted) creature. Each combat tick, the player attacks the active target, but **all engaged creatures** counterattack.
 
-Instead of computing a convex hull, we treat each node as a circle (node radius + small padding, ~20px total) and compute the **union boundary** of all these circles for a region. This produces exactly the shape in your reference image: a smooth outline that hugs each node with a consistent small gap, wrapping into concavities.
+## Changes
 
-### Algorithm
-1. For each node in a region, define a circle at its position with radius `NODE_RADIUS + BORDER_PAD` (~20px)
-2. Sample the boundary of each circle at fine intervals (e.g., every 5 degrees)
-3. Keep only boundary points that are **outside all other circles** in the region (these are the exposed arc segments)
-4. Connect adjacent exposed arcs to form the full outline path
-5. Render as an SVG `<path>` with arc commands (`A`) for the curved sections and straight lines between circles
+### `src/hooks/useCombat.ts`
 
-For single nodes, this simply draws a circle. For clusters, it creates the "cookie cutter" shape from your image.
+1. **Add `engagedCreatureIds` state** (a `Set<string>` via ref + state) to track all creatures currently in combat with the player.
 
-### Simpler Fallback: Metaball / Marching Squares
-If the arc-union math proves too complex, a simpler alternative:
-1. Create an offscreen grid covering the region's bounding box
-2. For each grid cell, compute the sum of `1/distance` to each node (metaball field function)
-3. Use a threshold to determine inside/outside
-4. Extract the contour using marching squares
-5. Smooth the resulting path
+2. **Update `startCombat`**: Add the new creature to `engagedCreatureIds` without removing existing entries. Set `activeCombatCreatureId` to the newly clicked creature (player's attack target).
 
-The arc-union approach is preferred as it gives cleaner SVG paths and is more performant.
+3. **Update `doCombatTick`**:
+   - Player attack phase: attacks only `activeCombatCreatureId` (unchanged).
+   - Creature counterattack phase: loop over ALL `engagedCreatureIds` and run the counterattack logic for each living creature, not just the active target.
 
----
+4. **Update creature death handling**: Remove dead creatures from `engagedCreatureIds`. If the active target dies, pick the next engaged creature as the new active target. If no engaged creatures remain, stop combat.
+
+5. **Update `stopCombat`**: Clear `engagedCreatureIds`.
+
+6. **Update the auto-aggro effect** (lines 211-224, 238-249): When an aggressive creature auto-engages, add it to the engaged set.
+
+### `src/components/game/NodeView.tsx`
+
+7. **Update UI indicator**: Accept `engagedCreatureIds` as a prop. Show the crossed-swords icon on ALL engaged creatures (not just the single active one). Highlight the primary target differently (e.g., destructive border for active, subtler indicator for other engaged creatures).
+
+### `src/pages/GamePage.tsx`
+
+8. **Pass `engagedCreatureIds`** from `useCombat` return value down to `NodeView`.
 
 ## Technical Details
 
-### File: `src/components/admin/AdminWorldMapView.tsx`
-
-**New constants:**
-- `BORDER_PAD = 20` -- offset from node edge to border (replaces `HULL_PAD = 35`)
-- `NODE_DRAW_RADIUS` -- the visual node circle radius (already exists around line 560 as `r={14}`)
-
-**Replace functions** (`convexHull`, `expandHull`, `hullToPath`):
-- Remove `convexHull()` and `expandHull()`
-- Replace with `computeRegionOutline(points, radius)` that computes the union-of-circles boundary
-- Update `hullToPath` to generate SVG path with arc commands
-
-**Update the `useMemo` block** (lines 386-405):
-- Instead of `convexHull` then `expandHull`, call `computeRegionOutline(hullPoints, NODE_DRAW_RADIUS + BORDER_PAD)`
-- The returned path and bbox are used the same way for rendering
-
-**No changes to:**
-- Global BFS layout algorithm (stays the same)
-- Node rendering, edge rendering, sidebar, interactions
-- Any other files
-
-### Union-of-Circles Algorithm Detail
-
 ```text
-For each region:
-  1. circles = [{cx, cy, r=20} for each node]
-  2. For each circle i:
-     - Find intersection points with all other circles j
-     - Find arc segments of circle i that lie outside all other circles
-  3. Chain the exposed arcs in order around the boundary
-  4. Output SVG path: arcs (A commands) for curved parts
+Before:
+  Player clicks Creature A (aggressive) -> attacks A, A counterattacks
+  Player clicks Creature B (passive)    -> attacks B, A stops counterattacking
+
+After:
+  Player clicks Creature A (aggressive) -> attacks A, A counterattacks
+  Player clicks Creature B (passive)    -> attacks B, BOTH A and B counterattack
+  Creature A dies                       -> attacks B, only B counterattacks
 ```
 
-For regions with nodes that are far apart (not overlapping circles), each node gets its own independent outline -- which may need connecting via the edges between them, or we increase the radius to ensure overlap. Given nodes are spaced at `MIN_NODE_GAP = 90px`, a radius of ~48px would ensure adjacent nodes' circles overlap (90/2 + small margin). We can tune this value.
+The engaged set is managed via a `useRef<Set<string>>` (for access inside the interval) mirrored to a state array for rendering. Each counterattack in the loop is independent -- each creature rolls its own attack against the player's AC.
 
