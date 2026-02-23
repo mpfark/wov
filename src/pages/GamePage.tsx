@@ -443,7 +443,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, []);
 
   // --- Auto-combat hook (must be before aggro effect) ---
-  const { inCombat, activeCombatCreatureId, creatureHpOverrides, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = useCombat({
+  const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = useCombat({
     character,
     creatures,
     updateCharacter,
@@ -1585,6 +1585,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               } : undefined}
               inCombat={inCombat}
               activeCombatCreatureId={activeCombatCreatureId}
+              engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
               onUseAbility={handleUseAbility}
