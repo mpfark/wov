@@ -93,7 +93,9 @@ serve(async (req) => {
 Generate a batch of ${count} distinct, lore-consistent items for a level ${level_min}–${level_max} world.
 
 GENERATION RULES:
-- ALL item names must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters or special Unicode.
+- ALL item names and descriptions must be written ENTIRELY in English. NO non-English words, NO accented/Unicode characters (ä, ö, ü, é, å, etc.). Use ONLY standard ASCII letters (A-Z, a-z), spaces, hyphens, and apostrophes.
+- Do NOT include any metadata, IDs, labels, or prefixes in the name or description fields. Names should be pure item names like "Iron Longsword" — never "name: Iron Longsword" or "平衡 Iron Longsword" or "item_3: Iron Longsword".
+- Descriptions must be a single evocative English sentence describing the item. Never leave description empty.
 - Item type: ${typeInstruction}
 - Slot: ${slotInstruction}
 - Rarity: ${rarityInstruction}
@@ -227,8 +229,22 @@ Call the generate_items tool with the structured output.`;
     const items = (parsed.items || []).map((item: any) => {
       const mult = RARITY_MULT[item.rarity] || 1;
       const autoGold = Math.round((item.level || 1) * 2.5 * mult * mult);
+
+      // Sanitize name: strip non-ASCII, remove prefixes like "name:", trim
+      let cleanName = (item.name || "Unnamed Item")
+        .replace(/[^\x20-\x7E]/g, '')        // strip non-ASCII
+        .replace(/^(name|item|id)\s*[:=]\s*/i, '') // strip "name:" prefixes
+        .replace(/^\d+[\s.:_-]+/, '')          // strip leading IDs like "3: " or "item_3 "
+        .trim();
+      if (!cleanName) cleanName = "Unnamed Item";
+
+      // Sanitize description
+      let cleanDesc = (item.description || "A mysterious item.")
+        .replace(/[^\x20-\x7E]/g, '')
+        .trim();
+      if (!cleanDesc) cleanDesc = "A mysterious item.";
+
       let stats = (item.stats && Object.keys(item.stats).length > 0) ? { ...item.stats } : {};
-      const level = item.level || 1;
 
       if (item.item_type === "equipment") {
         const budget = calcBudget(level, item.rarity, item.hands || 1);
@@ -266,6 +282,8 @@ Call the generate_items tool with the structured output.`;
 
       return {
         ...item,
+        name: cleanName,
+        description: cleanDesc,
         stats,
         slot: item.item_type === "consumable" ? null : (item.slot || null),
         value: autoGold,
