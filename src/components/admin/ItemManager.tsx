@@ -148,11 +148,12 @@ export default function ItemManager() {
   };
 
   const loadUsedItemIds = async () => {
-    const [creaturesRes, nodesRes, vendorRes, startingGearRes] = await Promise.all([
+    const [creaturesRes, nodesRes, vendorRes, startingGearRes, lootTableEntriesRes] = await Promise.all([
       supabase.from('creatures').select('loot_table'),
       supabase.from('nodes').select('searchable_items'),
       supabase.from('vendor_inventory').select('item_id'),
       supabase.from('class_starting_gear').select('item_id'),
+      supabase.from('loot_table_entries').select('item_id'),
     ]);
     const ids = new Set<string>();
     for (const c of (creaturesRes.data || [])) {
@@ -167,6 +168,7 @@ export default function ItemManager() {
     }
     for (const v of (vendorRes.data || [])) ids.add(v.item_id);
     for (const g of (startingGearRes.data || [])) ids.add(g.item_id);
+    for (const lt of (lootTableEntriesRes.data || [])) ids.add(lt.item_id);
     setUsedItemIds(ids);
   };
 
