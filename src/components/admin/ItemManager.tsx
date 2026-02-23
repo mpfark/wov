@@ -93,6 +93,7 @@ export default function ItemManager() {
     creatures: { id: string; name: string; chance: number }[];
     searchNodes: { id: string; name: string; chance: number }[];
     vendors: { id: string; name: string; node_name: string; price: number }[];
+    lootTables: { id: string; name: string; weight: number }[];
     holder?: { character_name: string; character_id: string } | null;
   } | null>(null);
 
@@ -102,10 +103,12 @@ export default function ItemManager() {
   };
 
   const loadItemUsage = async (itemId: string, itemRarity?: string) => {
-    const [creaturesRes, nodesRes, vendorRes] = await Promise.all([
+    const [creaturesRes, nodesRes, vendorRes, lootEntryRes, lootTablesRes] = await Promise.all([
       supabase.from('creatures').select('id, name, loot_table'),
       supabase.from('nodes').select('id, name, searchable_items'),
       supabase.from('vendor_inventory').select('id, item_id, node_id, price').eq('item_id', itemId),
+      supabase.from('loot_table_entries').select('loot_table_id, weight').eq('item_id', itemId),
+      supabase.from('loot_tables').select('id, name'),
     ]);
 
     const creatures: { id: string; name: string; chance: number }[] = [];
@@ -130,6 +133,13 @@ export default function ItemManager() {
       price: v.price,
     }));
 
+    const ltMap = new Map((lootTablesRes.data || []).map(t => [t.id, t.name]));
+    const lootTables = (lootEntryRes.data || []).map(e => ({
+      id: e.loot_table_id,
+      name: ltMap.get(e.loot_table_id) || 'Unknown',
+      weight: e.weight,
+    }));
+
     // Check if unique item is currently held by a player
     let holder: { character_name: string; character_id: string } | null = null;
     if (itemRarity === 'unique') {
@@ -144,7 +154,7 @@ export default function ItemManager() {
       }
     }
 
-    setItemUsage({ creatures, searchNodes, vendors, holder });
+    setItemUsage({ creatures, searchNodes, vendors, lootTables, holder });
   };
 
   const loadUsedItemIds = async () => {
@@ -621,7 +631,7 @@ export default function ItemManager() {
               )}
 
               {/* Used In section */}
-              {selectedId && itemUsage && (itemUsage.creatures.length > 0 || itemUsage.searchNodes.length > 0 || itemUsage.vendors.length > 0) && (
+              {selectedId && itemUsage && (itemUsage.creatures.length > 0 || itemUsage.searchNodes.length > 0 || itemUsage.vendors.length > 0 || itemUsage.lootTables.length > 0) && (
                 <div className="space-y-2 border-t border-border pt-3">
                   <p className="font-display text-xs text-primary">📍 Used In</p>
                   {itemUsage.creatures.length > 0 && (
@@ -653,6 +663,17 @@ export default function ItemManager() {
                         <div key={v.id} className="flex items-center justify-between px-2 py-1 rounded bg-background/40 border border-border text-xs">
                           <span className="text-foreground">{v.node_name}</span>
                           <span className="text-primary">{v.price}g</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {itemUsage.lootTables.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Package className="w-3 h-3" /> Loot Tables</p>
+                      {itemUsage.lootTables.map(lt => (
+                        <div key={lt.id} className="flex items-center justify-between px-2 py-1 rounded bg-background/40 border border-border text-xs">
+                          <span className="text-foreground">{lt.name}</span>
+                          <span className="text-muted-foreground">weight {lt.weight}</span>
                         </div>
                       ))}
                     </div>
