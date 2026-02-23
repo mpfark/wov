@@ -29,6 +29,7 @@ export default function WorldBuilderRulebook() {
           <h3 className="font-display text-sm text-primary">Region Rules</h3>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
             <li>Every region must have at least <strong>one inn</strong> node for resting.</li>
+            <li>If the region <strong>already has an inn</strong>, the AI will <strong>not</strong> generate another one.</li>
             <li>Regions have a <code className="text-[10px] bg-muted px-1 rounded">min_level</code> and <code className="text-[10px] bg-muted px-1 rounded">max_level</code> range.</li>
             <li>All creature levels within a region must fall within its level range.</li>
           </ul>
@@ -50,18 +51,25 @@ export default function WorldBuilderRulebook() {
         <Card className="p-3 space-y-1.5">
           <h3 className="font-display text-sm text-primary">Creature Rules</h3>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
-            <li><strong>2–4 creatures per node</strong>, mix of aggressive and passive.</li>
-            <li>Stats: str, dex, con, int, wis, cha — range <strong>5–30</strong> based on level.</li>
-            <li>Rarity distribution: mostly <Badge variant="outline" className="text-[9px] px-1 py-0">regular</Badge>, a few <Badge variant="secondary" className="text-[9px] px-1 py-0">rare</Badge>, 1–2 <Badge variant="destructive" className="text-[9px] px-1 py-0">boss</Badge> per region.</li>
+            <li><strong>1–4 creatures per node</strong>, mix of aggressive and passive.</li>
+            <li>Rarity distribution: mostly <Badge variant="outline" className="text-[9px] px-1 py-0">regular</Badge>, a few <Badge variant="secondary" className="text-[9px] px-1 py-0">rare</Badge>, at most 1 <Badge variant="destructive" className="text-[9px] px-1 py-0">boss</Badge> per region.</li>
             <li>Mark <code className="text-[10px] bg-muted px-1 rounded">is_humanoid: true</code> for bandits, soldiers, cultists, mages, knights — anything with a human form.</li>
           </ul>
           <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Base Stats (str, dex, con, int, wis, cha):</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round(10 + level × 0.7) · Bosses: ×2.0</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
             <p className="font-medium text-foreground text-[11px] mb-0.5">HP Formula:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">base 10 + (level × 3) · ×1.5 for rare · ×3 for boss</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round((15 + level × 8) × multiplier) · regular=1.0 · rare=1.5 · boss=4.0</code>
           </div>
           <div className="text-[11px] text-muted-foreground">
             <p className="font-medium text-foreground text-[11px] mb-0.5">AC Formula:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">8 + floor(level / 3) · +2 for rare · +4 for boss</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round(10 + level × 0.6 + bonus) · regular=+2 · rare=+2 · boss=+6</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Respawn:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">regular=120s · rare=300s · boss=600s</code>
           </div>
         </Card>
 
