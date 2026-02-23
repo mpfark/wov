@@ -1,51 +1,47 @@
 
 
-# Multi-Creature Combat Fix
+## Redesign Focus Strike Scaling
 
-## Problem
-The combat system only tracks a single active creature (`activeCombatCreatureId`). When a player switches targets (e.g., clicking Attack on a passive creature), the previous aggressive creature stops counterattacking entirely. Both creatures should hit the player if the player has engaged both.
+### The Problem
+Focus Strike currently scales off STR, which feels thematically wrong for spell-casters and charisma-based classes. A Wizard or Bard "channeling strength" breaks immersion.
 
-## Solution
-Track a **set of engaged creature IDs** alongside the single active (player-targeted) creature. Each combat tick, the player attacks the active target, but **all engaged creatures** counterattack.
+### The Solution
+Change Focus Strike to scale off the **average of all six stats** (STR, DEX, CON, INT, WIS, CHA), representing a moment of total concentration where the character channels everything they have into one strike. This rewards balanced builds and feels natural for every class fantasy.
 
-## Changes
+### Changes
 
-### `src/hooks/useCombat.ts`
+**1. Update ability description** (`src/lib/class-abilities.ts`)
+- Rename/re-describe Focus Strike from "scaling with STR" to something like:
+  - Label: **"Focus Strike"**
+  - Emoji: **"🎯"**
+  - Description: **"Channel every ounce of your being -- your next attack deals bonus damage scaling with your overall prowess"**
 
-1. **Add `engagedCreatureIds` state** (a `Set<string>` via ref + state) to track all creatures currently in combat with the player.
+**2. Update the damage formula** (`src/pages/GamePage.tsx`, around line 1423-1427)
+- Replace the STR-only modifier with an average-of-all-stats modifier:
+  - Current: `getStatMod2(character.str + equipmentBonuses.str)`
+  - New: calculate the average of all six stats (including equipment bonuses), then apply `getStatMod2` to that average
+  - The rest of the formula stays the same: `max(3, floor(avgMod * 2) + floor(level / 2))`
 
-2. **Update `startCombat`**: Add the new creature to `engagedCreatureIds` without removing existing entries. Set `activeCombatCreatureId` to the newly clicked creature (player's attack target).
+**3. Update the Game Manual** (`src/components/admin/GameManual.tsx`)
+- Update any reference to Focus Strike scaling with STR to reflect the new "average of all stats" scaling.
 
-3. **Update `doCombatTick`**:
-   - Player attack phase: attacks only `activeCombatCreatureId` (unchanged).
-   - Creature counterattack phase: loop over ALL `engagedCreatureIds` and run the counterattack logic for each living creature, not just the active target.
+### Technical Detail
 
-4. **Update creature death handling**: Remove dead creatures from `engagedCreatureIds`. If the active target dies, pick the next engaged creature as the new active target. If no engaged creatures remain, stop combat.
-
-5. **Update `stopCombat`**: Clear `engagedCreatureIds`.
-
-6. **Update the auto-aggro effect** (lines 211-224, 238-249): When an aggressive creature auto-engages, add it to the engaged set.
-
-### `src/components/game/NodeView.tsx`
-
-7. **Update UI indicator**: Accept `engagedCreatureIds` as a prop. Show the crossed-swords icon on ALL engaged creatures (not just the single active one). Highlight the primary target differently (e.g., destructive border for active, subtler indicator for other engaged creatures).
-
-### `src/pages/GamePage.tsx`
-
-8. **Pass `engagedCreatureIds`** from `useCombat` return value down to `NodeView`.
-
-## Technical Details
-
-```text
-Before:
-  Player clicks Creature A (aggressive) -> attacks A, A counterattacks
-  Player clicks Creature B (passive)    -> attacks B, A stops counterattacking
-
-After:
-  Player clicks Creature A (aggressive) -> attacks A, A counterattacks
-  Player clicks Creature B (passive)    -> attacks B, BOTH A and B counterattack
-  Creature A dies                       -> attacks B, only B counterattacks
+```
+// New formula (GamePage.tsx)
+const totalStats = (character.str + (equipmentBonuses.str || 0))
+                 + (character.dex + (equipmentBonuses.dex || 0))
+                 + (character.con + (equipmentBonuses.con || 0))
+                 + (character.int + (equipmentBonuses.int || 0))
+                 + (character.wis + (equipmentBonuses.wis || 0))
+                 + (character.cha + (equipmentBonuses.cha || 0));
+const avgStat = Math.floor(totalStats / 6);
+const avgMod = getStatMod2(avgStat);
+const bonusDmg = Math.max(3, Math.floor(avgMod * 2) + Math.floor(character.level / 2));
 ```
 
-The engaged set is managed via a `useRef<Set<string>>` (for access inside the interval) mirrored to a state array for rendering. Each counterattack in the loop is independent -- each creature rolls its own attack against the player's AC.
+### Files to Change
+- `src/lib/class-abilities.ts` -- update description text
+- `src/pages/GamePage.tsx` -- update damage calculation (~line 1423-1427)
+- `src/components/admin/GameManual.tsx` -- update manual text referencing Focus Strike
 
