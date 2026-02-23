@@ -247,7 +247,7 @@ Call the generate_items tool with the structured output.`;
       let stats = (item.stats && Object.keys(item.stats).length > 0) ? { ...item.stats } : {};
 
       if (item.item_type === "equipment") {
-        const budget = calcBudget(level, item.rarity, item.hands || 1);
+        const budget = calcBudget(item.level || 1, item.rarity, item.hands || 1);
         let spent = calcStatCost(stats);
 
         // If AI underspent the budget, top up with random stats
