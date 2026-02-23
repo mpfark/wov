@@ -222,14 +222,34 @@ export default function NodeView({
                   const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
                     g.item.rarity === 'rare' ? 'text-dwarvish' :
                     g.item.rarity === 'uncommon' ? 'text-chart-2' : 'text-foreground';
+                  const statEntries = Object.entries(g.item.stats || {}).filter(([, v]) => v !== 0);
                   return (
                     <div key={g.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-border">
-                      <div className="min-w-0 flex-1">
-                        <span className={`text-xs font-display truncate ${rarityColor}`}>{g.item.name}</span>
-                        {g.creature_name && (
-                          <span className="text-[9px] text-muted-foreground ml-1">from {g.creature_name}</span>
-                        )}
-                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="min-w-0 flex-1 cursor-default">
+                            <span className={`text-xs font-display truncate ${rarityColor}`}>{g.item.name}</span>
+                            {g.creature_name && (
+                              <span className="text-[9px] text-muted-foreground ml-1">from {g.creature_name}</span>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="text-xs max-w-[200px] space-y-0.5">
+                          <p className={`font-display ${rarityColor}`}>{g.item.name}</p>
+                          <p className="text-[10px] text-muted-foreground capitalize">
+                            {g.item.slot ? `${g.item.slot.replace('_', ' ')} · ` : ''}{g.item.item_type} · {g.item.rarity}
+                          </p>
+                          {g.item.description && <p className="text-[10px] italic text-foreground/70">{g.item.description}</p>}
+                          {statEntries.length > 0 && (
+                            <div className="text-[10px]">
+                              {statEntries.map(([k, v]) => (
+                                <span key={k} className="mr-1.5 text-elvish">{k.toUpperCase()} {v > 0 ? '+' : ''}{v}</span>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-[10px] text-dwarvish">{g.item.value}g</p>
+                        </TooltipContent>
+                      </Tooltip>
                       <Button size="sm" variant="outline" onClick={() => onPickUpLoot?.(g.id)} className="font-display text-[10px] h-5 px-1.5 ml-1 shrink-0">
                         Pick Up
                       </Button>
