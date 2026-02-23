@@ -1421,8 +1421,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         return;
       }
     } else if (ability.type === 'focus_strike') {
-      const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
-      const bonusDmg = Math.max(3, Math.floor(strMod * 2) + Math.floor(character.level / 2));
+      const totalStats = (character.str + (equipmentBonuses.str || 0))
+                       + (character.dex + (equipmentBonuses.dex || 0))
+                       + (character.con + (equipmentBonuses.con || 0))
+                       + (character.int + (equipmentBonuses.int || 0))
+                       + (character.wis + (equipmentBonuses.wis || 0))
+                       + (character.cha + (equipmentBonuses.cha || 0));
+      const avgStat = Math.floor(totalStats / 6);
+      const avgMod = getStatMod2(avgStat);
+      const bonusDmg = Math.max(3, Math.floor(avgMod * 2) + Math.floor(character.level / 2));
       setFocusStrikeBuff({ bonusDmg });
       addLog(`${ability.emoji} Focus Strike! Your next attack will deal +${bonusDmg} bonus damage.`);
     }
