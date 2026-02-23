@@ -112,7 +112,7 @@ function AdminEquipSlot({ slot, item, blocked }: {
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={`w-[6.5rem] p-1 border rounded text-center transition-colors ${
+          className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center transition-colors ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
             item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
           }`}
@@ -136,10 +136,15 @@ function AdminEquipSlot({ slot, item, blocked }: {
         <TooltipContent className="bg-popover border-border z-50">
           <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
+          {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
+          {!item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{item.item.item_type}</p>}
           {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
           {Object.entries(item.item.stats || {}).map(([k, v]) => (
-            <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
+            <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
+              {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
+            </p>
           ))}
+          <p className="text-[10px] text-muted-foreground">Durability: {item.current_durability}% | Value: {item.item.value}g</p>
         </TooltipContent>
       )}
     </Tooltip>
@@ -158,6 +163,8 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
   const inventory = c.inventory || [];
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
+  const beltedPotions = inventory.filter(i => (i as any).belt_slot != null && (i as any).belt_slot !== undefined);
+  const bagItems = unequipped.filter(i => (i as any).belt_slot === null || (i as any).belt_slot === undefined);
 
   const equipmentBonuses = equipped.reduce((acc, item) => {
     const stats = item.item.stats || {};
@@ -180,8 +187,17 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
 
+  // Group bag items
+  const grouped: { representative: AdminInventoryItem; all: AdminInventoryItem[] }[] = [];
+  const map = new Map<string, AdminInventoryItem[]>();
+  for (const inv of bagItems) {
+    const key = inv.item_id;
+    if (!map.has(key)) { map.set(key, []); grouped.push({ representative: inv, all: map.get(key)! }); }
+    map.get(key)!.push(inv);
+  }
+
   return (
-    <div className="border border-border rounded-lg p-3 space-y-3 bg-background/20">
+    <div className="h-full flex flex-col space-y-3">
       {/* Name & Identity + Edit button */}
       <div className="flex items-center justify-between">
         <div className="text-center flex-1">
@@ -289,80 +305,92 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats — 2-column layout matching player panel */}
       <div>
-        <h3 className="font-display text-xs text-muted-foreground mb-1.5">Attributes</h3>
-        <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5 gap-x-2">
-          <span>Stat</span>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help underline decoration-dotted text-right">Base</span>
-            </TooltipTrigger>
-            <TooltipContent className="bg-popover border-border z-50">
-              <p className="font-display text-sm">Base</p>
-              <p className="text-xs text-muted-foreground">Natural stat from race, class, and level-up points.</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help underline decoration-dotted text-chart-2 text-right">Gear</span>
-            </TooltipTrigger>
-            <TooltipContent className="bg-popover border-border z-50">
-              <p className="font-display text-sm">Gear</p>
-              <p className="text-xs text-muted-foreground">Bonus from equipped items.</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help underline decoration-dotted text-right w-8">Mod</span>
-            </TooltipTrigger>
-            <TooltipContent className="bg-popover border-border z-50">
-              <p className="font-display text-sm">Modifier</p>
-              <p className="text-xs text-muted-foreground">Added to dice rolls. Calculated as (total − 10) ÷ 2, rounded down.</p>
-            </TooltipContent>
-          </Tooltip>
+        <div className="flex items-center justify-between mb-1.5">
+          <h3 className="font-display text-xs text-muted-foreground">Attributes</h3>
+          {c.unspent_stat_points > 0 && (
+            <span className="text-[9px] text-primary">{c.unspent_stat_points} unspent</span>
+          )}
         </div>
-        <div className="space-y-0.5">
-          {Object.entries(STAT_LABELS).map(([key, label]) => {
-            const base = (c as any)[key] as number;
-            const bonus = equipmentBonuses[key] || 0;
-            const total = base + bonus;
-            const mod = getStatModifier(total);
-            return (
-              <Tooltip key={key}>
+        <div className="grid grid-cols-2 gap-2">
+          {/* Left column: Stats */}
+          <div>
+            <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5 gap-x-2">
+              <span>Stat</span>
+              <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help gap-x-2">
-                    <span className="font-display text-foreground">{STAT_FULL_NAMES[key]}</span>
-                    <span className="tabular-nums text-foreground text-right">{base}</span>
-                    <span className="tabular-nums text-chart-2 text-right w-6">{bonus > 0 ? `+${bonus}` : ''}</span>
-                    <span className="text-primary text-[10px] w-8 text-right">
-                      ({mod >= 0 ? `+${mod}` : mod})
-                    </span>
-                  </div>
+                  <span className="cursor-help underline decoration-dotted text-right">Base</span>
                 </TooltipTrigger>
                 <TooltipContent className="bg-popover border-border z-50">
-                  <p className="font-display text-sm">{STAT_FULL_NAMES[key]}</p>
-                  <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[key]}</p>
+                  <p className="font-display text-sm">Base</p>
+                  <p className="text-xs text-muted-foreground">Natural stat from race, class, and level-up points.</p>
                 </TooltipContent>
               </Tooltip>
-            );
-          })}
-        </div>
-        <div className="flex gap-3 justify-center text-xs mt-1.5">
-          <span className="font-display text-foreground">
-            AC {totalAC}
-            {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2">+{equipmentBonuses.ac}</span>}
-          </span>
-          <span className="font-display text-primary">
-            Gold {isEditing ? (
-              <input type="number" className="w-14 bg-background border border-border rounded px-1 text-xs text-primary inline"
-                value={gold} onChange={e => setCharEdits(p => ({ ...p, gold: parseInt(e.target.value) || 0 }))} />
-            ) : gold}
-          </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help underline decoration-dotted text-chart-2 text-right">Gear</span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-popover border-border z-50">
+                  <p className="font-display text-sm">Gear</p>
+                  <p className="text-xs text-muted-foreground">Bonus from equipped items.</p>
+                </TooltipContent>
+              </Tooltip>
+              <div className="w-4" />
+            </div>
+            <div className="space-y-0.5">
+              {Object.entries(STAT_LABELS).map(([key, label]) => {
+                const base = (c as any)[key] as number;
+                const bonus = equipmentBonuses[key] || 0;
+                return (
+                  <Tooltip key={key}>
+                    <TooltipTrigger asChild>
+                      <div className="grid grid-cols-[1fr_auto_auto] items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help gap-x-2">
+                        <span className="font-display text-foreground">{STAT_FULL_NAMES[key]}</span>
+                        <span className="tabular-nums text-foreground text-right">{base}</span>
+                        <span className="tabular-nums text-chart-2 text-right w-6">{bonus > 0 ? `+${bonus}` : ''}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-popover border-border z-50">
+                      <p className="font-display text-sm">{STAT_FULL_NAMES[key]}</p>
+                      <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[key]}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </div>
+          {/* Right column: Summary info */}
+          <div className="border-l border-border pl-2">
+            <div className="text-[9px] text-muted-foreground/70 mb-0.5">Summary</div>
+            <div className="space-y-1 text-[10px]">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total AC</span>
+                <span className="text-foreground font-display">{totalAC}{(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2"> (+{equipmentBonuses.ac})</span>}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Gold</span>
+                {isEditing ? (
+                  <input type="number" className="w-14 bg-background border border-border rounded px-1 text-[10px] text-primary text-right"
+                    value={gold} onChange={e => setCharEdits(p => ({ ...p, gold: parseInt(e.target.value) || 0 }))} />
+                ) : (
+                  <span className="text-primary font-display">{gold}</span>
+                )}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Items</span>
+                <span className="text-foreground">{inventory.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Equipped</span>
+                <span className="text-foreground">{equipped.length}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Equipment Paper Doll */}
+      {/* Equipment — Paper Doll Layout */}
       <div>
         <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
         <div className="relative flex flex-col items-center gap-1">
@@ -389,34 +417,46 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
         </div>
       </div>
 
-      {/* Inventory */}
-      <div>
+      {/* Inventory — grouped like player panel */}
+      <div className="flex-1 min-h-0 flex flex-col">
         <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-          Inventory ({unequipped.length})
+          Inventory ({bagItems.length})
         </h3>
-        <div className="space-y-1 max-h-40 overflow-y-auto">
-          {unequipped.length === 0 ? (
+        <div className="space-y-1 flex-1 min-h-0 overflow-y-auto">
+          {bagItems.length === 0 ? (
             <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>
-          ) : unequipped.map(inv => (
-            <div key={inv.id} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
-                    {inv.item.name}
-                    {inv.item.hands && <span className="text-[9px] text-muted-foreground ml-1">({inv.item.hands}H)</span>}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="bg-popover border-border z-50">
-                  <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
-                  <p className="text-xs text-muted-foreground">{inv.item.description}</p>
-                  {Object.entries(inv.item.stats || {}).map(([k, v]) => (
-                    <p key={k} className="text-xs">+{v as number} {k.toUpperCase()}</p>
-                  ))}
-                  <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          ))}
+          ) : grouped.map(({ representative: inv, all }) => {
+            const isBroken = inv.current_durability <= 0;
+            return (
+              <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
+                      {isBroken && <span className="text-destructive mr-1">⚒</span>}
+                      {inv.item.name}
+                      {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
+                      {inv.item.hands && <span className="text-[9px] text-muted-foreground ml-1">({inv.item.hands}H)</span>}
+                      {isBroken && <span className="text-[9px] text-destructive ml-1">(Broken)</span>}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-popover border-border z-50">
+                    <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
+                    {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
+                    <p className="text-xs text-muted-foreground">{inv.item.description}</p>
+                    {inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[inv.item.slot] || inv.item.slot} · {inv.item.item_type}</p>}
+                    {!inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>}
+                    {Object.entries(inv.item.stats || {}).map(([k, v]) => (
+                      <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
+                        {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
+                      </p>
+                    ))}
+                    <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
+                    {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
