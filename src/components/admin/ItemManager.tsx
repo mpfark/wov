@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, Package, MapPin, Skull, ShoppingBag, Search } from 'lucide-react';
+import { Plus, Trash2, Save, X, Package, MapPin, Skull, ShoppingBag, Search, ArrowUpDown } from 'lucide-react';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS } from '@/lib/game-data';
 
 interface Item {
@@ -81,6 +81,9 @@ export default function ItemManager() {
   const [filter, setFilter] = useState('');
   const [typeTab, setTypeTab] = useState<string>('all');
   const [slotTab, setSlotTab] = useState<string>('all');
+  const [rarityTab, setRarityTab] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'level' | 'value' | 'rarity'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
@@ -268,15 +271,25 @@ export default function ItemManager() {
 
   const unassignedCount = items.filter(i => !usedItemIds.has(i.id)).length;
 
+  const RARITY_ORDER: Record<string, number> = { common: 0, uncommon: 1, rare: 2, unique: 3 };
+
   const filtered = items.filter(i => {
     if (showUnassigned && usedItemIds.has(i.id)) return false;
     if (typeTab !== 'all' && i.item_type !== typeTab) return false;
     if ((typeTab === 'equipment' || typeTab === 'shield') && slotTab !== 'all') {
       if (i.slot !== slotTab) return false;
     }
+    if (rarityTab !== 'all' && i.rarity !== rarityTab) return false;
     if (!filter) return true;
     return i.name.toLowerCase().includes(filter.toLowerCase()) ||
       i.rarity.includes(filter.toLowerCase());
+  }).sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortBy === 'name') return dir * a.name.localeCompare(b.name);
+    if (sortBy === 'level') return dir * ((a.level ?? 1) - (b.level ?? 1));
+    if (sortBy === 'value') return dir * (a.value - b.value);
+    if (sortBy === 'rarity') return dir * ((RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0));
+    return 0;
   });
 
   return (
@@ -307,7 +320,7 @@ export default function ItemManager() {
           {['all', ...ITEM_TYPES].map(t => (
             <button
               key={t}
-              onClick={() => { setTypeTab(t); setSlotTab('all'); }}
+              onClick={() => { setTypeTab(t); setSlotTab('all'); setRarityTab('all'); }}
               className={`px-2 py-0.5 rounded text-[10px] font-display capitalize transition-colors ${
                 typeTab === t
                   ? 'bg-primary text-primary-foreground'
@@ -338,6 +351,48 @@ export default function ItemManager() {
             })}
           </div>
         )}
+        {/* Rarity filter + Sort controls */}
+        <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
+          {['all', ...RARITIES].map(r => {
+            const count = items.filter(i => {
+              if (typeTab !== 'all' && i.item_type !== typeTab) return false;
+              return r === 'all' || i.rarity === r;
+            }).length;
+            return (
+              <button
+                key={r}
+                onClick={() => setRarityTab(r)}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                  rarityTab === r
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                } ${r !== 'all' ? RARITY_COLORS[r] : ''}`}
+              >
+                {r === 'all' ? 'All Rarities' : r} ({count})
+              </button>
+            );
+          })}
+          <div className="flex-1" />
+          <div className="flex items-center gap-1">
+            <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
+            {(['name', 'level', 'value', 'rarity'] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => {
+                  if (sortBy === s) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                  else { setSortBy(s); setSortDir('asc'); }
+                }}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                  sortBy === s
+                    ? 'bg-primary/20 text-primary border border-primary/30'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {s}{sortBy === s ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+              </button>
+            ))}
+          </div>
+        </div>
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
