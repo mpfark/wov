@@ -254,7 +254,7 @@ Call the generate_items tool with the structured output.`;
         let attempts = 0;
         while (spent < budget && attempts < 50) {
           const pick = PRIMARY_STATS[Math.floor(Math.random() * PRIMARY_STATS.length)];
-          const cap = getStatCap(pick, level);
+          const cap = getStatCap(pick, item.level || 1);
           const current = stats[pick] || 0;
           if (current < cap) {
             stats[pick] = current + 1;
