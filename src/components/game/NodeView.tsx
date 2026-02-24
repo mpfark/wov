@@ -217,7 +217,7 @@ export default function NodeView({
                         <span className="text-[10px] text-muted-foreground">L{p.level}</span>
                         {isPartyMate && hpData && (
                           <div className="ml-auto flex items-center gap-1 shrink-0">
-                            <div className="w-[60px] h-2 bg-background rounded-full overflow-hidden border border-border">
+                            <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
                               <div
                                 className="h-full rounded-full transition-all duration-200"
                                 style={{
