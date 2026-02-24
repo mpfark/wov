@@ -337,18 +337,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, []);
 
   // MP (Stamina) regeneration — DEX-based rate every 3 seconds, 3× at inns
-  const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex });
-  useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex }; }, [character.mp, character.max_mp, character.current_node_id, character.dex]);
+  const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level });
+  useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level }; }, [character.mp, character.max_mp, character.current_node_id, character.dex, character.level]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const { mp, max_mp, current_node_id, dex } = mpCharRef.current;
-      if (mp >= max_mp) return;
+      const { mp, current_node_id, dex, level } = mpCharRef.current;
+      // Use gear-inclusive DEX to compute true max MP so regen doesn't stall below displayed max
+      const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
+      const effectiveMaxMp = getMaxMp(level, dexWithGear);
+      if (mp >= effectiveMaxMp) return;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
       const innMult = node?.is_inn ? 3 : 1;
-      const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
       const regenAmount = getMpRegenRate(dexWithGear) * innMult;
-      const newMp = Math.min(mp + regenAmount, max_mp);
+      const newMp = Math.min(mp + regenAmount, effectiveMaxMp);
       if (newMp > mp) {
         updateCharRegenRef.current({ mp: newMp });
       }
