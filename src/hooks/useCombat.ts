@@ -13,7 +13,7 @@ interface EquipmentBonuses {
 
 interface PartyMember {
   character_id: string;
-  character: { name: string; hp: number; current_node_id: string | null };
+  character: { name: string; hp: number; max_hp: number; current_node_id: string | null };
   is_following: boolean;
   status: string;
 }
@@ -651,7 +651,7 @@ export function useCombat({
                   _damage: remainingDmg,
                 });
                 if (!dmgError && tankNewHp !== null) {
-                  broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, engagedCreature.name);
+                  broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.max_hp, engagedCreature.name);
                 }
                 await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
               } catch (e) {
@@ -668,7 +668,7 @@ export function useCombat({
               _damage: creatureDmg,
             });
             if (!dmgError && tankNewHp !== null) {
-              broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.hp, engagedCreature.name);
+              broadcastHpRef.current?.(tankMember.character_id, tankNewHp, tankMember.character.max_hp, engagedCreature.name);
             }
             await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
           } catch (e) {
