@@ -1620,6 +1620,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 if (result === false) addLog('✨ That unique item is already claimed by another...');
                 else { addLog('📦 You pick up an item.'); fetchInventory(); }
               }}
+              partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
+              partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
             />
           </div>
           {/* Event Log - docked at bottom of middle column, 1/3 height */}

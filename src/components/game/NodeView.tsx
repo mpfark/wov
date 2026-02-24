@@ -45,6 +45,8 @@ interface Props {
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
+  partyMemberIds?: Set<string>;
+  partyMemberHp?: Map<string, { hp: number; max_hp: number }>;
 }
 
 export default function NodeView({
@@ -56,6 +58,8 @@ export default function NodeView({
   sunderDebuff,
   groundLoot = [],
   onPickUpLoot,
+  partyMemberIds,
+  partyMemberHp,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [healTarget, setHealTarget] = useState<string>('');
@@ -200,19 +204,35 @@ export default function NodeView({
                     </Button>
                   </div>
                 ))}
-                {otherPlayers.map(p => (
-                  <div key={p.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-primary/30">
-                    <div className="min-w-0">
-                      <span className="text-xs font-display text-primary">{p.name}</span>
-                      {getCharacterTitle(p.level) && (
-                        <span className="text-primary/60 ml-1 font-display text-[9px]">{getCharacterTitle(p.level)}</span>
-                      )}
-                      <span className="text-[10px] text-muted-foreground ml-1">
-                        {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
-                      </span>
+                {otherPlayers.map(p => {
+                  const isPartyMate = partyMemberIds?.has(p.id);
+                  const hpData = partyMemberHp?.get(p.id);
+                  return (
+                    <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-display text-primary truncate">{p.name}</span>
+                        {getCharacterTitle(p.level) && (
+                          <span className="text-primary/60 font-display text-[9px]">{getCharacterTitle(p.level)}</span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground">L{p.level}</span>
+                        {isPartyMate && hpData && (
+                          <>
+                            <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
+                              <div
+                                className="h-full rounded-full transition-all duration-200"
+                                style={{
+                                  width: `${Math.max((hpData.hp / hpData.max_hp) * 100, 0)}%`,
+                                  backgroundColor: (hpData.hp / hpData.max_hp) > 0.5 ? 'hsl(var(--elvish))' : (hpData.hp / hpData.max_hp) > 0.25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
+                                }}
+                              />
+                            </div>
+                            <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{hpData.hp}/{hpData.max_hp}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>
