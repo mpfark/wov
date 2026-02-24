@@ -201,14 +201,16 @@ export default function NodeView({
                   </div>
                 ))}
                 {otherPlayers.map(p => (
-                  <div key={p.id} className="text-[10px] text-foreground/80 p-1 bg-background/30 rounded border border-border">
-                    <span className="text-elvish">{p.name}</span>
-                    {getCharacterTitle(p.level) && (
-                      <span className="text-primary/60 ml-1 font-display text-[9px]">{getCharacterTitle(p.level)}</span>
-                    )}
-                    <span className="text-muted-foreground ml-1">
-                      — {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
-                    </span>
+                  <div key={p.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-primary/30">
+                    <div className="min-w-0">
+                      <span className="text-xs font-display text-primary">{p.name}</span>
+                      {getCharacterTitle(p.level) && (
+                        <span className="text-primary/60 ml-1 font-display text-[9px]">{getCharacterTitle(p.level)}</span>
+                      )}
+                      <span className="text-[10px] text-muted-foreground ml-1">
+                        {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
