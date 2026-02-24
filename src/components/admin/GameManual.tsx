@@ -807,13 +807,13 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-3 text-xs text-muted-foreground">
-                <p>Stamina (MP) limits how far you can travel before needing to rest. Each move between nodes costs <strong className="text-foreground">5 MP</strong>. A 500ms cooldown prevents rapid movement spam.</p>
+                <p>Stamina (MP) limits how far you can travel before needing to rest. Each move between nodes costs <strong className="text-foreground">10 MP</strong>. A 500ms cooldown prevents rapid movement spam.</p>
 
                 <div className="space-y-1">
                   <p><strong className="text-foreground">Max MP Formula:</strong> 100 + (DEX mod × 10) + ((level − 1) × 2)</p>
                   <p><strong className="text-foreground">Regen Rate:</strong> (5 + DEX mod) MP every 3 seconds</p>
                   <p><strong className="text-foreground">Inn Bonus:</strong> Regen rate tripled (×3) while resting at an Inn</p>
-                  <p><strong className="text-foreground">Movement Cost:</strong> 5 MP per node traversal</p>
+                  <p><strong className="text-foreground">Movement Cost:</strong> 10 MP per node traversal</p>
                 </div>
 
                 <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery.</p>
