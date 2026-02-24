@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getCharacterTitle } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
@@ -337,6 +337,9 @@ export default function CharacterPanel({
         {/* Name & Identity */}
         <div className="text-center">
           <h2 className="font-display text-lg text-primary text-glow">{character.name}</h2>
+          {getCharacterTitle(character.level) && (
+            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(character.level)}</p>
+          )}
           <p className="text-xs text-muted-foreground">
             {RACE_LABELS[character.race]} {CLASS_LABELS[character.class]} — Lvl {character.level}
           </p>

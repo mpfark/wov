@@ -6,7 +6,7 @@ import { Character } from '@/hooks/useCharacter';
 import { PartyMember } from '@/hooks/useParty';
 import { InventoryItem } from '@/hooks/useInventory';
 import { GroundLootItem } from '@/hooks/useGroundLoot';
-import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
 import { Button } from '@/components/ui/button';
@@ -203,6 +203,9 @@ export default function NodeView({
                 {otherPlayers.map(p => (
                   <div key={p.id} className="text-[10px] text-foreground/80 p-1 bg-background/30 rounded border border-border">
                     <span className="text-elvish">{p.name}</span>
+                    {getCharacterTitle(p.level) && (
+                      <span className="text-primary/60 ml-1 font-display text-[9px]">{getCharacterTitle(p.level)}</span>
+                    )}
                     <span className="text-muted-foreground ml-1">
                       — {RACE_LABELS[p.race]} {CLASS_LABELS[p.class]} Lvl {p.level}
                     </span>

@@ -243,13 +243,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [regenTick, setRegenTick] = useState(false);
 
   // Refs for regen to avoid stale closures resetting the timer
-  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con });
+  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level });
   const regenBuffRef = useRef(regenBuff);
   const foodBuffRef = useRef(foodBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
   const equippedRef = useRef(equipped);
-  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con }; }, [character.hp, character.max_hp, character.current_node_id, character.con]);
+  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level]);
   useEffect(() => { regenBuffRef.current = regenBuff; }, [regenBuff]);
   useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
@@ -275,7 +275,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const itemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
-        const regenAmount = Math.max(Math.floor((conRegen + itemRegen + foodRegen) * totalMult), 1);
+        const milestoneMult = regenCharRef.current.level >= 35 ? 2 : 1;
+        const regenAmount = Math.max(Math.floor((conRegen + itemRegen + foodRegen) * totalMult * milestoneMult), 1);
         const newHp = Math.min(hp + regenAmount, max_hp);
         if (newHp !== hp) {
           updateCharRegenRef.current({ hp: newHp });
@@ -791,7 +792,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
     if (isDead) return;
     if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
-    if ((character.cp ?? 0) < cpCost) { addLog('⚠️ Not enough CP to teleport.'); return; }
+    const effectiveCpCost = character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
+    if ((character.cp ?? 0) < effectiveCpCost) { addLog('⚠️ Not enough CP to teleport.'); return; }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
     const currentNodeObj = getNode(character.current_node_id!);
@@ -800,9 +802,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       setWaymarkNodeId(character.current_node_id!);
       addLog(`📍 You leave a hidden waymark at ${currentNodeObj.name}.`);
     }
-    await updateCharacter({ current_node_id: nodeId, cp: (character.cp ?? 0) - cpCost });
+    await updateCharacter({ current_node_id: nodeId, cp: (character.cp ?? 0) - effectiveCpCost });
     broadcastMove(character.id, character.name, nodeId);
-    addLog(`🌀 You teleport to ${targetNode.name} for ${cpCost} CP.`);
+    addLog(`🌀 You teleport to ${targetNode.name} for ${effectiveCpCost} CP.`);
     logActivity(character.user_id, character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
     // Move all co-located party members (followers always, all co-located if level 25+ recall)
@@ -826,10 +828,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (!waymarkNode) { addLog('⚠️ Your waymark has faded.'); setWaymarkNodeId(null); return; }
     if (isDead) return;
     if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
-    if ((character.cp ?? 0) < cpCost) { addLog('⚠️ Not enough CP to return to waymark.'); return; }
-    await updateCharacter({ current_node_id: waymarkNodeId, cp: (character.cp ?? 0) - cpCost });
+    const effectiveWayCost = character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
+    if ((character.cp ?? 0) < effectiveWayCost) { addLog('⚠️ Not enough CP to return to waymark.'); return; }
+    await updateCharacter({ current_node_id: waymarkNodeId, cp: (character.cp ?? 0) - effectiveWayCost });
     broadcastMove(character.id, character.name, waymarkNodeId);
-    addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${cpCost} CP.`);
+    addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${effectiveWayCost} CP.`);
     logActivity(character.user_id, character.id, 'teleport', `Returned to waymark at ${waymarkNode.name}`, { node_id: waymarkNodeId, cpCost });
     setWaymarkNodeId(null);
     setTeleportOpen(false);
@@ -1099,8 +1102,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
       return;
     }
-    if ((character.cp ?? 0) < ability.cpCost) {
-      addLog(`⚠️ Not enough CP for ${ability.label}! (${ability.cpCost} CP needed, ${character.cp ?? 0} available)`);
+    const effectiveCpCost = character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
+    if ((character.cp ?? 0) < effectiveCpCost) {
+      addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${character.cp ?? 0} available)`);
       return;
     }
 
@@ -1434,12 +1438,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`${ability.emoji} Focus Strike! Your next attack will deal +${bonusDmg} bonus damage.`);
     }
 
-    // Deduct CP cost
-    const newCp = Math.max((character.cp ?? 0) - ability.cpCost, 0);
+    // Deduct CP cost (with milestone discount)
+    const finalCpCost = character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
+    const newCp = Math.max((character.cp ?? 0) - finalCpCost, 0);
     await updateCharacter({ cp: newCp });
 
     // Track last used ability cost
-    setLastUsedAbilityCost(ability.cpCost);
+    setLastUsedAbilityCost(finalCpCost);
   }, [isDead, character, updateCharacter, addLog, party, partyMembers, inCombat, activeCombatCreatureId, creatures, equipmentBonuses, creatureHpOverrides, poisonStacks, igniteStacks, lastUsedAbilityCost]);
 
   // Keyboard movement + action bindings

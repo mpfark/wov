@@ -245,6 +245,23 @@ export function getCreatureDamageDie(level: number, rarity: string): number {
   return base + Math.floor(level / 2);
 }
 
+// Milestone titles by level
+const MILESTONE_TITLES: { level: number; title: string }[] = [
+  { level: 40, title: 'Ascendant' },
+  { level: 38, title: 'Paragon' },
+  { level: 36, title: 'Warden' },
+  { level: 34, title: 'Champion' },
+  { level: 32, title: 'Vanguard' },
+  { level: 30, title: 'Veteran' },
+];
+
+export function getCharacterTitle(level: number): string | null {
+  for (const m of MILESTONE_TITLES) {
+    if (level >= m.level) return m.title;
+  }
+  return null;
+}
+
 export function generateCreatureStats(level: number, rarity: string) {
   const mult = RARITY_MULTIPLIER[rarity] || RARITY_MULTIPLIER.regular;
   const baseStat = 8 + Math.floor(level * 0.7);
