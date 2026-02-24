@@ -355,8 +355,9 @@ export default function NodeView({
               {classAbilities.map((ability, idx) => {
                 const levelLocked = character.level < ability.levelRequired;
                 const notEnoughCp = (character.cp ?? 0) < ability.cpCost;
-                const needsTarget = ability.type === 'hp_transfer' || ability.type === 'ally_absorb';
-                const resolvedTarget = needsTarget ? (abilityTargetId ?? undefined) : undefined;
+                const needsTarget = ability.type === 'hp_transfer';
+                const selfFallback = ability.type === 'ally_absorb' ? character.id : undefined;
+                const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
                 const disableNoTarget = needsTarget && !resolvedTarget;
                 return (
                   <Tooltip key={idx}>
