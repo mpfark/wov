@@ -3,7 +3,7 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { Character } from '@/hooks/useCharacter';
 import { Button } from '@/components/ui/button';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
-import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints } from 'lucide-react';
+import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import type { ActiveBuffs } from './MapPanel';
 
@@ -25,12 +25,16 @@ interface Props {
   onSetTank: (charId: string | null) => void;
   onToggleFollow: (following: boolean) => void;
   activeBuffs?: ActiveBuffs;
+  abilityTargetId?: string | null;
+  onSetAbilityTarget?: (charId: string | null) => void;
+  showTargetSelector?: boolean;
 }
 
 export default function PartyPanel({
   character, party, members, pendingInvites, isLeader, isTank, myMembership,
   playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite,
   onLeave, onKick, onSetTank, onToggleFollow, activeBuffs,
+  abilityTargetId, onSetAbilityTarget, showTargetSelector,
 }: Props) {
   // Players at same node who aren't in the party
   const invitablePlayers = playersHere.filter(
@@ -94,6 +98,13 @@ export default function PartyPanel({
                     <span className="text-muted-foreground text-[10px]">L{m.character.level}</span>
                   </div>
                   <div className="flex gap-0.5 shrink-0">
+                    {/* Ability target icon — shown for classes with targeted abilities */}
+                    {showTargetSelector && !isMe && onSetAbilityTarget && (
+                      <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Set as ability target"
+                        onClick={() => onSetAbilityTarget(abilityTargetId === m.character_id ? null : m.character_id)}>
+                        <Crosshair className={`w-3 h-3 ${abilityTargetId === m.character_id ? 'text-elvish' : 'text-muted-foreground'}`} />
+                      </Button>
+                    )}
                     {isLeader && !isMe && (
                       <>
                         <Button size="sm" variant="ghost" className="h-5 w-5 p-0" title="Set as Tank"

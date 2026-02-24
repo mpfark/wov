@@ -52,6 +52,9 @@ interface Props {
   onSetTank: (charId: string | null) => void;
   onToggleFollow: (following: boolean) => void;
   activeBuffs?: ActiveBuffs;
+  abilityTargetId?: string | null;
+  onSetAbilityTarget?: (charId: string | null) => void;
+  showTargetSelector?: boolean;
   // Keyboard bindings
   keyboardBindings?: {
     bindings: KeyBindings;
@@ -72,7 +75,7 @@ export default function MapPanel({
   regions, nodes, currentNodeId, currentRegionId, characterLevel, onNodeClick, partyMembers, myCharacterId,
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
-  keyboardBindings, activeBuffs,
+  keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -322,6 +325,9 @@ export default function MapPanel({
           onSetTank={onSetTank}
           onToggleFollow={onToggleFollow}
           activeBuffs={activeBuffs}
+          abilityTargetId={abilityTargetId}
+          onSetAbilityTarget={onSetAbilityTarget}
+          showTargetSelector={showTargetSelector}
         />
       </div>
     </div>
