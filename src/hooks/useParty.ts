@@ -91,7 +91,9 @@ export function useParty(characterId: string | null) {
   const partyRef = useRef(party);
   useEffect(() => { partyRef.current = party; }, [party]);
 
-  const fetchMemberStats = useCallback(async () => {
+  // Debounced fetchMemberStats — prevents redundant concurrent DB queries
+  const fetchMemberStatsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fetchMemberStatsCore = useCallback(async () => {
     const currentParty = partyRef.current;
     if (!currentParty) return;
     const { data } = await supabase
@@ -101,6 +103,15 @@ export function useParty(characterId: string | null) {
       .eq('status', 'accepted');
     if (data) setMembers(data as unknown as PartyMember[]);
   }, []);
+
+  const fetchMemberStats = useCallback(() => {
+    // Debounce: only fire once per 500ms window
+    if (fetchMemberStatsTimer.current) return;
+    fetchMemberStatsTimer.current = setTimeout(() => {
+      fetchMemberStatsTimer.current = null;
+      fetchMemberStatsCore();
+    }, 500);
+  }, [fetchMemberStatsCore]);
 
   useEffect(() => {
     fetchParty();
@@ -115,41 +126,19 @@ export function useParty(characterId: string | null) {
     return () => { supabase.removeChannel(channel); };
   }, [characterId, fetchParty]);
 
-  // Separate subscription for party member character updates — use lightweight fetchMemberStats
-  useEffect(() => {
-    if (!characterId || members.length === 0) return;
-
-    const memberCharIds = members.map(m => m.character_id);
-    const channels = memberCharIds
-      .filter(id => id !== characterId)
-      .map(id =>
-        supabase
-          .channel(`party-char-${id}`)
-          .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'characters',
-            filter: `id=eq.${id}`,
-          }, () => fetchMemberStats())
-          .subscribe()
-      );
-
-    return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
-  }, [characterId, members.map(m => m.character_id).join(','), fetchMemberStats]);
-
-  // Polling fallback — re-fetch member stats every 3 seconds to catch missed realtime events
+  // Polling fallback — safety net for missed realtime/broadcast events (10s interval)
   useEffect(() => {
     if (!party) return;
     let active = true;
     let timeoutId: ReturnType<typeof setTimeout>;
     const poll = () => {
       if (!active) return;
-      fetchMemberStats();
-      timeoutId = setTimeout(poll, 3000);
+      fetchMemberStatsCore();
+      timeoutId = setTimeout(poll, 10000);
     };
-    timeoutId = setTimeout(poll, 3000);
+    timeoutId = setTimeout(poll, 10000);
     return () => { active = false; clearTimeout(timeoutId); };
-  }, [party?.id, fetchMemberStats]);
+  }, [party?.id, fetchMemberStatsCore]);
 
   const createParty = useCallback(async () => {
     if (!characterId || party) return;
