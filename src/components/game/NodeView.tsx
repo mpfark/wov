@@ -166,20 +166,22 @@ export default function NodeView({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
-                          <div
-                            className={`h-full rounded-full transition-all duration-200`}
-                            style={{
-                              width: `${hpPct}%`,
-                              backgroundColor: hasIgniteStacks
-                                ? 'hsl(var(--dwarvish))'
-                                : hasPoisonStacks
-                                ? 'hsl(var(--elvish))'
-                                : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
-                            }}
-                          />
+                        <div className="ml-auto flex items-center gap-1 shrink-0">
+                          <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
+                            <div
+                              className={`h-full rounded-full transition-all duration-200`}
+                              style={{
+                                width: `${hpPct}%`,
+                                backgroundColor: hasIgniteStacks
+                                  ? 'hsl(var(--dwarvish))'
+                                  : hasPoisonStacks
+                                  ? 'hsl(var(--elvish))'
+                                  : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
+                              }}
+                            />
+                          </div>
+                          <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                         </div>
-                        <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                         {isActiveTarget ? (
                           <span className="text-[10px] font-display text-destructive animate-pulse">⚔️</span>
                         ) : isEngaged ? (
