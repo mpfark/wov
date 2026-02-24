@@ -327,7 +327,8 @@ export function useCombat({
       const who = _party ? char.name : 'You';
       const _critBuff = critBuffRef.current;
       const critBonus = (_critBuff && Date.now() < _critBuff.expiresAt) ? _critBuff.bonus : 0;
-      const effectiveCritRange = ability.critRange - critBonus;
+      const milestoneCritBonus = char.level >= 28 ? 1 : 0;
+      const effectiveCritRange = ability.critRange - critBonus - milestoneCritBonus;
 
       // Sunder Armor — reduce creature AC if active on this target
       const _sunderDebuff = sunderDebuffRef.current;

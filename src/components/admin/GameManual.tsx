@@ -800,7 +800,39 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
-          {/* 8. Death & Respawn */}
+          {/* 8. Milestone Rewards */}
+          <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🏆 Milestone Rewards (Levels 28-40)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-3 text-xs text-muted-foreground">
+                <p>Endgame milestones reward continued progression with permanent bonuses and prestigious titles.</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Level</TableHead>
+                      <TableHead className="text-xs">Reward</TableHead>
+                      <TableHead className="text-xs">Details</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs">⚔️ Expanded Crit Range</TableCell><TableCell className="text-xs">Permanent +1 to crit range (stacks with Eagle Eye)</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs">🏅 Title: Veteran</TableCell><TableCell className="text-xs">Displayed to all players</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">32</TableCell><TableCell className="text-xs">🏅 Title: Vanguard</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">34</TableCell><TableCell className="text-xs">🏅 Title: Champion</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">35</TableCell><TableCell className="text-xs">💚 HP Regen Boost</TableCell><TableCell className="text-xs">Base HP regen doubled (stacks with inn/potion buffs)</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">36</TableCell><TableCell className="text-xs">🏅 Title: Warden</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">38</TableCell><TableCell className="text-xs">🏅 Title: Paragon</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">39</TableCell><TableCell className="text-xs">🔮 CP Discount</TableCell><TableCell className="text-xs">All ability CP costs reduced by 10%</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: Ascendant</TableCell><TableCell className="text-xs">Highest prestige title</TableCell></TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 9. Death & Respawn */}
           <AccordionItem value="death" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
               💀 Death & Respawn
