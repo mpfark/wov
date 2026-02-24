@@ -720,8 +720,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const handleMove = useCallback(async (nodeId: string, direction?: string) => {
     if (isDead) return;
-    // MP check — need at least 10 MP to move
-    if ((character.mp ?? 100) < 10) {
+    // MP check — need at least 5 MP to move
+    if ((character.mp ?? 100) < 5) {
       addLog('⚠️ You are too exhausted to move! Wait for your stamina to recover.');
       return;
     }
@@ -808,7 +808,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         await toggleFollow(false);
         addLog('You break away from the party leader.');
       }
-      await updateCharacter({ current_node_id: nodeId, mp: Math.max((character.mp ?? 100) - 10, 0) });
+      await updateCharacter({ current_node_id: nodeId, mp: Math.max((character.mp ?? 100) - 5, 0) });
       // Broadcast movement instantly to party members
       broadcastMove(character.id, character.name, nodeId);
       addLog(`You travel to ${targetNode.name}.`);
