@@ -24,6 +24,8 @@ export interface Character {
   unspent_stat_points: number;
   cp: number;
   max_cp: number;
+  mp: number;
+  max_mp: number;
 }
 
 export function useCharacter(user: User | null) {

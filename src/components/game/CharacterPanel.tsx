@@ -117,7 +117,6 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
   );
 }
 
-
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
   Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
@@ -451,6 +450,40 @@ export default function CharacterPanel({
                 {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× CP regen</p>}
                 {hasInspire && <p className="text-xs text-elvish">🎶 Inspire: 2× CP regen</p>}
                 {hasFood && <p className="text-xs text-elvish">🍞 Food: +{(foodCpRegen).toFixed(1)} CP/6s</p>}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })()}
+
+        {/* MP (Stamina) Bar */}
+        {(() => {
+          const mp = character.mp ?? 100;
+          const maxMp = character.max_mp ?? 100;
+          const mpPercent = Math.round((mp / maxMp) * 100);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="cursor-help">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Stamina</span>
+                    <span className="text-dwarvish">{mp}/{maxMp}</span>
+                  </div>
+                  <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
+                    <div
+                      className="h-full transition-all duration-500 rounded-full"
+                      style={{
+                        width: `${mpPercent}%`,
+                        background: 'linear-gradient(90deg, hsl(var(--dwarvish) / 0.7), hsl(var(--dwarvish)))',
+                      }}
+                    />
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="bg-popover border-border z-50 space-y-1">
+                <p className="font-display text-sm">Stamina (Movement Points)</p>
+                <p className="text-xs text-muted-foreground">Each move costs <span className="text-dwarvish">10 MP</span>.</p>
+                <p className="text-xs text-muted-foreground">Regenerates <span className="text-dwarvish">5 MP</span> every <span className="text-foreground">3s</span>.</p>
+                <p className="text-xs text-muted-foreground">Inn rest: <span className="text-elvish">3× regen</span>.</p>
               </TooltipContent>
             </Tooltip>
           );

@@ -115,6 +115,8 @@ export type Database = {
           level: number
           max_cp: number
           max_hp: number
+          max_mp: number
+          mp: number
           name: string
           race: Database["public"]["Enums"]["character_race"]
           str: number
@@ -141,6 +143,8 @@ export type Database = {
           level?: number
           max_cp?: number
           max_hp?: number
+          max_mp?: number
+          mp?: number
           name: string
           race: Database["public"]["Enums"]["character_race"]
           str?: number
@@ -167,6 +171,8 @@ export type Database = {
           level?: number
           max_cp?: number
           max_hp?: number
+          max_mp?: number
+          mp?: number
           name?: string
           race?: Database["public"]["Enums"]["character_race"]
           str?: number
