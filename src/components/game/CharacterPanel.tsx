@@ -4,7 +4,8 @@ import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getCharacterTitle } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine } from 'lucide-react';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ChevronDown } from 'lucide-react';
 import vitruvianMan from '@/assets/vitruvian-man.png';
 
 interface Props {
@@ -326,6 +327,8 @@ export default function CharacterPanel({
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
   const totalAC = character.ac + (equipmentBonuses.ac || 0);
+  const [attrsOpen, setAttrsOpen] = useState(true);
+  const [equipOpen, setEquipOpen] = useState(true);
 
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
@@ -465,11 +468,12 @@ export default function CharacterPanel({
         </div>
 
         {/* Stats — vertical breakdown */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
+        <Collapsible open={attrsOpen} onOpenChange={setAttrsOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
             <h3 className="font-display text-xs text-muted-foreground">Attributes</h3>
-            
-          </div>
+            <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${attrsOpen ? '' : '-rotate-90'}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
           <div className="grid grid-cols-2 gap-2">
             {/* Left column: Stats */}
             <div>
@@ -530,11 +534,16 @@ export default function CharacterPanel({
             </span>
             <span className="font-display text-primary">Gold {character.gold}</span>
           </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Equipment — Paper Doll Layout */}
-        <div>
-          <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
+        <Collapsible open={equipOpen} onOpenChange={setEquipOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
+            <h3 className="font-display text-xs text-muted-foreground">Equipment</h3>
+            <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${equipOpen ? '' : '-rotate-90'}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
           <div className="relative flex flex-col items-center gap-1">
 
             {/* Equipment slots — 3-column grid */}
@@ -623,7 +632,8 @@ export default function CharacterPanel({
             </div>
           </div>
         )}
-        </div>
+        </CollapsibleContent>
+        </Collapsible>
 
         {/* Inventory */}
         <div className="flex-1 min-h-0 flex flex-col">
