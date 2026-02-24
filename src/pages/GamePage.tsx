@@ -148,6 +148,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [teleportOpen, setTeleportOpen] = useState(false);
   const [waymarkNodeId, setWaymarkNodeId] = useState<string | null>(null);
+  const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(character.current_node_id, character.id);
   const [regenBuff, setRegenBuff] = useState<{ multiplier: number; expiresAt: number }>({ multiplier: 1, expiresAt: 0 });
   const [foodBuff, setFoodBuff] = useState<{ flatRegen: number; expiresAt: number }>({ flatRegen: 0, expiresAt: 0 });
@@ -1464,8 +1465,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   // Keyboard movement + action bindings
   const handleAbilityKey = useCallback((index: number) => {
-    handleUseAbility(index);
-  }, [handleUseAbility]);
+    handleUseAbility(index, abilityTargetId ?? undefined);
+  }, [handleUseAbility, abilityTargetId]);
 
   const handleBeltPotionKey = useCallback((index: number) => {
     if (beltedPotions[index]) {
@@ -1616,13 +1617,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
               onUseAbility={handleUseAbility}
-              healTargets={
-                party && character.class === 'healer'
-                  ? mergedPartyMembers
-                      .filter(m => m.character_id !== character.id && m.status === 'accepted' && m.character.current_node_id === character.current_node_id)
-                      .map(m => ({ id: m.character_id, name: m.character.name, hp: m.character.hp, max_hp: m.character.max_hp }))
-                  : []
-              }
+              abilityTargetId={abilityTargetId}
               beltedPotions={beltedPotions}
               onUseBeltPotion={handleUseConsumable}
               actionBindings={keyboardMovement.actionBindings}
@@ -1696,6 +1691,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
               focusStrike: !!focusStrikeBuff,
             }}
+            abilityTargetId={abilityTargetId}
+            onSetAbilityTarget={setAbilityTargetId}
+            showTargetSelector={
+              [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb')
+            }
           />
         </div>
       </div>

@@ -10,7 +10,6 @@ import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { useState, useEffect } from 'react';
@@ -36,7 +35,7 @@ interface Props {
   creatureHpOverrides?: Record<string, number>;
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
-  healTargets?: { id: string; name: string; hp: number; max_hp: number }[];
+  abilityTargetId?: string | null;
   beltedPotions?: InventoryItem[];
   onUseBeltPotion?: (inventoryId: string) => void;
   actionBindings?: ActionBindings;
@@ -51,7 +50,7 @@ interface Props {
 
 export default function NodeView({
   node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith, onOpenTeleport,
-  inCombat, activeCombatCreatureId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, healTargets = [],
+  inCombat, activeCombatCreatureId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   beltedPotions = [], onUseBeltPotion, actionBindings,
   poisonStacks = {},
   igniteStacks = {},
@@ -62,11 +61,9 @@ export default function NodeView({
   partyMemberHp,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
-  const [healTarget, setHealTarget] = useState<string>('');
   const [areaOpen, setAreaOpen] = useState(true);
 
-  // Only hp_transfer needs a target selector (heal is self-only)
-  const hasTargetedAbility = classAbilities.some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb');
+  // hasTargetedAbility check no longer needed — targeting is handled in PartyPanel
 
   // No longer need cooldown tracking — CP system handles availability
 
@@ -355,27 +352,12 @@ export default function NodeView({
           {/* Row 3: Abilities */}
           {classAbilities.length > 0 && onUseAbility && (
             <div className="flex flex-wrap items-center gap-1 justify-center">
-              {/* Target selector — shown if any targeted ability exists and targets available */}
-              {hasTargetedAbility && healTargets.length > 0 && (
-                <Select value={healTarget} onValueChange={setHealTarget}>
-                  <SelectTrigger className="h-6 text-[10px] font-display w-auto min-w-[80px] max-w-[120px]">
-                    <SelectValue placeholder="Select ally" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {healTargets.map(t => (
-                      <SelectItem key={t.id} value={t.id} className="text-[10px]">
-                        {t.name} ({t.hp}/{t.max_hp})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
               {classAbilities.map((ability, idx) => {
                 const levelLocked = character.level < ability.levelRequired;
                 const notEnoughCp = (character.cp ?? 0) < ability.cpCost;
                 const needsTarget = ability.type === 'hp_transfer' || ability.type === 'ally_absorb';
-                const resolvedTarget = needsTarget && healTarget !== 'self' ? healTarget : undefined;
-                const disableNoTarget = ability.type === 'hp_transfer' && (!resolvedTarget || healTargets.length === 0);
+                const resolvedTarget = needsTarget ? (abilityTargetId ?? undefined) : undefined;
+                const disableNoTarget = needsTarget && !resolvedTarget;
                 return (
                   <Tooltip key={idx}>
                     <TooltipTrigger asChild>
@@ -398,7 +380,7 @@ export default function NodeView({
                     <TooltipContent side="top" className="text-xs max-w-[200px]">
                       {levelLocked
                         ? `Unlocks at level ${ability.levelRequired}`
-                        : `${ability.description} · ${ability.cpCost} CP`
+                        : `${ability.description} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
                       }
                     </TooltipContent>
                   </Tooltip>
