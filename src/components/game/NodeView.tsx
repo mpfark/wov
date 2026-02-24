@@ -209,15 +209,15 @@ export default function NodeView({
                   const hpData = partyMemberHp?.get(p.id);
                   return (
                     <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5">
                         <span className="text-xs font-display text-primary truncate">{p.name}</span>
                         {getCharacterTitle(p.level) && (
                           <span className="text-primary/60 font-display text-[9px]">{getCharacterTitle(p.level)}</span>
                         )}
                         <span className="text-[10px] text-muted-foreground">L{p.level}</span>
                         {isPartyMate && hpData && (
-                          <>
-                            <div className="flex-1 h-2 bg-background rounded-full overflow-hidden border border-border">
+                          <div className="ml-auto flex items-center gap-1 shrink-0">
+                            <div className="w-16 h-2 bg-background rounded-full overflow-hidden border border-border">
                               <div
                                 className="h-full rounded-full transition-all duration-200"
                                 style={{
@@ -227,7 +227,7 @@ export default function NodeView({
                               />
                             </div>
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{hpData.hp}/{hpData.max_hp}</span>
-                          </>
+                          </div>
                         )}
                       </div>
                     </div>
