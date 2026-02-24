@@ -109,6 +109,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     broadcastReward,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
+  // Broadcast own HP whenever it changes so party members see updates instantly
+  useEffect(() => {
+    if (party && character) {
+      broadcastHp(character.id, character.hp, character.max_hp, 'sync');
+    }
+  }, [party, character?.hp, character?.max_hp, broadcastHp]);
+
   // Merge broadcast HP/movement overrides into party members for instant display
   const mergedPartyMembers = useMemo(() => {
     if (!partyHpOverrides && partyMoveEvents.length === 0) return partyMembers;
