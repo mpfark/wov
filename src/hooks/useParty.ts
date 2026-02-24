@@ -127,6 +127,7 @@ export function useParty(characterId: string | null) {
   }, [characterId, fetchParty]);
 
   // Polling fallback — safety net for missed realtime/broadcast events (10s interval)
+  // Polling fallback — safety net for missed realtime/broadcast events (5s interval)
   useEffect(() => {
     if (!party) return;
     let active = true;
@@ -134,9 +135,9 @@ export function useParty(characterId: string | null) {
     const poll = () => {
       if (!active) return;
       fetchMemberStatsCore();
-      timeoutId = setTimeout(poll, 10000);
+      timeoutId = setTimeout(poll, 5000);
     };
-    timeoutId = setTimeout(poll, 10000);
+    timeoutId = setTimeout(poll, 5000);
     return () => { active = false; clearTimeout(timeoutId); };
   }, [party?.id, fetchMemberStatsCore]);
 
