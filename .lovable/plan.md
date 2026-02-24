@@ -1,47 +1,51 @@
 
 
-## Redesign Focus Strike Scaling
+## Milestone Rewards for Levels 28-40
 
-### The Problem
-Focus Strike currently scales off STR, which feels thematically wrong for spell-casters and charisma-based classes. A Wizard or Bard "channeling strength" breaks immersion.
+### Overview
+Add three mechanical rewards and six title milestones to keep players motivated through the endgame grind (levels 28-40). All rewards are computed from the character's level at runtime -- no database changes needed.
 
-### The Solution
-Change Focus Strike to scale off the **average of all six stats** (STR, DEX, CON, INT, WIS, CHA), representing a moment of total concentration where the character channels everything they have into one strike. This rewards balanced builds and feels natural for every class fantasy.
+### Milestone Schedule
 
-### Changes
+| Level | Reward |
+|-------|--------|
+| 28 | **Expanded Crit Range** -- permanent +1 to crit range (e.g. 20 becomes 19-20) |
+| 30 | Title: **Veteran** |
+| 32 | Title: **Vanguard** |
+| 34 | Title: **Champion** |
+| 35 | **Passive HP Regen Boost** -- base HP regen doubled |
+| 36 | Title: **Warden** |
+| 38 | Title: **Paragon** |
+| 39 | **CP Discount** -- all ability CP costs reduced by 10% |
+| 40 | Title: **Ascendant** |
 
-**1. Update ability description** (`src/lib/class-abilities.ts`)
-- Rename/re-describe Focus Strike from "scaling with STR" to something like:
-  - Label: **"Focus Strike"**
-  - Emoji: **"🎯"**
-  - Description: **"Channel every ounce of your being -- your next attack deals bonus damage scaling with your overall prowess"**
+### Technical Details
 
-**2. Update the damage formula** (`src/pages/GamePage.tsx`, around line 1423-1427)
-- Replace the STR-only modifier with an average-of-all-stats modifier:
-  - Current: `getStatMod2(character.str + equipmentBonuses.str)`
-  - New: calculate the average of all six stats (including equipment bonuses), then apply `getStatMod2` to that average
-  - The rest of the formula stays the same: `max(3, floor(avgMod * 2) + floor(level / 2))`
+**1. Titles (`src/lib/game-data.ts` + `src/components/game/CharacterPanel.tsx` + `src/components/game/NodeView.tsx`)**
+- Add a `getCharacterTitle(level: number)` helper in `game-data.ts` that returns the highest earned title or `null`.
+- Display the title under the character name in `CharacterPanel` (e.g., "Veteran" in a subtle style).
+- Display the title next to player names in `NodeView` when other players are shown, so the title is visible to others.
 
-**3. Update the Game Manual** (`src/components/admin/GameManual.tsx`)
-- Update any reference to Focus Strike scaling with STR to reflect the new "average of all stats" scaling.
+**2. Expanded Crit Range at Level 28 (`src/hooks/useCombat.ts`)**
+- Where `effectiveCritRange` is calculated (line ~330), subtract 1 if `char.level >= 28`.
+- This stacks with the existing Eagle Eye (crit_buff) ability.
 
-### Technical Detail
+**3. Doubled HP Regen at Level 35 (`src/pages/GamePage.tsx`)**
+- In the HP regen interval (around line 278), apply a x2 multiplier when `character.level >= 35`.
+- Stacks multiplicatively with inn bonus and potion/inspire buffs.
 
-```
-// New formula (GamePage.tsx)
-const totalStats = (character.str + (equipmentBonuses.str || 0))
-                 + (character.dex + (equipmentBonuses.dex || 0))
-                 + (character.con + (equipmentBonuses.con || 0))
-                 + (character.int + (equipmentBonuses.int || 0))
-                 + (character.wis + (equipmentBonuses.wis || 0))
-                 + (character.cha + (equipmentBonuses.cha || 0));
-const avgStat = Math.floor(totalStats / 6);
-const avgMod = getStatMod2(avgStat);
-const bonusDmg = Math.max(3, Math.floor(avgMod * 2) + Math.floor(character.level / 2));
-```
+**4. CP Discount at Level 39 (`src/pages/GamePage.tsx`)**
+- Where `ability.cpCost` is checked and deducted (lines ~1102 and ~1438), apply `Math.ceil(cost * 0.9)` when `character.level >= 39`.
+- The discount applies to all abilities including Focus Strike and teleport costs.
+
+**5. Game Manual Update (`src/components/admin/GameManual.tsx`)**
+- Add a "Milestone Rewards" section documenting all milestone levels, titles, and mechanical bonuses.
 
 ### Files to Change
-- `src/lib/class-abilities.ts` -- update description text
-- `src/pages/GamePage.tsx` -- update damage calculation (~line 1423-1427)
-- `src/components/admin/GameManual.tsx` -- update manual text referencing Focus Strike
+- `src/lib/game-data.ts` -- add `getCharacterTitle()` helper
+- `src/hooks/useCombat.ts` -- crit range bonus at level 28
+- `src/pages/GamePage.tsx` -- HP regen boost at 35, CP discount at 39
+- `src/components/game/CharacterPanel.tsx` -- display title under name
+- `src/components/game/NodeView.tsx` -- display title next to player names
+- `src/components/admin/GameManual.tsx` -- document milestones
 
