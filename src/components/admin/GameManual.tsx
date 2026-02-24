@@ -11,7 +11,7 @@ import {
   ITEM_STAT_COSTS, calculateStats, calculateHP, calculateAC, getBaseRegen, getItemStatBudget,
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
   XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
-  CLASS_PRIMARY_STAT,
+  CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
@@ -800,7 +800,56 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
-          {/* 8. Milestone Rewards */}
+          {/* 8. Stamina (MP) */}
+          <AccordionItem value="stamina" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🏃 Stamina (Move Points)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-3 text-xs text-muted-foreground">
+                <p>Stamina (MP) limits how far you can travel before needing to rest. Each move between nodes costs <strong className="text-foreground">5 MP</strong>. A 500ms cooldown prevents rapid movement spam.</p>
+
+                <div className="space-y-1">
+                  <p><strong className="text-foreground">Max MP Formula:</strong> 100 + (DEX mod × 10) + ((level − 1) × 2)</p>
+                  <p><strong className="text-foreground">Regen Rate:</strong> (5 + DEX mod) MP every 3 seconds</p>
+                  <p><strong className="text-foreground">Inn Bonus:</strong> Regen rate tripled (×3) while resting at an Inn</p>
+                  <p><strong className="text-foreground">Movement Cost:</strong> 5 MP per node traversal</p>
+                </div>
+
+                <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery.</p>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Race</TableHead>
+                      {Object.entries(CLASS_LABELS).map(([key, label]) => (
+                        <TableHead key={key} className="text-xs text-center">{label}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(RACE_LABELS).map(([raceKey, raceLabel]) => (
+                      <TableRow key={raceKey}>
+                        <TableCell className="text-xs font-medium">{raceLabel}</TableCell>
+                        {Object.keys(CLASS_LABELS).map(classKey => {
+                          const stats = calculateStats(raceKey, classKey);
+                          const maxMp = getMaxMp(1, stats.dex);
+                          const regenRate = getMpRegenRate(stats.dex);
+                          return (
+                            <TableCell key={classKey} className="text-xs text-center">
+                              {maxMp} <span className="text-muted-foreground/60">({regenRate}/3s)</span>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 9. Milestone Rewards */}
           <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🏆 Milestone Rewards (Levels 28-40)
