@@ -7,12 +7,14 @@ interface CreatureDamageEvent {
   damage: number;
   attacker_name: string;
   killed: boolean;
+  sender_id?: string; // character id of the sender for self-filtering
 }
 
 /**
  * Hybrid Broadcast channel for instant creature HP sync at a node.
  * - Sends damage events via Broadcast for ~50ms latency to other players
  * - Receives events from other players and merges into local HP overrides
+ * - Self-filtering: ignores broadcasts from own character (local overrides handle that)
  * - Postgres Changes on the creatures table acts as a correction layer
  */
 export function useCreatureBroadcast(nodeId: string | null, characterId: string | null) {
@@ -33,8 +35,9 @@ export function useCreatureBroadcast(nodeId: string | null, characterId: string 
     channel
       .on('broadcast', { event: 'creature_damage' }, (payload) => {
         const data = payload.payload as CreatureDamageEvent;
-        // Only apply events from OTHER players (we already have local overrides)
         if (!data || !data.creature_id) return;
+        // Self-filter: skip broadcasts from own character (local creatureHpOverrides handles it)
+        if (data.sender_id === characterId) return;
         setBroadcastOverrides(prev => ({
           ...prev,
           [data.creature_id]: data.killed ? 0 : data.new_hp,
@@ -47,6 +50,19 @@ export function useCreatureBroadcast(nodeId: string | null, characterId: string 
       supabase.removeChannel(channel);
     };
   }, [nodeId, characterId]);
+
+  // Clean up overrides for creatures that no longer exist (respawned with new state, etc.)
+  const cleanupOverrides = useCallback((activeCreatureIds: string[]) => {
+    setBroadcastOverrides(prev => {
+      const activeSet = new Set(activeCreatureIds);
+      const keys = Object.keys(prev);
+      const stale = keys.filter(k => !activeSet.has(k));
+      if (stale.length === 0) return prev;
+      const next = { ...prev };
+      stale.forEach(k => delete next[k]);
+      return next;
+    });
+  }, []);
 
   const broadcastDamage = useCallback((
     creatureId: string,
@@ -65,9 +81,10 @@ export function useCreatureBroadcast(nodeId: string | null, characterId: string 
         damage,
         attacker_name: attackerName,
         killed,
-      } satisfies CreatureDamageEvent,
+        sender_id: characterId,
+      } as CreatureDamageEvent,
     });
-  }, []);
+  }, [characterId]);
 
-  return { broadcastOverrides, broadcastDamage };
+  return { broadcastOverrides, broadcastDamage, cleanupOverrides };
 }
