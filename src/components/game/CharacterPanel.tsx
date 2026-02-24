@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getCharacterTitle } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getCharacterTitle, getMaxMp, getMpRegenRate } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
@@ -458,8 +458,11 @@ export default function CharacterPanel({
         {/* MP (Stamina) Bar */}
         {(() => {
           const mp = character.mp ?? 100;
-          const maxMp = character.max_mp ?? 100;
+          const dexWithGear = character.dex + (equipmentBonuses.dex || 0);
+          const maxMp = getMaxMp(character.level, dexWithGear);
           const mpPercent = Math.round((mp / maxMp) * 100);
+          const mpRegen = getMpRegenRate(dexWithGear);
+          const dexMod = Math.max(Math.floor((dexWithGear - 10) / 2), 0);
           return (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -481,9 +484,10 @@ export default function CharacterPanel({
               </TooltipTrigger>
               <TooltipContent className="bg-popover border-border z-50 space-y-1">
                 <p className="font-display text-sm">Stamina (Movement Points)</p>
+                <p className="text-xs text-muted-foreground">Max: <span className="text-dwarvish">100</span> base{dexMod > 0 && <> + <span className="text-dwarvish">{dexMod * 10}</span> DEX</>} + <span className="text-dwarvish">{Math.floor((character.level - 1) * 2)}</span> level</p>
                 <p className="text-xs text-muted-foreground">Each move costs <span className="text-dwarvish">10 MP</span>.</p>
-                <p className="text-xs text-muted-foreground">Regenerates <span className="text-dwarvish">5 MP</span> every <span className="text-foreground">3s</span>.</p>
-                <p className="text-xs text-muted-foreground">Inn rest: <span className="text-elvish">3× regen</span>.</p>
+                <p className="text-xs text-muted-foreground">Regen: <span className="text-dwarvish">{mpRegen} MP</span> every <span className="text-foreground">3s</span></p>
+                {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× stamina regen</p>}
               </TooltipContent>
             </Tooltip>
           );

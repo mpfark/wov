@@ -121,6 +121,17 @@ export function getMaxCp(level: number, int: number = 10, wis: number = 10, cha:
   return 60 + (level - 1) * 3 + mentalMod * 5;
 }
 
+// MP (Stamina) system — DEX-based
+export function getMaxMp(level: number, dex: number = 10): number {
+  const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
+  return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
+}
+
+export function getMpRegenRate(dex: number = 10): number {
+  const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
+  return 5 + dexMod;
+}
+
 // Primary stat mapping per class for CP regen bonus
 export const CLASS_PRIMARY_STAT: Record<string, string> = {
   warrior: 'con', wizard: 'int', ranger: 'dex',
