@@ -86,7 +86,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const { playersHere } = usePresence(character.current_node_id, character);
   const { onlinePlayers } = useGlobalPresence(character);
   const { creatures } = useCreatures(character.current_node_id);
-  const { broadcastOverrides, broadcastDamage } = useCreatureBroadcast(character.current_node_id, character.id);
+  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(character.current_node_id, character.id);
+
+  // Clean up stale broadcast overrides when creature list changes (respawns, deaths)
+  useEffect(() => {
+    cleanupOverrides(creatures.map(c => c.id));
+  }, [creatures, cleanupOverrides]);
   const { npcs } = useNPCs(character.current_node_id);
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
