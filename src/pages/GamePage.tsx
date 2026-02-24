@@ -336,6 +336,25 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, []);
 
+  // MP (Stamina) regeneration — 5 MP every 3 seconds, 3× at inns
+  const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id });
+  useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id }; }, [character.mp, character.max_mp, character.current_node_id]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const { mp, max_mp, current_node_id } = mpCharRef.current;
+      if (mp >= max_mp) return;
+      const node = current_node_id ? getNodeRef.current(current_node_id) : null;
+      const innMult = node?.is_inn ? 3 : 1;
+      const regenAmount = 5 * innMult;
+      const newMp = Math.min(mp + regenAmount, max_mp);
+      if (newMp > mp) {
+        updateCharRegenRef.current({ mp: newMp });
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   // When a party reward broadcast arrives for this character, refetch character data from DB
   const lastRewardCountRef = useRef(0);
   useEffect(() => {
@@ -700,6 +719,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const handleMove = useCallback(async (nodeId: string, direction?: string) => {
     if (isDead) return;
+    // MP check — need at least 10 MP to move
+    if ((character.mp ?? 100) < 10) {
+      addLog('⚠️ You are too exhausted to move! Wait for your stamina to recover.');
+      return;
+    }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
     const targetRegion = getRegion(targetNode.region_id);
@@ -783,7 +807,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         await toggleFollow(false);
         addLog('You break away from the party leader.');
       }
-      await updateCharacter({ current_node_id: nodeId });
+      await updateCharacter({ current_node_id: nodeId, mp: Math.max((character.mp ?? 100) - 10, 0) });
       // Broadcast movement instantly to party members
       broadcastMove(character.id, character.name, nodeId);
       addLog(`You travel to ${targetNode.name}.`);
