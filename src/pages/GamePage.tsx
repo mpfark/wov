@@ -740,7 +740,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                   _damage: dmg,
                 });
                 if (newHp !== null) {
-                  broadcastHp?.(member.character_id, newHp, member.character.hp, creature.name);
+                  broadcastHp?.(member.character_id, newHp, member.character.max_hp, creature.name);
                 }
               } catch (e) {
                 console.error('Failed to apply opportunity attack to party member:', e);
