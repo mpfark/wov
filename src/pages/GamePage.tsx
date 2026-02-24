@@ -22,7 +22,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMpRegenRate } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -336,17 +336,18 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return () => clearInterval(interval);
   }, []);
 
-  // MP (Stamina) regeneration — 5 MP every 3 seconds, 3× at inns
-  const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id });
-  useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id }; }, [character.mp, character.max_mp, character.current_node_id]);
+  // MP (Stamina) regeneration — DEX-based rate every 3 seconds, 3× at inns
+  const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex });
+  useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex }; }, [character.mp, character.max_mp, character.current_node_id, character.dex]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const { mp, max_mp, current_node_id } = mpCharRef.current;
+      const { mp, max_mp, current_node_id, dex } = mpCharRef.current;
       if (mp >= max_mp) return;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
       const innMult = node?.is_inn ? 3 : 1;
-      const regenAmount = 5 * innMult;
+      const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
+      const regenAmount = getMpRegenRate(dexWithGear) * innMult;
       const newMp = Math.min(mp + regenAmount, max_mp);
       if (newMp > mp) {
         updateCharRegenRef.current({ mp: newMp });
@@ -1091,10 +1092,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const newLevel = character.level + 1;
       const newMaxCp = getMaxCp(newLevel, character.int, character.wis, character.cha);
       const oldMaxCp = character.max_cp ?? 60;
+      const newMaxMp = getMaxMp(newLevel, character.dex);
+      const oldMaxMp = character.max_mp ?? 100;
       const levelUpUpdates: Partial<Character> = {
         xp: newXp - xpForNext, level: newLevel, max_hp: character.max_hp + 5,
         hp: character.max_hp + 5, gold: newGold,
         max_cp: newMaxCp, cp: Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
+        max_mp: newMaxMp, mp: Math.min((character.mp ?? 100) + (newMaxMp - oldMaxMp), newMaxMp),
       };
       addLog(`🎉 Level Up! You are now level ${newLevel}!`);
       await updateCharacter(levelUpUpdates);
