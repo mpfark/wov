@@ -61,17 +61,28 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
     const item = groundLoot.find(g => g.id === groundLootId);
     if (!item) return;
 
+    // Optimistic removal — hide from UI immediately
+    setGroundLoot(prev => prev.filter(g => g.id !== groundLootId));
+
     // Unique item guard
     if (item.item.rarity === 'unique') {
       const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
         p_character_id: characterId, p_item_id: item.item_id,
       });
-      if (!acquired) return false;
-      // Delete from ground
+      if (!acquired) {
+        // Restore if failed
+        fetchGroundLoot();
+        return false;
+      }
       await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId);
     } else {
-      // Delete from ground first
-      await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId);
+      // Delete from ground first — if another player already took it, this is a no-op
+      const { data: deleted } = await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId).select();
+      if (!deleted || (deleted as any[]).length === 0) {
+        // Someone else already grabbed it
+        fetchGroundLoot();
+        return false;
+      }
       // Insert into inventory
       await supabase.from('character_inventory').insert({
         character_id: characterId, item_id: item.item_id, current_durability: 100,
