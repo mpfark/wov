@@ -109,11 +109,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     broadcastReward,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
-  // Broadcast own HP whenever it changes so party members see updates instantly
+  // Broadcast own HP whenever it changes so party members see updates instantly (throttled)
+  const lastBroadcastedHpRef = useRef<{ hp: number; max_hp: number } | null>(null);
   useEffect(() => {
-    if (party && character) {
-      broadcastHp(character.id, character.hp, character.max_hp, 'sync');
-    }
+    if (!party || !character) return;
+    const last = lastBroadcastedHpRef.current;
+    if (last && last.hp === character.hp && last.max_hp === character.max_hp) return;
+    lastBroadcastedHpRef.current = { hp: character.hp, max_hp: character.max_hp };
+    broadcastHp(character.id, character.hp, character.max_hp, 'sync');
   }, [party, character?.hp, character?.max_hp, broadcastHp]);
 
   // Merge broadcast HP/movement overrides into party members for instant display
