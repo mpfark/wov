@@ -53,14 +53,25 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete, e
 
   const create = async () => {
     if (!form.name) return toast.error('Name required');
-    const { error } = await supabase.from('regions').insert({
+    const { data: region, error } = await supabase.from('regions').insert({
       name: form.name,
       description: form.description,
       min_level: form.min_level,
       max_level: form.max_level,
-    });
+    }).select().single();
     if (error) return toast.error(error.message);
-    toast.success('Region created');
+
+    // Create an initial node in the new region
+    if (region) {
+      await supabase.from('nodes').insert({
+        name: `${form.name} Entrance`,
+        description: '',
+        region_id: region.id,
+        connections: [],
+      });
+    }
+
+    toast.success('Region created with starting node');
     setForm({ name: '', description: '', min_level: 1, max_level: 10 });
     setCreateOpen(false);
     onCreated();
