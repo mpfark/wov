@@ -475,6 +475,7 @@ export default function GameManual() {
                   </TableBody>
                 </Table>
               </div>
+              <p className="text-amber-400 mt-2 text-xs">⚔️ <strong>In Combat:</strong> CP regen is reduced to 10% of its normal value.</p>
 
               <Card className="bg-card/30">
                 <CardContent className="p-3">

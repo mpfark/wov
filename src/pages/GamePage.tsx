@@ -341,7 +341,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       // Food buff adds flat CP regen
       const food = foodBuffRef.current;
       const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-      const regenAmount = (baseRegen + foodCpRegen) * innMult * inspireMult;
+      const combatMult = inCombatRegenRef.current ? 0.1 : 1;
+      const regenAmount = (baseRegen + foodCpRegen) * innMult * inspireMult * combatMult;
       const newCp = Math.min(Math.floor(cp + regenAmount), max_cp);
       if (newCp > cp) {
         updateCharRegenRef.current({ cp: newCp });
