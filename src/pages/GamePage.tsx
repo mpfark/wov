@@ -29,9 +29,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
+import { useChat } from '@/hooks/useChat';
 import { APP_VERSION } from '@/lib/version';
+import { Input } from '@/components/ui/input';
 
 function getLogColor(log: string): string {
+  // Chat messages
+  if (log.startsWith('💬')) return 'text-foreground';
+  if (log.startsWith('🤫 To ')) return 'text-purple-400/70';
+  if (log.startsWith('🤫')) return 'text-purple-400';
+
   // DoT tick messages — italic + dedicated colors to distinguish from ability procs
   if (log.includes('bleeds for') && log.startsWith('🩸')) return 'text-dot-bleed italic';
   if (log.includes('poison damage') && log.startsWith('🧪')) return 'text-dot-poison italic';
@@ -173,6 +180,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   const ownLogIdsRef = useRef<Set<string>>(new Set());
 
@@ -1522,6 +1532,43 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [isDead, inCombat, creatures, startCombat]);
 
+  // Chat system
+  const handleChatMessage = useCallback((formatted: string) => {
+    setEventLog(prev => [...prev.slice(-49), formatted]);
+  }, []);
+
+  const { sendSay, sendWhisper } = useChat({
+    nodeId: character.current_node_id,
+    characterId: character.id,
+    characterName: character.name,
+    onlinePlayers,
+    onMessage: handleChatMessage,
+  });
+
+  const handleChatSubmit = useCallback(() => {
+    const text = chatInput.trim();
+    if (!text) { setChatOpen(false); return; }
+    setChatInput('');
+    setChatOpen(false);
+
+    // Whisper
+    const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
+    if (whisperMatch) {
+      const err = sendWhisper(whisperMatch[1], whisperMatch[2]);
+      if (err) setEventLog(prev => [...prev.slice(-49), `⚠️ ${err}`]);
+      return;
+    }
+
+    // Say (strip /say prefix if present)
+    const sayText = text.replace(/^\/say\s+/i, '');
+    sendSay(sayText);
+  }, [chatInput, sendSay, sendWhisper]);
+
+  const handleOpenChat = useCallback(() => {
+    setChatOpen(true);
+    setTimeout(() => chatInputRef.current?.focus(), 50);
+  }, []);
+
   const keyboardMovement = useKeyboardMovement({
     currentNode,
     nodes,
@@ -1532,6 +1579,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onUseAbility: handleAbilityKey,
     onUseBeltPotion: handleBeltPotionKey,
     onPickUpLoot: handlePickUpFirst,
+    onOpenChat: handleOpenChat,
   });
 
 
@@ -1677,6 +1725,22 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               )}
               <div ref={logEndRef} />
             </div>
+            {chatOpen && (
+              <div className="shrink-0 mt-1">
+                <Input
+                  ref={chatInputRef}
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); handleChatSubmit(); }
+                    if (e.key === 'Escape') { setChatOpen(false); setChatInput(''); }
+                  }}
+                  placeholder="Say something... (/w name message to whisper)"
+                  className="h-7 text-xs bg-background/50 border-border"
+                  autoComplete="off"
+                />
+              </div>
+            )}
           </div>
         </div>
 

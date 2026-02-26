@@ -881,7 +881,26 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
-          {/* 9. Death & Respawn */}
+          {/* Chat */}
+          <AccordionItem value="chat" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              💬 Chat (Say & Whisper)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>Press <strong className="text-foreground">Enter</strong> to open the chat input at the bottom of the event log. Press <strong className="text-foreground">Escape</strong> to cancel.</p>
+                <div className="space-y-1">
+                  <p><strong className="text-foreground">Say</strong> — Type a message and press Enter. All players at your current node will see it.</p>
+                  <p className="ml-3 text-muted-foreground/80">Example: <code className="text-primary">Hello everyone!</code></p>
+                  <p><strong className="text-foreground">Whisper</strong> — Send a private message to a specific player using <code className="text-primary">/w PlayerName message</code> or <code className="text-primary">/whisper PlayerName message</code>.</p>
+                  <p className="ml-3 text-muted-foreground/80">Example: <code className="text-primary">/w Gandalf Want to party up?</code></p>
+                </div>
+                <p>Chat messages are ephemeral — they are not stored and will disappear when you change nodes or refresh.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Death & Respawn */}
           <AccordionItem value="death" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
               💀 Death & Respawn

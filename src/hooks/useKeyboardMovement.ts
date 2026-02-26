@@ -109,9 +109,10 @@ interface UseKeyboardMovementOptions {
   onUseAbility?: (index: number) => void;
   onUseBeltPotion?: (index: number) => void;
   onPickUpLoot?: () => void;
+  onOpenChat?: () => void;
 }
 
-export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion, onPickUpLoot }: UseKeyboardMovementOptions) {
+export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion, onPickUpLoot, onOpenChat }: UseKeyboardMovementOptions) {
   const [bindings, setBindingsState] = useState<KeyBindings>(loadBindings);
   const [actionBindings, setActionBindingsState] = useState<ActionBindings>(loadActionBindings);
   const [moveCooldown, setMoveCooldown] = useState(false);
@@ -126,6 +127,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
   const onUseAbilityRef = useRef(onUseAbility);
   const onUseBeltPotionRef = useRef(onUseBeltPotion);
   const onPickUpLootRef = useRef(onPickUpLoot);
+  const onOpenChatRef = useRef(onOpenChat);
 
   useEffect(() => { bindingsRef.current = bindings; }, [bindings]);
   useEffect(() => { moveCooldownRef.current = moveCooldown; }, [moveCooldown]);
@@ -138,6 +140,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
   useEffect(() => { onUseAbilityRef.current = onUseAbility; }, [onUseAbility]);
   useEffect(() => { onUseBeltPotionRef.current = onUseBeltPotion; }, [onUseBeltPotion]);
   useEffect(() => { onPickUpLootRef.current = onPickUpLoot; }, [onPickUpLoot]);
+  useEffect(() => { onOpenChatRef.current = onOpenChat; }, [onOpenChat]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -151,6 +154,13 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
       if (document.querySelector('[role="dialog"]')) return;
 
       const key = e.key;
+
+      // Enter key opens chat
+      if (key === 'Enter' && onOpenChatRef.current) {
+        e.preventDefault();
+        onOpenChatRef.current();
+        return;
+      }
 
       // Check movement bindings first
       const node = currentNodeRef.current;
