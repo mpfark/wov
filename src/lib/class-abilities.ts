@@ -29,7 +29,7 @@ export interface ClassAbility {
 
 // Universal Tier 0 ability available to all classes from level 1
 export const UNIVERSAL_ABILITIES: ClassAbility[] = [
-  { label: 'Focus Strike', emoji: '🎯', description: 'Channel every ounce of your being — your next attack deals bonus damage scaling with your overall prowess', cpCost: 10, type: 'focus_strike', tier: 0, levelRequired: 1 },
+  { label: 'Focus Strike', emoji: '🎯', description: 'Channel every ounce of your being — your next attack deals bonus damage scaling with your base stats (unaffected by gear)', cpCost: 10, type: 'focus_strike', tier: 0, levelRequired: 1 },
 ];
 
 export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
