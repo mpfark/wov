@@ -1,78 +1,54 @@
 
 
-# Restructure Map: Region → Area → Node
+# Directional "Add Node" Buttons on Graph Views
 
-## Concept
+## What Changes
+When you hover over a node on the admin map, instead of a single `+` button in the top-right corner, you'll see small `+` buttons arranged around the node -- one for each **open direction** (N, NE, E, SE, S, SW, W, NW). Directions already taken by existing connections won't show a button, so you can only add nodes where there's room.
 
-Introduce an **Area** layer between Region and Node. An Area defines a place type (forest, town, cave, etc.) and provides a shared name and description for all its nodes. Nodes no longer require unique names — unnamed nodes display their Area name. Existing data continues working without an area assigned; you can reorganize manually later.
+Clicking a directional `+` button will open the node editor with the connection direction pre-filled, so the new node knows exactly how it relates to its neighbor.
 
-## What Changes for Players
+## Changes
 
-- The location header shows the **Area name** (e.g. "Darkwood Forest") instead of individual node names
-- If a node has its own name set, that name takes priority (e.g. "Thornwatch Tower" within Darkwood Forest)
-- The description comes from the Area unless the node overrides it
-- Region and level range display stays the same
+### 1. Update callback signatures to include direction
 
-## What Changes for Admins
+**`AdminWorldMapView.tsx`**, **`RegionGraphView.tsx`**, **`AdminPage.tsx`**
+- Change `onAddNodeAdjacent` from `(fromId: string) => void` to `(fromId: string, direction?: string) => void`
+- Pass the clicked direction through to the node editor
 
-- New **Area Manager** section in the admin panel for creating/editing areas (name, description, type tag)
-- Node editor gets an **Area** dropdown to assign nodes to areas
-- World Builder AI generates Areas as part of its output
-- World map shows area groupings visually
+### 2. Show directional `+` buttons on hover (both graph views)
 
-## Database Changes
+For each node, on hover:
+- Compute which of the 8 directions (N, NE, E, SE, S, SW, W, NW) are already used by existing connections
+- For each **open** direction, render a small `+` button positioned around the node circle at the correct angle
+- Each button calls `onAddNodeAdjacent(nodeId, direction)`
 
-### 1. New `area_type` enum
-Values: `forest`, `town`, `cave`, `ruins`, `plains`, `mountain`, `swamp`, `desert`, `coast`, `dungeon`, `other`
+Position mapping (relative to node center, ~38px out):
+| Direction | Angle | Offset |
+|-----------|-------|--------|
+| N | 270deg | (0, -38) |
+| NE | 315deg | (27, -27) |
+| E | 0deg | (38, 0) |
+| SE | 45deg | (27, 27) |
+| S | 90deg | (0, 38) |
+| SW | 135deg | (-27, 27) |
+| W | 180deg | (-38, 0) |
+| NW | 225deg | (-27, -27) |
 
-### 2. New `areas` table
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | Primary key |
-| region_id | uuid | FK to regions |
-| name | text | e.g. "Darkwood Forest" |
-| description | text | Shared by all nodes in area |
-| area_type | area_type enum | For filtering/theming |
-| created_at | timestamptz | Default now() |
+### 3. Pass direction into NodeEditorPanel
 
-RLS: Public read, admin-only write (same pattern as nodes/regions).
+**`AdminPage.tsx`**
+- Add state `adjacentDirection` alongside existing `adjacentToNodeId`
+- Pass it to `NodeEditorPanel` as a new prop
 
-### 3. Alter `nodes` table
-- Add `area_id uuid` (nullable, no FK constraint to keep it flexible)
-- Change `name` default to empty string (keep NOT NULL but allow empty)
-- Keep `description` as-is (acts as override when set)
+**`NodeEditorPanel.tsx`**
+- Accept optional `adjacentDirection?: string` prop
+- When creating a new node adjacent to another, pre-select this direction in the connection form instead of leaving it blank
 
-## File Changes
-
-### Data Layer
-- **`src/hooks/useNodes.ts`** — Add `Area` interface and fetch areas alongside regions/nodes. Add `getArea()`, `getAreaNodes()` helpers. Update `GameNode` to include optional `area_id`.
-
-### Player-Facing
-- **`src/components/game/NodeView.tsx`** — Display area name as primary heading when node has no name. Show area description as fallback. Show area type tag.
-- **`src/components/game/PlayerGraphView.tsx`** — Use area name for node labels when node name is empty.
-- **`src/components/game/MapPanel.tsx`** — Pass area data through to child components.
-- **`src/components/game/TeleportDialog.tsx`** — Show area name in teleport destination list for unnamed nodes.
-- **`src/pages/GamePage.tsx`** — Pass areas from useNodes to relevant components. Use area name in event log messages when node name is empty.
-
-### Admin-Facing
-- **`src/components/admin/AreaManager.tsx`** (new) — CRUD for areas: name, description, type, region assignment.
-- **`src/components/admin/NodeEditorPanel.tsx`** — Add area selector dropdown. Show inherited description from area.
-- **`src/components/admin/AdminWorldMapView.tsx`** — Update GraphNode interface to include area_id. Optionally color/group nodes by area.
-- **`src/components/admin/WorldBuilderPanel.tsx`** — Update generated output to include areas. Update apply logic to create areas before nodes.
-- **`src/components/admin/RegionGraphView.tsx`** — Show area groupings in the region graph view.
-- **`src/pages/AdminPage.tsx`** — Add Areas tab/section to admin panel.
-
-### AI World Builder
-- **`supabase/functions/ai-world-builder/index.ts`** — Update system prompt to generate areas. Update tool schema to include areas array. Update world summary to show area structure.
-
-### Documentation
-- **`src/components/admin/GameManual.tsx`** — Update world structure section to explain Region → Area → Node hierarchy.
-- **`src/components/admin/WorldBuilderRulebook.tsx`** — Update rules to reference areas.
-
-## Migration Strategy
-
-- Existing nodes get `area_id = NULL` by default
-- All existing functionality keeps working — when `area_id` is null, the node's own name/description is used as before
-- Admins can create areas and reassign existing nodes at their convenience
-- New AI-generated content will use the area system automatically
+### Files Modified
+| File | Change |
+|------|--------|
+| `src/components/admin/RegionGraphView.tsx` | Replace single `+` with directional `+` buttons around node |
+| `src/components/admin/AdminWorldMapView.tsx` | Same directional `+` buttons, updated callback signature |
+| `src/pages/AdminPage.tsx` | Track `adjacentDirection` state, pass to editor |
+| `src/components/admin/NodeEditorPanel.tsx` | Accept and use `adjacentDirection` prop to pre-fill connection direction |
 
