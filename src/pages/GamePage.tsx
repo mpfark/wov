@@ -90,7 +90,7 @@ interface Props {
 }
 
 export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
-  const { regions, nodes, loading: nodesLoading, getNode, getRegion } = useNodes(true);
+  const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id, character);
   const { onlinePlayers } = useGlobalPresence(character);
   const { creatures } = useCreatures(character.current_node_id);
@@ -1686,6 +1686,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             <NodeView
               node={currentNode}
               region={currentRegion}
+              area={currentNode.area_id ? getNodeArea(currentNode) : undefined}
               players={playersHere}
               creatures={creatures}
               npcs={npcs}
@@ -1760,6 +1761,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           <MapPanel
             regions={regions}
             nodes={nodes}
+            areas={areas}
             currentNodeId={character.current_node_id}
             currentRegionId={currentNode.region_id}
             characterLevel={character.level}
@@ -1844,6 +1846,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           currentRegion={currentRegion}
           regions={regions}
           nodes={nodes}
+          areas={areas}
           playerCp={character.cp ?? 0}
           playerMaxCp={character.max_cp ?? 60}
           characterLevel={character.level}

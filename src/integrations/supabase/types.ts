@@ -52,6 +52,41 @@ export type Database = {
           },
         ]
       }
+      areas: {
+        Row: {
+          area_type: Database["public"]["Enums"]["area_type"]
+          created_at: string
+          description: string
+          id: string
+          name: string
+          region_id: string
+        }
+        Insert: {
+          area_type?: Database["public"]["Enums"]["area_type"]
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          region_id: string
+        }
+        Update: {
+          area_type?: Database["public"]["Enums"]["area_type"]
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          region_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "areas_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_inventory: {
         Row: {
           belt_slot: number | null
@@ -461,6 +496,7 @@ export type Database = {
       }
       nodes: {
         Row: {
+          area_id: string | null
           connections: Json
           created_at: string
           description: string
@@ -474,6 +510,7 @@ export type Database = {
           searchable_items: Json
         }
         Insert: {
+          area_id?: string | null
           connections?: Json
           created_at?: string
           description?: string
@@ -482,11 +519,12 @@ export type Database = {
           is_inn?: boolean
           is_teleport?: boolean
           is_vendor?: boolean
-          name: string
+          name?: string
           region_id: string
           searchable_items?: Json
         }
         Update: {
+          area_id?: string | null
           connections?: Json
           created_at?: string
           description?: string
@@ -917,6 +955,18 @@ export type Database = {
     }
     Enums: {
       app_role: "player" | "steward" | "overlord"
+      area_type:
+        | "forest"
+        | "town"
+        | "cave"
+        | "ruins"
+        | "plains"
+        | "mountain"
+        | "swamp"
+        | "desert"
+        | "coast"
+        | "dungeon"
+        | "other"
       character_class:
         | "warrior"
         | "wizard"
@@ -1074,6 +1124,19 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["player", "steward", "overlord"],
+      area_type: [
+        "forest",
+        "town",
+        "cave",
+        "ruins",
+        "plains",
+        "mountain",
+        "swamp",
+        "desert",
+        "coast",
+        "dungeon",
+        "other",
+      ],
       character_class: [
         "warrior",
         "wizard",

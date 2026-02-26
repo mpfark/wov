@@ -1,4 +1,4 @@
-import { GameNode, Region } from '@/hooks/useNodes';
+import { GameNode, Region, Area, getNodeDisplayName, getNodeDisplayDescription } from '@/hooks/useNodes';
 import { PlayerPresence } from '@/hooks/usePresence';
 import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
@@ -18,6 +18,7 @@ import { ChevronDown, Search, ShoppingCart, Hammer } from 'lucide-react';
 interface Props {
   node: GameNode;
   region: Region | undefined;
+  area?: Area | null;
   players: PlayerPresence[];
   creatures: Creature[];
   npcs?: NPC[];
@@ -49,7 +50,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith, onOpenTeleport,
+  node, region, area, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith, onOpenTeleport,
   inCombat, activeCombatCreatureId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   beltedPotions = [], onUseBeltPotion, actionBindings,
   poisonStacks = {},
@@ -75,8 +76,11 @@ export default function NodeView({
         {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
           {/* Location Header */}
-          <div className="text-center border-b border-border pb-2">
-            <h2 className="font-display text-xl text-primary text-glow">{node.name}</h2>
+           <div className="text-center border-b border-border pb-2">
+            <h2 className="font-display text-xl text-primary text-glow">{getNodeDisplayName(node, area)}</h2>
+            {area && area.area_type !== 'other' && (
+              <span className="text-[10px] text-muted-foreground capitalize">{area.area_type}</span>
+            )}
             {region && (
               <p className="text-xs text-muted-foreground">
                 {region.name} — Levels {region.min_level}–{region.max_level}
@@ -95,7 +99,7 @@ export default function NodeView({
 
           {/* Description */}
           <p className="text-sm text-foreground/90 leading-relaxed italic">
-            {node.description || 'A quiet corner of the world...'}
+            {getNodeDisplayDescription(node, area) || 'A quiet corner of the world...'}
           </p>
         </div>
 

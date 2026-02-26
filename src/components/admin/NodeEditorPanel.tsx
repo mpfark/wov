@@ -251,6 +251,7 @@ export default function NodeEditorPanel({
   const [form, setForm] = useState({
     name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
+    area_id: '' as string,
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
   const [creatures, setCreatures] = useState<any[]>([]);
@@ -260,6 +261,7 @@ export default function NodeEditorPanel({
   const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; value: number }[]>([]);
   const [vendorForm, setVendorForm] = useState({ item_id: '', price: 10, stock: -1 });
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodeId);
+  const [allAreas, setAllAreas] = useState<{ id: string; name: string; region_id: string; area_type: string; description: string }[]>([]);
 
   // For assigning existing entities
   const [allCreatures, setAllCreatures] = useState<any[]>([]);
@@ -282,12 +284,14 @@ export default function NodeEditorPanel({
       supabase.from('creatures').select('id, name, level, rarity, is_aggressive, is_humanoid, hp, max_hp, ac, node_id').order('name'),
       supabase.from('npcs').select('id, name, description, dialogue, node_id').order('name'),
       supabase.from('loot_tables').select('id, name'),
-    ]).then(([cr, np, lt]) => {
+      supabase.from('areas').select('id, name, region_id, area_type, description').order('name'),
+    ]).then(([cr, np, lt, ar]) => {
       setAllCreatures(cr.data || []);
       setAllNpcs(np.data || []);
       const map: Record<string, string> = {};
       for (const t of (lt.data || [])) map[t.id] = t.name;
       setLootTableMap(map);
+      setAllAreas((ar.data || []) as any);
     });
     if (nodeId) {
       loadNode(nodeId);
@@ -295,7 +299,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, connections: '[]', searchable_items: [] });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, connections: '[]', searchable_items: [], area_id: '' });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -315,6 +319,7 @@ export default function NodeEditorPanel({
         is_teleport: (data as any).is_teleport ?? false,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
+        area_id: (data as any).area_id || '',
       });
       setSelectedRegionId(data.region_id);
     }
@@ -423,7 +428,7 @@ export default function NodeEditorPanel({
 
   /* ── Save node ── */
   const saveNode = async () => {
-    if (!form.name) return toast.error('Name required');
+    if (!selectedRegionId) return toast.error('Select a region');
     if (!selectedRegionId) return toast.error('Select a region');
     let connections: any;
     const searchable_items = form.searchable_items;
@@ -434,6 +439,7 @@ export default function NodeEditorPanel({
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
         is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, connections, searchable_items, region_id: selectedRegionId,
+        area_id: form.area_id || null,
       } as any).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
@@ -447,7 +453,8 @@ export default function NodeEditorPanel({
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
         is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, connections, searchable_items,
-      }).select().single();
+        area_id: form.area_id || null,
+      } as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
 
       if (adjacentToNodeId && inserted) {
@@ -535,6 +542,27 @@ export default function NodeEditorPanel({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-muted-foreground">Area (optional)</label>
+                <Select value={form.area_id || 'none'} onValueChange={v => setForm(f => ({ ...f, area_id: v === 'none' ? '' : v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="No area" /></SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50 max-h-60">
+                    <SelectItem value="none" className="text-xs text-muted-foreground">No area</SelectItem>
+                    {allAreas.filter(a => a.region_id === selectedRegionId).map(a => (
+                      <SelectItem key={a.id} value={a.id} className="text-xs">
+                        {a.name} <span className="text-muted-foreground capitalize">({a.area_type})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.area_id && (() => {
+                  const area = allAreas.find(a => a.id === form.area_id);
+                  return area?.description ? (
+                    <p className="text-[10px] text-muted-foreground mt-1 italic">Area desc: {area.description.slice(0, 100)}{area.description.length > 100 ? '…' : ''}</p>
+                  ) : null;
+                })()}
               </div>
 
               <Input placeholder="Node name" value={form.name}

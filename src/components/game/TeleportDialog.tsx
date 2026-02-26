@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { GameNode, Region } from '@/hooks/useNodes';
+import { GameNode, Region, Area, getNodeDisplayName } from '@/hooks/useNodes';
 
 interface TeleportDestination {
   node: GameNode;
@@ -16,6 +16,7 @@ interface Props {
   currentRegion: Region | undefined;
   regions: Region[];
   nodes: GameNode[];
+  areas?: Area[];
   playerCp: number;
   playerMaxCp: number;
   characterLevel: number;
@@ -31,7 +32,7 @@ function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Regio
   return Math.min(10 + levelDiff * 2, 30);
 }
 
-export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, playerCp, playerMaxCp, characterLevel, onTeleport, waymark, onReturnToWaymark }: Props) {
+export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, areas = [], playerCp, playerMaxCp, characterLevel, onTeleport, waymark, onReturnToWaymark }: Props) {
   const destinations: TeleportDestination[] = nodes
     .filter(n => n.is_teleport && n.id !== currentNode.id)
     .map(n => {
@@ -40,7 +41,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
     })
     .filter(Boolean) as TeleportDestination[];
 
-  destinations.sort((a, b) => a.region.min_level - b.region.min_level || a.node.name.localeCompare(b.node.name));
+  destinations.sort((a, b) => a.region.min_level - b.region.min_level || getNodeDisplayName(a.node, areas.find(ar => ar.id === a.node.area_id)).localeCompare(getNodeDisplayName(b.node, areas.find(ar => ar.id === b.node.area_id))));
 
   const waymarkCpCost = waymark?.region ? calculateTeleportCpCost(currentRegion, waymark.region) : 15;
   const canAffordWaymark = playerCp >= waymarkCpCost;
@@ -89,7 +90,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
               return (
                 <div key={d.node.id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40 hover:bg-background/60 transition-colors">
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-sm text-foreground truncate">{d.node.name}</p>
+                    <p className="font-display text-sm text-foreground truncate">{getNodeDisplayName(d.node, areas.find(a => a.id === d.node.area_id))}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {d.region.name} — Lv {d.region.min_level}–{d.region.max_level}
                     </p>

@@ -19,6 +19,7 @@ import WorldBuilderPanel from '@/components/admin/WorldBuilderPanel';
 import ItemForgePanel from '@/components/admin/ItemForgePanel';
 import GameManual from '@/components/admin/GameManual';
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
+import AreaManager from '@/components/admin/AreaManager';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -146,6 +147,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
             <TabsTrigger value="world-builder" className="font-display text-xs">🧙 World Builder</TabsTrigger>
             <TabsTrigger value="item-forge" className="font-display text-xs">🪄 Item Forge</TabsTrigger>
+            <TabsTrigger value="areas" className="font-display text-xs">🗺️ Areas</TabsTrigger>
             <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
           </TabsList>
         </div>
@@ -237,6 +239,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="item-forge" className="flex-1 min-h-0 mt-0 overflow-hidden">
           {activeTab === 'item-forge' && <ItemForgePanel onDataChanged={loadData} />}
+        </TabsContent>
+
+        <TabsContent value="areas" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          {activeTab === 'areas' && <AreaManager onDataChanged={loadData} />}
         </TabsContent>
 
         <TabsContent value="manual" className="flex-1 min-h-0 mt-0 overflow-hidden">

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Region, GameNode } from '@/hooks/useNodes';
+import { Region, GameNode, Area } from '@/hooks/useNodes';
 import { Party, PartyMember } from '@/hooks/useParty';
 import { PlayerPresence } from '@/hooks/usePresence';
 import { Character } from '@/hooks/useCharacter';
@@ -29,6 +29,7 @@ export interface ActiveBuffs {
 interface Props {
   regions: Region[];
   nodes: GameNode[];
+  areas?: Area[];
   currentNodeId: string | null;
   currentRegionId: string | null;
   characterLevel: number;
@@ -72,7 +73,7 @@ interface Props {
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
 
 export default function MapPanel({
-  regions, nodes, currentNodeId, currentRegionId, characterLevel, onNodeClick, partyMembers, myCharacterId,
+  regions, nodes, areas, currentNodeId, currentRegionId, characterLevel, onNodeClick, partyMembers, myCharacterId,
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
@@ -268,6 +269,7 @@ export default function MapPanel({
             onNodeClick={onNodeClick}
             partyMembers={partyMembers}
             myCharacterId={myCharacterId}
+            areas={areas}
           />
         ) : (
           <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
