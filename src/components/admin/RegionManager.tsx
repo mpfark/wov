@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, Sparkles, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const HEARTHLANDS_ID = '00000000-0000-0000-0000-000000000001';
@@ -31,6 +31,36 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete, e
   const [editOpen, setEditOpen] = useState(false);
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
   const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10 });
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const aiSuggest = async (target: 'create' | 'edit') => {
+    setAiLoading(true);
+    try {
+      const f = target === 'create' ? form : editingRegion;
+      if (!f) return;
+      const { data, error } = await supabase.functions.invoke('ai-name-suggest', {
+        body: {
+          type: 'region',
+          context: {
+            min_level: f.min_level,
+            max_level: f.max_level,
+            existing_regions: regions.map(r => r.name).join(', '),
+          },
+        },
+      });
+      if (error) throw error;
+      if (target === 'create') {
+        setForm(prev => ({ ...prev, name: data.name, description: data.description }));
+      } else {
+        setEditingRegion(prev => prev ? { ...prev, name: data.name, description: data.description } : prev);
+      }
+      toast.success('AI suggestion applied');
+    } catch (e: any) {
+      toast.error(e.message || 'AI suggestion failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // Open edit dialog when editingRegionId changes from parent
   useState(() => {});
@@ -112,8 +142,13 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete, e
             <DialogTitle className="font-display text-primary">New Region</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <Input placeholder="Region name" value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            <div className="flex gap-2">
+              <Input placeholder="Region name" value={form.name} className="flex-1"
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <Button variant="outline" size="sm" onClick={() => aiSuggest('create')} disabled={aiLoading} title="AI Suggest">
+                {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              </Button>
+            </div>
             <Textarea placeholder="Description" value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
             <div className="flex gap-2">
@@ -137,8 +172,13 @@ export default function RegionManager({ regions, onCreated, isValar, onDelete, e
           </DialogHeader>
           {editingRegion && (
             <div className="space-y-2">
-              <Input placeholder="Region name" value={editingRegion.name}
-                onChange={e => setEditingRegion(r => r ? { ...r, name: e.target.value } : r)} />
+              <div className="flex gap-2">
+                <Input placeholder="Region name" value={editingRegion.name} className="flex-1"
+                  onChange={e => setEditingRegion(r => r ? { ...r, name: e.target.value } : r)} />
+                <Button variant="outline" size="sm" onClick={() => aiSuggest('edit')} disabled={aiLoading} title="AI Suggest">
+                  {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
               <Textarea placeholder="Description" value={editingRegion.description}
                 onChange={e => setEditingRegion(r => r ? { ...r, description: e.target.value } : r)} />
               <div className="flex gap-2">

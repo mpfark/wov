@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Swords, Clock } from 'lucide-react';
+import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Swords, Clock, Sparkles, Loader2 } from 'lucide-react';
 import ItemPickerList from './ItemPickerList';
 
 interface VendorEntry {
@@ -244,6 +244,64 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
         </Button>
       </div>
     </div>
+  );
+}
+
+/* ─── AI Suggest Button for Nodes ────────────────────── */
+function AiSuggestNodeButton({ form, selectedRegionId, regions, allAreas, allNodesGlobal, onSuggestion }: {
+  form: { area_id: string; is_vendor: boolean; is_inn: boolean; is_blacksmith: boolean; is_teleport: boolean; connections: string };
+  selectedRegionId: string;
+  regions: any[];
+  allAreas: any[];
+  allNodesGlobal: any[];
+  onSuggestion: (name: string, description: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const suggest = async () => {
+    setLoading(true);
+    try {
+      const region = regions.find((r: any) => r.id === selectedRegionId);
+      const area = allAreas.find((a: any) => a.id === form.area_id);
+      let nearbyNodes: string[] = [];
+      try {
+        const conns = JSON.parse(form.connections) as any[];
+        nearbyNodes = conns.map(c => {
+          const n = allNodesGlobal.find((nd: any) => nd.id === c.node_id);
+          return n?.name?.trim() || '';
+        }).filter(Boolean);
+      } catch {}
+
+      const { data, error } = await supabase.functions.invoke('ai-name-suggest', {
+        body: {
+          type: 'node',
+          context: {
+            area_name: area?.name || '',
+            area_type: area?.area_type || '',
+            area_description: area?.description || '',
+            region_name: region?.name || '',
+            is_vendor: form.is_vendor,
+            is_inn: form.is_inn,
+            is_blacksmith: form.is_blacksmith,
+            is_teleport: form.is_teleport,
+            nearby_nodes: nearbyNodes.join(', ') || 'none',
+          },
+        },
+      });
+      if (error) throw error;
+      onSuggestion(data.name, data.description);
+      toast.success('AI suggestion applied');
+    } catch (e: any) {
+      toast.error(e.message || 'AI suggestion failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button variant="outline" size="sm" onClick={suggest} disabled={loading} title="AI Suggest name & description" className="h-8 shrink-0">
+      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+    </Button>
   );
 }
 
@@ -570,8 +628,18 @@ export default function NodeEditorPanel({
                 })()}
               </div>
 
-              <Input placeholder="Node name" value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" />
+              <div className="flex gap-2">
+                <Input placeholder="Node name" value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs flex-1" />
+                <AiSuggestNodeButton
+                  form={form}
+                  selectedRegionId={selectedRegionId}
+                  regions={regions}
+                  allAreas={allAreas}
+                  allNodesGlobal={allNodesGlobal}
+                  onSuggestion={(name, desc) => setForm(f => ({ ...f, name, description: desc }))}
+                />
+              </div>
               <Textarea placeholder="Description" value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="text-xs" />
               <ItemPickerList label="Searchable Items" value={form.searchable_items}
