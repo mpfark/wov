@@ -43,7 +43,6 @@ interface Props {
   creatureCounts?: Map<string, { total: number; aggressive: number }>;
   npcCounts?: Map<string, number>;
   onNodeClick: (nodeId: string) => void;
-  onAddNodeBetween: (fromId: string, toId: string) => void;
   onAddNodeAdjacent: (fromId: string, direction?: string) => void;
   onEditRegion?: (region: Region) => void;
   onDeleteRegion?: (regionId: string) => void;
@@ -314,7 +313,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent, onEditRegion, onDeleteRegion }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -830,17 +829,6 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     strokeWidth={edge.hidden ? 1 : edge.crossRegion ? 2.5 : 1.5}
                     strokeDasharray={edge.hidden ? '4 4' : edge.crossRegion ? '10 5' : '6 3'}
                   />
-                  <g
-                    className="cursor-pointer"
-                    onClick={e => { e.stopPropagation(); onAddNodeBetween(edge.from, edge.to); }}
-                  >
-                    <circle cx={midX} cy={midY} r={8}
-                      className="fill-background stroke-primary/50 hover:stroke-primary hover:fill-primary/10 transition-colors"
-                      strokeWidth={1}
-                    />
-                    <text x={midX} y={midY + 3} textAnchor="middle"
-                      className="fill-primary text-[9px] font-bold pointer-events-none select-none">+</text>
-                  </g>
                 </g>
               );
             })}

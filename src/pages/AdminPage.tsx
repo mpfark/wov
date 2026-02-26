@@ -97,12 +97,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setPanelOpen(true);
   };
 
-  const handleAddNodeBetween = (fromId: string, toId: string) => {
-    const node = nodes.find(n => n.id === fromId);
-    if (node) setSelectedRegion(node.region_id);
-    setEditingNodeId(null);
-    setIsNewNode(true);
-    setPanelOpen(true);
+  const handleAddNodeBetween = (_fromId: string, _toId: string) => {
+    // No longer used
   };
 
   const handleEditorSaved = () => {
@@ -185,7 +181,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   creatureCounts={creatureCounts}
                   npcCounts={npcCounts}
                   onNodeClick={handleNodeClick}
-                  onAddNodeBetween={handleAddNodeBetween}
                   onAddNodeAdjacent={handleAddNodeAdjacent}
                   onEditRegion={(region) => setEditingRegionId(region.id)}
                   onDeleteRegion={deleteRegion}

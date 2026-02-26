@@ -12,7 +12,6 @@ interface GraphNode {
 interface Props {
   nodes: GraphNode[];
   onNodeClick: (nodeId: string) => void;
-  onAddNodeBetween: (fromId: string, toId: string) => void;
   onAddNodeAdjacent: (fromId: string, direction?: string) => void;
 }
 
@@ -70,7 +69,7 @@ function layoutNodes(nodes: GraphNode[]) {
   return positions;
 }
 
-export default function RegionGraphView({ nodes, onNodeClick, onAddNodeBetween, onAddNodeAdjacent }: Props) {
+export default function RegionGraphView({ nodes, onNodeClick, onAddNodeAdjacent }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
   const positions = useMemo(() => layoutNodes(nodes), [nodes]);
@@ -156,18 +155,6 @@ export default function RegionGraphView({ nodes, onNodeClick, onAddNodeBetween, 
                   strokeWidth={edge.hidden ? 1 : 2}
                   strokeDasharray={edge.hidden ? '4 4' : '6 3'}
                 />
-                {/* Plus button on edge midpoint */}
-                <g
-                  className="cursor-pointer"
-                  onClick={e => { e.stopPropagation(); onAddNodeBetween(edge.from, edge.to); }}
-                >
-                  <circle cx={midX} cy={midY} r={10}
-                    className="fill-background stroke-primary/50 hover:stroke-primary hover:fill-primary/10 transition-colors"
-                    strokeWidth={1.5}
-                  />
-                  <text x={midX} y={midY + 4} textAnchor="middle"
-                    className="fill-primary text-xs font-bold pointer-events-none select-none">+</text>
-                </g>
               </g>
             );
           })}
