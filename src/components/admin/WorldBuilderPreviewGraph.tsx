@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react';
 
+interface GeneratedArea {
+  temp_id: string;
+  name: string;
+  description: string;
+  area_type: string;
+}
+
 interface GeneratedNode {
   temp_id: string;
   name: string;
   description: string;
+  area_temp_id?: string;
   is_inn?: boolean;
   is_vendor?: boolean;
   is_blacksmith?: boolean;
@@ -42,10 +50,25 @@ interface Props {
   creatures: GeneratedCreature[];
   npcs: GeneratedNPC[];
   items: GeneratedItem[];
+  areas?: GeneratedArea[];
   existingAnchors?: ExistingAnchor[];
   mode: 'rulebook' | 'new' | 'expand' | 'populate';
   populateNodeNames?: Map<string, string>;
 }
+
+const AREA_TYPE_COLORS: Record<string, string> = {
+  forest: 'hsl(120 40% 45% / 0.5)',
+  town: 'hsl(35 50% 55% / 0.5)',
+  cave: 'hsl(260 30% 50% / 0.5)',
+  ruins: 'hsl(20 30% 45% / 0.5)',
+  plains: 'hsl(60 40% 50% / 0.5)',
+  mountain: 'hsl(210 15% 50% / 0.5)',
+  swamp: 'hsl(90 30% 35% / 0.5)',
+  desert: 'hsl(40 50% 55% / 0.5)',
+  coast: 'hsl(195 50% 50% / 0.5)',
+  dungeon: 'hsl(0 30% 40% / 0.5)',
+  other: 'hsl(0 0% 50% / 0.5)',
+};
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
@@ -109,7 +132,7 @@ function layoutPreviewNodes(
 }
 
 export default function WorldBuilderPreviewGraph({
-  nodes, creatures, npcs, items, existingAnchors = [], mode, populateNodeNames,
+  nodes, creatures, npcs, items, areas = [], existingAnchors = [], mode, populateNodeNames,
 }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
@@ -149,7 +172,6 @@ export default function WorldBuilderPreviewGraph({
     return counts;
   }, [npcs]);
 
-  // Item counts per node (via creatures)
   const itemCountsPerNode = useMemo(() => {
     const counts = new Map<string, number>();
     for (const item of items) {
@@ -188,10 +210,10 @@ export default function WorldBuilderPreviewGraph({
     const nc = npcCounts.get(hoveredNode) || 0;
     const ic = itemCountsPerNode.get(hoveredNode) || 0;
     const node = nodes.find(n => n.temp_id === hoveredNode);
-    const desc = node?.description;
+    const area = node?.area_temp_id ? areas.find(a => a.temp_id === node.area_temp_id) : null;
+    const desc = node?.description || area?.description;
     const crList = creatures.filter(c => c.node_temp_id === hoveredNode);
     const npcList = npcs.filter(n => n.node_temp_id === hoveredNode);
-    // Items for creatures at this node
     const nodeCreatureTempIds = crList.map(c => c.temp_id).filter(Boolean) as string[];
     const itemList = items.filter(item => item.creature_temp_ids.some(id => nodeCreatureTempIds.includes(id)));
     let name = hoveredNode;
@@ -201,10 +223,10 @@ export default function WorldBuilderPreviewGraph({
       const realId = hoveredNode.replace('existing:', '');
       name = existingAnchors.find(a => a.id === realId)?.name || 'Existing';
     } else {
-      name = nodes.find(n => n.temp_id === hoveredNode)?.name || hoveredNode;
+      name = node?.name || area?.name || hoveredNode;
     }
-    return { name, cc, nc, ic, desc, crList, npcList, itemList };
-  }, [hoveredNode, nodes, creatures, npcs, items, creatureCounts, npcCounts, itemCountsPerNode, mode, populateNodeNames, existingAnchors]);
+    return { name, cc, nc, ic, desc, crList, npcList, itemList, areaType: area?.area_type };
+  }, [hoveredNode, nodes, creatures, npcs, items, areas, creatureCounts, npcCounts, itemCountsPerNode, mode, populateNodeNames, existingAnchors]);
 
   if (positions.size === 0) return null;
 
@@ -228,13 +250,24 @@ export default function WorldBuilderPreviewGraph({
       const realId = id.replace('existing:', '');
       return existingAnchors.find(a => a.id === realId)?.name || 'Existing';
     }
-    return nodes.find(n => n.temp_id === id)?.name || id;
+    const node = nodes.find(n => n.temp_id === id);
+    if (node?.name) return node.name;
+    const area = node?.area_temp_id ? areas.find(a => a.temp_id === node.area_temp_id) : null;
+    return area?.name || id;
   };
 
   const getNodeFlags = (id: string) => {
     const node = nodes.find(n => n.temp_id === id);
     if (!node) return '';
     return [node.is_inn && '🏨', node.is_vendor && '🛒', node.is_blacksmith && '🔨'].filter(Boolean).join('');
+  };
+
+  const getNodeAreaColor = (id: string): string | null => {
+    const node = nodes.find(n => n.temp_id === id);
+    if (!node?.area_temp_id) return null;
+    const area = areas.find(a => a.temp_id === node.area_temp_id);
+    if (!area) return null;
+    return AREA_TYPE_COLORS[area.area_type] || AREA_TYPE_COLORS.other;
   };
 
   return (
@@ -275,6 +308,7 @@ export default function WorldBuilderPreviewGraph({
           const cc = creatureCounts.get(id);
           const nc = npcCounts.get(id) || 0;
           const ic = itemCountsPerNode.get(id) || 0;
+          const areaColor = getNodeAreaColor(id);
 
           return (
             <g
@@ -283,6 +317,16 @@ export default function WorldBuilderPreviewGraph({
               onMouseLeave={() => setHoveredNode(null)}
               className="cursor-pointer"
             >
+              {/* Area color ring */}
+              {areaColor && !isExisting && (
+                <circle
+                  cx={px} cy={py} r={30}
+                  fill="none"
+                  stroke={areaColor}
+                  strokeWidth={3}
+                />
+              )}
+
               <circle
                 cx={px} cy={py} r={26}
                 fill={isExisting
@@ -366,6 +410,9 @@ export default function WorldBuilderPreviewGraph({
       {hoveredInfo && (
         <div className="absolute top-2 right-2 bg-card border border-border rounded p-2 shadow-lg max-w-[200px] z-10">
           <div className="font-display text-xs text-primary">{hoveredInfo.name}</div>
+          {hoveredInfo.areaType && (
+            <span className="text-[9px] text-muted-foreground italic">{hoveredInfo.areaType}</span>
+          )}
           {hoveredInfo.desc && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {hoveredInfo.desc.slice(0, 100)}{hoveredInfo.desc.length > 100 ? '…' : ''}
