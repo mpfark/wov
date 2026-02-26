@@ -840,6 +840,30 @@ export type Database = {
           },
         ]
       }
+      xp_boost: {
+        Row: {
+          activated_by: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          multiplier: number
+        }
+        Insert: {
+          activated_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          multiplier?: number
+        }
+        Update: {
+          activated_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          multiplier?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

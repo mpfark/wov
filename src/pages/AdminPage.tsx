@@ -18,6 +18,7 @@ import LootTableManager from '@/components/admin/LootTableManager';
 import WorldBuilderPanel from '@/components/admin/WorldBuilderPanel';
 import ItemForgePanel from '@/components/admin/ItemForgePanel';
 import GameManual from '@/components/admin/GameManual';
+import XpBoostPanel from '@/components/admin/XpBoostPanel';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -127,6 +128,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         </h1>
         <div className="flex-1" />
       </div>
+
+      {/* XP Boost Controls */}
+      <XpBoostPanel />
+
 
       <Tabs defaultValue="world" value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="px-4 pt-2 border-b border-border bg-card/30 shrink-0">

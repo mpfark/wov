@@ -57,6 +57,7 @@ interface UseCombatParams {
   broadcastDamage?: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
   broadcastHp?: (characterId: string, hp: number, maxHp: number, source: string) => void;
   broadcastReward?: (characterId: string, xp: number, gold: number, source: string) => void;
+  xpMultiplier?: number;
 }
 
 export function useCombat({
@@ -92,6 +93,7 @@ export function useCombat({
   broadcastDamage,
   broadcastHp,
   broadcastReward,
+  xpMultiplier = 1,
 }: UseCombatParams) {
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [inCombat, setInCombat] = useState(false);
@@ -136,6 +138,7 @@ export function useCombat({
   const broadcastDamageRef = useRef(broadcastDamage);
   const broadcastHpRef = useRef(broadcastHp);
   const broadcastRewardRef = useRef(broadcastReward);
+  const xpMultiplierRef = useRef(xpMultiplier);
   const combatCreatureIdRef = useRef<string | null>(null);
   const inCombatRef = useRef(false);
 
@@ -171,6 +174,7 @@ export function useCombat({
   useEffect(() => { broadcastDamageRef.current = broadcastDamage; }, [broadcastDamage]);
   useEffect(() => { broadcastHpRef.current = broadcastHp; }, [broadcastHp]);
   useEffect(() => { broadcastRewardRef.current = broadcastReward; }, [broadcastReward]);
+  useEffect(() => { xpMultiplierRef.current = xpMultiplier; }, [xpMultiplier]);
 
   const intervalRef = useRef<number | null>(null);
   const combatBusyRef = useRef(false);
@@ -400,7 +404,7 @@ export function useCombat({
           // Creature dies
           const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
           const xpPenalty = getXpPenalty(char.level, creature.level);
-          const totalXp = Math.floor(baseXp * xpPenalty);
+          const totalXp = Math.floor(baseXp * xpPenalty * (xpMultiplierRef.current || 1));
 
           const lootTable = creature.loot_table as any[];
           const goldEntry = lootTable?.find((e: any) => e.type === 'gold');
