@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { GameNode } from '@/hooks/useNodes';
+import { GameNode, Area, getNodeDisplayName } from '@/hooks/useNodes';
 import { PartyMember } from '@/hooks/useParty';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,6 +14,7 @@ interface Props {
   onNodeClick: (nodeId: string) => void;
   partyMembers?: PartyMember[];
   myCharacterId?: string;
+  areas?: Area[];
 }
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
@@ -42,7 +43,7 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
   return positions;
 }
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [] }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
 
@@ -294,15 +295,22 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                 </text>
               )}
               {/* Node name */}
-              <text
-                x={pos.px} y={pos.py + 4}
-                textAnchor="middle"
-                className={`font-display text-[10px] pointer-events-none select-none ${
-                  isCurrent ? 'fill-primary' : isHovered ? 'fill-primary/80' : 'fill-foreground'
-                }`}
-              >
-                {node.name.length > 14 ? node.name.slice(0, 13) + '…' : node.name}
-              </text>
+              {(() => {
+                const nodeArea = node.area_id ? areas.find(a => a.id === node.area_id) : undefined;
+                const displayName = getNodeDisplayName(node, nodeArea);
+                const truncated = displayName.length > 14 ? displayName.slice(0, 13) + '…' : displayName;
+                return (
+                  <text
+                    x={pos.px} y={pos.py + 4}
+                    textAnchor="middle"
+                    className={`font-display text-[10px] pointer-events-none select-none ${
+                      isCurrent ? 'fill-primary' : isHovered ? 'fill-primary/80' : 'fill-foreground'
+                    }`}
+                  >
+                    {truncated}
+                  </text>
+                );
+              })()}
             </g>
           );
         })}
