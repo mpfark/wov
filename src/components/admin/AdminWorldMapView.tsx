@@ -900,7 +900,10 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                       isHovered ? 'fill-primary' : 'fill-foreground'
                     }`}
                   >
-                    {node.name.length > 12 ? node.name.slice(0, 11) + '…' : node.name}
+                    {(() => {
+                      const label = node.name?.trim() || `#${node.id.slice(0, 6)}`;
+                      return label.length > 12 ? label.slice(0, 11) + '…' : label;
+                    })()}
                   </text>
 
                   {isHovered && (
