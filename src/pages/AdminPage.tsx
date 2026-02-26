@@ -36,6 +36,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [isNewNode, setIsNewNode] = useState(false);
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
+  const [adjacentDirection, setAdjacentDirection] = useState<string | null>(null);
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('world');
 
@@ -84,7 +85,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setPanelOpen(true);
   };
 
-  const handleAddNodeAdjacent = (fromId: string) => {
+  const handleAddNodeAdjacent = (fromId: string, direction?: string) => {
     if (fromId) {
       const node = nodes.find(n => n.id === fromId);
       if (node) setSelectedRegion(node.region_id);
@@ -92,6 +93,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setEditingNodeId(null);
     setIsNewNode(true);
     setAdjacentToNodeId(fromId || null);
+    setAdjacentDirection(direction || null);
     setPanelOpen(true);
   };
 
@@ -202,6 +204,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                       onSaved={handleEditorSaved}
                       isValar={isValar}
                       adjacentToNodeId={adjacentToNodeId}
+                      adjacentDirection={adjacentDirection}
                     />
                   </ResizablePanel>
                 </>
