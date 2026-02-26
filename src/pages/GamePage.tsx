@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 import { useChat } from '@/hooks/useChat';
+import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
 import { Input } from '@/components/ui/input';
 
@@ -100,6 +101,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     cleanupOverrides(creatures.map(c => c.id));
   }, [creatures, cleanupOverrides]);
   const { npcs } = useNPCs(character.current_node_id);
+  const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
   // Party broadcast must be initialized before useParty merge, but needs partyId
@@ -529,6 +531,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     broadcastDamage,
     broadcastHp,
     broadcastReward,
+    xpMultiplier,
   });
 
   // DoT (Rend bleed) tick effect
@@ -1061,7 +1064,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const awardKillRewards = useCallback(async (creature: any, opts?: { stopCombat?: boolean }) => {
     const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
     const xpPenalty = getXpPenalty(character.level, creature.level);
-    const totalXp = Math.floor(baseXp * xpPenalty);
+    const totalXp = Math.floor(baseXp * xpPenalty * xpMultiplier);
 
     const lootTableData = creature.loot_table as any[];
     const goldEntry = lootTableData?.find((e: any) => e.type === 'gold');
@@ -1094,8 +1097,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const xpShare = Math.floor(totalXp / splitCount);
     const goldShare = Math.floor(totalGold / splitCount);
     const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
+    const boostNote = xpMultiplier > 1 ? ` ⚡${xpMultiplier}x` : '';
     const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
-    addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}`);
+    addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}${boostNote}`);
 
     const newXp = character.xp + xpShare;
     const newGold = character.gold + goldShare;
@@ -1120,7 +1124,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
     await rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
     if (opts?.stopCombat) stopCombatFn();
-  }, [character, party, addLog, updateCharacter, rollLoot, stopCombatFn]);
+  }, [character, party, addLog, updateCharacter, rollLoot, stopCombatFn, xpMultiplier]);
 
 
   // Wire up refs for forward-declared callbacks
@@ -1606,7 +1610,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     <div className="h-screen flex flex-col parchment-bg">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
-        <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Eldara <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span></h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Eldara <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span></h1>
+          {xpMultiplier > 1 && xpBoostExpiresAt && (
+            <span className="text-xs font-display text-primary animate-pulse px-2 py-0.5 bg-primary/10 rounded-full border border-primary/30">
+              ⚡ {xpMultiplier}x XP
+            </span>
+          )}
+        </div>
           <div className="flex items-center gap-2">
             <OnlinePlayersDialog onlinePlayers={onlinePlayers} myCharacterId={character.id} />
             {isAdmin && (
