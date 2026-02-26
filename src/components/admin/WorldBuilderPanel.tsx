@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug, Book } from 'lucide-react';
+import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus, Expand, Bug, Book, TreePine } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
 import PopulateNodeSelector from './PopulateNodeSelector';
 import WorldBuilderRulebook from './WorldBuilderRulebook';
@@ -20,10 +20,18 @@ interface GeneratedRegion {
   max_level: number;
 }
 
+interface GeneratedArea {
+  temp_id: string;
+  name: string;
+  description: string;
+  area_type: string;
+}
+
 interface GeneratedNode {
   temp_id: string;
   name: string;
   description: string;
+  area_temp_id: string;
   is_inn?: boolean;
   is_vendor?: boolean;
   is_blacksmith?: boolean;
@@ -58,6 +66,7 @@ interface GeneratedNPC {
 
 interface GeneratedWorld {
   region: GeneratedRegion;
+  areas: GeneratedArea[];
   nodes: GeneratedNode[];
   creatures: GeneratedCreature[];
   npcs: GeneratedNPC[];
@@ -92,6 +101,11 @@ const DIRECTION_OPPOSITES: Record<string, string> = {
   E: 'W', W: 'E',
   NE: 'SW', SW: 'NE',
   NW: 'SE', SE: 'NW',
+};
+
+const AREA_TYPE_EMOJI: Record<string, string> = {
+  forest: '🌲', town: '🏘️', cave: '🕳️', ruins: '🏚️', plains: '🌾',
+  mountain: '⛰️', swamp: '🌿', desert: '🏜️', coast: '🌊', dungeon: '🏰', other: '📍',
 };
 
 type Mode = 'rulebook' | 'new' | 'expand' | 'populate';
@@ -202,6 +216,8 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+      // Ensure areas array exists in response
+      if (!data.areas) data.areas = [];
       setGenerated(data as GeneratedWorld);
       toast.success('Content generated! Review below.');
     } catch (e: any) {
@@ -265,15 +281,42 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
         regionId = regionData.id;
       }
 
+      // Insert areas and build temp_id → real_id map
+      const areaTempToReal = new Map<string, string>();
+      for (const area of (generated.areas || [])) {
+        const { data: areaData, error: areaErr } = await supabase
+          .from('areas')
+          .insert({
+            name: area.name,
+            description: area.description,
+            area_type: area.area_type as any,
+            region_id: regionId,
+          })
+          .select('id')
+          .single();
+        if (areaErr) throw areaErr;
+        areaTempToReal.set(area.temp_id, areaData.id);
+      }
+
+      const resolveAreaId = (areaTempId: string): string | null => {
+        if (!areaTempId) return null;
+        if (areaTempId.startsWith('existing_area:')) {
+          return areaTempId.replace('existing_area:', '');
+        }
+        return areaTempToReal.get(areaTempId) || null;
+      };
+
       // Insert new nodes
       const tempToReal = new Map<string, string>();
       for (const node of generated.nodes) {
+        const areaId = resolveAreaId(node.area_temp_id);
         const { data: nodeData, error: nodeErr } = await supabase
           .from('nodes')
           .insert({
-            name: node.name,
-            description: node.description,
+            name: node.name || '',
+            description: node.description || '',
             region_id: regionId,
+            area_id: areaId,
             is_inn: node.is_inn || false,
             is_vendor: node.is_vendor || false,
             is_blacksmith: node.is_blacksmith || false,
@@ -369,7 +412,7 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
       }
 
       const action = mode === 'expand' ? 'Expanded' : 'Created';
-      toast.success(`${action} ${generated.region.name}: ${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs.`);
+      toast.success(`${action} ${generated.region.name}: ${generated.areas.length} areas, ${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs.`);
       setGenerated(null);
       setPrompt('');
       const [newRegRes, newNodeRes, newCrRes, newNpRes] = await Promise.all([
@@ -413,18 +456,28 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
     return 'outline';
   };
 
-  // For populate mode, map node IDs to names for the preview
   const getNodeNameForCreature = (nodeTempId: string) => {
     if (mode === 'populate') {
       const node = allNodes.find(n => n.id === nodeTempId);
       return node?.name || nodeTempId;
     }
-    return generated?.nodes.find(n => n.temp_id === nodeTempId)?.name || nodeTempId;
+    const node = generated?.nodes.find(n => n.temp_id === nodeTempId);
+    if (!node) return nodeTempId;
+    if (node.name) return node.name;
+    // Fallback to area name
+    const area = generated?.areas.find(a => a.temp_id === node.area_temp_id);
+    return area?.name || nodeTempId;
   };
 
   const getLootTableName = (id?: string | null) => {
     if (!id) return null;
     return lootTables.find(lt => lt.id === id)?.name || null;
+  };
+
+  const getNodeDisplayName = (node: GeneratedNode) => {
+    if (node.name) return node.name;
+    const area = generated?.areas.find(a => a.temp_id === node.area_temp_id);
+    return area?.name || node.temp_id;
   };
 
   return (
@@ -526,8 +579,8 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
             mode === 'populate'
               ? 'e.g. "Add lore-appropriate creatures to these nodes, mix of aggressive and passive"'
               : mode === 'expand'
-              ? 'e.g. "Add 10 more nodes to the south, including a dark forest with wolves and a hidden cave with a boss"'
-              : 'e.g. "Create the Silvergrove region for levels 15-25 with 6 nodes including a Wanderer\'s Lodge as an inn"'
+              ? 'e.g. "Add a dark forest area with 4 nodes and a hidden cave area with 2 nodes including a boss"'
+              : 'e.g. "Create a coastal region for levels 10-20 with a fishing village area and a sea cave area"'
           }
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
@@ -581,6 +634,7 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
               creatures={generated.creatures}
               npcs={generated.npcs}
               items={[]}
+              areas={generated.areas}
               mode={mode}
               existingAnchors={
                 mode === 'expand'
@@ -619,6 +673,44 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
                 </div>
                 <p className="text-[11px] text-muted-foreground">{generated.region.description}</p>
               </Card>
+            )}
+
+            {/* Areas */}
+            {mode !== 'populate' && generated.areas.length > 0 && (
+              <Collapsible defaultOpen>
+                <CollapsibleTrigger className="flex items-center gap-1 text-xs font-display text-primary w-full">
+                  <ChevronDown className="w-3 h-3" />
+                  <TreePine className="w-3 h-3" /> Areas ({generated.areas.length})
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 mt-1">
+                  {generated.areas.map((area, i) => {
+                    const areaNodes = generated.nodes.filter(n => n.area_temp_id === area.temp_id);
+                    return (
+                      <Card key={i} className="p-2">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-xs">{AREA_TYPE_EMOJI[area.area_type] || '📍'}</span>
+                          <span className="text-xs font-medium">{area.name}</span>
+                          <Badge variant="outline" className="text-[9px]">{area.area_type}</Badge>
+                          <span className="text-[9px] text-muted-foreground">{areaNodes.length} nodes</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{area.description}</p>
+                        {areaNodes.length > 0 && (
+                          <div className="text-[9px] text-muted-foreground mt-1 flex flex-wrap gap-1">
+                            {areaNodes.map(n => {
+                              const flags = [n.is_inn && '🏨', n.is_vendor && '🛒', n.is_blacksmith && '🔨'].filter(Boolean).join('');
+                              return (
+                                <span key={n.temp_id} className="bg-muted px-1 py-0.5 rounded">
+                                  {n.name || '(unnamed)'} {flags}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {/* Creatures */}
@@ -671,7 +763,7 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
                       <p className="text-[10px] text-muted-foreground mt-0.5">{npc.description}</p>
                       <p className="text-[10px] italic text-muted-foreground mt-0.5">"{npc.dialogue.slice(0, 120)}{npc.dialogue.length > 120 ? '…' : ''}"</p>
                       <div className="text-[9px] text-muted-foreground">
-                        📍 {generated.nodes.find(n => n.temp_id === npc.node_temp_id)?.name || npc.node_temp_id}
+                        📍 {getNodeNameForCreature(npc.node_temp_id)}
                       </div>
                     </Card>
                   ))}
@@ -687,7 +779,7 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
                   ? 'Applying…'
                   : mode === 'populate'
                   ? `Apply ${generated.creatures.length} Creatures`
-                  : `Apply All (${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs)`
+                  : `Apply All (${generated.areas.length} areas, ${generated.nodes.length} nodes, ${generated.creatures.length} creatures, ${generated.npcs.length} NPCs)`
                 }
               </Button>
             </div>

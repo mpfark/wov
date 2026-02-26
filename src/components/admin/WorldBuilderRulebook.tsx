@@ -13,6 +13,17 @@ export default function WorldBuilderRulebook() {
           </p>
         </div>
 
+        {/* World Structure */}
+        <Card className="p-3 space-y-1.5">
+          <h3 className="font-display text-sm text-primary">World Structure: Region → Area → Node</h3>
+          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
+            <li>A <strong>Region</strong> has a name, level range, and description.</li>
+            <li>An <strong>Area</strong> groups nodes by place type (forest, town, cave, etc.) and provides a shared name and description.</li>
+            <li><strong>Nodes</strong> are individual locations within an area. They do NOT need unique names — unnamed nodes display their area name.</li>
+            <li>Only give a node its own name if it's a <strong>special/notable location</strong> (inn, vendor, blacksmith, boss lair, landmark).</li>
+          </ul>
+        </Card>
+
         {/* General Rules */}
         <Card className="p-3 space-y-1.5">
           <h3 className="font-display text-sm text-primary">General Rules</h3>
@@ -20,7 +31,20 @@ export default function WorldBuilderRulebook() {
             <li>All names must use <strong>ASCII-only</strong> characters (A-Z, a-z, spaces, hyphens, apostrophes). No accented/diacritic characters.</li>
             <li>No copyrighted content — original names inspired by high-fantasy, not taken from Tolkien, D&D, etc.</li>
             <li>Directional codes use <strong>short codes only</strong>: N, S, E, W, NE, NW, SE, SW. Never full words.</li>
-            <li>Temp IDs (e.g. "node_1") must <strong>never</strong> appear in name fields — only in temp_id and connection references.</li>
+            <li>Temp IDs (e.g. "node_1", "area_1") must <strong>never</strong> appear in name fields — only in temp_id and reference fields.</li>
+          </ul>
+        </Card>
+
+        {/* Area Rules */}
+        <Card className="p-3 space-y-1.5">
+          <h3 className="font-display text-sm text-primary">Area Rules</h3>
+          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
+            <li>Every area must have a <code className="text-[10px] bg-muted px-1 rounded">name</code>, <code className="text-[10px] bg-muted px-1 rounded">description</code>, and <code className="text-[10px] bg-muted px-1 rounded">area_type</code>.</li>
+            <li>Valid area types: <Badge variant="outline" className="text-[9px] px-1 py-0">forest</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">town</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">cave</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">ruins</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">plains</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">mountain</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">swamp</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">desert</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">coast</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">dungeon</Badge> <Badge variant="outline" className="text-[9px] px-1 py-0">other</Badge></li>
+            <li>Group nodes logically: forest nodes together, town nodes together, etc.</li>
+            <li>The area description is shared by all nodes — it should describe the general atmosphere/environment.</li>
+            <li>Every node must reference an <code className="text-[10px] bg-muted px-1 rounded">area_temp_id</code>.</li>
+            <li>In expand mode, use <code className="text-[10px] bg-muted px-1 rounded">existing_area:&lt;uuid&gt;</code> to assign nodes to an existing area.</li>
           </ul>
         </Card>
 
@@ -39,8 +63,8 @@ export default function WorldBuilderRulebook() {
         <Card className="p-3 space-y-1.5">
           <h3 className="font-display text-sm text-primary">Node Rules</h3>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
-            <li>Node names must be clean, lore-appropriate place names (e.g. "Thornwood Clearing").</li>
-            <li>Never append temp IDs, booleans, or metadata to node names.</li>
+            <li>Most nodes should have an <strong>empty name</strong> — they inherit the area name.</li>
+            <li>Only set a node name for special locations: inns, vendors, blacksmiths, boss lairs, landmarks.</li>
             <li><code className="text-[10px] bg-muted px-1 rounded">is_inn</code>, <code className="text-[10px] bg-muted px-1 rounded">is_vendor</code>, <code className="text-[10px] bg-muted px-1 rounded">is_blacksmith</code> are separate boolean fields — never in the name.</li>
             <li>Connections between generated nodes must be <strong>bidirectional</strong>.</li>
             <li>In expand mode, use <code className="text-[10px] bg-muted px-1 rounded">existing:&lt;uuid&gt;</code> in <code className="text-[10px] bg-muted px-1 rounded">target_temp_id</code> to reference existing nodes.</li>
@@ -104,7 +128,7 @@ export default function WorldBuilderRulebook() {
         <Card className="p-3 space-y-1.5">
           <h3 className="font-display text-sm text-primary">Populate Mode Rules</h3>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
-            <li>Do <strong>NOT</strong> generate new nodes — the nodes array must be empty.</li>
+            <li>Do <strong>NOT</strong> generate new nodes or areas — the nodes and areas arrays must be empty.</li>
             <li>Do <strong>NOT</strong> generate NPCs — the npcs array must be empty.</li>
             <li>Use <strong>real node IDs</strong> (UUIDs) as <code className="text-[10px] bg-muted px-1 rounded">node_temp_id</code> for creatures.</li>
             <li>Creature levels must match each node's region level range.</li>
@@ -118,6 +142,7 @@ export default function WorldBuilderRulebook() {
           <h3 className="font-display text-sm text-primary">Expand Mode Rules</h3>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
             <li>Do <strong>NOT</strong> generate a new region — reuse the existing region's data.</li>
+            <li>Generate new <strong>areas</strong> for new groups of nodes, or use <code className="text-[10px] bg-muted px-1 rounded">existing_area:&lt;uuid&gt;</code> to add nodes to existing areas.</li>
             <li>New nodes must connect to at least one existing node via <code className="text-[10px] bg-muted px-1 rounded">existing:&lt;uuid&gt;</code>.</li>
             <li>New nodes can also connect to other new nodes using temp IDs.</li>
             <li>Creature levels must stay within the region's level range.</li>

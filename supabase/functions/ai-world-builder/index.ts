@@ -41,13 +41,14 @@ serve(async (req) => {
     }
 
     // Fetch current world state for context
-    const [regRes, nodeRes, creatureRes, npcRes, ltRes, lteRes] = await Promise.all([
+    const [regRes, nodeRes, creatureRes, npcRes, ltRes, lteRes, areaRes] = await Promise.all([
       supabase.from("regions").select("id, name, description, min_level, max_level").order("min_level"),
-      supabase.from("nodes").select("id, name, region_id, is_inn, is_vendor, is_blacksmith, connections"),
+      supabase.from("nodes").select("id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, connections"),
       supabase.from("creatures").select("name, node_id, rarity, level"),
       supabase.from("npcs").select("name, node_id"),
       supabase.from("loot_tables").select("id, name"),
       supabase.from("loot_table_entries").select("loot_table_id, item_id, weight, items:item_id(name, level, rarity)"),
+      supabase.from("areas").select("id, name, description, area_type, region_id"),
     ]);
 
     const regions = regRes.data || [];
@@ -56,6 +57,7 @@ serve(async (req) => {
     const npcs = npcRes.data || [];
     const lootTables = ltRes.data || [];
     const lootTableEntries = lteRes.data || [];
+    const areas = areaRes.data || [];
 
     // Build loot table summary for AI context
     const lootTableSummary = lootTables.map((lt: any) => {
@@ -71,12 +73,17 @@ serve(async (req) => {
     }).filter(Boolean).join("\n");
 
     const worldSummary = regions.map((r: any) => {
+      const regionAreas = areas.filter((a: any) => a.region_id === r.id);
       const regionNodes = nodes.filter((n: any) => n.region_id === r.id);
-      const nodeNames = regionNodes.map((n: any) => {
-        const flags = [n.is_inn && "inn", n.is_vendor && "vendor", n.is_blacksmith && "blacksmith"].filter(Boolean);
-        return n.name + (flags.length ? ` (${flags.join(", ")})` : "");
-      }).join(", ");
-      return `- ${r.name} (Lvl ${r.min_level}-${r.max_level}): ${nodeNames || "no nodes yet"}`;
+      const areaInfo = regionAreas.map((a: any) => {
+        const areaNodes = regionNodes.filter((n: any) => n.area_id === a.id);
+        return `  Area: ${a.name} (${a.area_type}) — ${areaNodes.length} nodes`;
+      }).join("\n");
+      const unassignedNodes = regionNodes.filter((n: any) => !n.area_id);
+      const unassignedInfo = unassignedNodes.length > 0
+        ? `  Unassigned nodes: ${unassignedNodes.map((n: any) => n.name || "(unnamed)").join(", ")}`
+        : "";
+      return `- ${r.name} (Lvl ${r.min_level}-${r.max_level}):\n${areaInfo || "  No areas yet"}${unassignedInfo ? "\n" + unassignedInfo : ""}`;
     }).join("\n");
 
     // Build expand-specific or populate-specific context
@@ -86,16 +93,17 @@ serve(async (req) => {
       isPopulateMode = true;
       const nodeDetails = populate_nodes.map((pn: any) => {
         const nodeCreatures = creatures.filter((c: any) => c.node_id === pn.id).map((c: any) => `${c.name} (${c.rarity}, lvl ${c.level})`).join(", ");
-        return `  - ${pn.name} [id: ${pn.id}] (Region: ${pn.region_name}, Lvl ${pn.min_level}-${pn.max_level})\n    Description: ${pn.description}\n    Existing creatures: ${nodeCreatures || "none"}`;
+        return `  - ${pn.name || "(unnamed)"} [id: ${pn.id}] (Region: ${pn.region_name}, Lvl ${pn.min_level}-${pn.max_level})\n    Description: ${pn.description}\n    Existing creatures: ${nodeCreatures || "none"}`;
       }).join("\n");
 
-      expandContext = `\n\nYOU ARE POPULATING EXISTING NODES WITH CREATURES. Do NOT generate new nodes or NPCs.
+      expandContext = `\n\nYOU ARE POPULATING EXISTING NODES WITH CREATURES. Do NOT generate new nodes, NPCs, or areas.
 TARGET NODES TO POPULATE:
 ${nodeDetails}
 
 IMPORTANT RULES FOR POPULATING:
 - Do NOT generate any new nodes — the "nodes" array must be empty []
 - Do NOT generate any NPCs — the "npcs" array must be empty []
+- Do NOT generate any areas — the "areas" array must be empty []
 - Use the real node IDs (e.g. "${populate_nodes[0].id}") as the node_temp_id for creatures
 - Generate 1-4 creatures per node (mix of aggressive and passive)
 - Creature levels must match each node's region level range
@@ -107,6 +115,7 @@ IMPORTANT RULES FOR POPULATING:
       const targetRegion = regions.find((r: any) => r.id === expand_region.id);
       if (targetRegion) {
         const existingNodes = nodes.filter((n: any) => n.region_id === targetRegion.id);
+        const existingAreas = areas.filter((a: any) => a.region_id === targetRegion.id);
         const nodeDetails = existingNodes.map((n: any) => {
           const flags = [n.is_inn && "inn", n.is_vendor && "vendor", n.is_blacksmith && "blacksmith"].filter(Boolean);
           const conns = (n.connections as any[] || []).map((c: any) => {
@@ -115,24 +124,37 @@ IMPORTANT RULES FOR POPULATING:
           }).join(", ");
           const nodeCreatures = creatures.filter((c: any) => c.node_id === n.id).map((c: any) => `${c.name} (${c.rarity}, lvl ${c.level})`).join(", ");
           const nodeNpcs = npcs.filter((np: any) => np.node_id === n.id).map((np: any) => np.name).join(", ");
-          return `  - ${n.name}${flags.length ? ` (${flags.join(", ")})` : ""} [id: ${n.id}]\n    Exits: ${conns || "none"}\n    Creatures: ${nodeCreatures || "none"}\n    NPCs: ${nodeNpcs || "none"}`;
+          const nodeArea = existingAreas.find((a: any) => a.id === n.area_id);
+          const areaInfo = nodeArea ? ` [Area: ${nodeArea.name} (${nodeArea.area_type})]` : "";
+          return `  - ${n.name || "(unnamed)"}${flags.length ? ` (${flags.join(", ")})` : ""} [id: ${n.id}]${areaInfo}\n    Exits: ${conns || "none"}\n    Creatures: ${nodeCreatures || "none"}\n    NPCs: ${nodeNpcs || "none"}`;
+        }).join("\n");
+
+        const areaDetails = existingAreas.map((a: any) => {
+          const areaNodeCount = existingNodes.filter((n: any) => n.area_id === a.id).length;
+          return `  - ${a.name} (${a.area_type}) [id: ${a.id}] — ${areaNodeCount} nodes`;
         }).join("\n");
 
         expandContext = `\n\nYOU ARE EXPANDING AN EXISTING REGION. Do NOT generate a new region.
 EXISTING REGION: ${targetRegion.name} (Lvl ${targetRegion.min_level}-${targetRegion.max_level})
 Description: ${targetRegion.description}
 
+EXISTING AREAS IN THIS REGION:
+${areaDetails || "  None"}
+
 EXISTING NODES IN THIS REGION:
 ${nodeDetails}
 
 IMPORTANT RULES FOR EXPANSION:
 - The "region" field in your output should match the existing region exactly (same name, description, levels)
+- Generate new areas for new groups of nodes — each area defines a place type (forest, town, cave, etc.) and shared description
+- You can also assign new nodes to existing areas using "existing_area:<area_id>" in the area_temp_id field
 - New nodes MUST connect to at least one existing node using "existing_node_id" connections
 - Use "existing:<node_id>" format in target_temp_id to reference existing nodes (e.g. "existing:abc-123")
 - New nodes can also connect to other new nodes using temp_ids as usual
 - Creature levels must stay within ${targetRegion.min_level}-${targetRegion.max_level}
 - Do NOT duplicate existing node names or NPC names
-- Mark each creature as is_humanoid: true or false`;
+- Mark each creature as is_humanoid: true or false
+- Nodes do NOT need unique names — they inherit their area name. Only give a node a name if it's a special/notable location (inn, vendor, blacksmith, boss lair, etc.)`;
       }
     }
 
@@ -147,7 +169,12 @@ IMPORTANT RULES FOR EXPANSION:
       ? "This region ALREADY HAS an inn. Do NOT generate any new inn nodes (is_inn must be false for all new nodes)."
       : "This region does not have an inn yet. Generate exactly one inn node.";
 
-    const systemPrompt = `You are a high-fantasy world builder for a text-based RPG called "Wayfarers of Eldara". You generate regions, nodes, creatures, and NPCs that fit the world's lore. Generate original names and content inspired by classic high-fantasy settings but NOT taken directly from any copyrighted works (e.g. do not use names from Tolkien, D&D, or other franchises).
+    const systemPrompt = `You are a high-fantasy world builder for a text-based RPG called "Wayfarers of Eldara". You generate regions, areas, nodes, creatures, and NPCs that fit the world's lore. Generate original names and content inspired by classic high-fantasy settings but NOT taken directly from any copyrighted works (e.g. do not use names from Tolkien, D&D, or other franchises).
+
+WORLD STRUCTURE: Region → Area → Node
+- A Region has a name, level range, and description.
+- An Area groups nodes by place type (forest, town, cave, ruins, plains, mountain, swamp, desert, coast, dungeon, other). It provides a shared name and description for all its nodes.
+- Nodes are individual locations within an area. They do NOT need unique names — unnamed nodes display their area name. Only give a node its own name if it's a special/notable location (inn, vendor, blacksmith, boss lair, landmark).
 
 CURRENT WORLD STATE:
 ${worldSummary || "No regions exist yet."}
@@ -160,18 +187,21 @@ INN RULE: ${innInstruction}
 
 RULES:
 - Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
-- ALL names (region, node, creature, NPC) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead.
+- ALL names (region, area, node, creature, NPC) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead.
+- Each area should have an area_type that matches its theme (forest, town, cave, ruins, plains, mountain, swamp, desert, coast, dungeon, other).
+- Group nodes into areas logically: a cluster of forest nodes in one area, town nodes in another, etc.
 - Creature levels must match the region's level range
 - Generate 1-4 creatures per node (mix of aggressive and passive). Each region should have mostly regulars, a few rares, and at most 1 boss.
 - NPC dialogue should be lore-appropriate and atmospheric
-- Use temp IDs like "node_1", "node_2" ONLY in the temp_id field and connection references — NEVER include temp IDs in the "name" field
-- Node "name" must be a clean, lore-appropriate place name only (e.g. "Thornwood Clearing", "Rivermist Bridge"). NEVER append temp IDs, booleans, field names, or any metadata to node names.
+- Use temp IDs like "area_1", "node_1", "node_2" ONLY in the temp_id field and connection references — NEVER include temp IDs in the "name" field
+- Node "name" should be empty string "" for most nodes (they inherit area name). Only set a name for special locations like inns, vendors, blacksmiths, boss lairs, or landmarks.
 - The is_inn, is_vendor, is_blacksmith fields are SEPARATE boolean fields — do NOT put "is_vendor", "vendor", "true/false" or similar text inside the name or description
 - For expanding existing regions, use "existing:<real_uuid>" in target_temp_id to connect to existing nodes
 - Connections between nodes you generate should be bidirectional
 - Generate 1-2 NPCs for inn/vendor/blacksmith nodes
 - Create original fantasy names that evoke a sense of ancient, mythic world-building
 - Mark creatures as is_humanoid: true if they have a roughly human form (bandits, soldiers, cultists, mages, knights, etc.) or false for beasts/monsters/animals
+- Every node must reference an area_temp_id — either a new area temp ID or "existing_area:<uuid>" for an existing area
 
 CREATURE STAT FORMULAS (YOU MUST USE THESE EXACTLY):
 - Base stats (str, dex, con, int, wis, cha): round(10 + level * 0.7). For bosses, multiply by 2.0.
@@ -213,7 +243,7 @@ Call the generate_world tool with the structured output.`;
             type: "function",
             function: {
               name: "generate_world",
-              description: "Generate world content including region, nodes, creatures, and NPCs. Assign existing loot tables to creatures — do NOT generate items.",
+              description: "Generate world content including region, areas, nodes, creatures, and NPCs. Assign existing loot tables to creatures — do NOT generate items.",
               parameters: {
                 type: "object",
                 properties: {
@@ -227,14 +257,32 @@ Call the generate_world tool with the structured output.`;
                     },
                     required: ["name", "description", "min_level", "max_level"],
                   },
+                  areas: {
+                    type: "array",
+                    description: "Areas group nodes by place type. Each area has a name, description, type, and temp_id.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        temp_id: { type: "string", description: "Temporary ID like area_1, area_2" },
+                        name: { type: "string", description: "Area name e.g. 'Darkwood Forest', 'Thornwall Village'" },
+                        description: { type: "string", description: "Shared description for all nodes in this area" },
+                        area_type: {
+                          type: "string",
+                          enum: ["forest", "town", "cave", "ruins", "plains", "mountain", "swamp", "desert", "coast", "dungeon", "other"],
+                        },
+                      },
+                      required: ["temp_id", "name", "description", "area_type"],
+                    },
+                  },
                   nodes: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
                         temp_id: { type: "string", description: "Temporary ID like node_1, node_2" },
-                        name: { type: "string" },
-                        description: { type: "string" },
+                        name: { type: "string", description: "Optional unique name — empty string for nodes that inherit area name" },
+                        description: { type: "string", description: "Optional override description — empty string to use area description" },
+                        area_temp_id: { type: "string", description: "References area temp_id or 'existing_area:<uuid>' for existing areas" },
                         is_inn: { type: "boolean" },
                         is_vendor: { type: "boolean" },
                         is_blacksmith: { type: "boolean" },
@@ -250,7 +298,7 @@ Call the generate_world tool with the structured output.`;
                           },
                         },
                       },
-                      required: ["temp_id", "name", "description", "connections"],
+                      required: ["temp_id", "area_temp_id", "connections"],
                     },
                   },
                   creatures: {
@@ -308,7 +356,7 @@ Call the generate_world tool with the structured output.`;
                     },
                   },
                 },
-                required: ["region", "nodes", "creatures", "npcs"],
+                required: ["region", "areas", "nodes", "creatures", "npcs"],
               },
             },
           },
@@ -348,6 +396,7 @@ Call the generate_world tool with the structured output.`;
     // Sanitize: strip non-ASCII from all name fields
     const stripNonAscii = (s: string) => s.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
     const cleanName = (s: string) => {
+      if (!s) return s;
       let cleaned = stripNonAscii(s);
       cleaned = cleaned.replace(/\s*\(?node_\d+\)?/gi, '');
       cleaned = cleaned.replace(/\s*\(?\s*is_(vendor|inn|blacksmith)\s*:?\s*(true|false)?\s*\)?/gi, '');
@@ -356,6 +405,9 @@ Call the generate_world tool with the structured output.`;
       return cleaned;
     };
     if (generated.region?.name) generated.region.name = cleanName(generated.region.name);
+    for (const area of (generated.areas || [])) {
+      if (area.name) area.name = cleanName(area.name);
+    }
     for (const node of (generated.nodes || [])) {
       if (node.name) node.name = cleanName(node.name);
     }
@@ -370,6 +422,9 @@ Call the generate_world tool with the structured output.`;
     for (const npc of (generated.npcs || [])) {
       if (npc.name) npc.name = cleanName(npc.name);
     }
+
+    // Ensure areas array exists
+    if (!generated.areas) generated.areas = [];
 
     return new Response(JSON.stringify(generated), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
