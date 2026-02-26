@@ -1,51 +1,62 @@
 
 
-## Milestone Rewards for Levels 28-40
+# Chat System: Say & Whisper
 
-### Overview
-Add three mechanical rewards and six title milestones to keep players motivated through the endgame grind (levels 28-40). All rewards are computed from the character's level at runtime -- no database changes needed.
+Add an in-game chat system integrated into the event log, using Supabase Realtime Broadcast (no database tables needed for ephemeral messages).
 
-### Milestone Schedule
+## How It Works
 
-| Level | Reward |
-|-------|--------|
-| 28 | **Expanded Crit Range** -- permanent +1 to crit range (e.g. 20 becomes 19-20) |
-| 30 | Title: **Veteran** |
-| 32 | Title: **Vanguard** |
-| 34 | Title: **Champion** |
-| 35 | **Passive HP Regen Boost** -- base HP regen doubled |
-| 36 | Title: **Warden** |
-| 38 | Title: **Paragon** |
-| 39 | **CP Discount** -- all ability CP costs reduced by 10% |
-| 40 | Title: **Ascendant** |
+- **Say** (`/say <message>` or just type without a prefix): Message is broadcast to all players at the same node via the existing presence channel. Appears in everyone's event log at that node.
+- **Whisper** (`/w <player_name> <message>` or `/whisper <player_name> <message>`): Private message sent directly to a specific player via a dedicated per-character broadcast channel. Only sender and recipient see it.
+- **Enter key** opens/closes a chat input bar docked at the bottom of the event log area.
 
-### Technical Details
+## User Experience
 
-**1. Titles (`src/lib/game-data.ts` + `src/components/game/CharacterPanel.tsx` + `src/components/game/NodeView.tsx`)**
-- Add a `getCharacterTitle(level: number)` helper in `game-data.ts` that returns the highest earned title or `null`.
-- Display the title under the character name in `CharacterPanel` (e.g., "Veteran" in a subtle style).
-- Display the title next to player names in `NodeView` when other players are shown, so the title is visible to others.
+1. Player presses **Enter** -- a text input appears at the bottom of the event log
+2. Player types a message and presses **Enter** to send, or **Escape** to cancel
+3. Messages appear in the event log with distinct styling:
+   - Say: `💬 [PlayerName]: message` -- styled in a soft white/foreground color
+   - Whisper received: `🤫 [PlayerName] whispers: message` -- styled in a purple/magenta tone
+   - Whisper sent: `🤫 To [PlayerName]: message` -- styled in a dimmer purple tone
+4. While the chat input is focused, keyboard movement/actions are naturally disabled (existing `input`/`textarea` guard in `useKeyboardMovement.ts` handles this)
 
-**2. Expanded Crit Range at Level 28 (`src/hooks/useCombat.ts`)**
-- Where `effectiveCritRange` is calculated (line ~330), subtract 1 if `char.level >= 28`.
-- This stacks with the existing Eagle Eye (crit_buff) ability.
+## Technical Plan
 
-**3. Doubled HP Regen at Level 35 (`src/pages/GamePage.tsx`)**
-- In the HP regen interval (around line 278), apply a x2 multiplier when `character.level >= 35`.
-- Stacks multiplicatively with inn bonus and potion/inspire buffs.
+### 1. Create a `useChat` hook (`src/hooks/useChat.ts`)
+- Subscribe to a **node-scoped broadcast channel** (`chat-node-{nodeId}`) for "say" messages
+- Subscribe to a **character-scoped broadcast channel** (`chat-whisper-{characterId}`) for incoming whispers
+- To send a whisper, broadcast on `chat-whisper-{targetCharacterId}`
+- Expose: `sendSay(message)`, `sendWhisper(targetName, message)`, `chatMessages[]`
+- Each message has: `type` (say/whisper), `senderName`, `text`, `timestamp`
+- Re-subscribe to node channel when `nodeId` changes (same pattern as presence)
+- Use global presence data to resolve player names to character IDs for whisper targeting
 
-**4. CP Discount at Level 39 (`src/pages/GamePage.tsx`)**
-- Where `ability.cpCost` is checked and deducted (lines ~1102 and ~1438), apply `Math.ceil(cost * 0.9)` when `character.level >= 39`.
-- The discount applies to all abilities including Focus Strike and teleport costs.
+### 2. Integrate chat into GamePage (`src/pages/GamePage.tsx`)
+- Add the `useChat` hook
+- Add a `chatOpen` state toggled by Enter key (via a new keydown listener)
+- Render a text input at the bottom of the event log area when `chatOpen` is true
+- Parse input: if starts with `/w ` or `/whisper `, treat as whisper; otherwise treat as say
+- Push chat messages into the `eventLog` array so they appear inline with combat/game events
+- Pass `onlinePlayers` list to `useChat` for name-to-ID resolution
 
-**5. Game Manual Update (`src/components/admin/GameManual.tsx`)**
-- Add a "Milestone Rewards" section documenting all milestone levels, titles, and mechanical bonuses.
+### 3. Add chat message styling (`src/pages/GamePage.tsx` - `getLogColor`)
+- Add color rules for `💬` (say) and `🤫` (whisper) prefixed messages
 
-### Files to Change
-- `src/lib/game-data.ts` -- add `getCharacterTitle()` helper
-- `src/hooks/useCombat.ts` -- crit range bonus at level 28
-- `src/pages/GamePage.tsx` -- HP regen boost at 35, CP discount at 39
-- `src/components/game/CharacterPanel.tsx` -- display title under name
-- `src/components/game/NodeView.tsx` -- display title next to player names
-- `src/components/admin/GameManual.tsx` -- document milestones
+### 4. Update keyboard handler (`src/hooks/useKeyboardMovement.ts`)
+- Add `Enter` key to open chat (callback prop `onOpenChat`)
+- The existing input-tag guard prevents conflicts while typing
+
+### 5. Update Game Manual
+- Add a brief "Chat" section documenting `/say`, `/whisper`, and the Enter key shortcut
+
+## Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `src/hooks/useChat.ts` | **Create** -- broadcast-based chat hook |
+| `src/pages/GamePage.tsx` | **Edit** -- integrate chat hook, add input UI, add log colors |
+| `src/hooks/useKeyboardMovement.ts` | **Edit** -- add Enter key → onOpenChat callback |
+| `src/components/admin/GameManual.tsx` | **Edit** -- document chat commands |
+
+No database changes needed -- all chat is ephemeral via Supabase Broadcast channels.
 
