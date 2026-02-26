@@ -277,6 +277,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
   const equippedRef = useRef(equipped);
+  const inCombatRegenRef = useRef(false);
   useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level]);
   useEffect(() => { regenBuffRef.current = regenBuff; }, [regenBuff]);
   useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
@@ -304,7 +305,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
         const milestoneMult = regenCharRef.current.level >= 35 ? 2 : 1;
-        const regenAmount = Math.max(Math.floor((conRegen + itemRegen + foodRegen) * totalMult * milestoneMult), 1);
+        const combatMult = inCombatRegenRef.current ? 0.1 : 1;
+        const regenAmount = Math.max(Math.floor((conRegen + itemRegen + foodRegen) * totalMult * milestoneMult * combatMult), 1);
         const newHp = Math.min(hp + regenAmount, max_hp);
         if (newHp !== hp) {
           updateCharRegenRef.current({ hp: newHp });
@@ -533,6 +535,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     broadcastReward,
     xpMultiplier,
   });
+
+  // Keep combat ref updated for regen
+  useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
   // DoT (Rend bleed) tick effect
   useEffect(() => {
