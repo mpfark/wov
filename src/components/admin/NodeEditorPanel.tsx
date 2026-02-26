@@ -27,6 +27,7 @@ interface NodeEditorPanelProps {
   onSaved: () => void;
   isValar: boolean;
   adjacentToNodeId?: string | null;
+  adjacentDirection?: string | null;
 }
 
 const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
@@ -249,7 +250,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
 /* ─── Main component ────────────────────────────────── */
 
 export default function NodeEditorPanel({
-  nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId,
+  nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
     name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false,
@@ -450,7 +451,8 @@ export default function NodeEditorPanel({
       if (adjacentToNodeId) {
         const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
         if (parentNode) {
-          connections = [{ node_id: adjacentToNodeId, direction: 'S', label: '' }];
+          const reverseDir = adjacentDirection ? (REVERSE_DIR[adjacentDirection] || 'S') : 'S';
+          connections = [{ node_id: adjacentToNodeId, direction: reverseDir, label: '' }];
         }
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
@@ -464,7 +466,7 @@ export default function NodeEditorPanel({
         const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
         if (parentNode) {
           const parentConns = Array.isArray(parentNode.connections) ? [...parentNode.connections] : [];
-          parentConns.push({ node_id: inserted.id, direction: 'N', label: form.name });
+          parentConns.push({ node_id: inserted.id, direction: adjacentDirection || 'N', label: form.name });
           await supabase.from('nodes').update({ connections: parentConns }).eq('id', adjacentToNodeId);
         }
       }

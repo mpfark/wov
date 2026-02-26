@@ -44,7 +44,7 @@ interface Props {
   npcCounts?: Map<string, number>;
   onNodeClick: (nodeId: string) => void;
   onAddNodeBetween: (fromId: string, toId: string) => void;
-  onAddNodeAdjacent: (fromId: string) => void;
+  onAddNodeAdjacent: (fromId: string, direction?: string) => void;
   onEditRegion?: (region: Region) => void;
   onDeleteRegion?: (regionId: string) => void;
 }
@@ -906,19 +906,27 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     })()}
                   </text>
 
-                  {isHovered && (
-                    <g
-                      className="cursor-pointer"
-                      onClick={e => { e.stopPropagation(); onAddNodeAdjacent(node.id); }}
-                    >
-                      <circle cx={pos.px + 32} cy={pos.py - 22} r={9}
-                        className="fill-background stroke-elvish hover:fill-elvish/10 transition-colors"
-                        strokeWidth={1.5}
-                      />
-                      <text x={pos.px + 32} y={pos.py - 18} textAnchor="middle"
-                        className="fill-elvish text-[10px] font-bold pointer-events-none select-none">+</text>
-                    </g>
-                  )}
+                  {isHovered && (() => {
+                    const usedDirs = new Set(node.connections.map(c => c.direction));
+                    const DIR_OFFSETS: Record<string, [number, number]> = {
+                      N: [0, -38], NE: [27, -27], E: [38, 0], SE: [27, 27],
+                      S: [0, 38], SW: [-27, 27], W: [-38, 0], NW: [-27, -27],
+                    };
+                    return Object.entries(DIR_OFFSETS)
+                      .filter(([dir]) => !usedDirs.has(dir))
+                      .map(([dir, [ox, oy]]) => (
+                        <g key={dir} className="cursor-pointer"
+                          onClick={e => { e.stopPropagation(); onAddNodeAdjacent(node.id, dir); }}
+                        >
+                          <circle cx={pos.px + ox} cy={pos.py + oy} r={9}
+                            className="fill-background stroke-elvish hover:fill-elvish/10 transition-colors"
+                            strokeWidth={1.5}
+                          />
+                          <text x={pos.px + ox} y={pos.py + oy + 1} textAnchor="middle"
+                            className="fill-elvish text-[7px] font-bold pointer-events-none select-none">{dir}</text>
+                        </g>
+                      ));
+                  })()}
                 </g>
               );
             })}
