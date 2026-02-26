@@ -39,15 +39,19 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('world');
 
+  const [areas, setAreas] = useState<any[]>([]);
+
   const loadData = useCallback(async () => {
-    const [r, n, c, np] = await Promise.all([
+    const [r, n, c, np, a] = await Promise.all([
       supabase.from('regions').select('*').order('sort_order'),
       supabase.from('nodes').select('*').order('name'),
       supabase.from('creatures').select('id, node_id, is_aggressive, is_alive'),
       supabase.from('npcs').select('id, node_id'),
+      supabase.from('areas').select('*'),
     ]);
     setRegions(r.data || []);
     setNodes(n.data || []);
+    setAreas(a.data || []);
 
     // Build creature counts per node
     const counts = new Map<string, { total: number; aggressive: number }>();
@@ -175,6 +179,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                 <AdminWorldMapView
                   regions={regions}
                   nodes={nodes}
+                  areas={areas}
                   creatureCounts={creatureCounts}
                   npcCounts={npcCounts}
                   onNodeClick={handleNodeClick}

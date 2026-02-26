@@ -7,10 +7,26 @@ interface GraphNode {
   id: string;
   name: string;
   region_id: string;
+  area_id?: string | null;
   is_vendor: boolean;
   is_inn: boolean;
   is_blacksmith: boolean;
   connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
+}
+
+interface Area {
+  id: string;
+  region_id: string;
+  name: string;
+  description: string;
+  area_type: string;
+}
+
+interface Region {
+  id: string;
+  name: string;
+  min_level: number;
+  max_level: number;
 }
 
 interface Region {
@@ -23,6 +39,7 @@ interface Region {
 interface Props {
   regions: Region[];
   nodes: GraphNode[];
+  areas?: Area[];
   creatureCounts?: Map<string, { total: number; aggressive: number }>;
   npcCounts?: Map<string, number>;
   onNodeClick: (nodeId: string) => void;
@@ -105,7 +122,22 @@ function layoutNodes(nodes: GraphNode[]) {
 const NODE_DRAW_RADIUS = 28;
 const BORDER_PAD = 20;
 const OUTLINE_RADIUS = NODE_DRAW_RADIUS + BORDER_PAD;
+const AREA_PAD = 10;
+const AREA_OUTLINE_RADIUS = NODE_DRAW_RADIUS + AREA_PAD;
 
+const AREA_TYPE_COLORS: Record<string, { fill: string; stroke: string }> = {
+  forest:   { fill: 'hsl(120 30% 25% / 0.15)', stroke: 'hsl(120 40% 45% / 0.6)' },
+  town:     { fill: 'hsl(35 40% 30% / 0.15)',   stroke: 'hsl(35 50% 55% / 0.6)' },
+  cave:     { fill: 'hsl(260 20% 25% / 0.15)',   stroke: 'hsl(260 30% 50% / 0.6)' },
+  ruins:    { fill: 'hsl(30 15% 30% / 0.15)',    stroke: 'hsl(30 20% 50% / 0.6)' },
+  plains:   { fill: 'hsl(50 40% 30% / 0.15)',    stroke: 'hsl(50 50% 50% / 0.6)' },
+  mountain: { fill: 'hsl(210 15% 30% / 0.15)',   stroke: 'hsl(210 20% 55% / 0.6)' },
+  swamp:    { fill: 'hsl(90 25% 25% / 0.15)',    stroke: 'hsl(90 30% 40% / 0.6)' },
+  desert:   { fill: 'hsl(40 50% 30% / 0.15)',    stroke: 'hsl(40 60% 55% / 0.6)' },
+  coast:    { fill: 'hsl(195 40% 30% / 0.15)',   stroke: 'hsl(195 50% 50% / 0.6)' },
+  dungeon:  { fill: 'hsl(0 30% 25% / 0.15)',     stroke: 'hsl(0 40% 45% / 0.6)' },
+  other:    { fill: 'hsl(200 10% 30% / 0.15)',    stroke: 'hsl(200 15% 50% / 0.6)' },
+};
 interface Circle { cx: number; cy: number; r: number; }
 interface ExposedArc {
   circleIdx: number;
@@ -282,7 +314,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent, onEditRegion, onDeleteRegion }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeBetween, onAddNodeAdjacent, onEditRegion, onDeleteRegion }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -350,9 +382,8 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
   }, [regions, nodes]);
 
   // ---- Global node layout from center + convex hull per region ----
-  const { regionHulls, allNodePositions, canvasW, canvasH } = useMemo(() => {
+  const { regionHulls, areaHulls, allNodePositions, canvasW, canvasH } = useMemo(() => {
     const MIN_NODE_GAP = 90;
-    // OUTLINE_RADIUS is defined at module level
 
     // 1. Global BFS layout from Hearthvale Square using connection directions
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
@@ -363,7 +394,7 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
     const centerNode = nodeMap.get(CENTER_NODE_ID);
     const startId = centerNode ? CENTER_NODE_ID : (nodes.length > 0 ? nodes[0].id : null);
     if (!startId) {
-      return { regionHulls: new Map(), allNodePositions: new Map(), canvasW: CANVAS_W, canvasH: CANVAS_H };
+      return { regionHulls: new Map(), areaHulls: new Map(), allNodePositions: new Map(), canvasW: CANVAS_W, canvasH: CANVAS_H };
     }
 
     // BFS from center
@@ -482,6 +513,44 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
       hulls.set(region.id, { path, paths, bbox, region });
     }
 
+    // 4. Compute union-of-circles outlines per area (smaller radius, between region border and node)
+    const aHulls = new Map<string, { path: string; area: Area }>();
+    for (const area of areas) {
+      const areaNodes = nodes.filter(n => n.area_id === area.id);
+      if (areaNodes.length === 0) continue;
+      const areaCircles: Circle[] = [];
+      const areaNodeIds = new Set(areaNodes.map(n => n.id));
+
+      for (const n of areaNodes) {
+        const pos = nodePos.get(n.id);
+        if (pos) areaCircles.push({ cx: pos.px, cy: pos.py, r: AREA_OUTLINE_RADIUS });
+      }
+
+      // Add circles along intra-area edges
+      const edgeSpacing = AREA_OUTLINE_RADIUS * 1.4;
+      for (const n of areaNodes) {
+        for (const conn of n.connections) {
+          if (!areaNodeIds.has(conn.node_id)) continue;
+          if (conn.node_id < n.id) continue;
+          const fromPos = nodePos.get(n.id);
+          const toPos = nodePos.get(conn.node_id);
+          if (!fromPos || !toPos) continue;
+          const dx = toPos.px - fromPos.px;
+          const dy = toPos.py - fromPos.py;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const steps = Math.ceil(dist / edgeSpacing);
+          for (let s = 1; s < steps; s++) {
+            const t = s / steps;
+            areaCircles.push({ cx: fromPos.px + dx * t, cy: fromPos.py + dy * t, r: AREA_OUTLINE_RADIUS });
+          }
+        }
+      }
+
+      if (areaCircles.length === 0) continue;
+      const { paths: areaPaths } = computeRegionOutline(areaCircles);
+      aHulls.set(area.id, { path: areaPaths.join(' '), area });
+    }
+
     // Canvas size
     let maxRight = 0, maxBottom = 0;
     for (const pos of nodePos.values()) {
@@ -495,11 +564,12 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
 
     return {
       regionHulls: hulls,
+      areaHulls: aHulls,
       allNodePositions: nodePos,
       canvasW: Math.max(maxRight, CANVAS_W),
       canvasH: Math.max(maxBottom, CANVAS_H),
     };
-  }, [regions, nodes, nodesByRegion]);
+  }, [regions, nodes, areas, nodesByRegion]);
 
   // Zoom to a specific region
   const zoomToRegion = useCallback((regionId: string) => {
@@ -703,6 +773,42 @@ export default function AdminWorldMapView({ regions, nodes, creatureCounts, npcC
                       <text x={bbox.cx} y={bbox.cy + 4} textAnchor="middle"
                         className="fill-primary text-xs font-bold pointer-events-none select-none">+</text>
                     </g>
+                  )}
+                </g>
+              );
+            })}
+
+            {/* Area hulls — color-coded by area type */}
+            {[...areaHulls.entries()].map(([areaId, { path, area }]) => {
+              const colors = AREA_TYPE_COLORS[area.area_type] || AREA_TYPE_COLORS.other;
+              // Compute label position from area nodes
+              const areaNodes = nodes.filter(n => n.area_id === areaId);
+              const areaPositions = areaNodes.map(n => allNodePositions.get(n.id)).filter(Boolean) as Array<{ px: number; py: number }>;
+              const labelX = areaPositions.length > 0
+                ? areaPositions.reduce((s, p) => s + p.px, 0) / areaPositions.length
+                : 0;
+              const labelY = areaPositions.length > 0
+                ? Math.min(...areaPositions.map(p => p.py)) - AREA_OUTLINE_RADIUS - 4
+                : 0;
+
+              return (
+                <g key={`area-${areaId}`}>
+                  <path
+                    d={path}
+                    fill={colors.fill}
+                    stroke={colors.stroke}
+                    strokeWidth={1.5}
+                    className="pointer-events-none"
+                  />
+                  {areaPositions.length > 0 && (
+                    <text
+                      x={labelX} y={labelY}
+                      textAnchor="middle"
+                      fill={colors.stroke.replace('/ 0.6)', '/ 0.9)')}
+                      className="font-display text-[8px] pointer-events-none select-none"
+                    >
+                      {area.name}
+                    </text>
                   )}
                 </g>
               );
