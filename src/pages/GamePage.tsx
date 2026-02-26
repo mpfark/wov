@@ -1320,7 +1320,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       }
       const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
       const dmgPerTick = Math.max(2, Math.floor(strMod * 1.5));
-      const durationSec = 12 + Math.min(strMod, 6);
+      const durationSec = 20 + Math.min(strMod, 6);
       setDotDebuff({ damagePerTick: dmgPerTick, intervalMs: 3000, expiresAt: Date.now() + durationSec * 1000, creatureId: creature.id });
       addLog(`${ability.emoji} Rend! ${creature.name} is bleeding for ${dmgPerTick} damage every 3s for ${durationSec}s.`);
     } else if (ability.type === 'poison_buff') {
