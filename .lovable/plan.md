@@ -1,62 +1,78 @@
 
 
-# Chat System: Say & Whisper
+# Restructure Map: Region → Area → Node
 
-Add an in-game chat system integrated into the event log, using Supabase Realtime Broadcast (no database tables needed for ephemeral messages).
+## Concept
 
-## How It Works
+Introduce an **Area** layer between Region and Node. An Area defines a place type (forest, town, cave, etc.) and provides a shared name and description for all its nodes. Nodes no longer require unique names — unnamed nodes display their Area name. Existing data continues working without an area assigned; you can reorganize manually later.
 
-- **Say** (`/say <message>` or just type without a prefix): Message is broadcast to all players at the same node via the existing presence channel. Appears in everyone's event log at that node.
-- **Whisper** (`/w <player_name> <message>` or `/whisper <player_name> <message>`): Private message sent directly to a specific player via a dedicated per-character broadcast channel. Only sender and recipient see it.
-- **Enter key** opens/closes a chat input bar docked at the bottom of the event log area.
+## What Changes for Players
 
-## User Experience
+- The location header shows the **Area name** (e.g. "Darkwood Forest") instead of individual node names
+- If a node has its own name set, that name takes priority (e.g. "Thornwatch Tower" within Darkwood Forest)
+- The description comes from the Area unless the node overrides it
+- Region and level range display stays the same
 
-1. Player presses **Enter** -- a text input appears at the bottom of the event log
-2. Player types a message and presses **Enter** to send, or **Escape** to cancel
-3. Messages appear in the event log with distinct styling:
-   - Say: `💬 [PlayerName]: message` -- styled in a soft white/foreground color
-   - Whisper received: `🤫 [PlayerName] whispers: message` -- styled in a purple/magenta tone
-   - Whisper sent: `🤫 To [PlayerName]: message` -- styled in a dimmer purple tone
-4. While the chat input is focused, keyboard movement/actions are naturally disabled (existing `input`/`textarea` guard in `useKeyboardMovement.ts` handles this)
+## What Changes for Admins
 
-## Technical Plan
+- New **Area Manager** section in the admin panel for creating/editing areas (name, description, type tag)
+- Node editor gets an **Area** dropdown to assign nodes to areas
+- World Builder AI generates Areas as part of its output
+- World map shows area groupings visually
 
-### 1. Create a `useChat` hook (`src/hooks/useChat.ts`)
-- Subscribe to a **node-scoped broadcast channel** (`chat-node-{nodeId}`) for "say" messages
-- Subscribe to a **character-scoped broadcast channel** (`chat-whisper-{characterId}`) for incoming whispers
-- To send a whisper, broadcast on `chat-whisper-{targetCharacterId}`
-- Expose: `sendSay(message)`, `sendWhisper(targetName, message)`, `chatMessages[]`
-- Each message has: `type` (say/whisper), `senderName`, `text`, `timestamp`
-- Re-subscribe to node channel when `nodeId` changes (same pattern as presence)
-- Use global presence data to resolve player names to character IDs for whisper targeting
+## Database Changes
 
-### 2. Integrate chat into GamePage (`src/pages/GamePage.tsx`)
-- Add the `useChat` hook
-- Add a `chatOpen` state toggled by Enter key (via a new keydown listener)
-- Render a text input at the bottom of the event log area when `chatOpen` is true
-- Parse input: if starts with `/w ` or `/whisper `, treat as whisper; otherwise treat as say
-- Push chat messages into the `eventLog` array so they appear inline with combat/game events
-- Pass `onlinePlayers` list to `useChat` for name-to-ID resolution
+### 1. New `area_type` enum
+Values: `forest`, `town`, `cave`, `ruins`, `plains`, `mountain`, `swamp`, `desert`, `coast`, `dungeon`, `other`
 
-### 3. Add chat message styling (`src/pages/GamePage.tsx` - `getLogColor`)
-- Add color rules for `💬` (say) and `🤫` (whisper) prefixed messages
+### 2. New `areas` table
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | Primary key |
+| region_id | uuid | FK to regions |
+| name | text | e.g. "Darkwood Forest" |
+| description | text | Shared by all nodes in area |
+| area_type | area_type enum | For filtering/theming |
+| created_at | timestamptz | Default now() |
 
-### 4. Update keyboard handler (`src/hooks/useKeyboardMovement.ts`)
-- Add `Enter` key to open chat (callback prop `onOpenChat`)
-- The existing input-tag guard prevents conflicts while typing
+RLS: Public read, admin-only write (same pattern as nodes/regions).
 
-### 5. Update Game Manual
-- Add a brief "Chat" section documenting `/say`, `/whisper`, and the Enter key shortcut
+### 3. Alter `nodes` table
+- Add `area_id uuid` (nullable, no FK constraint to keep it flexible)
+- Change `name` default to empty string (keep NOT NULL but allow empty)
+- Keep `description` as-is (acts as override when set)
 
-## Files to Create/Modify
+## File Changes
 
-| File | Action |
-|------|--------|
-| `src/hooks/useChat.ts` | **Create** -- broadcast-based chat hook |
-| `src/pages/GamePage.tsx` | **Edit** -- integrate chat hook, add input UI, add log colors |
-| `src/hooks/useKeyboardMovement.ts` | **Edit** -- add Enter key → onOpenChat callback |
-| `src/components/admin/GameManual.tsx` | **Edit** -- document chat commands |
+### Data Layer
+- **`src/hooks/useNodes.ts`** — Add `Area` interface and fetch areas alongside regions/nodes. Add `getArea()`, `getAreaNodes()` helpers. Update `GameNode` to include optional `area_id`.
 
-No database changes needed -- all chat is ephemeral via Supabase Broadcast channels.
+### Player-Facing
+- **`src/components/game/NodeView.tsx`** — Display area name as primary heading when node has no name. Show area description as fallback. Show area type tag.
+- **`src/components/game/PlayerGraphView.tsx`** — Use area name for node labels when node name is empty.
+- **`src/components/game/MapPanel.tsx`** — Pass area data through to child components.
+- **`src/components/game/TeleportDialog.tsx`** — Show area name in teleport destination list for unnamed nodes.
+- **`src/pages/GamePage.tsx`** — Pass areas from useNodes to relevant components. Use area name in event log messages when node name is empty.
+
+### Admin-Facing
+- **`src/components/admin/AreaManager.tsx`** (new) — CRUD for areas: name, description, type, region assignment.
+- **`src/components/admin/NodeEditorPanel.tsx`** — Add area selector dropdown. Show inherited description from area.
+- **`src/components/admin/AdminWorldMapView.tsx`** — Update GraphNode interface to include area_id. Optionally color/group nodes by area.
+- **`src/components/admin/WorldBuilderPanel.tsx`** — Update generated output to include areas. Update apply logic to create areas before nodes.
+- **`src/components/admin/RegionGraphView.tsx`** — Show area groupings in the region graph view.
+- **`src/pages/AdminPage.tsx`** — Add Areas tab/section to admin panel.
+
+### AI World Builder
+- **`supabase/functions/ai-world-builder/index.ts`** — Update system prompt to generate areas. Update tool schema to include areas array. Update world summary to show area structure.
+
+### Documentation
+- **`src/components/admin/GameManual.tsx`** — Update world structure section to explain Region → Area → Node hierarchy.
+- **`src/components/admin/WorldBuilderRulebook.tsx`** — Update rules to reference areas.
+
+## Migration Strategy
+
+- Existing nodes get `area_id = NULL` by default
+- All existing functionality keeps working — when `area_id` is null, the node's own name/description is used as before
+- Admins can create areas and reassign existing nodes at their convenience
+- New AI-generated content will use the area system automatically
 
