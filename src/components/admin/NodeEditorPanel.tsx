@@ -55,11 +55,27 @@ function formatRespawn(seconds: number) {
   return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
 
+/** Rich label for a node: name if set, otherwise AreaName (flags) (#shortId) */
+function getNodeLabel(node: any, areas: any[]): string {
+  if (node?.name?.trim()) return node.name;
+  const flags: string[] = [];
+  if (node?.is_inn) flags.push('Inn');
+  if (node?.is_vendor) flags.push('Vendor');
+  if (node?.is_blacksmith) flags.push('Blacksmith');
+  if (node?.is_teleport) flags.push('Teleport');
+  const area = node?.area_id ? areas.find((a: any) => a.id === node.area_id) : null;
+  const areaName = area?.name || 'Unknown';
+  const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
+  const shortId = `#${(node?.id || '').slice(0, 4)}`;
+  return `${areaName}${flagStr} (${shortId})`;
+}
+
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
+  allAreas: any[];
   onUpdated: () => void;
 }) {
   const [addDir, setAddDir] = useState('N');
@@ -78,7 +94,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
 
   const nodeName = (id: string) => {
     const n = allNodesGlobal.find((n: any) => n.id === id);
-    return (n?.name?.trim()) || `#${id.slice(0, 6)}`;
+    return n ? getNodeLabel(n, allAreas) : `#${id.slice(0, 6)}`;
   };
 
   const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean }) => {
@@ -216,7 +232,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node..." /></SelectTrigger>
               <SelectContent className="bg-popover border-border z-50 max-h-60">
                 {availableNodes.map((n: any) => (
-                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name?.trim() || `#${n.id.slice(0, 6)}`}</SelectItem>
+                  <SelectItem key={n.id} value={n.id} className="text-xs">{getNodeLabel(n, allAreas)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -940,6 +956,7 @@ export default function NodeEditorPanel({
                   nodeId={activeNodeId}
                   connections={form.connections}
                   allNodesGlobal={allNodesGlobal}
+                  allAreas={allAreas}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
                 />
               </TabsContent>
