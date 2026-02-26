@@ -75,7 +75,10 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
     try { return JSON.parse(connections) || []; } catch { return []; }
   })();
 
-  const nodeName = (id: string) => allNodesGlobal.find((n: any) => n.id === id)?.name || id.slice(0, 8);
+  const nodeName = (id: string) => {
+    const n = allNodesGlobal.find((n: any) => n.id === id);
+    return (n?.name?.trim()) || `#${id.slice(0, 6)}`;
+  };
 
   const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean }) => {
     setEditingConnId(c.node_id);
@@ -212,7 +215,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node..." /></SelectTrigger>
               <SelectContent className="bg-popover border-border z-50 max-h-60">
                 {availableNodes.map((n: any) => (
-                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
+                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name?.trim() || `#${n.id.slice(0, 6)}`}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
