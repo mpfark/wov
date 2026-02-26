@@ -470,7 +470,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     setPoisonStacks(prev => {
       const existing = prev[creatureId];
       const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-      return { ...prev, [creatureId]: { stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + 15000 } };
+      return { ...prev, [creatureId]: { stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + 25000 } };
     });
   }, [character.dex]);
 
@@ -480,7 +480,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     setIgniteStacks(prev => {
       const existing = prev[creatureId];
       const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-      const duration = Math.min(30000, 20000 + intMod * 1000);
+      const duration = Math.min(45000, 30000 + intMod * 1000);
       return { ...prev, [creatureId]: { stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + duration } };
     });
   }, [character.int]);
@@ -1325,7 +1325,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`${ability.emoji} Rend! ${creature.name} is bleeding for ${dmgPerTick} damage every 3s for ${durationSec}s.`);
     } else if (ability.type === 'poison_buff') {
       const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
-      const durationMs = Math.min(30000, 20000 + dexMod * 1000);
+      const durationMs = Math.min(45000, 30000 + dexMod * 1000);
       setPoisonBuff({ expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Envenom! Your blade drips with poison for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'execute_attack') {
@@ -1376,7 +1376,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals 50% bonus damage!`);
     } else if (ability.type === 'ignite_buff') {
       const intMod = getStatMod2(character.int + (equipmentBonuses.int || 0));
-      const durationMs = Math.min(30000, 20000 + intMod * 1000);
+      const durationMs = Math.min(45000, 30000 + intMod * 1000);
       setIgniteBuff({ expiresAt: Date.now() + durationMs });
       addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ignite_consume') {
@@ -1485,12 +1485,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         return;
       }
     } else if (ability.type === 'focus_strike') {
-      const totalStats = (character.str + (equipmentBonuses.str || 0))
-                       + (character.dex + (equipmentBonuses.dex || 0))
-                       + (character.con + (equipmentBonuses.con || 0))
-                       + (character.int + (equipmentBonuses.int || 0))
-                       + (character.wis + (equipmentBonuses.wis || 0))
-                       + (character.cha + (equipmentBonuses.cha || 0));
+      // Use base stats only (no gear bonuses) to prevent scaling too hard at high levels
+      const totalStats = character.str + character.dex + character.con
+                       + character.int + character.wis + character.cha;
       const avgStat = Math.floor(totalStats / 6);
       const avgMod = getStatMod2(avgStat);
       const bonusDmg = Math.max(3, Math.floor(avgMod * 2) + Math.floor(character.level / 2));
