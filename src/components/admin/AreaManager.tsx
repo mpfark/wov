@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Save, Trash2, Pencil, X } from 'lucide-react';
+import { Plus, Save, Trash2, Pencil, X, Sparkles, Loader2 } from 'lucide-react';
 import { AREA_TYPES, type AreaType, type Area } from '@/hooks/useNodes';
 
 interface Region {
@@ -34,6 +34,35 @@ export default function AreaManager({ onDataChanged }: Props) {
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filterRegionId, setFilterRegionId] = useState<string>('');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const aiSuggest = async () => {
+    if (!form.region_id) return toast.error('Select a region first');
+    setAiLoading(true);
+    try {
+      const region = regions.find(r => r.id === form.region_id);
+      const existingAreas = areas.filter(a => a.region_id === form.region_id).map(a => a.name).join(', ');
+      const { data, error } = await supabase.functions.invoke('ai-name-suggest', {
+        body: {
+          type: 'area',
+          context: {
+            area_type: form.area_type,
+            region_name: region?.name || '',
+            min_level: region?.min_level,
+            max_level: region?.max_level,
+            existing_areas: existingAreas || 'none',
+          },
+        },
+      });
+      if (error) throw error;
+      setForm(prev => ({ ...prev, name: data.name, description: data.description }));
+      toast.success('AI suggestion applied');
+    } catch (e: any) {
+      toast.error(e.message || 'AI suggestion failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const load = async () => {
     const [aRes, rRes] = await Promise.all([
@@ -134,7 +163,12 @@ export default function AreaManager({ onDataChanged }: Props) {
                 <Button variant="ghost" size="sm" onClick={cancel} className="h-5 w-5 p-0"><X className="w-3 h-3" /></Button>
               </div>
               <Input placeholder="Area name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" />
-              <Textarea placeholder="Shared description for all nodes in this area" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" />
+              <div className="flex gap-2">
+                <Textarea placeholder="Shared description for all nodes in this area" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs flex-1" />
+                <Button variant="outline" size="sm" onClick={aiSuggest} disabled={aiLoading} title="AI Suggest name & description" className="h-8 shrink-0">
+                  {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Region</label>
