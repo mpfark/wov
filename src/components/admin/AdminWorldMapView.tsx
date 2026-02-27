@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Pencil, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface GraphNode {
   id: string;
@@ -50,6 +52,7 @@ interface Props {
   populateSelectedIds?: Set<string>;
   onPopulateToggleNode?: (nodeId: string) => void;
   onPositionsComputed?: (positions: Map<string, { px: number; py: number }>) => void;
+  onConnectionCreated?: () => void;
 }
 
 const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
@@ -317,7 +320,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -841,18 +844,72 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   suggestions.push({ id, ...pos });
                 }
               });
+
+              const handleSuggestionClick = async (targetId: string, targetPos: { px: number; py: number }) => {
+                if (!hNode || !hPos) return;
+                const dx = targetPos.px - hPos.px;
+                const dy = targetPos.py - hPos.py;
+                const angle = Math.atan2(-dy, dx) * (180 / Math.PI);
+                let dir: string;
+                if (angle >= -22.5 && angle < 22.5) dir = 'E';
+                else if (angle >= 22.5 && angle < 67.5) dir = 'NE';
+                else if (angle >= 67.5 && angle < 112.5) dir = 'N';
+                else if (angle >= 112.5 && angle < 157.5) dir = 'NW';
+                else if (angle >= 157.5 || angle < -157.5) dir = 'W';
+                else if (angle >= -157.5 && angle < -112.5) dir = 'SW';
+                else if (angle >= -112.5 && angle < -67.5) dir = 'S';
+                else dir = 'SE';
+
+                const OPPOSITE: Record<string, string> = { N: 'S', S: 'N', E: 'W', W: 'E', NE: 'SW', SW: 'NE', NW: 'SE', SE: 'NW' };
+                const reverseDir = OPPOSITE[dir] || 'N';
+
+                const targetNode = allNodeMap.get(targetId);
+                if (!targetNode) return;
+
+                // Update source node connections
+                const srcConns = [...(hNode.connections || []), { node_id: targetId, direction: dir }];
+                const { error: e1 } = await supabase.from('nodes').update({ connections: srcConns as any }).eq('id', hNode.id);
+                if (e1) { toast.error(e1.message); return; }
+
+                // Update target node connections
+                const tgtConns = [...(targetNode.connections || []), { node_id: hNode.id, direction: reverseDir }];
+                const { error: e2 } = await supabase.from('nodes').update({ connections: tgtConns as any }).eq('id', targetId);
+                if (e2) { toast.error(e2.message); return; }
+
+                toast.success(`Connected ${dir} → ${targetNode.name}`);
+                onConnectionCreated?.();
+              };
+
               return suggestions.map(s => (
-                <line key={`suggest-${hoveredNode}-${s.id}`}
-                  x1={hPos.px} y1={hPos.py} x2={s.px} y2={s.py}
-                  stroke="hsl(140 50% 50% / 0.35)"
-                  strokeWidth={1.5}
-                  strokeDasharray="3 5"
-                  className="pointer-events-none"
-                />
+                <g key={`suggest-${hoveredNode}-${s.id}`}
+                  className="cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); handleSuggestionClick(s.id, s); }}
+                >
+                  <line
+                    x1={hPos.px} y1={hPos.py} x2={s.px} y2={s.py}
+                    stroke="hsl(140 50% 50% / 0.35)"
+                    strokeWidth={1.5}
+                    strokeDasharray="3 5"
+                  />
+                  {/* Invisible wider hit area for easier clicking */}
+                  <line
+                    x1={hPos.px} y1={hPos.py} x2={s.px} y2={s.py}
+                    stroke="transparent"
+                    strokeWidth={12}
+                  />
+                  {/* Small + icon at midpoint */}
+                  <circle
+                    cx={(hPos.px + s.px) / 2} cy={(hPos.py + s.py) / 2} r={8}
+                    fill="hsl(140 50% 30% / 0.7)" stroke="hsl(140 50% 50% / 0.8)" strokeWidth={1}
+                  />
+                  <text
+                    x={(hPos.px + s.px) / 2} y={(hPos.py + s.py) / 2 + 3.5}
+                    textAnchor="middle"
+                    className="fill-white text-[9px] font-bold pointer-events-none select-none"
+                  >+</text>
+                </g>
               ));
             })()}
-
-            {/* Edges */}
             {edges.map(edge => {
               const from = allNodePositions.get(edge.from);
               const to = allNodePositions.get(edge.to);
