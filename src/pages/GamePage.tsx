@@ -1614,7 +1614,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Eldara <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span></h1>
+          <h1 className="font-display text-sm text-primary text-glow">Wayfarers of Edhelard <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span></h1>
           {xpMultiplier > 1 && xpBoostExpiresAt && (
             <span className="text-xs font-display text-primary animate-pulse px-2 py-0.5 bg-primary/10 rounded-full border border-primary/30">
               ⚡ {xpMultiplier}x XP

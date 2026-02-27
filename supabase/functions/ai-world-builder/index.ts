@@ -169,7 +169,7 @@ IMPORTANT RULES FOR EXPANSION:
       ? "This region ALREADY HAS an inn. Do NOT generate any new inn nodes (is_inn must be false for all new nodes)."
       : "This region does not have an inn yet. Generate exactly one inn node.";
 
-    const systemPrompt = `You are a high-fantasy world builder for a text-based RPG called "Wayfarers of Eldara". You generate regions, areas, nodes, creatures, and NPCs that fit the world's lore. Generate original names and content inspired by classic high-fantasy settings but NOT taken directly from any copyrighted works (e.g. do not use names from Tolkien, D&D, or other franchises).
+    const systemPrompt = `You are a high-fantasy world builder for a text-based RPG called "Wayfarers of Edhelard". You generate regions, areas, nodes, creatures, and NPCs that fit the world's lore. Generate original names and content inspired by classic high-fantasy settings but NOT taken directly from any copyrighted works (e.g. do not use names from Tolkien, D&D, or other franchises).
 
 WORLD STRUCTURE: Region → Area → Node
 - A Region has a name, level range, and description.
