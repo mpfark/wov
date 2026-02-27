@@ -505,7 +505,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level/2)) + STR mod</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
-                <p><strong className="text-foreground">Durability:</strong> Every combat round, 2 random equipped items each lose 1 durability</p>
+                <p><strong className="text-foreground">Durability:</strong> Each hit has a 25% chance to degrade 1 random equipped item by 1 durability</p>
                 <p><strong className="text-foreground">XP Penalty:</strong> Graduated: −10%/lvl (Lv1-5), −15%/lvl (Lv6-10), −20%/lvl (Lv11+). Min 10% reward.</p>
               </div>
               <Table>

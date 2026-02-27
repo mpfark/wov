@@ -716,9 +716,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const degradeEquipment = useCallback(async () => {
     if (equipped.length === 0) return;
-    // Pick up to 2 random equipped items to degrade by 1 durability each
+    // 25% chance to degrade 1 random equipped item (matches party RPC)
+    if (Math.random() > 0.25) return;
     const shuffled = [...equipped].sort(() => Math.random() - 0.5);
-    const toDamage = shuffled.slice(0, Math.min(2, shuffled.length));
+    const toDamage = shuffled.slice(0, 1);
     for (const item of toDamage) {
       const newDur = item.current_durability - 1;
       if (newDur <= 0) {
