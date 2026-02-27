@@ -53,6 +53,7 @@ interface Props {
   onPopulateToggleNode?: (nodeId: string) => void;
   onPositionsComputed?: (positions: Map<string, { px: number; py: number }>) => void;
   onConnectionCreated?: () => void;
+  panelOpen?: boolean;
 }
 
 const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
@@ -320,7 +321,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated, panelOpen }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -584,6 +585,34 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
       onPositionsComputed(allNodePositions);
     }
   }, [allNodePositions, onPositionsComputed]);
+
+  // Center on a specific node with smooth animation
+  const centerOnNode = useCallback((nodeId: string) => {
+    const pos = allNodePositions.get(nodeId);
+    if (!pos || !containerRef.current) return;
+
+    const container = containerRef.current;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+
+    const svgScale = Math.min(cw / canvasW, ch / canvasH);
+    const svgOffsetX = (cw - canvasW * svgScale) / 2;
+    const svgOffsetY = (ch - canvasH * svgScale) / 2;
+
+    const screenX = svgOffsetX + pos.px * svgScale;
+    const screenY = svgOffsetY + pos.py * svgScale;
+
+    // Use current zoom or a reasonable default
+    const targetZoom = Math.max(zoom, 1.2);
+
+    const targetPanX = cw / 2 - screenX * targetZoom;
+    const targetPanY = ch / 2 - screenY * targetZoom;
+
+    setIsAnimating(true);
+    setZoom(targetZoom);
+    setPan({ x: targetPanX, y: targetPanY });
+    setTimeout(() => setIsAnimating(false), 450);
+  }, [allNodePositions, canvasW, canvasH, zoom]);
 
   // Zoom to a specific region
   const zoomToRegion = useCallback((regionId: string) => {
@@ -957,8 +986,9 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                       if (populateMode && onPopulateToggleNode) {
                         onPopulateToggleNode(node.id);
                       } else {
-                        // Toggle selection: click same node to deselect, click different to select
-                        setSelectedNode(prev => prev === node.id ? null : node.id);
+                        const newSelected = selectedNode === node.id ? null : node.id;
+                        setSelectedNode(newSelected);
+                        if (newSelected) centerOnNode(newSelected);
                         onNodeClick(node.id);
                       }
                     }}
