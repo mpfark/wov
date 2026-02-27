@@ -1041,6 +1041,28 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
 
                   {isActive && !populateMode && (() => {
                     const usedDirs = new Set(node.connections.map(c => c.direction));
+                    // Also block directions where a suggested connection exists
+                    const connectedIds = new Set(node.connections.map(c => c.node_id));
+                    const nodePos = allNodePositions.get(node.id);
+                    if (nodePos) {
+                      allNodePositions.forEach((p, id) => {
+                        if (id === node.id || connectedIds.has(id)) return;
+                        const dx = p.px - nodePos.px;
+                        const dy = p.py - nodePos.py;
+                        if (Math.sqrt(dx * dx + dy * dy) > 115) return;
+                        const angle = Math.atan2(-dy, dx) * (180 / Math.PI);
+                        let dir: string;
+                        if (angle >= -22.5 && angle < 22.5) dir = 'E';
+                        else if (angle >= 22.5 && angle < 67.5) dir = 'NE';
+                        else if (angle >= 67.5 && angle < 112.5) dir = 'N';
+                        else if (angle >= 112.5 && angle < 157.5) dir = 'NW';
+                        else if (angle >= 157.5 || angle < -157.5) dir = 'W';
+                        else if (angle >= -157.5 && angle < -112.5) dir = 'SW';
+                        else if (angle >= -112.5 && angle < -67.5) dir = 'S';
+                        else dir = 'SE';
+                        usedDirs.add(dir);
+                      });
+                    }
                     const DIR_OFFSETS: Record<string, [number, number]> = {
                       N: [0, -38], NE: [27, -27], E: [38, 0], SE: [27, 27],
                       S: [0, 38], SW: [-27, 27], W: [-38, 0], NW: [-27, -27],
