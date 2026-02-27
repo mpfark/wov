@@ -15,6 +15,20 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import { useState, useEffect } from 'react';
 import { ChevronDown, Search, ShoppingCart, Hammer } from 'lucide-react';
 
+const AREA_TYPE_HEADER_COLORS: Record<string, string> = {
+  forest: 'hsl(120 40% 55%)',
+  town: 'hsl(35 55% 60%)',
+  cave: 'hsl(260 35% 60%)',
+  ruins: 'hsl(20 35% 55%)',
+  plains: 'hsl(60 45% 55%)',
+  mountain: 'hsl(210 20% 60%)',
+  swamp: 'hsl(90 30% 45%)',
+  desert: 'hsl(40 55% 60%)',
+  coast: 'hsl(195 55% 55%)',
+  dungeon: 'hsl(0 35% 50%)',
+  other: 'hsl(var(--primary))',
+};
+
 interface Props {
   node: GameNode;
   region: Region | undefined;
@@ -77,24 +91,18 @@ export default function NodeView({
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
           {/* Location Header */}
            <div className="text-center border-b border-border pb-2">
-            <h2 className="font-display text-xl text-primary text-glow">{getNodeDisplayName(node, area)}</h2>
-            {area && area.area_type !== 'other' && (
-              <span className="text-[10px] text-muted-foreground capitalize">{area.area_type}</span>
-            )}
-            {region && (
-              <p className="text-xs text-muted-foreground">
-                {region.name} — Levels {region.min_level}–{region.max_level}
-              </p>
-            )}
-            {node.is_inn && (
-              <p className="text-xs text-elvish mt-0.5">🏨 Inn — Resting here boosts HP regeneration</p>
-            )}
-            {node.is_blacksmith && (
-              <p className="text-xs text-dwarvish mt-0.5">🔨 Blacksmith — Repair your equipment here</p>
-            )}
-            {node.is_teleport && (
-              <p className="text-xs text-primary mt-0.5">🌀 Teleport Point — Fast travel available</p>
-            )}
+            <h2
+              className="font-display text-xl text-glow"
+              style={{ color: area ? (AREA_TYPE_HEADER_COLORS[area.area_type] || AREA_TYPE_HEADER_COLORS.other) : undefined }}
+            >
+              {getNodeDisplayName(node, area)}
+            </h2>
+            <div className="flex items-center justify-center gap-1.5 mt-0.5 flex-wrap">
+              {node.is_inn && <span className="text-[10px]" title="Inn">🏨</span>}
+              {node.is_blacksmith && <span className="text-[10px]" title="Blacksmith">🔨</span>}
+              {node.is_vendor && <span className="text-[10px]" title="Vendor">🪙</span>}
+              {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
+            </div>
           </div>
 
           {/* Description */}
