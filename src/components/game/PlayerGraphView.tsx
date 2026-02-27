@@ -297,7 +297,18 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               {/* Node name */}
               {(() => {
                 const nodeArea = node.area_id ? areas.find(a => a.id === node.area_id) : undefined;
-                const displayName = getNodeDisplayName(node, nodeArea);
+                let displayName = getNodeDisplayName(node, nodeArea);
+                // For unnamed nodes, show the travel direction instead
+                if (displayName === 'Unknown Location' && !isCurrent) {
+                  const conn = currentNode.connections.find(c => c.node_id === node.id);
+                  if (conn) {
+                    const dirNames: Record<string, string> = {
+                      N: 'North', S: 'South', E: 'East', W: 'West',
+                      NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest',
+                    };
+                    displayName = dirNames[conn.direction] || conn.direction;
+                  }
+                }
                 const truncated = displayName.length > 14 ? displayName.slice(0, 13) + '…' : displayName;
                 return (
                   <text
