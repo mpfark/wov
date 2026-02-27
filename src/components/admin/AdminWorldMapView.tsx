@@ -816,6 +816,34 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               );
             })}
 
+            {/* Suggested connections (dotted lines on hover) */}
+            {hoveredNode && !populateMode && (() => {
+              const hPos = allNodePositions.get(hoveredNode);
+              if (!hPos) return null;
+              const hNode = allNodeMap.get(hoveredNode);
+              if (!hNode) return null;
+              const connectedIds = new Set(hNode.connections.map(c => c.node_id));
+              const PROXIMITY = 200; // ~2 grid steps
+              const suggestions: Array<{ id: string; px: number; py: number }> = [];
+              allNodePositions.forEach((pos, id) => {
+                if (id === hoveredNode || connectedIds.has(id)) return;
+                const dx = pos.px - hPos.px;
+                const dy = pos.py - hPos.py;
+                if (Math.sqrt(dx * dx + dy * dy) <= PROXIMITY) {
+                  suggestions.push({ id, ...pos });
+                }
+              });
+              return suggestions.map(s => (
+                <line key={`suggest-${hoveredNode}-${s.id}`}
+                  x1={hPos.px} y1={hPos.py} x2={s.px} y2={s.py}
+                  stroke="hsl(140 50% 50% / 0.35)"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 5"
+                  className="pointer-events-none"
+                />
+              ));
+            })()}
+
             {/* Edges */}
             {edges.map(edge => {
               const from = allNodePositions.get(edge.from);

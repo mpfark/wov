@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -71,12 +71,13 @@ function getNodeLabel(node: any, areas: any[]): string {
 }
 
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated, suggestedNodeIds }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
   allAreas: any[];
   onUpdated: () => void;
+  suggestedNodeIds?: string[];
 }) {
   const [addDir, setAddDir] = useState('N');
   const [addNodeId, setAddNodeId] = useState('');
@@ -166,6 +167,36 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
   };
 
   const availableNodes = allNodesGlobal.filter((n: any) => n.id !== nodeId && !parsed.some(c => c.node_id === n.id));
+
+  // Quick-connect a suggested node (auto-detect best direction)
+  const quickConnect = async (targetId: string) => {
+    if (parsed.some(c => c.node_id === targetId)) return;
+    setSaving(true);
+    // Find used directions
+    const usedDirs = new Set(parsed.map(c => c.direction));
+    const freeDirs = DIRECTIONS.filter(d => !usedDirs.has(d));
+    const dir = freeDirs[0] || 'N';
+    const newConns = [...parsed, { node_id: targetId, direction: dir }];
+    await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
+    // Add reverse
+    const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', targetId).single();
+    if (targetNode) {
+      const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
+      if (!targetConns.some((c: any) => c.node_id === nodeId)) {
+        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[dir] || 'S' });
+        await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
+      }
+    }
+    toast.success('Connection added');
+    setSaving(false);
+    onUpdated();
+  };
+
+  // Filter suggested nodes to those not already connected
+  const suggestions = (suggestedNodeIds || [])
+    .filter(id => id !== nodeId && !parsed.some(c => c.node_id === id))
+    .map(id => allNodesGlobal.find((n: any) => n.id === id))
+    .filter(Boolean);
 
   return (
     <div className="space-y-3">
@@ -259,6 +290,25 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
           <Plus className="w-3 h-3 mr-1" /> Add Connection
         </Button>
       </div>
+
+      {/* Suggested Connections (nearby unconnected nodes) */}
+      {suggestions.length > 0 && (
+        <div className="border-t border-border pt-3 space-y-2">
+          <p className="font-display text-xs text-green-500">💡 Nearby Nodes (not connected)</p>
+          <div className="space-y-1">
+            {suggestions.map((n: any) => (
+              <div key={n.id} className="flex items-center gap-2 p-1.5 rounded border border-dashed border-green-500/30 bg-green-500/5">
+                <span className="font-display text-xs flex-1 truncate">{getNodeLabel(n, allAreas)}</span>
+                <Button size="sm" variant="outline" disabled={saving}
+                  onClick={() => quickConnect(n.id)}
+                  className="h-6 px-2 text-[10px] border-green-500/40 text-green-600 hover:bg-green-500/10">
+                  <Plus className="w-3 h-3 mr-1" /> Connect
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -350,6 +400,36 @@ export default function NodeEditorPanel({
 
   // Loot table info for creature display
   const [lootTableMap, setLootTableMap] = useState<Record<string, string>>({});
+
+  // Compute suggested nearby nodes (within 2 hops via BFS, not directly connected)
+  const suggestedNodeIds = useMemo(() => {
+    if (!activeNodeId) return [];
+    const nodeMap = new Map(allNodesGlobal.map((n: any) => [n.id, n]));
+    const currentNode = nodeMap.get(activeNodeId);
+    if (!currentNode) return [];
+    const directConns = new Set((currentNode.connections || []).map((c: any) => c.node_id));
+    // BFS 2 hops
+    const twoHopIds = new Set<string>();
+    for (const conn of (currentNode.connections || [])) {
+      const neighbor = nodeMap.get(conn.node_id);
+      if (!neighbor) continue;
+      for (const c2 of (neighbor.connections || [])) {
+        if (c2.node_id !== activeNodeId && !directConns.has(c2.node_id)) {
+          twoHopIds.add(c2.node_id);
+        }
+      }
+    }
+    // Also add same-region nodes not connected (limited to 5)
+    const sameRegion = allNodesGlobal
+      .filter((n: any) => n.region_id === currentNode.region_id && n.id !== activeNodeId && !directConns.has(n.id))
+      .map((n: any) => n.id);
+    // Prioritize 2-hop nodes, then same-region
+    const result = [...twoHopIds];
+    for (const id of sameRegion) {
+      if (!twoHopIds.has(id)) result.push(id);
+    }
+    return result.slice(0, 8);
+  }, [activeNodeId, allNodesGlobal]);
 
   useEffect(() => {
     setActiveNodeId(nodeId);
@@ -958,6 +1038,7 @@ export default function NodeEditorPanel({
                   allNodesGlobal={allNodesGlobal}
                   allAreas={allAreas}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
+                  suggestedNodeIds={suggestedNodeIds}
                 />
               </TabsContent>
             )}
