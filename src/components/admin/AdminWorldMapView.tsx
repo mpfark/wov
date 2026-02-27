@@ -46,6 +46,9 @@ interface Props {
   onAddNodeAdjacent: (fromId: string, direction?: string) => void;
   onEditRegion?: (region: Region) => void;
   onDeleteRegion?: (regionId: string) => void;
+  populateMode?: boolean;
+  populateSelectedIds?: Set<string>;
+  onPopulateToggleNode?: (nodeId: string) => void;
 }
 
 const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
@@ -313,7 +316,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -847,11 +850,23 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   <circle
                     cx={pos.px} cy={pos.py} r={28}
                     className={`cursor-pointer transition-all duration-200 ${
-                      isHovered ? 'fill-primary/20 stroke-primary' : 'fill-card stroke-border'
+                      populateMode && populateSelectedIds?.has(node.id)
+                        ? 'fill-primary/25 stroke-primary'
+                        : isHovered ? 'fill-primary/20 stroke-primary' : 'fill-card stroke-border'
                     }`}
-                    strokeWidth={isHovered ? 2.5 : 1.5}
-                    onClick={() => onNodeClick(node.id)}
+                    strokeWidth={populateMode && populateSelectedIds?.has(node.id) ? 3 : isHovered ? 2.5 : 1.5}
+                    onClick={() => {
+                      if (populateMode && onPopulateToggleNode) {
+                        onPopulateToggleNode(node.id);
+                      } else {
+                        onNodeClick(node.id);
+                      }
+                    }}
                   />
+                  {populateMode && populateSelectedIds?.has(node.id) && (
+                    <text x={pos.px + 20} y={pos.py - 20} textAnchor="middle"
+                      className="fill-primary text-[10px] font-bold pointer-events-none select-none">✓</text>
+                  )}
                   {(node.is_vendor || node.is_inn || node.is_blacksmith) && (
                     <text x={pos.px} y={pos.py - 12} textAnchor="middle" className="text-[8px] select-none pointer-events-none">
                       {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}{node.is_blacksmith ? '🔨' : ''}
@@ -894,7 +909,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     })()}
                   </text>
 
-                  {isHovered && (() => {
+                  {isHovered && !populateMode && (() => {
                     const usedDirs = new Set(node.connections.map(c => c.direction));
                     const DIR_OFFSETS: Record<string, [number, number]> = {
                       N: [0, -38], NE: [27, -27], E: [38, 0], SE: [27, 27],

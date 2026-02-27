@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, Bug } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
@@ -15,11 +15,12 @@ import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
-import WorldBuilderPanel from '@/components/admin/WorldBuilderPanel';
 import ItemForgePanel from '@/components/admin/ItemForgePanel';
 import GameManual from '@/components/admin/GameManual';
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import AreaManager from '@/components/admin/AreaManager';
+import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
+import PopulatePanel from '@/components/admin/PopulatePanel';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -39,6 +40,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [adjacentDirection, setAdjacentDirection] = useState<string | null>(null);
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('world');
+  const [populateMode, setPopulateMode] = useState(false);
+  const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
 
   const [areas, setAreas] = useState<any[]>([]);
 
@@ -147,7 +150,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
-            <TabsTrigger value="world-builder" className="font-display text-xs">🧙 World Builder</TabsTrigger>
+            <TabsTrigger value="rulebook" className="font-display text-xs">📖 Rulebook</TabsTrigger>
             <TabsTrigger value="item-forge" className="font-display text-xs">🪄 Item Forge</TabsTrigger>
             <TabsTrigger value="areas" className="font-display text-xs">🗺️ Areas</TabsTrigger>
             <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
@@ -168,6 +171,20 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <span className="text-xs text-muted-foreground ml-2">
               {regions.length} regions · {nodes.length} nodes
             </span>
+            <div className="flex-1" />
+            <Button
+              size="sm"
+              variant={populateMode ? 'default' : 'outline'}
+              onClick={() => {
+                setPopulateMode(m => !m);
+                if (populateMode) setPopulateSelectedIds(new Set());
+                if (!populateMode) setPanelOpen(false);
+              }}
+              className="text-xs"
+            >
+              <Bug className="w-3 h-3 mr-1" />
+              {populateMode ? 'Exit Populate' : 'Populate'}
+            </Button>
           </div>
 
           {/* Resizable map + properties panel */}
@@ -184,9 +201,19 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   onAddNodeAdjacent={handleAddNodeAdjacent}
                   onEditRegion={(region) => setEditingRegionId(region.id)}
                   onDeleteRegion={deleteRegion}
+                  populateMode={populateMode}
+                  populateSelectedIds={populateSelectedIds}
+                  onPopulateToggleNode={(id) => {
+                    setPopulateSelectedIds(prev => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    });
+                  }}
                 />
               </ResizablePanel>
-              {panelOpen && (
+              {(panelOpen && !populateMode) && (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={35} minSize={25}>
@@ -200,6 +227,22 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                       isValar={isValar}
                       adjacentToNodeId={adjacentToNodeId}
                       adjacentDirection={adjacentDirection}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+              {populateMode && populateSelectedIds.size > 0 && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <PopulatePanel
+                      selectedNodeIds={populateSelectedIds}
+                      allNodes={nodes.map(n => {
+                        const r = regions.find(reg => reg.id === n.region_id);
+                        return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level };
+                      })}
+                      onClose={() => { setPopulateMode(false); setPopulateSelectedIds(new Set()); }}
+                      onDataChanged={loadData}
                     />
                   </ResizablePanel>
                 </>
@@ -236,8 +279,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           {activeTab === 'roadmap' && <RoadmapManager />}
         </TabsContent>
 
-        <TabsContent value="world-builder" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          {activeTab === 'world-builder' && <WorldBuilderPanel onDataChanged={loadData} />}
+        <TabsContent value="rulebook" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          {activeTab === 'rulebook' && <WorldBuilderRulebook />}
         </TabsContent>
 
         <TabsContent value="item-forge" className="flex-1 min-h-0 mt-0 overflow-hidden">
