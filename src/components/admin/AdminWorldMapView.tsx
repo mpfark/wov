@@ -322,6 +322,7 @@ const CANVAS_H = 1200;
 
 export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -827,17 +828,19 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               );
             })}
 
-            {/* Suggested connections (dotted lines on hover) */}
-            {hoveredNode && !populateMode && (() => {
-              const hPos = allNodePositions.get(hoveredNode);
+            {/* Suggested connections (dotted lines on hover or selected) */}
+            {(() => {
+              const activeNode = selectedNode || hoveredNode;
+              if (!activeNode || populateMode) return null;
+              const hPos = allNodePositions.get(activeNode);
               if (!hPos) return null;
-              const hNode = allNodeMap.get(hoveredNode);
+              const hNode = allNodeMap.get(activeNode);
               if (!hNode) return null;
               const connectedIds = new Set(hNode.connections.map(c => c.node_id));
               const PROXIMITY = 200; // ~2 grid steps
               const suggestions: Array<{ id: string; px: number; py: number }> = [];
               allNodePositions.forEach((pos, id) => {
-                if (id === hoveredNode || connectedIds.has(id)) return;
+                if (id === activeNode || connectedIds.has(id)) return;
                 const dx = pos.px - hPos.px;
                 const dy = pos.py - hPos.py;
                 if (Math.sqrt(dx * dx + dy * dy) <= PROXIMITY) {
@@ -881,7 +884,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               };
 
               return suggestions.map(s => (
-                <g key={`suggest-${hoveredNode}-${s.id}`}
+                <g key={`suggest-${activeNode}-${s.id}`}
                   className="cursor-pointer"
                   onClick={(e) => { e.stopPropagation(); handleSuggestionClick(s.id, s); }}
                 >
@@ -934,6 +937,8 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               const pos = allNodePositions.get(node.id);
               if (!pos) return null;
               const isHovered = hoveredNode === node.id;
+              const isSelected = selectedNode === node.id;
+              const isActive = isHovered || isSelected;
 
               return (
                 <g key={node.id}
@@ -945,13 +950,15 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     className={`cursor-pointer transition-all duration-200 ${
                       populateMode && populateSelectedIds?.has(node.id)
                         ? 'fill-primary/25 stroke-primary'
-                        : isHovered ? 'fill-primary/20 stroke-primary' : 'fill-card stroke-border'
+                        : isActive ? 'fill-primary/20 stroke-primary' : 'fill-card stroke-border'
                     }`}
-                    strokeWidth={populateMode && populateSelectedIds?.has(node.id) ? 3 : isHovered ? 2.5 : 1.5}
-                    onClick={() => {
+                    strokeWidth={populateMode && populateSelectedIds?.has(node.id) ? 3 : isActive ? 2.5 : 1.5}
+                    onClick={(e) => {
                       if (populateMode && onPopulateToggleNode) {
                         onPopulateToggleNode(node.id);
                       } else {
+                        // Toggle selection: click same node to deselect, click different to select
+                        setSelectedNode(prev => prev === node.id ? null : node.id);
                         onNodeClick(node.id);
                       }
                     }}
@@ -993,7 +1000,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     x={pos.px} y={pos.py + 3}
                     textAnchor="middle"
                     className={`font-display text-[10px] pointer-events-none select-none ${
-                      isHovered ? 'fill-primary' : 'fill-foreground'
+                      isActive ? 'fill-primary' : 'fill-foreground'
                     }`}
                   >
                     {(() => {
@@ -1002,7 +1009,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     })()}
                   </text>
 
-                  {isHovered && !populateMode && (() => {
+                  {isActive && !populateMode && (() => {
                     const usedDirs = new Set(node.connections.map(c => c.direction));
                     const DIR_OFFSETS: Record<string, [number, number]> = {
                       N: [0, -38], NE: [27, -27], E: [38, 0], SE: [27, 27],
