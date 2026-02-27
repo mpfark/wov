@@ -873,12 +873,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       await updateCharacter({ current_node_id: nodeId, mp: Math.max((character.mp ?? 100) - 10, 0) });
       // Broadcast movement instantly to party members
       broadcastMove(character.id, character.name, nodeId);
+      const dirNames: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' };
+      const dirLabel = direction ? (dirNames[direction] || direction) : null;
       const targetArea = getNodeArea(targetNode);
-      const moveName = getNodeDisplayName(targetNode, targetArea) === 'Unknown Location' && direction
-        ? ({ N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' }[direction] || direction)
-        : getNodeDisplayName(targetNode, targetArea);
-      addLog(`You travel ${moveName === getNodeDisplayName(targetNode, targetArea) ? 'to ' + moveName : moveName}.`);
-      logActivity(character.user_id, character.id, 'move', `Traveled to ${moveName}`, { node_id: nodeId });
+      const moveName = getNodeDisplayName(targetNode, targetArea);
+      addLog(`You travel ${dirLabel || moveName}.`);
+      logActivity(character.user_id, character.id, 'move', `Traveled ${dirLabel || 'to ' + moveName}`, { node_id: nodeId });
       // Move followers if I'm the party leader
       if (party && isLeader) {
         const followers = partyMembers.filter(m => m.is_following && m.character_id !== character.id);
