@@ -866,7 +866,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               const hNode = allNodeMap.get(activeNode);
               if (!hNode) return null;
               const connectedIds = new Set(hNode.connections.map(c => c.node_id));
-              const PROXIMITY = 115; // ~1 grid step (90px gap + small tolerance)
+              const PROXIMITY = 140; // includes diagonal grid steps (~127px)
               const suggestions: Array<{ id: string; px: number; py: number }> = [];
               allNodePositions.forEach((pos, id) => {
                 if (id === activeNode || connectedIds.has(id)) return;
@@ -1049,7 +1049,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                         if (id === node.id || connectedIds.has(id)) return;
                         const dx = p.px - nodePos.px;
                         const dy = p.py - nodePos.py;
-                        if (Math.sqrt(dx * dx + dy * dy) > 115) return;
+                        if (Math.sqrt(dx * dx + dy * dy) > 140) return;
                         const angle = Math.atan2(-dy, dx) * (180 / Math.PI);
                         let dir: string;
                         if (angle >= -22.5 && angle < 22.5) dir = 'E';
