@@ -408,7 +408,7 @@ export default function NodeEditorPanel({
     const currentNode = nodeMap.get(activeNodeId);
     if (!currentNode) return [];
     const directConns = new Set((currentNode.connections || []).map((c: any) => c.node_id));
-    const PROXIMITY = 115;
+    const PROXIMITY = 140;
 
     const results: Array<{ id: string; direction: string; name: string; dist: number }> = [];
     nodePositions.forEach((pos, id) => {
