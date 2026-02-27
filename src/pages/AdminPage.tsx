@@ -42,6 +42,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState('world');
   const [populateMode, setPopulateMode] = useState(false);
   const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
+  const [nodePositions, setNodePositions] = useState<Map<string, { px: number; py: number }>>(new Map());
 
   const [areas, setAreas] = useState<any[]>([]);
 
@@ -211,6 +212,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                       return next;
                     });
                   }}
+                  onPositionsComputed={setNodePositions}
                 />
               </ResizablePanel>
               {(panelOpen && !populateMode) && (
@@ -227,6 +229,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                       isValar={isValar}
                       adjacentToNodeId={adjacentToNodeId}
                       adjacentDirection={adjacentDirection}
+                      nodePositions={nodePositions}
                     />
                   </ResizablePanel>
                 </>

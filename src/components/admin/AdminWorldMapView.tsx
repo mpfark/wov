@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Pencil, Trash2 } from 'lucide-react';
@@ -49,6 +49,7 @@ interface Props {
   populateMode?: boolean;
   populateSelectedIds?: Set<string>;
   onPopulateToggleNode?: (nodeId: string) => void;
+  onPositionsComputed?: (positions: Map<string, { px: number; py: number }>) => void;
 }
 
 const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
@@ -316,7 +317,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -572,6 +573,13 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
       canvasH: Math.max(maxBottom, CANVAS_H),
     };
   }, [regions, nodes, areas, nodesByRegion]);
+
+  // Expose positions to parent
+  useEffect(() => {
+    if (onPositionsComputed && allNodePositions.size > 0) {
+      onPositionsComputed(allNodePositions);
+    }
+  }, [allNodePositions, onPositionsComputed]);
 
   // Zoom to a specific region
   const zoomToRegion = useCallback((regionId: string) => {
