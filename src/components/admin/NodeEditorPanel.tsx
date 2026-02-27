@@ -71,13 +71,14 @@ function getNodeLabel(node: any, areas: any[]): string {
 }
 
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated, suggestedNodeIds }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated, suggestedNodeIds, suggestedNodes }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
   allAreas: any[];
   onUpdated: () => void;
   suggestedNodeIds?: string[];
+  suggestedNodes?: Array<{ id: string; viaNodeId: string; viaDirection: string }>;
 }) {
   const [addDir, setAddDir] = useState('N');
   const [addNodeId, setAddNodeId] = useState('');
@@ -192,10 +193,15 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
     onUpdated();
   };
 
-  // Filter suggested nodes to those not already connected
+  // Filter suggested nodes to those not already connected, enrich with direction info
   const suggestions = (suggestedNodeIds || [])
     .filter(id => id !== nodeId && !parsed.some(c => c.node_id === id))
-    .map(id => allNodesGlobal.find((n: any) => n.id === id))
+    .map(id => {
+      const node = allNodesGlobal.find((n: any) => n.id === id);
+      const meta = (suggestedNodes || []).find(s => s.id === id);
+      const viaNode = meta ? allNodesGlobal.find((n: any) => n.id === meta.viaNodeId) : null;
+      return node ? { ...node, viaDirection: meta?.viaDirection, viaNodeName: viaNode ? getNodeLabel(viaNode, allAreas) : undefined } : null;
+    })
     .filter(Boolean);
 
   return (
@@ -294,14 +300,19 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
       {/* Suggested Connections (nearby unconnected nodes) */}
       {suggestions.length > 0 && (
         <div className="border-t border-border pt-3 space-y-2">
-          <p className="font-display text-xs text-green-500">💡 Nearby Nodes (not connected)</p>
+          <p className="font-display text-xs text-accent-foreground">💡 Nearby Nodes (1 hop away)</p>
           <div className="space-y-1">
             {suggestions.map((n: any) => (
-              <div key={n.id} className="flex items-center gap-2 p-1.5 rounded border border-dashed border-green-500/30 bg-green-500/5">
-                <span className="font-display text-xs flex-1 truncate">{getNodeLabel(n, allAreas)}</span>
+              <div key={n.id} className="flex items-center gap-2 p-1.5 rounded border border-dashed border-accent/30 bg-accent/5">
+                <div className="flex-1 min-w-0">
+                  <span className="font-display text-xs truncate block">{getNodeLabel(n, allAreas)}</span>
+                  {n.viaDirection && n.viaNodeName && (
+                    <span className="text-[10px] text-muted-foreground">via {n.viaDirection} → {n.viaNodeName}</span>
+                  )}
+                </div>
                 <Button size="sm" variant="outline" disabled={saving}
                   onClick={() => quickConnect(n.id)}
-                  className="h-6 px-2 text-[10px] border-green-500/40 text-green-600 hover:bg-green-500/10">
+                  className="h-6 px-2 text-[10px] shrink-0">
                   <Plus className="w-3 h-3 mr-1" /> Connect
                 </Button>
               </div>
@@ -401,35 +412,31 @@ export default function NodeEditorPanel({
   // Loot table info for creature display
   const [lootTableMap, setLootTableMap] = useState<Record<string, string>>({});
 
-  // Compute suggested nearby nodes (within 2 hops via BFS, not directly connected)
-  const suggestedNodeIds = useMemo(() => {
+  // Compute suggested nearby nodes (1 hop away — neighbors of direct connections, not already connected)
+  // Returns objects with { id, viaNodeId, viaDirection } for context
+  const suggestedNodes = useMemo(() => {
     if (!activeNodeId) return [];
     const nodeMap = new Map(allNodesGlobal.map((n: any) => [n.id, n]));
     const currentNode = nodeMap.get(activeNodeId);
     if (!currentNode) return [];
     const directConns = new Set((currentNode.connections || []).map((c: any) => c.node_id));
-    // BFS 2 hops
-    const twoHopIds = new Set<string>();
+    // 1 hop: neighbors of direct connections
+    const results: Array<{ id: string; viaNodeId: string; viaDirection: string }> = [];
+    const seen = new Set<string>();
     for (const conn of (currentNode.connections || [])) {
       const neighbor = nodeMap.get(conn.node_id);
       if (!neighbor) continue;
       for (const c2 of (neighbor.connections || [])) {
-        if (c2.node_id !== activeNodeId && !directConns.has(c2.node_id)) {
-          twoHopIds.add(c2.node_id);
+        if (c2.node_id !== activeNodeId && !directConns.has(c2.node_id) && !seen.has(c2.node_id)) {
+          seen.add(c2.node_id);
+          results.push({ id: c2.node_id, viaNodeId: conn.node_id, viaDirection: conn.direction });
         }
       }
     }
-    // Also add same-region nodes not connected (limited to 5)
-    const sameRegion = allNodesGlobal
-      .filter((n: any) => n.region_id === currentNode.region_id && n.id !== activeNodeId && !directConns.has(n.id))
-      .map((n: any) => n.id);
-    // Prioritize 2-hop nodes, then same-region
-    const result = [...twoHopIds];
-    for (const id of sameRegion) {
-      if (!twoHopIds.has(id)) result.push(id);
-    }
-    return result.slice(0, 8);
+    return results.slice(0, 8);
   }, [activeNodeId, allNodesGlobal]);
+
+  const suggestedNodeIds = useMemo(() => suggestedNodes.map(s => s.id), [suggestedNodes]);
 
   useEffect(() => {
     setActiveNodeId(nodeId);
@@ -1039,6 +1046,7 @@ export default function NodeEditorPanel({
                   allAreas={allAreas}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
                   suggestedNodeIds={suggestedNodeIds}
+                  suggestedNodes={suggestedNodes}
                 />
               </TabsContent>
             )}
