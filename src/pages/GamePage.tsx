@@ -188,6 +188,46 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const ownLogIdsRef = useRef<Set<string>>(new Set());
 
+  // Local-only log (no party combat log broadcast)
+  const addLocalLog = useCallback((msg: string) => {
+    setEventLog(prev => [...prev.slice(-49), msg]);
+  }, []);
+
+  // Track player arrivals and departures via presence
+  const prevPlayersRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const currentIds = new Set(playersHere.map(p => p.id));
+    const prevIds = prevPlayersRef.current;
+
+    // Skip on first render (don't announce everyone already here)
+    if (prevIds.size > 0 || currentIds.size === 0) {
+      // Arrivals
+      for (const p of playersHere) {
+        if (!prevIds.has(p.id)) {
+          addLocalLog(`⚔️ ${p.name} has arrived.`);
+        }
+      }
+      // Departures
+      for (const id of prevIds) {
+        if (!currentIds.has(id)) {
+          const prev = prevPlayersRef.current;
+          // We need the name — store a name map
+          const name = prevPlayerNamesRef.current.get(id);
+          if (name) {
+            addLocalLog(`🚶 ${name} has departed.`);
+          }
+        }
+      }
+    }
+
+    // Update refs
+    prevPlayersRef.current = currentIds;
+    const nameMap = new Map<string, string>();
+    for (const p of playersHere) nameMap.set(p.id, p.name);
+    prevPlayerNamesRef.current = nameMap;
+  }, [playersHere, addLocalLog]);
+  const prevPlayerNamesRef = useRef<Map<string, string>>(new Map());
+
   const addLog = useCallback((msg: string) => {
     // Strip internal buff tags from the displayed message
     const displayMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
