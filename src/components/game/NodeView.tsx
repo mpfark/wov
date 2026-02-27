@@ -103,6 +103,11 @@ export default function NodeView({
               {node.is_vendor && <span className="text-[10px]" title="Vendor">🪙</span>}
               {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
             </div>
+            {region && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {region.name} — Levels {region.min_level}–{region.max_level}
+              </p>
+            )}
           </div>
 
           {/* Description */}
