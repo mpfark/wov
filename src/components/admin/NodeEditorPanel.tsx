@@ -28,6 +28,7 @@ interface NodeEditorPanelProps {
   isValar: boolean;
   adjacentToNodeId?: string | null;
   adjacentDirection?: string | null;
+  nodePositions?: Map<string, { px: number; py: number }>;
 }
 
 const DIRECTIONS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
@@ -71,14 +72,13 @@ function getNodeLabel(node: any, areas: any[]): string {
 }
 
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated, suggestedNodeIds, suggestedNodes }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated, suggestedNodes }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
   allAreas: any[];
   onUpdated: () => void;
-  suggestedNodeIds?: string[];
-  suggestedNodes?: Array<{ id: string; viaNodeId: string; viaDirection: string }>;
+  suggestedNodes?: Array<{ id: string; direction: string; name: string }>;
 }) {
   const [addDir, setAddDir] = useState('N');
   const [addNodeId, setAddNodeId] = useState('');
@@ -169,14 +169,11 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
 
   const availableNodes = allNodesGlobal.filter((n: any) => n.id !== nodeId && !parsed.some(c => c.node_id === n.id));
 
-  // Quick-connect a suggested node (auto-detect best direction)
-  const quickConnect = async (targetId: string) => {
+  // Quick-connect a suggested node with a specific direction
+  const quickConnect = async (targetId: string, direction: string) => {
     if (parsed.some(c => c.node_id === targetId)) return;
     setSaving(true);
-    // Find used directions
-    const usedDirs = new Set(parsed.map(c => c.direction));
-    const freeDirs = DIRECTIONS.filter(d => !usedDirs.has(d));
-    const dir = freeDirs[0] || 'N';
+    const dir = direction;
     const newConns = [...parsed, { node_id: targetId, direction: dir }];
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
     // Add reverse
@@ -193,16 +190,9 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
     onUpdated();
   };
 
-  // Filter suggested nodes to those not already connected, enrich with direction info
-  const suggestions = (suggestedNodeIds || [])
-    .filter(id => id !== nodeId && !parsed.some(c => c.node_id === id))
-    .map(id => {
-      const node = allNodesGlobal.find((n: any) => n.id === id);
-      const meta = (suggestedNodes || []).find(s => s.id === id);
-      const viaNode = meta ? allNodesGlobal.find((n: any) => n.id === meta.viaNodeId) : null;
-      return node ? { ...node, viaDirection: meta?.viaDirection, viaNodeName: viaNode ? getNodeLabel(viaNode, allAreas) : undefined } : null;
-    })
-    .filter(Boolean);
+  // Filter suggested nodes to those not already connected
+  const suggestions = (suggestedNodes || [])
+    .filter(s => s.id !== nodeId && !parsed.some(c => c.node_id === s.id));
 
   return (
     <div className="space-y-3">
@@ -300,18 +290,14 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
       {/* Suggested Connections (nearby unconnected nodes) */}
       {suggestions.length > 0 && (
         <div className="border-t border-border pt-3 space-y-2">
-          <p className="font-display text-xs text-accent-foreground">💡 Nearby Nodes (1 hop away)</p>
+          <p className="font-display text-xs text-accent-foreground">💡 Nearby Nodes</p>
           <div className="space-y-1">
-            {suggestions.map((n: any) => (
-              <div key={n.id} className="flex items-center gap-2 p-1.5 rounded border border-dashed border-accent/30 bg-accent/5">
-                <div className="flex-1 min-w-0">
-                  <span className="font-display text-xs truncate block">{getNodeLabel(n, allAreas)}</span>
-                  {n.viaDirection && n.viaNodeName && (
-                    <span className="text-[10px] text-muted-foreground">via {n.viaDirection} → {n.viaNodeName}</span>
-                  )}
-                </div>
+            {suggestions.map((s: any) => (
+              <div key={s.id} className="flex items-center gap-2 p-1.5 rounded border border-dashed border-accent/30 bg-accent/5">
+                <span className="font-mono text-[10px] text-primary font-bold w-6 text-center shrink-0">{s.direction}</span>
+                <span className="font-display text-xs truncate flex-1">{s.name}</span>
                 <Button size="sm" variant="outline" disabled={saving}
-                  onClick={() => quickConnect(n.id)}
+                  onClick={() => quickConnect(s.id, s.direction)}
                   className="h-6 px-2 text-[10px] shrink-0">
                   <Plus className="w-3 h-3 mr-1" /> Connect
                 </Button>
@@ -385,7 +371,7 @@ function AiSuggestNodeButton({ form, selectedRegionId, regions, allAreas, allNod
 /* ─── Main component ────────────────────────────────── */
 
 export default function NodeEditorPanel({
-  nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection,
+  nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection, nodePositions,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
     name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false,
@@ -412,31 +398,43 @@ export default function NodeEditorPanel({
   // Loot table info for creature display
   const [lootTableMap, setLootTableMap] = useState<Record<string, string>>({});
 
-  // Compute suggested nearby nodes (1 hop away — neighbors of direct connections, not already connected)
-  // Returns objects with { id, viaNodeId, viaDirection } for context
+  // Compute suggested nearby nodes using layout positions (matching map dotted lines)
+  // Returns { id, direction, name } where direction is computed from relative position
   const suggestedNodes = useMemo(() => {
-    if (!activeNodeId) return [];
+    if (!activeNodeId || !nodePositions || nodePositions.size === 0) return [];
+    const currentPos = nodePositions.get(activeNodeId);
+    if (!currentPos) return [];
     const nodeMap = new Map(allNodesGlobal.map((n: any) => [n.id, n]));
     const currentNode = nodeMap.get(activeNodeId);
     if (!currentNode) return [];
     const directConns = new Set((currentNode.connections || []).map((c: any) => c.node_id));
-    // 1 hop: neighbors of direct connections
-    const results: Array<{ id: string; viaNodeId: string; viaDirection: string }> = [];
-    const seen = new Set<string>();
-    for (const conn of (currentNode.connections || [])) {
-      const neighbor = nodeMap.get(conn.node_id);
-      if (!neighbor) continue;
-      for (const c2 of (neighbor.connections || [])) {
-        if (c2.node_id !== activeNodeId && !directConns.has(c2.node_id) && !seen.has(c2.node_id)) {
-          seen.add(c2.node_id);
-          results.push({ id: c2.node_id, viaNodeId: conn.node_id, viaDirection: conn.direction });
-        }
-      }
-    }
-    return results.slice(0, 8);
-  }, [activeNodeId, allNodesGlobal]);
+    const PROXIMITY = 200;
 
-  const suggestedNodeIds = useMemo(() => suggestedNodes.map(s => s.id), [suggestedNodes]);
+    const results: Array<{ id: string; direction: string; name: string; dist: number }> = [];
+    nodePositions.forEach((pos, id) => {
+      if (id === activeNodeId || directConns.has(id)) return;
+      const dx = pos.px - currentPos.px;
+      const dy = pos.py - currentPos.py;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > PROXIMITY) return;
+      // Compute compass direction from angle
+      const angle = Math.atan2(-dy, dx) * (180 / Math.PI); // -dy because y-axis is inverted in SVG
+      let dir: string;
+      if (angle >= -22.5 && angle < 22.5) dir = 'E';
+      else if (angle >= 22.5 && angle < 67.5) dir = 'NE';
+      else if (angle >= 67.5 && angle < 112.5) dir = 'N';
+      else if (angle >= 112.5 && angle < 157.5) dir = 'NW';
+      else if (angle >= 157.5 || angle < -157.5) dir = 'W';
+      else if (angle >= -157.5 && angle < -112.5) dir = 'SW';
+      else if (angle >= -112.5 && angle < -67.5) dir = 'S';
+      else dir = 'SE';
+
+      const node = nodeMap.get(id);
+      const name = node ? getNodeLabel(node, allAreas) : `#${id.slice(0, 6)}`;
+      results.push({ id, direction: dir, name, dist });
+    });
+    return results.sort((a, b) => a.dist - b.dist).slice(0, 8).map(({ dist, ...r }) => r);
+  }, [activeNodeId, allNodesGlobal, nodePositions, allAreas]);
 
   useEffect(() => {
     setActiveNodeId(nodeId);
@@ -1045,7 +1043,6 @@ export default function NodeEditorPanel({
                   allNodesGlobal={allNodesGlobal}
                   allAreas={allAreas}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
-                  suggestedNodeIds={suggestedNodeIds}
                   suggestedNodes={suggestedNodes}
                 />
               </TabsContent>
