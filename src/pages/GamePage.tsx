@@ -9,7 +9,7 @@ import TeleportDialog from '@/components/game/TeleportDialog';
 import { useGroundLoot } from '@/hooks/useGroundLoot';
 
 import { Character } from '@/hooks/useCharacter';
-import { useNodes } from '@/hooks/useNodes';
+import { useNodes, getNodeDisplayName } from '@/hooks/useNodes';
 import { usePresence } from '@/hooks/usePresence';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
@@ -833,8 +833,12 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       await updateCharacter({ current_node_id: nodeId, mp: Math.max((character.mp ?? 100) - 10, 0) });
       // Broadcast movement instantly to party members
       broadcastMove(character.id, character.name, nodeId);
-      addLog(`You travel to ${targetNode.name}.`);
-      logActivity(character.user_id, character.id, 'move', `Traveled to ${targetNode.name}`, { node_id: nodeId });
+      const targetArea = getNodeArea(targetNode);
+      const moveName = getNodeDisplayName(targetNode, targetArea) === 'Unknown Location' && direction
+        ? ({ N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' }[direction] || direction)
+        : getNodeDisplayName(targetNode, targetArea);
+      addLog(`You travel ${moveName === getNodeDisplayName(targetNode, targetArea) ? 'to ' + moveName : moveName}.`);
+      logActivity(character.user_id, character.id, 'move', `Traveled to ${moveName}`, { node_id: nodeId });
       // Move followers if I'm the party leader
       if (party && isLeader) {
         const followers = partyMembers.filter(m => m.is_following && m.character_id !== character.id);
