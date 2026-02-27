@@ -213,6 +213,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                     });
                   }}
                   onPositionsComputed={setNodePositions}
+                  onConnectionCreated={loadData}
                 />
               </ResizablePanel>
               {(panelOpen && !populateMode) && (
