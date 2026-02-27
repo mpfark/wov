@@ -866,7 +866,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               const hNode = allNodeMap.get(activeNode);
               if (!hNode) return null;
               const connectedIds = new Set(hNode.connections.map(c => c.node_id));
-              const PROXIMITY = 200; // ~2 grid steps
+              const PROXIMITY = 115; // ~1 grid step (90px gap + small tolerance)
               const suggestions: Array<{ id: string; px: number; py: number }> = [];
               allNodePositions.forEach((pos, id) => {
                 if (id === activeNode || connectedIds.has(id)) return;
