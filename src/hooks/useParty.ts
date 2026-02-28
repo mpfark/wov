@@ -160,6 +160,12 @@ export function useParty(characterId: string | null) {
 
   const invitePlayer = useCallback(async (targetCharacterId: string) => {
     if (!party) return;
+    // Max 4 members (accepted + pending)
+    const { count } = await supabase
+      .from('party_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('party_id', party.id);
+    if ((count ?? 0) >= 4) return;
     const { error } = await supabase.from('party_members').insert({
       party_id: party.id,
       character_id: targetCharacterId,
