@@ -5,7 +5,8 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { Character } from '@/hooks/useCharacter';
 import PlayerGraphView from './PlayerGraphView';
 import PartyPanel from './PartyPanel';
-import { Keyboard, RotateCcw } from 'lucide-react';
+import { Keyboard, RotateCcw, MapIcon } from 'lucide-react';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -248,47 +249,74 @@ export default function MapPanel({
             </Popover>
           )}
         </div>
-        {currentNodeId ? (
-          <PlayerGraphView
-            currentNodeId={currentNodeId}
-            nodes={nodes}
-            onNodeClick={onNodeClick}
-            partyMembers={partyMembers}
-            myCharacterId={myCharacterId}
-            areas={areas}
-          />
-        ) : (
-          <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
-        )}
-      </div>
+        <div className="relative">
+          {currentNodeId ? (
+            <PlayerGraphView
+              currentNodeId={currentNodeId}
+              nodes={nodes}
+              onNodeClick={onNodeClick}
+              partyMembers={partyMembers}
+              myCharacterId={myCharacterId}
+              areas={areas}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
+          )}
 
-      {/* Map Legend */}
-      <div className="border-t border-border pt-2">
-        <h3 className="font-display text-[10px] text-muted-foreground mb-1">Legend</h3>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-          <div className="flex items-center gap-1.5">
-            <span className="text-primary text-[8px]">◆</span>
-            <span className="text-muted-foreground">You are here</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[8px]">🪙</span>
-            <span className="text-muted-foreground">Vendor</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <svg width="10" height="10"><circle cx="5" cy="5" r="4" className="fill-chart-2 stroke-background" strokeWidth={1} /></svg>
-            <span className="text-muted-foreground">Party member</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke="hsl(35 20% 35% / 0.4)" strokeWidth={1.5} strokeDasharray="4 3" /></svg>
-            <span className="text-muted-foreground">Exit path</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="hsl(0 70% 50%)" className="stroke-background" strokeWidth={1} /></svg>
-            <span className="text-muted-foreground">Aggressive</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} /></svg>
-            <span className="text-muted-foreground">Creature</span>
+          {/* Legend hover icon — bottom-right */}
+          <div className="absolute bottom-1 right-1 z-10">
+            <HoverCard openDelay={100} closeDelay={200}>
+              <HoverCardTrigger asChild>
+                <button className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors">
+                  <MapIcon className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent side="top" align="end" className="w-56 p-2.5">
+                <h4 className="font-display text-[10px] text-muted-foreground mb-1.5">Map</h4>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-primary text-[8px]">◆</span>
+                    <span className="text-muted-foreground">You are here</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <svg width="10" height="10"><circle cx="5" cy="5" r="4" className="fill-chart-2 stroke-background" strokeWidth={1} /></svg>
+                    <span className="text-muted-foreground">Party member</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="hsl(0 70% 50%)" className="stroke-background" strokeWidth={1} /></svg>
+                    <span className="text-muted-foreground">Aggressive</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="hsl(35 60% 50%)" className="stroke-background" strokeWidth={1} /></svg>
+                    <span className="text-muted-foreground">Creature</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <svg width="16" height="8"><line x1="0" y1="4" x2="16" y2="4" stroke="hsl(35 20% 35% / 0.4)" strokeWidth={1.5} strokeDasharray="4 3" /></svg>
+                    <span className="text-muted-foreground">Exit path</span>
+                  </div>
+                </div>
+                <h4 className="font-display text-[10px] text-muted-foreground mt-2 mb-1">Services</h4>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🏨</span><span className="text-muted-foreground">Inn</span></div>
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🔨</span><span className="text-muted-foreground">Blacksmith</span></div>
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🪙</span><span className="text-muted-foreground">Vendor</span></div>
+                  <div className="flex items-center gap-1.5"><span className="text-[8px]">🌀</span><span className="text-muted-foreground">Teleport</span></div>
+                </div>
+                <h4 className="font-display text-[10px] text-muted-foreground mt-2 mb-1">Area Types</h4>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(35 55% 60%)' }} /><span className="text-muted-foreground">Town</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(120 40% 55%)' }} /><span className="text-muted-foreground">Forest</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(30 30% 45%)' }} /><span className="text-muted-foreground">Cave</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(45 40% 55%)' }} /><span className="text-muted-foreground">Ruins</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(80 35% 55%)' }} /><span className="text-muted-foreground">Plains</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(210 30% 50%)' }} /><span className="text-muted-foreground">Mountain</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(150 35% 40%)' }} /><span className="text-muted-foreground">Swamp</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(40 50% 60%)' }} /><span className="text-muted-foreground">Desert</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(200 50% 55%)' }} /><span className="text-muted-foreground">Coast</span></div>
+                  <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: 'hsl(0 40% 35%)' }} /><span className="text-muted-foreground">Dungeon</span></div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
           </div>
         </div>
       </div>
