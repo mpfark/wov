@@ -32,7 +32,8 @@ export function useInventory(characterId: string | null) {
     const { data } = await supabase
       .from('character_inventory')
       .select('*, item:items(*)')
-      .eq('character_id', characterId);
+      .eq('character_id', characterId)
+      .order('created_at', { ascending: true });
     if (data) setInventory(data as unknown as InventoryItem[]);
     setLoading(false);
   }, [characterId]);
