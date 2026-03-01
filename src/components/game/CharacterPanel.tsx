@@ -5,7 +5,7 @@ import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTi
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ChevronDown } from 'lucide-react';
+import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ChevronDown, ArrowUpDown } from 'lucide-react';
 import vitruvianMan from '@/assets/vitruvian-man.png';
 
 interface Props {
@@ -326,6 +326,7 @@ export default function CharacterPanel({
 }: Props) {
   const [attrsOpen, setAttrsOpen] = useState(true);
   const [equipOpen, setEquipOpen] = useState(true);
+  const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
 
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
@@ -514,9 +515,19 @@ export default function CharacterPanel({
 
         {/* Inventory */}
         <div className="flex-1 min-h-0 flex flex-col">
-          <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-            Inventory ({unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined).length})
-          </h3>
+          <div className="flex items-center justify-between mb-1.5">
+            <h3 className="font-display text-xs text-muted-foreground">
+              Inventory ({unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined).length})
+            </h3>
+            <button
+              onClick={() => setInventorySort(prev => prev === 'default' ? 'name' : prev === 'name' ? 'rarity' : prev === 'rarity' ? 'type' : 'default')}
+              className="flex items-center gap-0.5 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+              title="Sort inventory"
+            >
+              <ArrowUpDown className="w-3 h-3" />
+              <span className="capitalize">{inventorySort === 'default' ? '' : inventorySort}</span>
+            </button>
+          </div>
           <div className="space-y-1 flex-1 min-h-0 overflow-y-auto">
             {unequipped.length === 0 ? (
               <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>
@@ -531,6 +542,15 @@ export default function CharacterPanel({
                 const key = inv.item_id;
                 if (!map.has(key)) { map.set(key, []); grouped.push({ representative: inv, all: map.get(key)! }); }
                 map.get(key)!.push(inv);
+              }
+              // Sort groups
+              const RARITY_ORDER: Record<string, number> = { common: 0, uncommon: 1, rare: 2, unique: 3 };
+              if (inventorySort === 'name') {
+                grouped.sort((a, b) => a.representative.item.name.localeCompare(b.representative.item.name));
+              } else if (inventorySort === 'rarity') {
+                grouped.sort((a, b) => (RARITY_ORDER[b.representative.item.rarity] ?? 0) - (RARITY_ORDER[a.representative.item.rarity] ?? 0));
+              } else if (inventorySort === 'type') {
+                grouped.sort((a, b) => a.representative.item.item_type.localeCompare(b.representative.item.item_type));
               }
               return grouped.map(({ representative: inv, all }) => {
                 const isBroken = inv.current_durability <= 0;
