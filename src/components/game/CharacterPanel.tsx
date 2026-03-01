@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle } from '@/lib/game-data';
@@ -350,60 +350,59 @@ export default function CharacterPanel({
             <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${attrsOpen ? '' : '-rotate-90'}`} />
           </CollapsibleTrigger>
           <CollapsibleContent>
-          <div className="grid grid-cols-2 gap-2">
-            {/* Left column: Stats */}
-            <div>
-              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center text-[9px] text-muted-foreground/70 px-1 mb-0.5 gap-x-2">
-                <span>Stat</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="cursor-help underline decoration-dotted text-right">Base</span>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-popover border-border z-50">
-                    <p className="font-display text-sm">Base</p>
-                    <p className="text-xs text-muted-foreground">Your natural stat from race, class, and level-up points.</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="cursor-help underline decoration-dotted text-chart-2 text-right">Gear</span>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-popover border-border z-50">
-                    <p className="font-display text-sm">Gear</p>
-                    <p className="text-xs text-muted-foreground">Bonus from equipped items.</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div className="w-4" />
-              </div>
-              <div className="space-y-0.5">
-                {Object.entries(STAT_LABELS).map(([key, label]) => {
-                  const base = (character as any)[key] as number;
-                  const bonus = equipmentBonuses[key] || 0;
-                  return (
-                    <Tooltip key={key}>
+          <div className="space-y-1.5">
+            {/* Two-column stat layout: Physical | Mental */}
+            <div className="grid grid-cols-2 gap-x-3">
+              {[['str', 'int'], ['dex', 'wis'], ['con', 'cha']].map(([left, right]) => {
+                const lBase = (character as any)[left] as number;
+                const lBonus = equipmentBonuses[left] || 0;
+                const rBase = (character as any)[right] as number;
+                const rBonus = equipmentBonuses[right] || 0;
+                return (
+                  <React.Fragment key={`${left}-${right}`}>
+                    {/* Left stat */}
+                    <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="grid grid-cols-[1fr_auto_auto] items-center text-xs py-0.5 px-1 rounded hover:bg-accent/30 transition-colors cursor-help gap-x-2">
-                          <span className="font-display text-foreground">{STAT_FULL_NAMES[key]}</span>
-                          <span className="tabular-nums text-foreground text-right">{base}</span>
-                          <span className="tabular-nums text-chart-2 text-right w-6">{bonus > 0 ? `+${bonus}` : ''}</span>
+                        <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                          <span className="font-display text-foreground">{STAT_FULL_NAMES[left]}</span>
+                          <span className="flex gap-1.5 tabular-nums">
+                            <span className="text-foreground">{lBase}</span>
+                            <span className="text-chart-2 w-5 text-right">{lBonus > 0 ? `+${lBonus}` : ''}</span>
+                          </span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent className="bg-popover border-border z-50">
-                        <p className="font-display text-sm">{STAT_FULL_NAMES[key]}</p>
-                        <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[key]}</p>
+                        <p className="font-display text-sm">{STAT_FULL_NAMES[left]}</p>
+                        <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[left]}</p>
                       </TooltipContent>
                     </Tooltip>
-                  );
-                })}
-              </div>
+                    {/* Right stat */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                          <span className="font-display text-foreground">{STAT_FULL_NAMES[right]}</span>
+                          <span className="flex gap-1.5 tabular-nums">
+                            <span className="text-foreground">{rBase}</span>
+                            <span className="text-chart-2 w-5 text-right">{rBonus > 0 ? `+${rBonus}` : ''}</span>
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-popover border-border z-50">
+                        <p className="font-display text-sm">{STAT_FULL_NAMES[right]}</p>
+                        <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[right]}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </React.Fragment>
+                );
+              })}
             </div>
-            {/* Right column: AC & Gold */}
-            <div className="border-l border-border pl-2 flex flex-col justify-center gap-1">
-              <span className="text-xs font-display text-foreground">
+            {/* AC & Gold row */}
+            <div className="flex justify-center gap-4 text-xs border-t border-border pt-1">
+              <span className="font-display text-foreground">
                 AC {character.ac + (equipmentBonuses.ac || 0)}
-                {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2">+{equipmentBonuses.ac}</span>}
+                {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2 ml-0.5">+{equipmentBonuses.ac}</span>}
               </span>
-              <span className="text-xs font-display text-primary">Gold {character.gold}</span>
+              <span className="font-display text-primary">Gold {character.gold}</span>
             </div>
           </div>
           </CollapsibleContent>
