@@ -5,7 +5,7 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { Character } from '@/hooks/useCharacter';
 import PlayerGraphView from './PlayerGraphView';
 import PartyPanel from './PartyPanel';
-import { Keyboard, RotateCcw, MapIcon } from 'lucide-react';
+import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer } from 'lucide-react';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -69,6 +69,13 @@ interface Props {
     ACTION_NAMES: readonly ActionName[];
     ACTION_LABELS: Record<ActionName, string>;
   };
+  // Action buttons
+  onSearch?: () => void;
+  onOpenVendor?: () => void;
+  onOpenBlacksmith?: () => void;
+  onOpenTeleport?: () => void;
+  searchDisabled?: boolean;
+  hasDiscoverable?: boolean;
 }
 
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
@@ -78,6 +85,7 @@ export default function MapPanel({
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
+  onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, searchDisabled, hasDiscoverable,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -263,8 +271,71 @@ export default function MapPanel({
             <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
           )}
 
-          {/* Legend hover icon — bottom-right */}
-          <div className="absolute bottom-1 right-1 z-10">
+          {/* Bottom toolbar — action buttons + legend */}
+          <div className="absolute bottom-1 left-1 right-1 z-10 flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <TooltipProvider delayDuration={200}>
+                {onSearch && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onSearch}
+                        disabled={searchDisabled}
+                        className={`h-5 w-5 flex items-center justify-center rounded border transition-colors disabled:opacity-40 ${
+                          hasDiscoverable
+                            ? 'bg-primary/20 border-primary/50 shadow-[0_0_6px_hsl(var(--primary)/0.4)] animate-pulse'
+                            : 'bg-background/70 border-border/50 hover:bg-muted/60'
+                        }`}
+                      >
+                        <Search className={`h-3 w-3 ${hasDiscoverable ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Search (5 CP)</TooltipContent>
+                  </Tooltip>
+                )}
+                {onOpenVendor && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onOpenVendor}
+                        className="h-5 w-5 flex items-center justify-center rounded bg-primary/15 border border-primary/40 shadow-[0_0_6px_hsl(var(--primary)/0.3)] hover:bg-primary/25 transition-colors"
+                      >
+                        <ShoppingCart className="h-3 w-3 text-primary" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Shop</TooltipContent>
+                  </Tooltip>
+                )}
+                {onOpenBlacksmith && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onOpenBlacksmith}
+                        className="h-5 w-5 flex items-center justify-center rounded bg-dwarvish/15 border border-dwarvish/40 shadow-[0_0_6px_hsl(var(--dwarvish)/0.3)] hover:bg-dwarvish/25 transition-colors"
+                      >
+                        <Hammer className="h-3 w-3 text-dwarvish" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Blacksmith</TooltipContent>
+                  </Tooltip>
+                )}
+                {onOpenTeleport && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onOpenTeleport}
+                        className="h-5 w-5 flex items-center justify-center rounded bg-primary/15 border border-primary/40 shadow-[0_0_6px_hsl(var(--primary)/0.3)] hover:bg-primary/25 transition-colors"
+                      >
+                        <span className="text-[10px]">🌀</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      {characterLevel >= 25 ? 'Recall' : 'Teleport'}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+            </div>
             <HoverCard openDelay={100} closeDelay={200}>
               <HoverCardTrigger asChild>
                 <button className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors">

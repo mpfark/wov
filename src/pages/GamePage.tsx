@@ -1741,15 +1741,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               npcs={npcs}
               character={character}
               eventLog={eventLog}
-              onSearch={handleSearch}
               onAttack={handleAttack}
               onTalkToNPC={npc => setTalkingToNPC(npc)}
-              onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
-              onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
-              onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
-                if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
-                setTeleportOpen(true);
-              } : undefined}
               inCombat={inCombat}
               activeCombatCreatureId={activeCombatCreatureId}
               engagedCreatureIds={engagedCreatureIds}
@@ -1868,6 +1861,15 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             showTargetSelector={
               [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb')
             }
+            onSearch={handleSearch}
+            onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
+            onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
+            onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
+              if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
+              setTeleportOpen(true);
+            } : undefined}
+            searchDisabled={character.cp < 5}
+            hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
           />
         </div>
       </div>

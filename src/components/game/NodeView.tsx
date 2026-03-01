@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusBarsStrip';
 import { useState, useEffect } from 'react';
-import { ChevronDown, Search, ShoppingCart, Hammer } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 const AREA_TYPE_HEADER_COLORS: Record<string, string> = {
   forest: 'hsl(120 40% 55%)',
@@ -37,12 +37,8 @@ interface Props {
   npcs?: NPC[];
   character: Character;
   eventLog: string[];
-  onSearch: () => void;
   onAttack: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;
-  onOpenVendor?: () => void;
-  onOpenBlacksmith?: () => void;
-  onOpenTeleport?: () => void;
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
   engagedCreatureIds?: string[];
@@ -63,7 +59,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, area, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith, onOpenTeleport,
+  node, region, area, players, creatures, npcs = [], character, eventLog, onAttack, onTalkToNPC,
   inCombat, activeCombatCreatureId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   actionBindings,
   poisonStacks = {},
@@ -315,37 +311,7 @@ export default function NodeView({
 
         {/* Compact Action Bar - pinned to bottom */}
         <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
-          {/* Row 1: Core actions */}
-          <div className="flex gap-1 justify-center">
-            {(() => {
-              const hasHidden = node.connections?.some((c: any) => c.hidden);
-              const hasLoot = node.searchable_items && node.searchable_items.length > 0;
-              const hasDiscoverable = hasHidden || hasLoot;
-              return (
-                <Button variant="secondary" size="sm" onClick={onSearch} disabled={character.cp < 5} className={`font-display text-[10px] h-6 px-2 ${hasDiscoverable ? 'ring-1 ring-primary/40 text-primary animate-pulse' : ''}`}>
-                  <Search className="h-3 w-3 mr-0.5" /> Search <span className="ml-0.5 text-muted-foreground">(5)</span>
-                  {actionBindings?.search?.[0] && (
-                    <span className="ml-1 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings.search[0])}]</span>
-                  )}
-                </Button>
-              );
-            })()}
-            {onOpenVendor && (
-              <Button variant="outline" size="sm" onClick={onOpenVendor} className="font-display text-[10px] h-6 px-2 text-primary">
-                <ShoppingCart className="h-3 w-3 mr-0.5" /> Shop
-              </Button>
-            )}
-            {onOpenBlacksmith && (
-              <Button variant="outline" size="sm" onClick={onOpenBlacksmith} className="font-display text-[10px] h-6 px-2 text-dwarvish">
-                <Hammer className="h-3 w-3 mr-0.5" /> Smithy
-              </Button>
-            )}
-            {onOpenTeleport && (
-              <Button variant="outline" size="sm" onClick={onOpenTeleport} className="font-display text-[10px] h-6 px-2 text-primary">
-                🌀 {character.level >= 25 && !node.is_teleport ? 'Recall' : 'Teleport'}
-              </Button>
-            )}
-          </div>
+          {/* Abilities */}
 
 
 
