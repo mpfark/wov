@@ -41,6 +41,7 @@ interface Props {
   onBeltPotion?: (inventoryId: string) => void;
   onUnbeltPotion?: (inventoryId: string) => void;
   inCombat?: boolean;
+  actionBindings?: Record<string, string[]>;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -321,6 +322,7 @@ export default function CharacterPanel({
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
+  actionBindings,
 }: Props) {
   const [attrsOpen, setAttrsOpen] = useState(true);
   const [equipOpen, setEquipOpen] = useState(true);
@@ -458,7 +460,11 @@ export default function CharacterPanel({
                 const potion = beltedPotions.find(p => p.belt_slot === slot);
                 return (
                   <div key={slot} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
-                    <span className="text-muted-foreground text-[9px] w-4">{slot}.</span>
+                    <span className="text-muted-foreground text-[9px] w-4">
+                      {actionBindings?.[`potion${slot}`]?.[0]
+                        ? `[${actionBindings[`potion${slot}`][0]}]`
+                        : `${slot}.`}
+                    </span>
                     {potion ? (
                       <>
                         <Tooltip>
