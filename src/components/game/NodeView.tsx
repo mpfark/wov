@@ -3,8 +3,6 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
-import { PartyMember } from '@/hooks/useParty';
-import { InventoryItem } from '@/hooks/useInventory';
 import { GroundLootItem } from '@/hooks/useGroundLoot';
 import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
@@ -52,8 +50,6 @@ interface Props {
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
   abilityTargetId?: string | null;
-  beltedPotions?: InventoryItem[];
-  onUseBeltPotion?: (inventoryId: string) => void;
   actionBindings?: ActionBindings;
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
@@ -69,7 +65,7 @@ interface Props {
 export default function NodeView({
   node, region, area, players, creatures, npcs = [], character, eventLog, onSearch, onAttack, onTalkToNPC, onOpenVendor, onOpenBlacksmith, onOpenTeleport,
   inCombat, activeCombatCreatureId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
-  beltedPotions = [], onUseBeltPotion, actionBindings,
+  actionBindings,
   poisonStacks = {},
   igniteStacks = {},
   sunderDebuff,
@@ -351,31 +347,8 @@ export default function NodeView({
             )}
           </div>
 
-          {/* Row 2: Belt Potions */}
-          {beltedPotions.length > 0 && onUseBeltPotion && (
-            <div className="flex flex-wrap gap-1 justify-center">
-              {beltedPotions.map((p, idx) => (
-                <Tooltip key={p.id}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onUseBeltPotion(p.id)}
-                      className="font-display text-[10px] text-blood border-blood/30 h-5 px-1.5"
-                    >
-                      🧪 {p.item.name.length > 6 ? p.item.name.slice(0, 6) + '…' : p.item.name}
-                      {actionBindings?.[`potion${idx + 1}` as keyof ActionBindings]?.[0] && (
-                        <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`potion${idx + 1}` as keyof ActionBindings][0])}]</span>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    {p.item.name}
-                  </TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
-          )}
+
+
 
           {/* Row 3: Abilities */}
           {classAbilities.length > 0 && onUseAbility && (

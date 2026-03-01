@@ -1713,6 +1713,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             onBeltPotion={beltPotion}
             onUnbeltPotion={unbeltPotion}
             inCombat={inCombat}
+            actionBindings={keyboardMovement.actionBindings}
             baseRegen={baseRegen}
             itemHpRegen={itemHpRegen}
             foodBuff={foodBuff}
@@ -1756,8 +1757,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
               onUseAbility={handleUseAbility}
               abilityTargetId={abilityTargetId}
-              beltedPotions={beltedPotions}
-              onUseBeltPotion={handleUseConsumable}
               actionBindings={keyboardMovement.actionBindings}
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
