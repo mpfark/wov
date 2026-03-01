@@ -1770,6 +1770,24 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               }}
               partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
+              statusBarsProps={{
+                equipmentBonuses,
+                isAtInn: currentNode?.is_inn ?? false,
+                regenBuff,
+                regenTick,
+                baseRegen,
+                itemHpRegen,
+                foodBuff,
+                critBuff,
+                acBuff,
+                poisonBuff,
+                damageBuff,
+                evasionBuff,
+                igniteBuff,
+                absorbBuff,
+                partyRegenBuff,
+                focusStrikeBuff,
+              }}
             />
           </div>
           {/* Event Log - docked at bottom of middle column, 1/3 height */}

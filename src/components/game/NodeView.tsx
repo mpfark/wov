@@ -12,6 +12,7 @@ import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusBarsStrip';
 import { useState, useEffect } from 'react';
 import { ChevronDown, Search, ShoppingCart, Hammer } from 'lucide-react';
 
@@ -61,6 +62,8 @@ interface Props {
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
   partyMemberHp?: Map<string, { hp: number; max_hp: number }>;
+  // Status bars props
+  statusBarsProps?: Omit<StatusBarsStripProps, 'character'>;
 }
 
 export default function NodeView({
@@ -74,6 +77,7 @@ export default function NodeView({
   onPickUpLoot,
   partyMemberIds,
   partyMemberHp,
+  statusBarsProps,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [areaOpen, setAreaOpen] = useState(true);
@@ -306,8 +310,15 @@ export default function NodeView({
           </Collapsible>
         )}
 
+        {/* Status Bars — above action bar */}
+        {statusBarsProps && (
+          <div className="pt-1.5 border-t border-border mt-1">
+            <StatusBarsStrip character={character} {...statusBarsProps} />
+          </div>
+        )}
+
         {/* Compact Action Bar - pinned to bottom */}
-        <div className="pt-2 border-t border-border mt-2 space-y-1.5 flex flex-col items-center">
+        <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
           {/* Row 1: Core actions */}
           <div className="flex gap-1 justify-center">
             {(() => {

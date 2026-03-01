@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getCharacterTitle, getMaxMp, getMpRegenRate } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
@@ -322,10 +322,6 @@ export default function CharacterPanel({
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
 }: Props) {
-  const hpPercent = Math.round((character.hp / character.max_hp) * 100);
-  const xpForNext = getXpForLevel(character.level);
-  const xpPercent = Math.round((character.xp / xpForNext) * 100);
-  const totalAC = character.ac + (equipmentBonuses.ac || 0);
   const [attrsOpen, setAttrsOpen] = useState(true);
   const [equipOpen, setEquipOpen] = useState(true);
 
@@ -345,163 +341,6 @@ export default function CharacterPanel({
           <p className="text-xs text-muted-foreground">
             {RACE_LABELS[character.race]} {CLASS_LABELS[character.class]} — Lvl {character.level}
           </p>
-        </div>
-
-        {/* HP Bar */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="cursor-help">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-muted-foreground">HP</span>
-                <span className="flex items-center gap-1">
-                  {regenTick && (
-                    <span className="text-[10px] text-elvish animate-fade-in font-display">+regen</span>
-                  )}
-                  <span className="text-blood">{character.hp}/{character.max_hp}</span>
-                </span>
-              </div>
-              <div className={`h-2 bg-background rounded-full overflow-hidden border transition-all duration-300 ${regenTick ? 'border-elvish shadow-[0_0_8px_hsl(var(--elvish)/0.6)]' : 'border-border'}`}>
-                <div
-                  className="h-full transition-all duration-500"
-                  style={{
-                    width: `${hpPercent}%`,
-                    background: hpPercent > 50 ? 'hsl(var(--elvish))' : hpPercent > 25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
-                  }}
-                />
-              </div>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="bg-popover border-border z-50 space-y-1">
-            <p className="font-display text-sm">Regeneration</p>
-            <p className="text-xs text-muted-foreground">Base (CON): <span className="text-elvish">{baseRegen} HP</span> every <span className="text-foreground">15s</span></p>
-            {itemHpRegen > 0 && (
-              <p className="text-xs text-elvish">⚙️ Gear: <span className="text-foreground">+{itemHpRegen} HP</span></p>
-            )}
-            {isAtInn && (
-              <p className="text-xs text-elvish">🏨 Inn Rest: <span className="text-foreground">3× multiplier</span></p>
-            )}
-            {regenBuff && Date.now() < regenBuff.expiresAt && (
-              <p className="text-xs text-primary">🧪 Potion: <span className="text-foreground">{regenBuff.multiplier}× multiplier</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
-            )}
-            {foodBuff && Date.now() < foodBuff.expiresAt && (
-              <p className="text-xs text-elvish">🍞 Food: <span className="text-foreground">+{foodBuff.flatRegen} HP</span> <span className="text-muted-foreground">({Math.ceil((foodBuff.expiresAt - Date.now()) / 1000)}s left)</span></p>
-            )}
-            {(() => {
-              const potionMult = regenBuff && Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
-              const innMult = isAtInn ? 3 : 1;
-              const foodRegen = foodBuff && Date.now() < foodBuff.expiresAt ? foodBuff.flatRegen : 0;
-              const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * potionMult * innMult), 1);
-              return <p className="text-xs font-display text-elvish border-t border-border pt-1">Total: {total} HP every 15s</p>;
-            })()}
-          </TooltipContent>
-        </Tooltip>
-
-        {/* CP Bar */}
-        {(() => {
-          const cp = character.cp ?? 100;
-          const maxCp = character.max_cp ?? 100;
-          const cpPercent = Math.round((cp / maxCp) * 100);
-          const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
-          const primaryVal = (character as any)[primaryStat] ?? 10;
-          const cpRegen = getCpRegenRate(primaryVal);
-          const hasInspire = regenBuff && Date.now() < regenBuff.expiresAt;
-          const inspireMult = hasInspire ? regenBuff.multiplier : 1;
-          const hasFood = foodBuff && Date.now() < foodBuff.expiresAt;
-          const foodCpRegen = hasFood ? foodBuff.flatRegen * 0.5 : 0;
-          const innMult = isAtInn ? 3 : 1;
-          const effectiveRegen = (cpRegen + foodCpRegen) * innMult * inspireMult;
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="cursor-help">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">CP</span>
-                    <span className="text-[hsl(var(--primary))]">{cp}/{maxCp}</span>
-                  </div>
-                  <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
-                    <div
-                      className="h-full transition-all duration-500 rounded-full"
-                      style={{
-                        width: `${cpPercent}%`,
-                        background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
-                      }}
-                    />
-                  </div>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="bg-popover border-border z-50 space-y-1">
-                <p className="font-display text-sm">Concentration Points</p>
-                {(() => {
-                  const mentalMod = Math.max(
-                    Math.floor((character.int - 10) / 2),
-                    Math.floor((character.wis - 10) / 2),
-                    Math.floor((character.cha - 10) / 2),
-                    0
-                  );
-                  const levelPart = (character.level - 1) * 3;
-                  const mentalPart = mentalMod * 5;
-                  return <p className="text-xs text-muted-foreground">Max: <span className="text-primary">60</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> mental</p>;
-                })()}
-                <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">6s</span></p>
-                {(hasInspire || hasFood || isAtInn) && (
-                  <p className="text-xs text-muted-foreground">Effective: <span className="text-primary">{effectiveRegen.toFixed(1)} CP</span> / <span className="text-foreground">6s</span></p>
-                )}
-                <p className="text-xs text-muted-foreground">Abilities cost CP to use.</p>
-                {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× CP regen</p>}
-                {hasInspire && <p className="text-xs text-elvish">🎶 Inspire: 2× CP regen</p>}
-                {hasFood && <p className="text-xs text-elvish">🍞 Food: +{(foodCpRegen).toFixed(1)} CP/6s</p>}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })()}
-
-        {/* MP (Stamina) Bar */}
-        {(() => {
-          const mp = character.mp ?? 100;
-          const dexWithGear = character.dex + (equipmentBonuses.dex || 0);
-          const maxMp = getMaxMp(character.level, dexWithGear);
-          const mpPercent = Math.round((mp / maxMp) * 100);
-          const mpRegen = getMpRegenRate(dexWithGear);
-          const dexMod = Math.max(Math.floor((dexWithGear - 10) / 2), 0);
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="cursor-help">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Stamina</span>
-                    <span className="text-dwarvish">{mp}/{maxMp}</span>
-                  </div>
-                  <div className="h-2 bg-background rounded-full overflow-hidden border border-border">
-                    <div
-                      className="h-full transition-all duration-500 rounded-full"
-                      style={{
-                        width: `${mpPercent}%`,
-                        background: 'linear-gradient(90deg, hsl(var(--dwarvish) / 0.7), hsl(var(--dwarvish)))',
-                      }}
-                    />
-                  </div>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="bg-popover border-border z-50 space-y-1">
-                <p className="font-display text-sm">Stamina (Movement Points)</p>
-                <p className="text-xs text-muted-foreground">Max: <span className="text-dwarvish">100</span> base{dexMod > 0 && <> + <span className="text-dwarvish">{dexMod * 10}</span> DEX</>} + <span className="text-dwarvish">{Math.floor((character.level - 1) * 2)}</span> level</p>
-                <p className="text-xs text-muted-foreground">Each move costs <span className="text-dwarvish">10 MP</span>.</p>
-                <p className="text-xs text-muted-foreground">Regen: <span className="text-dwarvish">{mpRegen} MP</span> every <span className="text-foreground">3s</span></p>
-                {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× stamina regen</p>}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })()}
-
-        {/* XP Bar */}
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-muted-foreground">XP</span>
-            <span className="text-primary">{character.xp}/{xpForNext}</span>
-          </div>
-          <div className="h-1.5 bg-background rounded-full overflow-hidden border border-border">
-            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${xpPercent}%` }} />
-          </div>
         </div>
 
         {/* Stats — vertical breakdown */}
@@ -558,18 +397,14 @@ export default function CharacterPanel({
                 })}
               </div>
             </div>
-            {/* Right column: Active Buffs */}
-            <div className="border-l border-border pl-2">
-              <div className="text-[9px] text-muted-foreground/70 mb-0.5">Buffs</div>
-              <ActiveBuffs isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff} acBuff={acBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff} igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff} focusStrikeBuff={focusStrikeBuff} />
+            {/* Right column: AC & Gold */}
+            <div className="border-l border-border pl-2 flex flex-col justify-center gap-1">
+              <span className="text-xs font-display text-foreground">
+                AC {character.ac + (equipmentBonuses.ac || 0)}
+                {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2">+{equipmentBonuses.ac}</span>}
+              </span>
+              <span className="text-xs font-display text-primary">Gold {character.gold}</span>
             </div>
-          </div>
-          <div className="flex gap-3 justify-center text-xs mt-1.5">
-            <span className="font-display text-foreground">
-              AC {totalAC}
-              {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2">+{equipmentBonuses.ac}</span>}
-            </span>
-            <span className="font-display text-primary">Gold {character.gold}</span>
           </div>
           </CollapsibleContent>
         </Collapsible>
