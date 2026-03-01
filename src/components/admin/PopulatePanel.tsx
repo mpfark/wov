@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Wand2, ChevronDown, Check, Swords, X } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
+import { calculateHumanoidGold } from '@/lib/game-data';
 
 interface GeneratedCreature {
   temp_id?: string;
@@ -106,6 +107,11 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
     try {
       for (const creature of generated.creatures) {
         const nodeId = creature.node_temp_id; // Already a real UUID
+        const isHumanoid = creature.is_humanoid || false;
+        const goldLoot = isHumanoid
+          ? [calculateHumanoidGold(creature.level, creature.rarity)]
+          : [];
+
         await supabase.from('creatures').insert({
           name: creature.name,
           description: creature.description,
@@ -116,10 +122,10 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
           ac: creature.ac,
           rarity: creature.rarity as any,
           is_aggressive: creature.is_aggressive,
-          is_humanoid: creature.is_humanoid || false,
+          is_humanoid: isHumanoid,
           respawn_seconds: creature.respawn_seconds || 300,
           stats: creature.stats,
-          loot_table: [],
+          loot_table: goldLoot,
           loot_table_id: creature.loot_table_id || null,
           drop_chance: creature.drop_chance || 0.3,
         });

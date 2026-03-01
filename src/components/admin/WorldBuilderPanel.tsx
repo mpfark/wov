@@ -12,6 +12,7 @@ import { Loader2, Wand2, ChevronDown, Check, MapPin, Swords, MessageSquare, Plus
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
 import PopulateNodeSelector from './PopulateNodeSelector';
 import WorldBuilderRulebook from './WorldBuilderRulebook';
+import { calculateHumanoidGold } from '@/lib/game-data';
 
 interface GeneratedRegion {
   name: string;
@@ -380,6 +381,11 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
         const nodeId = resolveTarget(creature.node_temp_id);
         if (!nodeId) continue;
 
+        const isHumanoid = creature.is_humanoid || false;
+        const goldLoot = isHumanoid
+          ? [calculateHumanoidGold(creature.level, creature.rarity)]
+          : [];
+
         await supabase.from('creatures').insert({
           name: creature.name,
           description: creature.description,
@@ -390,10 +396,10 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
           ac: creature.ac,
           rarity: creature.rarity as any,
           is_aggressive: creature.is_aggressive,
-          is_humanoid: creature.is_humanoid || false,
+          is_humanoid: isHumanoid,
           respawn_seconds: creature.respawn_seconds || 300,
           stats: creature.stats,
-          loot_table: [],
+          loot_table: goldLoot,
           loot_table_id: creature.loot_table_id || null,
           drop_chance: creature.drop_chance || 0.3,
         });
