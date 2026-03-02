@@ -9,6 +9,23 @@ const corsHeaders = {
 
 const ALL_SLOTS = ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"] as const;
 
+// In-memory rate limiter: max 10 requests per 60 seconds per user
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+const rateLimitMap = new Map<string, number[]>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const timestamps = (rateLimitMap.get(userId) || []).filter(t => now - t < RATE_LIMIT_WINDOW_MS);
+  if (timestamps.length >= RATE_LIMIT_MAX) {
+    rateLimitMap.set(userId, timestamps);
+    return false;
+  }
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return true;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -30,6 +47,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const userId = claimsData.claims.sub;
+
+    if (!checkRateLimit(userId as string)) {
+      return new Response(JSON.stringify({ error: "Rate limited. Please wait before making more requests." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const roles = (roleData || []).map((r: any) => r.role);
