@@ -857,16 +857,36 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       addLog('🌑 You slip through the shadows unnoticed...');
       setStealthBuff(null);
     } else {
-      // Opportunity attack against the fleeing player
+      // Opportunity attack against the fleeing player (absorb shields soak damage first)
+      let currentAbsorb = absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0;
       for (const creature of livingCreatures) {
         if (currentHp <= 0) break;
         const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
         if (atkRoll >= effectiveAC) {
-          const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-          currentHp = Math.max(currentHp - dmg, 0);
-          addLog(`⚔️ ${creature.name} strikes ${party ? character.name : 'you'} while fleeing! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${dmg} damage!`);
+          const rawDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+          let dmgToHp = rawDmg;
+          if (currentAbsorb > 0) {
+            const absorbed = Math.min(currentAbsorb, rawDmg);
+            currentAbsorb -= absorbed;
+            dmgToHp = rawDmg - absorbed;
+            if (absorbed > 0) {
+              addLog(`🛡️ Your shield absorbs ${absorbed} damage from ${creature.name}'s opportunity attack!`);
+            }
+          }
+          if (dmgToHp > 0) {
+            currentHp = Math.max(currentHp - dmgToHp, 0);
+          }
+          addLog(`⚔️ ${creature.name} strikes ${party ? character.name : 'you'} while fleeing! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${rawDmg} damage${dmgToHp < rawDmg ? ` (${dmgToHp} after shield)` : ''}!`);
         } else {
           addLog(`${creature.name} swipes at ${party ? character.name : 'you'} while fleeing — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
+        }
+      }
+      // Update absorb buff with remaining shield HP
+      if (absorbBuff && Date.now() < absorbBuff.expiresAt) {
+        if (currentAbsorb <= 0) {
+          setAbsorbBuff(null);
+        } else if (currentAbsorb !== absorbBuff.shieldHp) {
+          setAbsorbBuff({ ...absorbBuff, shieldHp: currentAbsorb });
         }
       }
       // Opportunity attacks against party members at the same node (excluding self)
