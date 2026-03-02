@@ -687,10 +687,10 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     }`}
                     onClick={() => zoomToRegion(region.id)}
                   >
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 min-w-0">
                       <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
-                      <span className="font-display truncate flex-1">{region.name}</span>
-                      <div className="hidden group-hover:flex items-center gap-0.5">
+                      <span className="font-display truncate min-w-0">{region.name}</span>
+                      <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
                         {onEditRegion && (
                           <button
                             onClick={e => { e.stopPropagation(); onEditRegion(region); }}
