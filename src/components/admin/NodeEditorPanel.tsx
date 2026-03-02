@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Swords, Clock, Sparkles, Loader2 } from 'lucide-react';
+import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Swords, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AREA_TYPES, type AreaType } from '@/hooks/useNodes';
 import ItemPickerList from './ItemPickerList';
 
 interface VendorEntry {
@@ -387,6 +389,9 @@ export default function NodeEditorPanel({
   const [vendorForm, setVendorForm] = useState({ item_id: '', price: 10, stock: -1 });
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodeId);
   const [allAreas, setAllAreas] = useState<{ id: string; name: string; region_id: string; area_type: string; description: string }[]>([]);
+  const [areaDialogOpen, setAreaDialogOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState<{ id?: string; name: string; description: string; region_id: string; area_type: AreaType } | null>(null);
+  const [areaSaving, setAreaSaving] = useState(false);
 
   // For assigning existing entities
   const [allCreatures, setAllCreatures] = useState<any[]>([]);
@@ -589,6 +594,45 @@ export default function NodeEditorPanel({
     if (activeNodeId) loadVendorInventory(activeNodeId);
   };
 
+  /* ── Area create/edit ── */
+  const openCreateArea = () => {
+    setEditingArea({ name: '', description: '', region_id: selectedRegionId, area_type: 'other' });
+    setAreaDialogOpen(true);
+  };
+  const openEditArea = () => {
+    const area = allAreas.find(a => a.id === form.area_id);
+    if (!area) return;
+    setEditingArea({ id: area.id, name: area.name, description: area.description, region_id: area.region_id, area_type: area.area_type as AreaType });
+    setAreaDialogOpen(true);
+  };
+  const saveArea = async () => {
+    if (!editingArea || !editingArea.name.trim()) return toast.error('Name is required');
+    setAreaSaving(true);
+    if (editingArea.id) {
+      const { error } = await supabase.from('areas').update({
+        name: editingArea.name.trim(), description: editingArea.description.trim(),
+        region_id: editingArea.region_id, area_type: editingArea.area_type,
+      } as any).eq('id', editingArea.id);
+      if (error) { toast.error(error.message); setAreaSaving(false); return; }
+      toast.success('Area updated');
+    } else {
+      const { data: newArea, error } = await supabase.from('areas').insert({
+        name: editingArea.name.trim(), description: editingArea.description.trim(),
+        region_id: editingArea.region_id, area_type: editingArea.area_type,
+      } as any).select().single();
+      if (error) { toast.error(error.message); setAreaSaving(false); return; }
+      toast.success('Area created');
+      if (newArea) setForm(f => ({ ...f, area_id: newArea.id }));
+    }
+    setAreaSaving(false);
+    setAreaDialogOpen(false);
+    setEditingArea(null);
+    // Refresh areas list
+    const { data } = await supabase.from('areas').select('id, name, region_id, area_type, description').order('name');
+    if (data) setAllAreas(data as any);
+    onSaved();
+  };
+
   /* ── Save node ── */
   const saveNode = async () => {
     if (!selectedRegionId) return toast.error('Select a region');
@@ -710,17 +754,27 @@ export default function NodeEditorPanel({
 
               <div>
                 <label className="text-[10px] text-muted-foreground">Area (optional)</label>
-                <Select value={form.area_id || 'none'} onValueChange={v => setForm(f => ({ ...f, area_id: v === 'none' ? '' : v }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="No area" /></SelectTrigger>
-                  <SelectContent className="bg-popover border-border z-50 max-h-60">
-                    <SelectItem value="none" className="text-xs text-muted-foreground">No area</SelectItem>
-                    {allAreas.filter(a => a.region_id === selectedRegionId).map(a => (
-                      <SelectItem key={a.id} value={a.id} className="text-xs">
-                        {a.name} <span className="text-muted-foreground capitalize">({a.area_type})</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-1">
+                  <Select value={form.area_id || 'none'} onValueChange={v => setForm(f => ({ ...f, area_id: v === 'none' ? '' : v }))}>
+                    <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="No area" /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50 max-h-60">
+                      <SelectItem value="none" className="text-xs text-muted-foreground">No area</SelectItem>
+                      {allAreas.filter(a => a.region_id === selectedRegionId).map(a => (
+                        <SelectItem key={a.id} value={a.id} className="text-xs">
+                          {a.name} <span className="text-muted-foreground capitalize">({a.area_type})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.area_id && (
+                    <Button variant="ghost" size="sm" onClick={openEditArea} className="h-8 w-8 p-0 shrink-0" title="Edit area">
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={openCreateArea} className="h-8 w-8 p-0 shrink-0" title="New area">
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
                 {form.area_id && (() => {
                   const area = allAreas.find(a => a.id === form.area_id);
                   return area?.description ? (
@@ -1050,6 +1104,49 @@ export default function NodeEditorPanel({
           </Tabs>
         </div>
       </ScrollArea>
+      {/* Area Create/Edit Dialog */}
+      <Dialog open={areaDialogOpen} onOpenChange={(open) => { setAreaDialogOpen(open); if (!open) setEditingArea(null); }}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-primary text-sm">{editingArea?.id ? 'Edit Area' : 'New Area'}</DialogTitle>
+          </DialogHeader>
+          {editingArea && (
+            <div className="space-y-2">
+              <Input placeholder="Area name" value={editingArea.name} className="h-8 text-xs"
+                onChange={e => setEditingArea(a => a ? { ...a, name: e.target.value } : a)} />
+              <Textarea placeholder="Description" value={editingArea.description} rows={2} className="text-xs"
+                onChange={e => setEditingArea(a => a ? { ...a, description: e.target.value } : a)} />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Region</label>
+                  <Select value={editingArea.region_id} onValueChange={v => setEditingArea(a => a ? { ...a, region_id: v } : a)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {regions.map(r => (
+                        <SelectItem key={r.id} value={r.id} className="text-xs">{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Type</label>
+                  <Select value={editingArea.area_type} onValueChange={v => setEditingArea(a => a ? { ...a, area_type: v as AreaType } : a)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {AREA_TYPES.map(t => (
+                        <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button onClick={saveArea} disabled={areaSaving} className="font-display text-xs w-full">
+                <Save className="w-3 h-3 mr-1" /> {editingArea.id ? 'Save' : 'Create'}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
