@@ -26,9 +26,10 @@ export interface StatusBarsStripProps {
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number } | null;
   focusStrikeBuff?: { bonusDmg: number } | null;
+  stealthBuff?: { expiresAt: number } | null;
 }
 
-function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
+function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
@@ -40,12 +41,13 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
   const igniteActive = igniteBuff && now < igniteBuff.expiresAt;
   const absorbActive = absorbBuff && now < absorbBuff.expiresAt;
   const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
+  const stealthActive = stealthBuff && now < stealthBuff.expiresAt;
 
   useEffect(() => {
-    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive) return;
+    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [buffActive, foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive]);
+  }, [buffActive, foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
@@ -118,6 +120,12 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
     buffs.push({ emoji: '🎯', label: 'Focus Strike', detail: `+${focusStrikeBuff.bonusDmg} dmg`, color: 'text-primary', bgColor: 'bg-primary/15', pct: 100 });
   }
 
+  if (stealthActive) {
+    const dur = 20_000; // max ~20s duration for Shadowstep
+    const pct = Math.max(0, Math.min(100, ((stealthBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({ emoji: '🌑', label: 'Shadowstep', detail: 'Stealth + ambush bonus', color: 'text-primary', bgColor: 'bg-primary/15', pct });
+  }
+
   if (buffs.length === 0) return null;
 
   return (
@@ -141,7 +149,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
 
 export default function StatusBarsStrip({
   character, equipmentBonuses, isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
-  foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
+  foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
   const cp = character.cp ?? 100;
@@ -267,6 +275,7 @@ export default function StatusBarsStrip({
         isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff}
         acBuff={acBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
         igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff} focusStrikeBuff={focusStrikeBuff}
+        stealthBuff={stealthBuff}
       />
     </div>
   );
