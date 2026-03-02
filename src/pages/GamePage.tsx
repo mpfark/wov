@@ -177,7 +177,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [absorbBuff, setAbsorbBuff] = useState<{ shieldHp: number; expiresAt: number } | null>(null);
   const [partyRegenBuff, setPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number } | null>(null);
   const [lastUsedAbilityCost, setLastUsedAbilityCost] = useState<number>(0);
-  const [sunderDebuff, setSunderDebuff] = useState<{ acReduction: number; expiresAt: number; creatureId: string } | null>(null);
+  const [sunderDebuff, setSunderDebuff] = useState<{ acReduction: number; expiresAt: number; creatureId: string; creatureName: string } | null>(null);
   const [focusStrikeBuff, setFocusStrikeBuff] = useState<{ bonusDmg: number } | null>(null);
   const isDeadRef = useRef(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
@@ -1597,7 +1597,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
       const acReduction = Math.max(2, strMod);
       const durationSec = Math.min(20, 12 + strMod);
-      setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: activeCombatCreatureId });
+      setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: activeCombatCreatureId, creatureName: creature.name });
       addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
       if (!inCombat || !activeCombatCreatureId) {
