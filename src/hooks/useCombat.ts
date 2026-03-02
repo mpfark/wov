@@ -49,7 +49,7 @@ interface UseCombatParams {
   onAddIgniteStack?: (creatureId: string) => void;
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   onAbsorbDamage?: (remaining: number) => void;
-  sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string } | null;
+  sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string; creatureName: string } | null;
   disengageNextHit?: { bonusMult: number; expiresAt: number } | null;
   onClearDisengage?: () => void;
   focusStrikeBuff?: { bonusDmg: number } | null;
