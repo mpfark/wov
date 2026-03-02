@@ -174,7 +174,11 @@ export default function AreaManager({ onDataChanged }: Props) {
   };
 
   const deleteType = async (name: string) => {
-    if (!window.confirm(`Delete type "${name}"? Areas using it will keep the value but it won't appear in dropdowns.`)) return;
+    const usageCount = areas.filter(a => a.area_type === name).length;
+    const msg = usageCount > 0
+      ? `Type "${name}" is used by ${usageCount} area${usageCount > 1 ? 's' : ''}. Deleting it will remove it from dropdowns but those areas will keep the value. Continue?`
+      : `Delete type "${name}"?`;
+    if (!window.confirm(msg)) return;
     const { error } = await supabase.from('area_types').delete().eq('name', name);
     if (error) return toast.error(error.message);
     toast.success('Type deleted');
