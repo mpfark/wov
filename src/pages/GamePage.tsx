@@ -169,11 +169,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [acBuff, setAcBuff] = useState<{ bonus: number; expiresAt: number } | null>(null);
   const [dotDebuff, setDotDebuff] = useState<{ damagePerTick: number; intervalMs: number; expiresAt: number; creatureId: string } | null>(null);
   const [poisonBuff, setPoisonBuff] = useState<{ expiresAt: number } | null>(null);
-  const [poisonStacks, setPoisonStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
+  const [poisonStacks, setPoisonStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number; creatureName: string; creatureLevel: number; creatureRarity: string; creatureLootTable: any[]; lootTableId: string | null; dropChance: number; maxHp: number; lastKnownHp: number }>>({});
   const [evasionBuff, setEvasionBuff] = useState<{ dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null>(null);
   const [disengageNextHit, setDisengageNextHit] = useState<{ bonusMult: number; expiresAt: number } | null>(null);
   const [igniteBuff, setIgniteBuff] = useState<{ expiresAt: number } | null>(null);
-  const [igniteStacks, setIgniteStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>>({});
+  const [igniteStacks, setIgniteStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number; creatureName: string; creatureLevel: number; creatureRarity: string; creatureLootTable: any[]; lootTableId: string | null; dropChance: number; maxHp: number; lastKnownHp: number }>>({});
   const [absorbBuff, setAbsorbBuff] = useState<{ shieldHp: number; expiresAt: number } | null>(null);
   const [partyRegenBuff, setPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number } | null>(null);
   const [lastUsedAbilityCost, setLastUsedAbilityCost] = useState<number>(0);
@@ -510,23 +510,45 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const handleAddPoisonStack = useCallback((creatureId: string) => {
     const dexMod = getStatMod2(character.dex);
     const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2));
+    const creature = creatures.find(c => c.id === creatureId);
     setPoisonStacks(prev => {
       const existing = prev[creatureId];
       const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-      return { ...prev, [creatureId]: { stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + 25000 } };
+      return { ...prev, [creatureId]: {
+        stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + 25000,
+        creatureName: existing?.creatureName || creature?.name || 'Unknown',
+        creatureLevel: existing?.creatureLevel || creature?.level || 1,
+        creatureRarity: existing?.creatureRarity || creature?.rarity || 'regular',
+        creatureLootTable: existing?.creatureLootTable || (creature?.loot_table as any[]) || [],
+        lootTableId: existing?.lootTableId ?? creature?.loot_table_id ?? null,
+        dropChance: existing?.dropChance ?? creature?.drop_chance ?? 0.5,
+        maxHp: existing?.maxHp || creature?.max_hp || 10,
+        lastKnownHp: existing?.lastKnownHp ?? creature?.hp ?? 10,
+      }};
     });
-  }, [character.dex]);
+  }, [character.dex, creatures]);
 
   const handleAddIgniteStack = useCallback((creatureId: string) => {
     const intMod = getStatMod2(character.int);
     const dmgPerTick = Math.max(1, Math.floor(intMod * 1.2));
+    const creature = creatures.find(c => c.id === creatureId);
     setIgniteStacks(prev => {
       const existing = prev[creatureId];
       const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
       const duration = Math.min(45000, 30000 + intMod * 1000);
-      return { ...prev, [creatureId]: { stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + duration } };
+      return { ...prev, [creatureId]: {
+        stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + duration,
+        creatureName: existing?.creatureName || creature?.name || 'Unknown',
+        creatureLevel: existing?.creatureLevel || creature?.level || 1,
+        creatureRarity: existing?.creatureRarity || creature?.rarity || 'regular',
+        creatureLootTable: existing?.creatureLootTable || (creature?.loot_table as any[]) || [],
+        lootTableId: existing?.lootTableId ?? creature?.loot_table_id ?? null,
+        dropChance: existing?.dropChance ?? creature?.drop_chance ?? 0.5,
+        maxHp: existing?.maxHp || creature?.max_hp || 10,
+        lastKnownHp: existing?.lastKnownHp ?? creature?.hp ?? 10,
+      }};
     });
-  }, [character.int]);
+  }, [character.int, creatures]);
 
   const handleAbsorbDamage = useCallback((remaining: number) => {
     setAbsorbBuff(prev => {
@@ -611,6 +633,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [dotDebuff, creatures, creatureHpOverrides, addLog]);
 
   // Poison DoT tick effect — every 3 seconds, deal cumulative poison damage per creature
+  // Now persists across node changes using stored creature metadata + server-side RPC
   useEffect(() => {
     const activeStacks = Object.entries(poisonStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
@@ -619,27 +642,40 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       let anyExpired = false;
       for (const [creatureId, stack] of Object.entries(poisonStacks)) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
-        const creature = creatures.find(c => c.id === creatureId);
-        if (!creature || !creature.is_alive || creature.hp <= 0) { anyExpired = true; continue; }
+        // Use local creature if available (same node), otherwise use stored metadata
+        const localCreature = creatures.find(c => c.id === creatureId);
+        const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
+        if (currentHp <= 0) { anyExpired = true; continue; }
         const totalDmg = stack.stacks * stack.damagePerTick;
-        const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
-        updateCreatureHp(creatureId, newHp);
-        broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
+        const newHp = Math.max(currentHp - totalDmg, 0);
+        // Update local overrides if creature is in current node
+        if (localCreature) {
+          updateCreatureHp(creatureId, newHp);
+          broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
+        }
+        // Always apply damage server-side via RPC
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
-        addLog(`🧪 ${creature.name} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+        // Update lastKnownHp in stack state for future ticks
+        setPoisonStacks(prev => {
+          if (!prev[creatureId]) return prev;
+          return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
+        });
+        const cName = localCreature?.name || stack.creatureName;
+        addLog(`🧪 ${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
-          await awardKillRewardsRef.current(creature, { stopCombat: true });
+          // Build a creature-like object for reward calculation
+          const creatureData = localCreature || {
+            name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
+            loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
+          };
+          await awardKillRewardsRef.current(creatureData, { stopCombat: true });
         }
       }
       if (anyExpired) {
         setPoisonStacks(prev => {
           const next = { ...prev };
           for (const key of Object.keys(next)) {
-            if (Date.now() >= next[key].expiresAt) delete next[key];
-            else {
-              const c = creatures.find(cr => cr.id === key);
-              if (!c || !c.is_alive || c.hp <= 0) delete next[key];
-            }
+            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) delete next[key];
           }
           return next;
         });
@@ -649,6 +685,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [poisonStacks, creatures, creatureHpOverrides, addLog]);
 
   // Ignite DoT tick effect — every 3 seconds, deal cumulative burn damage per creature
+  // Now persists across node changes using stored creature metadata + server-side RPC
   useEffect(() => {
     const activeStacks = Object.entries(igniteStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
@@ -657,27 +694,35 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       let anyExpired = false;
       for (const [creatureId, stack] of Object.entries(igniteStacks)) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
-        const creature = creatures.find(c => c.id === creatureId);
-        if (!creature || !creature.is_alive || creature.hp <= 0) { anyExpired = true; continue; }
+        const localCreature = creatures.find(c => c.id === creatureId);
+        const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
+        if (currentHp <= 0) { anyExpired = true; continue; }
         const totalDmg = stack.stacks * stack.damagePerTick;
-        const newHp = Math.max((creatureHpOverrides[creatureId] ?? creature.hp) - totalDmg, 0);
-        updateCreatureHp(creatureId, newHp);
-        broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
+        const newHp = Math.max(currentHp - totalDmg, 0);
+        if (localCreature) {
+          updateCreatureHp(creatureId, newHp);
+          broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
+        }
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
-        addLog(`🔥 ${creature.name} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+        setIgniteStacks(prev => {
+          if (!prev[creatureId]) return prev;
+          return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
+        });
+        const cName = localCreature?.name || stack.creatureName;
+        addLog(`🔥 ${cName} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
-          await awardKillRewardsRef.current(creature, { stopCombat: true });
+          const creatureData = localCreature || {
+            name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
+            loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
+          };
+          await awardKillRewardsRef.current(creatureData, { stopCombat: true });
         }
       }
       if (anyExpired) {
         setIgniteStacks(prev => {
           const next = { ...prev };
           for (const key of Object.keys(next)) {
-            if (Date.now() >= next[key].expiresAt) delete next[key];
-            else {
-              const c = creatures.find(cr => cr.id === key);
-              if (!c || !c.is_alive || c.hp <= 0) delete next[key];
-            }
+            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) delete next[key];
           }
           return next;
         });
