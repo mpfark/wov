@@ -127,8 +127,8 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
   }
 
   return (
-    <div className="flex flex-wrap gap-1 justify-center min-h-[22px]">
-      {buffs.length === 0 && <span className="invisible text-xs px-1.5 py-0.5">placeholder</span>}
+    <div className="flex flex-wrap gap-1 justify-center items-center min-h-[22px]">
+      {buffs.length === 0 && <span className="text-[9px] text-muted-foreground/40 italic font-display tracking-wide">No active buffs</span>}
       {buffs.map(b => (
         <Tooltip key={b.label}>
           <TooltipTrigger asChild>
