@@ -52,9 +52,27 @@ export type Database = {
           },
         ]
       }
+      area_types: {
+        Row: {
+          created_at: string
+          emoji: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          name?: string
+        }
+        Relationships: []
+      }
       areas: {
         Row: {
-          area_type: Database["public"]["Enums"]["area_type"]
+          area_type: string
           created_at: string
           description: string
           id: string
@@ -62,7 +80,7 @@ export type Database = {
           region_id: string
         }
         Insert: {
-          area_type?: Database["public"]["Enums"]["area_type"]
+          area_type?: string
           created_at?: string
           description?: string
           id?: string
@@ -70,7 +88,7 @@ export type Database = {
           region_id: string
         }
         Update: {
-          area_type?: Database["public"]["Enums"]["area_type"]
+          area_type?: string
           created_at?: string
           description?: string
           id?: string
