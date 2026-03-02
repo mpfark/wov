@@ -167,7 +167,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [damageBuff, setDamageBuff] = useState<{ expiresAt: number } | null>(null);
   const [rootDebuff, setRootDebuff] = useState<{ damageReduction: number; expiresAt: number } | null>(null);
   const [acBuff, setAcBuff] = useState<{ bonus: number; expiresAt: number } | null>(null);
-  const [dotDebuff, setDotDebuff] = useState<{ damagePerTick: number; intervalMs: number; expiresAt: number; creatureId: string } | null>(null);
+  const [dotDebuff, setDotDebuff] = useState<{ damagePerTick: number; intervalMs: number; expiresAt: number; creatureId: string; creatureName: string; creatureLevel: number; creatureRarity: string; creatureLootTable: any[]; lootTableId: string | null; dropChance: number; maxHp: number; lastKnownHp: number } | null>(null);
   const [poisonBuff, setPoisonBuff] = useState<{ expiresAt: number } | null>(null);
   const [poisonStacks, setPoisonStacks] = useState<Record<string, { stacks: number; damagePerTick: number; expiresAt: number; creatureName: string; creatureLevel: number; creatureRarity: string; creatureLootTable: any[]; lootTableId: string | null; dropChance: number; maxHp: number; lastKnownHp: number }>>({});
   const [evasionBuff, setEvasionBuff] = useState<{ dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null>(null);
@@ -602,7 +602,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // Keep combat ref updated for regen
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
-  // DoT (Rend bleed) tick effect
+  // DoT (Rend bleed) tick effect — persists across node changes using stored creature metadata + server-side RPC
   useEffect(() => {
     if (!dotDebuff || Date.now() >= dotDebuff.expiresAt) return;
     const interval = setInterval(async () => {
@@ -611,21 +611,33 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         clearInterval(interval);
         return;
       }
-      const creature = creatures.find(c => c.id === dotDebuff.creatureId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) {
+      const localCreature = creatures.find(c => c.id === dotDebuff.creatureId);
+      const currentHp = creatureHpOverrides[dotDebuff.creatureId] ?? localCreature?.hp ?? dotDebuff.lastKnownHp;
+      if (currentHp <= 0) {
         setDotDebuff(null);
         clearInterval(interval);
         return;
       }
-      const newHp = Math.max((creatureHpOverrides[dotDebuff.creatureId] ?? creature.hp) - dotDebuff.damagePerTick, 0);
-      updateCreatureHp(dotDebuff.creatureId, newHp);
-      broadcastDamage(dotDebuff.creatureId, newHp, dotDebuff.damagePerTick, character.name, newHp <= 0);
+      const newHp = Math.max(currentHp - dotDebuff.damagePerTick, 0);
+      // Update local overrides if creature is in current node
+      if (localCreature) {
+        updateCreatureHp(dotDebuff.creatureId, newHp);
+        broadcastDamage(dotDebuff.creatureId, newHp, dotDebuff.damagePerTick, character.name, newHp <= 0);
+      }
+      // Always apply damage server-side via RPC
       await supabase.rpc('damage_creature', { _creature_id: dotDebuff.creatureId, _new_hp: newHp, _killed: newHp <= 0 });
-      addLog(`🩸 ${creature.name} bleeds for ${dotDebuff.damagePerTick} damage!`);
+      // Update lastKnownHp for future ticks
+      setDotDebuff(prev => prev ? { ...prev, lastKnownHp: newHp } : null);
+      const cName = localCreature?.name || dotDebuff.creatureName;
+      addLog(`🩸 ${cName} bleeds for ${dotDebuff.damagePerTick} damage!`);
       if (newHp <= 0) {
         setDotDebuff(null);
         clearInterval(interval);
-        await awardKillRewardsRef.current(creature, { stopCombat: true });
+        const creatureData = localCreature || {
+          name: dotDebuff.creatureName, level: dotDebuff.creatureLevel, rarity: dotDebuff.creatureRarity,
+          loot_table: dotDebuff.creatureLootTable, loot_table_id: dotDebuff.lootTableId, drop_chance: dotDebuff.dropChance,
+        };
+        await awardKillRewardsRef.current(creatureData, { stopCombat: true });
         return;
       }
     }, dotDebuff.intervalMs);
@@ -1447,7 +1459,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       const strMod = getStatMod2(character.str + (equipmentBonuses.str || 0));
       const dmgPerTick = Math.max(2, Math.floor(strMod * 1.5));
       const durationSec = 20 + Math.min(strMod, 6);
-      setDotDebuff({ damagePerTick: dmgPerTick, intervalMs: 3000, expiresAt: Date.now() + durationSec * 1000, creatureId: creature.id });
+      setDotDebuff({ damagePerTick: dmgPerTick, intervalMs: 3000, expiresAt: Date.now() + durationSec * 1000, creatureId: creature.id, creatureName: creature.name, creatureLevel: creature.level, creatureRarity: creature.rarity, creatureLootTable: Array.isArray(creature.loot_table) ? creature.loot_table : [], lootTableId: creature.loot_table_id || null, dropChance: creature.drop_chance ?? 0.5, maxHp: creature.max_hp, lastKnownHp: creatureHpOverrides[creature.id] ?? creature.hp });
       addLog(`${ability.emoji} Rend! ${creature.name} is bleeding for ${dmgPerTick} damage every 3s for ${durationSec}s.`);
     } else if (ability.type === 'poison_buff') {
       const dexMod = getStatMod2(character.dex + (equipmentBonuses.dex || 0));
