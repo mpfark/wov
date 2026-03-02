@@ -689,7 +689,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
-                      <span className="font-display truncate min-w-0">{region.name}</span>
+                      <span className="font-display truncate max-w-[110px]" title={region.name}>{region.name}</span>
                       <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
                         {onEditRegion && (
                           <button
