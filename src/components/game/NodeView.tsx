@@ -13,20 +13,9 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusBarsStrip';
 import { useState, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useAreaTypes } from '@/hooks/useAreaTypes';
+import { getAreaHeaderColor } from '@/lib/area-colors';
 
-const AREA_TYPE_HEADER_COLORS: Record<string, string> = {
-  forest: 'hsl(120 40% 55%)',
-  town: 'hsl(35 55% 60%)',
-  cave: 'hsl(260 35% 60%)',
-  ruins: 'hsl(20 35% 55%)',
-  plains: 'hsl(60 45% 55%)',
-  mountain: 'hsl(210 20% 60%)',
-  swamp: 'hsl(90 30% 45%)',
-  desert: 'hsl(40 55% 60%)',
-  coast: 'hsl(195 55% 55%)',
-  dungeon: 'hsl(0 35% 50%)',
-  other: 'hsl(var(--primary))',
-};
 
 interface Props {
   node: GameNode;
@@ -73,6 +62,7 @@ export default function NodeView({
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [areaOpen, setAreaOpen] = useState(true);
+  const { emojiMap } = useAreaTypes();
 
   // hasTargetedAbility check no longer needed — targeting is handled in PartyPanel
 
@@ -89,7 +79,7 @@ export default function NodeView({
            <div className="text-center border-b border-border pb-2">
             <h2
               className="font-display text-xl text-glow"
-              style={{ color: area ? (AREA_TYPE_HEADER_COLORS[area.area_type] || AREA_TYPE_HEADER_COLORS.other) : undefined }}
+              style={{ color: area ? getAreaHeaderColor(emojiMap[area.area_type] || '📍') : undefined }}
             >
               {getNodeDisplayName(node, area)}
             </h2>

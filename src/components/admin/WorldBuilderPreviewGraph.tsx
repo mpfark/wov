@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useAreaTypes } from '@/hooks/useAreaTypes';
+import { getAreaPreviewColor } from '@/lib/area-colors';
 
 interface GeneratedArea {
   temp_id: string;
@@ -56,19 +58,6 @@ interface Props {
   populateNodeNames?: Map<string, string>;
 }
 
-const AREA_TYPE_COLORS: Record<string, string> = {
-  forest: 'hsl(120 40% 45% / 0.5)',
-  town: 'hsl(35 50% 55% / 0.5)',
-  cave: 'hsl(260 30% 50% / 0.5)',
-  ruins: 'hsl(20 30% 45% / 0.5)',
-  plains: 'hsl(60 40% 50% / 0.5)',
-  mountain: 'hsl(210 15% 50% / 0.5)',
-  swamp: 'hsl(90 30% 35% / 0.5)',
-  desert: 'hsl(40 50% 55% / 0.5)',
-  coast: 'hsl(195 50% 50% / 0.5)',
-  dungeon: 'hsl(0 30% 40% / 0.5)',
-  other: 'hsl(0 0% 50% / 0.5)',
-};
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
@@ -135,6 +124,7 @@ export default function WorldBuilderPreviewGraph({
   nodes, creatures, npcs, items, areas = [], existingAnchors = [], mode, populateNodeNames,
 }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const { emojiMap } = useAreaTypes();
 
   const populatePositions = useMemo(() => {
     if (mode !== 'populate' || !populateNodeNames) return null;
@@ -267,7 +257,8 @@ export default function WorldBuilderPreviewGraph({
     if (!node?.area_temp_id) return null;
     const area = areas.find(a => a.temp_id === node.area_temp_id);
     if (!area) return null;
-    return AREA_TYPE_COLORS[area.area_type] || AREA_TYPE_COLORS.other;
+    const emoji = emojiMap[area.area_type] || '📍';
+    return getAreaPreviewColor(emoji);
   };
 
   return (
