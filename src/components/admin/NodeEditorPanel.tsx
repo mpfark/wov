@@ -9,7 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Swords, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AREA_TYPES, type AreaType } from '@/hooks/useNodes';
+import { type AreaType } from '@/hooks/useNodes';
+import { useAreaTypes } from '@/hooks/useAreaTypes';
 import ItemPickerList from './ItemPickerList';
 
 interface VendorEntry {
@@ -381,6 +382,7 @@ export default function NodeEditorPanel({
     area_id: '' as string,
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
+  const { areaTypes, emojiMap: areaTypeEmoji, refetch: refetchAreaTypes } = useAreaTypes();
   const [creatures, setCreatures] = useState<any[]>([]);
   const [npcs, setNpcs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1133,8 +1135,8 @@ export default function NodeEditorPanel({
                   <Select value={editingArea.area_type} onValueChange={v => setEditingArea(a => a ? { ...a, area_type: v as AreaType } : a)}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {AREA_TYPES.map(t => (
-                        <SelectItem key={t} value={t} className="text-xs capitalize">{t}</SelectItem>
+                      {areaTypes.map(t => (
+                        <SelectItem key={t.name} value={t.name} className="text-xs capitalize">{t.emoji} {t.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
