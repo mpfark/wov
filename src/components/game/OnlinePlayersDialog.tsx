@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Users } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getCharacterTitle } from '@/lib/game-data';
 
 const RACE_LABELS: Record<string, string> = {
   human: 'Human', elf: 'Elf', dwarf: 'Dwarf', halfling: 'Halfling', edain: 'Edain', half_elf: 'Half-Elf',
@@ -52,8 +53,13 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
                 {onlinePlayers.map(p => (
                   <TableRow key={p.id} className={p.id === myCharacterId ? 'bg-primary/5' : ''}>
                     <TableCell className="text-xs font-display">
-                      {p.name}
-                      {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
+                      <div>
+                        {p.name}
+                        {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
+                      </div>
+                      {getCharacterTitle(p.level) && (
+                        <div className="text-[9px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(p.level)}</div>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>
                     <TableCell className="text-xs">{CLASS_LABELS[p.class] || p.class}</TableCell>
