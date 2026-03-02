@@ -859,8 +859,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     } else {
       // Opportunity attack against the fleeing player (absorb shields soak damage first)
       let currentAbsorb = absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0;
+      const hasEvasion = evasionBuff && Date.now() < evasionBuff.expiresAt && evasionBuff.dodgeChance > 0;
       for (const creature of livingCreatures) {
         if (currentHp <= 0) break;
+        // Evasion buff (Cloak of Shadows) grants dodge chance on opportunity attacks
+        if (hasEvasion && Math.random() < evasionBuff!.dodgeChance) {
+          addLog(`🌫️ ${party ? character.name : 'You'} dodge${party ? 's' : ''} ${creature.name}'s opportunity attack!`);
+          continue;
+        }
         const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
         if (atkRoll >= effectiveAC) {
           const rawDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
