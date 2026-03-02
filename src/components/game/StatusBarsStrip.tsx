@@ -126,10 +126,9 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
     buffs.push({ emoji: '🌑', label: 'Shadowstep', detail: 'Stealth + ambush bonus', color: 'text-primary', bgColor: 'bg-primary/15', pct });
   }
 
-  if (buffs.length === 0) return null;
-
   return (
-    <div className="flex flex-wrap gap-1 justify-center">
+    <div className="flex flex-wrap gap-1 justify-center min-h-[22px]">
+      {buffs.length === 0 && <span className="invisible text-xs px-1.5 py-0.5">placeholder</span>}
       {buffs.map(b => (
         <Tooltip key={b.label}>
           <TooltipTrigger asChild>
