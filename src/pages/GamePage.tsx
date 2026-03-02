@@ -1779,6 +1779,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 absorbBuff,
                 partyRegenBuff,
                 focusStrikeBuff,
+                stealthBuff,
               }}
             />
           </div>
