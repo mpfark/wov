@@ -4,6 +4,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MapPin, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAreaTypes } from '@/hooks/useAreaTypes';
+import { getAreaFillColor, getAreaStrokeColor } from '@/lib/area-colors';
 
 interface GraphNode {
   id: string;
@@ -132,19 +134,6 @@ const OUTLINE_RADIUS = NODE_DRAW_RADIUS + BORDER_PAD;
 const AREA_PAD = 10;
 const AREA_OUTLINE_RADIUS = NODE_DRAW_RADIUS + AREA_PAD;
 
-const AREA_TYPE_COLORS: Record<string, { fill: string; stroke: string }> = {
-  forest:   { fill: 'hsl(120 30% 25% / 0.15)', stroke: 'hsl(120 40% 45% / 0.6)' },
-  town:     { fill: 'hsl(35 40% 30% / 0.15)',   stroke: 'hsl(35 50% 55% / 0.6)' },
-  cave:     { fill: 'hsl(260 20% 25% / 0.15)',   stroke: 'hsl(260 30% 50% / 0.6)' },
-  ruins:    { fill: 'hsl(30 15% 30% / 0.15)',    stroke: 'hsl(30 20% 50% / 0.6)' },
-  plains:   { fill: 'hsl(50 40% 30% / 0.15)',    stroke: 'hsl(50 50% 50% / 0.6)' },
-  mountain: { fill: 'hsl(210 15% 30% / 0.15)',   stroke: 'hsl(210 20% 55% / 0.6)' },
-  swamp:    { fill: 'hsl(90 25% 25% / 0.15)',    stroke: 'hsl(90 30% 40% / 0.6)' },
-  desert:   { fill: 'hsl(40 50% 30% / 0.15)',    stroke: 'hsl(40 60% 55% / 0.6)' },
-  coast:    { fill: 'hsl(195 40% 30% / 0.15)',   stroke: 'hsl(195 50% 50% / 0.6)' },
-  dungeon:  { fill: 'hsl(0 30% 25% / 0.15)',     stroke: 'hsl(0 40% 45% / 0.6)' },
-  other:    { fill: 'hsl(200 10% 30% / 0.15)',    stroke: 'hsl(200 15% 50% / 0.6)' },
-};
 interface Circle { cx: number; cy: number; r: number; }
 interface ExposedArc {
   circleIdx: number;
@@ -332,6 +321,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const allNodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
+  const { emojiMap } = useAreaTypes();
 
   const zoomAroundPoint = useCallback((centerX: number, centerY: number, newZoom: number) => {
     setZoom(prevZoom => {
@@ -823,7 +813,8 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
 
             {/* Area hulls — color-coded by area type */}
             {[...areaHulls.entries()].map(([areaId, { path, area }]) => {
-              const colors = AREA_TYPE_COLORS[area.area_type] || AREA_TYPE_COLORS.other;
+              const emoji = emojiMap[area.area_type] || '📍';
+              const colors = { fill: getAreaFillColor(emoji), stroke: getAreaStrokeColor(emoji) };
               // Compute label position from area nodes
               const areaNodes = nodes.filter(n => n.area_id === areaId);
               const areaPositions = areaNodes.map(n => allNodePositions.get(n.id)).filter(Boolean) as Array<{ px: number; py: number }>;
