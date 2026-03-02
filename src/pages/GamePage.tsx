@@ -853,9 +853,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0 && (c.is_aggressive || c.id === activeCombatCreatureId));
     let currentHp = character.hp;
     const isStealthed = stealthBuff && Date.now() < stealthBuff.expiresAt;
+    const isDisengaged = evasionBuff && Date.now() < evasionBuff.expiresAt && evasionBuff.source === 'disengage';
     if (isStealthed) {
       addLog('🌑 You slip through the shadows unnoticed...');
       setStealthBuff(null);
+    } else if (isDisengaged) {
+      addLog('🦘 You leap away cleanly — no opportunity attacks!');
+      setEvasionBuff(null);
     } else {
       // Opportunity attack against the fleeing player (absorb shields soak damage first)
       let currentAbsorb = absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0;
