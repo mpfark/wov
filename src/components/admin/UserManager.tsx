@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
-import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate } from '@/lib/game-data';
+import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getCharacterTitle } from '@/lib/game-data';
 
 interface AdminInventoryItem {
   id: string;
@@ -206,6 +206,9 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
               value={name} maxLength={50} onChange={e => setCharEdits(p => ({ ...p, name: e.target.value }))} />
           ) : (
             <h2 className="font-display text-lg text-primary text-glow">{c.name}</h2>
+          )}
+          {getCharacterTitle(c.level) && (
+            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(c.level)}</p>
           )}
           <p className="text-xs text-muted-foreground">
             {RACE_LABELS[c.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[c.class as keyof typeof CLASS_LABELS]} — Lvl {isEditing ? (
