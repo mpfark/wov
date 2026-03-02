@@ -2,7 +2,7 @@ import { Party, PartyMember, useParty } from '@/hooks/useParty';
 import { PlayerPresence } from '@/hooks/usePresence';
 import { Character } from '@/hooks/useCharacter';
 import { Button } from '@/components/ui/button';
-import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
 import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import type { ActiveBuffs } from './MapPanel';
@@ -96,6 +96,9 @@ export default function PartyPanel({
                       {m.character.name}
                     </span>
                     <span className="text-muted-foreground text-[10px]">L{m.character.level}</span>
+                    {getCharacterTitle(m.character.level) && (
+                      <span className="text-[9px] text-primary/70 font-display tracking-wide uppercase">{getCharacterTitle(m.character.level)}</span>
+                    )}
                   </div>
                   <div className="flex gap-0.5 shrink-0">
                     {/* Ability target icon — shown for classes with targeted abilities */}
