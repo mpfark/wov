@@ -4,8 +4,8 @@ import { Badge } from '@/components/ui/badge';
 
 export default function WorldBuilderRulebook() {
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-4 space-y-4 max-w-2xl">
+    <ScrollArea className="h-full">
+      <div className="p-4 pb-12 space-y-4 max-w-2xl">
         <div>
           <h2 className="font-display text-lg text-primary mb-1">📜 AI Rulebook</h2>
           <p className="text-xs text-muted-foreground">
