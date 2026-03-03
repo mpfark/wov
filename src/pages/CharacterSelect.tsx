@@ -45,7 +45,7 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {characters.map(char => (
+          {[...characters].sort((a, b) => a.name.localeCompare(b.name)).map(char => (
             <Card
               key={char.id}
               className="ornate-border bg-card/90 backdrop-blur cursor-pointer transition-all hover:border-primary hover:shadow-lg hover:shadow-primary/10 group"
