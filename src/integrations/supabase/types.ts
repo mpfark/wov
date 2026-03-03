@@ -160,6 +160,7 @@ export type Database = {
           created_at: string
           current_node_id: string | null
           dex: number
+          gender: Database["public"]["Enums"]["character_gender"]
           gold: number
           hp: number
           id: string
@@ -188,6 +189,7 @@ export type Database = {
           created_at?: string
           current_node_id?: string | null
           dex?: number
+          gender?: Database["public"]["Enums"]["character_gender"]
           gold?: number
           hp?: number
           id?: string
@@ -216,6 +218,7 @@ export type Database = {
           created_at?: string
           current_node_id?: string | null
           dex?: number
+          gender?: Database["public"]["Enums"]["character_gender"]
           gold?: number
           hp?: number
           id?: string
@@ -992,6 +995,7 @@ export type Database = {
         | "rogue"
         | "healer"
         | "bard"
+      character_gender: "male" | "female"
       character_race:
         | "human"
         | "elf"
@@ -1163,6 +1167,7 @@ export const Constants = {
         "healer",
         "bard",
       ],
+      character_gender: ["male", "female"],
       character_race: [
         "human",
         "elf",

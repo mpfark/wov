@@ -19,9 +19,10 @@ interface Props {
 
 export default function CharacterCreation({ onCreateCharacter, onCharacterReady, startingNodeId, onBack }: Props) {
   const [name, setName] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [race, setRace] = useState('');
   const [charClass, setCharClass] = useState('');
-  const [step, setStep] = useState(0); // 0=name, 1=race, 2=class, 3=confirm
+  const [step, setStep] = useState(0); // 0=name, 1=gender, 2=race, 3=class, 4=confirm
   const [loading, setLoading] = useState(false);
 
   const stats = race && charClass ? calculateStats(race, charClass) : null;
@@ -34,7 +35,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
     try {
       const maxCp = getMaxCp(1, stats.int, stats.wis, stats.cha);
       const char = await onCreateCharacter({
-        name, race, class: charClass,
+        name, gender, race, class: charClass,
         ...stats, hp, max_hp: hp, ac,
         current_node_id: startingNodeId,
         cp: maxCp, max_cp: maxCp,
@@ -96,7 +97,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
             </div>
           )}
           <h1 className="font-display text-2xl text-primary text-glow">Forge Your Hero</h1>
-          <p className="text-sm text-muted-foreground">Step {step + 1} of 4</p>
+          <p className="text-sm text-muted-foreground">Step {step + 1} of 5</p>
         </CardHeader>
         <CardContent>
           {step === 0 && (
@@ -116,13 +117,34 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
           )}
 
           {step === 1 && (
+            <div className="space-y-4">
+              <CardTitle className="font-display text-lg">Choose Gender</CardTitle>
+              <div className="grid grid-cols-2 gap-3">
+                {(['male', 'female'] as const).map(g => (
+                  <button
+                    key={g}
+                    onClick={() => { setGender(g); setStep(2); }}
+                    className={`p-4 rounded-md border text-center transition-all hover:border-primary ${
+                      gender === g ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                    }`}
+                  >
+                    <div className="text-2xl mb-1">{g === 'male' ? '♂' : '♀'}</div>
+                    <div className="font-display text-sm text-foreground capitalize">{g}</div>
+                  </button>
+                ))}
+              </div>
+              <Button variant="ghost" onClick={() => setStep(0)} className="font-display">Back</Button>
+            </div>
+          )}
+
+          {step === 2 && (
             <div className="space-y-3">
               <CardTitle className="font-display text-lg">Choose Your Race</CardTitle>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(RACE_LABELS).map(([key, label]) => (
                   <button
                     key={key}
-                    onClick={() => { setRace(key); setStep(2); }}
+                    onClick={() => { setRace(key); setStep(3); }}
                     className={`p-3 rounded-md border text-left transition-all hover:border-primary ${
                       race === key ? 'border-primary bg-primary/10' : 'border-border bg-card'
                     }`}
@@ -141,18 +163,18 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                   </button>
                 ))}
               </div>
-              <Button variant="ghost" onClick={() => setStep(0)} className="font-display">Back</Button>
+              <Button variant="ghost" onClick={() => setStep(1)} className="font-display">Back</Button>
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-3">
               <CardTitle className="font-display text-lg">Choose Your Class</CardTitle>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(CLASS_LABELS).map(([key, label]) => (
                   <button
                     key={key}
-                    onClick={() => { setCharClass(key); setStep(3); }}
+                    onClick={() => { setCharClass(key); setStep(4); }}
                     className={`p-3 rounded-md border text-left transition-all hover:border-primary ${
                       charClass === key ? 'border-primary bg-primary/10' : 'border-border bg-card'
                     }`}
@@ -177,17 +199,17 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                   </button>
                 ))}
               </div>
-              <Button variant="ghost" onClick={() => setStep(1)} className="font-display">Back</Button>
+              <Button variant="ghost" onClick={() => setStep(2)} className="font-display">Back</Button>
             </div>
           )}
 
-          {step === 3 && stats && (
+          {step === 4 && stats && (
             <div className="space-y-4">
               <CardTitle className="font-display text-lg">Confirm Your Hero</CardTitle>
               <div className="ornate-border p-4 rounded-md bg-background/50">
                 <h3 className="font-display text-primary text-glow text-xl">{name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {RACE_LABELS[race]} {CLASS_LABELS[charClass]}
+                  <span className="capitalize">{gender}</span> {RACE_LABELS[race]} {CLASS_LABELS[charClass]}
                 </p>
                 <div className="grid grid-cols-3 gap-2 mt-3">
                   {Object.entries(STAT_LABELS).map(([key, label]) => (
@@ -204,7 +226,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" onClick={() => setStep(2)} className="font-display">Back</Button>
+                <Button variant="ghost" onClick={() => setStep(3)} className="font-display">Back</Button>
                 <Button onClick={handleCreate} disabled={loading} className="flex-1 font-display">
                   {loading ? 'Creating...' : 'Begin Your Adventure'}
                 </Button>
