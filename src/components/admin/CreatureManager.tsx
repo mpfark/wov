@@ -71,6 +71,7 @@ export default function CreatureManager() {
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [showNoLoot, setShowNoLoot] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'rarity' | 'location'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
   const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
   const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
@@ -243,11 +244,12 @@ export default function CreatureManager() {
     const matchesRegion = regionFilter === 'all' || getNodeRegion(c.node_id) === regionFilter;
     return matchesText && matchesRegion;
   }).sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1;
     switch (sortBy) {
-      case 'level': return a.level - b.level;
-      case 'rarity': return (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0);
-      case 'location': return getNodeName(a.node_id).localeCompare(getNodeName(b.node_id));
-      default: return a.name.localeCompare(b.name);
+      case 'level': return (a.level - b.level) * dir;
+      case 'rarity': return ((RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)) * dir;
+      case 'location': return getNodeName(a.node_id).localeCompare(getNodeName(b.node_id)) * dir;
+      default: return a.name.localeCompare(b.name) * dir;
     }
   });
 
@@ -272,15 +274,24 @@ export default function CreatureManager() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
-            <SelectTrigger className="w-24 h-7 text-xs"><SelectValue placeholder="Sort" /></SelectTrigger>
-            <SelectContent className="bg-popover border-border z-50">
-              <SelectItem value="name" className="text-xs">Name</SelectItem>
-              <SelectItem value="level" className="text-xs">Level</SelectItem>
-              <SelectItem value="rarity" className="text-xs">Rarity</SelectItem>
-              <SelectItem value="location" className="text-xs">Location</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-0.5">
+            {(['name', 'level', 'rarity', 'location'] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => {
+                  if (sortBy === s) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                  else { setSortBy(s); setSortDir('asc'); }
+                }}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                  sortBy === s
+                    ? 'bg-primary/20 text-primary border border-primary/40'
+                    : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                }`}
+              >
+                {s}{sortBy === s ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+              </button>
+            ))}
+          </div>
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
           <button
             onClick={() => setShowUnassigned(v => !v)}
