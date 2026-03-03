@@ -907,7 +907,7 @@ export default function UserManager({ isValar }: Props) {
                   {selectedUser.characters.length === 0 ? (
                     <p className="text-[10px] text-muted-foreground/50 italic">No characters</p>
                   ) : (
-                    selectedUser.characters.map(char => {
+                    [...selectedUser.characters].sort((a, b) => a.name.localeCompare(b.name)).map(char => {
                       const isActive = selectedCharId === char.id;
                       return (
                         <div
