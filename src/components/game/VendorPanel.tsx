@@ -120,7 +120,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
               }
               return acc;
             }, {});
-            return Object.values(stacked).map(({ vi, count, totalStock }) => (
+            return Object.values(stacked).sort((a, b) => a.vi.item.name.localeCompare(b.vi.item.name)).map(({ vi, count, totalStock }) => (
               <div key={vi.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
                 <div className="flex items-center gap-1.5">
                   {count > 1 && (
@@ -158,7 +158,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
               return acc;
             }, {});
             const sellPrice = (inv: InventoryItem) => Math.max(1, Math.floor(inv.item.value * 0.5));
-            return Object.values(stacked).map(({ inv, count }) => (
+            return Object.values(stacked).sort((a, b) => a.inv.item.name.localeCompare(b.inv.item.name)).map(({ inv, count }) => (
               <div key={inv.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
                 <div className="flex items-center gap-1.5">
                   {count > 1 && (
