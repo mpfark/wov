@@ -7,6 +7,7 @@ export interface PlayerPresence {
   race: string;
   class: string;
   level: number;
+  gender: 'male' | 'female';
 }
 
 interface PresenceCharacter {
@@ -15,6 +16,7 @@ interface PresenceCharacter {
   race: string;
   class: string;
   level: number;
+  gender: 'male' | 'female';
 }
 
 export function usePresence(nodeId: string | null, character?: PresenceCharacter | null) {
@@ -23,8 +25,8 @@ export function usePresence(nodeId: string | null, character?: PresenceCharacter
   // Memoize character data to avoid unnecessary re-subscriptions
   const charData = useMemo(() => {
     if (!character) return null;
-    return { id: character.id, name: character.name, race: character.race, class: character.class, level: character.level };
-  }, [character?.id, character?.name, character?.race, character?.class, character?.level]);
+    return { id: character.id, name: character.name, race: character.race, class: character.class, level: character.level, gender: character.gender };
+  }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender]);
 
   useEffect(() => {
     if (!nodeId || !charData) { setPlayersHere([]); return; }
@@ -41,7 +43,7 @@ export function usePresence(nodeId: string | null, character?: PresenceCharacter
           if (key === charData.id) continue; // exclude self
           const p = (presences as any[])[0];
           if (p?.id && p?.name) {
-            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level });
+            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male' });
           }
         }
         setPlayersHere(players);
@@ -54,6 +56,7 @@ export function usePresence(nodeId: string | null, character?: PresenceCharacter
             race: charData.race,
             class: charData.class,
             level: charData.level,
+            gender: charData.gender,
           });
         }
       });

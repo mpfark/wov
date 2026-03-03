@@ -57,8 +57,8 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
                         {p.name}
                         {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
                       </div>
-                      {getCharacterTitle(p.level) && (
-                        <div className="text-[9px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(p.level)}</div>
+                      {getCharacterTitle(p.level, p.gender) && (
+                        <div className="text-[9px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(p.level, p.gender)}</div>
                       )}
                     </TableCell>
                     <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>

@@ -338,8 +338,8 @@ export default function CharacterPanel({
         {/* Name & Identity */}
         <div className="text-center">
           <h2 className="font-display text-lg text-primary text-glow">{character.name}</h2>
-          {getCharacterTitle(character.level) && (
-            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(character.level)}</p>
+          {getCharacterTitle(character.level, character.gender) && (
+            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(character.level, character.gender)}</p>
           )}
           <p className="text-xs text-muted-foreground">
             {RACE_LABELS[character.race]} {CLASS_LABELS[character.class]} — Lvl {character.level}
