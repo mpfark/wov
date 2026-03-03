@@ -33,6 +33,7 @@ import { useChat } from '@/hooks/useChat';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
 import { Input } from '@/components/ui/input';
+import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 
 function getLogColor(log: string): string {
   // Chat messages
@@ -1765,6 +1766,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                 Switch Character
               </Button>
             )}
+            <ReportIssueDialog userId={character.user_id} characterId={character.id} characterName={character.name} />
             <Button variant="ghost" size="sm" onClick={onSignOut} className="text-xs text-muted-foreground">
               Sign Out
             </Button>
