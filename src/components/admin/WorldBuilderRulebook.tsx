@@ -142,41 +142,34 @@ export default function WorldBuilderRulebook() {
           </ul>
         </Card>
 
-        {/* Generation Modes */}
+        {/* AI Populate Mode */}
         <Card className="p-3 space-y-1.5">
-          <h3 className="font-display text-sm text-primary">Generation Modes</h3>
+          <h3 className="font-display text-sm text-primary">AI Populate Mode</h3>
           <p className="text-[11px] text-muted-foreground mb-1">
-            The AI world builder supports three modes, plus a map-integrated populate workflow:
+            The only AI generation workflow is <strong>Populate</strong>, accessed via the Populate button on the World Map tab. Regions, areas, and nodes are created manually by admins — the AI only populates existing nodes with creatures.
           </p>
-          <div className="space-y-2">
-            <div>
-              <p className="text-[11px] font-medium text-foreground">🆕 New Region</p>
-              <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc pl-4">
-                <li>Generates a brand new region with areas, nodes, creatures, and NPCs.</li>
-                <li>Must include at least one inn node.</li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-foreground">🔗 Expand Region</p>
-              <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc pl-4">
-                <li>Adds content to an existing region — does NOT create a new region.</li>
-                <li>New areas or <code className="text-[10px] bg-muted px-1 rounded">existing_area:&lt;uuid&gt;</code> for existing areas.</li>
-                <li>New nodes must connect to at least one existing node via <code className="text-[10px] bg-muted px-1 rounded">existing:&lt;uuid&gt;</code>.</li>
-                <li>Must not duplicate existing node names or NPC names.</li>
-                <li>If the region already has an inn, no new inn is generated.</li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-foreground">🐛 Populate (Map-Integrated)</p>
-              <ul className="text-[11px] text-muted-foreground space-y-0.5 list-disc pl-4">
-                <li>Accessed via the <strong>Populate button</strong> on the World Map tab — select nodes visually, then enter a prompt.</li>
-                <li>Generates <strong>only creatures</strong> — no new nodes, areas, or NPCs.</li>
-                <li>Uses real node UUIDs as <code className="text-[10px] bg-muted px-1 rounded">node_temp_id</code>.</li>
-                <li>Creature levels must match each node's region level range.</li>
-                <li>Does not duplicate existing creature names on the same node.</li>
-              </ul>
-            </div>
-          </div>
+          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
+            <li>Select nodes visually on the map, then enter a prompt describing the creatures you want.</li>
+            <li>Generates <strong>only creatures</strong> — no new nodes, areas, regions, or NPCs.</li>
+            <li>Uses real node UUIDs as <code className="text-[10px] bg-muted px-1 rounded">node_temp_id</code>.</li>
+            <li>Creature levels must match each node's region level range.</li>
+            <li>Does not duplicate existing creature names on the same node.</li>
+          </ul>
+        </Card>
+
+        {/* Admin Workflow */}
+        <Card className="p-3 space-y-1.5">
+          <h3 className="font-display text-sm text-primary">Admin Workflow</h3>
+          <p className="text-[11px] text-muted-foreground mb-1">
+            World structure is built manually using the map-integrated tools:
+          </p>
+          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
+            <li><strong>Regions</strong> — created via the "New Region" button. Each new region gets an automatic entrance node.</li>
+            <li><strong>Nodes</strong> — added using the directional <code className="text-[10px] bg-muted px-1 rounded">+</code> buttons (N, NE, E, SE, S, SW, W, NW) around selected nodes on the map.</li>
+            <li><strong>Connections</strong> — click the faint green dotted lines between nearby nodes (&lt;140px) for instant bidirectional linking.</li>
+            <li><strong>Areas</strong> — managed via the Areas tab or inline in the Node Editor.</li>
+            <li><strong>AI naming</strong> — use the <code className="text-[10px] bg-muted px-1 rounded">✨</code> sparkle button in region/node editors for AI-suggested names and descriptions.</li>
+          </ul>
         </Card>
 
         {/* Server-Side Processing */}
