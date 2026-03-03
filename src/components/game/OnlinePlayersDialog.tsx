@@ -43,8 +43,8 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Name</TableHead>
                   <TableHead className="text-xs w-20">Title</TableHead>
+                  <TableHead className="text-xs">Name</TableHead>
                   <TableHead className="text-xs">Race</TableHead>
                   <TableHead className="text-xs">Class</TableHead>
                   <TableHead className="text-xs text-right">Level</TableHead>
@@ -53,12 +53,12 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
               <TableBody>
                 {onlinePlayers.map(p => (
                   <TableRow key={p.id} className={p.id === myCharacterId ? 'bg-primary/5' : ''}>
+                    <TableCell className="text-[10px] font-display text-primary/70 tracking-widest uppercase">
+                      {getCharacterTitle(p.level, p.gender) || '—'}
+                    </TableCell>
                     <TableCell className="text-xs font-display">
                       {p.name}
                       {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
-                    </TableCell>
-                    <TableCell className="text-[10px] font-display text-primary/70 tracking-widest uppercase">
-                      {getCharacterTitle(p.level, p.gender) || '—'}
                     </TableCell>
                     <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>
                     <TableCell className="text-xs">{CLASS_LABELS[p.class] || p.class}</TableCell>
