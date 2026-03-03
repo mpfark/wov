@@ -21,6 +21,7 @@ import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import AreaManager from '@/components/admin/AreaManager';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
+import IssueReportManager from '@/components/admin/IssueReportManager';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -155,6 +156,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="item-forge" className="font-display text-xs">🪄 Item Forge</TabsTrigger>
             <TabsTrigger value="areas" className="font-display text-xs">🗺️ Areas</TabsTrigger>
             <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
+            <TabsTrigger value="issues" className="font-display text-xs"><Bug className="w-3 h-3 mr-1 inline" />Issues</TabsTrigger>
           </TabsList>
         </div>
 
@@ -298,6 +300,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
 
         <TabsContent value="manual" className="flex-1 min-h-0 mt-0 overflow-hidden">
           {activeTab === 'manual' && <GameManual />}
+        </TabsContent>
+
+        <TabsContent value="issues" className="flex-1 min-h-0 mt-0 overflow-hidden">
+          {activeTab === 'issues' && <IssueReportManager />}
         </TabsContent>
       </Tabs>
     </div>
