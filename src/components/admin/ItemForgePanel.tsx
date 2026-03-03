@@ -37,7 +37,7 @@ interface Creature { id: string; name: string; level: number; rarity: string; no
 
 const ITEM_RARITY_COLORS: Record<string, string> = {
   common: 'text-muted-foreground',
-  uncommon: 'text-green-400',
+  uncommon: 'text-elvish',
   rare: 'text-blue-400',
 };
 

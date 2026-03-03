@@ -46,7 +46,7 @@ interface Props {
 
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
-  uncommon: 'text-chart-2',
+  uncommon: 'text-elvish',
   rare: 'text-dwarvish',
   unique: 'text-primary text-glow',
 };

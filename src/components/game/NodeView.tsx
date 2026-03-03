@@ -252,7 +252,7 @@ export default function NodeView({
                 {groundLoot.map(g => {
                   const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
                     g.item.rarity === 'rare' ? 'text-dwarvish' :
-                    g.item.rarity === 'uncommon' ? 'text-chart-2' : 'text-foreground';
+                    g.item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground';
                   const statEntries = Object.entries(g.item.stats || {}).filter(([, v]) => v !== 0);
                   return (
                     <div key={g.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-border">
