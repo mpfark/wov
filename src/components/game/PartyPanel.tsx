@@ -96,8 +96,8 @@ export default function PartyPanel({
                       {m.character.name}
                     </span>
                     <span className="text-muted-foreground text-[10px]">L{m.character.level}</span>
-                    {getCharacterTitle(m.character.level) && (
-                      <span className="text-[9px] text-primary/70 font-display tracking-wide uppercase">{getCharacterTitle(m.character.level)}</span>
+                    {getCharacterTitle(m.character.level, m.character.gender) && (
+                      <span className="text-[9px] text-primary/70 font-display tracking-wide uppercase">{getCharacterTitle(m.character.level, m.character.gender)}</span>
                     )}
                   </div>
                   <div className="flex gap-0.5 shrink-0">

@@ -213,8 +213,8 @@ export default function NodeView({
                     <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
                     <div className="flex items-center gap-1.5">
                         <span className="text-xs font-display text-primary truncate">{p.name}</span>
-                        {getCharacterTitle(p.level) && (
-                          <span className="text-primary/60 font-display text-[9px]">{getCharacterTitle(p.level)}</span>
+                        {getCharacterTitle(p.level, p.gender) && (
+                          <span className="text-primary/60 font-display text-[9px]">{getCharacterTitle(p.level, p.gender)}</span>
                         )}
                         <span className="text-[10px] text-muted-foreground">L{p.level}</span>
                         {isPartyMate && hpData && (

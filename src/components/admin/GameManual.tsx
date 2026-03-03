@@ -869,14 +869,15 @@ export default function GameManual() {
                   </TableHeader>
                   <TableBody>
                     <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs">⚔️ Expanded Crit Range</TableCell><TableCell className="text-xs">Permanent +1 to crit range (stacks with Eagle Eye)</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs">🏅 Title: Veteran</TableCell><TableCell className="text-xs">Displayed to all players</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">32</TableCell><TableCell className="text-xs">🏅 Title: Vanguard</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">34</TableCell><TableCell className="text-xs">🏅 Title: Champion</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs">🏅 Title: Lord / Lady</TableCell><TableCell className="text-xs">First nobility title, displayed to all players</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs">🏅 Title: Baron / Baroness</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">32</TableCell><TableCell className="text-xs">🏅 Title: Count / Countess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">34</TableCell><TableCell className="text-xs">🏅 Title: Marquis / Marquise</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">35</TableCell><TableCell className="text-xs">💚 HP Regen Boost</TableCell><TableCell className="text-xs">Base HP regen doubled (stacks with inn/potion buffs)</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">36</TableCell><TableCell className="text-xs">🏅 Title: Warden</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">38</TableCell><TableCell className="text-xs">🏅 Title: Paragon</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">36</TableCell><TableCell className="text-xs">🏅 Title: Duke / Duchess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">38</TableCell><TableCell className="text-xs">🏅 Title: Prince / Princess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">39</TableCell><TableCell className="text-xs">🔮 CP Discount</TableCell><TableCell className="text-xs">All ability CP costs reduced by 10%</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: Ascendant</TableCell><TableCell className="text-xs">Highest prestige title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: King / Queen</TableCell><TableCell className="text-xs">Highest prestige title</TableCell></TableRow>
                   </TableBody>
                 </Table>
               </div>

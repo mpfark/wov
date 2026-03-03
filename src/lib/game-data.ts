@@ -256,19 +256,20 @@ export function getCreatureDamageDie(level: number, rarity: string): number {
   return base + Math.floor(level / 2);
 }
 
-// Milestone titles by level
-const MILESTONE_TITLES: { level: number; title: string }[] = [
-  { level: 40, title: 'Ascendant' },
-  { level: 38, title: 'Paragon' },
-  { level: 36, title: 'Warden' },
-  { level: 34, title: 'Champion' },
-  { level: 32, title: 'Vanguard' },
-  { level: 30, title: 'Veteran' },
+// Nobility titles by level (every 2 levels from 28–40)
+const MILESTONE_TITLES: { level: number; male: string; female: string }[] = [
+  { level: 40, male: 'King', female: 'Queen' },
+  { level: 38, male: 'Prince', female: 'Princess' },
+  { level: 36, male: 'Duke', female: 'Duchess' },
+  { level: 34, male: 'Marquis', female: 'Marquise' },
+  { level: 32, male: 'Count', female: 'Countess' },
+  { level: 30, male: 'Baron', female: 'Baroness' },
+  { level: 28, male: 'Lord', female: 'Lady' },
 ];
 
-export function getCharacterTitle(level: number): string | null {
+export function getCharacterTitle(level: number, gender: 'male' | 'female' = 'male'): string | null {
   for (const m of MILESTONE_TITLES) {
-    if (level >= m.level) return m.title;
+    if (level >= m.level) return gender === 'female' ? m.female : m.male;
   }
   return null;
 }

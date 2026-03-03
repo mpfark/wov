@@ -209,8 +209,8 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
           ) : (
             <h2 className="font-display text-lg text-primary text-glow">{c.name}</h2>
           )}
-          {getCharacterTitle(c.level) && (
-            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(c.level)}</p>
+          {getCharacterTitle(c.level, c.gender) && (
+            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(c.level, c.gender)}</p>
           )}
           <p className="text-xs text-muted-foreground">
             {isEditing ? (
