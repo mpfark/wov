@@ -541,7 +541,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
                     <span className={`font-display text-sm flex-1 ${
                       v.item?.rarity === 'unique' ? 'text-primary text-glow' :
                       v.item?.rarity === 'rare' ? 'text-dwarvish' :
-                      v.item?.rarity === 'uncommon' ? 'text-chart-2' : 'text-foreground'
+                      v.item?.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground'
                     }`}>{v.item?.name || v.item_id}</span>
                     <div className="flex items-center gap-1">
                       <label className="text-[10px] text-muted-foreground">Price:</label>

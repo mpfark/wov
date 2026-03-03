@@ -48,7 +48,7 @@ const RARITY_COLORS: Record<string, string> = {
 
 const ITEM_RARITY_COLORS: Record<string, string> = {
   common: 'text-muted-foreground',
-  uncommon: 'text-green-400',
+  uncommon: 'text-elvish',
   rare: 'text-blue-400',
   unique: 'text-primary',
 };

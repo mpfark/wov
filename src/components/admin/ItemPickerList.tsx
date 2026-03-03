@@ -78,7 +78,7 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
     const r = items.find(i => i.id === id)?.rarity;
     if (r === 'unique') return 'text-primary';
     if (r === 'rare') return 'text-dwarvish';
-    if (r === 'uncommon') return 'text-chart-2';
+    if (r === 'uncommon') return 'text-elvish';
     return 'text-foreground';
   };
 
