@@ -212,10 +212,10 @@ export default function NodeView({
                   return (
                     <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
                     <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-display text-primary truncate">{p.name}</span>
-                        {getCharacterTitle(p.level, p.gender) && (
-                          <span className="text-primary/60 font-display text-[9px]">{getCharacterTitle(p.level, p.gender)}</span>
-                        )}
+                        <span className="text-xs font-display text-primary truncate">
+                          {getCharacterTitle(p.level, p.gender) && <span className="text-primary/60 text-[9px] mr-0.5">{getCharacterTitle(p.level, p.gender)}</span>}
+                          {p.name}
+                        </span>
                         <span className="text-[10px] text-muted-foreground">L{p.level}</span>
                         {isPartyMate && hpData && (
                           <div className="ml-auto flex items-center gap-1 shrink-0">

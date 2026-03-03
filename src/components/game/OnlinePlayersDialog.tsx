@@ -54,12 +54,12 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
                   <TableRow key={p.id} className={p.id === myCharacterId ? 'bg-primary/5' : ''}>
                     <TableCell className="text-xs font-display">
                       <div>
+                        {getCharacterTitle(p.level, p.gender) && (
+                          <span className="text-[9px] text-primary/70 tracking-widest uppercase mr-1">{getCharacterTitle(p.level, p.gender)}</span>
+                        )}
                         {p.name}
                         {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
                       </div>
-                      {getCharacterTitle(p.level, p.gender) && (
-                        <div className="text-[9px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(p.level, p.gender)}</div>
-                      )}
                     </TableCell>
                     <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>
                     <TableCell className="text-xs">{CLASS_LABELS[p.class] || p.class}</TableCell>
