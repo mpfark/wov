@@ -28,7 +28,7 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
           <span>{onlinePlayers.length} Online</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2">
             <Users className="h-4 w-4 text-primary" />
@@ -44,6 +44,7 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">Name</TableHead>
+                  <TableHead className="text-xs w-20">Title</TableHead>
                   <TableHead className="text-xs">Race</TableHead>
                   <TableHead className="text-xs">Class</TableHead>
                   <TableHead className="text-xs text-right">Level</TableHead>
@@ -53,13 +54,11 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Pr
                 {onlinePlayers.map(p => (
                   <TableRow key={p.id} className={p.id === myCharacterId ? 'bg-primary/5' : ''}>
                     <TableCell className="text-xs font-display">
-                      <div>
-                        {getCharacterTitle(p.level, p.gender) && (
-                          <span className="text-[9px] text-primary/70 tracking-widest uppercase mr-1">{getCharacterTitle(p.level, p.gender)}</span>
-                        )}
-                        {p.name}
-                        {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
-                      </div>
+                      {p.name}
+                      {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
+                    </TableCell>
+                    <TableCell className="text-[10px] font-display text-primary/70 tracking-widest uppercase">
+                      {getCharacterTitle(p.level, p.gender) || '—'}
                     </TableCell>
                     <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>
                     <TableCell className="text-xs">{CLASS_LABELS[p.class] || p.class}</TableCell>
