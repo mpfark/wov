@@ -70,6 +70,7 @@ export default function CreatureManager() {
   const [regionFilter, setRegionFilter] = useState('all');
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [showNoLoot, setShowNoLoot] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'level' | 'rarity' | 'location'>('name');
   const [loading, setLoading] = useState(false);
   const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
   const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
@@ -231,6 +232,8 @@ export default function CreatureManager() {
     return itemLoot.length === 0;
   };
 
+  const RARITY_ORDER: Record<string, number> = { regular: 0, rare: 1, boss: 2 };
+
   const filtered = creatures.filter(c => {
     if (showUnassigned && c.node_id) return false;
     if (showNoLoot && !hasNoLoot(c)) return false;
@@ -239,6 +242,13 @@ export default function CreatureManager() {
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
     const matchesRegion = regionFilter === 'all' || getNodeRegion(c.node_id) === regionFilter;
     return matchesText && matchesRegion;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'level': return a.level - b.level;
+      case 'rarity': return (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0);
+      case 'location': return getNodeName(a.node_id).localeCompare(getNodeName(b.node_id));
+      default: return a.name.localeCompare(b.name);
+    }
   });
 
   const unassignedCount = creatures.filter(c => !c.node_id).length;
@@ -260,6 +270,15 @@ export default function CreatureManager() {
               {regionNames.map(r => (
                 <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
+            <SelectTrigger className="w-24 h-7 text-xs"><SelectValue placeholder="Sort" /></SelectTrigger>
+            <SelectContent className="bg-popover border-border z-50">
+              <SelectItem value="name" className="text-xs">Name</SelectItem>
+              <SelectItem value="level" className="text-xs">Level</SelectItem>
+              <SelectItem value="rarity" className="text-xs">Rarity</SelectItem>
+              <SelectItem value="location" className="text-xs">Location</SelectItem>
             </SelectContent>
           </Select>
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
