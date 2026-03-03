@@ -19,8 +19,8 @@ export default function ReportIssueDialog({ userId, characterId, characterName }
 
   const handleSubmit = async () => {
     const trimmed = message.trim();
-    if (!trimmed || trimmed.length < 5) {
-      toast.error('Please describe the issue (at least 5 characters).');
+    if (!trimmed || trimmed.length < 3) {
+      toast.error('Please describe the issue (at least 3 characters).');
       return;
     }
     setSubmitting(true);
@@ -68,7 +68,7 @@ export default function ReportIssueDialog({ userId, characterId, characterName }
           />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleSubmit} disabled={submitting || message.trim().length < 5}>
+            <Button size="sm" onClick={handleSubmit} disabled={submitting || message.trim().length < 3}>
               {submitting ? 'Sending…' : 'Submit'}
             </Button>
           </div>
