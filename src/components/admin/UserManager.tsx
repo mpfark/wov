@@ -34,6 +34,7 @@ interface AdminInventoryItem {
 interface AdminCharacter {
   id: string;
   name: string;
+  gender: 'male' | 'female';
   level: number;
   class: string;
   race: string;
@@ -71,6 +72,7 @@ interface CharacterEdits {
   name?: string;
   gold?: number;
   level?: number;
+  gender?: 'male' | 'female';
 }
 
 interface Props {
@@ -211,6 +213,17 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
             <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(c.level)}</p>
           )}
           <p className="text-xs text-muted-foreground">
+            {isEditing ? (
+              <button
+                onClick={() => setCharEdits(p => ({ ...p, gender: (p.gender ?? c.gender) === 'male' ? 'female' : 'male' }))}
+                className="text-xs text-primary/70 hover:text-primary cursor-pointer mr-1"
+                title="Toggle gender"
+              >
+                {(charEdits.gender ?? c.gender) === 'male' ? '♂' : '♀'}
+              </button>
+            ) : (
+              <span className="mr-1">{c.gender === 'male' ? '♂' : '♀'}</span>
+            )}
             {RACE_LABELS[c.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[c.class as keyof typeof CLASS_LABELS]} — Lvl {isEditing ? (
               <input type="number" className="w-10 bg-background border border-border rounded px-1 text-xs text-foreground inline"
                 value={level} onChange={e => setCharEdits(p => ({ ...p, level: parseInt(e.target.value) || 1 }))} />
@@ -910,7 +923,7 @@ export default function UserManager({ isValar }: Props) {
                                 {char.name}
                               </h3>
                               <p className="text-[10px] text-muted-foreground">
-                                {RACE_LABELS[char.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[char.class as keyof typeof CLASS_LABELS]}
+                                {char.gender === 'male' ? '♂' : '♀'} {RACE_LABELS[char.race as keyof typeof RACE_LABELS]} {CLASS_LABELS[char.class as keyof typeof CLASS_LABELS]}
                               </p>
                             </div>
                           </div>
