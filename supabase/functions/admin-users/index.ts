@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
       if (!character_id || !updates || typeof updates !== "object") throw new Error("character_id and updates required");
 
       const allowedFields = ["name", "hp", "max_hp", "gold", "xp",
-        "str", "dex", "con", "int", "wis", "cha", "ac", "current_node_id", "unspent_stat_points"];
+        "str", "dex", "con", "int", "wis", "cha", "ac", "current_node_id", "unspent_stat_points", "gender"];
 
       const filteredUpdates: Record<string, any> = {};
       for (const [key, value] of Object.entries(updates)) {
