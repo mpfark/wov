@@ -454,52 +454,30 @@ export default function CharacterPanel({
             {/* Attributes overlaid — absolute so equipment holds height */}
             <TabsContent value="attributes" className="mt-0 absolute inset-0 data-[state=inactive]:!block data-[state=inactive]:invisible">
               <div className="space-y-2.5">
-                {/* Base stats grid */}
-                <div className="grid grid-cols-2 gap-x-3">
-                  {[['str', 'int'], ['dex', 'wis'], ['con', 'cha']].map(([left, right]) => {
-                    const lBase = (character as any)[left] as number;
-                    const lBonus = equipmentBonuses[left] || 0;
-                    const lMod = getStatModifier(lBase + lBonus);
-                    const rBase = (character as any)[right] as number;
-                    const rBonus = equipmentBonuses[right] || 0;
-                    const rMod = getStatModifier(rBase + rBonus);
+                {/* Base stats — single column: STR, DEX, CON, INT, WIS, CHA */}
+                <div className="space-y-0">
+                  {['str', 'dex', 'con', 'int', 'wis', 'cha'].map(stat => {
+                    const base = (character as any)[stat] as number;
+                    const bonus = equipmentBonuses[stat] || 0;
+                    const mod = getStatModifier(base + bonus);
                     return (
-                      <React.Fragment key={`${left}-${right}`}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                              <span className="font-display text-foreground">{STAT_FULL_NAMES[left]}</span>
-                              <span className="flex gap-1.5 tabular-nums">
-                                <span className="text-foreground">{lBase}</span>
-                                <span className="text-chart-2 w-5 text-right">{lBonus > 0 ? `+${lBonus}` : ''}</span>
-                                <span className="text-muted-foreground w-6 text-right text-[10px]">({lMod >= 0 ? '+' : ''}{lMod})</span>
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-popover border-border z-50">
-                            <p className="font-display text-sm">{STAT_FULL_NAMES[left]}</p>
-                            <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[left]}</p>
-                            <p className="text-[10px] text-muted-foreground">Modifier: {lMod >= 0 ? '+' : ''}{lMod}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                              <span className="font-display text-foreground">{STAT_FULL_NAMES[right]}</span>
-                              <span className="flex gap-1.5 tabular-nums">
-                                <span className="text-foreground">{rBase}</span>
-                                <span className="text-chart-2 w-5 text-right">{rBonus > 0 ? `+${rBonus}` : ''}</span>
-                                <span className="text-muted-foreground w-6 text-right text-[10px]">({rMod >= 0 ? '+' : ''}{rMod})</span>
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-popover border-border z-50">
-                            <p className="font-display text-sm">{STAT_FULL_NAMES[right]}</p>
-                            <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[right]}</p>
-                            <p className="text-[10px] text-muted-foreground">Modifier: {rMod >= 0 ? '+' : ''}{rMod}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </React.Fragment>
+                      <Tooltip key={stat}>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                            <span className="font-display text-foreground">{STAT_FULL_NAMES[stat]}</span>
+                            <span className="flex gap-1.5 tabular-nums">
+                              <span className="text-foreground">{base}</span>
+                              <span className="text-chart-2 w-5 text-right">{bonus > 0 ? `+${bonus}` : ''}</span>
+                              <span className="text-muted-foreground w-6 text-right text-[10px]">({mod >= 0 ? '+' : ''}{mod})</span>
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-popover border-border z-50">
+                          <p className="font-display text-sm">{STAT_FULL_NAMES[stat]}</p>
+                          <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[stat]}</p>
+                          <p className="text-[10px] text-muted-foreground">Modifier: {mod >= 0 ? '+' : ''}{mod}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     );
                   })}
                 </div>
