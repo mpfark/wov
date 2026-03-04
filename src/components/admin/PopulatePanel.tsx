@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, Wand2, ChevronDown, Check, Swords, X } from 'lucide-react';
 import WorldBuilderPreviewGraph from './WorldBuilderPreviewGraph';
-import { calculateHumanoidGold } from '@/lib/game-data';
+import { calculateHumanoidGold, generateCreatureStats } from '@/lib/game-data';
 
 interface GeneratedCreature {
   temp_id?: string;
@@ -112,19 +112,22 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
           ? [calculateHumanoidGold(creature.level, creature.rarity)]
           : [];
 
+        // Recalculate stats from formulas to ensure correctness
+        const computed = generateCreatureStats(creature.level, creature.rarity);
+
         await supabase.from('creatures').insert({
           name: creature.name,
           description: creature.description,
           node_id: nodeId,
           level: creature.level,
-          hp: creature.hp,
-          max_hp: creature.max_hp,
-          ac: creature.ac,
+          hp: computed.hp,
+          max_hp: computed.hp,
+          ac: computed.ac,
           rarity: creature.rarity as any,
           is_aggressive: creature.is_aggressive,
           is_humanoid: isHumanoid,
           respawn_seconds: creature.respawn_seconds || 300,
-          stats: creature.stats,
+          stats: computed.stats,
           loot_table: goldLoot,
           loot_table_id: creature.loot_table_id || null,
           drop_chance: creature.drop_chance || 0.3,
