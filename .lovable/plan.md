@@ -1,32 +1,36 @@
-## Inventory Carry Capacity & Encumbrance System
 
-### Concept
 
-Players get a **carry capacity** derived from STR. They can hold more items than this limit, but each move costs extra MP proportional to how over-encumbered they are.
+## Tab Layout for Equipment & Attributes
 
-### Weight System
+Replace the two collapsible sections (Attributes and Equipment+Belt Potions) with a tabbed layout using the existing `Tabs` component. Equipment tab is shown by default.
 
-- **Equipment** items count as **1 slot** each
-- **Consumables** count as **⅓ slot** each (rounded up total)
-- **Equipped items** and **belted potions** don't count toward weight
+### Changes
 
-### Formula
+**`src/components/game/CharacterPanel.tsx`**:
+
+1. Replace `Collapsible` import with `Tabs, TabsList, TabsTrigger, TabsContent` from `@/components/ui/tabs`.
+2. Remove `attrsOpen`/`equipOpen` state variables.
+3. Wrap the Attributes section and Equipment+Belt Potions section in a `<Tabs defaultValue="equipment">` with two triggers: "Equipment" and "Attributes".
+4. Keep the Name/Identity block above the tabs (unchanged).
+5. Keep the Inventory section below the tabs (unchanged).
+6. Move AC & Gold row out of the Attributes tab content and place it just below the tabs (always visible) since it's critical info.
+
+### Layout structure
 
 ```text
-Carry Capacity = 12 + STR_modifier (minimum 10)
-  - e.g. STR 14 → mod +2 → capacity 14
-  - e.g. STR 8  → mod -1 → capacity 11 (clamped to 10)
-
-Bag Weight = ceil(equipment_count * 1 + consumable_count * 0.33)
-
-Weight Over = max(0, bag_weight - capacity)
-
-Move Cost = 10 + (weight_over * 5) MP
+┌─────────────────────────┐
+│  Name / Title / Level   │  (unchanged)
+├─────────────────────────┤
+│ [Equipment] [Attributes]│  tab triggers
+├─────────────────────────┤
+│  AC 14  ·  Gold 230     │  always visible
+├─────────────────────────┤
+│  (tab content)          │  equipment grid + belt
+│                         │  OR stat grid
+├─────────────────────────┤
+│  Inventory (15) 12/14   │  (unchanged)
+└─────────────────────────┘
 ```
 
-STR modifier includes equipment bonuses (already tracked via `equipmentBonuses`).
+Minimal styling: small tab triggers matching the existing `font-display text-xs` aesthetic.
 
-### What stays the same
-- Players are never blocked from picking up items
-- Base move cost remains 10 MP when at or under capacity
-- MP regen is unchanged
