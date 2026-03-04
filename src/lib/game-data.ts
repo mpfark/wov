@@ -241,7 +241,7 @@ export function calculateHumanoidGold(level: number, rarity: string): { min: num
 
 // Generate creature stats based on level and rarity
 const RARITY_MULTIPLIER: Record<string, { stat: number; hp: number; ac: number }> = {
-  regular: { stat: 1, hp: 1, ac: 0 },
+  regular: { stat: 1, hp: 1, ac: 2 },
   rare:    { stat: 1.3, hp: 1.5, ac: 2 },
   boss:    { stat: 2.0, hp: 4.0, ac: 6 },
 };
@@ -286,6 +286,6 @@ export function generateCreatureStats(level: number, rarity: string) {
     cha: Math.round((baseStat - 3) * mult.stat),
   };
   const hp = Math.round((15 + level * 8) * mult.hp);
-  const ac = 8 + Math.floor(level * 0.6) + mult.ac;
+  const ac = Math.round(10 + level * 0.6 + mult.ac);
   return { stats, hp, ac };
 }
