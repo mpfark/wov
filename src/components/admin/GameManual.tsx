@@ -815,10 +815,19 @@ export default function GameManual() {
                   <p><strong className="text-foreground">Max MP Formula:</strong> 100 + (DEX mod × 10) + ((level − 1) × 2)</p>
                   <p><strong className="text-foreground">Regen Rate:</strong> (5 + DEX mod) MP every 3 seconds</p>
                   <p><strong className="text-foreground">Inn Bonus:</strong> Regen rate tripled (×3) while resting at an Inn</p>
-                  <p><strong className="text-foreground">Movement Cost:</strong> 10 MP per node traversal</p>
+                  <p><strong className="text-foreground">Movement Cost:</strong> 10 MP per node traversal (base)</p>
                 </div>
 
-                <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery.</p>
+                <div className="space-y-1 bg-background/40 p-2 rounded border border-border">
+                  <p className="text-foreground font-display text-xs">⚖️ Encumbrance</p>
+                  <p>Players have a <strong className="text-foreground">carry capacity</strong> based on Strength:</p>
+                  <p><strong className="text-foreground">Carry Capacity</strong> = 12 + STR modifier (minimum 10)</p>
+                  <p>Exceeding capacity doesn't prevent picking up items, but <strong className="text-foreground">increases movement cost</strong>:</p>
+                  <p><strong className="text-foreground">Move Cost</strong> = 10 + (items over capacity × 5) MP</p>
+                  <p className="text-muted-foreground">Example: A character with STR 14 (capacity 14) carrying 17 items pays 10 + (3 × 5) = 25 MP per move.</p>
+                </div>
+
+                <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery. STR-focused classes like Warriors can carry more items before becoming encumbered.</p>
 
                 <Table>
                   <TableHeader>
