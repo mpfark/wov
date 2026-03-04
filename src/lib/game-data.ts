@@ -132,6 +132,18 @@ export function getMpRegenRate(dex: number = 10): number {
   return 5 + dexMod;
 }
 
+// Encumbrance system
+export function getCarryCapacity(str: number): number {
+  const strMod = getStatModifier(str);
+  return Math.max(12 + strMod, 10);
+}
+
+export function getMoveCost(inventoryCount: number, str: number): number {
+  const capacity = getCarryCapacity(str);
+  const itemsOver = Math.max(0, inventoryCount - capacity);
+  return 10 + itemsOver * 5;
+}
+
 // Primary stat mapping per class for CP regen bonus
 export const CLASS_PRIMARY_STAT: Record<string, string> = {
   warrior: 'con', wizard: 'int', ranger: 'dex',

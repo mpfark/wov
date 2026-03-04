@@ -22,7 +22,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMpRegenRate } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMpRegenRate, getMoveCost, getCarryCapacity } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -840,10 +840,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const handleMove = useCallback(async (nodeId: string, direction?: string) => {
     if (isDead) return;
-    // MP check — need at least 10 MP to move
-    if ((character.mp ?? 100) < 10) {
-      addLog('⚠️ You are too exhausted to move! Wait for your stamina to recover.');
+    // Encumbrance — dynamic MP cost based on carry capacity
+    const effectiveStr = character.str + (equipmentBonuses.str || 0);
+    const moveCost = getMoveCost(inventory.length, effectiveStr);
+    if ((character.mp ?? 100) < moveCost) {
+      addLog(`⚠️ You are too exhausted to move! Need ${moveCost} MP to move.`);
       return;
+    }
+    const capacity = getCarryCapacity(effectiveStr);
+    if (inventory.length > capacity) {
+      addLog(`⚠️ Over-encumbered! Carrying ${inventory.length}/${capacity} items — movement costs ${moveCost} MP.`);
     }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
@@ -958,7 +964,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         await toggleFollow(false);
         addLog('You break away from the party leader.');
       }
-      await updateCharacter({ current_node_id: nodeId, mp: Math.max((character.mp ?? 100) - 10, 0) });
+      await updateCharacter({ current_node_id: nodeId, mp: Math.max((character.mp ?? 100) - moveCost, 0) });
       // Broadcast movement instantly to party members
       broadcastMove(character.id, character.name, nodeId);
       const dirNames: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' };
@@ -1853,6 +1859,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
                 equipmentBonuses,
+                inventoryCount: inventory.length,
                 isAtInn: currentNode?.is_inn ?? false,
                 regenBuff,
                 regenTick,

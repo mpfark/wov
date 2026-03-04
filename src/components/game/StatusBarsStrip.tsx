@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxMp, getMpRegenRate } from '@/lib/game-data';
+import { getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxMp, getMpRegenRate, getMoveCost, getCarryCapacity } from '@/lib/game-data';
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
@@ -11,6 +11,7 @@ const BUFF_DURATIONS: Record<string, number> = {
 export interface StatusBarsStripProps {
   character: Character;
   equipmentBonuses: Record<string, number>;
+  inventoryCount?: number;
   isAtInn?: boolean;
   regenBuff?: { multiplier: number; expiresAt: number };
   regenTick?: boolean;
@@ -147,7 +148,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
 }
 
 export default function StatusBarsStrip({
-  character, equipmentBonuses, isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
+  character, equipmentBonuses, inventoryCount = 0, isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
   foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
@@ -252,7 +253,18 @@ export default function StatusBarsStrip({
           </TooltipTrigger>
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
             <p className="font-display text-sm">Stamina</p>
-            <p className="text-xs text-muted-foreground">Regen: <span className="text-dwarvish">{mpRegen} MP</span> / 3s · Move: 10 MP</p>
+            {(() => {
+              const strWithGear = character.str + (equipmentBonuses.str || 0);
+              const currentMoveCost = getMoveCost(inventoryCount, strWithGear);
+              const cap = getCarryCapacity(strWithGear);
+              const isEncumbered = inventoryCount > cap;
+              return (
+                <>
+                  <p className="text-xs text-muted-foreground">Regen: <span className="text-dwarvish">{mpRegen} MP</span> / 3s · Move: {isEncumbered ? <span className="text-destructive">{currentMoveCost} MP</span> : <span>{currentMoveCost} MP</span>}</p>
+                  {isEncumbered && <p className="text-xs text-destructive">⚠️ Over-encumbered ({inventoryCount}/{cap})</p>}
+                </>
+              );
+            })()}
             {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× regen</p>}
           </TooltipContent>
         </Tooltip>
