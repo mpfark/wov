@@ -4,8 +4,8 @@ import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown } from 'lucide-react';
 import vitruvianMan from '@/assets/vitruvian-man.png';
 
 interface Props {
@@ -324,8 +324,6 @@ export default function CharacterPanel({
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
   actionBindings,
 }: Props) {
-  const [attrsOpen, setAttrsOpen] = useState(true);
-  const [equipOpen, setEquipOpen] = useState(true);
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
 
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
@@ -346,15 +344,24 @@ export default function CharacterPanel({
           </p>
         </div>
 
-        {/* Stats — vertical breakdown */}
-        <Collapsible open={attrsOpen} onOpenChange={setAttrsOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
-            <h3 className="font-display text-xs text-muted-foreground">Attributes</h3>
-            <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${attrsOpen ? '' : '-rotate-90'}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-          <div className="space-y-1.5">
-            {/* Two-column stat layout: Physical | Mental */}
+        {/* Tabs: Equipment & Attributes */}
+        <Tabs defaultValue="equipment" className="space-y-1.5">
+          <TabsList className="h-7 w-full bg-muted/50 p-0.5">
+            <TabsTrigger value="equipment" className="font-display text-xs h-6 flex-1">Equipment</TabsTrigger>
+            <TabsTrigger value="attributes" className="font-display text-xs h-6 flex-1">Attributes</TabsTrigger>
+          </TabsList>
+
+          {/* AC & Gold — always visible */}
+          <div className="flex justify-center gap-4 text-xs">
+            <span className="font-display text-foreground">
+              AC {character.ac + (equipmentBonuses.ac || 0)}
+              {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2 ml-0.5">+{equipmentBonuses.ac}</span>}
+            </span>
+            <span className="font-display text-primary">Gold {character.gold}</span>
+          </div>
+
+          {/* Attributes tab */}
+          <TabsContent value="attributes" className="mt-0">
             <div className="grid grid-cols-2 gap-x-3">
               {[['str', 'int'], ['dex', 'wis'], ['con', 'cha']].map(([left, right]) => {
                 const lBase = (character as any)[left] as number;
@@ -363,7 +370,6 @@ export default function CharacterPanel({
                 const rBonus = equipmentBonuses[right] || 0;
                 return (
                   <React.Fragment key={`${left}-${right}`}>
-                    {/* Left stat */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
@@ -379,7 +385,6 @@ export default function CharacterPanel({
                         <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[left]}</p>
                       </TooltipContent>
                     </Tooltip>
-                    {/* Right stat */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
@@ -399,119 +404,96 @@ export default function CharacterPanel({
                 );
               })}
             </div>
-            {/* AC & Gold row */}
-            <div className="flex justify-center gap-4 text-xs border-t border-border pt-1">
-              <span className="font-display text-foreground">
-                AC {character.ac + (equipmentBonuses.ac || 0)}
-                {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2 ml-0.5">+{equipmentBonuses.ac}</span>}
-              </span>
-              <span className="font-display text-primary">Gold {character.gold}</span>
+          </TabsContent>
+
+          {/* Equipment tab */}
+          <TabsContent value="equipment" className="mt-0">
+            <div className="relative flex flex-col items-center gap-1">
+              <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
+                <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} />
+                <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
+                <div />
+                <div />
+                <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
+                <div />
+                <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
+                <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
+                <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
+                <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
+                <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
+                <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
+                <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
+                <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
+                <div />
+                <div />
+                <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} />
+                <div />
+              </div>
             </div>
-          </div>
-          </CollapsibleContent>
-        </Collapsible>
 
-        {/* Equipment — Paper Doll Layout */}
-        <Collapsible open={equipOpen} onOpenChange={setEquipOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
-            <h3 className="font-display text-xs text-muted-foreground">Equipment</h3>
-            <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${equipOpen ? '' : '-rotate-90'}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-          <div className="relative flex flex-col items-center gap-1">
-
-            {/* Equipment slots — 3-column grid */}
-            <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
-              {/* Row 1: Trinket - Head - (empty) */}
-              <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} />
-              <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
-              <div />
-              {/* Row 2: (empty) - Amulet - (empty) */}
-              <div />
-              <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
-              <div />
-              {/* Row 3: Shoulders - Chest - Gloves */}
-              <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
-              <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
-              <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
-              {/* Row 4: Main Hand - Belt - Off Hand */}
-              <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
-              <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
-              <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
-              {/* Row 5: Ring - Pants - (empty) */}
-              <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
-              <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
-              <div />
-              {/* Row 6: (empty) - Boots - (empty) */}
-              <div />
-              <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} />
-              <div />
-          </div>
-        </div>
-
-        {/* Belt Potions */}
-        {beltCapacity > 0 && (
-          <div>
-            <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-              Belt Potions ({beltedPotions.length}/{beltCapacity})
-            </h3>
-            <div className="space-y-1">
-              {Array.from({ length: beltCapacity }, (_, i) => {
-                const slot = i + 1;
-                const potion = beltedPotions.find(p => p.belt_slot === slot);
-                return (
-                  <div key={slot} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
-                    <span className="text-muted-foreground text-[9px] w-4">
-                      {actionBindings?.[`potion${slot}`]?.[0]
-                        ? `[${actionBindings[`potion${slot}`][0]}]`
-                        : `${slot}.`}
-                    </span>
-                    {potion ? (
-                      <>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[potion.item.rarity]}`}>
-                              {potion.item.name}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-popover border-border z-50">
-                            <p className={`font-display ${RARITY_COLORS[potion.item.rarity]}`}>{potion.item.name}</p>
-                            <p className="text-xs text-muted-foreground">{potion.item.description}</p>
-                            <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
-                            {Object.entries(potion.item.stats || {}).map(([k, v]) => (
-                              <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
-                                {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
-                              </p>
-                            ))}
-                            <p className="text-[10px] text-muted-foreground mt-1">Value: {potion.item.value}g</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <div className="flex gap-0.5 shrink-0 ml-1">
-                          {onUseConsumable && (
-                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                              onClick={() => onUseConsumable(potion.id)}>
-                              <Heart className="w-3 h-3 text-blood" />
-                            </Button>
-                          )}
-                          {!inCombat && onUnbeltPotion && (
-                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                              onClick={() => onUnbeltPotion(potion.id)}>
-                              <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
-                            </Button>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground/50 flex-1">Empty</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        </CollapsibleContent>
-        </Collapsible>
+            {/* Belt Potions */}
+            {beltCapacity > 0 && (
+              <div className="mt-2">
+                <h3 className="font-display text-xs text-muted-foreground mb-1.5">
+                  Belt Potions ({beltedPotions.length}/{beltCapacity})
+                </h3>
+                <div className="space-y-1">
+                  {Array.from({ length: beltCapacity }, (_, i) => {
+                    const slot = i + 1;
+                    const potion = beltedPotions.find(p => p.belt_slot === slot);
+                    return (
+                      <div key={slot} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                        <span className="text-muted-foreground text-[9px] w-4">
+                          {actionBindings?.[`potion${slot}`]?.[0]
+                            ? `[${actionBindings[`potion${slot}`][0]}]`
+                            : `${slot}.`}
+                        </span>
+                        {potion ? (
+                          <>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[potion.item.rarity]}`}>
+                                  {potion.item.name}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-popover border-border z-50">
+                                <p className={`font-display ${RARITY_COLORS[potion.item.rarity]}`}>{potion.item.name}</p>
+                                <p className="text-xs text-muted-foreground">{potion.item.description}</p>
+                                <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
+                                {Object.entries(potion.item.stats || {}).map(([k, v]) => (
+                                  <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
+                                    {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
+                                  </p>
+                                ))}
+                                <p className="text-[10px] text-muted-foreground mt-1">Value: {potion.item.value}g</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <div className="flex gap-0.5 shrink-0 ml-1">
+                              {onUseConsumable && (
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onUseConsumable(potion.id)}>
+                                  <Heart className="w-3 h-3 text-blood" />
+                                </Button>
+                              )}
+                              {!inCombat && onUnbeltPotion && (
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onUnbeltPotion(potion.id)}>
+                                  <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/50 flex-1">Empty</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Inventory */}
         <div className="flex-1 min-h-0 flex flex-col">
