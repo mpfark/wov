@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
@@ -517,13 +517,14 @@ export default function CharacterPanel({
         <div className="flex-1 min-h-0 flex flex-col">
           <div className="flex items-center justify-between mb-1.5">
             {(() => {
-              const bagCount = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined).length;
+              const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+              const bagWeight = getBagWeight(bagItems);
               const effectiveStr = character.str + (equipmentBonuses.str || 0);
               const capacity = getCarryCapacity(effectiveStr);
-              const isOver = bagCount > capacity;
+              const isOver = bagWeight > capacity;
               return (
                 <h3 className="font-display text-xs text-muted-foreground">
-                  Inventory ({bagCount}) — <span className={isOver ? 'text-destructive' : ''}>{bagCount}/{capacity}{isOver ? ' ⚠️' : ''}</span>
+                  Inventory ({bagItems.length}) — <span className={isOver ? 'text-destructive' : ''}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
                 </h3>
               );
             })()}

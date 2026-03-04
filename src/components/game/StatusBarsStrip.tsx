@@ -261,7 +261,7 @@ export default function StatusBarsStrip({
               return (
                 <>
                   <p className="text-xs text-muted-foreground">Regen: <span className="text-dwarvish">{mpRegen} MP</span> / 3s · Move: {isEncumbered ? <span className="text-destructive">{currentMoveCost} MP</span> : <span>{currentMoveCost} MP</span>}</p>
-                  {isEncumbered && <p className="text-xs text-destructive">⚠️ Over-encumbered ({inventoryCount}/{cap})</p>}
+                  {isEncumbered && <p className="text-xs text-destructive">⚠️ Over-encumbered ({inventoryCount}/{cap} weight)</p>}
                 </>
               );
             })()}
