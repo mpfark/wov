@@ -138,9 +138,18 @@ export function getCarryCapacity(str: number): number {
   return Math.max(12 + strMod, 10);
 }
 
-export function getMoveCost(inventoryCount: number, str: number): number {
+// Calculate weighted bag size: equipment = 1 slot, consumables = 1/3 slot
+export function getBagWeight(bagItems: { item: { item_type: string } }[]): number {
+  let weight = 0;
+  for (const i of bagItems) {
+    weight += i.item.item_type === 'consumable' ? 1 / 3 : 1;
+  }
+  return Math.ceil(weight);
+}
+
+export function getMoveCost(bagWeight: number, str: number): number {
   const capacity = getCarryCapacity(str);
-  const itemsOver = Math.max(0, inventoryCount - capacity);
+  const itemsOver = Math.max(0, bagWeight - capacity);
   return 10 + itemsOver * 5;
 }
 

@@ -22,7 +22,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMpRegenRate, getMoveCost, getCarryCapacity } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, CLASS_LEVEL_BONUSES, CLASS_LABELS, getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMpRegenRate, getMoveCost, getCarryCapacity, getBagWeight } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getStatModifier as getStatMod2 } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
@@ -842,15 +842,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (isDead) return;
     // Encumbrance — dynamic MP cost based on carry capacity
     const effectiveStr = character.str + (equipmentBonuses.str || 0);
-    const bagCount = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined).length;
-    const moveCost = getMoveCost(bagCount, effectiveStr);
+    const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+    const bagWeight = getBagWeight(bagItems);
+    const moveCost = getMoveCost(bagWeight, effectiveStr);
     if ((character.mp ?? 100) < moveCost) {
       addLog(`⚠️ You are too exhausted to move! Need ${moveCost} MP to move.`);
       return;
     }
     const capacity = getCarryCapacity(effectiveStr);
-    if (bagCount > capacity) {
-      addLog(`⚠️ Over-encumbered! Carrying ${bagCount}/${capacity} items — movement costs ${moveCost} MP.`);
+    if (bagWeight > capacity) {
+      addLog(`⚠️ Over-encumbered! Carrying ${bagWeight}/${capacity} weight — movement costs ${moveCost} MP.`);
     }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
@@ -1860,7 +1861,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
                 equipmentBonuses,
-                inventoryCount: unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined).length,
+                inventoryCount: getBagWeight(unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined)),
                 isAtInn: currentNode?.is_inn ?? false,
                 regenBuff,
                 regenTick,

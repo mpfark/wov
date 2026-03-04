@@ -822,9 +822,10 @@ export default function GameManual() {
                   <p className="text-foreground font-display text-xs">⚖️ Encumbrance</p>
                   <p>Players have a <strong className="text-foreground">carry capacity</strong> based on Strength:</p>
                   <p><strong className="text-foreground">Carry Capacity</strong> = 12 + STR modifier (minimum 10)</p>
+                  <p>Items have different <strong className="text-foreground">weights</strong>: equipment = 1 slot, consumables = ⅓ slot. Equipped items and belted potions don't count.</p>
                   <p>Exceeding capacity doesn't prevent picking up items, but <strong className="text-foreground">increases movement cost</strong>:</p>
-                  <p><strong className="text-foreground">Move Cost</strong> = 10 + (items over capacity × 5) MP</p>
-                  <p className="text-muted-foreground">Example: A character with STR 14 (capacity 14) carrying 17 items pays 10 + (3 × 5) = 25 MP per move.</p>
+                  <p><strong className="text-foreground">Move Cost</strong> = 10 + (weight over capacity × 5) MP</p>
+                  <p className="text-muted-foreground">Example: A character with STR 14 (capacity 14) carrying 12 equipment + 9 potions has weight 12 + 3 = 15, paying 10 + (1 × 5) = 15 MP per move.</p>
                 </div>
 
                 <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery. STR-focused classes like Warriors can carry more items before becoming encumbered.</p>
