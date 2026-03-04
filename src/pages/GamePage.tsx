@@ -842,14 +842,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (isDead) return;
     // Encumbrance — dynamic MP cost based on carry capacity
     const effectiveStr = character.str + (equipmentBonuses.str || 0);
-    const moveCost = getMoveCost(inventory.length, effectiveStr);
+    const moveCost = getMoveCost(unequipped.length, effectiveStr);
     if ((character.mp ?? 100) < moveCost) {
       addLog(`⚠️ You are too exhausted to move! Need ${moveCost} MP to move.`);
       return;
     }
     const capacity = getCarryCapacity(effectiveStr);
-    if (inventory.length > capacity) {
-      addLog(`⚠️ Over-encumbered! Carrying ${inventory.length}/${capacity} items — movement costs ${moveCost} MP.`);
+    if (unequipped.length > capacity) {
+      addLog(`⚠️ Over-encumbered! Carrying ${unequipped.length}/${capacity} items — movement costs ${moveCost} MP.`);
     }
     const targetNode = getNode(nodeId);
     if (!targetNode) return;
@@ -1859,7 +1859,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
                 equipmentBonuses,
-                inventoryCount: inventory.length,
+                inventoryCount: unequipped.length,
                 isAtInn: currentNode?.is_inn ?? false,
                 regenBuff,
                 regenTick,
