@@ -518,13 +518,12 @@ export default function CharacterPanel({
           <div className="flex items-center justify-between mb-1.5">
             {(() => {
               const bagCount = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined).length;
-              const totalUnequipped = unequipped.length;
               const effectiveStr = character.str + (equipmentBonuses.str || 0);
               const capacity = getCarryCapacity(effectiveStr);
-              const isOver = totalUnequipped > capacity;
+              const isOver = bagCount > capacity;
               return (
                 <h3 className="font-display text-xs text-muted-foreground">
-                  Inventory ({bagCount}) — <span className={isOver ? 'text-destructive' : ''}>{totalUnequipped}/{capacity}{isOver ? ' ⚠️' : ''}</span>
+                  Inventory ({bagCount}) — <span className={isOver ? 'text-destructive' : ''}>{bagCount}/{capacity}{isOver ? ' ⚠️' : ''}</span>
                 </h3>
               );
             })()}
