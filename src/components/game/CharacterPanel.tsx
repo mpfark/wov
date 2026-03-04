@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT } from '@/lib/game-data';
+import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -452,47 +453,132 @@ export default function CharacterPanel({
 
             {/* Attributes overlaid — absolute so equipment holds height */}
             <TabsContent value="attributes" className="mt-0 absolute inset-0 data-[state=inactive]:!block data-[state=inactive]:invisible">
-              <div className="grid grid-cols-2 gap-x-3">
-                {[['str', 'int'], ['dex', 'wis'], ['con', 'cha']].map(([left, right]) => {
-                  const lBase = (character as any)[left] as number;
-                  const lBonus = equipmentBonuses[left] || 0;
-                  const rBase = (character as any)[right] as number;
-                  const rBonus = equipmentBonuses[right] || 0;
+              <div className="space-y-2.5">
+                {/* Base stats grid */}
+                <div className="grid grid-cols-2 gap-x-3">
+                  {[['str', 'int'], ['dex', 'wis'], ['con', 'cha']].map(([left, right]) => {
+                    const lBase = (character as any)[left] as number;
+                    const lBonus = equipmentBonuses[left] || 0;
+                    const lMod = getStatModifier(lBase + lBonus);
+                    const rBase = (character as any)[right] as number;
+                    const rBonus = equipmentBonuses[right] || 0;
+                    const rMod = getStatModifier(rBase + rBonus);
+                    return (
+                      <React.Fragment key={`${left}-${right}`}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                              <span className="font-display text-foreground">{STAT_FULL_NAMES[left]}</span>
+                              <span className="flex gap-1.5 tabular-nums">
+                                <span className="text-foreground">{lBase}</span>
+                                <span className="text-chart-2 w-5 text-right">{lBonus > 0 ? `+${lBonus}` : ''}</span>
+                                <span className="text-muted-foreground w-6 text-right text-[10px]">({lMod >= 0 ? '+' : ''}{lMod})</span>
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-popover border-border z-50">
+                            <p className="font-display text-sm">{STAT_FULL_NAMES[left]}</p>
+                            <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[left]}</p>
+                            <p className="text-[10px] text-muted-foreground">Modifier: {lMod >= 0 ? '+' : ''}{lMod}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                              <span className="font-display text-foreground">{STAT_FULL_NAMES[right]}</span>
+                              <span className="flex gap-1.5 tabular-nums">
+                                <span className="text-foreground">{rBase}</span>
+                                <span className="text-chart-2 w-5 text-right">{rBonus > 0 ? `+${rBonus}` : ''}</span>
+                                <span className="text-muted-foreground w-6 text-right text-[10px]">({rMod >= 0 ? '+' : ''}{rMod})</span>
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-popover border-border z-50">
+                            <p className="font-display text-sm">{STAT_FULL_NAMES[right]}</p>
+                            <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[right]}</p>
+                            <p className="text-[10px] text-muted-foreground">Modifier: {rMod >= 0 ? '+' : ''}{rMod}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+
+                {/* Derived Stats */}
+                {(() => {
+                  const eCon = character.con + (equipmentBonuses.con || 0);
+                  const eDex = character.dex + (equipmentBonuses.dex || 0);
+                  const eInt = character.int + (equipmentBonuses.int || 0);
+                  const eWis = character.wis + (equipmentBonuses.wis || 0);
+                  const eCha = character.cha + (equipmentBonuses.cha || 0);
+                  const hpRegen = getBaseRegen(eCon) + (itemHpRegen || 0);
+                  const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
+                  const maxMp = getMaxMp(character.level, eDex);
+                  const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
+                  const cpRegen = getCpRegenRate((character as any)[primaryStat] + (equipmentBonuses[primaryStat] || 0));
+                  const mpRegen = getMpRegenRate(eDex);
+
+                  const combat = CLASS_COMBAT[character.class];
+                  const atkStat = combat?.stat || 'str';
+                  const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
+                  const milestoneCrit = character.level >= 28 ? 1 : 0;
+                  const effectiveCrit = (combat?.critRange || 20) - milestoneCrit;
+
+                  const derivedRows: { label: string; value: string; tip: string }[] = [
+                    { label: 'Max HP', value: `${character.max_hp}`, tip: `Base + CON modifier + (level-1)×5` },
+                    { label: 'HP Regen', value: `${hpRegen}/tick`, tip: `Base ${getBaseRegen(eCon)} + ${itemHpRegen || 0} from gear (every 15s)` },
+                    { label: 'Max CP', value: `${maxCp}`, tip: `60 + (level-1)×3 + best mental mod×5` },
+                    { label: 'CP Regen', value: `${cpRegen}/tick`, tip: `Based on ${primaryStat.toUpperCase()} (every 6s)` },
+                    { label: 'Max Stamina', value: `${maxMp}`, tip: `100 + DEX mod×10 + (level-1)×2` },
+                    { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 6s)` },
+                  ];
+
+                  const combatRows: { label: string; value: string; tip: string }[] = [
+                    { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
+                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: milestoneCrit ? 'Includes +1 from level 28 milestone' : 'Natural roll needed for critical hit' },
+                  ];
+
                   return (
-                    <React.Fragment key={`${left}-${right}`}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                            <span className="font-display text-foreground">{STAT_FULL_NAMES[left]}</span>
-                            <span className="flex gap-1.5 tabular-nums">
-                              <span className="text-foreground">{lBase}</span>
-                              <span className="text-chart-2 w-5 text-right">{lBonus > 0 ? `+${lBonus}` : ''}</span>
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-popover border-border z-50">
-                          <p className="font-display text-sm">{STAT_FULL_NAMES[left]}</p>
-                          <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[left]}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                            <span className="font-display text-foreground">{STAT_FULL_NAMES[right]}</span>
-                            <span className="flex gap-1.5 tabular-nums">
-                              <span className="text-foreground">{rBase}</span>
-                              <span className="text-chart-2 w-5 text-right">{rBonus > 0 ? `+${rBonus}` : ''}</span>
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-popover border-border z-50">
-                          <p className="font-display text-sm">{STAT_FULL_NAMES[right]}</p>
-                          <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[right]}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </React.Fragment>
+                    <>
+                      <div className="border-t border-border pt-1.5">
+                        <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Derived</h4>
+                        <div className="grid grid-cols-2 gap-x-3">
+                          {derivedRows.map(r => (
+                            <Tooltip key={r.label}>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                                  <span className="text-muted-foreground">{r.label}</span>
+                                  <span className="font-display text-foreground tabular-nums">{r.value}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-popover border-border z-50">
+                                <p className="text-xs">{r.tip}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="border-t border-border pt-1.5">
+                        <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Combat</h4>
+                        <div className="grid grid-cols-2 gap-x-3">
+                          {combatRows.map(r => (
+                            <Tooltip key={r.label}>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                                  <span className="text-muted-foreground">{r.label}</span>
+                                  <span className="font-display text-foreground tabular-nums">{r.value}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-popover border-border z-50">
+                                <p className="text-xs">{r.tip}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          ))}
+                        </div>
+                      </div>
+                    </>
                   );
-                })}
+                })()}
               </div>
             </TabsContent>
           </div>
