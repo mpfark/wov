@@ -537,11 +537,12 @@ export default function CharacterPanel({
                   ];
 
                   const totalHitBonus = atkMod + intHit;
-                  const hitChanceVs10 = Math.min(100, Math.max(5, (21 - (10 - totalHitBonus)) * 5));
+                  const sameLevelAC = Math.round(10 + character.level * 0.6 + 2);
+                  const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
 
                   const combatRows: { label: string; value: string; tip: string }[] = [
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
-                    { label: 'Hit Bonus', value: `+${totalHitBonus} (${hitChanceVs10}% vs AC 10)`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChanceVs10}% vs AC 10` },
+                    { label: 'Hit Bonus', value: `+${totalHitBonus} (${hitChance}% vs AC ${sameLevelAC})`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
                     ...(strFloor > 0 ? [{ label: 'Min Damage', value: `+${strFloor}`, tip: 'STR bonus: minimum damage floor on all attacks' }] : []),
                     ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}% halve`, tip: 'WIS bonus: chance to halve incoming creature damage' }] : []),
