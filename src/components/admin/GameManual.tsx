@@ -116,6 +116,24 @@ export default function GameManual() {
                 Race choice has a <strong className="text-foreground">major impact</strong> on derived stats — tough races (Dwarf, Edain) provide significantly more HP via CON, while wise/mental races (Elf, Half-Elf) provide larger CP pools via INT/WIS/CHA.
               </p>
 
+              {/* What Each Attribute Does */}
+              <Card className="bg-card/30 border-border">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">📋 Attribute Effects</p>
+                  <div className="text-xs text-muted-foreground space-y-1.5">
+                    <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity (bag slots before encumbrance penalties), and movement cost reduction when overburdened.</p>
+                    <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and evasion chance.</p>
+                    <p><strong className="text-foreground">CON (Constitution)</strong> — Increases max HP, passive HP regeneration rate, and resistance to DoT effects. Primary stat for Warrior CP regen.</p>
+                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP (for abilities), spell damage bonus, and contributes to CP regen for Wizards. Also factors into lore-based interactions.</p>
+                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP, healing power, and contributes to CP regen for Healers and Rangers. Improves perception for searching.</p>
+                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Increases max CP, Bard ability effectiveness, and contributes to CP regen for Bards and Rogues. Affects vendor prices and social interactions.</p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/70 mt-1">
+                    Stat modifier = <code className="text-primary">floor((stat − 10) / 2)</code>. A stat of 10 gives +0, 12 gives +1, 14 gives +2, etc.
+                  </p>
+                </CardContent>
+              </Card>
+
               {/* Race-Class Synergy Guide */}
               <Card className="bg-primary/5 border-primary/20">
                 <CardContent className="p-3 space-y-2">
