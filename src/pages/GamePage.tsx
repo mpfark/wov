@@ -34,6 +34,7 @@ import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
 import { Input } from '@/components/ui/input';
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
+import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 
 function getLogColor(log: string): string {
   // Chat messages
@@ -91,6 +92,7 @@ interface Props {
 }
 
 export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
+  const bus = useCreateGameEventBus();
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const { playersHere } = usePresence(character.current_node_id, character);
   const { onlinePlayers } = useGlobalPresence(character);
@@ -189,10 +191,39 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const ownLogIdsRef = useRef<Set<string>>(new Set());
 
+  // ── Event bus subscribers ──────────────────────────────────────
+  // Consumer 1: Update eventLog state for displayed logs
+  useGameEvent(bus, 'log', ({ message }) => {
+    const displayMsg = message.replace('[INSPIRE_BUFF]', '').trim();
+    setEventLog(prev => [...prev.slice(-49), displayMsg]);
+  });
+
+  // Consumer 2: Write to party combat log + broadcast for instant delivery
+  useGameEvent(bus, 'log', ({ message }) => {
+    (async () => {
+      const id = await addPartyCombatLog(message, character.current_node_id, character.name);
+      if (id) {
+        ownLogIdsRef.current.add(id);
+        broadcastCombatMsg(id, message, character.current_node_id, character.name);
+      }
+    })();
+  });
+
+  // Consumer 3: Update eventLog for local-only messages (no party broadcast)
+  useGameEvent(bus, 'log:local', ({ message }) => {
+    setEventLog(prev => [...prev.slice(-49), message]);
+  });
+
+  // Consumer 4: Forward creature damage events to broadcast channel
+  useGameEvent(bus, 'creature:damage', (payload) => {
+    broadcastDamage(payload.creatureId, payload.newHp, payload.damage, payload.attackerName, payload.killed);
+  });
+
+  // ── Log emitters (backward-compatible wrappers) ────────────────
   // Local-only log (no party combat log broadcast)
   const addLocalLog = useCallback((msg: string) => {
-    setEventLog(prev => [...prev.slice(-49), msg]);
-  }, []);
+    bus.emit('log:local', { message: msg });
+  }, [bus]);
 
   // Track player arrivals and departures via presence
   const prevPlayersRef = useRef<Set<string>>(new Set());
@@ -230,19 +261,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const prevPlayerNamesRef = useRef<Map<string, string>>(new Map());
 
   const addLog = useCallback((msg: string) => {
-    // Strip internal buff tags from the displayed message
-    const displayMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
-    setEventLog(prev => [...prev.slice(-49), displayMsg]);
-    // Also write to party combat log if in a party, and track own IDs to prevent duplicates
-    (async () => {
-      const id = await addPartyCombatLog(msg, character.current_node_id, character.name);
-      if (id) {
-        ownLogIdsRef.current.add(id);
-        // Broadcast for instant delivery to party members (~50ms vs ~300ms DB)
-        broadcastCombatMsg(id, msg, character.current_node_id, character.name);
-      }
-    })();
-  }, [addPartyCombatLog, character.current_node_id, character.name, broadcastCombatMsg]);
+    bus.emit('log', { message: msg });
+  }, [bus]);
 
   // Helper to process incoming log messages from other players
   const processIncomingLog = useCallback((message: string, characterName: string | null, nodeId: string | null) => {
