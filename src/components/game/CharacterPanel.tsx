@@ -560,17 +560,18 @@ export default function CharacterPanel({
                       </div>
                       <div className="border-t border-border pt-1.5">
                         <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Combat</h4>
-                        <div className="grid grid-cols-2 gap-x-3">
+                        <div className="space-y-0">
                           {combatRows.map(r => (
                             <Tooltip key={r.label}>
                               <TooltipTrigger asChild>
                                 <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                                  <span className="text-muted-foreground">{r.label}</span>
+                                  <span className="font-display text-foreground">{r.label}</span>
                                   <span className="font-display text-foreground tabular-nums">{r.value}</span>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent className="bg-popover border-border z-50">
-                                <p className="text-xs">{r.tip}</p>
+                                <p className="font-display text-sm">{r.label}</p>
+                                <p className="text-xs text-muted-foreground">{r.tip}</p>
                               </TooltipContent>
                             </Tooltip>
                           ))}
