@@ -39,7 +39,7 @@ export default function GameManual() {
     const level = i + 1;
     const xpRequired = getXpForLevel(level);
     const totalXp = Array.from({ length: level }, (_, l) => getXpForLevel(l + 1)).reduce((a, b) => a + b, 0);
-    const statGain = level % 5 === 0 ? '+1 all stats' : '—';
+    const statGain = '+1 point';
     const classBonus = level > 1 && level % 3 === 0;
     return { level, xpRequired, totalXp, statGain, classBonus, players: playerCounts[level] || 0 };
   });
@@ -57,7 +57,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                XP per level = <code className="text-primary">floor(level^2.0 × 50)</code>. All stats +1 every 5th level (5, 10, 15, 20...). Class bonuses every 3 levels.
+                XP per level = <code className="text-primary">floor(level^2.0 × 50)</code>. You gain <strong className="text-foreground">1 stat point per level</strong> to allocate freely. Class bonuses every 3 levels.
               </p>
               <div className="max-h-[400px] overflow-auto">
                 <Table>
@@ -66,7 +66,7 @@ export default function GameManual() {
                       <TableHead className="text-xs w-12">Lv</TableHead>
                       <TableHead className="text-xs">XP Req</TableHead>
                       <TableHead className="text-xs">Total XP</TableHead>
-                      <TableHead className="text-xs">Stats</TableHead>
+                      <TableHead className="text-xs">Stat Point</TableHead>
                       <TableHead className="text-xs">Class Bonus</TableHead>
                       <TableHead className="text-xs">Players</TableHead>
                     </TableRow>

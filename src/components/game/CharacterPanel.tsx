@@ -43,6 +43,7 @@ interface Props {
   onUnbeltPotion?: (inventoryId: string) => void;
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
+  onAllocateStat?: (stat: string) => void;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -323,7 +324,7 @@ export default function CharacterPanel({
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
-  actionBindings,
+  actionBindings, onAllocateStat,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
 
@@ -455,16 +456,33 @@ export default function CharacterPanel({
             <TabsContent value="attributes" className="mt-0 absolute inset-0 data-[state=inactive]:!block data-[state=inactive]:invisible">
               <div className="space-y-2.5">
                 {/* Base stats — single column: STR, DEX, CON, INT, WIS, CHA */}
+                {character.unspent_stat_points > 0 && (
+                  <div className="text-[10px] text-primary font-display text-center py-0.5 bg-primary/10 rounded border border-primary/20">
+                    {character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''} to allocate
+                  </div>
+                )}
                 <div className="space-y-0">
                   {['str', 'dex', 'con', 'int', 'wis', 'cha'].map(stat => {
                     const base = (character as any)[stat] as number;
                     const bonus = equipmentBonuses[stat] || 0;
                     const mod = getStatModifier(base + bonus);
+                    const hasPoints = character.unspent_stat_points > 0;
                     return (
                       <Tooltip key={stat}>
                         <TooltipTrigger asChild>
                           <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                            <span className="font-display text-foreground">{STAT_FULL_NAMES[stat]}</span>
+                            <span className="flex items-center gap-1">
+                              {hasPoints && onAllocateStat && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onAllocateStat(stat); }}
+                                  className="w-4 h-4 flex items-center justify-center rounded bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-bold transition-colors"
+                                  title={`Add 1 to ${STAT_FULL_NAMES[stat]}`}
+                                >
+                                  +
+                                </button>
+                              )}
+                              <span className="font-display text-foreground">{STAT_FULL_NAMES[stat]}</span>
+                            </span>
                             <span className="flex gap-1.5 tabular-nums">
                               <span className="text-foreground">{base}</span>
                               <span className="text-chart-2 w-5 text-right">{bonus > 0 ? `+${bonus}` : ''}</span>

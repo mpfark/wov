@@ -20,7 +20,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { getBagWeight } from '@/lib/game-data';
+import { getBagWeight, getStatModifier, getMaxCp, getMaxMp } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -578,6 +578,40 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             damageBuff={damageBuff}
             partyRegenBuff={partyRegenBuff}
             focusStrikeBuff={focusStrikeBuff}
+            onAllocateStat={async (stat: string) => {
+              if (character.unspent_stat_points <= 0) return;
+              const currentVal = (character as any)[stat] ?? 10;
+              const updates: Partial<Character> = {
+                [stat]: currentVal + 1,
+                unspent_stat_points: character.unspent_stat_points - 1,
+              };
+              // Recalculate derived stats affected by the allocation
+              if (stat === 'con') {
+                updates.max_hp = character.max_hp + (getStatModifier(currentVal + 1) - getStatModifier(currentVal));
+                if (updates.max_hp !== character.max_hp) {
+                  updates.hp = character.hp + (updates.max_hp - character.max_hp);
+                }
+              }
+              if (stat === 'int' || stat === 'wis' || stat === 'cha') {
+                const eInt = stat === 'int' ? currentVal + 1 : character.int;
+                const eWis = stat === 'wis' ? currentVal + 1 : character.wis;
+                const eCha = stat === 'cha' ? currentVal + 1 : character.cha;
+                const newMaxCp = getMaxCp(character.level, eInt, eWis, eCha);
+                if (newMaxCp !== character.max_cp) {
+                  updates.max_cp = newMaxCp;
+                  updates.cp = Math.min((character.cp ?? 0) + (newMaxCp - character.max_cp), newMaxCp);
+                }
+              }
+              if (stat === 'dex') {
+                const newMaxMp = getMaxMp(character.level, currentVal + 1);
+                if (newMaxMp !== (character.max_mp ?? 100)) {
+                  updates.max_mp = newMaxMp;
+                  updates.mp = Math.min((character.mp ?? 100) + (newMaxMp - (character.max_mp ?? 100)), newMaxMp);
+                }
+              }
+              await updateCharacter(updates);
+              addLog(`📊 +1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`);
+            }}
           />
         </div>
 

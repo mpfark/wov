@@ -222,8 +222,10 @@ export function useActions(params: UseActionsParams) {
         hp: p.character.max_hp + 5, gold: newGold,
         max_cp: newMaxCp, cp: Math.min((p.character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
         max_mp: newMaxMp, mp: Math.min((p.character.mp ?? 100) + (newMaxMp - oldMaxMp), newMaxMp),
+        unspent_stat_points: (p.character.unspent_stat_points || 0) + 1,
       };
       p.addLog(`🎉 Level Up! You are now level ${newLevel}!`);
+      p.addLog(`📊 You gained 1 stat point to allocate!`);
       await p.updateCharacter(levelUpUpdates);
     } else {
       await p.updateCharacter({ xp: newXp, gold: newGold });

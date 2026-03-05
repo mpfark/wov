@@ -190,8 +190,6 @@ Deno.serve(async (req) => {
         const stats: Record<string, number> = {};
         for (const s of statKeys) {
           let val = 8 + (raceBonus[s] || 0) + (classBonus[s] || 0);
-          // +1 all stats every 5th level (5, 10, 15, 20, ...)
-          val += Math.floor(level / 5);
           // Class bonus every 3 levels
           if (levelBonuses[s]) {
             let bonusCount = 0;
@@ -214,6 +212,11 @@ Deno.serve(async (req) => {
         const manualPoints = Math.max(0, (char as any)[s] - oldBaseStats[s]);
         updates[s] = newBaseStats[s] + manualPoints;
       }
+      // Adjust unspent stat points for new level (1 per level, minus what was already allocated)
+      const totalPointsAtNewLevel = Math.max(new_level - 1, 0);
+      const totalPointsAtOldLevel = Math.max(oldLevel - 1, 0);
+      const pointsDiff = totalPointsAtNewLevel - totalPointsAtOldLevel;
+      updates.unspent_stat_points = Math.max(0, (char.unspent_stat_points || 0) + pointsDiff);
 
       // HP: base class HP + 5 per level after 1 + con modifier
       const baseHP = CLASS_BASE_HP[char.class] || 18;
@@ -333,6 +336,7 @@ Deno.serve(async (req) => {
       const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
       const statIncreases: Record<string, number> = {};
       for (const s of statKeys) statIncreases[s] = 0;
+      let statPoints = 0;
 
       // Process multiple level-ups
       let xpForNext = newLevel * 100;
@@ -342,10 +346,8 @@ Deno.serve(async (req) => {
         newMaxHp += 5;
         newHp = newMaxHp; // Full heal on level up
 
-        // +1 all stats every 5th level
-        if (newLevel % 5 === 0) {
-          for (const s of statKeys) statIncreases[s]++;
-        }
+        // Grant 1 unspent stat point per level
+        statPoints++;
 
         // Class bonus every 3 levels (uncapped)
         if (newLevel % 3 === 0) {
@@ -372,6 +374,7 @@ Deno.serve(async (req) => {
       const updates: Record<string, any> = {
         xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
         max_cp: grantMaxCp, cp: grantMaxCp,
+        unspent_stat_points: (char as any).unspent_stat_points + statPoints,
       };
 
       // Apply accumulated stat increases
@@ -442,8 +445,8 @@ Deno.serve(async (req) => {
 
       for (const stat of statKeys) {
         let base = 8 + (raceBonus[stat] || 0) + (classBonus[stat] || 0);
-        // +1 all stats every 5th level
-        base += Math.floor(char.level / 5);
+        // No more auto +1 all stats every 5 levels — removed
+        // Add class level bonuses (every 3 levels)
         // Add class level bonuses (every 3 levels)
         if (levelBonuses[stat]) {
           let bonusCount = 0;
