@@ -612,7 +612,7 @@ export function useActions(params: UseActionsParams) {
       const reduction = 0.3;
       p.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
-    } else if ((ability.type as string) === 'ac_buff') {
+    } else if (ability.type === 'battle_cry') {
       const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const bonus = Math.max(2, conMod + 1);
       const durationMs = Math.min(20000, 12000 + conMod * 1000);
@@ -640,7 +640,7 @@ export function useActions(params: UseActionsParams) {
       const durationMs = Math.min(30000, 20000 + dexMod * 1000);
       p.setPoisonBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for ${Math.round(durationMs / 1000)}s.`);
-    } else if ((ability.type as string) === 'poison_consume') {
+    } else if (ability.type === 'execute_attack') {
       if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Eviscerate!`); return; }
       const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Eviscerate.`); return; }
