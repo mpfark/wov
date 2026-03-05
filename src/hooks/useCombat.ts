@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
-import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getIntCritBonus, getWisDodgeChance, getStrDamageFloor, getChaGoldMultiplier } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getStrDamageFloor, getChaGoldMultiplier } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -247,14 +247,15 @@ export function useCombat(params: UseCombatParams) {
       const statBonus = _eqBonuses[ability.stat] || 0;
       const atkRoll = rollD20();
       const statMod = getStatModifier((char as any)[ability.stat] + statBonus);
-      const totalAtk = atkRoll + statMod;
       const statLabel = ability.stat.toUpperCase();
       const who = _party ? char.name : 'You';
       const _critBuff = e.critBuff;
       const critBonus = (_critBuff && Date.now() < _critBuff.expiresAt) ? _critBuff.bonus : 0;
       const milestoneCritBonus = char.level >= 28 ? 1 : 0;
-      const intCritBonus = getIntCritBonus(char.int + (_eqBonuses.int || 0));
-      const effectiveCritRange = ability.critRange - critBonus - milestoneCritBonus - intCritBonus;
+      const dexCritBonus = getDexCritBonus(char.dex + (_eqBonuses.dex || 0));
+      const effectiveCritRange = ability.critRange - critBonus - milestoneCritBonus - dexCritBonus;
+      const intHitBonus = getIntHitBonus(char.int + (_eqBonuses.int || 0));
+      const totalAtk = atkRoll + statMod + intHitBonus;
 
       // Sunder Armor
       const _sunderDebuff = e.sunderDebuff;

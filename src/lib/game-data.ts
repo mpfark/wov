@@ -248,9 +248,15 @@ export function getStatModifier(stat: number): number {
 
 // ── Cross-Stat Bonuses ─────────────────────────────────────────
 
-// INT → Critical Hit Chance: every 2 INT modifier points improves crit range by 1
-export function getIntCritBonus(int: number): number {
+// INT → Hit Bonus: +1 to attack rolls per 2 INT modifier points
+export function getIntHitBonus(int: number): number {
   const mod = getStatModifier(int);
+  return Math.max(0, Math.floor(mod / 2));
+}
+
+// DEX → Critical Hit Chance: every 2 DEX modifier points improves crit range by 1
+export function getDexCritBonus(dex: number): number {
+  const mod = getStatModifier(dex);
   return Math.max(0, Math.floor(mod / 2));
 }
 

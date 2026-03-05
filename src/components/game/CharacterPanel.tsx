@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -61,9 +61,9 @@ const STAT_FULL_NAMES: Record<string, string> = {
 
 const STAT_DESCRIPTIONS: Record<string, string> = {
   str: 'Melee attack, carry capacity, +min damage floor on all attacks',
-  dex: 'Ranged attack, AC bonus, max Stamina, initiative',
+  dex: 'Ranged attack, AC bonus, max Stamina, crit chance',
   con: 'Hit points and physical resilience',
-  int: 'Arcane power, CP pool, improves critical hit range',
+  int: 'Arcane power, CP pool, improves hit chance',
   wis: 'Perception, healing, chance to halve incoming damage',
   cha: 'Persuasion, bardic abilities, better vendor prices & humanoid gold',
 };
@@ -518,9 +518,10 @@ export default function CharacterPanel({
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
                   const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
+                  const intHit = getIntHitBonus(eInt);
                   const milestoneCrit = character.level >= 28 ? 1 : 0;
-                  const intCrit = getIntCritBonus(eInt);
-                  const effectiveCrit = (combat?.critRange || 20) - milestoneCrit - intCrit;
+                  const dexCrit = getDexCritBonus(eDex);
+                  const effectiveCrit = (combat?.critRange || 20) - milestoneCrit - dexCrit;
                   const wisHalveChance = getWisDodgeChance(eWis);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
@@ -535,12 +536,13 @@ export default function CharacterPanel({
                     { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 6s)` },
                   ];
 
-                  const hitChanceVs10 = Math.min(100, Math.max(5, (21 - (10 - atkMod)) * 5));
+                  const totalHitBonus = atkMod + intHit;
+                  const hitChanceVs10 = Math.min(100, Math.max(5, (21 - (10 - totalHitBonus)) * 5));
 
                   const combatRows: { label: string; value: string; tip: string }[] = [
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
-                    { label: 'Hit Bonus', value: `${atkMod >= 0 ? '+' : ''}${atkMod} (${hitChanceVs10}% vs AC 10)`, tip: `d20 + ${atkMod} vs target AC. Example: ${hitChanceVs10}% chance to hit AC 10` },
-                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${intCrit > 0 ? `+${intCrit} INT bonus` : 'INT bonus at 14+'}` },
+                    { label: 'Hit Bonus', value: `+${totalHitBonus} (${hitChanceVs10}% vs AC 10)`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChanceVs10}% vs AC 10` },
+                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
                     ...(strFloor > 0 ? [{ label: 'Min Damage', value: `+${strFloor}`, tip: 'STR bonus: minimum damage floor on all attacks' }] : []),
                     ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}% halve`, tip: 'WIS bonus: chance to halve incoming creature damage' }] : []),
                     ...(buyDisc > 0 ? [{ label: 'Vendor Bonus', value: `Buy -${Math.round(buyDisc * 100)}% / Sell ${Math.round(sellMult * 100)}%`, tip: 'CHA bonus: better vendor prices' }] : []),
