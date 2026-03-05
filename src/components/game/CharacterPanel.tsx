@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT } from '@/lib/game-data';
@@ -327,7 +328,7 @@ export default function CharacterPanel({
   actionBindings, onAllocateStat,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
-
+  const [pendingStat, setPendingStat] = useState<string | null>(null);
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
@@ -474,7 +475,7 @@ export default function CharacterPanel({
                             <span className="flex items-center gap-1">
                               {hasPoints && onAllocateStat && (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); onAllocateStat(stat); }}
+                                  onClick={(e) => { e.stopPropagation(); setPendingStat(stat); }}
                                   className="w-4 h-4 flex items-center justify-center rounded bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-bold transition-colors"
                                   title={`Add 1 to ${STAT_FULL_NAMES[stat]}`}
                                 >
@@ -705,6 +706,38 @@ export default function CharacterPanel({
         </div>
 
       </div>
+
+      {/* Stat allocation confirmation dialog */}
+      <AlertDialog open={!!pendingStat} onOpenChange={(open) => { if (!open) setPendingStat(null); }}>
+        <AlertDialogContent className="bg-card border-border max-w-xs">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-primary text-sm">Allocate Stat Point</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              Add +1 to <strong className="text-foreground">{pendingStat ? STAT_FULL_NAMES[pendingStat] : ''}</strong>?
+              {pendingStat && (
+                <span className="block mt-1 text-muted-foreground">
+                  {(character as any)[pendingStat]} → {(character as any)[pendingStat] + 1}
+                </span>
+              )}
+              <span className="block mt-1 text-muted-foreground/70">This cannot be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-7">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="text-xs h-7"
+              onClick={() => {
+                if (pendingStat && onAllocateStat) {
+                  onAllocateStat(pendingStat);
+                }
+                setPendingStat(null);
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }
