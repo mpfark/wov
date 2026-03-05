@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, ShoppingBag, ArrowUpFromLine } from 'lucide-react';
 import { InventoryItem } from '@/hooks/useInventory';
+import { getChaSellMultiplier, getChaBuyDiscount, getStatModifier } from '@/lib/game-data';
 
 interface VendorItem {
   id: string;
@@ -27,6 +28,8 @@ interface Props {
   nodeId: string;
   characterId: string;
   gold: number;
+  cha: number;
+  equipmentBonuses?: Record<string, number>;
   inventory: InventoryItem[];
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
@@ -40,7 +43,11 @@ const RARITY_COLORS: Record<string, string> = {
   unique: 'text-primary text-glow',
 };
 
-export default function VendorPanel({ open, onClose, nodeId, characterId, gold, inventory, onGoldChange, onInventoryChange, addLog }: Props) {
+export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog }: Props) {
+  const effectiveCha = cha + (equipmentBonuses.cha || 0);
+  const buyDiscount = getChaBuyDiscount(effectiveCha);
+  const sellMultiplier = getChaSellMultiplier(effectiveCha);
+  const chaMod = getStatModifier(effectiveCha);
   const [vendorItems, setVendorItems] = useState<VendorItem[]>([]);
 
   useEffect(() => {
@@ -54,8 +61,11 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       });
   }, [open, nodeId]);
 
+  const getDiscountedPrice = (basePrice: number) => Math.max(1, Math.floor(basePrice * (1 - buyDiscount)));
+
   const buyItem = async (vi: VendorItem) => {
-    if (gold < vi.price) {
+    const finalPrice = getDiscountedPrice(vi.price);
+    if (gold < finalPrice) {
       addLog('❌ Not enough gold!');
       return;
     }
@@ -66,11 +76,12 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     });
     if (error) { addLog(`❌ ${error.message}`); return; }
 
-    const newGold = gold - vi.price;
+    const newGold = gold - finalPrice;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`🪙 Purchased ${vi.item.name} for ${vi.price} gold.`);
+    const discountNote = buyDiscount > 0 ? ` (${Math.round(buyDiscount * 100)}% CHA discount)` : '';
+    addLog(`🪙 Purchased ${vi.item.name} for ${finalPrice} gold.${discountNote}`);
 
     if (vi.stock > 0) {
       await supabase.from('vendor_inventory').update({ stock: vi.stock - 1 }).eq('id', vi.id);
@@ -78,14 +89,17 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     }
   };
 
+  const getSellPrice = (inv: InventoryItem) => Math.max(1, Math.floor(inv.item.value * sellMultiplier));
+
   const sellItem = async (inv: InventoryItem) => {
-    const sellPrice = Math.max(1, Math.floor(inv.item.value * 0.5));
+    const sellPrice = getSellPrice(inv);
     await supabase.from('character_inventory').delete().eq('id', inv.id);
     const newGold = gold + sellPrice;
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`🪙 Sold ${inv.item.name} for ${sellPrice} gold.`);
+    const chaNote = chaMod > 0 ? ` (CHA bonus)` : '';
+    addLog(`🪙 Sold ${inv.item.name} for ${sellPrice} gold.${chaNote}`);
   };
 
   const sellableItems = inventory.filter(i => !i.equipped_slot);
@@ -102,6 +116,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
         <div className="flex items-center gap-2 text-sm mb-3">
           <Coins className="w-4 h-4 text-primary" />
           <span className="font-display text-primary">{gold} Gold</span>
+          {chaMod > 0 && <span className="text-[10px] text-muted-foreground">(CHA: Buy -{Math.round(buyDiscount * 100)}%, Sell {Math.round(sellMultiplier * 100)}%)</span>}
         </div>
 
         {/* Buy */}
@@ -134,9 +149,10 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
                     {totalStock > 0 && <span className="text-xs text-muted-foreground ml-1">(×{totalStock})</span>}
                   </div>
                 </div>
-                <Button size="sm" onClick={() => buyItem(vi)} disabled={gold < vi.price}
+                <Button size="sm" onClick={() => buyItem(vi)} disabled={gold < getDiscountedPrice(vi.price)}
                   className="font-display text-xs h-7">
-                  <Coins className="w-3 h-3 mr-1" /> {vi.price}g
+                  <Coins className="w-3 h-3 mr-1" />
+                  {buyDiscount > 0 ? <><span className="line-through text-muted-foreground mr-0.5">{vi.price}</span>{getDiscountedPrice(vi.price)}g</> : <>{vi.price}g</>}
                 </Button>
               </div>
             ));
@@ -157,7 +173,6 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
               }
               return acc;
             }, {});
-            const sellPrice = (inv: InventoryItem) => Math.max(1, Math.floor(inv.item.value * 0.5));
             return Object.values(stacked).sort((a, b) => a.inv.item.name.localeCompare(b.inv.item.name)).map(({ inv, count }) => (
               <div key={inv.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
                 <div className="flex items-center gap-1.5">
@@ -172,7 +187,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
                   </div>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => sellItem(inv)} className="font-display text-xs h-7">
-                  <ArrowUpFromLine className="w-3 h-3 mr-1" /> {sellPrice(inv)}g
+                  <ArrowUpFromLine className="w-3 h-3 mr-1" /> {getSellPrice(inv)}g
                 </Button>
               </div>
             ));
