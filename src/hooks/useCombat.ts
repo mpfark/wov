@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
-import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getIntCritBonus, getWisDamageReduction, getStrDamageFloor, getChaGoldMultiplier } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getIntCritBonus, getWisDodgeChance, getStrDamageFloor, getChaGoldMultiplier } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -547,9 +547,12 @@ export function useCombat(params: UseCombatParams) {
           const dmgDie = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-          // WIS damage reduction (tank path)
-          const wisReductionTank = getWisDamageReduction(char.wis + (_eqBonuses.wis || 0));
-          if (iAmTheTank && wisReductionTank > 0) creatureDmg = Math.max(creatureDmg - wisReductionTank, 1);
+          // WIS chance to halve damage (tank path)
+          const wisChanceTank = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
+          if (iAmTheTank && wisChanceTank > 0 && Math.random() < wisChanceTank) {
+            creatureDmg = Math.max(Math.floor(creatureDmg / 2), 1);
+            _addLog(`🧘 ${who}'s awareness halves ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
+          }
 
           // Force Shield absorb for tank
           const _absorbBuff = ext.current.absorbBuff;
@@ -604,9 +607,12 @@ export function useCombat(params: UseCombatParams) {
           const dmgDie2 = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-          // WIS damage reduction
-          const wisReduction = getWisDamageReduction(char.wis + (_eqBonuses.wis || 0));
-          if (wisReduction > 0) creatureDmg = Math.max(creatureDmg - wisReduction, 1);
+          // WIS chance to halve damage
+          const wisChance = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
+          if (wisChance > 0 && Math.random() < wisChance) {
+            creatureDmg = Math.max(Math.floor(creatureDmg / 2), 1);
+            _addLog(`🧘 ${who}'s awareness halves ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
+          }
 
           // Force Shield absorb
           const _absorbBuff = ext.current.absorbBuff;

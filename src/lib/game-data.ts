@@ -254,9 +254,9 @@ export function getIntCritBonus(int: number): number {
   return Math.max(0, Math.floor(mod / 2));
 }
 
-// WIS → Damage Reduction: flat reduction to incoming damage
-export function getWisDamageReduction(wis: number): number {
-  return Math.max(0, getStatModifier(wis));
+// WIS → Chance to halve incoming damage: WIS_mod × 3% chance
+export function getWisDodgeChance(wis: number): number {
+  return Math.max(0, getStatModifier(wis) * 0.03);
 }
 
 // CHA → Vendor Price Modifiers
