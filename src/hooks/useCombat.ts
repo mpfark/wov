@@ -399,15 +399,9 @@ export function useCombat(params: UseCombatParams) {
 
             const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 
-            if (newLevel % 5 === 0) {
-              const boostedStats: string[] = [];
-              for (const stat of statKeys) {
-                const current = (char as any)[stat] || 10;
-                (levelUpUpdates as any)[stat] = current + 1;
-                boostedStats.push(stat.toUpperCase());
-              }
-              _addLog(`📊 All stats increased: ${boostedStats.join(', ')} +1`);
-            }
+            // Grant 1 unspent stat point per level
+            levelUpUpdates.unspent_stat_points = (char.unspent_stat_points || 0) + 1;
+            _addLog(`📊 You gained 1 stat point to allocate!`);
 
             if (newLevel % 3 === 0) {
               const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
