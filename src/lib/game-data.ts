@@ -246,6 +246,41 @@ export function getStatModifier(stat: number): number {
   return Math.floor((stat - 10) / 2);
 }
 
+// ── Cross-Stat Bonuses ─────────────────────────────────────────
+
+// INT → Critical Hit Chance: every 2 INT modifier points improves crit range by 1
+export function getIntCritBonus(int: number): number {
+  const mod = getStatModifier(int);
+  return Math.max(0, Math.floor(mod / 2));
+}
+
+// WIS → Damage Reduction: flat reduction to incoming damage
+export function getWisDamageReduction(wis: number): number {
+  return Math.max(0, getStatModifier(wis));
+}
+
+// CHA → Vendor Price Modifiers
+export function getChaSellMultiplier(cha: number): number {
+  const mod = getStatModifier(cha);
+  return Math.min(0.8, 0.5 + mod * 0.03);
+}
+
+export function getChaBuyDiscount(cha: number): number {
+  const mod = getStatModifier(cha);
+  return Math.max(0, mod * 0.02); // 2% per CHA modifier point
+}
+
+// CHA → Bonus gold from humanoid kills
+export function getChaGoldMultiplier(cha: number): number {
+  const mod = getStatModifier(cha);
+  return 1 + Math.max(0, mod * 0.05); // +5% per CHA modifier point
+}
+
+// STR → Minimum damage floor on all attacks
+export function getStrDamageFloor(str: number): number {
+  return Math.max(0, Math.floor(getStatModifier(str) / 2));
+}
+
 // Humanoid gold scaling
 const HUMANOID_GOLD_RARITY_MULT: Record<string, number> = {
   regular: 1, rare: 1.5, boss: 3,

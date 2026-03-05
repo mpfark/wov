@@ -121,12 +121,12 @@ export default function GameManual() {
                 <CardContent className="p-3 space-y-2">
                   <p className="text-xs font-display text-primary">📋 Attribute Effects</p>
                   <div className="text-xs text-muted-foreground space-y-1.5">
-                    <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity (bag slots before encumbrance penalties), and movement cost reduction when overburdened.</p>
+                    <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">+floor(STR_mod / 2)</code> min damage.</p>
                     <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and evasion chance.</p>
                     <p><strong className="text-foreground">CON (Constitution)</strong> — Increases max HP, passive HP regeneration rate, and resistance to DoT effects. Primary stat for Warrior CP regen.</p>
-                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP (for abilities), spell damage bonus, and contributes to CP regen for Wizards. Also factors into lore-based interactions.</p>
-                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP, healing power, and contributes to CP regen for Healers and Rangers. Improves perception for searching.</p>
-                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Increases max CP, Bard ability effectiveness, and contributes to CP regen for Bards and Rogues. Affects vendor prices and social interactions.</p>
+                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP, spell damage bonus, CP regen for Wizards, and <strong>improves critical hit range</strong>: <code className="text-primary">+1 crit range per 2 INT modifier</code> (INT 14 = crit 19-20).</p>
+                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP, healing power, CP regen for Healers/Rangers, search bonus, and <strong>flat damage reduction</strong> from creature attacks: <code className="text-primary">-WIS_mod damage taken</code>.</p>
+                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Increases max CP, Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount 2%/mod), and <strong>+5% gold from humanoid kills</strong> per CHA modifier.</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground/70 mt-1">
                     Stat modifier = <code className="text-primary">floor((stat − 10) / 2)</code>. A stat of 10 gives +0, 12 gives +1, 14 gives +2, etc.
@@ -518,7 +518,9 @@ export default function GameManual() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Attack Roll:</strong> d20 + stat modifier ≥ target AC → hit</p>
                 <p><strong className="text-foreground">Damage:</strong> class dice (min–max) + stat modifier</p>
-                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage</p>
+                <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">1 + floor(STR_mod / 2)</code> damage (even spells)</p>
+                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>INT bonus:</strong> <code className="text-primary">+1 crit range per 2 INT modifier</code></p>
+                <p><strong className="text-foreground">Damage Reduction (WIS):</strong> Incoming creature damage reduced by <code className="text-primary">WIS modifier</code> (min 1 damage)</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod vs player AC</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level/2)) + STR mod</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>

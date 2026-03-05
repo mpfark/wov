@@ -5,7 +5,7 @@
  */
 import { useState, useCallback } from 'react';
 import { Character } from '@/hooks/useCharacter';
-import { rollD20, getStatModifier, rollDamage, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMoveCost, getCarryCapacity, getBagWeight } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMoveCost, getCarryCapacity, getBagWeight, getChaGoldMultiplier } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getNodeDisplayName } from '@/hooks/useNodes';
 import { supabase } from '@/integrations/supabase/client';
@@ -181,6 +181,10 @@ export function useActions(params: UseActionsParams) {
     let totalGold = 0;
     if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
       totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+      if (creature.is_humanoid) {
+        const effectiveCha = p.character.cha + (p.equipmentBonuses.cha || 0);
+        totalGold = Math.floor(totalGold * getChaGoldMultiplier(effectiveCha));
+      }
     }
     let splitCount = 1;
     if (p.party?.id) {

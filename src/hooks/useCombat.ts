@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
-import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, getCreatureDamageDie, CLASS_LEVEL_BONUSES, CLASS_LABELS, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getIntCritBonus, getWisDamageReduction, getStrDamageFloor, getChaGoldMultiplier } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -253,7 +253,8 @@ export function useCombat(params: UseCombatParams) {
       const _critBuff = e.critBuff;
       const critBonus = (_critBuff && Date.now() < _critBuff.expiresAt) ? _critBuff.bonus : 0;
       const milestoneCritBonus = char.level >= 28 ? 1 : 0;
-      const effectiveCritRange = ability.critRange - critBonus - milestoneCritBonus;
+      const intCritBonus = getIntCritBonus(char.int + (_eqBonuses.int || 0));
+      const effectiveCritRange = ability.critRange - critBonus - milestoneCritBonus - intCritBonus;
 
       // Sunder Armor
       const _sunderDebuff = e.sunderDebuff;
@@ -263,7 +264,8 @@ export function useCombat(params: UseCombatParams) {
       if (atkRoll >= effectiveCritRange || (atkRoll !== 1 && totalAtk >= effectiveCreatureAC)) {
         const dmg = rollDamage(ability.diceMin, ability.diceMax) + statMod;
         const isCrit = atkRoll >= effectiveCritRange;
-        let finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1);
+        const strFloor = getStrDamageFloor(char.str + (_eqBonuses.str || 0));
+        let finalDmg = isCrit ? dmg * 2 : Math.max(dmg, 1 + strFloor);
 
         // Stealth ambush
         const _stealthBuff = e.stealthBuff;
@@ -329,9 +331,13 @@ export function useCombat(params: UseCombatParams) {
 
           const lootTable = creature.loot_table as any[];
           const goldEntry = lootTable?.find((entry: any) => entry.type === 'gold');
-          let totalGold = 0;
+        let totalGold = 0;
           if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
             totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+            // CHA gold bonus for humanoid kills
+            if ((creature as any).is_humanoid) {
+              totalGold = Math.floor(totalGold * getChaGoldMultiplier(char.cha + (_eqBonuses.cha || 0)));
+            }
           }
 
           updateCreatureHp(creatureId, 0);
@@ -541,6 +547,9 @@ export function useCombat(params: UseCombatParams) {
           const dmgDie = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
+          // WIS damage reduction (tank path)
+          const wisReductionTank = getWisDamageReduction(char.wis + (_eqBonuses.wis || 0));
+          if (iAmTheTank && wisReductionTank > 0) creatureDmg = Math.max(creatureDmg - wisReductionTank, 1);
 
           // Force Shield absorb for tank
           const _absorbBuff = ext.current.absorbBuff;
@@ -595,6 +604,9 @@ export function useCombat(params: UseCombatParams) {
           const dmgDie2 = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
+          // WIS damage reduction
+          const wisReduction = getWisDamageReduction(char.wis + (_eqBonuses.wis || 0));
+          if (wisReduction > 0) creatureDmg = Math.max(creatureDmg - wisReduction, 1);
 
           // Force Shield absorb
           const _absorbBuff = ext.current.absorbBuff;

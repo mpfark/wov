@@ -757,6 +757,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           nodeId={currentNode.id}
           characterId={character.id}
           gold={character.gold}
+          cha={character.cha}
+          equipmentBonuses={equipmentBonuses}
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
