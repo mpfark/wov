@@ -1,44 +1,50 @@
 
 
-## Technical Refactors Inspired by LPMud Architecture
+## Cross-Stat Incentive System
 
-After reviewing the codebase, three architectural pain points stand out that map directly to patterns LPMuds solved decades ago.
+The current system has a clear problem: mental classes (Wizard, Healer, Bard) have almost no reason to invest in STR or DEX beyond baseline, and physical classes (Warrior, Ranger, Rogue) have little reason to invest in INT/WIS/CHA beyond CP pool.
 
-### Problem 1: The God Component (GamePage = 2046 lines)
+### Current Cross-Stat Value
 
-LPMuds split logic into layers: the "mudlib" (shared engine), "room" objects, and "player" objects. GamePage currently owns combat, movement, regen, loot, abilities, chat, buffs, death, and UI rendering all in one file.
+| Stat | Currently Useful For |
+|------|---------------------|
+| STR | Attack (Warrior only), carry capacity |
+| DEX | AC (all), MP (all), attack (Ranger/Rogue) |
+| CON | HP, HP regen (all) |
+| INT | CP pool (highest mental), search (Wizard only) |
+| WIS | CP pool (highest mental), search (non-Wizard) |
+| CHA | CP pool (highest mental) |
 
-**Refactor**: Extract game logic into a `useGameLoop` hook that consolidates the scattered `useEffect` intervals (regen, combat, buff expiry) into a single tick-based loop — mirroring LPMud's `heart_beat()`. This hook would own all buff/debuff state, regen timers, and action handlers, returning only the data and callbacks the UI needs.
+DEX and CON are already universally attractive. The real gaps are: **STR for casters** and **INT/WIS/CHA for physical classes**.
 
-Additionally, extract the action handlers (`handleMove`, `handleSearch`, `handleUseAbility`, `handleUseConsumable`, `rollLoot`, `awardKillRewards`) into a `useActions` hook.
+### Proposed Additions
 
-### Problem 2: The Ref Mirror Anti-Pattern (useCombat = 30+ refs)
+These are small, meaningful bonuses that create interesting choices without being mandatory:
 
-`useCombat` takes 30+ parameters and mirrors every single one into a `useRef` + `useEffect` pair to avoid stale closures in the combat interval. This is fragile and verbose.
+#### For Physical Classes to Want Mental Stats
 
-**Refactor**: Replace with a `useReducer` pattern. All combat-relevant state lives in a single reducer. The combat tick reads from `stateRef.current` (one ref) instead of 30 individual refs. Buff/debuff state moves into the reducer as well, eliminating the prop-drilling of `poisonBuff`, `igniteBuff`, `absorbBuff`, `sunderDebuff`, etc. from GamePage → useCombat.
+1. **INT → Critical Hit Chance**: Every 2 points of INT modifier adds +1 to crit range (e.g., INT 14 = modifier +2, crit range improved by 1). Flavor: *"A keen mind spots weaknesses."* This is distinct from DEX-based abilities and gives Warriors/Rangers/Rogues a reason to invest in INT.
 
-### Problem 3: No Central Event Bus
+2. **WIS → Search Bonus**: WIS modifier already applies to search for non-Wizards, but we could also add a **dodge/damage reduction from creature attacks**: WIS modifier reduces incoming damage by a flat amount (min 0). Flavor: *"Awareness helps you read enemy attacks."* This makes WIS attractive for survivability beyond just CP.
 
-LPMuds route events (damage, death, loot, chat) through a central dispatcher. Currently, combat results are threaded through callbacks (`addLog`, `broadcastDamage`, `broadcastHp`, `broadcastReward`) passed as props through multiple layers.
+3. **CHA → Better Vendor Prices**: CHA modifier improves sell prices and reduces buy prices. Sell multiplier becomes `0.5 + CHA_mod * 0.03` (capped at 0.8). Buy discount = `CHA_mod * 2%` off. Flavor: *"A silver tongue fetches better deals."* Also add **CHA → bonus gold from humanoid kills**: existing `calculateHumanoidGold` gets a CHA multiplier.
 
-**Refactor**: Introduce a lightweight pub/sub event emitter (a React context + `useRef` holding subscribers). Components subscribe to events like `'combat:hit'`, `'combat:kill'`, `'player:levelup'`, `'loot:drop'`. The combat hook emits events; the log, broadcast, and UI hooks subscribe independently. This decouples producers from consumers.
+#### For Casters to Want STR
 
-### Implementation Order
+4. **STR → Focus Strike Damage**: Focus Strike already uses average of all stats, but we can add a **STR-specific melee damage floor**: all classes get `+floor(STR_mod / 2)` minimum damage on attacks (even spell attacks). Flavor: *"Raw physical power adds force to any strike."* This is small but consistent.
 
-1. **Event bus** first (small, foundational, unblocks the others)
-2. **Combat reducer** (consolidates the 30-ref problem)  
-3. **useGameLoop + useActions extraction** (breaks up GamePage)
+Alternatively, a simpler approach: **STR → bonus HP** (a flat +1 HP per STR modifier point, stacking with CON). This makes STR a secondary survivability stat.
 
-### Estimated scope per step
+### Recommended Approach
 
-| Step | Files touched | Risk |
-|------|--------------|------|
-| Event bus | 1 new hook + 3-4 consumers | Low |
-| Combat reducer | `useCombat.ts` + `GamePage.tsx` | Medium |
-| GameLoop extraction | `GamePage.tsx` → 2 new hooks | Medium |
+I'd suggest presenting options to you since this is a significant game balance decision.
 
-### What stays the same
+### Files to Change
 
-All database queries, Supabase realtime subscriptions, RLS policies, and UI components remain unchanged. This is purely a code organization refactor with no backend changes.
+- `src/lib/game-data.ts` — Add helper functions for CHA vendor bonus, INT crit bonus
+- `src/hooks/useCombat.ts` — Apply INT crit range bonus and WIS damage reduction
+- `src/components/game/VendorPanel.tsx` — Apply CHA price modifiers
+- `src/hooks/useActions.ts` — Apply CHA gold bonus to humanoid kills, STR damage floor
+- `src/components/game/CharacterPanel.tsx` — Display new derived bonuses in attributes
+- `src/components/admin/GameManual.tsx` — Document the new cross-stat bonuses
 
