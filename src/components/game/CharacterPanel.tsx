@@ -530,8 +530,11 @@ export default function CharacterPanel({
                     { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 6s)` },
                   ];
 
+                  const hitChanceVs10 = Math.min(100, Math.max(5, (21 - (10 - atkMod)) * 5));
+
                   const combatRows: { label: string; value: string; tip: string }[] = [
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
+                    { label: 'Hit Bonus', value: `${atkMod >= 0 ? '+' : ''}${atkMod} (${hitChanceVs10}% vs AC 10)`, tip: `d20 + ${atkMod} vs target AC. Example: ${hitChanceVs10}% chance to hit AC 10` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: milestoneCrit ? 'Includes +1 from level 28 milestone' : 'Natural roll needed for critical hit' },
                   ];
 
