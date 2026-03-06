@@ -33,7 +33,7 @@ export interface UseCombatParams {
   equipmentBonuses: EquipmentBonuses;
   effectiveAC: number;
   addLog: (msg: string) => void;
-  rollLoot: (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => Promise<void>;
+  rollLoot: (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null) => Promise<void>;
   degradeEquipment: () => Promise<void>;
   party: Party | null;
   partyMembers: PartyMember[];
@@ -446,7 +446,7 @@ export function useCombat(params: UseCombatParams) {
             await _updateCharacter({ xp: newXp, gold: newGold });
           }
 
-          await _rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance);
+          await _rollLoot(creature.loot_table as any[], creature.name, (creature as any).loot_table_id, (creature as any).drop_chance, creature.node_id);
 
           // Remove dead creature from engaged set
           engagedCreatureIdsRef.current.delete(creatureId);

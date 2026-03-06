@@ -20,6 +20,7 @@ export interface DotDebuff {
   damagePerTick: number; intervalMs: number; expiresAt: number;
   creatureId: string; creatureName: string; creatureLevel: number; creatureRarity: string;
   creatureLootTable: any[]; lootTableId: string | null; dropChance: number;
+  creatureNodeId: string | null;
   maxHp: number; lastKnownHp: number;
 }
 export interface PoisonBuff { expiresAt: number }
@@ -27,6 +28,7 @@ export interface PoisonStack {
   stacks: number; damagePerTick: number; expiresAt: number;
   creatureName: string; creatureLevel: number; creatureRarity: string;
   creatureLootTable: any[]; lootTableId: string | null; dropChance: number;
+  creatureNodeId: string | null;
   maxHp: number; lastKnownHp: number;
 }
 export interface EvasionBuff { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' }
@@ -36,6 +38,7 @@ export interface IgniteStack {
   stacks: number; damagePerTick: number; expiresAt: number;
   creatureName: string; creatureLevel: number; creatureRarity: string;
   creatureLootTable: any[]; lootTableId: string | null; dropChance: number;
+  creatureNodeId: string | null;
   maxHp: number; lastKnownHp: number;
 }
 export interface AbsorbBuff { shieldHp: number; expiresAt: number }
@@ -255,6 +258,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         creatureLootTable: existing?.creatureLootTable || (creature?.loot_table as any[]) || [],
         lootTableId: existing?.lootTableId ?? creature?.loot_table_id ?? null,
         dropChance: existing?.dropChance ?? creature?.drop_chance ?? 0.5,
+        creatureNodeId: existing?.creatureNodeId ?? creature?.node_id ?? null,
         maxHp: existing?.maxHp || creature?.max_hp || 10,
         lastKnownHp: existing?.lastKnownHp ?? creature?.hp ?? 10,
       }};
@@ -277,6 +281,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         creatureLootTable: existing?.creatureLootTable || (creature?.loot_table as any[]) || [],
         lootTableId: existing?.lootTableId ?? creature?.loot_table_id ?? null,
         dropChance: existing?.dropChance ?? creature?.drop_chance ?? 0.5,
+        creatureNodeId: existing?.creatureNodeId ?? creature?.node_id ?? null,
         maxHp: existing?.maxHp || creature?.max_hp || 10,
         lastKnownHp: existing?.lastKnownHp ?? creature?.hp ?? 10,
       }};
@@ -316,6 +321,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const creatureData = localCreature || {
           name: dotDebuff.creatureName, level: dotDebuff.creatureLevel, rarity: dotDebuff.creatureRarity,
           loot_table: dotDebuff.creatureLootTable, loot_table_id: dotDebuff.lootTableId, drop_chance: dotDebuff.dropChance,
+          node_id: dotDebuff.creatureNodeId,
         };
         await awardKillRewardsRef.current(creatureData, { stopCombat: true });
       }
@@ -353,6 +359,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
+            node_id: stack.creatureNodeId,
           };
           await awardKillRewardsRef.current(creatureData, { stopCombat: true });
         }
@@ -400,6 +407,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
+            node_id: stack.creatureNodeId,
           };
           await awardKillRewardsRef.current(creatureData, { stopCombat: true });
         }
