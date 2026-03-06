@@ -360,9 +360,9 @@ export default function CharacterPanel({
             <span className="font-display text-primary">Gold {character.gold}</span>
           </div>
 
-          {/* Tab content — equipment always sets height */}
-          <div className="relative">
-            {/* Equipment (always rendered to hold height; invisible when inactive) */}
+          {/* Tab content — grid overlay so taller tab sets height */}
+          <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
+            {/* Equipment */}
             <TabsContent value="equipment" className="mt-0 data-[state=inactive]:!block data-[state=inactive]:invisible">
               <div className="relative flex flex-col items-center gap-1">
                 <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
