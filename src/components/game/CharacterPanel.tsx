@@ -540,9 +540,16 @@ export default function CharacterPanel({
                   const sameLevelAC = Math.round(10 + character.level * 0.6 + 2);
                   const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
 
+                  // Creature's chance to hit the player
+                  const totalAC = character.ac + (equipmentBonuses.ac || 0);
+                  const creatureBaseStat = Math.round(10 + character.level * 0.7); // regular rarity 1x
+                  const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
+                  const getHitChance = Math.min(95, Math.max(5, (21 - (totalAC - creatureAtkMod)) * 5));
+
                   const combatRows: { label: string; value: string; tip: string }[] = [
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
                     { label: 'Hit Bonus', value: `+${totalHitBonus} (${hitChance}% vs AC ${sameLevelAC})`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
+                    { label: 'AC', value: `${totalAC} (${getHitChance}% to be hit)`, tip: `Your AC ${totalAC} vs regular creature atk +${creatureAtkMod} → ${getHitChance}% chance to be hit` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
                     ...(strFloor > 0 ? [{ label: 'Min Damage', value: `+${strFloor}`, tip: 'STR bonus: minimum damage floor on all attacks' }] : []),
                     ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}% halve`, tip: 'WIS bonus: chance to halve incoming creature damage' }] : []),
