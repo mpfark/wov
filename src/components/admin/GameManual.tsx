@@ -636,6 +636,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Attack Speed:</strong> <code className="text-primary">max(3.0 − DEX_mod × 0.25, 1.0)s</code> per attack. Base 3.0s, each point of DEX modifier reduces by 0.25s, minimum 1.0s.</p>
                 <p><strong className="text-foreground">Attack Roll:</strong> d20 + stat modifier ≥ target AC → hit</p>
                 <p><strong className="text-foreground">Damage:</strong> class dice (min–max) + stat modifier</p>
                 <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">1 + floor(STR_mod / 2)</code> damage (even spells)</p>
