@@ -262,9 +262,9 @@ export function getIntHitBonus(int: number): number {
   return diminishing(getStatModifier(int), 3);
 }
 
-// DEX → Critical Hit Chance: sqrt curve, capped at +2 (crit on 18-20 max)
+// DEX → Critical Hit Chance: sqrt curve, capped at +4 (crit on 16-20 max)
 export function getDexCritBonus(dex: number): number {
-  return diminishing(getStatModifier(dex), 2);
+  return diminishing(getStatModifier(dex), 4);
 }
 
 // WIS → Chance to reduce incoming damage by 25%: sqrt curve, capped at 15%
