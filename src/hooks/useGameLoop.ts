@@ -370,6 +370,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const cName = localCreature?.name || stack.creatureName;
         addLog(`🧪 ${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
+          anyExpired = true;
           dotKilledRef.current.add(creatureId);
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
@@ -404,7 +405,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0) {
+        if (currentHp <= 0 || dotKilledRef.current.has(creatureId)) {
           anyExpired = true;
           setIgniteStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
           continue;
@@ -429,7 +430,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         addLog(`🔥 ${cName} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
           anyExpired = true;
-          const creatureData = localCreature || {
+          dotKilledRef.current.add(creatureId);
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
             node_id: stack.creatureNodeId,
