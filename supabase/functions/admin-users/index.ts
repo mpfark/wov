@@ -500,6 +500,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "grant-respec") {
+      const body = await req.json();
       const { character_id, amount } = body;
       if (!character_id || !amount || amount < 1) throw { message: "character_id and amount (>=1) required", status: 400 };
       const { data: char, error: fetchErr } = await adminClient.from("characters").select("respec_points").eq("id", character_id).single();
