@@ -105,6 +105,11 @@ export function useGameLoop(params: UseGameLoopParams) {
   const isDeadRef = useRef(false);
   // Track creatures killed by DoTs to prevent re-damaging after respawn
   const dotKilledRef = useRef<Set<string>>(new Set());
+  // Refs for DoT stacks — prevents stale closures in intervals
+  const poisonStacksRef = useRef(poisonStacks);
+  useEffect(() => { poisonStacksRef.current = poisonStacks; }, [poisonStacks]);
+  const igniteStacksRef = useRef(igniteStacks);
+  useEffect(() => { igniteStacksRef.current = igniteStacks; }, [igniteStacks]);
 
   // ── Regen refs (avoid stale closures in intervals) ─────────────
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level });
@@ -339,10 +344,11 @@ export function useGameLoop(params: UseGameLoopParams) {
     const activeStacks = Object.entries(poisonStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
     const interval = setInterval(async () => {
+      const currentStacks = poisonStacksRef.current;
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const now = Date.now();
       let anyExpired = false;
-      for (const [creatureId, stack] of Object.entries(poisonStacks)) {
+      for (const [creatureId, stack] of Object.entries(currentStacks)) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
@@ -404,7 +410,8 @@ export function useGameLoop(params: UseGameLoopParams) {
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const now = Date.now();
       let anyExpired = false;
-      for (const [creatureId, stack] of Object.entries(igniteStacks)) {
+      const currentIgniteStacks = igniteStacksRef.current;
+      for (const [creatureId, stack] of Object.entries(currentIgniteStacks)) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
