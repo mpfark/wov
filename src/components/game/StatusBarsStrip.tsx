@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxMp, getMpRegenRate, getMoveCost, getCarryCapacity } from '@/lib/game-data';
+import { getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate, getMoveCost, getCarryCapacity } from '@/lib/game-data';
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
@@ -153,7 +153,10 @@ export default function StatusBarsStrip({
 }: StatusBarsStripProps) {
   const hpPercent = Math.round((character.hp / character.max_hp) * 100);
   const cp = character.cp ?? 100;
-  const maxCp = character.max_cp ?? 100;
+  const intWithGear = character.int + (equipmentBonuses.int || 0);
+  const wisWithGear = character.wis + (equipmentBonuses.wis || 0);
+  const chaWithGear = character.cha + (equipmentBonuses.cha || 0);
+  const maxCp = getMaxCp(character.level, intWithGear, wisWithGear, chaWithGear);
   const cpPercent = Math.round((cp / maxCp) * 100);
   const mp = character.mp ?? 100;
   const dexWithGear = character.dex + (equipmentBonuses.dex || 0);
