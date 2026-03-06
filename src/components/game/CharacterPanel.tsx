@@ -354,12 +354,8 @@ export default function CharacterPanel({
             <TabsTrigger value="attributes" className="font-display text-xs h-6 flex-1">Attributes</TabsTrigger>
           </TabsList>
 
-          {/* AC & Gold — always visible */}
-          <div className="flex justify-center gap-4 text-xs">
-            <span className="font-display text-foreground">
-              AC {character.ac + (equipmentBonuses.ac || 0)}
-              {(equipmentBonuses.ac || 0) > 0 && <span className="text-chart-2 ml-0.5">+{equipmentBonuses.ac}</span>}
-            </span>
+          {/* Gold — always visible */}
+          <div className="flex justify-center text-xs">
             <span className="font-display text-primary">Gold {character.gold}</span>
           </div>
 
