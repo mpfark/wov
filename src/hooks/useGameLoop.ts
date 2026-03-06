@@ -103,6 +103,8 @@ export function useGameLoop(params: UseGameLoopParams) {
   const [regenTick, setRegenTick] = useState(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const isDeadRef = useRef(false);
+  // Track creatures killed by DoTs to prevent re-damaging after respawn
+  const dotKilledRef = useRef<Set<string>>(new Set());
 
   // ── Regen refs (avoid stale closures in intervals) ─────────────
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level });
