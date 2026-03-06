@@ -279,7 +279,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, [partyRewardEvents, character.id, updateCharacter]);
 
   // ── Forward-declared refs for circular deps ────────────────────
-  const rollLootRef = useRef<(lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => Promise<void>>(async () => {});
+  const rollLootRef = useRef<(lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null) => Promise<void>>(async () => {});
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
   const awardKillRewardsRef = useRef<(creature: any, opts?: { stopCombat?: boolean }) => Promise<void>>(async () => {});
 
@@ -315,8 +315,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   // ── useCombat ──────────────────────────────────────────────────
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = useCombat({
     character, creatures, updateCharacter, equipmentBonuses, effectiveAC, addLog,
-    rollLoot: useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => {
-      await rollLootRef.current(lootTable, creatureName, lootTableId, dropChance);
+    rollLoot: useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null) => {
+      await rollLootRef.current(lootTable, creatureName, lootTableId, dropChance, creatureNodeId);
     }, []),
     degradeEquipment: useCallback(async () => { await degradeEquipmentRef.current(); }, []),
     party, partyMembers, isDead, critBuff,

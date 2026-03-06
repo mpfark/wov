@@ -105,8 +105,9 @@ export function useActions(params: UseActionsParams) {
   }, [p.equipped, p.addLog, p.fetchInventory]);
 
   // ── Loot rolling ───────────────────────────────────────────────
-  const rollLoot = useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number) => {
-    if (!p.character.current_node_id) return;
+  const rollLoot = useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null) => {
+    const targetNodeId = creatureNodeId || p.character.current_node_id;
+    if (!targetNodeId) return;
 
     if (lootTableId) {
       const chance = dropChance ?? 0.5;
@@ -135,7 +136,7 @@ export function useActions(params: UseActionsParams) {
           }
         }
         await supabase.from('node_ground_loot' as any).insert({
-          node_id: p.character.current_node_id,
+          node_id: targetNodeId,
           item_id: pickedItemId,
           creature_name: creatureName,
         });
@@ -160,7 +161,7 @@ export function useActions(params: UseActionsParams) {
             }
           }
           await supabase.from('node_ground_loot' as any).insert({
-            node_id: p.character.current_node_id,
+            node_id: targetNodeId,
             item_id: entry.item_id,
             creature_name: creatureName,
           });
@@ -234,7 +235,7 @@ export function useActions(params: UseActionsParams) {
     } else {
       await p.updateCharacter({ xp: newXp, gold: newGold });
     }
-    await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance);
+    await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance, creature.node_id);
     if (opts?.stopCombat) p.stopCombat();
   }, [p.character, p.party, p.addLog, p.updateCharacter, rollLoot, p.stopCombat, p.xpMultiplier]);
 
@@ -638,6 +639,7 @@ export function useActions(params: UseActionsParams) {
         creatureLevel: creature.level, creatureRarity: creature.rarity,
         creatureLootTable: (creature.loot_table as any[]) || [],
         lootTableId: creature.loot_table_id ?? null, dropChance: creature.drop_chance ?? 0.5,
+        creatureNodeId: creature.node_id ?? null,
         maxHp: creature.max_hp, lastKnownHp: p.creatureHpOverrides[creature.id] ?? creature.hp,
       });
       p.addLog(`${ability.emoji} Rend! ${creature.name} bleeds for ${dmgPerTick} damage every ${intervalMs / 1000}s for ${durationMs / 1000}s.`);
