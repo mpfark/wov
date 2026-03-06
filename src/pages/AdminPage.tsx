@@ -307,6 +307,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           {activeTab === 'issues' && <IssueReportManager />}
         </TabsContent>
       </Tabs>
+
+      <AdminChatWidget />
     </div>
   );
 }
