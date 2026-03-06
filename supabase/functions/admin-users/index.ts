@@ -234,6 +234,11 @@ Deno.serve(async (req) => {
       updates.max_cp = 60 + (new_level - 1) * 3 + mentalMod * 5;
       updates.cp = updates.max_cp;
 
+      // MP: 100 + dexMod * 10 + (level-1) * 2
+      const dexMod = Math.max(Math.floor((updates.dex - 10) / 2), 0);
+      updates.max_mp = 100 + dexMod * 10 + Math.floor((new_level - 1) * 2);
+      updates.mp = updates.max_mp;
+
       // Reset XP when setting level directly
       updates.xp = 0;
 
@@ -371,9 +376,14 @@ Deno.serve(async (req) => {
         0
       );
       const grantMaxCp = 60 + (newLevel - 1) * 3 + grantMentalMod * 5;
+      // MP: 100 + dexMod * 10 + (level-1) * 2
+      const grantFinalDex = (char as any).dex + (statIncreases.dex || 0);
+      const grantDexMod = Math.max(Math.floor((grantFinalDex - 10) / 2), 0);
+      const grantMaxMp = 100 + grantDexMod * 10 + Math.floor((newLevel - 1) * 2);
       const updates: Record<string, any> = {
         xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
         max_cp: grantMaxCp, cp: grantMaxCp,
+        max_mp: grantMaxMp, mp: grantMaxMp,
         unspent_stat_points: (char as any).unspent_stat_points + statPoints,
       };
 
