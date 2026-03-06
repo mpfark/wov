@@ -1,0 +1,1 @@
+ALTER TABLE public.characters ADD COLUMN respec_points integer NOT NULL DEFAULT 0;

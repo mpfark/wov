@@ -410,6 +410,12 @@ export function useCombat(params: UseCombatParams) {
             levelUpUpdates.unspent_stat_points = (char.unspent_stat_points || 0) + 1;
             _addLog(`📊 You gained 1 stat point to allocate!`);
 
+            // Grant respec point at milestone levels (10, 20, 30, 40)
+            if ([10, 20, 30, 40].includes(newLevel)) {
+              levelUpUpdates.respec_points = (char.respec_points || 0) + 1;
+              _addLog(`🔄 You earned a respec point! You can reallocate a stat point.`);
+            }
+
             if (newLevel % 3 === 0) {
               const bonuses = CLASS_LEVEL_BONUSES[char.class] || {};
               const bonusNames: string[] = [];

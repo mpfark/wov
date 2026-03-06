@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES, calculateStats } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -45,6 +45,7 @@ interface Props {
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
   onAllocateStat?: (stat: string) => void;
+  onRespecStat?: (stat: string) => void;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -325,10 +326,11 @@ export default function CharacterPanel({
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
-  actionBindings, onAllocateStat,
+  actionBindings, onAllocateStat, onRespecStat,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const [pendingStat, setPendingStat] = useState<string | null>(null);
+  const [pendingRespec, setPendingRespec] = useState<string | null>(null);
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
@@ -453,9 +455,14 @@ export default function CharacterPanel({
             <TabsContent value="attributes" className="mt-0 absolute inset-0 data-[state=inactive]:!block data-[state=inactive]:invisible">
               <div className="space-y-2.5">
                 {/* Base stats — single column: STR, DEX, CON, INT, WIS, CHA */}
-                {character.unspent_stat_points > 0 && (
-                  <div className="text-[10px] text-primary font-display text-center py-0.5 bg-primary/10 rounded border border-primary/20">
-                    {character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''} to allocate
+                {(character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) && (
+                  <div className="text-[10px] font-display text-center py-0.5 bg-primary/10 rounded border border-primary/20 flex justify-center gap-3">
+                    {character.unspent_stat_points > 0 && (
+                      <span className="text-primary">{character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''}</span>
+                    )}
+                    {(character.respec_points || 0) > 0 && (
+                      <span className="text-chart-5">{character.respec_points} respec{(character.respec_points || 0) > 1 ? 's' : ''}</span>
+                    )}
                   </div>
                 )}
                 <div className="space-y-0">
@@ -464,11 +471,27 @@ export default function CharacterPanel({
                     const bonus = equipmentBonuses[stat] || 0;
                     const mod = getStatModifier(base + bonus);
                     const hasPoints = character.unspent_stat_points > 0;
+                    // Calculate non-manual base: creation stats + class level bonuses
+                    const creationStats = calculateStats(character.race, character.class);
+                    const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
+                    const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
+                    const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
+                    const manualPoints = base - nonManualBase;
+                    const hasRespec = (character.respec_points || 0) > 0 && manualPoints > 0;
                     return (
                       <Tooltip key={stat}>
                         <TooltipTrigger asChild>
                           <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
                             <span className="flex items-center gap-1">
+                              {hasRespec && onRespecStat && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setPendingRespec(stat); }}
+                                  className="w-4 h-4 flex items-center justify-center rounded bg-chart-5/20 hover:bg-chart-5/40 text-chart-5 text-[10px] font-bold transition-colors"
+                                  title={`Remove 1 from ${STAT_FULL_NAMES[stat]} (${manualPoints} allocated)`}
+                                >
+                                  −
+                                </button>
+                              )}
                               {hasPoints && onAllocateStat && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setPendingStat(stat); }}
@@ -491,6 +514,7 @@ export default function CharacterPanel({
                           <p className="font-display text-sm">{STAT_FULL_NAMES[stat]}</p>
                           <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[stat]}</p>
                           <p className="text-[10px] text-muted-foreground">Modifier: {mod >= 0 ? '+' : ''}{mod}</p>
+                          {manualPoints > 0 && <p className="text-[10px] text-chart-5">{manualPoints} manually allocated</p>}
                         </TooltipContent>
                       </Tooltip>
                     );
@@ -737,7 +761,7 @@ export default function CharacterPanel({
                   {(character as any)[pendingStat]} → {(character as any)[pendingStat] + 1}
                 </span>
               )}
-              <span className="block mt-1 text-muted-foreground/70">This cannot be undone.</span>
+              <span className="block mt-1 text-muted-foreground/70">You can undo this with a respec point.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -749,6 +773,38 @@ export default function CharacterPanel({
                   onAllocateStat(pendingStat);
                 }
                 setPendingStat(null);
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Respec confirmation dialog */}
+      <AlertDialog open={!!pendingRespec} onOpenChange={(open) => { if (!open) setPendingRespec(null); }}>
+        <AlertDialogContent className="bg-card border-border max-w-xs">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-chart-5 text-sm">Respec Stat Point</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              Remove 1 from <strong className="text-foreground">{pendingRespec ? STAT_FULL_NAMES[pendingRespec] : ''}</strong>?
+              {pendingRespec && (
+                <span className="block mt-1 text-muted-foreground">
+                  {(character as any)[pendingRespec]} → {(character as any)[pendingRespec] - 1}
+                </span>
+              )}
+              <span className="block mt-1 text-muted-foreground/70">Uses 1 respec point. You'll get the stat point back to reallocate.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-7">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="text-xs h-7"
+              onClick={() => {
+                if (pendingRespec && onRespecStat) {
+                  onRespecStat(pendingRespec);
+                }
+                setPendingRespec(null);
               }}
             >
               Confirm

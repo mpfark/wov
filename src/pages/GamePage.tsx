@@ -612,6 +612,42 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               await updateCharacter(updates);
               addLog(`📊 +1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`);
             }}
+            onRespecStat={async (stat: string) => {
+              if ((character.respec_points || 0) <= 0) return;
+              const currentVal = (character as any)[stat] ?? 10;
+              const updates: Partial<Character> = {
+                [stat]: currentVal - 1,
+                respec_points: (character.respec_points || 0) - 1,
+                unspent_stat_points: character.unspent_stat_points + 1,
+              };
+              // Recalculate derived stats
+              if (stat === 'con') {
+                const newMaxHp = character.max_hp + (getStatModifier(currentVal - 1) - getStatModifier(currentVal));
+                if (newMaxHp !== character.max_hp) {
+                  updates.max_hp = newMaxHp;
+                  updates.hp = Math.min(character.hp, newMaxHp);
+                }
+              }
+              if (stat === 'int' || stat === 'wis' || stat === 'cha') {
+                const eInt = stat === 'int' ? currentVal - 1 : character.int;
+                const eWis = stat === 'wis' ? currentVal - 1 : character.wis;
+                const eCha = stat === 'cha' ? currentVal - 1 : character.cha;
+                const newMaxCp = getMaxCp(character.level, eInt, eWis, eCha);
+                if (newMaxCp !== character.max_cp) {
+                  updates.max_cp = newMaxCp;
+                  updates.cp = Math.min(character.cp ?? 0, newMaxCp);
+                }
+              }
+              if (stat === 'dex') {
+                const newMaxMp = getMaxMp(character.level, currentVal - 1);
+                if (newMaxMp !== (character.max_mp ?? 100)) {
+                  updates.max_mp = newMaxMp;
+                  updates.mp = Math.min(character.mp ?? 100, newMaxMp);
+                }
+              }
+              await updateCharacter(updates);
+              addLog(`🔄 -1 ${stat.toUpperCase()} respec'd! You have ${character.unspent_stat_points + 1} stat point(s) to allocate.`);
+            }}
           />
         </div>
 
