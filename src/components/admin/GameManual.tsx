@@ -12,6 +12,7 @@ import {
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
   XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
   CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate,
+  getIntHitBonus, getDexCritBonus, getStrDamageFloor, getCarryCapacity, getWisDodgeChance,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
@@ -114,6 +115,108 @@ export default function GameManual() {
                     Maximum of <strong className="text-foreground">4 respec points</strong> total across a character's lifetime.
                     Only manually allocated points can be respec'd — base race, class, and level-up bonuses are permanent.
                   </p>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* 1b. Class Balance Simulation */}
+          <AccordionItem value="balance-sim" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              ⚖️ Class Balance Simulation (Lv 20 & 40)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <p className="text-xs text-muted-foreground mb-2">
+                Simulates all classes at levels 20 and 40 using <strong className="text-foreground">Human race</strong> with <strong className="text-foreground">no manual stat allocation</strong> and <strong className="text-foreground">no gear bonuses</strong>. Shows base power curves from race + class + level-up bonuses only.
+              </p>
+              {[20, 40].map(simLevel => {
+                const classes = Object.keys(CLASS_STATS);
+                const rows = classes.map(cls => {
+                  const baseStats = calculateStats('human', cls);
+                  const levelBonuses = CLASS_LEVEL_BONUSES[cls] || {};
+                  const bonusTicks = Math.floor((simLevel - 1) / 3);
+                  const stats: Record<string, number> = {};
+                  for (const s of STAT_KEYS) {
+                    stats[s] = baseStats[s] + (levelBonuses[s] || 0) * bonusTicks;
+                  }
+                  const maxHp = (CLASS_BASE_HP[cls] || 18) + Math.floor((stats.con - 10) / 2) + (simLevel - 1) * 5;
+                  const ac = (CLASS_BASE_AC[cls] || 10) + Math.floor((stats.dex - 10) / 2);
+                  const maxCp = getMaxCp(simLevel, stats.int, stats.wis, stats.cha);
+                  const maxMp = getMaxMp(simLevel, stats.dex);
+                  const hpRegen = getBaseRegen(stats.con);
+                  const primaryStat = CLASS_PRIMARY_STAT[cls] || 'int';
+                  const cpRegen = getCpRegenRate(stats[primaryStat]);
+                  const mpRegen = getMpRegenRate(stats.dex);
+                  const hitBonus = getIntHitBonus(stats.int);
+                  const critBonus = getDexCritBonus(stats.dex);
+                  const dmgFloor = getStrDamageFloor(stats.str);
+                  const carry = getCarryCapacity(stats.str);
+                  const awareness = Math.round(getWisDodgeChance(stats.wis) * 100);
+                  return { cls, stats, maxHp, ac, maxCp, maxMp, hpRegen, cpRegen, mpRegen, hitBonus, critBonus, dmgFloor, carry, awareness };
+                });
+                const maxHpVal = Math.max(...rows.map(r => r.maxHp));
+                const maxCpVal = Math.max(...rows.map(r => r.maxCp));
+                return (
+                  <Card key={simLevel} className="mb-3 bg-card/30">
+                    <CardContent className="p-3">
+                      <p className="text-xs font-display text-primary mb-2">Level {simLevel} — Human (all classes)</p>
+                      <div className="overflow-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Class</TableHead>
+                              {STAT_KEYS.map(s => <TableHead key={s} className="text-xs">{STAT_LABELS[s]}</TableHead>)}
+                              <TableHead className="text-xs">HP</TableHead>
+                              <TableHead className="text-xs">AC</TableHead>
+                              <TableHead className="text-xs">CP</TableHead>
+                              <TableHead className="text-xs">MP</TableHead>
+                              <TableHead className="text-xs">HP/t</TableHead>
+                              <TableHead className="text-xs">CP/t</TableHead>
+                              <TableHead className="text-xs">MP/t</TableHead>
+                              <TableHead className="text-xs">Hit+</TableHead>
+                              <TableHead className="text-xs">Crit+</TableHead>
+                              <TableHead className="text-xs">DmgF</TableHead>
+                              <TableHead className="text-xs">Carry</TableHead>
+                              <TableHead className="text-xs">Aware%</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {rows.map(r => (
+                              <TableRow key={r.cls}>
+                                <TableCell className="text-xs font-display">{CLASS_LABELS[r.cls]}</TableCell>
+                                {STAT_KEYS.map(s => (
+                                  <TableCell key={s} className="text-xs">{r.stats[s]}</TableCell>
+                                ))}
+                                <TableCell className={`text-xs font-bold ${r.maxHp >= maxHpVal ? 'text-green-400' : ''}`}>{r.maxHp}</TableCell>
+                                <TableCell className="text-xs">{r.ac}</TableCell>
+                                <TableCell className={`text-xs font-bold ${r.maxCp >= maxCpVal ? 'text-blue-400' : ''}`}>{r.maxCp}</TableCell>
+                                <TableCell className="text-xs">{r.maxMp}</TableCell>
+                                <TableCell className="text-xs">{r.hpRegen}</TableCell>
+                                <TableCell className="text-xs">{r.cpRegen}</TableCell>
+                                <TableCell className="text-xs">{r.mpRegen}</TableCell>
+                                <TableCell className="text-xs">{r.hitBonus > 0 ? `+${r.hitBonus}` : '—'}</TableCell>
+                                <TableCell className="text-xs">{r.critBonus > 0 ? `+${r.critBonus}` : '—'}</TableCell>
+                                <TableCell className="text-xs">{r.dmgFloor > 0 ? r.dmgFloor : '—'}</TableCell>
+                                <TableCell className="text-xs">{r.carry}</TableCell>
+                                <TableCell className="text-xs">{r.awareness > 0 ? `${r.awareness}%` : '—'}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+              <Card className="bg-card/30">
+                <CardContent className="p-3">
+                  <p className="text-xs font-display text-chart-5 mb-1">📝 Reading the Simulation</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong className="text-foreground">HP/t, CP/t, MP/t</strong> — Regen per tick (HP every 15s, CP/MP continuous).</p>
+                    <p><strong className="text-foreground">Hit+</strong> — Bonus to attack rolls from INT. <strong className="text-foreground">Crit+</strong> — Extra crit range from DEX.</p>
+                    <p><strong className="text-foreground">DmgF</strong> — Minimum damage floor from STR. <strong className="text-foreground">Aware%</strong> — Chance to reduce incoming damage by 25% from WIS.</p>
+                    <p className="text-muted-foreground/70">All values assume Human race, zero manual stat points, and no equipment. Actual characters will vary based on race choice, stat allocation, and gear.</p>
+                  </div>
                 </CardContent>
               </Card>
             </AccordionContent>
