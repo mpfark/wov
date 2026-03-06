@@ -709,7 +709,7 @@ export function useActions(params: UseActionsParams) {
       if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'absorb_buff') {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
-      const shieldHp = intMod * 4 + p.character.level;
+      const shieldHp = intMod * 2 + p.character.level;
       const durationMs = Math.min(20000, 10000 + intMod * 1000);
       p.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
