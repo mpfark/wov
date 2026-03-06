@@ -22,6 +22,7 @@ import AreaManager from '@/components/admin/AreaManager';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
+import AdminChatWidget from '@/components/admin/AdminChatWidget';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -306,6 +307,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           {activeTab === 'issues' && <IssueReportManager />}
         </TabsContent>
       </Tabs>
+
+      <AdminChatWidget />
     </div>
   );
 }
