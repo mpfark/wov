@@ -4,7 +4,7 @@
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
-import { getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxMp, getMpRegenRate, getStatModifier } from '@/lib/game-data';
+import { getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate, getStatModifier } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 
@@ -109,6 +109,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const updateCharRegenRef = useRef(updateCharacter);
   const equippedRef = useRef(equipped);
   const inCombatRegenRef = useRef(false);
+  const equipmentBonusesRef = useRef(equipmentBonuses);
 
   useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level]);
   useEffect(() => { regenBuffRef.current = regenBuff; }, [regenBuff]);
@@ -116,6 +117,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
   useEffect(() => { equippedRef.current = equipped; }, [equipped]);
+  useEffect(() => { equipmentBonusesRef.current = equipmentBonuses; }, [equipmentBonuses]);
 
   // ── Computed values ────────────────────────────────────────────
   const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
@@ -151,15 +153,17 @@ export function useGameLoop(params: UseGameLoopParams) {
   }, []);
 
   // ── CP Regen (every 6s) ────────────────────────────────────────
-  const cpCharRef = useRef({ cp: character.cp ?? 100, max_cp: character.max_cp ?? 100, class: character.class });
+  const cpCharRef = useRef({ cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha });
   const cpStatRef = useRef(character);
-  useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, max_cp: character.max_cp ?? 100, class: character.class }; }, [character.cp, character.max_cp, character.class]);
+  useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.class, character.level, character.int, character.wis, character.cha]);
   useEffect(() => { cpStatRef.current = character; }, [character]);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const { cp, max_cp, class: charClass } = cpCharRef.current;
-      if (cp >= max_cp) return;
+      const { cp, class: charClass, level, int, wis, cha } = cpCharRef.current;
+      const eqB = equipmentBonusesRef.current;
+      const gearAwareMaxCp = getMaxCp(level, int + (eqB.int || 0), wis + (eqB.wis || 0), cha + (eqB.cha || 0));
+      if (cp >= gearAwareMaxCp) return;
       const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
       const primaryVal = (cpStatRef.current as any)[primaryStat] ?? 10;
       const bRegen = getCpRegenRate(primaryVal);
@@ -172,7 +176,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
       const combatMult = inCombatRegenRef.current ? 0.1 : 1;
       const regenAmount = (bRegen + foodCpRegen) * innMult * inspireMult * combatMult;
-      const newCp = Math.min(Math.floor(cp + regenAmount), max_cp);
+      const newCp = Math.min(Math.floor(cp + regenAmount), gearAwareMaxCp);
       if (newCp > cp) {
         updateCharRegenRef.current({ cp: newCp });
       }
