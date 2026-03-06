@@ -480,6 +480,7 @@ export default function CharacterPanel({
                     const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
                     const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
                     const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
+                    const manualPoints = base - nonManualBase;
                     return (
                       <Tooltip key={stat}>
                         <TooltipTrigger asChild>
