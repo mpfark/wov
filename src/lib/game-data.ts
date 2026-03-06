@@ -248,43 +248,48 @@ export function getStatModifier(stat: number): number {
 
 // ── Cross-Stat Bonuses ─────────────────────────────────────────
 
-// INT → Hit Bonus: +1 to attack rolls per 2 INT modifier points
+// ── Diminishing returns helper: sqrt-based soft cap ──────────────
+function diminishing(mod: number, cap: number): number {
+  return Math.min(cap, Math.floor(Math.sqrt(Math.max(0, mod))));
+}
+
+function diminishingFloat(mod: number, perPoint: number, cap: number): number {
+  return Math.min(cap, Math.sqrt(Math.max(0, mod)) * perPoint);
+}
+
+// INT → Hit Bonus: sqrt curve, capped at +3
 export function getIntHitBonus(int: number): number {
-  const mod = getStatModifier(int);
-  return Math.max(0, Math.floor(mod / 2));
+  return diminishing(getStatModifier(int), 3);
 }
 
-// DEX → Critical Hit Chance: every 2 DEX modifier points improves crit range by 1
+// DEX → Critical Hit Chance: sqrt curve, capped at +2 (crit on 18-20 max)
 export function getDexCritBonus(dex: number): number {
-  const mod = getStatModifier(dex);
-  return Math.max(0, Math.floor(mod / 2));
+  return diminishing(getStatModifier(dex), 2);
 }
 
-// WIS → Chance to reduce incoming damage by 25%: WIS_mod × 3% chance
+// WIS → Chance to reduce incoming damage by 25%: sqrt curve, capped at 15%
 export function getWisDodgeChance(wis: number): number {
-  return Math.max(0, getStatModifier(wis) * 0.03);
+  return diminishingFloat(getStatModifier(wis), 0.03, 0.15);
 }
 
 // CHA → Vendor Price Modifiers
 export function getChaSellMultiplier(cha: number): number {
-  const mod = getStatModifier(cha);
-  return Math.min(0.8, 0.5 + mod * 0.03);
+  const mod = Math.max(0, getStatModifier(cha));
+  return Math.min(0.8, 0.5 + Math.sqrt(mod) * 0.03);
 }
 
 export function getChaBuyDiscount(cha: number): number {
-  const mod = getStatModifier(cha);
-  return Math.max(0, mod * 0.02); // 2% per CHA modifier point
+  return diminishingFloat(getStatModifier(cha), 0.02, 0.10);
 }
 
-// CHA → Bonus gold from humanoid kills
+// CHA → Bonus gold from humanoid kills: sqrt curve, capped at +25%
 export function getChaGoldMultiplier(cha: number): number {
-  const mod = getStatModifier(cha);
-  return 1 + Math.max(0, mod * 0.05); // +5% per CHA modifier point
+  return 1 + diminishingFloat(getStatModifier(cha), 0.05, 0.25);
 }
 
-// STR → Minimum damage floor on all attacks
+// STR → Minimum damage floor on all attacks: sqrt curve, capped at +3
 export function getStrDamageFloor(str: number): number {
-  return Math.max(0, Math.floor(getStatModifier(str) / 2));
+  return diminishing(getStatModifier(str), 3);
 }
 
 // Humanoid gold scaling
