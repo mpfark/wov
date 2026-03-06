@@ -499,6 +499,16 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, refunded_points: Math.max(totalSpentPoints, 0) });
     }
 
+    if (action === "grant-respec") {
+      const { character_id, amount } = body;
+      if (!character_id || !amount || amount < 1) throw { message: "character_id and amount (>=1) required", status: 400 };
+      const { data: char, error: fetchErr } = await adminClient.from("characters").select("respec_points").eq("id", character_id).single();
+      if (fetchErr || !char) throw { message: "Character not found", status: 404 };
+      const { error } = await adminClient.from("characters").update({ respec_points: (char.respec_points || 0) + amount }).eq("id", character_id);
+      if (error) throw error;
+      return jsonResponse({ success: true, new_total: (char.respec_points || 0) + amount });
+    }
+
     return jsonResponse({ error: "Unknown action" }, 400);
   } catch (err: any) {
     const status = err.status || 500;
