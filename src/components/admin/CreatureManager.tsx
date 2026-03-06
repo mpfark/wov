@@ -295,16 +295,6 @@ export default function CreatureManager() {
           </div>
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
           <button
-            onClick={() => setShowUnassigned(v => !v)}
-            className={`px-2 py-0.5 rounded text-[10px] font-display transition-colors ${
-              showUnassigned
-                ? 'bg-destructive/20 text-destructive border border-destructive/50'
-                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            }`}
-          >
-            Unassigned ({unassignedCount})
-          </button>
-          <button
             onClick={() => setShowNoLoot(v => !v)}
             className={`px-2 py-0.5 rounded text-[10px] font-display transition-colors ${
               showNoLoot
