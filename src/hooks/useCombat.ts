@@ -548,12 +548,12 @@ export function useCombat(params: UseCombatParams) {
           const dmgDie = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-          // WIS chance to halve damage (tank path)
-          const wisChanceTank = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
-          if (iAmTheTank && wisChanceTank > 0 && Math.random() < wisChanceTank) {
-            creatureDmg = Math.max(Math.floor(creatureDmg / 2), 1);
-            _addLog(`🧘 ${who}'s awareness halves ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
-          }
+           // WIS chance to reduce damage by 25% (tank path)
+           const wisChanceTank = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
+           if (iAmTheTank && wisChanceTank > 0 && Math.random() < wisChanceTank) {
+             creatureDmg = Math.max(Math.floor(creatureDmg * 0.75), 1);
+             _addLog(`🧘 ${who}'s awareness softens ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
+           }
 
           // Force Shield absorb for tank
           const _absorbBuff = ext.current.absorbBuff;
@@ -608,12 +608,12 @@ export function useCombat(params: UseCombatParams) {
           const dmgDie2 = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
           let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(engagedCreature.stats.str || 10), 1);
           if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-          // WIS chance to halve damage
-          const wisChance = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
-          if (wisChance > 0 && Math.random() < wisChance) {
-            creatureDmg = Math.max(Math.floor(creatureDmg / 2), 1);
-            _addLog(`🧘 ${who}'s awareness halves ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
-          }
+           // WIS chance to reduce damage by 25%
+           const wisChance = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
+           if (wisChance > 0 && Math.random() < wisChance) {
+             creatureDmg = Math.max(Math.floor(creatureDmg * 0.75), 1);
+             _addLog(`🧘 ${who}'s awareness softens ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
+           }
 
           // Force Shield absorb
           const _absorbBuff = ext.current.absorbBuff;

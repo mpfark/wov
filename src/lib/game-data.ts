@@ -260,7 +260,7 @@ export function getDexCritBonus(dex: number): number {
   return Math.max(0, Math.floor(mod / 2));
 }
 
-// WIS → Chance to halve incoming damage: WIS_mod × 3% chance
+// WIS → Chance to reduce incoming damage by 25%: WIS_mod × 3% chance
 export function getWisDodgeChance(wis: number): number {
   return Math.max(0, getStatModifier(wis) * 0.03);
 }
