@@ -75,8 +75,10 @@ export interface UseCombatParams {
 
 export function useCombat(params: UseCombatParams) {
   // ── Single ref for ALL external state ──────────────────────────
-  const ext = useRef(params);
-  ext.current = params;
+  const ext = useRef<UseCombatParams>(params);
+  if (ext && typeof ext === 'object' && 'current' in ext) {
+    ext.current = params;
+  }
 
   // Destructure for useEffect dependency arrays (React-tracked)
   const { character, creatures, isDead } = params;
