@@ -344,10 +344,11 @@ export function useGameLoop(params: UseGameLoopParams) {
     const activeStacks = Object.entries(poisonStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
     const interval = setInterval(async () => {
+      const currentStacks = poisonStacksRef.current;
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const now = Date.now();
       let anyExpired = false;
-      for (const [creatureId, stack] of Object.entries(poisonStacks)) {
+      for (const [creatureId, stack] of Object.entries(currentStacks)) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
