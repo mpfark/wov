@@ -238,15 +238,18 @@ export default function GameManual() {
                 <CardContent className="p-3 space-y-2">
                   <p className="text-xs font-display text-primary">📋 Attribute Effects</p>
                   <div className="text-xs text-muted-foreground space-y-1.5">
-                    <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">+floor(STR_mod / 2)</code> min damage.</p>
-                    <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and <strong>improves critical hit range</strong>: <code className="text-primary">+1 crit range per 2 DEX modifier</code>.</p>
+                    <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">min(3, floor(√mod))</code> min damage.</p>
+                    <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and <strong>improves critical hit range</strong>: <code className="text-primary">min(2, floor(√mod))</code> — max crit on 18-20.</p>
                     <p><strong className="text-foreground">CON (Constitution)</strong> — Increases max HP, passive HP regeneration rate, and resistance to DoT effects. Primary stat for Warrior CP regen.</p>
-                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP, spell damage bonus, CP regen for Wizards, and <strong>improves hit chance</strong>: <code className="text-primary">+1 to attack rolls per 2 INT modifier</code>.</p>
-                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP, healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">WIS_mod × 3%</code> chance per hit.</p>
-                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Increases max CP, Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount 2%/mod), and <strong>+5% gold from humanoid kills</strong> per CHA modifier.</p>
+                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP, spell damage bonus, CP regen for Wizards, and <strong>improves hit chance</strong>: <code className="text-primary">min(3, floor(√mod))</code> bonus to attack rolls.</p>
+                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP, healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(15%, √mod × 3%)</code>.</p>
+                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Increases max CP, Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +25%.</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground/70 mt-1">
                     Stat modifier = <code className="text-primary">floor((stat − 10) / 2)</code>. A stat of 10 gives +0, 12 gives +1, 14 gives +2, etc.
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/70">
+                    ⚖️ <strong className="text-foreground">Diminishing returns:</strong> All cross-stat bonuses scale with <code className="text-primary">√(modifier)</code> instead of linearly, with hard caps. Early investment is impactful; extreme stacking gives sharply reduced returns.
                   </p>
                 </CardContent>
               </Card>
