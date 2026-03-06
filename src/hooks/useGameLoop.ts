@@ -343,7 +343,11 @@ export function useGameLoop(params: UseGameLoopParams) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0) { anyExpired = true; continue; }
+        if (currentHp <= 0) {
+          anyExpired = true;
+          setPoisonStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
+          continue;
+        }
         const totalDmg = stack.stacks * stack.damagePerTick;
         const newHp = Math.max(currentHp - totalDmg, 0);
         if (localCreature) {
@@ -353,11 +357,17 @@ export function useGameLoop(params: UseGameLoopParams) {
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         setPoisonStacks(prev => {
           if (!prev[creatureId]) return prev;
+          if (newHp <= 0) {
+            const next = { ...prev };
+            delete next[creatureId];
+            return next;
+          }
           return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
         });
         const cName = localCreature?.name || stack.creatureName;
         addLog(`🧪 ${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
+          anyExpired = true;
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
@@ -391,7 +401,11 @@ export function useGameLoop(params: UseGameLoopParams) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0) { anyExpired = true; continue; }
+        if (currentHp <= 0) {
+          anyExpired = true;
+          setIgniteStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
+          continue;
+        }
         const totalDmg = stack.stacks * stack.damagePerTick;
         const newHp = Math.max(currentHp - totalDmg, 0);
         if (localCreature) {
@@ -401,11 +415,17 @@ export function useGameLoop(params: UseGameLoopParams) {
         await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
         setIgniteStacks(prev => {
           if (!prev[creatureId]) return prev;
+          if (newHp <= 0) {
+            const next = { ...prev };
+            delete next[creatureId];
+            return next;
+          }
           return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
         });
         const cName = localCreature?.name || stack.creatureName;
         addLog(`🔥 ${cName} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
+          anyExpired = true;
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
