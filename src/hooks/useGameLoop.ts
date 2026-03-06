@@ -431,6 +431,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         if (newHp <= 0) {
           anyExpired = true;
           dotKilledRef.current.add(creatureId);
+          const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
             node_id: stack.creatureNodeId,
