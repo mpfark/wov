@@ -218,6 +218,15 @@ Deno.serve(async (req) => {
       const pointsDiff = totalPointsAtNewLevel - totalPointsAtOldLevel;
       updates.unspent_stat_points = Math.max(0, (char.unspent_stat_points || 0) + pointsDiff);
 
+      // Calculate respec points: 1 per milestone (10, 20, 30, 40)
+      const countMilestones = (level: number) => [10, 20, 30, 40].filter(m => level >= m).length;
+      const newMilestones = countMilestones(new_level);
+      const oldMilestones = countMilestones(oldLevel);
+      const respecDiff = newMilestones - oldMilestones;
+      if (respecDiff !== 0) {
+        updates.respec_points = Math.max(0, (char.respec_points || 0) + respecDiff);
+      }
+
       // HP: base class HP + 5 per level after 1 + con modifier
       const baseHP = CLASS_BASE_HP[char.class] || 18;
       const conMod = Math.floor((updates.con - 10) / 2);
@@ -252,7 +261,7 @@ Deno.serve(async (req) => {
       if (!character_id || !updates || typeof updates !== "object") throw new Error("character_id and updates required");
 
       const allowedFields = ["name", "hp", "max_hp", "gold", "xp",
-        "str", "dex", "con", "int", "wis", "cha", "ac", "current_node_id", "unspent_stat_points", "gender"];
+        "str", "dex", "con", "int", "wis", "cha", "ac", "current_node_id", "unspent_stat_points", "gender", "respec_points"];
 
       const filteredUpdates: Record<string, any> = {};
       for (const [key, value] of Object.entries(updates)) {

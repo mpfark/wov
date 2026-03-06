@@ -27,6 +27,7 @@ export interface Character {
   max_cp: number;
   mp: number;
   max_mp: number;
+  respec_points: number;
 }
 
 export function useCharacter(user: User | null) {
