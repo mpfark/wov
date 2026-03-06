@@ -151,7 +151,8 @@ export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount = 0, isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
   foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
-  const hpPercent = Math.round((character.hp / character.max_hp) * 100);
+  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0);
+  const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const cp = character.cp ?? 100;
   const intWithGear = character.int + (equipmentBonuses.int || 0);
   const wisWithGear = character.wis + (equipmentBonuses.wis || 0);
@@ -183,7 +184,7 @@ export default function StatusBarsStrip({
                 <span className="text-muted-foreground">HP</span>
                 <span className="flex items-center gap-0.5">
                   {regenTick && <span className="text-[9px] text-elvish animate-fade-in font-display">+</span>}
-                  <span className="text-blood tabular-nums">{character.hp}/{character.max_hp}</span>
+                  <span className="text-blood tabular-nums">{character.hp}/{effectiveMaxHp}</span>
                 </span>
               </div>
               <div className={`h-1.5 bg-background rounded-full overflow-hidden border transition-all duration-300 ${regenTick ? 'border-elvish shadow-[0_0_6px_hsl(var(--elvish)/0.5)]' : 'border-border'}`}>

@@ -130,7 +130,9 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => {
     const interval = setInterval(() => {
       const { hp, max_hp, current_node_id, con } = regenCharRef.current;
-      if (hp < max_hp && hp > 0) {
+      const gearHpBonus = equipmentBonusesRef.current.hp || 0;
+      const effectiveMaxHp = max_hp + gearHpBonus;
+      if (hp < effectiveMaxHp && hp > 0) {
         const buff = regenBuffRef.current;
         const potionMult = Date.now() < buff.expiresAt ? buff.multiplier : 1;
         const node = current_node_id ? getNodeRef.current(current_node_id) : null;
@@ -144,7 +146,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const milestoneMult = regenCharRef.current.level >= 35 ? 2 : 1;
         const combatMult = inCombatRegenRef.current ? 0.1 : 1;
         const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * milestoneMult * combatMult), 1);
-        const newHp = Math.min(hp + regenAmount, max_hp);
+        const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
           updateCharRegenRef.current({ hp: newHp });
           setRegenTick(true);
