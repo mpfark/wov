@@ -568,14 +568,14 @@ export default function CharacterPanel({
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Base 3.0s − ${dexMod > 0 ? dexMod * 0.25 + 's DEX bonus' : '0s DEX bonus'} (min 1.0s)` },
                     { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
-                    ...(strFloor > 0 ? [{ label: 'Min Damage', value: `+${strFloor}`, tip: 'STR bonus: minimum damage floor on all attacks' }] : []),
+                    { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];
 
                   const defenseRows: { label: string; value: string; tip: string }[] = [
                     { label: 'AC', value: `${totalAC}`, tip: `Your AC ${totalAC} vs regular creature atk +${creatureAtkMod}` },
                     { label: 'Dodge', value: `${100 - getHitChance}%`, tip: `Chance a same-level creature misses you (AC ${totalAC})` },
-                    ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}%`, tip: 'WIS bonus: chance to reduce incoming creature damage by 25%' }] : []),
-                    ...(buyDisc > 0 ? [{ label: 'Vendor Bonus', value: `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%`, tip: 'CHA bonus: better buy/sell prices' }] : []),
+                    { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? 'WIS bonus: chance to reduce incoming creature damage by 25%' : 'WIS 12+ for chance to reduce incoming damage by 25%' },
+                    { label: 'Vendor Bonus', value: buyDisc > 0 ? `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%` : '–', tip: buyDisc > 0 ? 'CHA bonus: better buy/sell prices' : 'CHA 12+ for better buy/sell prices' },
                   ];
 
                   const renderSection = (title: string, rows: { label: string; value: string; tip: string }[], cols: boolean = false) => (
