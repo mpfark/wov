@@ -250,8 +250,7 @@ export default function NodeView({
             <CollapsibleContent>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {groundLoot.map(g => {
-                  const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
-                    g.item.rarity === 'rare' ? 'text-dwarvish' :
+                   const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
                     g.item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground';
                   const statEntries = Object.entries(g.item.stats || {}).filter(([, v]) => v !== 0);
                   return (

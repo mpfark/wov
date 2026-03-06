@@ -20,7 +20,7 @@ interface ForgedItem {
   name: string;
   description: string;
   item_type: 'equipment' | 'consumable';
-  rarity: 'common' | 'uncommon' | 'rare';
+  rarity: 'common' | 'uncommon';
   slot: string | null;
   level: number;
   hands: number | null;
@@ -377,7 +377,6 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                   <SelectItem value="random">🎲 Mixed</SelectItem>
                   <SelectItem value="common">Common</SelectItem>
                   <SelectItem value="uncommon">Uncommon</SelectItem>
-                  <SelectItem value="rare">Rare</SelectItem>
                 </SelectContent>
               </Select>
             </div>
