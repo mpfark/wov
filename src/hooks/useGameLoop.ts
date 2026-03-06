@@ -384,7 +384,10 @@ export function useGameLoop(params: UseGameLoopParams) {
         setPoisonStacks(prev => {
           const next = { ...prev };
           for (const key of Object.keys(next)) {
-            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) delete next[key];
+            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) {
+              dotKilledRef.current.delete(key);
+              delete next[key];
+            }
           }
           return next;
         });
