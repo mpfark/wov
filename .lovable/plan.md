@@ -1,25 +1,31 @@
 
 
-## Cross-Stat Incentive System ✅ IMPLEMENTED
+## Cross-Stat & Combat System ✅ IMPLEMENTED
 
-All four cross-stat bonuses are now live:
+### Cross-Stat Bonuses (Diminishing Returns via sqrt curves)
 
-### Implemented Bonuses
+1. **INT → Hit Bonus**: `+floor(sqrt(INT_mod))`, capped at +3. Improves attack rolls.
+2. **DEX → Critical Hit Chance**: `+floor(sqrt(DEX_mod))`, capped at +4. Crit on 16-20 max.
+3. **WIS → Awareness (Damage Reduction Chance)**: `sqrt(WIS_mod) × 3%`, capped at 15%. Chance to reduce incoming damage by 25%.
+4. **CHA → Better Vendor Prices & Humanoid Gold**: Sell multiplier = `0.5 + sqrt(CHA_mod) × 0.03` (cap 0.8). Buy discount = `sqrt(CHA_mod) × 2%` (cap 10%). Humanoid gold = `+sqrt(CHA_mod) × 5%` (cap 25%).
+5. **STR → Minimum Damage Floor**: `+floor(sqrt(STR_mod))`, capped at +3. All attacks deal at least this much.
 
-1. **INT → Critical Hit Chance** ✅: Every 2 points of INT modifier improves crit range by 1. Formula: `+floor(INT_mod / 2)`. INT 14 = crit 19-20.
+### Attack Speed
 
-2. **WIS → Damage Reduction** ✅: WIS modifier reduces incoming creature damage by a flat amount (min 1 damage). Formula: `-WIS_mod damage taken`.
+- Formula: `max(3.0 − DEX_mod × 0.25, 1.0)` seconds per attack
+- Base interval: 3.0s, minimum: 1.0s
+- Displayed in Character Panel → Attributes → Offense section
 
-3. **CHA → Better Vendor Prices & Humanoid Gold** ✅: Sell multiplier = `0.5 + CHA_mod × 0.03` (capped at 0.8). Buy discount = `CHA_mod × 2%`. Humanoid gold bonus = `+5% per CHA modifier`.
+### Character Panel Display
 
-4. **STR → Minimum Damage Floor** ✅: All attacks (including spells) deal at least `1 + floor(STR_mod / 2)` damage. Small but consistent bonus.
+- All cross-stat bonus rows always visible; shows "–" when modifier too low
+- Tooltips explain unlock thresholds (e.g. "STR 14+", "WIS 12+", "CHA 12+")
 
 ### Files Changed
 
-- `src/lib/game-data.ts` — Added helper functions: `getIntCritBonus`, `getWisDamageReduction`, `getChaSellMultiplier`, `getChaBuyDiscount`, `getChaGoldMultiplier`, `getStrDamageFloor`
-- `src/hooks/useCombat.ts` — Applied INT crit range, STR damage floor, WIS damage reduction, CHA humanoid gold bonus
-- `src/hooks/useActions.ts` — Applied CHA humanoid gold bonus in `awardKillRewards`
+- `src/lib/game-data.ts` — Helper functions: `getIntHitBonus`, `getDexCritBonus`, `getWisDodgeChance`, `getChaSellMultiplier`, `getChaBuyDiscount`, `getChaGoldMultiplier`, `getStrDamageFloor`
+- `src/hooks/useCombat.ts` — Applied INT hit bonus, DEX crit range, STR damage floor, WIS awareness, CHA humanoid gold bonus, DEX attack speed
+- `src/hooks/useActions.ts` — CHA humanoid gold bonus in `awardKillRewards`
 - `src/components/game/VendorPanel.tsx` — CHA-based buy/sell price modifiers with UI indicators
-- `src/components/game/CharacterPanel.tsx` — Shows cross-stat bonuses in Attributes tab (Crit Range, Min Damage, Dmg Reduction, Vendor Bonus)
-- `src/components/admin/GameManual.tsx` — Documented all new cross-stat bonuses in Attribute Effects and Combat sections
-- `src/pages/GamePage.tsx` — Passes `cha` and `equipmentBonuses` to VendorPanel
+- `src/components/game/CharacterPanel.tsx` — Shows all cross-stat bonuses in Attributes tab (always visible, "–" when inactive), attack speed display
+- `src/components/admin/GameManual.tsx` — Documented all cross-stat bonuses and attack speed formula
