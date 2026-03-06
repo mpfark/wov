@@ -192,9 +192,9 @@ export function useCombat(params: UseCombatParams) {
 
   useEffect(() => {
     if (inCombat || !justStoppedRef.current || ext.current.isDead) return;
-    justStoppedRef.current = false;
     const nextAggro = creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
     if (nextAggro) {
+      justStoppedRef.current = false; // consume flag only when aggro creature found
       const timeout = setTimeout(() => {
         ext.current.addLog(`⚠️ ${nextAggro.name} attacks!`);
         startCombatRef.current(nextAggro.id);
@@ -233,6 +233,19 @@ export function useCombat(params: UseCombatParams) {
 
       const creature = e.creatures.find(c => c.id === creatureId);
       if (!creature || !creature.is_alive || creature.hp <= 0) {
+        // Target died (e.g. killed by another player) — pick next or stop
+        engagedCreatureIdsRef.current.delete(creatureId);
+        setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
+        const nextEngaged = [...engagedCreatureIdsRef.current].find(id => {
+          const c = e.creatures.find(cr => cr.id === id);
+          return c && c.is_alive && c.hp > 0;
+        });
+        if (nextEngaged) {
+          combatCreatureIdRef.current = nextEngaged;
+          setActiveCombatCreatureId(nextEngaged);
+        } else {
+          stopCombat();
+        }
         return;
       }
 
