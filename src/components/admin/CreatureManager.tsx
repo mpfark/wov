@@ -68,7 +68,7 @@ export default function CreatureManager() {
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
-  const [showUnassigned, setShowUnassigned] = useState(false);
+  // showUnassigned removed — now handled via regionFilter === 'unassigned'
   const [showNoLoot, setShowNoLoot] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'rarity' | 'location'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -236,12 +236,12 @@ export default function CreatureManager() {
   const RARITY_ORDER: Record<string, number> = { regular: 0, rare: 1, boss: 2 };
 
   const filtered = creatures.filter(c => {
-    if (showUnassigned && c.node_id) return false;
+    if (regionFilter === 'unassigned' && c.node_id) return false;
     if (showNoLoot && !hasNoLoot(c)) return false;
     const matchesText = c.name.toLowerCase().includes(filter.toLowerCase()) ||
       c.rarity.includes(filter.toLowerCase()) ||
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
-    const matchesRegion = regionFilter === 'all' || getNodeRegion(c.node_id) === regionFilter;
+    const matchesRegion = regionFilter === 'all' || regionFilter === 'unassigned' || getNodeRegion(c.node_id) === regionFilter;
     return matchesText && matchesRegion;
   }).sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -266,9 +266,10 @@ export default function CreatureManager() {
           <span className="text-xs text-muted-foreground">({creatures.length})</span>
           <div className="flex-1" />
           <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="w-32 h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
+            <SelectTrigger className="w-36 h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
             <SelectContent className="bg-popover border-border z-50 max-h-60">
               <SelectItem value="all" className="text-xs">All Regions</SelectItem>
+              <SelectItem value="unassigned" className="text-xs text-destructive">⚠ Unassigned ({unassignedCount})</SelectItem>
               {regionNames.map(r => (
                 <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
               ))}
