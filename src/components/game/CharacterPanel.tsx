@@ -546,7 +546,7 @@ export default function CharacterPanel({
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
 
-                  const derivedRows: { label: string; value: string; tip: string }[] = [
+                  const poolRows: { label: string; value: string; tip: string }[] = [
                     { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0)}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} from gear` },
                     { label: 'HP Regen', value: `${hpRegen}/tick`, tip: `Base ${getBaseRegen(eCon)} + ${itemHpRegen || 0} from gear (every 15s)` },
                     { label: 'Max CP', value: `${maxCp}`, tip: `60 + (level-1)×3 + best mental mod×5` },
@@ -559,61 +559,52 @@ export default function CharacterPanel({
                   const sameLevelAC = Math.round(10 + character.level * 0.6 + 2);
                   const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
 
-                  // Creature's chance to hit the player
                   const totalAC = character.ac + (equipmentBonuses.ac || 0);
-                  const creatureBaseStat = Math.round(10 + character.level * 0.7); // regular rarity 1x
+                  const creatureBaseStat = Math.round(10 + character.level * 0.7);
                   const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
                   const getHitChance = Math.min(95, Math.max(5, (21 - (totalAC - creatureAtkMod)) * 5));
 
-                  const combatRows: { label: string; value: string; tip: string }[] = [
+                  const offenseRows: { label: string; value: string; tip: string }[] = [
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
-                    { label: 'Hit Bonus', value: `+${totalHitBonus} (${hitChance}% vs AC ${sameLevelAC})`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
-                    { label: 'AC', value: `${totalAC} (${getHitChance}% to be hit)`, tip: `Your AC ${totalAC} vs regular creature atk +${creatureAtkMod} → ${getHitChance}% chance to be hit` },
-                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
+                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
+                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
                     ...(strFloor > 0 ? [{ label: 'Min Damage', value: `+${strFloor}`, tip: 'STR bonus: minimum damage floor on all attacks' }] : []),
-                    ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}% reduce`, tip: 'WIS bonus: chance to reduce incoming creature damage by 25%' }] : []),
-                    ...(buyDisc > 0 ? [{ label: 'Vendor Bonus', value: `Buy -${Math.round(buyDisc * 100)}% / Sell ${Math.round(sellMult * 100)}%`, tip: 'CHA bonus: better vendor prices' }] : []),
                   ];
+
+                  const defenseRows: { label: string; value: string; tip: string }[] = [
+                    { label: 'AC', value: `${totalAC}`, tip: `Your AC ${totalAC} vs regular creature atk +${creatureAtkMod}` },
+                    { label: 'Dodge', value: `${100 - getHitChance}%`, tip: `Chance a same-level creature misses you (AC ${totalAC})` },
+                    ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}%`, tip: 'WIS bonus: chance to reduce incoming creature damage by 25%' }] : []),
+                    ...(buyDisc > 0 ? [{ label: 'Vendor Bonus', value: `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%`, tip: 'CHA bonus: better buy/sell prices' }] : []),
+                  ];
+
+                  const renderSection = (title: string, rows: { label: string; value: string; tip: string }[], cols: boolean = false) => (
+                    <div className="border-t border-border pt-1.5">
+                      <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">{title}</h4>
+                      <div className={cols ? 'grid grid-cols-2 gap-x-3' : 'space-y-0'}>
+                        {rows.map(r => (
+                          <Tooltip key={r.label}>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
+                                <span className="text-muted-foreground">{r.label}</span>
+                                <span className="font-display text-foreground tabular-nums">{r.value}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-popover border-border z-50">
+                              <p className="font-display text-sm">{r.label}</p>
+                              <p className="text-xs text-muted-foreground">{r.tip}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    </div>
+                  );
 
                   return (
                     <>
-                      <div className="border-t border-border pt-1.5">
-                        <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Derived</h4>
-                        <div className="grid grid-cols-2 gap-x-3">
-                          {derivedRows.map(r => (
-                            <Tooltip key={r.label}>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                                  <span className="text-muted-foreground">{r.label}</span>
-                                  <span className="font-display text-foreground tabular-nums">{r.value}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent className="bg-popover border-border z-50">
-                                <p className="text-xs">{r.tip}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="border-t border-border pt-1.5">
-                        <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">Combat</h4>
-                        <div className="space-y-0">
-                          {combatRows.map(r => (
-                            <Tooltip key={r.label}>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
-                                  <span className="font-display text-foreground">{r.label}</span>
-                                  <span className="font-display text-foreground tabular-nums">{r.value}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent className="bg-popover border-border z-50">
-                                <p className="font-display text-sm">{r.label}</p>
-                                <p className="text-xs text-muted-foreground">{r.tip}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                        </div>
-                      </div>
+                      {renderSection('Pools', poolRows, true)}
+                      {renderSection('Offense', offenseRows)}
+                      {renderSection('Defense', defenseRows)}
                     </>
                   );
                 })()}
