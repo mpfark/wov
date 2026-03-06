@@ -308,8 +308,9 @@ export function useCombat(params: UseCombatParams) {
         const surgePrefix = isDmgBuffed ? '✨ ' : '';
         const disengagePrefix = isDisengageHit ? '🦘 ' : '';
         const focusPrefix = isFocusStrike ? '🎯 ' : '';
+        const intHitLabel = intHitBonus > 0 ? ` + ${intHitBonus} INT` : '';
         _addLog(
-          `${ambushPrefix}${disengagePrefix}${focusPrefix}${surgePrefix}${sunderReduction > 0 ? '🔨 ' : ''}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''} — ${finalDmg} damage.`
+          `${ambushPrefix}${disengagePrefix}${focusPrefix}${surgePrefix}${sunderReduction > 0 ? '🔨 ' : ''}${isCrit ? `${ability.emoji} CRITICAL! ` : ability.emoji + ' '}${who} ${ability.verb} ${creature.name}! Rolled ${atkRoll} + ${statMod} ${statLabel}${intHitLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''} — ${finalDmg} damage.`
         );
 
         // Poison proc
@@ -470,7 +471,8 @@ export function useCombat(params: UseCombatParams) {
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: false });
         }
       } else {
-        _addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''}.`);
+        const intHitMissLabel = intHitBonus > 0 ? ` + ${intHitBonus} INT` : '';
+        _addLog(`${ability.emoji} ${who} ${ability.verb} ${creature.name} — miss! Rolled ${atkRoll} + ${statMod} ${statLabel}${intHitMissLabel} = ${totalAtk} vs AC ${effectiveCreatureAC}${sunderReduction > 0 ? ' (Sundered -' + sunderReduction + ')' : ''}.`);
       }
 
       // ── Creature counterattack ─────────────────────────────────
