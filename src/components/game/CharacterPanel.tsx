@@ -64,7 +64,7 @@ const STAT_DESCRIPTIONS: Record<string, string> = {
   dex: 'Ranged attack, AC bonus, max Stamina, crit chance',
   con: 'Hit points and physical resilience',
   int: 'Arcane power, CP pool, improves hit chance',
-  wis: 'Perception, healing, chance to halve incoming damage',
+  wis: 'Perception, healing, chance to reduce incoming damage by 25%',
   cha: 'Persuasion, bardic abilities, better vendor prices & humanoid gold',
 };
 
@@ -552,7 +552,7 @@ export default function CharacterPanel({
                     { label: 'AC', value: `${totalAC} (${getHitChance}% to be hit)`, tip: `Your AC ${totalAC} vs regular creature atk +${creatureAtkMod} → ${getHitChance}% chance to be hit` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}-20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
                     ...(strFloor > 0 ? [{ label: 'Min Damage', value: `+${strFloor}`, tip: 'STR bonus: minimum damage floor on all attacks' }] : []),
-                    ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}% halve`, tip: 'WIS bonus: chance to halve incoming creature damage' }] : []),
+                    ...(wisHalveChance > 0 ? [{ label: 'Awareness', value: `${Math.round(wisHalveChance * 100)}% reduce`, tip: 'WIS bonus: chance to reduce incoming creature damage by 25%' }] : []),
                     ...(buyDisc > 0 ? [{ label: 'Vendor Bonus', value: `Buy -${Math.round(buyDisc * 100)}% / Sell ${Math.round(sellMult * 100)}%`, tip: 'CHA bonus: better vendor prices' }] : []),
                   ];
 
