@@ -548,7 +548,7 @@ export default function CharacterPanel({
                   const buyDisc = getChaBuyDiscount(eCha);
 
                   const derivedRows: { label: string; value: string; tip: string }[] = [
-                    { label: 'Max HP', value: `${character.max_hp}`, tip: `Base + CON modifier + (level-1)×5` },
+                    { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0)}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} from gear` },
                     { label: 'HP Regen', value: `${hpRegen}/tick`, tip: `Base ${getBaseRegen(eCon)} + ${itemHpRegen || 0} from gear (every 15s)` },
                     { label: 'Max CP', value: `${maxCp}`, tip: `60 + (level-1)×3 + best mental mod×5` },
                     { label: 'CP Regen', value: `${cpRegen}/tick`, tip: `Based on ${primaryStat.toUpperCase()} (every 6s)` },
