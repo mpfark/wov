@@ -410,7 +410,8 @@ export function useGameLoop(params: UseGameLoopParams) {
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const now = Date.now();
       let anyExpired = false;
-      for (const [creatureId, stack] of Object.entries(igniteStacks)) {
+      const currentIgniteStacks = igniteStacksRef.current;
+      for (const [creatureId, stack] of Object.entries(currentIgniteStacks)) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
