@@ -41,7 +41,8 @@ export default function GameManual() {
     const totalXp = Array.from({ length: level }, (_, l) => getXpForLevel(l + 1)).reduce((a, b) => a + b, 0);
     const statGain = '+1 point';
     const classBonus = level > 1 && level % 3 === 0;
-    return { level, xpRequired, totalXp, statGain, classBonus, players: playerCounts[level] || 0 };
+    const respec = [10, 20, 30, 40].includes(level);
+    return { level, xpRequired, totalXp, statGain, classBonus, respec, players: playerCounts[level] || 0 };
   });
 
   return (
@@ -57,7 +58,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                XP per level = <code className="text-primary">floor(level^2.0 × 50)</code>. You gain <strong className="text-foreground">1 stat point per level</strong> to allocate freely. Class bonuses every 3 levels.
+                XP per level = <code className="text-primary">floor(level^2.0 × 50)</code>. You gain <strong className="text-foreground">1 stat point per level</strong> to allocate freely. Class bonuses every 3 levels. <strong className="text-foreground">Respec points</strong> at levels 10, 20, 30, 40.
               </p>
               <div className="max-h-[400px] overflow-auto">
                 <Table>
@@ -68,6 +69,7 @@ export default function GameManual() {
                       <TableHead className="text-xs">Total XP</TableHead>
                       <TableHead className="text-xs">Stat Point</TableHead>
                       <TableHead className="text-xs">Class Bonus</TableHead>
+                      <TableHead className="text-xs">Respec</TableHead>
                       <TableHead className="text-xs">Players</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -79,6 +81,7 @@ export default function GameManual() {
                         <TableCell className="text-xs">{row.totalXp.toLocaleString()}</TableCell>
                         <TableCell className="text-xs">{row.statGain}</TableCell>
                         <TableCell className="text-xs">{row.classBonus ? '✦ Yes' : '—'}</TableCell>
+                        <TableCell className="text-xs">{row.respec ? '🔄 +1' : '—'}</TableCell>
                         <TableCell className="text-xs">
                           {row.players > 0 ? <Badge variant="secondary" className="text-xs">{row.players}</Badge> : '—'}
                         </TableCell>
@@ -100,6 +103,17 @@ export default function GameManual() {
                       </div>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+              <Card className="mt-3 bg-card/30">
+                <CardContent className="p-3">
+                  <p className="text-xs font-display text-chart-5 mb-1">🔄 Respec Points (Levels 10, 20, 30, 40)</p>
+                  <p className="text-xs text-muted-foreground">
+                    At each milestone level, you earn <strong className="text-foreground">1 respec point</strong>. 
+                    A respec point lets you remove 1 manually allocated stat point and get it back as an unspent point to reallocate. 
+                    Maximum of <strong className="text-foreground">4 respec points</strong> total across a character's lifetime.
+                    Only manually allocated points can be respec'd — base race, class, and level-up bonuses are permanent.
+                  </p>
                 </CardContent>
               </Card>
             </AccordionContent>
