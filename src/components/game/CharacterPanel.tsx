@@ -480,22 +480,11 @@ export default function CharacterPanel({
                     const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
                     const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
                     const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
-                    const manualPoints = base - nonManualBase;
-                    const hasRespec = (character.respec_points || 0) > 0 && manualPoints > 0;
                     return (
                       <Tooltip key={stat}>
                         <TooltipTrigger asChild>
                           <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
                             <span className="flex items-center gap-1">
-                              {hasRespec && onRespecStat && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setPendingRespec(stat); }}
-                                  className="w-4 h-4 flex items-center justify-center rounded bg-chart-5/20 hover:bg-chart-5/40 text-chart-5 text-[10px] font-bold transition-colors"
-                                  title={`Remove 1 from ${STAT_FULL_NAMES[stat]} (${manualPoints} allocated)`}
-                                >
-                                  −
-                                </button>
-                              )}
                               {hasPoints && onAllocateStat && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setPendingStat(stat); }}
