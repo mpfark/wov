@@ -39,6 +39,7 @@ function getLogColor(log: string): string {
   if (log.startsWith('💬')) return 'text-foreground';
   if (log.startsWith('🤫 To ')) return 'text-purple-400/70';
   if (log.startsWith('🤫')) return 'text-purple-400';
+  if (log.includes('(remote)') && (log.startsWith('🩸') || log.startsWith('🧪') || log.startsWith('🔥'))) return 'text-muted-foreground/60 italic text-[10px]';
   if (log.includes('bleeds for') && log.startsWith('🩸')) return 'text-dot-bleed italic';
   if (log.includes('poison damage') && log.startsWith('🧪')) return 'text-dot-poison italic';
   if (log.includes('burns for') && log.startsWith('🔥')) return 'text-dot-burn italic';

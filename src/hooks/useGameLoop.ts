@@ -324,7 +324,8 @@ export function useGameLoop(params: UseGameLoopParams) {
       await supabase.rpc('damage_creature', { _creature_id: dotDebuff.creatureId, _new_hp: newHp, _killed: newHp <= 0 });
       setDotDebuff(prev => prev ? { ...prev, lastKnownHp: newHp } : null);
       const cName = localCreature?.name || dotDebuff.creatureName;
-      addLog(`🩸 ${cName} bleeds for ${dotDebuff.damagePerTick} damage!`);
+      const isRemote = dotDebuff.creatureNodeId !== character.current_node_id;
+      addLog(`🩸${isRemote ? '📡 ' : ' '}${cName} bleeds for ${dotDebuff.damagePerTick} damage!${isRemote ? ' (remote)' : ''}`);
       if (newHp <= 0) {
         dotKilledRef.current.add(dotDebuff.creatureId);
         setDotDebuff(null); clearInterval(interval);
@@ -374,7 +375,8 @@ export function useGameLoop(params: UseGameLoopParams) {
           return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
         });
         const cName = localCreature?.name || stack.creatureName;
-        addLog(`🧪 ${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+        const isRemote = stack.creatureNodeId !== character.current_node_id;
+        addLog(`🧪${isRemote ? '📡 ' : ' '}${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})${isRemote ? ' (remote)' : ''}`);
         if (newHp <= 0) {
           anyExpired = true;
           dotKilledRef.current.add(creatureId);
@@ -437,7 +439,8 @@ export function useGameLoop(params: UseGameLoopParams) {
           return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
         });
         const cName = localCreature?.name || stack.creatureName;
-        addLog(`🔥 ${cName} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
+        const isRemote = stack.creatureNodeId !== character.current_node_id;
+        addLog(`🔥${isRemote ? '📡 ' : ' '}${cName} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})${isRemote ? ' (remote)' : ''}`);
         if (newHp <= 0) {
           anyExpired = true;
           dotKilledRef.current.add(creatureId);
