@@ -559,8 +559,13 @@ export default function CharacterPanel({
                   const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
                   const getHitChance = Math.min(95, Math.max(5, (21 - (totalAC - creatureAtkMod)) * 5));
 
+                  const dexMod = Math.floor((character.dex + (equipmentBonuses.dex || 0) - 10) / 2);
+                  const attackInterval = Math.max(3000 - (dexMod * 250), 1000);
+                  const atkSpeed = (attackInterval / 1000).toFixed(1);
+
                   const offenseRows: { label: string; value: string; tip: string }[] = [
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
+                    { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Base 3.0s − ${dexMod > 0 ? dexMod * 0.25 + 's DEX bonus' : '0s DEX bonus'} (min 1.0s)` },
                     { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
                     ...(strFloor > 0 ? [{ label: 'Min Damage', value: `+${strFloor}`, tip: 'STR bonus: minimum damage floor on all attacks' }] : []),
