@@ -103,6 +103,8 @@ export function useGameLoop(params: UseGameLoopParams) {
   const [regenTick, setRegenTick] = useState(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const isDeadRef = useRef(false);
+  // Track creatures killed by DoTs to prevent re-damaging after respawn
+  const dotKilledRef = useRef<Set<string>>(new Set());
 
   // ── Regen refs (avoid stale closures in intervals) ─────────────
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level });
@@ -308,7 +310,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const localCreature = creatures.find(c => c.id === dotDebuff.creatureId);
       const currentHp = creatureHpOverrides[dotDebuff.creatureId] ?? localCreature?.hp ?? dotDebuff.lastKnownHp;
-      if (currentHp <= 0) { setDotDebuff(null); clearInterval(interval); return; }
+      if (currentHp <= 0 || dotKilledRef.current.has(dotDebuff.creatureId)) { setDotDebuff(null); clearInterval(interval); return; }
       const newHp = Math.max(currentHp - dotDebuff.damagePerTick, 0);
       if (localCreature) {
         updateCreatureHp(dotDebuff.creatureId, newHp);
@@ -319,6 +321,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const cName = localCreature?.name || dotDebuff.creatureName;
       addLog(`🩸 ${cName} bleeds for ${dotDebuff.damagePerTick} damage!`);
       if (newHp <= 0) {
+        dotKilledRef.current.add(dotDebuff.creatureId);
         setDotDebuff(null); clearInterval(interval);
         const creatureData = localCreature || {
           name: dotDebuff.creatureName, level: dotDebuff.creatureLevel, rarity: dotDebuff.creatureRarity,
@@ -343,7 +346,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0) {
+        if (currentHp <= 0 || dotKilledRef.current.has(creatureId)) {
           anyExpired = true;
           setPoisonStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
           continue;
@@ -368,6 +371,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         addLog(`🧪 ${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
           anyExpired = true;
+          dotKilledRef.current.add(creatureId);
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
@@ -380,7 +384,10 @@ export function useGameLoop(params: UseGameLoopParams) {
         setPoisonStacks(prev => {
           const next = { ...prev };
           for (const key of Object.keys(next)) {
-            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) delete next[key];
+            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) {
+              dotKilledRef.current.delete(key);
+              delete next[key];
+            }
           }
           return next;
         });
@@ -401,7 +408,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0) {
+        if (currentHp <= 0 || dotKilledRef.current.has(creatureId)) {
           anyExpired = true;
           setIgniteStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
           continue;
@@ -426,6 +433,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         addLog(`🔥 ${cName} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
           anyExpired = true;
+          dotKilledRef.current.add(creatureId);
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
@@ -438,7 +446,10 @@ export function useGameLoop(params: UseGameLoopParams) {
         setIgniteStacks(prev => {
           const next = { ...prev };
           for (const key of Object.keys(next)) {
-            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) delete next[key];
+            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) {
+              dotKilledRef.current.delete(key);
+              delete next[key];
+            }
           }
           return next;
         });
