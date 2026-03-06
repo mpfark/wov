@@ -183,9 +183,9 @@ export default function NodeView({
                           <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                         </div>
                         {isActiveTarget ? (
-                          <span className="text-[10px] font-display text-destructive animate-pulse">⚔️</span>
+                          <span className="text-[10px] font-display text-destructive animate-pulse flex items-center gap-0.5">⚔️ TARGET</span>
                         ) : isEngaged ? (
-                          <span className="text-[10px] font-display text-dwarvish animate-pulse">⚔️</span>
+                          <span className="text-[10px] font-display text-dwarvish animate-pulse flex items-center gap-0.5">⚔️ ENGAGED</span>
                         ) : (
                           <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
                             {CLASS_COMBAT[character.class]?.label || 'Atk'}
