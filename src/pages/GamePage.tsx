@@ -20,7 +20,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
-import { getBagWeight, getStatModifier, getMaxCp, getMaxMp } from '@/lib/game-data';
+import { getBagWeight, getStatModifier, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES, calculateHP } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -612,41 +612,40 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               await updateCharacter(updates);
               addLog(`📊 +1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`);
             }}
-            onRespecStat={async (stat: string) => {
+            onFullRespec={async () => {
               if ((character.respec_points || 0) <= 0) return;
-              const currentVal = (character as any)[stat] ?? 10;
+              // Calculate non-manual base for each stat
+              const creationStats = calculateStats(character.race, character.class);
+              const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
+              let totalRefunded = 0;
               const updates: Partial<Character> = {
-                [stat]: currentVal - 1,
                 respec_points: (character.respec_points || 0) - 1,
-                unspent_stat_points: character.unspent_stat_points + 1,
               };
-              // Recalculate derived stats
-              if (stat === 'con') {
-                const newMaxHp = character.max_hp + (getStatModifier(currentVal - 1) - getStatModifier(currentVal));
-                if (newMaxHp !== character.max_hp) {
-                  updates.max_hp = newMaxHp;
-                  updates.hp = Math.min(character.hp, newMaxHp);
+              for (const stat of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const) {
+                const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
+                const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
+                const manualPoints = (character as any)[stat] - nonManualBase;
+                if (manualPoints > 0) {
+                  (updates as any)[stat] = nonManualBase;
+                  totalRefunded += manualPoints;
                 }
               }
-              if (stat === 'int' || stat === 'wis' || stat === 'cha') {
-                const eInt = stat === 'int' ? currentVal - 1 : character.int;
-                const eWis = stat === 'wis' ? currentVal - 1 : character.wis;
-                const eCha = stat === 'cha' ? currentVal - 1 : character.cha;
-                const newMaxCp = getMaxCp(character.level, eInt, eWis, eCha);
-                if (newMaxCp !== character.max_cp) {
-                  updates.max_cp = newMaxCp;
-                  updates.cp = Math.min(character.cp ?? 0, newMaxCp);
-                }
-              }
-              if (stat === 'dex') {
-                const newMaxMp = getMaxMp(character.level, currentVal - 1);
-                if (newMaxMp !== (character.max_mp ?? 100)) {
-                  updates.max_mp = newMaxMp;
-                  updates.mp = Math.min(character.mp ?? 100, newMaxMp);
-                }
-              }
+              updates.unspent_stat_points = character.unspent_stat_points + totalRefunded;
+              // Recalculate derived stats from new base values
+              const newCon = (updates.con ?? character.con) as number;
+              const newMaxHp = calculateHP(character.class, newCon) + (character.level - 1) * 5;
+              updates.max_hp = newMaxHp;
+              updates.hp = Math.min(character.hp, newMaxHp);
+              const newInt = (updates.int ?? character.int) as number;
+              const newWis = (updates.wis ?? character.wis) as number;
+              const newCha = (updates.cha ?? character.cha) as number;
+              updates.max_cp = getMaxCp(character.level, newInt, newWis, newCha);
+              updates.cp = Math.min(character.cp ?? 0, updates.max_cp);
+              const newDex = (updates.dex ?? character.dex) as number;
+              updates.max_mp = getMaxMp(character.level, newDex);
+              updates.mp = Math.min(character.mp ?? 100, updates.max_mp);
               await updateCharacter(updates);
-              addLog(`🔄 -1 ${stat.toUpperCase()} respec'd! You have ${character.unspent_stat_points + 1} stat point(s) to allocate.`);
+              addLog(`🔄 Full respec! ${totalRefunded} stat point${totalRefunded !== 1 ? 's' : ''} refunded.`);
             }}
           />
         </div>
