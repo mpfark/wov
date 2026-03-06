@@ -587,6 +587,7 @@ export default function UserManager({ isValar }: Props) {
   const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_name: string }[]>([]);
   const [teleportNodeId, setTeleportNodeId] = useState<string>('');
   const [grantXpAmount, setGrantXpAmount] = useState<number>(100);
+  const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
   const [removeItemId, setRemoveItemId] = useState<string>('');
 
   const callAdmin = useCallback(async (action: string, method: string, body?: any) => {
@@ -749,6 +750,15 @@ export default function UserManager({ isValar }: Props) {
     try {
       const data = await callAdmin('reset-stats', 'POST', { character_id: characterId });
       toast.success(`Stats reset — ${data.refunded_points} points refunded`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleGrantRespec = async (characterId: string) => {
+    if (!grantRespecAmount || grantRespecAmount <= 0) return;
+    try {
+      const data = await callAdmin('grant-respec', 'POST', { character_id: characterId, amount: grantRespecAmount });
+      toast.success(`Granted ${grantRespecAmount} respec point${grantRespecAmount > 1 ? 's' : ''} (total: ${data.new_total})`);
       loadUsers();
     } catch (err: any) { toast.error(err.message); }
   };
@@ -1016,6 +1026,17 @@ export default function UserManager({ isValar }: Props) {
                   <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
                     disabled={grantXpAmount <= 0} onClick={() => handleGrantXp(selectedChar.id)}>
                     <Sparkles className="w-3 h-3" /> Grant XP
+                  </Button>
+                </div>
+
+                {/* Grant Respec */}
+                <div className="flex gap-1">
+                  <Input type="number" min={1} value={grantRespecAmount}
+                    onChange={e => setGrantRespecAmount(parseInt(e.target.value) || 0)}
+                    className="h-7 text-[10px] w-20" placeholder="Pts" />
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
+                    disabled={grantRespecAmount <= 0} onClick={() => handleGrantRespec(selectedChar.id)}>
+                    <RotateCcw className="w-3 h-3" /> Grant Respec
                   </Button>
                 </div>
 
