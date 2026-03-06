@@ -310,7 +310,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const localCreature = creatures.find(c => c.id === dotDebuff.creatureId);
       const currentHp = creatureHpOverrides[dotDebuff.creatureId] ?? localCreature?.hp ?? dotDebuff.lastKnownHp;
-      if (currentHp <= 0) { setDotDebuff(null); clearInterval(interval); return; }
+      if (currentHp <= 0 || dotKilledRef.current.has(dotDebuff.creatureId)) { setDotDebuff(null); clearInterval(interval); return; }
       const newHp = Math.max(currentHp - dotDebuff.damagePerTick, 0);
       if (localCreature) {
         updateCreatureHp(dotDebuff.creatureId, newHp);
@@ -321,6 +321,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const cName = localCreature?.name || dotDebuff.creatureName;
       addLog(`🩸 ${cName} bleeds for ${dotDebuff.damagePerTick} damage!`);
       if (newHp <= 0) {
+        dotKilledRef.current.add(dotDebuff.creatureId);
         setDotDebuff(null); clearInterval(interval);
         const creatureData = localCreature || {
           name: dotDebuff.creatureName, level: dotDebuff.creatureLevel, rarity: dotDebuff.creatureRarity,
@@ -345,7 +346,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         if (now >= stack.expiresAt) { anyExpired = true; continue; }
         const localCreature = creatures.find(c => c.id === creatureId);
         const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0) {
+        if (currentHp <= 0 || dotKilledRef.current.has(creatureId)) {
           anyExpired = true;
           setPoisonStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
           continue;
@@ -369,7 +370,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const cName = localCreature?.name || stack.creatureName;
         addLog(`🧪 ${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})`);
         if (newHp <= 0) {
-          anyExpired = true;
+          dotKilledRef.current.add(creatureId);
           const creatureData = localCreature || {
             name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
             loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
