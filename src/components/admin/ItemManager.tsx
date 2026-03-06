@@ -25,7 +25,7 @@ interface Item {
   origin_id: string | null;
 }
 
-const RARITIES = ['common', 'uncommon', 'rare', 'unique'];
+const RARITIES = ['common', 'uncommon', 'unique'];
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
 const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest', 'shield'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];

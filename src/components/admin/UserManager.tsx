@@ -82,7 +82,6 @@ interface Props {
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
-  rare: 'text-dwarvish',
   unique: 'text-primary text-glow',
 };
 
@@ -781,7 +780,6 @@ export default function UserManager({ isValar }: Props) {
 
   const rarityColor = (rarity: string) => {
     if (rarity === 'unique') return 'text-primary';
-    if (rarity === 'rare') return 'text-dwarvish';
     if (rarity === 'uncommon') return 'text-elvish';
     return 'text-foreground';
   };

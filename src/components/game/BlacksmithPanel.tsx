@@ -28,7 +28,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
   const [repairing, setRepairing] = useState(false);
 
   const damagedItems = inventory.filter(i => i.current_durability < 100);
-  const isUnrepairable = (rarity: string) => rarity === 'unique' || rarity === 'rare';
+  const isUnrepairable = (rarity: string) => rarity === 'unique';
 
   const repairItem = async (inv: InventoryItem) => {
     if (isUnrepairable(inv.item.rarity)) return;

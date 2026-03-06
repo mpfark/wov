@@ -66,7 +66,7 @@ serve(async (req) => {
       level_max = 10,
       item_type = "random",       // "equipment" | "consumable" | "random"
       slot = "random",            // specific slot | "random" | "any_weapon" | "any_armor"
-      rarity = "random",          // "common" | "uncommon" | "rare" | "random"
+      rarity = "random",          // "common" | "uncommon" | "random"
       stats_focus = "random",     // "random" | "offensive" | "defensive" | "utility"
     } = body;
 
@@ -101,7 +101,7 @@ serve(async (req) => {
 
     // Build rarity instruction
     let rarityInstruction = "";
-    if (rarity === "random") rarityInstruction = "Vary rarity freely: mostly common, some uncommon, occasional rare.";
+    if (rarity === "random") rarityInstruction = "Vary rarity freely: mostly common, some uncommon.";
     else rarityInstruction = `All items must have rarity: ${rarity}.`;
 
     // Build item type instruction
@@ -124,7 +124,7 @@ GENERATION RULES:
 - Level: pick a level between ${level_min} and ${level_max} for each item.
 - Stat budget formula: floor(1 + (level - 1) * 0.3 * rarity_multiplier * hands_multiplier)
   - For consumables: budget is 3x the normal formula
-  - Rarity multipliers: common=1.0, uncommon=1.5, rare=2.0
+  - Rarity multipliers: common=1.0, uncommon=1.5
   - hands_multiplier: 1.0 for 1h, 1.5 for 2h (hands=2, main_hand only)
 - ABSOLUTE RULE: Equipment items MUST have AT LEAST 2 different stat keys. Items with only 1 stat will be REJECTED.
 - Distribute the full budget across multiple stats. Example for budget=2: {"str":1,"con":1}. Example for budget=4: {"str":2,"dex":1,"con":1}. Example for budget=6: {"str":2,"dex":2,"wis":1,"hp":2}.
@@ -132,7 +132,7 @@ GENERATION RULES:
 - Valid stat keys for consumables: hp, hp_regen ONLY (no other stats allowed, no caps)
 - Even for budget=1 items, split across 2 stats like {"str":1,"dex":1} (going slightly over budget is fine for variety).
 - Stat value caps (equipment only): str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
-- drop_chance: 0.1–0.5 (rare items lower, consumables 0.3–0.5)
+- drop_chance: 0.1–0.5 (uncommon items lower, consumables 0.3–0.5)
 - max_durability: always 100 (fixed for all items)
 - Gold value: DO NOT set this, it will be auto-calculated.
 - Do NOT generate items with names from this list: ${existingItemNames || "none"}
@@ -156,7 +156,7 @@ Call the generate_items tool with the structured output.`;
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. IMPORTANT: Calculate the stat budget for each item using the formula and spend ALL of it across multiple stats. A level 10 uncommon item has budget floor(1+9*0.3*1.5)=5, so its stats should total ~5 points spread across 2-3 keys. A level 14 rare item has budget floor(1+13*0.3*2)=8, so spread 8 points across 3-4 keys. Never leave budget unspent.` },
+          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. IMPORTANT: Calculate the stat budget for each item using the formula and spend ALL of it across multiple stats. A level 10 uncommon item has budget floor(1+9*0.3*1.5)=5, so its stats should total ~5 points spread across 2-3 keys. Never leave budget unspent.` },
         ],
         tools: [
           {
@@ -175,7 +175,7 @@ Call the generate_items tool with the structured output.`;
                         name: { type: "string" },
                         description: { type: "string" },
                         item_type: { type: "string", enum: ["equipment", "consumable"] },
-                        rarity: { type: "string", enum: ["common", "uncommon", "rare"] },
+                        rarity: { type: "string", enum: ["common", "uncommon"] },
                         slot: {
                           type: "string",
                           enum: ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"],
@@ -226,7 +226,7 @@ Call the generate_items tool with the structured output.`;
       throw new Error("No tool call in AI response");
     }
 
-    const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5, rare: 2.0, unique: 3.0 };
+    const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5, unique: 3.0 };
     const STAT_COSTS: Record<string, number> = { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2 };
     const PRIMARY_STATS = ["str", "dex", "con", "int", "wis", "cha"];
 
