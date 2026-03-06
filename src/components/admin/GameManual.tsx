@@ -873,7 +873,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Stat Budget:</strong> floor(1 + (level − 1) × 0.3 × rarity_mult × hands_mult)</p>
                 <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5</p>
                 <p><strong className="text-foreground">Repair Cost:</strong> ceil((100 − cur_dur) × value × rarity_mult / 100)</p>
-                <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Rare/Unique are destroyed at 0.</p>
+                <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Unique items are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
                 <p><strong className="text-foreground">Creature Loot:</strong> Drops are resolved via the shared <strong>Loot Table system</strong> — each creature has a <code className="text-primary">drop_chance</code> (0.0–1.0) and a linked <code className="text-primary">loot_table_id</code>. On kill, if the drop roll succeeds, one item is selected from the table using weighted random selection. Gold drops from humanoids use a separate inline configuration.</p>
               </div>
@@ -925,7 +925,7 @@ export default function GameManual() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-                      {['common', 'uncommon', 'rare', 'unique'].map(rarity =>
+                      {['common', 'uncommon', 'unique'].map(rarity =>
                         [1, 5, 10, 20].map(lv => (
                           <div key={`${rarity}-${lv}`}>
                             <span className="capitalize">{rarity}</span> Lv{lv} 1h: <span className="text-primary">{getItemStatBudget(lv, rarity, 1)}</span>{' '}
