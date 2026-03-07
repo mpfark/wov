@@ -75,14 +75,15 @@ Party combat resolution runs on a server-authoritative edge function (`combat-ti
 ### Communication Flow
 
 ```
-Non-leader clients ──(broadcast: member_dot_state every 2.5s)──► Leader client
-                                                                      │
+Non-leader clients ──(broadcast: member_buff_state every 2.5s)──► Leader client
+Non-leader clients ──(broadcast: member_dot_state every 2.5s)───► Leader client
+                                                                       │
 Leader client ──(POST /combat-tick with member_buffs + member_dots)──► Edge Function
-                                                                      │
+                                                                       │
 Edge Function ──(response: events, creature_states, member_states)──► Leader client
-                                                                      │
+                                                                       │
 Leader client ──(broadcast: combat_tick_result)──► All party members
-                                                      │
+                                                       │
 All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 ```
 
