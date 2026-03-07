@@ -215,20 +215,37 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, [params.party?.id, processTickResult]);
 
-  // ── Non-leader: broadcast DoT state periodically ───────────────
+  // ── Non-leader: broadcast buff + DoT state periodically ─────────
   useEffect(() => {
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
-      if (!ext.current.gatherDotStacks || !channelRef.current) return;
-      const dots = ext.current.gatherDotStacks();
-      // Only broadcast if there are active DoTs
-      const hasActive = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
-      if (!hasActive) return;
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'member_dot_state',
-        payload: { character_id: ext.current.character.id, dots },
-      });
+      if (!channelRef.current) return;
+
+      // Broadcast DoT state
+      if (ext.current.gatherDotStacks) {
+        const dots = ext.current.gatherDotStacks();
+        const hasActiveDots = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
+        if (hasActiveDots) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'member_dot_state',
+            payload: { character_id: ext.current.character.id, dots },
+          });
+        }
+      }
+
+      // Broadcast buff state
+      if (ext.current.gatherBuffs) {
+        const buffs = ext.current.gatherBuffs();
+        const hasActiveBuffs = Object.keys(buffs).length > 0;
+        if (hasActiveBuffs) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'member_buff_state',
+            payload: { character_id: ext.current.character.id, buffs },
+          });
+        }
+      }
     }, 2500); // Slightly faster than 3s tick to ensure leader has fresh data
     return () => clearInterval(interval);
   }, [params.party, params.isLeader]);
