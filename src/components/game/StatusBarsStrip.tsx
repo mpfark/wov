@@ -196,15 +196,15 @@ export default function StatusBarsStrip({
             </div>
           </TooltipTrigger>
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
-            <p className="font-display text-sm">Regeneration</p>
-            <p className="text-xs text-muted-foreground">Base (CON): <span className="text-elvish">{baseRegen} HP</span> every <span className="text-foreground">15s</span></p>
-            {itemHpRegen > 0 && <p className="text-xs text-elvish">⚙️ Gear: +{itemHpRegen} HP</p>}
-            {isAtInn && <p className="text-xs text-elvish">🏨 Inn Rest: 3× multiplier</p>}
+            <p className="font-display text-sm">Health Points</p>
+            <p className="text-xs text-muted-foreground">Base (CON): <span className="text-elvish">{baseRegen} HP</span> / 15s</p>
+            {itemHpRegen > 0 && <p className="text-xs text-muted-foreground">⚙️ Gear: <span className="text-elvish">+{itemHpRegen} HP</span></p>}
+            {isAtInn && <p className="text-xs text-muted-foreground">🏨 Inn: <span className="text-elvish">3× multiplier</span></p>}
             {regenBuff && Date.now() < regenBuff.expiresAt && (
-              <p className="text-xs text-primary">🧪 Potion: {regenBuff.multiplier}× <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
+              <p className="text-xs text-muted-foreground">🧪 Potion: <span className="text-primary">{regenBuff.multiplier}×</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
             )}
             {foodBuff && Date.now() < foodBuff.expiresAt && (
-              <p className="text-xs text-elvish">🍞 Food: +{foodBuff.flatRegen} HP <span className="text-muted-foreground">({Math.ceil((foodBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
+              <p className="text-xs text-muted-foreground">🍞 Food: <span className="text-elvish">+{foodBuff.flatRegen} HP</span> <span className="text-muted-foreground">({Math.ceil((foodBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
             )}
             {(() => {
               const potionMult = regenBuff && Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
@@ -234,8 +234,9 @@ export default function StatusBarsStrip({
           </TooltipTrigger>
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
             <p className="font-display text-sm">Concentration Points</p>
-            <p className="text-xs text-muted-foreground">Regen: <span className="text-primary">{cpRegen} CP</span> / 6s</p>
-            {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× CP regen</p>}
+            <p className="text-xs text-muted-foreground">Base Regen: <span className="text-primary">{cpRegen} CP</span> / 6s</p>
+            {isAtInn && <p className="text-xs text-muted-foreground">🏨 Inn: <span className="text-elvish">3× multiplier</span></p>}
+            <p className="text-xs font-display text-primary border-t border-border pt-1">Total: {cpRegen * (isAtInn ? 3 : 1)} CP / 6s</p>
           </TooltipContent>
         </Tooltip>
 
@@ -257,6 +258,7 @@ export default function StatusBarsStrip({
           </TooltipTrigger>
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
             <p className="font-display text-sm">Stamina</p>
+            <p className="text-xs text-muted-foreground">Base Regen: <span className="text-dwarvish">{mpRegen} MP</span> / 3s</p>
             {(() => {
               const strWithGear = character.str + (equipmentBonuses.str || 0);
               const currentMoveCost = getMoveCost(inventoryCount, strWithGear);
@@ -264,12 +266,13 @@ export default function StatusBarsStrip({
               const isEncumbered = inventoryCount > cap;
               return (
                 <>
-                  <p className="text-xs text-muted-foreground">Regen: <span className="text-dwarvish">{mpRegen} MP</span> / 3s · Move: {isEncumbered ? <span className="text-destructive">{currentMoveCost} MP</span> : <span>{currentMoveCost} MP</span>}</p>
+                  <p className="text-xs text-muted-foreground">Move Cost: {isEncumbered ? <span className="text-destructive">{currentMoveCost} MP</span> : <span className="text-dwarvish">{currentMoveCost} MP</span>}</p>
                   {isEncumbered && <p className="text-xs text-destructive">⚠️ Over-encumbered ({inventoryCount}/{cap} weight)</p>}
                 </>
               );
             })()}
-            {isAtInn && <p className="text-xs text-elvish">🏨 Inn: 3× regen</p>}
+            {isAtInn && <p className="text-xs text-muted-foreground">🏨 Inn: <span className="text-elvish">3× multiplier</span></p>}
+            <p className="text-xs font-display text-dwarvish border-t border-border pt-1">Total: {mpRegen * (isAtInn ? 3 : 1)} MP / 3s</p>
           </TooltipContent>
         </Tooltip>
       </div>
