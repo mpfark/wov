@@ -20,6 +20,7 @@ interface CombatTickResponse {
   events: { type: string; message: string; character_id?: string }[];
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number }[];
+  consumed_buffs?: { type: string; character_id: string; buff: string }[];
 }
 
 export interface MemberBuffState {
@@ -50,6 +51,8 @@ export interface UsePartyCombatParams {
   fetchGroundLoot: () => void;
   /** Gather current buff state for combat-tick payload */
   gatherBuffs?: () => MemberBuffState;
+  /** Called when server consumes one-shot buffs (stealth, focus_strike, disengage) */
+  onConsumedBuffs?: (consumed: { buff: string; character_id: string }[]) => void;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
