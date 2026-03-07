@@ -127,6 +127,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       });
     }
 
+    // Notify client about consumed one-shot buffs
+    if (data.consumed_buffs?.length && ext.current.onConsumedBuffs) {
+      const myConsumed = data.consumed_buffs.filter(b => b.character_id === ext.current.character.id);
+      if (myConsumed.length) ext.current.onConsumedBuffs(myConsumed);
+    }
+
     // Refresh ground loot if any drops occurred
     if (data.events.some(e => e.type === 'loot_drop')) {
       ext.current.fetchGroundLoot();
