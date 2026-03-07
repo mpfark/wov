@@ -173,37 +173,80 @@ Deno.serve(async (req) => {
     const tankAtNode = members.some(m => m.id === tankId);
 
     // ── Member attacks ───────────────────────────────────────────
+    const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume
     for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
+      const mb = buffs[m.id] || {};
       const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
       const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
       const sMod = sm(effStat);
       const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
       const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
       const mileCrit = c.level >= 28 ? 1 : 0;
-      const effCrit = atk.crit - dcb - mileCrit;
+      const critBonusFromBuff = mb.crit_buff?.bonus || 0;
+      const effCrit = atk.crit - dcb - mileCrit - critBonusFromBuff;
       const sdf = strDmgFloor((c.str || 10) + (eb.str || 0));
       const numAtk = dexMultiAttack((c.dex || 10) + (eb.dex || 0));
+      const isStealth = !!mb.stealth_buff;
+      const isDmgBuff = !!mb.damage_buff; // Arcane Surge
+      const hasFocusStrike = !!mb.focus_strike;
+      const hasDisengage = !!mb.disengage_next_hit;
 
       for (let a = 0; a < numAtk; a++) {
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) break;
 
+        // Apply sunder debuff to creature AC
+        let creatureAc = target.ac;
+        if (mb.sunder_target === target.id && mb.sunder_reduction) {
+          creatureAc = Math.max(creatureAc - mb.sunder_reduction, 0);
+        }
+
         const roll = rollD20();
         const total = roll + sMod + ihb;
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
 
-        if (roll >= effCrit || (roll !== 1 && total >= target.ac)) {
-          const raw = rollDmg(atk.min, atk.max) + sMod;
+        if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
+          let raw = rollDmg(atk.min, atk.max) + sMod;
           const isCrit = roll >= effCrit;
-          const dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+
+          // Apply damage multipliers
+          let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+          if (isStealth) {
+            dmg = dmg * 2;
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('stealth');
+            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
+          }
+          if (isDmgBuff) dmg = Math.floor(dmg * 1.5);
+          if (hasFocusStrike) {
+            dmg += mb.focus_strike.bonus_dmg;
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('focus_strike');
+            events.push({ type: 'buff_consumed', message: `🎯 ${c.name}'s Focus Strike adds ${mb.focus_strike.bonus_dmg} bonus damage!`, character_id: m.id });
+          }
+          if (hasDisengage && a === 0) {
+            dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('disengage');
+          }
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
 
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${target.ac} — ${dmg} damage.`,
+            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
           });
+
+          // Poison proc (40% chance if poison buff active)
+          if (mb.poison_buff && Math.random() < 0.4) {
+            events.push({ type: 'poison_proc', message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
+          }
+          // Ignite proc (40% chance if ignite buff active)
+          if (mb.ignite_buff && Math.random() < 0.4) {
+            events.push({ type: 'ignite_proc', message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
+          }
 
           if (cHp[target.id] <= 0) {
             cKilled.add(target.id);
@@ -250,7 +293,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${target.ac}.`,
+            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc}.`,
           });
         }
       }
