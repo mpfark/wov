@@ -1,75 +1,35 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  getStatModifier as sm,
+  rollD20,
+  rollDamage as rollDmg,
+  getIntHitBonus as intHitBonus,
+  getDexCritBonus as dexCritBonus,
+  getWisDodgeChance as wisAwareness,
+  getStrDamageFloor as strDmgFloor,
+  getChaGoldMultiplier as chaGoldMult,
+  getDexMultiAttack as dexMultiAttack,
+  getCreatureDamageDie as creatureDmgDie,
+  getXpForLevel as xpForLevel,
+  getXpPenalty as xpPenalty,
+  getMaxCp as calcMaxCp,
+  getMaxMp as calcMaxMp,
+  XP_RARITY_MULTIPLIER as XP_RARITY,
+  CLASS_COMBAT_PROFILES,
+  CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
+  CLASS_LABELS,
+} from "../_shared/combat-math.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// ── Combat formulas (replicated from game-data.ts) ───────────────
-
-function sm(stat: number): number { return Math.floor((stat - 10) / 2); }
-function rollD20(): number { return Math.floor(Math.random() * 20) + 1; }
-function rollDmg(min: number, max: number): number { return Math.floor(Math.random() * (max - min + 1)) + min; }
-function dim(mod: number, cap: number): number { return Math.min(cap, Math.floor(Math.sqrt(Math.max(0, mod)))); }
-function dimF(mod: number, per: number, cap: number): number { return Math.min(cap, Math.sqrt(Math.max(0, mod)) * per); }
-
-const intHitBonus = (int: number) => dim(sm(int), 3);
-const dexCritBonus = (dex: number) => dim(sm(dex), 4);
-const wisAwareness = (wis: number) => dimF(sm(wis), 0.03, 0.15);
-const strDmgFloor = (str: number) => dim(sm(str), 3);
-const chaGoldMult = (cha: number) => 1 + dimF(sm(cha), 0.05, 0.25);
-
-function dexMultiAttack(dex: number): number {
-  const m = sm(dex);
-  return m >= 5 ? 3 : m >= 3 ? 2 : 1;
+// Map CLASS_COMBAT_PROFILES to the local format used below
+const CLASS_ATK: Record<string, { stat: string; min: number; max: number; crit: number; emoji: string; verb: string }> = {};
+for (const [k, v] of Object.entries(CLASS_COMBAT_PROFILES)) {
+  CLASS_ATK[k] = { stat: v.stat, min: v.diceMin, max: v.diceMax, crit: v.critRange, emoji: v.emoji, verb: v.verb };
 }
-
-function creatureDmgDie(level: number, rarity: string): number {
-  const base: Record<string, number> = { regular: 4, rare: 6, boss: 10 };
-  return (base[rarity] || 4) + Math.floor(level / 2);
-}
-
-function xpForLevel(level: number): number {
-  return Math.floor(Math.pow(level, 2.0) * 50);
-}
-
-function xpPenalty(playerLvl: number, creatureLvl: number): number {
-  const diff = Math.max(playerLvl - creatureLvl, 0);
-  const rate = playerLvl <= 5 ? 0.10 : playerLvl <= 10 ? 0.15 : 0.20;
-  return Math.max(1 - diff * rate, 0.10);
-}
-
-function calcMaxCp(level: number, int: number, wis: number, cha: number): number {
-  const m = Math.max(sm(int), sm(wis), sm(cha), 0);
-  return 60 + (level - 1) * 3 + m * 5;
-}
-
-function calcMaxMp(level: number, dex: number): number {
-  const m = Math.max(sm(dex), 0);
-  return 100 + m * 10 + Math.floor((level - 1) * 2);
-}
-
-const XP_RARITY: Record<string, number> = { regular: 1, rare: 1.5, boss: 2.5 };
-
-const CLASS_ATK: Record<string, { stat: string; min: number; max: number; crit: number; emoji: string; verb: string }> = {
-  warrior: { stat: 'str', min: 1, max: 10, crit: 20, emoji: '⚔️', verb: 'swings at' },
-  wizard:  { stat: 'int', min: 1, max: 8,  crit: 20, emoji: '🔥', verb: 'hurls flame at' },
-  ranger:  { stat: 'dex', min: 1, max: 8,  crit: 20, emoji: '🏹', verb: 'shoots' },
-  rogue:   { stat: 'dex', min: 1, max: 6,  crit: 19, emoji: '🗡️', verb: 'strikes' },
-  healer:  { stat: 'wis', min: 1, max: 6,  crit: 20, emoji: '⭐', verb: 'smites' },
-  bard:    { stat: 'cha', min: 1, max: 6,  crit: 20, emoji: '🎵', verb: 'mocks' },
-};
-
-const CLASS_LVL_BONUS: Record<string, Record<string, number>> = {
-  warrior: { str: 1, dex: 1 }, wizard: { int: 1, wis: 1 },
-  ranger: { dex: 1, wis: 1 }, rogue: { dex: 1, cha: 1 },
-  healer: { wis: 1, con: 1 }, bard: { cha: 1, int: 1 },
-};
-
-const CLASS_LABELS: Record<string, string> = {
-  warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger',
-  rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
-};
 
 function json(data: unknown) {
   return new Response(JSON.stringify(data), {
