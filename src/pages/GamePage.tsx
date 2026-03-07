@@ -359,10 +359,18 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     return buffs;
   }, [critBuff, stealthBuff, damageBuff, rootDebuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, focusStrikeBuff]);
 
+  const handleConsumedBuffs = useCallback((consumed: { buff: string; character_id: string }[]) => {
+    for (const c of consumed) {
+      if (c.buff === 'stealth') gameLoop.setStealthBuff(null);
+      if (c.buff === 'focus_strike') gameLoop.setFocusStrikeBuff(null);
+      if (c.buff === 'disengage') gameLoop.setDisengageNextHit(null);
+    }
+  }, [gameLoop.setStealthBuff, gameLoop.setFocusStrikeBuff, gameLoop.setDisengageNextHit]);
+
   const partyCombat = usePartyCombat({
     character, creatures, party, isLeader, isDead,
     addLocalLog, updateCharacter, fetchGroundLoot,
-    gatherBuffs,
+    gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
   });
 
   // ── Merge combat state ─────────────────────────────────────────
