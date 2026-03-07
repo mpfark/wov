@@ -3,7 +3,7 @@
  *
  * Leader: runs a 3s heartbeat calling the edge function, broadcasts results to party.
  * Non-leader: listens for tick results via broadcast, updates local state.
- * Non-leaders also broadcast their DoT stacks so the leader can include them in the tick.
+ * Non-leaders broadcast their buff and DoT stacks so the leader can include them in the tick.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
@@ -83,7 +83,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
 
-  // Leader aggregates non-leader DoT stacks received via broadcast
+  // Leader aggregates non-leader buff + DoT stacks received via broadcast
+  const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberDotsRef = useRef<Record<string, DotStackReport>>({});
 
   // ── Helpers ────────────────────────────────────────────────────
@@ -108,6 +109,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setEngagedCreatureIds([]);
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
+    memberBuffsRef.current = {};
     memberDotsRef.current = {};
   }, []);
 
@@ -197,6 +199,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           memberDotsRef.current[character_id] = dots;
         }
       })
+      .on('broadcast', { event: 'member_buff_state' }, (payload) => {
+        // Leader collects non-leader buff states
+        if (!ext.current.isLeader) return;
+        const { character_id, buffs } = payload.payload as { character_id: string; buffs: MemberBuffState };
+        if (character_id && buffs) {
+          memberBuffsRef.current[character_id] = buffs;
+        }
+      })
       .subscribe();
 
     return () => {
@@ -205,20 +215,37 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, [params.party?.id, processTickResult]);
 
-  // ── Non-leader: broadcast DoT state periodically ───────────────
+  // ── Non-leader: broadcast buff + DoT state periodically ─────────
   useEffect(() => {
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
-      if (!ext.current.gatherDotStacks || !channelRef.current) return;
-      const dots = ext.current.gatherDotStacks();
-      // Only broadcast if there are active DoTs
-      const hasActive = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
-      if (!hasActive) return;
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'member_dot_state',
-        payload: { character_id: ext.current.character.id, dots },
-      });
+      if (!channelRef.current) return;
+
+      // Broadcast DoT state
+      if (ext.current.gatherDotStacks) {
+        const dots = ext.current.gatherDotStacks();
+        const hasActiveDots = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
+        if (hasActiveDots) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'member_dot_state',
+            payload: { character_id: ext.current.character.id, dots },
+          });
+        }
+      }
+
+      // Broadcast buff state
+      if (ext.current.gatherBuffs) {
+        const buffs = ext.current.gatherBuffs();
+        const hasActiveBuffs = Object.keys(buffs).length > 0;
+        if (hasActiveBuffs) {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'member_buff_state',
+            payload: { character_id: ext.current.character.id, buffs },
+          });
+        }
+      }
     }, 2500); // Slightly faster than 3s tick to ensure leader has fresh data
     return () => clearInterval(interval);
   }, [params.party, params.isLeader]);
@@ -235,8 +262,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         return;
       }
 
-      // Gather buff state from leader's client
-      const memberBuffs: Record<string, MemberBuffState> = {};
+      // Gather buff state: leader's own + collected from non-leaders
+      const memberBuffs: Record<string, MemberBuffState> = { ...memberBuffsRef.current };
       if (ext.current.gatherBuffs) {
         memberBuffs[p.character.id] = ext.current.gatherBuffs();
       }
