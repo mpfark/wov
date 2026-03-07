@@ -97,10 +97,10 @@ All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 - Wired `GamePage` to use `usePartyCombat` when in party, `useCombat` when solo
 
 #### Phase 2: Full Buff Integration ✅
-- Leader reports `member_buffs` in tick payload via `gatherBuffs` callback
+- All members report `member_buffs` via `gatherBuffs` callback; non-leaders broadcast every 2.5s, leader aggregates
 - Edge function applies all offensive buffs (stealth, arcane surge, disengage, focus strike, sunder, poison/ignite procs)
 - Edge function applies all defensive buffs (AC buff, evasion, absorb shields, WIS awareness)
-- Returns `consumed_buffs` for one-shot buff cleanup on client
+- Returns `consumed_buffs` for one-shot buff cleanup on all clients (leader + non-leaders)
 
 #### Phase 3: Loot & Level-Up ✅
 - Loot rolling with weighted tables and unique item checks implemented in Phase 1
@@ -108,10 +108,10 @@ All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 - Equipment degradation (25% chance per hit) implemented in Phase 1
 
 #### Phase 4: Server-Side DoT Ticking ✅
-- Non-leaders broadcast DoT state (bleed, poison, ignite) every 2.5s via `member_dot_state` broadcast
+- All members broadcast DoT state (bleed, poison, ignite) every 2.5s via `member_dot_state` broadcast
 - Leader aggregates all members' DoT stacks into `member_dots` payload
 - Edge function resolves DoT damage, handles DoT kills with reward splitting
-- Returns `cleared_dots` so clients remove stale DoT timers
+- Returns `cleared_dots` so all clients remove stale DoT timers
 - `useGameLoop` suppresses local DoT ticking when `inParty` is true
 
 ---
