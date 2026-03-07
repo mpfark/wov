@@ -97,8 +97,9 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await userDb.auth.getUser();
     if (authErr || !user) throw new Error('Unauthorized');
 
-    const { party_id, node_id } = await req.json();
+    const { party_id, node_id, member_buffs } = await req.json();
     if (!party_id || !node_id) throw new Error('Missing party_id or node_id');
+    const buffs: Record<string, any> = member_buffs || {};
 
     // ── Verify party leader ──────────────────────────────────────
     const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
