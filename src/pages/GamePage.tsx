@@ -20,6 +20,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { useCombat } from '@/hooks/useCombat';
+import { usePartyCombat } from '@/hooks/usePartyCombat';
 import { getBagWeight, getStatModifier, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES, calculateHP } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
@@ -313,8 +314,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
   const effectiveAC = character.ac + (equipmentBonuses.ac || 0) + acBuffBonus;
 
-  // ── useCombat ──────────────────────────────────────────────────
-  const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = useCombat({
+  // ── useCombat (solo mode — disabled when in party) ──────────────
+  const soloCombat = useCombat({
     character, creatures, updateCharacter, equipmentBonuses, effectiveAC, addLog,
     rollLoot: useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null) => {
       await rollLootRef.current(lootTable, creatureName, lootTableId, dropChance, creatureNodeId);
@@ -330,7 +331,23 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onClearDisengage: useCallback(() => gameLoop.setDisengageNextHit(null), []),
     focusStrikeBuff, onClearFocusStrike: useCallback(() => gameLoop.setFocusStrikeBuff(null), []),
     broadcastDamage, broadcastHp, broadcastReward, xpMultiplier,
+    disabled: !!party,
   });
+
+  // ── usePartyCombat (party mode — dormant when solo) ────────────
+  const partyCombat = usePartyCombat({
+    character, creatures, party, isLeader, isDead,
+    addLocalLog, updateCharacter, fetchGroundLoot,
+  });
+
+  // ── Merge combat state ─────────────────────────────────────────
+  const inCombat = party ? partyCombat.inCombat : soloCombat.inCombat;
+  const activeCombatCreatureId = party ? partyCombat.activeCombatCreatureId : soloCombat.activeCombatCreatureId;
+  const engagedCreatureIds = party ? partyCombat.engagedCreatureIds : soloCombat.engagedCreatureIds;
+  const creatureHpOverrides = party ? partyCombat.creatureHpOverrides : soloCombat.creatureHpOverrides;
+  const updateCreatureHp = party ? partyCombat.updateCreatureHp : soloCombat.updateCreatureHp;
+  const startCombat = party ? partyCombat.startCombat : soloCombat.startCombat;
+  const stopCombatFn = party ? partyCombat.stopCombat : soloCombat.stopCombat;
 
   // Sync combat state ref for DoT ticks in useGameLoop
   combatStateRef.current = { creatureHpOverrides, updateCreatureHp };
