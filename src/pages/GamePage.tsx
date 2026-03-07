@@ -335,9 +335,34 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   });
 
   // ── usePartyCombat (party mode — dormant when solo) ────────────
+  const gatherBuffs = useCallback(() => {
+    const now = Date.now();
+    const buffs: Record<string, any> = {};
+    if (critBuff && now < critBuff.expiresAt) buffs.crit_buff = { bonus: critBuff.bonus };
+    if (stealthBuff && now < stealthBuff.expiresAt) buffs.stealth_buff = true;
+    if (damageBuff && now < damageBuff.expiresAt) buffs.damage_buff = true;
+    if (rootDebuff && now < rootDebuff.expiresAt) {
+      buffs.root_debuff_target = (rootDebuff as any).creatureId;
+      buffs.root_debuff_reduction = rootDebuff.damageReduction;
+    }
+    if (acBuff && now < acBuff.expiresAt) buffs.ac_buff = acBuff.bonus;
+    if (poisonBuff && now < poisonBuff.expiresAt) buffs.poison_buff = true;
+    if (evasionBuff && now < evasionBuff.expiresAt) buffs.evasion_buff = { dodge_chance: evasionBuff.dodgeChance };
+    if (igniteBuff && now < igniteBuff.expiresAt) buffs.ignite_buff = true;
+    if (absorbBuff && now < absorbBuff.expiresAt) buffs.absorb_buff = { shield_hp: absorbBuff.shieldHp };
+    if (sunderDebuff && now < sunderDebuff.expiresAt) {
+      buffs.sunder_target = sunderDebuff.creatureId;
+      buffs.sunder_reduction = sunderDebuff.acReduction;
+    }
+    if (disengageNextHit) buffs.disengage_next_hit = { bonus_mult: disengageNextHit.bonusMult };
+    if (focusStrikeBuff) buffs.focus_strike = { bonus_dmg: focusStrikeBuff.bonusDmg };
+    return buffs;
+  }, [critBuff, stealthBuff, damageBuff, rootDebuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, focusStrikeBuff]);
+
   const partyCombat = usePartyCombat({
     character, creatures, party, isLeader, isDead,
     addLocalLog, updateCharacter, fetchGroundLoot,
+    gatherBuffs,
   });
 
   // ── Merge combat state ─────────────────────────────────────────
