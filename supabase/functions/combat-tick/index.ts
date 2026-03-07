@@ -165,6 +165,7 @@ Deno.serve(async (req) => {
     const mXp: Record<string, number> = {};
     const mGold: Record<string, number> = {};
     const degradeSet = new Set<string>();
+    const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
