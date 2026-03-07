@@ -262,8 +262,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         return;
       }
 
-      // Gather buff state from leader's client
-      const memberBuffs: Record<string, MemberBuffState> = {};
+      // Gather buff state: leader's own + collected from non-leaders
+      const memberBuffs: Record<string, MemberBuffState> = { ...memberBuffsRef.current };
       if (ext.current.gatherBuffs) {
         memberBuffs[p.character.id] = ext.current.gatherBuffs();
       }
