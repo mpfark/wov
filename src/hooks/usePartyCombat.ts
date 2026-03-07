@@ -83,7 +83,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
 
-  // Leader aggregates non-leader DoT stacks received via broadcast
+  // Leader aggregates non-leader buff + DoT stacks received via broadcast
+  const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberDotsRef = useRef<Record<string, DotStackReport>>({});
 
   // ── Helpers ────────────────────────────────────────────────────
