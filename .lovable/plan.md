@@ -44,8 +44,8 @@ Party combat resolution runs on a server-authoritative edge function (`combat-ti
 | Attack speed | Faster ticks = faster attacks | Fixed heartbeat; DEX mod → multi-attack per tick |
 | Authority | Client resolves all damage/rewards | Edge function resolves all damage/rewards atomically |
 | UI sync | Direct state updates + local overrides | Leader broadcasts tick results to party via Supabase Broadcast |
-| Buff/debuff state | Client-managed (useGameLoop) | Client-managed, **reported** to server each tick via `member_buffs` payload |
-| DoT state | Client ticks DoTs locally | Non-leaders broadcast DoT state; leader aggregates into `member_dots` payload; server resolves DoT damage |
+| Buff/debuff state | Client-managed (useGameLoop) | Client-managed; **all members** broadcast buff state every 2.5s; leader aggregates into `member_buffs` payload |
+| DoT state | Client ticks DoTs locally | **All members** broadcast DoT state every 2.5s; leader aggregates into `member_dots` payload; server resolves DoT damage |
 
 ---
 
@@ -75,14 +75,15 @@ Party combat resolution runs on a server-authoritative edge function (`combat-ti
 ### Communication Flow
 
 ```
-Non-leader clients ──(broadcast: member_dot_state every 2.5s)──► Leader client
-                                                                      │
+Non-leader clients ──(broadcast: member_buff_state every 2.5s)──► Leader client
+Non-leader clients ──(broadcast: member_dot_state every 2.5s)───► Leader client
+                                                                       │
 Leader client ──(POST /combat-tick with member_buffs + member_dots)──► Edge Function
-                                                                      │
+                                                                       │
 Edge Function ──(response: events, creature_states, member_states)──► Leader client
-                                                                      │
+                                                                       │
 Leader client ──(broadcast: combat_tick_result)──► All party members
-                                                      │
+                                                       │
 All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 ```
 
@@ -96,10 +97,10 @@ All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 - Wired `GamePage` to use `usePartyCombat` when in party, `useCombat` when solo
 
 #### Phase 2: Full Buff Integration ✅
-- Leader reports `member_buffs` in tick payload via `gatherBuffs` callback
+- All members report `member_buffs` via `gatherBuffs` callback; non-leaders broadcast every 2.5s, leader aggregates
 - Edge function applies all offensive buffs (stealth, arcane surge, disengage, focus strike, sunder, poison/ignite procs)
 - Edge function applies all defensive buffs (AC buff, evasion, absorb shields, WIS awareness)
-- Returns `consumed_buffs` for one-shot buff cleanup on client
+- Returns `consumed_buffs` for one-shot buff cleanup on all clients (leader + non-leaders)
 
 #### Phase 3: Loot & Level-Up ✅
 - Loot rolling with weighted tables and unique item checks implemented in Phase 1
@@ -107,10 +108,10 @@ All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 - Equipment degradation (25% chance per hit) implemented in Phase 1
 
 #### Phase 4: Server-Side DoT Ticking ✅
-- Non-leaders broadcast DoT state (bleed, poison, ignite) every 2.5s via `member_dot_state` broadcast
+- All members broadcast DoT state (bleed, poison, ignite) every 2.5s via `member_dot_state` broadcast
 - Leader aggregates all members' DoT stacks into `member_dots` payload
 - Edge function resolves DoT damage, handles DoT kills with reward splitting
-- Returns `cleared_dots` so clients remove stale DoT timers
+- Returns `cleared_dots` so all clients remove stale DoT timers
 - `useGameLoop` suppresses local DoT ticking when `inParty` is true
 
 ---
@@ -119,7 +120,7 @@ All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 
 #### New Files
 - `supabase/functions/combat-tick/index.ts` — Server-authoritative combat edge function
-- `src/hooks/usePartyCombat.ts` — Client hook for party combat (leader tick driver + non-leader listener + DoT broadcast)
+- `src/hooks/usePartyCombat.ts` — Client hook for party combat (leader tick driver + non-leader listener + buff/DoT broadcast)
 
 #### Modified Files
 - `src/pages/GamePage.tsx` — Conditional: `usePartyCombat` when in party, `useCombat` when solo; `gatherBuffs`/`gatherDotStacks` callbacks; `onConsumedBuffs`/`onClearedDots` handlers
