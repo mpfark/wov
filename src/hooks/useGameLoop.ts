@@ -347,6 +347,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => {
     const activeStacks = Object.entries(poisonStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
+    if (params.inParty) return; // Server handles DoT in party mode
     const interval = setInterval(async () => {
       const currentStacks = poisonStacksRef.current;
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
@@ -411,6 +412,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => {
     const activeStacks = Object.entries(igniteStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
+    if (params.inParty) return; // Server handles DoT in party mode
     const interval = setInterval(async () => {
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const now = Date.now();
