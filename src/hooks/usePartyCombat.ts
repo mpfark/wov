@@ -22,6 +22,23 @@ interface CombatTickResponse {
   member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number }[];
 }
 
+export interface MemberBuffState {
+  crit_buff?: { bonus: number };
+  stealth_buff?: boolean;
+  damage_buff?: boolean;
+  root_debuff_target?: string;
+  root_debuff_reduction?: number;
+  ac_buff?: number;
+  poison_buff?: boolean;
+  evasion_buff?: { dodge_chance: number };
+  ignite_buff?: boolean;
+  absorb_buff?: { shield_hp: number };
+  sunder_target?: string;
+  sunder_reduction?: number;
+  disengage_next_hit?: { bonus_mult: number };
+  focus_strike?: { bonus_dmg: number };
+}
+
 export interface UsePartyCombatParams {
   character: Character;
   creatures: Creature[];
@@ -31,6 +48,8 @@ export interface UsePartyCombatParams {
   addLocalLog: (msg: string) => void;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   fetchGroundLoot: () => void;
+  /** Gather current buff state for combat-tick payload */
+  gatherBuffs?: () => MemberBuffState;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
@@ -160,8 +179,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         return;
       }
 
+      // Gather buff state from leader's client
+      const memberBuffs: Record<string, MemberBuffState> = {};
+      if (ext.current.gatherBuffs) {
+        memberBuffs[p.character.id] = ext.current.gatherBuffs();
+      }
+
       const { data, error } = await supabase.functions.invoke('combat-tick', {
-        body: { party_id: p.party.id, node_id: p.character.current_node_id },
+        body: { party_id: p.party.id, node_id: p.character.current_node_id, member_buffs: memberBuffs },
       });
 
       if (error) {
