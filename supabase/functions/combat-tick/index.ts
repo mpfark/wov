@@ -97,8 +97,9 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await userDb.auth.getUser();
     if (authErr || !user) throw new Error('Unauthorized');
 
-    const { party_id, node_id } = await req.json();
+    const { party_id, node_id, member_buffs } = await req.json();
     if (!party_id || !node_id) throw new Error('Missing party_id or node_id');
+    const buffs: Record<string, any> = member_buffs || {};
 
     // ── Verify party leader ──────────────────────────────────────
     const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
@@ -172,37 +173,80 @@ Deno.serve(async (req) => {
     const tankAtNode = members.some(m => m.id === tankId);
 
     // ── Member attacks ───────────────────────────────────────────
+    const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume
     for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
+      const mb = buffs[m.id] || {};
       const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
       const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
       const sMod = sm(effStat);
       const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
       const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
       const mileCrit = c.level >= 28 ? 1 : 0;
-      const effCrit = atk.crit - dcb - mileCrit;
+      const critBonusFromBuff = mb.crit_buff?.bonus || 0;
+      const effCrit = atk.crit - dcb - mileCrit - critBonusFromBuff;
       const sdf = strDmgFloor((c.str || 10) + (eb.str || 0));
       const numAtk = dexMultiAttack((c.dex || 10) + (eb.dex || 0));
+      const isStealth = !!mb.stealth_buff;
+      const isDmgBuff = !!mb.damage_buff; // Arcane Surge
+      const hasFocusStrike = !!mb.focus_strike;
+      const hasDisengage = !!mb.disengage_next_hit;
 
       for (let a = 0; a < numAtk; a++) {
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) break;
 
+        // Apply sunder debuff to creature AC
+        let creatureAc = target.ac;
+        if (mb.sunder_target === target.id && mb.sunder_reduction) {
+          creatureAc = Math.max(creatureAc - mb.sunder_reduction, 0);
+        }
+
         const roll = rollD20();
         const total = roll + sMod + ihb;
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
 
-        if (roll >= effCrit || (roll !== 1 && total >= target.ac)) {
-          const raw = rollDmg(atk.min, atk.max) + sMod;
+        if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
+          let raw = rollDmg(atk.min, atk.max) + sMod;
           const isCrit = roll >= effCrit;
-          const dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+
+          // Apply damage multipliers
+          let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+          if (isStealth) {
+            dmg = dmg * 2;
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('stealth');
+            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
+          }
+          if (isDmgBuff) dmg = Math.floor(dmg * 1.5);
+          if (hasFocusStrike) {
+            dmg += mb.focus_strike.bonus_dmg;
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('focus_strike');
+            events.push({ type: 'buff_consumed', message: `🎯 ${c.name}'s Focus Strike adds ${mb.focus_strike.bonus_dmg} bonus damage!`, character_id: m.id });
+          }
+          if (hasDisengage && a === 0) {
+            dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('disengage');
+          }
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
 
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${target.ac} — ${dmg} damage.`,
+            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
           });
+
+          // Poison proc (40% chance if poison buff active)
+          if (mb.poison_buff && Math.random() < 0.4) {
+            events.push({ type: 'poison_proc', message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
+          }
+          // Ignite proc (40% chance if ignite buff active)
+          if (mb.ignite_buff && Math.random() < 0.4) {
+            events.push({ type: 'ignite_proc', message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
+          }
 
           if (cHp[target.id] <= 0) {
             cKilled.add(target.id);
@@ -249,13 +293,56 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${target.ac}.`,
+            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc}.`,
           });
         }
       }
     }
 
     // ── Creature counterattacks ──────────────────────────────────
+    // Helper to apply defensive buffs and deal damage to a target
+    const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
+      const mb = buffs[targetId] || {};
+      const acBuffBonus = mb.ac_buff || 0;
+      const tAC = (targetC.ac || 10) + (targetEq.ac || 0) + acBuffBonus;
+      const roll = rollD20() + cStr;
+
+      if (roll >= tAC) {
+        // Evasion check (Cloak of Shadows / Disengage)
+        if (mb.evasion_buff?.dodge_chance && Math.random() < mb.evasion_buff.dodge_chance) {
+          events.push({ type: 'evasion_dodge', message: `🦘 ${targetName} dodges ${creature.name}'s attack!`, character_id: targetId });
+          return;
+        }
+
+        let dmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
+
+        // WIS awareness
+        const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0));
+        if (wis > 0 && Math.random() < wis) {
+          dmg = Math.max(Math.floor(dmg * 0.75), 1);
+          events.push({ type: 'wis_awareness', message: `🧘 ${targetName}'s awareness softens ${creature.name}'s blow! (${dmg} damage)` });
+        }
+
+        // Absorb shield
+        if (mb.absorb_buff?.shield_hp && mb.absorb_buff.shield_hp > 0) {
+          const absorbed = Math.min(dmg, mb.absorb_buff.shield_hp);
+          mb.absorb_buff.shield_hp -= absorbed;
+          dmg -= absorbed;
+          events.push({ type: 'absorb', message: `🛡️✨ ${targetName}'s shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
+          if (dmg <= 0) return;
+        }
+
+        mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
+        degradeSet.add(targetId);
+        events.push({ type: 'creature_hit', message: `${tankLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${roll} vs AC ${tAC} — ${dmg} damage.` });
+        if (mHp[targetId] <= 0) {
+          events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
+        }
+      } else {
+        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${roll} vs AC ${tAC}.` });
+      }
+    };
+
     for (const creature of creatures) {
       if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
       const cs = creature.stats as any;
@@ -265,51 +352,20 @@ Deno.serve(async (req) => {
       if (tankAtNode) {
         const tank = members.find(m => m.id === tankId);
         if (!tank || mHp[tankId] <= 0) continue;
-        const tEq = eq[tankId] || {};
-        const tAC = (tank.c.ac || 10) + (tEq.ac || 0);
-        const roll = rollD20() + cStr;
-
-        if (roll >= tAC) {
-          let dmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
-          const wis = wisAwareness((tank.c.wis || 10) + (tEq.wis || 0));
-          if (wis > 0 && Math.random() < wis) {
-            dmg = Math.max(Math.floor(dmg * 0.75), 1);
-            events.push({ type: 'wis_awareness', message: `🧘 ${tank.c.name}'s awareness softens ${creature.name}'s blow! (${dmg} damage)` });
-          }
-          mHp[tankId] = Math.max(mHp[tankId] - dmg, 0);
-          degradeSet.add(tankId);
-          events.push({ type: 'creature_hit', message: `🛡️ ${creature.name} strikes ${tank.c.name} (Tank)! Rolled ${roll} vs AC ${tAC} — ${dmg} damage.` });
-          if (mHp[tankId] <= 0) {
-            events.push({ type: 'member_death', message: `💀 ${tank.c.name} has been defeated...`, character_id: tankId });
-          }
-        } else {
-          events.push({ type: 'creature_miss', message: `${creature.name} attacks ${tank.c.name} (Tank) — misses! Rolled ${roll} vs AC ${tAC}.` });
-        }
+        applyCreatureHit(tankId, tank.c.name, tank.c, eq[tankId] || {}, creature, cStr, dmgDie, '🛡️ ');
       } else {
-        // No tank at node — each creature attacks each member
         for (const m of members) {
           if (mHp[m.id] <= 0) continue;
-          const mEq = eq[m.id] || {};
-          const mAC = (m.c.ac || 10) + (mEq.ac || 0);
-          const roll = rollD20() + cStr;
-
-          if (roll >= mAC) {
-            let dmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
-            const wis = wisAwareness((m.c.wis || 10) + (mEq.wis || 0));
-            if (wis > 0 && Math.random() < wis) {
-              dmg = Math.max(Math.floor(dmg * 0.75), 1);
-              events.push({ type: 'wis_awareness', message: `🧘 ${m.c.name}'s awareness softens ${creature.name}'s blow! (${dmg} damage)` });
-            }
-            mHp[m.id] = Math.max(mHp[m.id] - dmg, 0);
-            degradeSet.add(m.id);
-            events.push({ type: 'creature_hit', message: `${creature.name} strikes ${m.c.name}! Rolled ${roll} vs AC ${mAC} — ${dmg} damage.` });
-            if (mHp[m.id] <= 0) {
-              events.push({ type: 'member_death', message: `💀 ${m.c.name} has been defeated...`, character_id: m.id });
-            }
-          } else {
-            events.push({ type: 'creature_miss', message: `${creature.name} attacks ${m.c.name} — misses! Rolled ${roll} vs AC ${mAC}.` });
-          }
+          applyCreatureHit(m.id, m.c.name, m.c, eq[m.id] || {}, creature, cStr, dmgDie, '');
         }
+      }
+    }
+
+    // ── Report consumed one-shot buffs ──────────────────────────
+    const consumedBuffsList: any[] = [];
+    for (const [cid, consumed] of Object.entries(consumedBuffs)) {
+      for (const buff of consumed) {
+        consumedBuffsList.push({ type: 'buff_consumed', character_id: cid, buff });
       }
     }
 
@@ -464,7 +520,7 @@ Deno.serve(async (req) => {
       alive: !cKilled.has(cr.id) && cHp[cr.id] > 0,
     }));
 
-    return json({ events, creature_states, member_states: memberStates });
+    return json({ events, creature_states, member_states: memberStates, consumed_buffs: consumedBuffsList });
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 400,
