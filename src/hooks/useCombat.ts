@@ -564,30 +564,28 @@ export function useCombat(params: UseCombatParams) {
         if (isEvading && Math.random() < _evasionBuff!.dodgeChance) {
           _addLog(`🌫️ ${tankMember.character.name} dodges ${engagedCreature.name}'s attack from the shadows!`);
         } else if (creatureAtk >= buffedAC) {
-          const dmgDie = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
-          let creatureDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(engagedCreature.stats.str || 10), 1);
-          if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-           // WIS chance to reduce damage by 25% (tank path)
-           const wisChanceTank = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
-           if (iAmTheTank && wisChanceTank > 0 && Math.random() < wisChanceTank) {
-             creatureDmg = Math.max(Math.floor(creatureDmg * 0.75), 1);
-             _addLog(`🧘 ${who}'s awareness softens ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
-           }
-
-          // Force Shield absorb for tank
+          const rawCreatureDmg = rollCreatureDamage(engagedCreature.level, engagedCreature.rarity, engagedCreature.stats.str || 10);
+          const wisChanceTank = iAmTheTank ? getWisDodgeChance(char.wis + (_eqBonuses.wis || 0)) : 0;
           const _absorbBuff = ext.current.absorbBuff;
-          const hasShield = _absorbBuff && Date.now() < _absorbBuff.expiresAt && _absorbBuff.shieldHp > 0;
-          if (hasShield) {
-            const absorbed = Math.min(creatureDmg, _absorbBuff!.shieldHp);
-            const remainingShield = _absorbBuff!.shieldHp - absorbed;
-            const remainingDmg = creatureDmg - absorbed;
-            ext.current.onAbsorbDamage?.(remainingShield);
-            if (remainingDmg > 0) {
-              _addLog(`🛡️✨ Force Shield absorbs ${absorbed} damage! ${remainingDmg} damage bleeds through. (Shield broken)`);
+          const shieldHp = (_absorbBuff && Date.now() < _absorbBuff.expiresAt) ? _absorbBuff.shieldHp : 0;
+          const defResult = applyDefensiveBuffs(rawCreatureDmg, {
+            isRooted: !!isRooted,
+            wisAwarenessChance: wisChanceTank,
+            absorbShieldHp: shieldHp,
+          });
+
+          if (defResult.wisReduced) {
+            _addLog(`🧘 ${who}'s awareness softens ${engagedCreature.name}'s blow! (${defResult.finalDamage + defResult.absorbed} damage)`);
+          }
+
+          if (defResult.absorbed > 0) {
+            ext.current.onAbsorbDamage?.(defResult.remainingShield);
+            if (defResult.finalDamage > 0) {
+              _addLog(`🛡️✨ Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} damage bleeds through. (Shield broken)`);
               try {
                 const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
                   _character_id: tankMember.character_id,
-                  _damage: remainingDmg,
+                  _damage: defResult.finalDamage,
                 });
                 if (!dmgError && tankNewHp !== null) {
                   ext.current.broadcastHp?.(tankMember.character_id, tankNewHp, tankMember.character.max_hp, engagedCreature.name);
@@ -597,22 +595,23 @@ export function useCombat(params: UseCombatParams) {
                 console.error('Failed to update tank HP/equipment:', err);
               }
             } else {
-              _addLog(`🛡️✨ Force Shield absorbs all ${absorbed} damage! (${remainingShield} shield HP left)`);
+              _addLog(`🛡️✨ Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
             }
           } else {
-          _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${engagedCreature.name} strikes ${tankMember.character.name} (Tank)! ${creatureDmg} damage.`);
-          try {
-            const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
-              _character_id: tankMember.character_id,
-              _damage: creatureDmg,
-            });
-            if (!dmgError && tankNewHp !== null) {
-              ext.current.broadcastHp?.(tankMember.character_id, tankNewHp, tankMember.character.max_hp, engagedCreature.name);
+            const totalDmg = defResult.finalDamage;
+            _addLog(`${isRooted ? '🌿 ' : ''}🛡️ ${engagedCreature.name} strikes ${tankMember.character.name} (Tank)! ${totalDmg} damage.`);
+            try {
+              const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
+                _character_id: tankMember.character_id,
+                _damage: totalDmg,
+              });
+              if (!dmgError && tankNewHp !== null) {
+                ext.current.broadcastHp?.(tankMember.character_id, tankNewHp, tankMember.character.max_hp, engagedCreature.name);
+              }
+              await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
+            } catch (err) {
+              console.error('Failed to update tank HP/equipment:', err);
             }
-            await supabase.rpc('degrade_party_member_equipment' as any, { _character_id: tankMember.character_id });
-          } catch (err) {
-            console.error('Failed to update tank HP/equipment:', err);
-          }
           }
         } else {
           _addLog(`${acBuffBonus > 0 ? '📯 ' : ''}${engagedCreature.name} attacks ${tankMember.character.name} (Tank) — misses!${acBuffBonus > 0 ? ' (Battle Cry AC+' + acBuffBonus + ')' : ''}`);
@@ -624,27 +623,25 @@ export function useCombat(params: UseCombatParams) {
         if (isEvading && Math.random() < _evasionBuff!.dodgeChance) {
           _addLog(`🌫️ ${who} ${_party ? 'dodges' : 'dodge'} ${engagedCreature.name}'s attack from the shadows!`);
         } else if (creatureAtk >= buffedAC) {
-          const dmgDie2 = getCreatureDamageDie(engagedCreature.level, engagedCreature.rarity);
-          let creatureDmg = Math.max(rollDamage(1, dmgDie2) + getStatModifier(engagedCreature.stats.str || 10), 1);
-          if (isRooted) creatureDmg = Math.max(Math.floor(creatureDmg * 0.7), 1);
-           // WIS chance to reduce damage by 25%
-           const wisChance = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
-           if (wisChance > 0 && Math.random() < wisChance) {
-             creatureDmg = Math.max(Math.floor(creatureDmg * 0.75), 1);
-             _addLog(`🧘 ${who}'s awareness softens ${engagedCreature.name}'s blow! (${creatureDmg} damage)`);
-           }
-
-          // Force Shield absorb
+          const rawCreatureDmg = rollCreatureDamage(engagedCreature.level, engagedCreature.rarity, engagedCreature.stats.str || 10);
+          const wisChance = getWisDodgeChance(char.wis + (_eqBonuses.wis || 0));
           const _absorbBuff = ext.current.absorbBuff;
-          const hasShield = _absorbBuff && Date.now() < _absorbBuff.expiresAt && _absorbBuff.shieldHp > 0;
-          if (hasShield) {
-            const absorbed = Math.min(creatureDmg, _absorbBuff!.shieldHp);
-            const remainingShield = _absorbBuff!.shieldHp - absorbed;
-            const remainingDmg = creatureDmg - absorbed;
-            ext.current.onAbsorbDamage?.(remainingShield);
-            if (remainingDmg > 0) {
-              const playerNewHp = Math.max(currentChar.hp - remainingDmg, 0);
-              _addLog(`🛡️✨ Force Shield absorbs ${absorbed} damage! ${remainingDmg} damage bleeds through. (Shield broken)`);
+          const shieldHp = (_absorbBuff && Date.now() < _absorbBuff.expiresAt) ? _absorbBuff.shieldHp : 0;
+          const defResult = applyDefensiveBuffs(rawCreatureDmg, {
+            isRooted: !!isRooted,
+            wisAwarenessChance: wisChance,
+            absorbShieldHp: shieldHp,
+          });
+
+          if (defResult.wisReduced) {
+            _addLog(`🧘 ${who}'s awareness softens ${engagedCreature.name}'s blow! (${defResult.finalDamage + defResult.absorbed} damage)`);
+          }
+
+          if (defResult.absorbed > 0) {
+            ext.current.onAbsorbDamage?.(defResult.remainingShield);
+            if (defResult.finalDamage > 0) {
+              const playerNewHp = Math.max(currentChar.hp - defResult.finalDamage, 0);
+              _addLog(`🛡️✨ Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} damage bleeds through. (Shield broken)`);
               await _updateCharacter({ hp: playerNewHp });
               await _degradeEquipment();
               if (playerNewHp <= 0) {
@@ -653,11 +650,11 @@ export function useCombat(params: UseCombatParams) {
                 break;
               }
             } else {
-              _addLog(`🛡️✨ Force Shield absorbs all ${absorbed} damage! (${remainingShield} shield HP left)`);
+              _addLog(`🛡️✨ Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
             }
           } else {
-            const playerNewHp = Math.max(currentChar.hp - creatureDmg, 0);
-            _addLog(`${isRooted ? '🌿 ' : ''}${acBuffBonus > 0 ? '📯 ' : ''}${engagedCreature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${buffedAC} — Hit! ${creatureDmg} damage.`);
+            const playerNewHp = Math.max(currentChar.hp - defResult.finalDamage, 0);
+            _addLog(`${isRooted ? '🌿 ' : ''}${acBuffBonus > 0 ? '📯 ' : ''}${engagedCreature.name} strikes back at ${who}! Rolled ${creatureAtk} vs AC ${buffedAC} — Hit! ${defResult.finalDamage} damage.`);
             await _updateCharacter({ hp: playerNewHp });
             await _degradeEquipment();
             if (playerNewHp <= 0) {
