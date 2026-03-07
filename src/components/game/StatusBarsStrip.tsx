@@ -235,8 +235,20 @@ export default function StatusBarsStrip({
           <TooltipContent className="bg-popover border-border z-50 space-y-1">
             <p className="font-display text-sm">Concentration Points</p>
             <p className="text-xs text-muted-foreground">Base Regen: <span className="text-primary">{cpRegen} CP</span> / 6s</p>
+            {regenBuff && Date.now() < regenBuff.expiresAt && regenBuff.multiplier === 2 && (
+              <p className="text-xs text-muted-foreground">🎶 Inspire: <span className="text-elvish">2× multiplier</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
+            )}
+            {foodBuff && Date.now() < foodBuff.expiresAt && (
+              <p className="text-xs text-muted-foreground">🍞 Food: <span className="text-elvish">+{Math.floor(foodBuff.flatRegen * 0.5)} CP</span> <span className="text-muted-foreground">({Math.ceil((foodBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
+            )}
             {isAtInn && <p className="text-xs text-muted-foreground">🏨 Inn: <span className="text-elvish">3× multiplier</span></p>}
-            <p className="text-xs font-display text-primary border-t border-border pt-1">Total: {cpRegen * (isAtInn ? 3 : 1)} CP / 6s</p>
+            {(() => {
+              const inspireMult = regenBuff && Date.now() < regenBuff.expiresAt && regenBuff.multiplier === 2 ? 2 : 1;
+              const innMult = isAtInn ? 3 : 1;
+              const foodCp = foodBuff && Date.now() < foodBuff.expiresAt ? Math.floor(foodBuff.flatRegen * 0.5) : 0;
+              const total = Math.max(Math.floor((cpRegen + foodCp) * inspireMult * innMult), 1);
+              return <p className="text-xs font-display text-primary border-t border-border pt-1">Total: {total} CP / 6s</p>;
+            })()}
           </TooltipContent>
         </Tooltip>
 
