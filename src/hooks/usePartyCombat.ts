@@ -109,6 +109,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setEngagedCreatureIds([]);
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
+    memberBuffsRef.current = {};
     memberDotsRef.current = {};
   }, []);
 
