@@ -199,6 +199,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           memberDotsRef.current[character_id] = dots;
         }
       })
+      .on('broadcast', { event: 'member_buff_state' }, (payload) => {
+        // Leader collects non-leader buff states
+        if (!ext.current.isLeader) return;
+        const { character_id, buffs } = payload.payload as { character_id: string; buffs: MemberBuffState };
+        if (character_id && buffs) {
+          memberBuffsRef.current[character_id] = buffs;
+        }
+      })
       .subscribe();
 
     return () => {
