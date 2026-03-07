@@ -44,8 +44,8 @@ Party combat resolution runs on a server-authoritative edge function (`combat-ti
 | Attack speed | Faster ticks = faster attacks | Fixed heartbeat; DEX mod → multi-attack per tick |
 | Authority | Client resolves all damage/rewards | Edge function resolves all damage/rewards atomically |
 | UI sync | Direct state updates + local overrides | Leader broadcasts tick results to party via Supabase Broadcast |
-| Buff/debuff state | Client-managed (useGameLoop) | Client-managed, **reported** to server each tick via `member_buffs` payload |
-| DoT state | Client ticks DoTs locally | Non-leaders broadcast DoT state; leader aggregates into `member_dots` payload; server resolves DoT damage |
+| Buff/debuff state | Client-managed (useGameLoop) | Client-managed; **all members** broadcast buff state every 2.5s; leader aggregates into `member_buffs` payload |
+| DoT state | Client ticks DoTs locally | **All members** broadcast DoT state every 2.5s; leader aggregates into `member_dots` payload; server resolves DoT damage |
 
 ---
 
