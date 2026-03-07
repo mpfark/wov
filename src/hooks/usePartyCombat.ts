@@ -3,7 +3,7 @@
  *
  * Leader: runs a 3s heartbeat calling the edge function, broadcasts results to party.
  * Non-leader: listens for tick results via broadcast, updates local state.
- * Provides the same external interface as useCombat for seamless integration.
+ * Non-leaders also broadcast their DoT stacks so the leader can include them in the tick.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
@@ -21,6 +21,7 @@ interface CombatTickResponse {
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number }[];
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
+  cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
 }
 
 export interface MemberBuffState {
@@ -40,6 +41,12 @@ export interface MemberBuffState {
   focus_strike?: { bonus_dmg: number };
 }
 
+export interface DotStackReport {
+  bleed?: { creature_id: string; damage_per_tick: number };
+  poison: Record<string, { stacks: number; damage_per_tick: number }>;
+  ignite: Record<string, { stacks: number; damage_per_tick: number }>;
+}
+
 export interface UsePartyCombatParams {
   character: Character;
   creatures: Creature[];
@@ -51,8 +58,12 @@ export interface UsePartyCombatParams {
   fetchGroundLoot: () => void;
   /** Gather current buff state for combat-tick payload */
   gatherBuffs?: () => MemberBuffState;
+  /** Gather current DoT stacks for combat-tick payload */
+  gatherDotStacks?: () => DotStackReport;
   /** Called when server consumes one-shot buffs (stealth, focus_strike, disengage) */
   onConsumedBuffs?: (consumed: { buff: string; character_id: string }[]) => void;
+  /** Called when server clears DoT stacks (creature died from DoT) */
+  onClearedDots?: (cleared: { character_id: string; creature_id: string; dot_type: string }[]) => void;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
@@ -71,6 +82,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const inCombatRef = useRef(false);
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
+
+  // Leader aggregates non-leader DoT stacks received via broadcast
+  const memberDotsRef = useRef<Record<string, DotStackReport>>({});
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -94,6 +108,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setEngagedCreatureIds([]);
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
+    memberDotsRef.current = {};
   }, []);
 
   // ── Process tick result (shared by leader + non-leader) ────────
@@ -110,7 +125,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       });
     }
 
-    // Display events via local log (avoids double-broadcast through party_combat_log)
+    // Display events via local log
     for (const ev of data.events) {
       ext.current.addLocalLog(ev.message);
     }
@@ -131,6 +146,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (data.consumed_buffs?.length && ext.current.onConsumedBuffs) {
       const myConsumed = data.consumed_buffs.filter(b => b.character_id === ext.current.character.id);
       if (myConsumed.length) ext.current.onConsumedBuffs(myConsumed);
+    }
+
+    // Notify client about cleared DoT stacks (creature died from DoT)
+    if (data.cleared_dots?.length && ext.current.onClearedDots) {
+      const myCleared = data.cleared_dots.filter(d => d.character_id === ext.current.character.id);
+      if (myCleared.length) ext.current.onClearedDots(myCleared);
     }
 
     // Refresh ground loot if any drops occurred
@@ -168,6 +189,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         const data = payload.payload as CombatTickResponse;
         if (data) processTickResult(data);
       })
+      .on('broadcast', { event: 'member_dot_state' }, (payload) => {
+        // Leader collects non-leader DoT stacks
+        if (!ext.current.isLeader) return;
+        const { character_id, dots } = payload.payload as { character_id: string; dots: DotStackReport };
+        if (character_id && dots) {
+          memberDotsRef.current[character_id] = dots;
+        }
+      })
       .subscribe();
 
     return () => {
@@ -175,6 +204,24 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       supabase.removeChannel(channel);
     };
   }, [params.party?.id, processTickResult]);
+
+  // ── Non-leader: broadcast DoT state periodically ───────────────
+  useEffect(() => {
+    if (!params.party || params.isLeader) return;
+    const interval = setInterval(() => {
+      if (!ext.current.gatherDotStacks || !channelRef.current) return;
+      const dots = ext.current.gatherDotStacks();
+      // Only broadcast if there are active DoTs
+      const hasActive = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
+      if (!hasActive) return;
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'member_dot_state',
+        payload: { character_id: ext.current.character.id, dots },
+      });
+    }, 2500); // Slightly faster than 3s tick to ensure leader has fresh data
+    return () => clearInterval(interval);
+  }, [params.party, params.isLeader]);
 
   // ── Leader: tick function ──────────────────────────────────────
 
@@ -194,8 +241,19 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         memberBuffs[p.character.id] = ext.current.gatherBuffs();
       }
 
+      // Gather DoT stacks: leader's own + collected from non-leaders
+      const memberDots: Record<string, DotStackReport> = { ...memberDotsRef.current };
+      if (ext.current.gatherDotStacks) {
+        memberDots[p.character.id] = ext.current.gatherDotStacks();
+      }
+
       const { data, error } = await supabase.functions.invoke('combat-tick', {
-        body: { party_id: p.party.id, node_id: p.character.current_node_id, member_buffs: memberBuffs },
+        body: {
+          party_id: p.party.id,
+          node_id: p.character.current_node_id,
+          member_buffs: memberBuffs,
+          member_dots: memberDots,
+        },
       });
 
       if (error) {

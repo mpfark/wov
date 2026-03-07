@@ -296,6 +296,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures, combatStateRef, broadcastDamage,
     party, partyMembers, awardKillRewardsRef,
+    inParty: !!party,
   });
 
   // Wire setRegenBuff for incoming log processing
@@ -367,10 +368,50 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [gameLoop.setStealthBuff, gameLoop.setFocusStrikeBuff, gameLoop.setDisengageNextHit]);
 
+  const gatherDotStacks = useCallback(() => {
+    const now = Date.now();
+    const result: { bleed?: { creature_id: string; damage_per_tick: number }; poison: Record<string, { stacks: number; damage_per_tick: number }>; ignite: Record<string, { stacks: number; damage_per_tick: number }> } = {
+      poison: {},
+      ignite: {},
+    };
+    const dotD = gameLoop.dotDebuff;
+    if (dotD && now < dotD.expiresAt) {
+      result.bleed = { creature_id: dotD.creatureId, damage_per_tick: dotD.damagePerTick };
+    }
+    for (const [cid, s] of Object.entries(gameLoop.poisonStacks)) {
+      if (now < s.expiresAt) result.poison[cid] = { stacks: s.stacks, damage_per_tick: s.damagePerTick };
+    }
+    for (const [cid, s] of Object.entries(gameLoop.igniteStacks)) {
+      if (now < s.expiresAt) result.ignite[cid] = { stacks: s.stacks, damage_per_tick: s.damagePerTick };
+    }
+    return result;
+  }, [gameLoop.dotDebuff, gameLoop.poisonStacks, gameLoop.igniteStacks]);
+
+  const handleClearedDots = useCallback((cleared: { character_id: string; creature_id: string; dot_type: string }[]) => {
+    for (const c of cleared) {
+      if (c.dot_type === 'bleed') gameLoop.setDotDebuff(null);
+      if (c.dot_type === 'poison') {
+        gameLoop.setPoisonStacks(prev => {
+          const next = { ...prev };
+          delete next[c.creature_id];
+          return next;
+        });
+      }
+      if (c.dot_type === 'ignite') {
+        gameLoop.setIgniteStacks(prev => {
+          const next = { ...prev };
+          delete next[c.creature_id];
+          return next;
+        });
+      }
+    }
+  }, [gameLoop.setDotDebuff, gameLoop.setPoisonStacks, gameLoop.setIgniteStacks]);
+
   const partyCombat = usePartyCombat({
     character, creatures, party, isLeader, isDead,
     addLocalLog, updateCharacter, fetchGroundLoot,
     gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
+    gatherDotStacks, onClearedDots: handleClearedDots,
   });
 
   // ── Merge combat state ─────────────────────────────────────────

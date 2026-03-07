@@ -69,6 +69,8 @@ export interface UseGameLoopParams {
   broadcastDamage: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
   party: any;
   partyMembers: any[];
+  /** When true, DoT ticking is handled server-side by combat-tick */
+  inParty?: boolean;
   awardKillRewardsRef: React.MutableRefObject<(creature: any, opts?: { stopCombat?: boolean }) => Promise<void>>;
 }
 
@@ -308,6 +310,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── DoT: Bleed (Rend) ─────────────────────────────────────────
   useEffect(() => {
     if (!dotDebuff || Date.now() >= dotDebuff.expiresAt) return;
+    if (params.inParty) return; // Server handles DoT in party mode
     const interval = setInterval(async () => {
       if (Date.now() >= dotDebuff.expiresAt) {
         setDotDebuff(null); clearInterval(interval); return;
@@ -344,6 +347,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => {
     const activeStacks = Object.entries(poisonStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
+    if (params.inParty) return; // Server handles DoT in party mode
     const interval = setInterval(async () => {
       const currentStacks = poisonStacksRef.current;
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
@@ -408,6 +412,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => {
     const activeStacks = Object.entries(igniteStacks).filter(([, s]) => Date.now() < s.expiresAt);
     if (activeStacks.length === 0) return;
+    if (params.inParty) return; // Server handles DoT in party mode
     const interval = setInterval(async () => {
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
       const now = Date.now();
