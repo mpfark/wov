@@ -520,7 +520,7 @@ Deno.serve(async (req) => {
       alive: !cKilled.has(cr.id) && cHp[cr.id] > 0,
     }));
 
-    return json({ events, creature_states, member_states: memberStates });
+    return json({ events, creature_states, member_states: memberStates, consumed_buffs: consumedBuffsList });
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 400,
