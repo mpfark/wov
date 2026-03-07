@@ -60,6 +60,7 @@ export interface UseCombatParams {
   broadcastHp?: (characterId: string, hp: number, maxHp: number, source: string) => void;
   broadcastReward?: (characterId: string, xp: number, gold: number, source: string) => void;
   xpMultiplier?: number;
+  disabled?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -81,7 +82,7 @@ export function useCombat(params: UseCombatParams) {
   }
 
   // Destructure for useEffect dependency arrays (React-tracked)
-  const { character, creatures, isDead } = params;
+  const { character, creatures, isDead, disabled } = params;
 
   // ── Internal combat state (exposed to callers) ─────────────────
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
@@ -133,6 +134,11 @@ export function useCombat(params: UseCombatParams) {
   useEffect(() => {
     if (isDead) stopCombat();
   }, [isDead, stopCombat]);
+
+  // Stop combat when disabled (e.g. switching to party mode)
+  useEffect(() => {
+    if (disabled) stopCombat();
+  }, [disabled, stopCombat]);
 
   // Stop combat when node changes
   useEffect(() => {
@@ -191,7 +197,7 @@ export function useCombat(params: UseCombatParams) {
   }, [inCombat]);
 
   useEffect(() => {
-    if (inCombat || !justStoppedRef.current || ext.current.isDead) return;
+    if (inCombat || !justStoppedRef.current || ext.current.isDead || ext.current.disabled) return;
     const nextAggro = creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
     if (nextAggro) {
       justStoppedRef.current = false; // consume flag only when aggro creature found
@@ -205,7 +211,7 @@ export function useCombat(params: UseCombatParams) {
 
   // Auto-aggro: when aggressive creatures appear at the node while in combat, add them to engaged set
   useEffect(() => {
-    if (!inCombat) return;
+    if (!inCombat || ext.current.disabled) return;
     for (const c of creatures) {
       if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.has(c.id)) {
         engagedCreatureIdsRef.current.add(c.id);
@@ -684,7 +690,7 @@ export function useCombat(params: UseCombatParams) {
   // ── Start combat ───────────────────────────────────────────────
 
   const startCombat = useCallback((creatureId: string) => {
-    if (ext.current.isDead || ext.current.character.hp <= 0) return;
+    if (ext.current.disabled || ext.current.isDead || ext.current.character.hp <= 0) return;
     const creature = ext.current.creatures.find(c => c.id === creatureId);
     if (!creature || !creature.is_alive || creature.hp <= 0) return;
 

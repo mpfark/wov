@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.ai-name-suggest]
 verify_jwt = false
+
+[functions.combat-tick]
+verify_jwt = false
