@@ -120,7 +120,7 @@ All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
 
 #### New Files
 - `supabase/functions/combat-tick/index.ts` — Server-authoritative combat edge function
-- `src/hooks/usePartyCombat.ts` — Client hook for party combat (leader tick driver + non-leader listener + DoT broadcast)
+- `src/hooks/usePartyCombat.ts` — Client hook for party combat (leader tick driver + non-leader listener + buff/DoT broadcast)
 
 #### Modified Files
 - `src/pages/GamePage.tsx` — Conditional: `usePartyCombat` when in party, `useCombat` when solo; `gatherBuffs`/`gatherDotStacks` callbacks; `onConsumedBuffs`/`onClearedDots` handlers
