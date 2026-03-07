@@ -3,7 +3,7 @@
  *
  * Leader: runs a 3s heartbeat calling the edge function, broadcasts results to party.
  * Non-leader: listens for tick results via broadcast, updates local state.
- * Non-leaders also broadcast their DoT stacks so the leader can include them in the tick.
+ * Non-leaders broadcast their buff and DoT stacks so the leader can include them in the tick.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
