@@ -199,6 +199,7 @@ export default function StatusBarsStrip({
             <p className="font-display text-sm">Health Points</p>
             <p className="text-xs text-muted-foreground">Base (CON): <span className="text-elvish">{baseRegen} HP</span> / 15s</p>
             {itemHpRegen > 0 && <p className="text-xs text-muted-foreground">⚙️ Gear: <span className="text-elvish">+{itemHpRegen} HP</span></p>}
+            {character.level >= 35 && <p className="text-xs text-muted-foreground">🏆 Milestone: <span className="text-elvish">2× multiplier</span></p>}
             {isAtInn && <p className="text-xs text-muted-foreground">🏨 Inn: <span className="text-elvish">3× multiplier</span></p>}
             {regenBuff && Date.now() < regenBuff.expiresAt && (
               <p className="text-xs text-muted-foreground">🧪 Potion: <span className="text-primary">{regenBuff.multiplier}×</span> <span className="text-muted-foreground">({Math.ceil((regenBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
@@ -209,8 +210,9 @@ export default function StatusBarsStrip({
             {(() => {
               const potionMult = regenBuff && Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
               const innMult = isAtInn ? 3 : 1;
+              const milestoneMult = character.level >= 35 ? 2 : 1;
               const foodRegen = foodBuff && Date.now() < foodBuff.expiresAt ? foodBuff.flatRegen : 0;
-              const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * potionMult * innMult), 1);
+              const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * potionMult * innMult * milestoneMult), 1);
               return <p className="text-xs font-display text-elvish border-t border-border pt-1">Total: {total} HP / 15s</p>;
             })()}
           </TooltipContent>
