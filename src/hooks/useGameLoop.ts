@@ -310,6 +310,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── DoT: Bleed (Rend) ─────────────────────────────────────────
   useEffect(() => {
     if (!dotDebuff || Date.now() >= dotDebuff.expiresAt) return;
+    if (params.inParty) return; // Server handles DoT in party mode
     const interval = setInterval(async () => {
       if (Date.now() >= dotDebuff.expiresAt) {
         setDotDebuff(null); clearInterval(interval); return;
