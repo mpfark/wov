@@ -301,7 +301,97 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Creature counterattacks ──────────────────────────────────
+    // ── DoT ticking (Bleed, Poison, Ignite) ──────────────────────
+    // Helper: handle DoT kill reward/loot
+    const handleDotKill = (creature: any, killerName: string) => {
+      cKilled.add(creature.id);
+      const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
+      const lt = (creature.loot_table || []) as any[];
+      const goldEntry = lt.find((e: any) => e.type === 'gold');
+      let totalGold = 0;
+      if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+        totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+      }
+      const split = members.length;
+      const goldEach = Math.floor(totalGold / split);
+      for (const mm of members) {
+        const penalty = xpPenalty(mm.c.level, creature.level);
+        mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / split);
+        mGold[mm.id] += goldEach;
+      }
+      const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
+      const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
+      events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}` });
+      if (creature.loot_table_id) {
+        lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
+      } else {
+        for (const entry of lt) {
+          if (entry.type === 'gold') continue;
+          if (Math.random() <= (entry.chance || 0.1)) {
+            lootQueue.push({ nodeId: node_id, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1 });
+          }
+        }
+      }
+    };
+
+    for (const [charId, dotState] of Object.entries(dots)) {
+      const member = members.find(m => m.id === charId);
+      const charName = member?.c?.name || 'Unknown';
+
+      // Bleed (Rend) — single target
+      if (dotState.bleed) {
+        const { creature_id, damage_per_tick } = dotState.bleed;
+        const creature = creatures.find(cr => cr.id === creature_id);
+        if (creature && cHp[creature_id] > 0 && !cKilled.has(creature_id)) {
+          cHp[creature_id] = Math.max(cHp[creature_id] - damage_per_tick, 0);
+          events.push({ type: 'dot_tick', message: `🩸 ${creature.name} bleeds for ${damage_per_tick} damage! (${charName}'s Rend)` });
+          if (cHp[creature_id] <= 0) {
+            handleDotKill(creature, charName);
+            clearedDots.push({ character_id: charId, creature_id, dot_type: 'bleed' });
+          }
+        } else if (!creature || cKilled.has(creature_id)) {
+          clearedDots.push({ character_id: charId, creature_id, dot_type: 'bleed' });
+        }
+      }
+
+      // Poison stacks
+      if (dotState.poison) {
+        for (const [creatureId, ps] of Object.entries(dotState.poison as Record<string, { stacks: number; damage_per_tick: number }>)) {
+          const creature = creatures.find(cr => cr.id === creatureId);
+          if (!creature || cHp[creatureId] <= 0 || cKilled.has(creatureId)) {
+            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'poison' });
+            continue;
+          }
+          const totalDmg = ps.stacks * ps.damage_per_tick;
+          cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
+          events.push({ type: 'dot_tick', message: `🧪 ${creature.name} takes ${totalDmg} poison damage! (${ps.stacks} stack${ps.stacks > 1 ? 's' : ''}, ${charName})` });
+          if (cHp[creatureId] <= 0) {
+            handleDotKill(creature, charName);
+            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'poison' });
+          }
+        }
+      }
+
+      // Ignite stacks
+      if (dotState.ignite) {
+        for (const [creatureId, is] of Object.entries(dotState.ignite as Record<string, { stacks: number; damage_per_tick: number }>)) {
+          const creature = creatures.find(cr => cr.id === creatureId);
+          if (!creature || cHp[creatureId] <= 0 || cKilled.has(creatureId)) {
+            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'ignite' });
+            continue;
+          }
+          const totalDmg = is.stacks * is.damage_per_tick;
+          cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
+          events.push({ type: 'dot_tick', message: `🔥 ${creature.name} burns for ${totalDmg} fire damage! (${is.stacks} stack${is.stacks > 1 ? 's' : ''}, ${charName})` });
+          if (cHp[creatureId] <= 0) {
+            handleDotKill(creature, charName);
+            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'ignite' });
+          }
+        }
+      }
+    }
+
+
     // Helper to apply defensive buffs and deal damage to a target
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
