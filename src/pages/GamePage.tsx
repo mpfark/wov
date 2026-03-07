@@ -296,6 +296,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures, combatStateRef, broadcastDamage,
     party, partyMembers, awardKillRewardsRef,
+    inParty: !!party,
   });
 
   // Wire setRegenBuff for incoming log processing
