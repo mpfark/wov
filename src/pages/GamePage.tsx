@@ -390,23 +390,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const handleClearedDots = useCallback((cleared: { character_id: string; creature_id: string; dot_type: string }[]) => {
     for (const c of cleared) {
-      if (c.dot_type === 'bleed') gameLoop.setDotDebuff(null);
-      if (c.dot_type === 'poison') {
-        gameLoop.setPoisonStacks(prev => {
-          const next = { ...prev };
-          delete next[c.creature_id];
-          return next;
-        });
-      }
-      if (c.dot_type === 'ignite') {
-        gameLoop.setIgniteStacks(prev => {
-          const next = { ...prev };
-          delete next[c.creature_id];
-          return next;
-        });
-      }
+      gameLoop.notifyCreatureKilled(c.creature_id);
     }
-  }, [gameLoop.setDotDebuff, gameLoop.setPoisonStacks, gameLoop.setIgniteStacks]);
+  }, [gameLoop.notifyCreatureKilled]);
 
   const partyCombat = usePartyCombat({
     character, creatures, party, isLeader, isDead,
