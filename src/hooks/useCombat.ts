@@ -136,6 +136,7 @@ export function useCombat(params: UseCombatParams) {
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
     tankAbsentWarnedRef.current = false;
+    lastCreatureAttackRef.current = {};
   }, []);
 
   // ── Lifecycle effects ──────────────────────────────────────────
