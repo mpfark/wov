@@ -63,6 +63,7 @@ export interface UseCombatParams {
   onClearDisengage?: () => void;
   focusStrikeBuff?: { bonusDmg: number } | null;
   onClearFocusStrike?: () => void;
+  onCreatureKilled?: (creatureId: string) => void;
   broadcastDamage?: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
   broadcastHp?: (characterId: string, hp: number, maxHp: number, source: string) => void;
   broadcastReward?: (characterId: string, xp: number, gold: number, source: string) => void;
