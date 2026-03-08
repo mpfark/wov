@@ -352,6 +352,7 @@ export function useCombat(params: UseCombatParams) {
 
           updateCreatureHp(creatureId, 0);
           e.broadcastDamage?.(creatureId, 0, finalDmg, char.name, true);
+          e.onCreatureKilled?.(creatureId);
           await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: 0, _killed: true });
 
           // Fresh query for party members at the same node
