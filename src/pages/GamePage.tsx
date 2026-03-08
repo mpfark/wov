@@ -331,6 +331,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     sunderDebuff, disengageNextHit,
     onClearDisengage: useCallback(() => gameLoop.setDisengageNextHit(null), []),
     focusStrikeBuff, onClearFocusStrike: useCallback(() => gameLoop.setFocusStrikeBuff(null), []),
+    onCreatureKilled: gameLoop.notifyCreatureKilled,
     broadcastDamage, broadcastHp, broadcastReward, xpMultiplier,
     disabled: !!party,
   });
