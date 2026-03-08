@@ -172,6 +172,8 @@ export function useActions(params: UseActionsParams) {
 
   // ── Kill rewards ───────────────────────────────────────────────
   const awardKillRewards = useCallback(async (creature: any, opts?: { stopCombat?: boolean }) => {
+    // Immediately purge all DoTs targeting this creature
+    p.notifyCreatureKilled?.(creature.id);
     const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
     const xpPenalty = getXpPenalty(p.character.level, creature.level);
     const totalXp = Math.floor(baseXp * xpPenalty * p.xpMultiplier);
