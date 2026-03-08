@@ -470,6 +470,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     partyRegenBuff, setPartyRegenBuff: gameLoop.setPartyRegenBuff,
     sunderDebuff, setSunderDebuff: gameLoop.setSunderDebuff,
     focusStrikeBuff, setFocusStrikeBuff: gameLoop.setFocusStrikeBuff,
+    notifyCreatureKilled: gameLoop.notifyCreatureKilled,
   });
 
   // Wire forward-declared refs
