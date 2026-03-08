@@ -559,8 +559,8 @@ export default function CharacterPanel({
                   const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
                   const getHitChance = Math.min(95, Math.max(5, (21 - (totalAC - creatureAtkMod)) * 5));
 
-                  const dexMod = Math.floor((character.dex + (equipmentBonuses.dex || 0) - 10) / 2);
-                  const attackInterval = Math.max(3000 - (dexMod * 125), 1000);
+                  const dexMod = Math.max(Math.floor((character.dex + (equipmentBonuses.dex || 0) - 10) / 2), 0);
+                  const attackInterval = Math.max(Math.round(3000 - Math.sqrt(dexMod) * 350), 1000);
                   const atkSpeed = (attackInterval / 1000).toFixed(1);
 
                   const offenseRows: { label: string; value: string; tip: string }[] = [
