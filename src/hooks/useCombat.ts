@@ -710,8 +710,8 @@ export function useCombat(params: UseCombatParams) {
     setInCombat(true);
 
     const char = ext.current.character;
-    const dexMod = Math.floor((char.dex - 10) / 2);
-    const attackInterval = Math.max(3000 - (dexMod * 125), 1000);
+    const dexMod = Math.max(Math.floor((char.dex - 10) / 2), 0);
+    const attackInterval = Math.max(Math.round(3000 - Math.sqrt(dexMod) * 350), 1000);
 
     doCombatTick();
 
