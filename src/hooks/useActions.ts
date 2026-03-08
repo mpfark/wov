@@ -69,6 +69,7 @@ export interface UseActionsParams {
   partyRegenBuff: PartyRegenBuff | null; setPartyRegenBuff: (v: PartyRegenBuff | null) => void;
   sunderDebuff: SunderDebuff | null; setSunderDebuff: (v: SunderDebuff | null) => void;
   focusStrikeBuff: FocusStrikeBuff | null; setFocusStrikeBuff: (v: FocusStrikeBuff | null) => void;
+  notifyCreatureKilled?: (creatureId: string) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
