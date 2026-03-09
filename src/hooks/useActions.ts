@@ -387,6 +387,10 @@ export function useActions(params: UseActionsParams) {
     }
     await p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - effectiveCpCost });
     p.broadcastMove(p.character.id, p.character.name, nodeId);
+    supabase.from('character_visited_nodes').upsert(
+      { character_id: p.character.id, node_id: nodeId },
+      { onConflict: 'character_id,node_id' }
+    ).then();
     p.addLog(`🌀 You teleport to ${targetNode.name} for ${effectiveCpCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
