@@ -806,13 +806,13 @@ export default function GameManual() {
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Warrior —</p>
                   <p><strong className="text-foreground">💪 Second Wind (T1, 15 CP):</strong> Heal = <code className="text-primary">max(3, CON_mod × 3 + level)</code></p>
                   <p><strong className="text-foreground">📯 Battle Cry (T2, 25 CP):</strong> AC Bonus = <code className="text-primary">max(3, DEX_mod + 2)</code>, Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🩸 Rend (T3, 40 CP):</strong> Bleed = <code className="text-primary">floor(STR_mod × 1.5) + 2</code> per 2s tick, Duration = <code className="text-primary">min(30s, 20s + STR_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🩸 Rend (T3, 40 CP):</strong> Bleed = <code className="text-primary">floor((STR_mod × 1.5 + 2) × 0.67)</code> per 2s tick, Duration = <code className="text-primary">min(30s, 20s + STR_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🔨 Sunder Armor (T4, 60 CP):</strong> AC Reduction = <code className="text-primary">max(2, STR_mod)</code>, Duration = <code className="text-primary">min(20s, 12s + STR_mod × 1s)</code></p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Wizard —</p>
                   <p><strong className="text-foreground">🛡️✨ Force Shield (T1, 15 CP):</strong> Shield HP = <code className="text-primary">INT_mod + floor(level × 0.5)</code>, Duration = <code className="text-primary">min(15s, 8s + INT_mod × 1s)</code></p>
                   <p><strong className="text-foreground">✨ Arcane Surge (T2, 25 CP):</strong> +50% spell damage, Duration = <code className="text-primary">min(25s, 15s + INT_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🔥🔥 Ignite (T3, 40 CP):</strong> Burn = <code className="text-primary">floor(INT_mod × 0.7)</code> per stack per 2s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(45s, 30s + INT_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🔥🔥 Ignite (T3, 40 CP):</strong> Burn = <code className="text-primary">floor(INT_mod × 0.7 × 0.67)</code> per stack per 2s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(45s, 30s + INT_mod × 1s)</code></p>
                   <p><strong className="text-foreground">💥 Conflagrate (T4, 60 CP):</strong> Dmg = <code className="text-primary">(1d8 + INT_mod) × (1 + 0.5 × burn_stacks)</code>, consumes all burn stacks</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Ranger —</p>
@@ -823,7 +823,7 @@ export default function GameManual() {
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Rogue —</p>
                   <p><strong className="text-foreground">🌑 Shadowstep (T1, 15 CP):</strong> Stealth (2× next hit, dodge while fleeing), Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🧪 Envenom (T2, 25 CP):</strong> Poison = <code className="text-primary">floor(DEX_mod × 1.2)</code> per stack per 2s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(30s, 20s + DEX_mod × 1s)</code> (buff), stacks last 25s</p>
+                  <p><strong className="text-foreground">🧪 Envenom (T2, 25 CP):</strong> Poison = <code className="text-primary">floor(DEX_mod × 1.2 × 0.67)</code> per stack per 2s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(30s, 20s + DEX_mod × 1s)</code> (buff), stacks last 25s</p>
                   <p><strong className="text-foreground">🔪 Eviscerate (T3, 40 CP):</strong> Dmg = <code className="text-primary">(1d6 + DEX_mod) × (1 + 0.5 × poison_stacks)</code>, consumes all poison stacks</p>
                   <p><strong className="text-foreground">🌫️ Cloak of Shadows (T4, 60 CP):</strong> 50% dodge chance, Duration = <code className="text-primary">min(15s, 10s + DEX_mod × 0.5s)</code></p>
 
