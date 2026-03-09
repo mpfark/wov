@@ -392,10 +392,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                 const truncated = displayName.length > 14 ? displayName.slice(0, 13) + '…' : displayName;
                 return (
                   <text
-                    x={pos.px} y={pos.py + 4}
+                    x={pos.px} y={pos.py + (isVisitedGhost ? 3 : 4)}
                     textAnchor="middle"
-                    className={`font-display text-[10px] pointer-events-none select-none ${
-                      isCurrent ? 'fill-primary' : isHovered ? 'fill-primary/80' : 'fill-foreground'
+                    className={`font-display pointer-events-none select-none ${
+                      isVisitedGhost ? 'text-[8px] fill-muted-foreground/50' :
+                      isCurrent ? 'text-[10px] fill-primary' : isHovered ? 'text-[10px] fill-primary/80' : 'text-[10px] fill-foreground'
                     }`}
                   >
                     {truncated}
