@@ -42,7 +42,7 @@ export interface IgniteStack {
   maxHp: number; lastKnownHp: number;
 }
 export interface AbsorbBuff { shieldHp: number; expiresAt: number }
-export interface PartyRegenBuff { healPerTick: number; expiresAt: number }
+export interface PartyRegenBuff { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' }
 export interface SunderDebuff { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }
 export interface FocusStrikeBuff { bonusDmg: number }
 
