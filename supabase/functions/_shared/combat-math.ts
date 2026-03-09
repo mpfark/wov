@@ -224,7 +224,7 @@ export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunder
   let baseDamage = 0;
   if (hit) {
     const rawDmg = rollDamage(profile.diceMin, profile.diceMax) + sMod;
-    baseDamage = isCrit ? Math.max(rawDmg * 2, 1) : Math.max(rawDmg, 1 + sdf);
+    baseDamage = isCrit ? Math.max(Math.floor(rawDmg * 1.5), 1) : Math.max(rawDmg, 1 + sdf);
   }
 
   return { hit, isCrit, roll, totalAtk, effectiveCreatureAC: effectiveAC, baseDamage, intHitBonus: ihb, strFloor: sdf };
