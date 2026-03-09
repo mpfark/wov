@@ -151,13 +151,12 @@ Deno.serve(async (req) => {
       const critBonusFromBuff = mb.crit_buff?.bonus || 0;
       const effCrit = atk.crit - dcb - mileCrit - critBonusFromBuff;
       const sdf = strDmgFloor((c.str || 10) + (eb.str || 0));
-      const numAtk = dexMultiAttack((c.dex || 10) + (eb.dex || 0));
       const isStealth = !!mb.stealth_buff;
       const isDmgBuff = !!mb.damage_buff; // Arcane Surge
       const hasFocusStrike = !!mb.focus_strike;
       const hasDisengage = !!mb.disengage_next_hit;
 
-      for (let a = 0; a < numAtk; a++) {
+      for (let a = 0; a < 1; a++) {
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) break;
 
