@@ -82,7 +82,13 @@ const CREATURE_DAMAGE_BASE: Record<string, number> = {
 /** Creature damage die max based on level and rarity */
 export function getCreatureDamageDie(level: number, rarity: string): number {
   const base = CREATURE_DAMAGE_BASE[rarity] || 4;
-  return base + Math.floor(level / 2);
+  return base + Math.floor(level * 0.7);
+}
+
+/** Bonus damage multiplier when creature out-levels the player (+8% per level diff) */
+export function getCreatureLevelGapMultiplier(creatureLevel: number, playerLevel: number): number {
+  const diff = Math.max(creatureLevel - playerLevel, 0);
+  return 1 + diff * 0.08;
 }
 
 // ── XP formulas ──────────────────────────────────────────────────
