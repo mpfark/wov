@@ -349,6 +349,11 @@ export function useActions(params: UseActionsParams) {
       }
       await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
       p.broadcastMove(p.character.id, p.character.name, nodeId);
+      // Track visited node (fire-and-forget upsert)
+      supabase.from('character_visited_nodes').upsert(
+        { character_id: p.character.id, node_id: nodeId },
+        { onConflict: 'character_id,node_id' }
+      ).then();
       const dirNames: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' };
       const dirLabel = direction ? (dirNames[direction] || direction) : null;
       const targetArea = p.getNodeArea(targetNode);
