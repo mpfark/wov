@@ -844,6 +844,16 @@ export default function CharacterPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {onBatchAllocateStats && (
+        <StatPlannerDialog
+          open={statPlannerOpen}
+          onOpenChange={setStatPlannerOpen}
+          character={character}
+          equipmentBonuses={equipmentBonuses}
+          onCommit={onBatchAllocateStats}
+        />
+      )}
     </TooltipProvider>
   );
 }
