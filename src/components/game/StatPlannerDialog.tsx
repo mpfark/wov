@@ -99,8 +99,7 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const buyDisc = getChaBuyDiscount(eCha);
       const sellMult = getChaSellMultiplier(eCha);
 
-      const dexMod = Math.max(Math.floor((eDex - 10) / 2), 0);
-      const atkSpeed = Math.max(Math.round(3000 - Math.sqrt(dexMod) * 350), 1000) / 1000;
+      const atkSpeed = 2.0;
 
       return {
         maxHp, ac, maxCp, maxMp, hpRegen, cpRegen, mpRegen,

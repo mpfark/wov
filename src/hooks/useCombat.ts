@@ -713,15 +713,11 @@ export function useCombat(params: UseCombatParams) {
     setActiveCombatCreatureId(creatureId);
     setInCombat(true);
 
-    const char = ext.current.character;
-    const dexMod = Math.max(Math.floor((char.dex - 10) / 2), 0);
-    const attackInterval = Math.max(Math.round(3000 - Math.sqrt(dexMod) * 350), 1000);
-
     doCombatTick();
 
     intervalRef.current = setWorkerInterval(() => {
       doCombatTick();
-    }, attackInterval);
+    }, 2000);
   }, [doCombatTick]);
 
   // Keep startCombatRef in sync

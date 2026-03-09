@@ -333,10 +333,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setActiveCombatCreatureId(creatureId);
     setEngagedCreatureIds([creatureId]);
 
-    // Start 3s heartbeat
+    // Start 2s heartbeat
     if (intervalRef.current) clearInterval(intervalRef.current);
     doTick(); // Immediate first tick
-    intervalRef.current = window.setInterval(doTick, 3000);
+    intervalRef.current = window.setInterval(doTick, 2000);
   }, [doTick]);
 
   // ── Lifecycle effects ──────────────────────────────────────────
