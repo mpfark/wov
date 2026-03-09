@@ -144,18 +144,18 @@ export function useGameLoop(params: UseGameLoopParams) {
       const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
       if (hp < effectiveMaxHp && hp > 0) {
         const buff = regenBuffRef.current;
-        const potionMult = Date.now() < buff.expiresAt ? buff.multiplier : 1;
+        const potionBonus = Date.now() < buff.expiresAt ? (buff.multiplier - 1) : 0; // +2 from potion
         const node = current_node_id ? getNodeRef.current(current_node_id) : null;
-        const innMult = node?.is_inn ? 3 : 1;
-        const totalMult = potionMult * innMult;
+        const innBonus = node?.is_inn ? 2 : 0; // +2 from inn
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
         const conRegen = getBaseRegen(conWithGear);
         const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
-        const milestoneMult = regenCharRef.current.level >= 35 ? 2 : 1;
+        const milestoneBonus = regenCharRef.current.level >= 35 ? 1 : 0; // +1 from milestone
+        const totalMult = 1 + potionBonus + milestoneBonus + innBonus; // additive: max 1+2+1+2 = 6x
         const combatMult = inCombatRegenRef.current ? 0.1 : 1;
-        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * milestoneMult * combatMult), 1);
+        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * combatMult), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
           updateCharRegenRef.current({ hp: newHp });
