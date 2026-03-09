@@ -67,7 +67,7 @@ export function getChaGoldMultiplier(cha: number): number {
 
 // ── DEX multi-attack (party mode) ───────────────────────────────
 
-/** DEX mod → number of attacks per 3s tick in party combat */
+/** DEX mod → number of attacks per 2s tick (currently unused, kept for reference) */
 export function getDexMultiAttack(dex: number): number {
   const m = getStatModifier(dex);
   return m >= 5 ? 3 : m >= 3 ? 2 : 1;

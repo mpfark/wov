@@ -1,7 +1,7 @@
 /**
  * usePartyCombat — server-authoritative party combat via the combat-tick edge function.
  *
- * Leader: runs a 3s heartbeat calling the edge function, broadcasts results to party.
+ * Leader: runs a 2s heartbeat calling the edge function, broadcasts results to party.
  * Non-leader: listens for tick results via broadcast, updates local state.
  * Non-leaders broadcast their buff and DoT stacks so the leader can include them in the tick.
  */

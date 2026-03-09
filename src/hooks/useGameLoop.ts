@@ -200,7 +200,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     return () => clearInterval(interval);
   }, []);
 
-  // ── MP Regen (every 3s) ────────────────────────────────────────
+  // ── MP Regen (every 2s) ────────────────────────────────────────
   const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level });
   useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level }; }, [character.mp, character.max_mp, character.current_node_id, character.dex, character.level]);
 
@@ -217,7 +217,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       if (newMp > mp) {
         updateCharRegenRef.current({ mp: newMp });
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -406,7 +406,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           return next;
         });
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [poisonStacks, creatures, addLog]);
 
@@ -471,7 +471,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           return next;
         });
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [igniteStacks, creatures, addLog]);
 
@@ -510,7 +510,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       } else {
         addLog(`${abilityEmoji} ${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`);
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [partyRegenBuff, party, partyMembers, character, addLog, updateCharacter]);
 
