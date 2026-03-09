@@ -184,9 +184,9 @@ export function useGameLoop(params: UseGameLoopParams) {
       const bRegen = getCpRegenRate(primaryVal);
       const nodeId = regenCharRef.current.current_node_id;
       const node = nodeId ? getNodeRef.current(nodeId) : null;
-      const innBonus = node?.is_inn ? 2 : 0;
+      const innBonus = node?.is_inn ? 1 : 0;
       const buff = regenBuffRef.current;
-      const inspireBonus = Date.now() < buff.expiresAt ? (buff.multiplier - 1) : 0;
+      const inspireBonus = Date.now() < buff.expiresAt ? 0.5 : 0;
       const food = foodBuffRef.current;
       const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
       const totalMult = 1 + inspireBonus + innBonus;
