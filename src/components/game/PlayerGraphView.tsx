@@ -166,24 +166,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     ).then();
   }, [characterId, currentNodeId]);
 
-  // Compute 2nd-degree visited nodes (neighbors of neighbors that have been visited before)
-  const visitedSecondDegree = useMemo(() => {
-    if (visitedNodeIds.size === 0) return [];
-    const directIds = new Set([currentNodeId, ...neighbors.map(n => n.id)]);
-    const secondDeg: GameNode[] = [];
-    for (const neighbor of neighbors) {
-      for (const conn of neighbor.connections.filter(c => !c.hidden)) {
-        if (directIds.has(conn.node_id)) continue;
-        if (!visitedNodeIds.has(conn.node_id)) continue;
-        const node = nodes.find(n => n.id === conn.node_id);
-        if (node && !secondDeg.some(s => s.id === node.id)) {
-          secondDeg.push(node);
-        }
-      }
-    }
-    return secondDeg;
-  }, [currentNodeId, neighbors, visitedNodeIds, nodes]);
-
   // Fetch creature presence for all visible nodes
   useEffect(() => {
     if (visibleNodeIds.length === 0) return;
