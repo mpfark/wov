@@ -266,6 +266,7 @@ export default function MapPanel({
               partyMembers={partyMembers}
               myCharacterId={myCharacterId}
               areas={areas}
+              characterId={character.id}
             />
           ) : (
             <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
