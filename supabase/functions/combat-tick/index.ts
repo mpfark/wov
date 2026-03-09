@@ -10,6 +10,7 @@ import {
   getChaGoldMultiplier as chaGoldMult,
   getDexMultiAttack as dexMultiAttack,
   getCreatureDamageDie as creatureDmgDie,
+  getCreatureLevelGapMultiplier as creatureLevelGapMult,
   getXpForLevel as xpForLevel,
   getXpPenalty as xpPenalty,
   getMaxCp as calcMaxCp,
