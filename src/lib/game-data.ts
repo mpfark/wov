@@ -320,7 +320,7 @@ const CREATURE_DAMAGE_BASE: Record<string, number> = {
 
 export function getCreatureDamageDie(level: number, rarity: string): number {
   const base = CREATURE_DAMAGE_BASE[rarity] || 4;
-  return base + Math.floor(level / 2);
+  return base + Math.floor(level * 0.7);
 }
 
 // Nobility titles by level (every 2 levels from 28–40)

@@ -288,9 +288,13 @@ export function calculateKillRewards(
 }
 
 /** Resolve creature counterattack damage (before defensive buffs) */
-export function rollCreatureDamage(creatureLevel: number, creatureRarity: string, creatureStr: number): number {
+export function rollCreatureDamage(creatureLevel: number, creatureRarity: string, creatureStr: number, playerLevel?: number): number {
   const dmgDie = getCreatureDamageDie(creatureLevel, creatureRarity);
-  return Math.max(rollDamage(1, dmgDie) + getStatModifier(creatureStr), 1);
+  const baseDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creatureStr), 1);
+  if (playerLevel != null) {
+    return Math.max(Math.floor(baseDmg * getCreatureLevelGapMultiplier(creatureLevel, playerLevel)), 1);
+  }
+  return baseDmg;
 }
 
 /**
