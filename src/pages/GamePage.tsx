@@ -249,9 +249,11 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       if (seenIdsRef.current.has(entry.id)) continue;
       seenIdsRef.current.add(entry.id);
       if (ownLogIdsRef.current.has(entry.id)) continue;
+      // Fallback: skip own messages that arrived via postgres_changes before ownLogIdsRef was populated
+      if (entry.character_name === character.name) continue;
       processIncomingLog(entry.message, entry.character_name, entry.node_id);
     }
-  }, [partyCombatEntries, party, processIncomingLog]);
+  }, [partyCombatEntries, party, processIncomingLog, character.name]);
 
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [eventLog]);
 
