@@ -823,7 +823,7 @@ export default function GameManual() {
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Rogue —</p>
                   <p><strong className="text-foreground">🌑 Shadowstep (T1, 15 CP):</strong> Stealth (2× next hit, dodge while fleeing), Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🧪 Envenom (T2, 25 CP):</strong> Poison = <code className="text-primary">floor(DEX_mod × 1.2)</code> per stack per 3s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(30s, 20s + DEX_mod × 1s)</code> (buff), stacks last 25s</p>
+                  <p><strong className="text-foreground">🧪 Envenom (T2, 25 CP):</strong> Poison = <code className="text-primary">floor(DEX_mod × 1.2)</code> per stack per 2s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(30s, 20s + DEX_mod × 1s)</code> (buff), stacks last 25s</p>
                   <p><strong className="text-foreground">🔪 Eviscerate (T3, 40 CP):</strong> Dmg = <code className="text-primary">(1d6 + DEX_mod) × (1 + 0.5 × poison_stacks)</code>, consumes all poison stacks</p>
                   <p><strong className="text-foreground">🌫️ Cloak of Shadows (T4, 60 CP):</strong> 50% dodge chance, Duration = <code className="text-primary">min(15s, 10s + DEX_mod × 0.5s)</code></p>
 
