@@ -241,9 +241,9 @@ export default function GameManual() {
                     <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">min(5, floor(√mod))</code> min damage.</p>
                     <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and <strong>improves critical hit range</strong>: <code className="text-primary">min(5, floor(√mod))</code> — max crit on 15-20.</p>
                     <p><strong className="text-foreground">CON (Constitution)</strong> — Increases max HP, passive HP regeneration rate, and resistance to DoT effects. Primary stat for Warrior CP regen.</p>
-                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP, spell damage bonus, CP regen for Wizards, and <strong>improves hit chance</strong>: <code className="text-primary">min(5, floor(√mod))</code> bonus to attack rolls.</p>
-                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP, healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(20%, √mod × 3%)</code>.</p>
-                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Increases max CP, Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +35%.</p>
+                    <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP (via INT modifier), spell damage bonus, CP regen for Wizards, and <strong>improves hit chance</strong>: <code className="text-primary">min(5, floor(√mod))</code> bonus to attack rolls.</p>
+                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP (via WIS modifier), healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(20%, √mod × 3%)</code>.</p>
+                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +35%.</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground/70 mt-1">
                     Stat modifier = <code className="text-primary">floor((stat − 10) / 2)</code>. A stat of 10 gives +0, 12 gives +1, 14 gives +2, etc.
@@ -493,14 +493,15 @@ export default function GameManual() {
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p>CP is the resource that powers class abilities. It replaces cooldown timers — abilities cost CP to use and are disabled when you don't have enough.</p>
-                <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">60 + (level − 1) × 3 + mentalMod × 5</code></p>
-                <p className="ml-4 text-[10px]"><code>mentalMod = max(modifier(INT), modifier(WIS), modifier(CHA), 0)</code> where modifier = floor((stat − 10) / 2)</p>
-                <p className="mt-1"><strong className="text-foreground">Race Impact:</strong> Caster races like <strong>Elf</strong> (+3 WIS, +2 INT) and <strong>Half-Elf</strong> (+3 CHA, +2 WIS) start with significantly higher CP pools than tank races like <strong>Dwarf</strong> (+4 CON but −2 CHA). Choose a race whose mental stats complement your class's primary resource needs.</p>
+                <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">30 + (level − 1) × 3 + (INT_mod + WIS_mod) × 3</code></p>
+                <p className="ml-4 text-[10px]"><code>INT_mod = max(floor((INT − 10) / 2), 0)</code>, <code>WIS_mod = max(floor((WIS − 10) / 2), 0)</code></p>
+                <p className="mt-1"><strong className="text-foreground">Race Impact:</strong> Caster races like <strong>Elf</strong> (+3 WIS, +2 INT) and <strong>Half-Elf</strong> (+3 CHA, +2 WIS) start with higher CP pools than tank races like <strong>Dwarf</strong> (+4 CON but low mental stats). Investing in both INT and WIS rewards split investment over stacking a single mental stat.</p>
                 <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 6 seconds</code> + bonus from primary stat</p>
                 <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/6s for every 2 points of primary stat modifier</p>
-                <p><strong className="text-foreground">Inn Rest</strong> = Fully restores CP (alongside HP)</p>
-                <p><strong className="text-foreground">🎶 Inspire</strong> = Doubles CP regen rate (alongside HP regen) for 90 seconds</p>
+                <p><strong className="text-foreground">🏨 Inn Rest</strong> = Doubles CP regen rate (+1.0× multiplier) while resting</p>
+                <p><strong className="text-foreground">🎶 Inspire</strong> = +0.5× CP regen multiplier for 90 seconds</p>
                 <p><strong className="text-foreground">🍞 Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 5 minutes</p>
+                <p><strong className="text-foreground">💊 Regen Potion</strong> = +0.5× CP regen multiplier</p>
               </div>
 
               <div>
