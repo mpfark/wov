@@ -146,6 +146,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     };
   }, [positions]);
 
+  const secondDegIds = useMemo(() => new Set(visitedSecondDegree.map(n => n.id)), [visitedSecondDegree]);
+
   // Collect edges (including edges from neighbors to 2nd-degree visited nodes)
   const edges = useMemo(() => {
     if (!currentNode) return [];
