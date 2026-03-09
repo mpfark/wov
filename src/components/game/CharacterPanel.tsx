@@ -585,7 +585,7 @@ export default function CharacterPanel({
                   const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
                   const maxMp = getMaxMp(character.level, eDex);
                   const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
-                  const cpRegen = getCpRegenRate((character as any)[primaryStat] + (equipmentBonuses[primaryStat] || 0));
+                  const baseCpRegen = getCpRegenRate((character as any)[primaryStat] + (equipmentBonuses[primaryStat] || 0));
                   const mpRegen = getMpRegenRate(eDex);
 
                   // Regen multiplier from buffs
