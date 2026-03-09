@@ -418,6 +418,10 @@ export function useActions(params: UseActionsParams) {
     if ((p.character.cp ?? 0) < effectiveWayCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
     await p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - effectiveWayCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId);
+    supabase.from('character_visited_nodes').upsert(
+      { character_id: p.character.id, node_id: waymarkNodeId },
+      { onConflict: 'character_id,node_id' }
+    ).then();
     p.addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${effectiveWayCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Returned to waymark at ${waymarkNode.name}`, { node_id: waymarkNodeId, cpCost });
     setWaymarkNodeId(null);
