@@ -473,7 +473,8 @@ export default function CharacterPanel({
                   {['str', 'dex', 'con', 'int', 'wis', 'cha'].map(stat => {
                     const base = (character as any)[stat] as number;
                     const bonus = equipmentBonuses[stat] || 0;
-                    const mod = getStatModifier(base + bonus);
+                    const effective = base + bonus;
+                    const mod = getStatModifier(effective);
                     const hasPoints = character.unspent_stat_points > 0;
                     // Calculate non-manual base: creation stats + class level bonuses
                     const creationStats = calculateStats(character.race, character.class);
@@ -481,6 +482,38 @@ export default function CharacterPanel({
                     const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
                     const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
                     const manualPoints = base - nonManualBase;
+                    
+                    // Calculate derived bonuses for each stat
+                    let derivedBonus = '';
+                    if (stat === 'str') {
+                      const dmgFloor = getStrDamageFloor(effective);
+                      derivedBonus = dmgFloor > 0 
+                        ? `+${dmgFloor} Min Damage (cap: +5)` 
+                        : 'Min Damage at 14+ (cap: +5)';
+                    } else if (stat === 'dex') {
+                      const critBonus = getDexCritBonus(effective);
+                      derivedBonus = critBonus > 0 
+                        ? `+${critBonus} Crit Range (cap: +5)` 
+                        : 'Crit Range at 14+ (cap: +5)';
+                    } else if (stat === 'int') {
+                      const hitBonus = getIntHitBonus(effective);
+                      derivedBonus = hitBonus > 0 
+                        ? `+${hitBonus} Hit Chance (cap: +5)` 
+                        : 'Hit Chance at 12+ (cap: +5)';
+                    } else if (stat === 'wis') {
+                      const dodgeChance = getWisDodgeChance(effective);
+                      derivedBonus = dodgeChance > 0 
+                        ? `${Math.round(dodgeChance * 100)}% Awareness (cap: 20%)` 
+                        : 'Awareness at 12+ (cap: 20%)';
+                    } else if (stat === 'cha') {
+                      const buyDiscount = getChaBuyDiscount(effective);
+                      const sellMult = getChaSellMultiplier(effective);
+                      const goldMult = Math.round(((sellMult - 1) / 0.05) * 5); // Convert back to percentage
+                      derivedBonus = buyDiscount > 0 
+                        ? `−${Math.round(buyDiscount * 100)}% buy / +${goldMult}% gold (cap: 10% / +35%)` 
+                        : 'Vendor bonus at 12+ (cap: 10% / +35%)';
+                    }
+                    
                     return (
                       <Tooltip key={stat}>
                         <TooltipTrigger asChild>
@@ -508,7 +541,12 @@ export default function CharacterPanel({
                           <p className="font-display text-sm">{STAT_FULL_NAMES[stat]}</p>
                           <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[stat]}</p>
                           <p className="text-[10px] text-muted-foreground">Modifier: {mod >= 0 ? '+' : ''}{mod}</p>
-                          {manualPoints > 0 && <p className="text-[10px] text-chart-5">{manualPoints} manually allocated</p>}
+                          {derivedBonus && (
+                            <p className="text-[10px] text-chart-2 mt-0.5 border-t border-border/50 pt-0.5">
+                              {derivedBonus}
+                            </p>
+                          )}
+                          {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
                         </TooltipContent>
                       </Tooltip>
                     );
