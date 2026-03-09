@@ -945,7 +945,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           nodes={nodes}
           areas={areas}
           playerCp={character.cp ?? 0}
-          playerMaxCp={character.max_cp ?? 60}
+          playerMaxCp={character.max_cp ?? 30}
           characterLevel={character.level}
           onTeleport={handleTeleport}
           waymark={waymarkNodeId ? { node: getNode(waymarkNodeId)!, region: getRegion(getNode(waymarkNodeId)?.region_id ?? '') } : null}

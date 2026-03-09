@@ -257,7 +257,7 @@ export function useActions(params: UseActionsParams) {
       const finalDex = (levelUpUpdates as any).dex ?? p.character.dex;
 
       const newMaxCp = getMaxCp(newLevel, finalInt, finalWis, finalCha);
-      const oldMaxCp = p.character.max_cp ?? 60;
+      const oldMaxCp = p.character.max_cp ?? 30;
       levelUpUpdates.max_cp = newMaxCp;
       levelUpUpdates.cp = Math.min((p.character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp);
 

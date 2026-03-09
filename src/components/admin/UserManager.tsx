@@ -266,8 +266,8 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
 
       {/* CP Bar */}
       {(() => {
-        const cp = c.cp ?? 60;
-        const maxCp = c.max_cp ?? 60;
+        const cp = c.cp ?? 30;
+        const maxCp = c.max_cp ?? 30;
         const cpPercent = Math.round((cp / maxCp) * 100);
         const primaryStat = CLASS_PRIMARY_STAT[c.class] || 'con';
         const primaryVal = (c as any)[primaryStat] ?? 10;
