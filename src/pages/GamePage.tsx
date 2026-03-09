@@ -112,7 +112,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
-    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward,
+    incomingPartyRegenBuff,
+    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward, broadcastPartyRegenBuff,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
