@@ -678,8 +678,8 @@ export function useActions(params: UseActionsParams) {
       const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Rend.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
-      const dmgPerTick = Math.max(1, strMod + 1);
-      const durationMs = 18000;
+      const dmgPerTick = Math.max(1, Math.floor(strMod * 1.5) + 2);
+      const durationMs = Math.min(30000, 20000 + strMod * 1000);
       const intervalMs = 3000;
       p.setDotDebuff({
         damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
