@@ -221,7 +221,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   }
 
   const allDisplayNodes = [currentNode, ...neighbors, ...visitedSecondDegree];
-  const secondDegIds = new Set(visitedSecondDegree.map(n => n.id));
+  
   const displayedIds = new Set(allDisplayNodes.map(n => n.id));
 
   // Compute exit stubs for neighbor nodes (connections leading to nodes not displayed)
