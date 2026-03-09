@@ -406,7 +406,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           return next;
         });
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [poisonStacks, creatures, addLog]);
 
