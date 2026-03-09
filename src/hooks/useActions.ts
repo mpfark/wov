@@ -638,11 +638,11 @@ export function useActions(params: UseActionsParams) {
       p.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'battle_cry') {
-      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
-      const bonus = Math.max(2, conMod + 1);
-      const durationMs = Math.min(20000, 12000 + conMod * 1000);
+      const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
+      const bonus = Math.max(3, strMod + 2);
+      const durationMs = Math.min(25000, 15000 + strMod * 1000);
       p.setAcBuff({ bonus, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Shield Wall! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} Battle Cry! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'dot_debuff') {
       if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
       const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
@@ -727,8 +727,8 @@ export function useActions(params: UseActionsParams) {
       if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'absorb_buff') {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
-      const shieldHp = intMod * 2 + p.character.level;
-      const durationMs = Math.min(20000, 10000 + intMod * 1000);
+      const shieldHp = intMod + Math.floor(p.character.level * 0.5);
+      const durationMs = Math.min(15000, 8000 + intMod * 1000);
       p.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'party_regen') {
@@ -743,8 +743,8 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ally_absorb') {
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
-      const shieldHp = wisMod * 5 + p.character.level;
-      const durationMs = Math.min(20000, 12000 + wisMod * 1000);
+      const shieldHp = wisMod * 2 + Math.floor(p.character.level * 0.7);
+      const durationMs = Math.min(18000, 10000 + wisMod * 1000);
       if (targetId && targetId !== p.character.id) {
         p.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
         const targetMember = p.partyMembers.find(m => m.character_id === targetId);
