@@ -146,17 +146,25 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     };
   }, [positions]);
 
-  // Collect edges
+  // Collect edges (including edges from neighbors to 2nd-degree visited nodes)
   const edges = useMemo(() => {
     if (!currentNode) return [];
-    const result: Array<{ from: string; to: string; label?: string }> = [];
+    const result: Array<{ from: string; to: string; label?: string; faded?: boolean }> = [];
     for (const conn of visibleConnections) {
       if (nodePositions.has(conn.node_id)) {
         result.push({ from: currentNode.id, to: conn.node_id, label: conn.label });
       }
     }
+    // Add edges from neighbors to 2nd-degree visited nodes
+    for (const neighbor of neighbors) {
+      for (const conn of neighbor.connections.filter(c => !c.hidden)) {
+        if (secondDegIds.has(conn.node_id) && nodePositions.has(conn.node_id)) {
+          result.push({ from: neighbor.id, to: conn.node_id, faded: true });
+        }
+      }
+    }
     return result;
-  }, [currentNode, visibleConnections, nodePositions]);
+  }, [currentNode, visibleConnections, nodePositions, neighbors, secondDegIds]);
 
   // Compute visible node IDs for creature fetch
   const visibleNodeIds = useMemo(() => {
