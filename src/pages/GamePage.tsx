@@ -115,15 +115,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
-  // Broadcast own HP whenever it changes
+  // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
+  const gearConMod = Math.floor((equipmentBonuses.con || 0) / 2);
+  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0) + gearConMod;
   const lastBroadcastedHpRef = useRef<{ hp: number; max_hp: number } | null>(null);
   useEffect(() => {
     if (!party || !character) return;
     const last = lastBroadcastedHpRef.current;
-    if (last && last.hp === character.hp && last.max_hp === character.max_hp) return;
-    lastBroadcastedHpRef.current = { hp: character.hp, max_hp: character.max_hp };
-    broadcastHp(character.id, character.hp, character.max_hp, 'sync');
-  }, [party, character?.hp, character?.max_hp, broadcastHp]);
+    if (last && last.hp === character.hp && last.max_hp === effectiveMaxHp) return;
+    lastBroadcastedHpRef.current = { hp: character.hp, max_hp: effectiveMaxHp };
+    broadcastHp(character.id, character.hp, effectiveMaxHp, 'sync');
+  }, [party, character?.hp, effectiveMaxHp, broadcastHp]);
 
   // Merge broadcast HP/movement overrides into party members
   const mergedPartyMembers = useMemo(() => {
