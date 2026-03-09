@@ -41,7 +41,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   ],
   warrior: [
     { label: 'Second Wind', emoji: '💪', description: 'Catch your breath and recover HP based on CON', cpCost: 15, type: 'self_heal', tier: 1, levelRequired: 5 },
-    { label: 'Battle Cry', emoji: '📯', description: 'Let out a war cry that boosts your AC based on STR', cpCost: 25, type: 'battle_cry', tier: 2, levelRequired: 10 },
+    { label: 'Battle Cry', emoji: '📯', description: 'Let out a war cry that boosts your AC based on DEX', cpCost: 25, type: 'battle_cry', tier: 2, levelRequired: 10 },
     { label: 'Rend', emoji: '🩸', description: 'Slice your target, applying a bleed that deals STR-based damage over time', cpCost: 40, type: 'dot_debuff', tier: 3, levelRequired: 15 },
     { label: 'Sunder Armor', emoji: '🔨', description: "A crushing blow that reduces your target's AC based on STR, making it easier to hit", cpCost: 60, type: 'sunder_debuff', tier: 4, levelRequired: 20 },
   ],
