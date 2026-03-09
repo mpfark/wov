@@ -727,6 +727,44 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               await updateCharacter(updates);
               addLog(`🔄 Full respec! ${totalRefunded} stat point${totalRefunded !== 1 ? 's' : ''} refunded.`);
             }}
+            onBatchAllocateStats={async (allocations: Record<string, number>) => {
+              const totalPoints = Object.values(allocations).reduce((s, v) => s + v, 0);
+              if (totalPoints <= 0 || totalPoints > character.unspent_stat_points) return;
+              const updates: Partial<Character> = {
+                unspent_stat_points: character.unspent_stat_points - totalPoints,
+              };
+              // Apply all stat changes
+              for (const [stat, amount] of Object.entries(allocations)) {
+                const currentVal = (character as any)[stat] ?? 10;
+                (updates as any)[stat] = currentVal + amount;
+              }
+              // Recalculate derived stats
+              const newCon = (updates.con ?? character.con) as number;
+              const oldConMod = getStatModifier(character.con);
+              const newConMod = getStatModifier(newCon);
+              if (newConMod !== oldConMod) {
+                const hpDelta = newConMod - oldConMod;
+                updates.max_hp = character.max_hp + hpDelta;
+                updates.hp = character.hp + hpDelta;
+              }
+              const newInt = (updates.int ?? character.int) as number;
+              const newWis = (updates.wis ?? character.wis) as number;
+              const newCha = (updates.cha ?? character.cha) as number;
+              const newMaxCp = getMaxCp(character.level, newInt, newWis, newCha);
+              if (newMaxCp !== character.max_cp) {
+                updates.max_cp = newMaxCp;
+                updates.cp = Math.min((character.cp ?? 0) + (newMaxCp - character.max_cp), newMaxCp);
+              }
+              const newDex = (updates.dex ?? character.dex) as number;
+              const newMaxMp = getMaxMp(character.level, newDex);
+              if (newMaxMp !== (character.max_mp ?? 100)) {
+                updates.max_mp = newMaxMp;
+                updates.mp = Math.min((character.mp ?? 100) + (newMaxMp - (character.max_mp ?? 100)), newMaxMp);
+              }
+              await updateCharacter(updates);
+              const statList = Object.entries(allocations).map(([s, v]) => `+${v} ${s.toUpperCase()}`).join(', ');
+              addLog(`📊 Batch allocation: ${statList} (${character.unspent_stat_points - totalPoints} points remaining)`);
+            }}
           />
         </div>
 

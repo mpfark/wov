@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown } from 'lucide-react';
 import vitruvianMan from '@/assets/vitruvian-man.png';
+import StatPlannerDialog from '@/components/game/StatPlannerDialog';
 
 interface Props {
   character: Character;
@@ -46,6 +47,7 @@ interface Props {
   actionBindings?: Record<string, string[]>;
   onAllocateStat?: (stat: string) => void;
   onFullRespec?: () => void;
+  onBatchAllocateStats?: (allocations: Record<string, number>) => void;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -325,11 +327,12 @@ export default function CharacterPanel({
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
-  actionBindings, onAllocateStat, onFullRespec,
+  actionBindings, onAllocateStat, onFullRespec, onBatchAllocateStats,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const [pendingStat, setPendingStat] = useState<string | null>(null);
   const [showRespecConfirm, setShowRespecConfirm] = useState(false);
+  const [statPlannerOpen, setStatPlannerOpen] = useState(false);
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
@@ -458,6 +461,14 @@ export default function CharacterPanel({
                   <div className="text-[10px] font-display text-center py-0.5 bg-primary/10 rounded border border-primary/20 flex justify-center gap-3 items-center">
                     {character.unspent_stat_points > 0 && (
                       <span className="text-primary">{character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''}</span>
+                    )}
+                    {character.unspent_stat_points > 1 && onBatchAllocateStats && (
+                      <button
+                        onClick={() => setStatPlannerOpen(true)}
+                        className="text-chart-2 hover:text-chart-2/80 underline underline-offset-2 transition-colors"
+                      >
+                        Plan Stats
+                      </button>
                     )}
                     {(character.respec_points || 0) > 0 && onFullRespec && (
                       <button
@@ -833,6 +844,16 @@ export default function CharacterPanel({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {onBatchAllocateStats && (
+        <StatPlannerDialog
+          open={statPlannerOpen}
+          onOpenChange={setStatPlannerOpen}
+          character={character}
+          equipmentBonuses={equipmentBonuses}
+          onCommit={onBatchAllocateStats}
+        />
+      )}
     </TooltipProvider>
   );
 }
