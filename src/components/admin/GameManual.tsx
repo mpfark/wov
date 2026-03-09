@@ -212,7 +212,7 @@ export default function GameManual() {
                 <CardContent className="p-3">
                   <p className="text-xs font-display text-chart-5 mb-1">📝 Reading the Simulation</p>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p><strong className="text-foreground">HP/t, CP/t, MP/t</strong> — Regen per tick (HP every 15s, CP/MP continuous).</p>
+                    <p><strong className="text-foreground">HP/t, CP/t, MP/t</strong> — Regen per tick (HP & CP every 6s, MP every 2s).</p>
                     <p><strong className="text-foreground">Hit+</strong> — Bonus to attack rolls from INT. <strong className="text-foreground">Crit+</strong> — Extra crit range from DEX.</p>
                     <p><strong className="text-foreground">DmgF</strong> — Minimum damage floor from STR. <strong className="text-foreground">Aware%</strong> — Chance to reduce incoming damage by 25% from WIS.</p>
                     <p className="text-muted-foreground/70">All values assume Human race, zero manual stat points, and no equipment. Actual characters will vary based on race choice, stat allocation, and gear.</p>
