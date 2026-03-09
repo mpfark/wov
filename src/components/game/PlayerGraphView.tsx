@@ -115,18 +115,25 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
 
     const SPACING = 120;
     const PADDING = 70;
-    const vals = [...positions.values()];
-    const minX = Math.min(...vals.map(p => p.x));
-    const maxX = Math.max(...vals.map(p => p.x));
-    const minY = Math.min(...vals.map(p => p.y));
-    const maxY = Math.max(...vals.map(p => p.y));
+
+    // Only use primary nodes (current + direct neighbors) to determine SVG size
+    // so ghost nodes don't cause the map to resize
+    const primaryIds = new Set([currentNodeId, ...neighbors.map(n => n.id)]);
+    const primaryVals = [...positions.entries()].filter(([id]) => primaryIds.has(id)).map(([, p]) => p);
+    const sizeVals = primaryVals.length > 0 ? primaryVals : [...positions.values()];
+
+    const minX = Math.min(...sizeVals.map(p => p.x));
+    const maxX = Math.max(...sizeVals.map(p => p.x));
+    const minY = Math.min(...sizeVals.map(p => p.y));
+    const maxY = Math.max(...sizeVals.map(p => p.y));
 
     // Always ensure at least 1 unit extent in each direction from center so layout is stable
     const maxExtentX = Math.max(1, Math.abs(minX), Math.abs(maxX));
     const maxExtentY = Math.max(1, Math.abs(minY), Math.abs(maxY));
 
-    const totalW = maxExtentX * 2 * SPACING + PADDING * 2;
-    const totalH = maxExtentY * 2 * SPACING + PADDING * 2;
+    // Add 1 extra unit of extent to accommodate ghost nodes without resizing
+    const totalW = (maxExtentX + 1) * 2 * SPACING + PADDING * 2;
+    const totalH = (maxExtentY + 1) * 2 * SPACING + PADDING * 2;
     const centerPx = totalW / 2;
     const centerPy = totalH / 2;
 
