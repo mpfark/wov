@@ -593,10 +593,11 @@ export default function CharacterPanel({
                   const foodBuffActive = foodBuff && now < foodBuff.expiresAt;
                   const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
                   let effectiveHpRegen = hpRegen;
-                  let regenMultiplier = 1;
-                  if (isAtInn) regenMultiplier = 3;
-                  else if (regenBuffActive) regenMultiplier = regenBuff!.multiplier;
-                  effectiveHpRegen = Math.round(hpRegen * regenMultiplier + (foodBuffActive ? foodBuff!.flatRegen : 0) + (partyRegenActive ? partyRegenBuff!.healPerTick : 0));
+                  const potionBonus = regenBuffActive ? 0.5 : 0;
+                  const innBonus = isAtInn ? 1 : 0;
+                  const milestoneBonus = character.level >= 35 ? 0.5 : 0;
+                  const regenMultiplier = 1 + potionBonus + milestoneBonus + innBonus;
+                  effectiveHpRegen = Math.max(Math.floor((hpRegen + (foodBuffActive ? foodBuff!.flatRegen : 0)) * regenMultiplier + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
                   const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive;
 
                   const combat = CLASS_COMBAT[character.class];
