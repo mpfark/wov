@@ -187,7 +187,9 @@ export default function NodeView({
                               className={`h-full rounded-full transition-all duration-200`}
                               style={{
                                 width: `${hpPct}%`,
-                                backgroundColor: hasIgniteStacks
+                                backgroundColor: isBleeding
+                                  ? 'hsl(var(--dot-bleed))'
+                                  : hasIgniteStacks
                                   ? 'hsl(var(--dwarvish))'
                                   : hasPoisonStacks
                                   ? 'hsl(var(--elvish))'
