@@ -15,6 +15,7 @@ interface Props {
   partyMembers?: PartyMember[];
   myCharacterId?: string;
   areas?: Area[];
+  characterId?: string;
 }
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
