@@ -799,12 +799,46 @@ export default function GameManual() {
               <div className="mt-3 space-y-2">
                 <p className="text-xs font-display text-primary">Key Ability Formulas</p>
                 <div className="space-y-1 text-xs text-muted-foreground">
-                  <p><strong className="text-foreground">🛡️✨ Force Shield (Wizard T1, 15 CP):</strong> Shield HP = <code className="text-primary">INT_mod + floor(level × 0.5)</code>, Duration = <code className="text-primary">min(15s, 8s + INT_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">📯 Battle Cry (Warrior T2, 25 CP):</strong> AC Bonus = <code className="text-primary">max(3, STR_mod + 2)</code>, Duration = <code className="text-primary">min(25s, 15s + STR_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🛡️💚 Divine Aegis (Healer T4, 60 CP):</strong> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">min(18s, 10s + WIS_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🩸 Rend (Warrior T3, 40 CP):</strong> Bleed = <code className="text-primary">floor(STR_mod × 1.5) + 2</code> per 3s tick, Duration = <code className="text-primary">min(30s, 20s + STR_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🔥🔥 Ignite (Wizard T3, 40 CP):</strong> Burn = <code className="text-primary">floor(INT_mod × 0.7)</code> per stack per 3s tick (max 5 stacks), 40% apply chance</p>
-                  <p className="ml-4 text-[10px]">All modifiers include equipment bonuses. modifier = floor((stat − 10) / 2). INT hit bonus capped at +3.</p>
+                  <p className="text-[10px] font-semibold text-primary/70 mt-1">— Universal —</p>
+                  <p><strong className="text-foreground">🎯 Focus Strike (T0, 10 CP):</strong> Bonus Dmg = <code className="text-primary">max(3, floor(avg_base_mod × 2) + floor(level / 2))</code> on next hit (base stats only, no gear)</p>
+
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Warrior —</p>
+                  <p><strong className="text-foreground">💪 Second Wind (T1, 15 CP):</strong> Heal = <code className="text-primary">max(3, CON_mod × 3 + level)</code></p>
+                  <p><strong className="text-foreground">📯 Battle Cry (T2, 25 CP):</strong> AC Bonus = <code className="text-primary">max(3, STR_mod + 2)</code>, Duration = <code className="text-primary">min(25s, 15s + STR_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🩸 Rend (T3, 40 CP):</strong> Bleed = <code className="text-primary">floor(STR_mod × 1.5) + 2</code> per 3s tick, Duration = <code className="text-primary">min(30s, 20s + STR_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🔨 Sunder Armor (T4, 60 CP):</strong> AC Reduction = <code className="text-primary">max(2, STR_mod)</code>, Duration = <code className="text-primary">min(20s, 12s + STR_mod × 1s)</code></p>
+
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Wizard —</p>
+                  <p><strong className="text-foreground">🛡️✨ Force Shield (T1, 15 CP):</strong> Shield HP = <code className="text-primary">INT_mod + floor(level × 0.5)</code>, Duration = <code className="text-primary">min(15s, 8s + INT_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">✨ Arcane Surge (T2, 25 CP):</strong> +50% spell damage, Duration = <code className="text-primary">min(25s, 15s + INT_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🔥🔥 Ignite (T3, 40 CP):</strong> Burn = <code className="text-primary">floor(INT_mod × 0.7)</code> per stack per 3s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(45s, 30s + INT_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">💥 Conflagrate (T4, 60 CP):</strong> Dmg = <code className="text-primary">(1d8 + INT_mod) × (1 + 0.5 × burn_stacks)</code>, consumes all burn stacks</p>
+
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Ranger —</p>
+                  <p><strong className="text-foreground">🦅 Eagle Eye (T1, 15 CP):</strong> Crit Range widened by <code className="text-primary">min(DEX_mod, 5)</code> for 30s</p>
+                  <p><strong className="text-foreground">🏹🏹 Barrage (T2, 25 CP):</strong> Fire <code className="text-primary">DEX_mod ≥ 3 ? 3 : 2</code> arrows at 70% damage each</p>
+                  <p><strong className="text-foreground">🌿 Nature's Snare (T3, 40 CP):</strong> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🦘 Disengage (T4, 60 CP):</strong> 100% dodge for <code className="text-primary">min(8s, 5s + DEX_mod × 0.5s)</code>, next hit +50% damage</p>
+
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Rogue —</p>
+                  <p><strong className="text-foreground">🌑 Shadowstep (T1, 15 CP):</strong> Stealth (2× next hit, dodge while fleeing), Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🧪 Envenom (T2, 25 CP):</strong> Poison = <code className="text-primary">floor(DEX_mod × 1.2)</code> per stack per 3s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(30s, 20s + DEX_mod × 1s)</code> (buff), stacks last 25s</p>
+                  <p><strong className="text-foreground">🔪 Eviscerate (T3, 40 CP):</strong> Dmg = <code className="text-primary">(1d6 + DEX_mod) × (1 + 0.5 × poison_stacks)</code>, consumes all poison stacks</p>
+                  <p><strong className="text-foreground">🌫️ Cloak of Shadows (T4, 60 CP):</strong> 50% dodge chance, Duration = <code className="text-primary">min(15s, 10s + DEX_mod × 0.5s)</code></p>
+
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Healer —</p>
+                  <p><strong className="text-foreground">💚 Heal (T1, 15 CP):</strong> Restore = <code className="text-primary">max(3, WIS_mod × 3 + level)</code></p>
+                  <p><strong className="text-foreground">💉 Transfer Health (T2, 25 CP):</strong> Sacrifice own HP to heal ally = <code className="text-primary">WIS_mod × 3 + level</code> (capped by own HP − 1)</p>
+                  <p><strong className="text-foreground">✨💚 Purifying Light (T3, 40 CP):</strong> Party heal = <code className="text-primary">max(1, WIS_mod + 2)</code> per 3s tick, Duration = <code className="text-primary">min(25s, 15s + WIS_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🛡️💚 Divine Aegis (T4, 60 CP):</strong> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">min(18s, 10s + WIS_mod × 1s)</code></p>
+
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Bard —</p>
+                  <p><strong className="text-foreground">🎶 Inspire (T1, 15 CP):</strong> 2× HP & CP regen for 90s</p>
+                  <p><strong className="text-foreground">🎵💢 Dissonance (T2, 25 CP):</strong> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🎶✨ Crescendo (T3, 40 CP):</strong> Party heal = <code className="text-primary">max(1, CHA_mod + 2)</code> per 3s tick, Duration = <code className="text-primary">min(25s, 15s + CHA_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🎵💥 Grand Finale (T4, 60 CP):</strong> Dmg = <code className="text-primary">max(8, CHA_mod × 4 + floor(level × 1.5)) + 1d(CHA_mod × 2)</code></p>
+
+                  <p className="ml-4 text-[10px] mt-2">All modifiers include equipment bonuses unless noted. modifier = floor((stat − 10) / 2). INT hit bonus capped at +3. Lv 39+ milestone: all CP costs −10%.</p>
                 </div>
               </div>
             </AccordionContent>
