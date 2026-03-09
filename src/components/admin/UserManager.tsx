@@ -625,7 +625,7 @@ export default function UserManager({ isValar }: Props) {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('items').select('id, name, rarity').order('name'),
+      supabase.from('items').select('id, name, rarity, level, slot').order('name'),
       supabase.from('nodes').select('id, name, region_id').order('name'),
       supabase.from('regions').select('id, name'),
     ]).then(([itemsRes, nodesRes, regionsRes]) => {
