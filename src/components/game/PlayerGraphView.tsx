@@ -66,8 +66,31 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     if (!currentNode) return new Map<string, { x: number; y: number }>();
     // Use a virtual node with only visible connections for layout
     const virtualNode = { ...currentNode, connections: visibleConnections };
-    return layoutFromCenter(virtualNode, neighbors);
-  }, [currentNode, visibleConnections, neighbors]);
+    const basePositions = layoutFromCenter(virtualNode, neighbors);
+
+    // Place 2nd-degree visited nodes beyond their parent neighbor
+    for (const secNode of visitedSecondDegree) {
+      // Find which neighbor connects to this node
+      for (const neighbor of neighbors) {
+        const conn = neighbor.connections.find(c => c.node_id === secNode.id && !c.hidden);
+        if (!conn) continue;
+        const neighborPos = basePositions.get(neighbor.id);
+        if (!neighborPos) continue;
+        const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+        let nx = neighborPos.x + offset[0];
+        let ny = neighborPos.y + offset[1];
+        // Avoid collisions
+        while ([...basePositions.values()].some(p => p.x === nx && p.y === ny)) {
+          nx += offset[0] || 1;
+          ny += offset[1] || 1;
+        }
+        basePositions.set(secNode.id, { x: nx, y: ny });
+        break;
+      }
+    }
+
+    return basePositions;
+  }, [currentNode, visibleConnections, neighbors, visitedSecondDegree]);
 
   const { nodePositions, svgWidth, svgHeight, SPACING } = useMemo(() => {
     if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250, SPACING: 120 };
