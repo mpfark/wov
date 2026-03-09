@@ -218,24 +218,54 @@ export function useActions(params: UseActionsParams) {
     const xpForNext = getXpForLevel(p.character.level);
     if (newXp >= xpForNext) {
       const newLevel = p.character.level + 1;
-      const newMaxCp = getMaxCp(newLevel, p.character.int, p.character.wis, p.character.cha);
-      const oldMaxCp = p.character.max_cp ?? 60;
-      const newMaxMp = getMaxMp(newLevel, p.character.dex);
-      const oldMaxMp = p.character.max_mp ?? 100;
-      // Recalculate max_hp from formula to account for CON changes from class bonuses
-      const newLevelBonuses = CLASS_LEVEL_BONUSES[p.character.class] || {};
-      const conBonusThisLevel = (newLevel % 3 === 0 && newLevelBonuses.con) ? newLevelBonuses.con : 0;
-      const newCon = p.character.con + conBonusThisLevel;
-      const newMaxHp = getMaxHp(p.character.class, newCon, newLevel);
       const levelUpUpdates: Partial<Character> = {
-        xp: newXp - xpForNext, level: newLevel, max_hp: newMaxHp,
-        hp: newMaxHp, gold: newGold,
-        max_cp: newMaxCp, cp: Math.min((p.character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
-        max_mp: newMaxMp, mp: Math.min((p.character.mp ?? 100) + (newMaxMp - oldMaxMp), newMaxMp),
+        xp: newXp - xpForNext, level: newLevel, gold: newGold,
         unspent_stat_points: (p.character.unspent_stat_points || 0) + 1,
       };
+
       p.addLog(`🎉 Level Up! You are now level ${newLevel}!`);
       p.addLog(`📊 You gained 1 stat point to allocate!`);
+
+      if ([10, 20, 30, 40].includes(newLevel)) {
+        levelUpUpdates.respec_points = (p.character.respec_points || 0) + 1;
+        p.addLog(`🔄 You earned a respec point! You can reallocate a stat point.`);
+      }
+
+      // Apply class stat bonuses every 3 levels
+      if (newLevel % 3 === 0) {
+        const bonuses = CLASS_LEVEL_BONUSES[p.character.class] || {};
+        const bonusNames: string[] = [];
+        for (const [stat, amount] of Object.entries(bonuses)) {
+          const currentVal = (levelUpUpdates as any)[stat] ?? (p.character as any)[stat] ?? 10;
+          (levelUpUpdates as any)[stat] = currentVal + amount;
+          bonusNames.push(`+${amount} ${stat.toUpperCase()}`);
+        }
+        if (bonusNames.length > 0) {
+          p.addLog(`📈 ${CLASS_LABELS[p.character.class] || p.character.class} bonus: ${bonusNames.join(', ')}!`);
+        }
+      }
+
+      // Recalculate derived stats using potentially updated values
+      const finalCon = (levelUpUpdates as any).con ?? p.character.con;
+      const newMaxHp = getMaxHp(p.character.class, finalCon, newLevel);
+      levelUpUpdates.max_hp = newMaxHp;
+      levelUpUpdates.hp = newMaxHp;
+
+      const finalInt = (levelUpUpdates as any).int ?? p.character.int;
+      const finalWis = (levelUpUpdates as any).wis ?? p.character.wis;
+      const finalCha = (levelUpUpdates as any).cha ?? p.character.cha;
+      const finalDex = (levelUpUpdates as any).dex ?? p.character.dex;
+
+      const newMaxCp = getMaxCp(newLevel, finalInt, finalWis, finalCha);
+      const oldMaxCp = p.character.max_cp ?? 60;
+      levelUpUpdates.max_cp = newMaxCp;
+      levelUpUpdates.cp = Math.min((p.character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp);
+
+      const newMaxMp = getMaxMp(newLevel, finalDex);
+      const oldMaxMp = p.character.max_mp ?? 100;
+      levelUpUpdates.max_mp = newMaxMp;
+      levelUpUpdates.mp = Math.min((p.character.mp ?? 100) + (newMaxMp - oldMaxMp), newMaxMp);
+
       await p.updateCharacter(levelUpUpdates);
     } else {
       await p.updateCharacter({ xp: newXp, gold: newGold });
