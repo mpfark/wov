@@ -639,7 +639,7 @@ export default function CharacterPanel({
 
                   const poolRows: DerivedRow[] = [
                     { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2)}${absorbActive ? ` (+${absorbBuff!.shieldHp})` : ''}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} HP gear + ${Math.floor((equipmentBonuses.con || 0) / 2)} from CON gear${absorbActive ? ` + ${absorbBuff!.shieldHp} Force Shield` : ''}`, buffed: !!absorbActive, buffColor: 'text-primary' },
-                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen} × ${regenMultiplier}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 15s)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
+                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen} × ${regenMultiplier}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 6s, ×0.4 scaling)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
                      { label: 'Max CP', value: `${maxCp}`, tip: `30 + (level-1)×3 + (INT_mod + WIS_mod)×3` },
                      (() => {
                        const cpMultiplier = 1 + (regenBuffActive ? 0.5 : 0) + (character.level >= 35 ? 0.5 : 0) + (isAtInn ? 1 : 0);

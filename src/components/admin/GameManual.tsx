@@ -212,7 +212,7 @@ export default function GameManual() {
                 <CardContent className="p-3">
                   <p className="text-xs font-display text-chart-5 mb-1">📝 Reading the Simulation</p>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p><strong className="text-foreground">HP/t, CP/t, MP/t</strong> — Regen per tick (HP every 15s, CP/MP continuous).</p>
+                    <p><strong className="text-foreground">HP/t, CP/t, MP/t</strong> — Regen per tick (HP & CP every 6s, MP every 2s).</p>
                     <p><strong className="text-foreground">Hit+</strong> — Bonus to attack rolls from INT. <strong className="text-foreground">Crit+</strong> — Extra crit range from DEX.</p>
                     <p><strong className="text-foreground">DmgF</strong> — Minimum damage floor from STR. <strong className="text-foreground">Aware%</strong> — Chance to reduce incoming damage by 25% from WIS.</p>
                     <p className="text-muted-foreground/70">All values assume Human race, zero manual stat points, and no equipment. Actual characters will vary based on race choice, stat allocation, and gear.</p>
@@ -415,9 +415,9 @@ export default function GameManual() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
                 <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
-                <p><strong className="text-foreground">Passive HP Regen</strong> (every 15s) = 1 + floor((CON − 10) / 4) + gear bonuses</p>
+                <p><strong className="text-foreground">Passive HP Regen</strong> (every 6s) = (1 + floor((CON − 10) / 4) + gear bonuses) × 0.4</p>
                 <p className="text-amber-400 mt-1">⚔️ <strong>In Combat:</strong> Regen is reduced to 10% of its normal value.</p>
-                <p className="mt-1">Example: CON 14 → regen = 1 + floor(4/4) = <code className="text-primary">{getBaseRegen(14)}</code>/tick</p>
+                <p className="mt-1">Example: CON 14 → base regen = {getBaseRegen(14)}, per tick = <code className="text-primary">{Math.max(1, Math.floor(getBaseRegen(14) * 0.4))}</code></p>
               </div>
               <Table>
                 <TableHeader>
