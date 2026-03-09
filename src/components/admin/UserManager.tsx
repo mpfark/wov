@@ -641,8 +641,19 @@ export default function UserManager({ isValar }: Props) {
     });
   }, []);
 
-  // Auto-select first character when user changes
+  // Auto-select first character when user changes (not on data refresh)
+  const prevSelectedUserIdRef = useRef<string | null>(null);
   useEffect(() => {
+    if (selectedUserId === prevSelectedUserIdRef.current) {
+      // User didn't change — just a data refresh. Preserve current char selection.
+      // But verify the selected char still exists
+      const user = users.find(u => u.id === selectedUserId);
+      if (selectedCharId && user && !user.characters.some(c => c.id === selectedCharId)) {
+        setSelectedCharId(user.characters[0]?.id || null);
+      }
+      return;
+    }
+    prevSelectedUserIdRef.current = selectedUserId;
     const user = users.find(u => u.id === selectedUserId);
     if (user?.characters?.length) {
       setSelectedCharId(user.characters[0].id);
