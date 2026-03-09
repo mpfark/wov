@@ -493,14 +493,15 @@ export default function GameManual() {
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p>CP is the resource that powers class abilities. It replaces cooldown timers — abilities cost CP to use and are disabled when you don't have enough.</p>
-                <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">60 + (level − 1) × 3 + mentalMod × 5</code></p>
-                <p className="ml-4 text-[10px]"><code>mentalMod = max(modifier(INT), modifier(WIS), modifier(CHA), 0)</code> where modifier = floor((stat − 10) / 2)</p>
-                <p className="mt-1"><strong className="text-foreground">Race Impact:</strong> Caster races like <strong>Elf</strong> (+3 WIS, +2 INT) and <strong>Half-Elf</strong> (+3 CHA, +2 WIS) start with significantly higher CP pools than tank races like <strong>Dwarf</strong> (+4 CON but −2 CHA). Choose a race whose mental stats complement your class's primary resource needs.</p>
+                <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">30 + (level − 1) × 3 + (INT_mod + WIS_mod) × 3</code></p>
+                <p className="ml-4 text-[10px]"><code>INT_mod = max(floor((INT − 10) / 2), 0)</code>, <code>WIS_mod = max(floor((WIS − 10) / 2), 0)</code></p>
+                <p className="mt-1"><strong className="text-foreground">Race Impact:</strong> Caster races like <strong>Elf</strong> (+3 WIS, +2 INT) and <strong>Half-Elf</strong> (+3 CHA, +2 WIS) start with higher CP pools than tank races like <strong>Dwarf</strong> (+4 CON but low mental stats). Investing in both INT and WIS rewards split investment over stacking a single mental stat.</p>
                 <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 6 seconds</code> + bonus from primary stat</p>
                 <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/6s for every 2 points of primary stat modifier</p>
-                <p><strong className="text-foreground">Inn Rest</strong> = Fully restores CP (alongside HP)</p>
-                <p><strong className="text-foreground">🎶 Inspire</strong> = Doubles CP regen rate (alongside HP regen) for 90 seconds</p>
+                <p><strong className="text-foreground">🏨 Inn Rest</strong> = Doubles CP regen rate (+1.0× multiplier) while resting</p>
+                <p><strong className="text-foreground">🎶 Inspire</strong> = +0.5× CP regen multiplier for 90 seconds</p>
                 <p><strong className="text-foreground">🍞 Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 5 minutes</p>
+                <p><strong className="text-foreground">💊 Regen Potion</strong> = +0.5× CP regen multiplier</p>
               </div>
 
               <div>
