@@ -42,7 +42,7 @@ export interface IgniteStack {
   maxHp: number; lastKnownHp: number;
 }
 export interface AbsorbBuff { shieldHp: number; expiresAt: number }
-export interface PartyRegenBuff { healPerTick: number; expiresAt: number }
+export interface PartyRegenBuff { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' }
 export interface SunderDebuff { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }
 export interface FocusStrikeBuff { bonusDmg: number }
 
@@ -478,6 +478,9 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── Crescendo / Purifying Light party regen ────────────────────
   useEffect(() => {
     if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
+    const isHealer = partyRegenBuff.source === 'healer';
+    const abilityLabel = isHealer ? 'Purifying Light' : 'Crescendo';
+    const abilityEmoji = isHealer ? '✨💚' : '🎶✨';
     const interval = setInterval(async () => {
       if (Date.now() >= partyRegenBuff.expiresAt) {
         setPartyRegenBuff(null); clearInterval(interval); return;
@@ -500,12 +503,12 @@ export function useGameLoop(params: UseGameLoopParams) {
           });
         }
         if (membersHere.length > 0) {
-          addLog(`🎶✨ Crescendo heals ${membersHere.length + 1} allies for ${partyRegenBuff.healPerTick} HP!`);
+          addLog(`${abilityEmoji} ${abilityLabel} heals ${membersHere.length + 1} allies for ${partyRegenBuff.healPerTick} HP!`);
         } else {
-          addLog(`🎶✨ Crescendo heals you for ${partyRegenBuff.healPerTick} HP!`);
+          addLog(`${abilityEmoji} ${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`);
         }
       } else {
-        addLog(`🎶✨ Crescendo heals you for ${partyRegenBuff.healPerTick} HP!`);
+        addLog(`${abilityEmoji} ${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`);
       }
     }, 3000);
     return () => clearInterval(interval);

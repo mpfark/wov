@@ -112,7 +112,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
-    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward,
+    incomingPartyRegenBuff,
+    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward, broadcastPartyRegenBuff,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
@@ -314,6 +315,20 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     handleAddPoisonStack, handleAddIgniteStack, handleAbsorbDamage,
     inCombatRegenRef, deathGoldRef,
   } = gameLoop;
+
+  // Apply incoming party regen buff from another party member
+  useEffect(() => {
+    if (!incomingPartyRegenBuff) return;
+    gameLoop.setPartyRegenBuff(incomingPartyRegenBuff);
+  }, [incomingPartyRegenBuff]);
+
+  // Broadcast party regen buff when caster sets it
+  const prevPartyRegenBuffRef = useRef<typeof partyRegenBuff>(null);
+  useEffect(() => {
+    if (!party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
+    prevPartyRegenBuffRef.current = partyRegenBuff;
+    broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
+  }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // effectiveAC
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;

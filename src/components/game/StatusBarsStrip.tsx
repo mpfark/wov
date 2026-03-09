@@ -5,7 +5,7 @@ import { getXpForLevel, getMaxCp, getMaxMp } from '@/lib/game-data';
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
-  Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
+  Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000, 'Purifying Light': 25_000,
 };
 
 export interface StatusBarsStripProps {
@@ -25,7 +25,7 @@ export interface StatusBarsStripProps {
   evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null;
   igniteBuff?: { expiresAt: number } | null;
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
-  partyRegenBuff?: { healPerTick: number; expiresAt: number } | null;
+  partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' } | null;
   focusStrikeBuff?: { bonusDmg: number } | null;
   stealthBuff?: { expiresAt: number } | null;
 }
@@ -112,9 +112,10 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
   }
 
   if (partyRegenActive) {
-    const dur = BUFF_DURATIONS['Crescendo'] || 25_000;
+    const isHealer = partyRegenBuff!.source === 'healer';
+    const dur = BUFF_DURATIONS[isHealer ? 'Purifying Light' : 'Crescendo'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((partyRegenBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🎶✨', label: 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/3s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ emoji: isHealer ? '✨💚' : '🎶✨', label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/3s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (focusStrikeBuff) {

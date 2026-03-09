@@ -5,7 +5,7 @@ interface PartyHpEvent {
   character_id: string;
   hp: number;
   max_hp: number;
-  source: string; // who caused the change (e.g. creature name or "regen")
+  source: string;
 }
 
 interface PartyMoveEvent {
@@ -15,40 +15,43 @@ interface PartyMoveEvent {
 }
 
 interface PartyCombatMsgEvent {
-  id: string; // unique message id to deduplicate
+  id: string;
   message: string;
   node_id: string | null;
   character_name: string | null;
 }
 
 interface PartyRewardEvent {
-  character_id: string; // the character who should refetch
+  character_id: string;
   xp: number;
   gold: number;
-  source: string; // e.g. creature name
+  source: string;
+}
+
+interface PartyRegenBuffEvent {
+  healPerTick: number;
+  expiresAt: number;
+  source: 'healer' | 'bard';
+  caster_id: string;
 }
 
 /**
- * Hybrid Broadcast channels for party-level events:
- * 1. Party member HP changes — instant HP bar updates across party
- * 2. Movement — instant map indicator updates  
- * 3. Combat log messages — instant log display before DB round-trip
- * 
- * All three use Broadcast (~50ms) with Postgres Changes as correction layer.
+ * Hybrid Broadcast channels for party-level events.
  */
 export function usePartyBroadcast(partyId: string | null, characterId: string | null) {
   const [hpOverrides, setHpOverrides] = useState<Record<string, { hp: number; max_hp: number }>>({});
   const [moveEvents, setMoveEvents] = useState<PartyMoveEvent[]>([]);
   const [broadcastLogEntries, setBroadcastLogEntries] = useState<PartyCombatMsgEvent[]>([]);
   const [rewardEvents, setRewardEvents] = useState<PartyRewardEvent[]>([]);
+  const [incomingPartyRegenBuff, setIncomingPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number; source: 'healer' | 'bard' } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Reset when party changes
   useEffect(() => {
     setHpOverrides({});
     setMoveEvents([]);
     setBroadcastLogEntries([]);
     setRewardEvents([]);
+    setIncomingPartyRegenBuff(null);
   }, [partyId]);
 
   useEffect(() => {
@@ -70,7 +73,6 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
         const data = payload.payload as PartyMoveEvent;
         if (!data?.character_id || data.character_id === characterId) return;
         setMoveEvents(prev => [...prev.slice(-20), data]);
-        // Also update HP overrides to clear stale node data
       })
       .on('broadcast', { event: 'party_combat_msg' }, (payload) => {
         const data = payload.payload as PartyCombatMsgEvent;
@@ -80,8 +82,12 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_reward' }, (payload) => {
         const data = payload.payload as PartyRewardEvent;
         if (!data?.character_id || data.character_id !== characterId) return;
-        // This character received a reward — trigger refetch
         setRewardEvents(prev => [...prev.slice(-9), data]);
+      })
+      .on('broadcast', { event: 'party_regen_buff' }, (payload) => {
+        const data = payload.payload as PartyRegenBuffEvent;
+        if (!data || data.caster_id === characterId) return;
+        setIncomingPartyRegenBuff({ healPerTick: data.healPerTick, expiresAt: data.expiresAt, source: data.source });
       })
       .subscribe();
 
@@ -123,14 +129,24 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
+  const broadcastPartyRegenBuff = useCallback((healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string) => {
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'party_regen_buff',
+      payload: { healPerTick, expiresAt, source, caster_id: casterId } satisfies PartyRegenBuffEvent,
+    });
+  }, []);
+
   return {
     hpOverrides,
     moveEvents,
     broadcastLogEntries,
     rewardEvents,
+    incomingPartyRegenBuff,
     broadcastHp,
     broadcastMove,
     broadcastCombatMsg,
     broadcastReward,
+    broadcastPartyRegenBuff,
   };
 }

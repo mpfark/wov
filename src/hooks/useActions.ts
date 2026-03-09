@@ -767,7 +767,7 @@ export function useActions(params: UseActionsParams) {
         : getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const healPerTick = Math.max(1, scaleStat + 2);
       const durationMs = Math.min(25000, 15000 + scaleStat * 1000);
-      p.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs });
+      p.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: p.character.class === 'healer' ? 'healer' : 'bard' });
       const who = p.party ? 'your party' : 'you';
       const abilityName = p.character.class === 'healer' ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
       p.addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
