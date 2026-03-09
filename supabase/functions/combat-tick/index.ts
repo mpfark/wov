@@ -15,6 +15,7 @@ import {
   getXpPenalty as xpPenalty,
   getMaxCp as calcMaxCp,
   getMaxMp as calcMaxMp,
+  getMaxHp as calcMaxHp,
   XP_RARITY_MULTIPLIER as XP_RARITY,
   CLASS_COMBAT_PROFILES,
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
