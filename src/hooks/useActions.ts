@@ -743,8 +743,8 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ally_absorb') {
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
-      const shieldHp = wisMod * 5 + p.character.level;
-      const durationMs = Math.min(20000, 12000 + wisMod * 1000);
+      const shieldHp = wisMod * 2 + Math.floor(p.character.level * 0.7);
+      const durationMs = Math.min(18000, 10000 + wisMod * 1000);
       if (targetId && targetId !== p.character.id) {
         p.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
         const targetMember = p.partyMembers.find(m => m.character_id === targetId);
