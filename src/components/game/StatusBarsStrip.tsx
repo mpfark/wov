@@ -168,11 +168,6 @@ export default function StatusBarsStrip({
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
 
-  // Regen info for tooltips
-  const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
-  const primaryVal = (character as any)[primaryStat] ?? 10;
-  const cpRegen = getCpRegenRate(primaryVal);
-  const mpRegen = getMpRegenRate(dexWithGear);
 
   return (
     <div className="space-y-1">
