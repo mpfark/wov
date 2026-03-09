@@ -419,8 +419,6 @@ export function useCombat(params: UseCombatParams) {
             const levelUpUpdates: Partial<Character> = {
               xp: newXp - xpForNext,
               level: newLevel,
-              max_hp: char.max_hp + 5,
-              hp: char.max_hp + 5,
               gold: newGold,
             };
 
