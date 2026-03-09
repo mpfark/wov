@@ -642,8 +642,14 @@ export default function CharacterPanel({
                   const poolRows: DerivedRow[] = [
                     { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2)}${absorbActive ? ` (+${absorbBuff!.shieldHp})` : ''}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} HP gear + ${Math.floor((equipmentBonuses.con || 0) / 2)} from CON gear${absorbActive ? ` + ${absorbBuff!.shieldHp} Force Shield` : ''}`, buffed: !!absorbActive, buffColor: 'text-primary' },
                     { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen} × ${regenMultiplier}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 15s)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
-                    { label: 'Max CP', value: `${maxCp}`, tip: `60 + (level-1)×3 + best mental mod×5` },
-                    { label: 'CP Regen', value: `${cpRegen}/tick`, tip: `Based on ${primaryStat.toUpperCase()} (every 6s)` },
+                     { label: 'Max CP', value: `${maxCp}`, tip: `30 + (level-1)×3 + (INT_mod + WIS_mod)×3` },
+                     (() => {
+                       const cpMultiplier = 1 + (regenBuffActive ? 0.5 : 0) + (character.level >= 35 ? 0.5 : 0) + (isAtInn ? 1 : 0);
+                       const foodCpBonus = foodBuffActive ? foodBuff!.flatRegen * 0.5 : 0;
+                       const effectiveCpRegen = Math.max(+(baseCpRegen * cpMultiplier + foodCpBonus).toFixed(1), 0.1);
+                       const cpRegenBuffed = cpMultiplier > 1 || foodBuffActive;
+                       return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen} × ${cpMultiplier}${foodBuffActive ? ` + ${foodCpBonus} food` : ''} (every 6s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
+                     })(),
                     { label: 'Max Stamina', value: `${maxMp}`, tip: `100 + DEX mod×10 + (level-1)×2` },
                     { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 6s)` },
                   ];
