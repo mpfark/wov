@@ -644,7 +644,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">+1 crit range per 2 DEX modifier</code></p>
                 <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">WIS_mod × 3%</code> chance to reduce incoming creature damage by 25% per hit</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod vs player AC</p>
-                <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level/2)) + STR mod</p>
+                <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
                 <p><strong className="text-foreground">Durability:</strong> Each hit has a 25% chance to degrade 1 random equipped item by 1 durability</p>
