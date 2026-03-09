@@ -368,6 +368,9 @@ Deno.serve(async (req) => {
         }
 
         let dmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
+        // Level-gap bonus: creatures deal more damage when they out-level the target
+        const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
+        if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
         // WIS awareness
         const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0));
