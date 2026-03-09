@@ -211,7 +211,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const effectiveMaxMp = getMaxMp(level, dexWithGear);
       if (mp >= effectiveMaxMp) return;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
-      const innBonus = node?.is_inn ? 2 : 0;
+      const innBonus = node?.is_inn ? 1 : 0;
       const regenAmount = getMpRegenRate(dexWithGear) * (1 + innBonus);
       const newMp = Math.min(mp + regenAmount, effectiveMaxMp);
       if (newMp > mp) {
