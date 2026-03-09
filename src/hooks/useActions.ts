@@ -638,11 +638,11 @@ export function useActions(params: UseActionsParams) {
       p.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'battle_cry') {
-      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
-      const bonus = Math.max(2, conMod + 1);
-      const durationMs = Math.min(20000, 12000 + conMod * 1000);
+      const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
+      const bonus = Math.max(3, strMod + 2);
+      const durationMs = Math.min(25000, 15000 + strMod * 1000);
       p.setAcBuff({ bonus, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Shield Wall! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} Battle Cry! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'dot_debuff') {
       if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
       const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
