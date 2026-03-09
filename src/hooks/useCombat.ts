@@ -8,7 +8,7 @@ import {
   rollCreatureDamage, calculateKillRewards,
   AttackContext,
 } from '@/lib/combat-math';
-import { getMaxCp } from '@/lib/game-data';
+import { getMaxCp, getMaxHp } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
