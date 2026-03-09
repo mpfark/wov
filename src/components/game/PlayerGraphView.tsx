@@ -381,32 +381,17 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   ◆
                 </text>
               )}
-              {/* Node name */}
-              {(() => {
+              {/* Area type emoji for non-ghost nodes */}
+              {!isVisitedGhost && (() => {
                 const nodeArea = node.area_id ? areas.find(a => a.id === node.area_id) : undefined;
-                let displayName = getNodeDisplayName(node, nodeArea);
-                // For unnamed nodes, show the travel direction instead
-                if (displayName === 'Unknown Location' && !isCurrent) {
-                  const conn = currentNode.connections.find(c => c.node_id === node.id);
-                  if (conn) {
-                    const dirNames: Record<string, string> = {
-                      N: 'North', S: 'South', E: 'East', W: 'West',
-                      NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest',
-                    };
-                    displayName = dirNames[conn.direction] || conn.direction;
-                  }
-                }
-                const truncated = displayName.length > 14 ? displayName.slice(0, 13) + '…' : displayName;
+                if (!nodeArea) return null;
                 return (
                   <text
-                    x={pos.px} y={pos.py + (isVisitedGhost ? 3 : 4)}
+                    x={pos.px} y={pos.py + 4}
                     textAnchor="middle"
-                    className={`font-display pointer-events-none select-none ${
-                      isVisitedGhost ? 'text-[8px] fill-muted-foreground/50' :
-                      isCurrent ? 'text-[10px] fill-primary' : isHovered ? 'text-[10px] fill-primary/80' : 'text-[10px] fill-foreground'
-                    }`}
+                    className="text-[12px] pointer-events-none select-none"
                   >
-                    {truncated}
+                    {nodeArea.area_type === 'forest' ? '🌲' : nodeArea.area_type === 'town' ? '🏘️' : nodeArea.area_type === 'cave' ? '⛏️' : nodeArea.area_type === 'ruins' ? '🏛️' : nodeArea.area_type === 'plains' ? '🌾' : nodeArea.area_type === 'mountain' ? '⛰️' : nodeArea.area_type === 'swamp' ? '🌿' : nodeArea.area_type === 'desert' ? '🏜️' : nodeArea.area_type === 'coast' ? '🌊' : nodeArea.area_type === 'dungeon' ? '💀' : ''}
                   </text>
                 );
               })()}
