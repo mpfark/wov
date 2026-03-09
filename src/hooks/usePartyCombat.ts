@@ -127,9 +127,22 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       });
     }
 
-    // Display events via local log
+    // Display events via local log — convert own character name to "You"
+    const myName = ext.current.character.name;
     for (const ev of data.events) {
-      ext.current.addLocalLog(ev.message);
+      let msg = ev.message;
+      // Convert own character name references to "You" / "Your" for immersion
+      if (ev.character_id === ext.current.character.id || msg.includes(myName)) {
+        // Replace "CharName's" → "Your" (possessive, must come before name replacement)
+        msg = msg.replace(new RegExp(`${myName}'s`, 'g'), 'Your');
+        // Replace "CharName " at start or after emoji prefix → "You "
+        msg = msg.replace(new RegExp(`(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*(?:CRITICAL!\\s*)?))${myName} `, 'u'), '$1You ');
+        // Replace remaining " CharName " mid-sentence
+        msg = msg.replace(new RegExp(` ${myName} `, 'g'), ' you ');
+        msg = msg.replace(new RegExp(` ${myName}\\.`, 'g'), ' you.');
+        msg = msg.replace(new RegExp(` ${myName}!`, 'g'), ' you!');
+      }
+      ext.current.addLocalLog(msg);
     }
 
     // Update own character state from server-authoritative data
