@@ -135,39 +135,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
   const baseRegen = getBaseRegen(character.con + (equipmentBonuses.con || 0));
 
-  // ── HP Regen (every 15s) ───────────────────────────────────────
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const { hp, max_hp, current_node_id, con } = regenCharRef.current;
-      const gearHpBonus = equipmentBonusesRef.current.hp || 0;
-      const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
-      const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
-      if (hp < effectiveMaxHp && hp > 0) {
-        const buff = regenBuffRef.current;
-        const potionBonus = Date.now() < buff.expiresAt ? 0.5 : 0; // +0.5 from potion
-        const node = current_node_id ? getNodeRef.current(current_node_id) : null;
-        const innBonus = node?.is_inn ? 1 : 0; // +1 from inn
-        const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
-        const conRegen = getBaseRegen(conWithGear);
-        const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
-        const food = foodBuffRef.current;
-        const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
-        const milestoneBonus = regenCharRef.current.level >= 35 ? 0.5 : 0; // +0.5 from milestone
-        const totalMult = 1 + potionBonus + milestoneBonus + innBonus; // additive: max 1+0.5+0.5+1 = 3x
-        const combatMult = inCombatRegenRef.current ? 0.1 : 1;
-        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * combatMult), 1);
-        const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
-        if (newHp !== hp) {
-          updateCharRegenRef.current({ hp: newHp });
-          setRegenTick(true);
-          setTimeout(() => setRegenTick(false), 1200);
-        }
-      }
-    }, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // ── CP Regen (every 6s) ────────────────────────────────────────
+  // ── HP + CP Regen (every 6s, unified tick) ─────────────────────
   const cpCharRef = useRef({ cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha });
   const cpStatRef = useRef(character);
   useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.class, character.level, character.int, character.wis, character.cha]);
@@ -175,26 +143,62 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      const updates: Partial<Character> = {};
+
+      // ── HP Regen ──
+      const { hp, max_hp, current_node_id, con } = regenCharRef.current;
+      const gearHpBonus = equipmentBonusesRef.current.hp || 0;
+      const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
+      const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
+      if (hp < effectiveMaxHp && hp > 0) {
+        const buff = regenBuffRef.current;
+        const potionBonus = Date.now() < buff.expiresAt ? 0.5 : 0;
+        const node = current_node_id ? getNodeRef.current(current_node_id) : null;
+        const innBonus = node?.is_inn ? 1 : 0;
+        const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
+        const conRegen = getBaseRegen(conWithGear);
+        const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
+        const food = foodBuffRef.current;
+        const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
+        const milestoneBonus = regenCharRef.current.level >= 35 ? 0.5 : 0;
+        const totalMult = 1 + potionBonus + milestoneBonus + innBonus;
+        const combatMult = inCombatRegenRef.current ? 0.1 : 1;
+        // Scaled by 0.4 to compensate for 6s tick (was 15s, 2.5x more ticks)
+        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * combatMult * 0.4), 1);
+        const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
+        if (newHp !== hp) {
+          updates.hp = newHp;
+          setRegenTick(true);
+          setTimeout(() => setRegenTick(false), 1200);
+        }
+      }
+
+      // ── CP Regen ──
       const { cp, class: charClass, level, int, wis, cha } = cpCharRef.current;
       const eqB = equipmentBonusesRef.current;
       const gearAwareMaxCp = getMaxCp(level, int + (eqB.int || 0), wis + (eqB.wis || 0), cha + (eqB.cha || 0));
-      if (cp >= gearAwareMaxCp) return;
-      const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
-      const primaryVal = (cpStatRef.current as any)[primaryStat] ?? 10;
-      const bRegen = getCpRegenRate(primaryVal);
-      const nodeId = regenCharRef.current.current_node_id;
-      const node = nodeId ? getNodeRef.current(nodeId) : null;
-      const innBonus = node?.is_inn ? 1 : 0;
-      const buff = regenBuffRef.current;
-      const inspireBonus = Date.now() < buff.expiresAt ? 0.5 : 0;
-      const food = foodBuffRef.current;
-      const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-      const totalMult = 1 + inspireBonus + innBonus;
-      const combatMult = inCombatRegenRef.current ? 0.1 : 1;
-      const regenAmount = (bRegen + foodCpRegen) * totalMult * combatMult;
-      const newCp = Math.min(Math.floor(cp + regenAmount), gearAwareMaxCp);
-      if (newCp > cp) {
-        updateCharRegenRef.current({ cp: newCp });
+      if (cp < gearAwareMaxCp) {
+        const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
+        const primaryVal = (cpStatRef.current as any)[primaryStat] ?? 10;
+        const bRegen = getCpRegenRate(primaryVal);
+        const nodeId = regenCharRef.current.current_node_id;
+        const node = nodeId ? getNodeRef.current(nodeId) : null;
+        const innBonus = node?.is_inn ? 1 : 0;
+        const buff = regenBuffRef.current;
+        const inspireBonus = Date.now() < buff.expiresAt ? 0.5 : 0;
+        const food = foodBuffRef.current;
+        const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
+        const totalMult = 1 + inspireBonus + innBonus;
+        const combatMult = inCombatRegenRef.current ? 0.1 : 1;
+        const regenAmount = (bRegen + foodCpRegen) * totalMult * combatMult;
+        const newCp = Math.min(Math.floor(cp + regenAmount), gearAwareMaxCp);
+        if (newCp > cp) {
+          updates.cp = newCp;
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updateCharRegenRef.current(updates);
       }
     }, 6000);
     return () => clearInterval(interval);
