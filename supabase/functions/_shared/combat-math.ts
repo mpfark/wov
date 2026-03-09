@@ -113,15 +113,11 @@ export function getXpPenalty(playerLevel: number, creatureLevel: number): number
 
 // ── CP / MP formulas ─────────────────────────────────────────────
 
-/** Max Concentration Points */
-export function getMaxCp(level: number, int: number = 10, wis: number = 10, cha: number = 10): number {
-  const mentalMod = Math.max(
-    getStatModifier(int),
-    getStatModifier(wis),
-    getStatModifier(cha),
-    0
-  );
-  return 60 + (level - 1) * 3 + mentalMod * 5;
+/** Max Concentration Points — scales with INT + WIS */
+export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
+  const intMod = Math.max(getStatModifier(int), 0);
+  const wisMod = Math.max(getStatModifier(wis), 0);
+  return 30 + (level - 1) * 3 + (intMod + wisMod) * 3;
 }
 
 /** Max Movement Points (stamina) */
