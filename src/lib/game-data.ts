@@ -87,6 +87,13 @@ export function calculateHP(charClass: string, con: number) {
   return baseHP + conMod;
 }
 
+/** Full max HP formula: base class HP + CON modifier + (level-1)*5 */
+export function getMaxHp(charClass: string, con: number, level: number): number {
+  const baseHP = CLASS_BASE_HP[charClass] || 18;
+  const conMod = Math.floor((con - 10) / 2);
+  return baseHP + conMod + (level - 1) * 5;
+}
+
 export function calculateAC(charClass: string, dex: number) {
   const baseAC = CLASS_BASE_AC[charClass] || 10;
   const dexMod = Math.floor((dex - 10) / 2);

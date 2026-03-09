@@ -222,9 +222,14 @@ export function useActions(params: UseActionsParams) {
       const oldMaxCp = p.character.max_cp ?? 60;
       const newMaxMp = getMaxMp(newLevel, p.character.dex);
       const oldMaxMp = p.character.max_mp ?? 100;
+      // Recalculate max_hp from formula to account for CON changes from class bonuses
+      const newLevelBonuses = CLASS_LEVEL_BONUSES[p.character.class] || {};
+      const conBonusThisLevel = (newLevel % 3 === 0 && newLevelBonuses.con) ? newLevelBonuses.con : 0;
+      const newCon = p.character.con + conBonusThisLevel;
+      const newMaxHp = getMaxHp(p.character.class, newCon, newLevel);
       const levelUpUpdates: Partial<Character> = {
-        xp: newXp - xpForNext, level: newLevel, max_hp: p.character.max_hp + 5,
-        hp: p.character.max_hp + 5, gold: newGold,
+        xp: newXp - xpForNext, level: newLevel, max_hp: newMaxHp,
+        hp: newMaxHp, gold: newGold,
         max_cp: newMaxCp, cp: Math.min((p.character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp),
         max_mp: newMaxMp, mp: Math.min((p.character.mp ?? 100) + (newMaxMp - oldMaxMp), newMaxMp),
         unspent_stat_points: (p.character.unspent_stat_points || 0) + 1,

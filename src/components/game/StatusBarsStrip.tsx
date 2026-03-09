@@ -151,7 +151,9 @@ export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount = 0, isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
   foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
-  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0);
+  // Include both direct HP bonuses and CON-derived HP from equipment
+  const gearConMod = Math.floor((equipmentBonuses.con || 0) / 2);
+  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0) + gearConMod;
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const cp = character.cp ?? 100;
   const intWithGear = character.int + (equipmentBonuses.int || 0);
