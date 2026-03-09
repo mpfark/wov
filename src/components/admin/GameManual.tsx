@@ -795,6 +795,16 @@ export default function GameManual() {
                   </AccordionItem>
                 ))}
               </Accordion>
+
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-display text-primary">Key Ability Formulas</p>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p><strong className="text-foreground">🛡️✨ Force Shield (Wizard T1, 15 CP):</strong> Shield HP = <code className="text-primary">INT_mod + floor(level × 0.5)</code>, Duration = <code className="text-primary">min(15s, 8s + INT_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">📯 Battle Cry (Warrior T2, 25 CP):</strong> AC Bonus = <code className="text-primary">max(3, STR_mod + 2)</code>, Duration = <code className="text-primary">min(25s, 15s + STR_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🛡️💚 Divine Aegis (Healer T4, 60 CP):</strong> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">min(18s, 10s + WIS_mod × 1s)</code></p>
+                  <p className="ml-4 text-[10px]">All modifiers include equipment bonuses. modifier = floor((stat − 10) / 2)</p>
+                </div>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
