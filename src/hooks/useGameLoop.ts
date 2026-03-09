@@ -510,7 +510,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       } else {
         addLog(`${abilityEmoji} ${abilityLabel} heals you for ${partyRegenBuff.healPerTick} HP!`);
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, [partyRegenBuff, party, partyMembers, character, addLog, updateCharacter]);
 

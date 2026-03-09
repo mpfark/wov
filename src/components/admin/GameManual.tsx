@@ -830,7 +830,7 @@ export default function GameManual() {
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Healer —</p>
                   <p><strong className="text-foreground">💚 Heal (T1, 15 CP):</strong> Restore = <code className="text-primary">max(3, WIS_mod × 3 + level)</code></p>
                   <p><strong className="text-foreground">💉 Transfer Health (T2, 25 CP):</strong> Sacrifice own HP to heal ally = <code className="text-primary">WIS_mod × 3 + level</code> (capped by own HP − 1)</p>
-                  <p><strong className="text-foreground">✨💚 Purifying Light (T3, 40 CP):</strong> Party heal = <code className="text-primary">max(1, WIS_mod + 2)</code> per 3s tick, Duration = <code className="text-primary">min(25s, 15s + WIS_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">✨💚 Purifying Light (T3, 40 CP):</strong> Party heal = <code className="text-primary">max(1, WIS_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + WIS_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🛡️💚 Divine Aegis (T4, 60 CP):</strong> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">min(18s, 10s + WIS_mod × 1s)</code></p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Bard —</p>

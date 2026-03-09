@@ -680,7 +680,7 @@ export function useActions(params: UseActionsParams) {
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const dmgPerTick = Math.max(1, Math.floor(strMod * 1.5) + 2);
       const durationMs = Math.min(30000, 20000 + strMod * 1000);
-      const intervalMs = 3000;
+      const intervalMs = 2000;
       p.setDotDebuff({
         damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
         creatureId: p.activeCombatCreatureId, creatureName: creature.name,
