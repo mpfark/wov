@@ -802,7 +802,9 @@ export default function GameManual() {
                   <p><strong className="text-foreground">🛡️✨ Force Shield (Wizard T1, 15 CP):</strong> Shield HP = <code className="text-primary">INT_mod + floor(level × 0.5)</code>, Duration = <code className="text-primary">min(15s, 8s + INT_mod × 1s)</code></p>
                   <p><strong className="text-foreground">📯 Battle Cry (Warrior T2, 25 CP):</strong> AC Bonus = <code className="text-primary">max(3, STR_mod + 2)</code>, Duration = <code className="text-primary">min(25s, 15s + STR_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🛡️💚 Divine Aegis (Healer T4, 60 CP):</strong> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">min(18s, 10s + WIS_mod × 1s)</code></p>
-                  <p className="ml-4 text-[10px]">All modifiers include equipment bonuses. modifier = floor((stat − 10) / 2)</p>
+                  <p><strong className="text-foreground">🩸 Rend (Warrior T3, 40 CP):</strong> Bleed = <code className="text-primary">floor(STR_mod × 1.5) + 2</code> per 3s tick, Duration = <code className="text-primary">min(30s, 20s + STR_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🔥🔥 Ignite (Wizard T3, 40 CP):</strong> Burn = <code className="text-primary">floor(INT_mod × 0.7)</code> per stack per 3s tick (max 5 stacks), 40% apply chance</p>
+                  <p className="ml-4 text-[10px]">All modifiers include equipment bonuses. modifier = floor((stat − 10) / 2). INT hit bonus capped at +3.</p>
                 </div>
               </div>
             </AccordionContent>
