@@ -455,10 +455,7 @@ Deno.serve(async (req) => {
         if (newXp >= needed) {
           newLevel = c.level + 1;
           newXp -= needed;
-          newMaxHp = c.max_hp + 5;
           updates.level = newLevel;
-          updates.max_hp = newMaxHp;
-          updates.hp = newMaxHp; // Full heal on level up
           updates.unspent_stat_points = (c.unspent_stat_points || 0) + 1;
 
           if (newLevel % 3 === 0) {
