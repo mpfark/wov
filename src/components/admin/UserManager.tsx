@@ -581,7 +581,7 @@ export default function UserManager({ isValar }: Props) {
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [editingChar, setEditingChar] = useState<string | null>(null);
   const [charEdits, setCharEdits] = useState<CharacterEdits>({});
-  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string }[]>([]);
+  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; level: number; slot: string | null }[]>([]);
   const [giveItemId, setGiveItemId] = useState<string>('');
   const [givingItem, setGivingItem] = useState(false);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_name: string }[]>([]);
@@ -625,7 +625,7 @@ export default function UserManager({ isValar }: Props) {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('items').select('id, name, rarity').order('name'),
+      supabase.from('items').select('id, name, rarity, level, slot').order('name'),
       supabase.from('nodes').select('id, name, region_id').order('name'),
       supabase.from('regions').select('id, name'),
     ]).then(([itemsRes, nodesRes, regionsRes]) => {
@@ -960,7 +960,7 @@ export default function UserManager({ isValar }: Props) {
         </div>
 
         {/* COL 3 — Actions */}
-        <div className="w-56 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+        <div className="w-70 shrink-0 border-r border-border flex flex-col overflow-y-auto">
           {!selectedChar ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-[10px] text-muted-foreground italic">
@@ -985,6 +985,7 @@ export default function UserManager({ isValar }: Props) {
                         {allItems.map(item => (
                           <SelectItem key={item.id} value={item.id} className="text-xs">
                             <span className={rarityColor(item.rarity)}>{item.name}</span>
+                            <span className="text-muted-foreground ml-1">L{item.level}{item.slot ? ` · ${item.slot.replace('_', ' ')}` : ''}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
