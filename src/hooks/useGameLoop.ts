@@ -144,16 +144,16 @@ export function useGameLoop(params: UseGameLoopParams) {
       const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
       if (hp < effectiveMaxHp && hp > 0) {
         const buff = regenBuffRef.current;
-        const potionBonus = Date.now() < buff.expiresAt ? (buff.multiplier - 1) : 0; // +2 from potion
+        const potionBonus = Date.now() < buff.expiresAt ? 0.5 : 0; // +0.5 from potion
         const node = current_node_id ? getNodeRef.current(current_node_id) : null;
-        const innBonus = node?.is_inn ? 2 : 0; // +2 from inn
+        const innBonus = node?.is_inn ? 1 : 0; // +1 from inn
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
         const conRegen = getBaseRegen(conWithGear);
         const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
-        const milestoneBonus = regenCharRef.current.level >= 35 ? 1 : 0; // +1 from milestone
-        const totalMult = 1 + potionBonus + milestoneBonus + innBonus; // additive: max 1+2+1+2 = 6x
+        const milestoneBonus = regenCharRef.current.level >= 35 ? 0.5 : 0; // +0.5 from milestone
+        const totalMult = 1 + potionBonus + milestoneBonus + innBonus; // additive: max 1+0.5+0.5+1 = 3x
         const combatMult = inCombatRegenRef.current ? 0.1 : 1;
         const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * combatMult), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
@@ -184,9 +184,9 @@ export function useGameLoop(params: UseGameLoopParams) {
       const bRegen = getCpRegenRate(primaryVal);
       const nodeId = regenCharRef.current.current_node_id;
       const node = nodeId ? getNodeRef.current(nodeId) : null;
-      const innBonus = node?.is_inn ? 2 : 0;
+      const innBonus = node?.is_inn ? 1 : 0;
       const buff = regenBuffRef.current;
-      const inspireBonus = Date.now() < buff.expiresAt ? (buff.multiplier - 1) : 0;
+      const inspireBonus = Date.now() < buff.expiresAt ? 0.5 : 0;
       const food = foodBuffRef.current;
       const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
       const totalMult = 1 + inspireBonus + innBonus;
@@ -211,7 +211,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const effectiveMaxMp = getMaxMp(level, dexWithGear);
       if (mp >= effectiveMaxMp) return;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
-      const innBonus = node?.is_inn ? 2 : 0;
+      const innBonus = node?.is_inn ? 1 : 0;
       const regenAmount = getMpRegenRate(dexWithGear) * (1 + innBonus);
       const newMp = Math.min(mp + regenAmount, effectiveMaxMp);
       if (newMp > mp) {

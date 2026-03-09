@@ -210,9 +210,9 @@ export default function StatusBarsStrip({
               <p className="text-xs text-muted-foreground">🍞 Food: <span className="text-elvish">+{foodBuff.flatRegen} HP</span> <span className="text-muted-foreground">({Math.ceil((foodBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
             )}
             {(() => {
-              const potionBonus = regenBuff && Date.now() < regenBuff.expiresAt ? (regenBuff.multiplier - 1) : 0;
-              const innBonus = isAtInn ? 2 : 0;
-              const milestoneBonus = character.level >= 35 ? 1 : 0;
+              const potionBonus = regenBuff && Date.now() < regenBuff.expiresAt ? 0.5 : 0;
+              const innBonus = isAtInn ? 1 : 0;
+              const milestoneBonus = character.level >= 35 ? 0.5 : 0;
               const foodRegen = foodBuff && Date.now() < foodBuff.expiresAt ? foodBuff.flatRegen : 0;
               const totalMult = 1 + potionBonus + milestoneBonus + innBonus;
               const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * totalMult), 1);
