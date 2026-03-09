@@ -44,9 +44,10 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
   return positions;
 }
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [] }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
+  const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
   // Filter out hidden connections for player view
