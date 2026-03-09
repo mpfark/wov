@@ -381,20 +381,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   ◆
                 </text>
               )}
-              {/* Area type emoji for non-ghost nodes */}
-              {!isVisitedGhost && (() => {
-                const nodeArea = node.area_id ? areas.find(a => a.id === node.area_id) : undefined;
-                if (!nodeArea) return null;
-                return (
-                  <text
-                    x={pos.px} y={pos.py + 4}
-                    textAnchor="middle"
-                    className="text-[12px] pointer-events-none select-none"
-                  >
-                    {nodeArea.area_type === 'forest' ? '🌲' : nodeArea.area_type === 'town' ? '🏘️' : nodeArea.area_type === 'cave' ? '⛏️' : nodeArea.area_type === 'ruins' ? '🏛️' : nodeArea.area_type === 'plains' ? '🌾' : nodeArea.area_type === 'mountain' ? '⛰️' : nodeArea.area_type === 'swamp' ? '🌿' : nodeArea.area_type === 'desert' ? '🏜️' : nodeArea.area_type === 'coast' ? '🌊' : nodeArea.area_type === 'dungeon' ? '💀' : ''}
-                  </text>
-                );
-              })()}
             </g>
           );
         })}
