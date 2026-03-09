@@ -130,6 +130,18 @@ export function getMaxMp(level: number, dex: number = 10): number {
   return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
 }
 
+// ── Max HP formula ───────────────────────────────────────────────
+
+const CLASS_BASE_HP: Record<string, number> = {
+  warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
+};
+
+/** Max HP = base class HP + CON modifier + (level-1)*5 */
+export function getMaxHp(charClass: string, con: number, level: number): number {
+  const baseHP = CLASS_BASE_HP[charClass] || 18;
+  return baseHP + getStatModifier(con) + (level - 1) * 5;
+}
+
 // ── Class combat data ────────────────────────────────────────────
 
 export interface ClassAttackProfile {

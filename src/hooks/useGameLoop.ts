@@ -140,7 +140,8 @@ export function useGameLoop(params: UseGameLoopParams) {
     const interval = setInterval(() => {
       const { hp, max_hp, current_node_id, con } = regenCharRef.current;
       const gearHpBonus = equipmentBonusesRef.current.hp || 0;
-      const effectiveMaxHp = max_hp + gearHpBonus;
+      const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
+      const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
       if (hp < effectiveMaxHp && hp > 0) {
         const buff = regenBuffRef.current;
         const potionMult = Date.now() < buff.expiresAt ? buff.multiplier : 1;
@@ -482,7 +483,8 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
       const charState = regenCharRef.current;
       const gearHpBonus = equipmentBonusesRef.current.hp || 0;
-      const effectiveMaxHp = charState.max_hp + gearHpBonus;
+      const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
+      const effectiveMaxHp = charState.max_hp + gearHpBonus + gearConMod;
       const selfNewHp = Math.min(effectiveMaxHp, charState.hp + partyRegenBuff.healPerTick);
       if (selfNewHp > charState.hp) {
         await updateCharacter({ hp: selfNewHp });

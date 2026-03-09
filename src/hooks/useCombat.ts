@@ -8,7 +8,7 @@ import {
   rollCreatureDamage, calculateKillRewards,
   AttackContext,
 } from '@/lib/combat-math';
-import { getMaxCp } from '@/lib/game-data';
+import { getMaxCp, getMaxHp } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -419,8 +419,6 @@ export function useCombat(params: UseCombatParams) {
             const levelUpUpdates: Partial<Character> = {
               xp: newXp - xpForNext,
               level: newLevel,
-              max_hp: char.max_hp + 5,
-              hp: char.max_hp + 5,
               gold: newGold,
             };
 
@@ -446,6 +444,12 @@ export function useCombat(params: UseCombatParams) {
                 _addLog(`📈 ${CLASS_LABELS[char.class] || char.class} bonus: ${bonusNames.join(', ')}!`);
               }
             }
+
+            // Recalculate max_hp from formula to account for CON changes
+            const finalCon = (levelUpUpdates as any).con ?? char.con;
+            const newMaxHp = getMaxHp(char.class, finalCon, newLevel);
+            levelUpUpdates.max_hp = newMaxHp;
+            levelUpUpdates.hp = newMaxHp;
 
             const finalInt = (levelUpUpdates as any).int ?? char.int;
             const finalWis = (levelUpUpdates as any).wis ?? char.wis;
