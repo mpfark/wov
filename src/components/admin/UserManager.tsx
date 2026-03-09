@@ -266,20 +266,16 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
 
       {/* CP Bar */}
       {(() => {
-        const cp = c.cp ?? 60;
-        const maxCp = c.max_cp ?? 60;
+        const cp = c.cp ?? 30;
+        const maxCp = c.max_cp ?? 30;
         const cpPercent = Math.round((cp / maxCp) * 100);
         const primaryStat = CLASS_PRIMARY_STAT[c.class] || 'con';
         const primaryVal = (c as any)[primaryStat] ?? 10;
         const cpRegen = getCpRegenRate(primaryVal);
-        const mentalMod = Math.max(
-          Math.floor((c.int - 10) / 2),
-          Math.floor((c.wis - 10) / 2),
-          Math.floor((c.cha - 10) / 2),
-          0
-        );
+        const intMod = Math.max(Math.floor((c.int - 10) / 2), 0);
+        const wisMod = Math.max(Math.floor((c.wis - 10) / 2), 0);
         const levelPart = (c.level - 1) * 3;
-        const mentalPart = mentalMod * 5;
+        const mentalPart = (intMod + wisMod) * 3;
         return (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -301,7 +297,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
             </TooltipTrigger>
             <TooltipContent className="bg-popover border-border z-50 space-y-1">
               <p className="font-display text-sm">Concentration Points</p>
-              <p className="text-xs text-muted-foreground">Max: <span className="text-primary">60</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> mental</p>
+              <p className="text-xs text-muted-foreground">Max: <span className="text-primary">30</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> (INT+WIS)</p>
               <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">6s</span></p>
               <p className="text-xs text-muted-foreground">Primary stat: {STAT_LABELS[primaryStat]}</p>
             </TooltipContent>

@@ -455,7 +455,7 @@ export function useCombat(params: UseCombatParams) {
             const finalWis = (levelUpUpdates as any).wis ?? char.wis;
             const finalCha = (levelUpUpdates as any).cha ?? char.cha;
             const newMaxCp = getMaxCp(newLevel, finalInt, finalWis, finalCha);
-            const oldMaxCp = char.max_cp ?? 60;
+            const oldMaxCp = char.max_cp ?? 30;
             levelUpUpdates.max_cp = newMaxCp;
             levelUpUpdates.cp = Math.min((char.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp);
 
