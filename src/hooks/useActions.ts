@@ -5,7 +5,7 @@
  */
 import { useState, useCallback } from 'react';
 import { Character } from '@/hooks/useCharacter';
-import { rollD20, getStatModifier, rollDamage, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMoveCost, getCarryCapacity, getBagWeight, getChaGoldMultiplier } from '@/lib/game-data';
+import { rollD20, getStatModifier, rollDamage, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMaxHp, getMoveCost, getCarryCapacity, getBagWeight, getChaGoldMultiplier, CLASS_LEVEL_BONUSES } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getNodeDisplayName } from '@/hooks/useNodes';
 import { supabase } from '@/integrations/supabase/client';
