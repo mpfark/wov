@@ -150,6 +150,42 @@ export type Database = {
           },
         ]
       }
+      character_visited_nodes: {
+        Row: {
+          character_id: string
+          first_visited_at: string
+          id: string
+          node_id: string
+        }
+        Insert: {
+          character_id: string
+          first_visited_at?: string
+          id?: string
+          node_id: string
+        }
+        Update: {
+          character_id?: string
+          first_visited_at?: string
+          id?: string
+          node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_visited_nodes_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_visited_nodes_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           ac: number
