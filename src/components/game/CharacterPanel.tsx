@@ -613,7 +613,7 @@ export default function CharacterPanel({
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
 
-                  const baseAC = character.ac + (equipmentBonuses.ac || 0);
+                  const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
                   const totalHitBonus = atkMod + intHit;
