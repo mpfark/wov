@@ -132,7 +132,8 @@ export function getMaxMp(level: number, dex: number = 10): number {
 
 export function getMpRegenRate(dex: number = 10): number {
   const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
-  return 5 + dexMod;
+  // Scaled by 0.67 to compensate for 2s tick (was 3s)
+  return Math.round((5 + dexMod) * 0.67);
 }
 
 // Encumbrance system
