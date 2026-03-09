@@ -47,6 +47,7 @@ interface Props {
   actionBindings?: Record<string, string[]>;
   onAllocateStat?: (stat: string) => void;
   onFullRespec?: () => void;
+  onBatchAllocateStats?: (allocations: Record<string, number>) => void;
 }
 
 const RARITY_COLORS: Record<string, string> = {
