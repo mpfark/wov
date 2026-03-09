@@ -581,7 +581,7 @@ export default function UserManager({ isValar }: Props) {
   const [selectedCharId, setSelectedCharId] = useState<string | null>(null);
   const [editingChar, setEditingChar] = useState<string | null>(null);
   const [charEdits, setCharEdits] = useState<CharacterEdits>({});
-  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string }[]>([]);
+  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; level: number; slot: string | null }[]>([]);
   const [giveItemId, setGiveItemId] = useState<string>('');
   const [givingItem, setGivingItem] = useState(false);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_name: string }[]>([]);
