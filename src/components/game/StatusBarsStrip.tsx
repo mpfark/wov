@@ -210,11 +210,12 @@ export default function StatusBarsStrip({
               <p className="text-xs text-muted-foreground">🍞 Food: <span className="text-elvish">+{foodBuff.flatRegen} HP</span> <span className="text-muted-foreground">({Math.ceil((foodBuff.expiresAt - Date.now()) / 1000)}s)</span></p>
             )}
             {(() => {
-              const potionMult = regenBuff && Date.now() < regenBuff.expiresAt ? regenBuff.multiplier : 1;
-              const innMult = isAtInn ? 3 : 1;
-              const milestoneMult = character.level >= 35 ? 2 : 1;
+              const potionBonus = regenBuff && Date.now() < regenBuff.expiresAt ? (regenBuff.multiplier - 1) : 0;
+              const innBonus = isAtInn ? 2 : 0;
+              const milestoneBonus = character.level >= 35 ? 1 : 0;
               const foodRegen = foodBuff && Date.now() < foodBuff.expiresAt ? foodBuff.flatRegen : 0;
-              const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * potionMult * innMult * milestoneMult), 1);
+              const totalMult = 1 + potionBonus + milestoneBonus + innBonus;
+              const total = Math.max(Math.floor((baseRegen + itemHpRegen + foodRegen) * totalMult), 1);
               return <p className="text-xs font-display text-elvish border-t border-border pt-1">Total: {total} HP / 15s</p>;
             })()}
           </TooltipContent>
