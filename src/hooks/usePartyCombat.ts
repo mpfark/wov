@@ -259,7 +259,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           });
         }
       }
-    }, 2500); // Slightly faster than 3s tick to ensure leader has fresh data
+    }, 1800); // Slightly faster than 2s tick to ensure leader has fresh data
     return () => clearInterval(interval);
   }, [params.party, params.isLeader]);
 
