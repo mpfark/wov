@@ -985,6 +985,7 @@ export default function UserManager({ isValar }: Props) {
                         {allItems.map(item => (
                           <SelectItem key={item.id} value={item.id} className="text-xs">
                             <span className={rarityColor(item.rarity)}>{item.name}</span>
+                            <span className="text-muted-foreground ml-1">L{item.level}{item.slot ? ` · ${item.slot.replace('_', ' ')}` : ''}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
