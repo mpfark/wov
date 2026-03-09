@@ -280,7 +280,7 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   const handleAddIgniteStack = useCallback((creatureId: string) => {
     const intMod = getStatModifier(character.int);
-    const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7));
+    const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
     const creature = creatures.find(c => c.id === creatureId);
     setIgniteStacks(prev => {
       const existing = prev[creatureId];
