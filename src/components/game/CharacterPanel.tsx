@@ -566,6 +566,16 @@ export default function CharacterPanel({
 
                 {/* Derived Stats */}
                 {(() => {
+                  const now = Date.now();
+                  const acBuffActive = acBuff && now < acBuff.expiresAt;
+                  const critBuffActive = critBuff && now < critBuff.expiresAt;
+                  const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
+                  const dmgBuffActive = damageBuff && now < damageBuff.expiresAt;
+                  const absorbActive = absorbBuff && now < absorbBuff.expiresAt;
+                  const focusActive = !!focusStrikeBuff;
+                  const poisonActive = poisonBuff && now < poisonBuff.expiresAt;
+                  const igniteActive = igniteBuff && now < igniteBuff.expiresAt;
+
                   const eCon = character.con + (equipmentBonuses.con || 0);
                   const eDex = character.dex + (equipmentBonuses.dex || 0);
                   const eInt = character.int + (equipmentBonuses.int || 0);
@@ -578,56 +588,89 @@ export default function CharacterPanel({
                   const cpRegen = getCpRegenRate((character as any)[primaryStat] + (equipmentBonuses[primaryStat] || 0));
                   const mpRegen = getMpRegenRate(eDex);
 
+                  // Regen multiplier from buffs
+                  const regenBuffActive = regenBuff && now < regenBuff.expiresAt;
+                  const foodBuffActive = foodBuff && now < foodBuff.expiresAt;
+                  const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
+                  let effectiveHpRegen = hpRegen;
+                  let regenMultiplier = 1;
+                  if (isAtInn) regenMultiplier = 3;
+                  else if (regenBuffActive) regenMultiplier = regenBuff!.multiplier;
+                  effectiveHpRegen = Math.round(hpRegen * regenMultiplier + (foodBuffActive ? foodBuff!.flatRegen : 0) + (partyRegenActive ? partyRegenBuff!.healPerTick : 0));
+                  const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive;
+
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
                   const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
                   const intHit = getIntHitBonus(eInt);
                   const milestoneCrit = character.level >= 28 ? 1 : 0;
                   const dexCrit = getDexCritBonus(eDex);
-                  const effectiveCrit = (combat?.critRange || 20) - milestoneCrit - dexCrit;
+                  const baseCritRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
+                  const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
                   const wisHalveChance = getWisDodgeChance(eWis);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
 
-                  const poolRows: { label: string; value: string; tip: string }[] = [
-                    { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2)}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} HP gear + ${Math.floor((equipmentBonuses.con || 0) / 2)} from CON gear` },
-                    { label: 'HP Regen', value: `${hpRegen}/tick`, tip: `Base ${getBaseRegen(eCon)} + ${itemHpRegen || 0} from gear (every 15s)` },
+                  const baseAC = character.ac + (equipmentBonuses.ac || 0);
+                  const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
+
+                  const totalHitBonus = atkMod + intHit;
+                  const sameLevelAC = Math.round(10 + character.level * 0.9 + 2);
+                  const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
+
+                  const creatureBaseStat = Math.round(10 + character.level * 0.7);
+                  const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
+                  const getHitChance = Math.min(95, Math.max(5, (21 - (totalAC - creatureAtkMod)) * 5));
+
+                  // Evasion buff dodge bonus
+                  const baseDodge = 100 - getHitChance;
+                  const effectiveDodge = evasionActive ? Math.min(100, baseDodge + Math.round(evasionBuff!.dodgeChance * 100)) : baseDodge;
+
+                  const dexMod = Math.max(Math.floor((character.dex + (equipmentBonuses.dex || 0) - 10) / 2), 0);
+                  const attackInterval = Math.max(Math.round(3000 - Math.sqrt(dexMod) * 350), 1000);
+                  const atkSpeed = (attackInterval / 1000).toFixed(1);
+
+                  // Damage multiplier text
+                  const dmgMultParts: string[] = [];
+                  if (dmgBuffActive) dmgMultParts.push('1.5× Arcane Surge');
+                  if (focusActive) dmgMultParts.push(`+${focusStrikeBuff!.bonusDmg} Focus Strike`);
+
+                  type DerivedRow = { label: string; value: string; tip: string; buffed?: boolean; buffColor?: string };
+
+                  const poolRows: DerivedRow[] = [
+                    { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2)}${absorbActive ? ` (+${absorbBuff!.shieldHp})` : ''}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} HP gear + ${Math.floor((equipmentBonuses.con || 0) / 2)} from CON gear${absorbActive ? ` + ${absorbBuff!.shieldHp} Force Shield` : ''}`, buffed: !!absorbActive, buffColor: 'text-primary' },
+                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen} × ${regenMultiplier}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 15s)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
                     { label: 'Max CP', value: `${maxCp}`, tip: `60 + (level-1)×3 + best mental mod×5` },
                     { label: 'CP Regen', value: `${cpRegen}/tick`, tip: `Based on ${primaryStat.toUpperCase()} (every 6s)` },
                     { label: 'Max Stamina', value: `${maxMp}`, tip: `100 + DEX mod×10 + (level-1)×2` },
                     { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 6s)` },
                   ];
 
-                  const totalHitBonus = atkMod + intHit;
-                  const sameLevelAC = Math.round(10 + character.level * 0.9 + 2);
-                  const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
-
-                  const totalAC = character.ac + (equipmentBonuses.ac || 0);
-                  const creatureBaseStat = Math.round(10 + character.level * 0.7);
-                  const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
-                  const getHitChance = Math.min(95, Math.max(5, (21 - (totalAC - creatureAtkMod)) * 5));
-
-                  const dexMod = Math.max(Math.floor((character.dex + (equipmentBonuses.dex || 0) - 10) / 2), 0);
-                  const attackInterval = Math.max(Math.round(3000 - Math.sqrt(dexMod) * 350), 1000);
-                  const atkSpeed = (attackInterval / 1000).toFixed(1);
-
-                  const offenseRows: { label: string; value: string; tip: string }[] = [
-                    { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage` },
+                  const offenseRows: DerivedRow[] = [
+                    { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Base 3.0s − ${dexMod > 0 ? dexMod * 0.25 + 's DEX bonus' : '0s DEX bonus'} (min 1.0s)` },
                     { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
-                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}` },
+                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
                     { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];
 
-                  const defenseRows: { label: string; value: string; tip: string }[] = [
-                    { label: 'AC', value: `${totalAC}`, tip: `Your AC ${totalAC} vs regular creature atk +${creatureAtkMod}` },
-                    { label: 'Dodge', value: `${100 - getHitChance}%`, tip: `Chance a same-level creature misses you (AC ${totalAC})` },
+                  // Procs line
+                  if (poisonActive || igniteActive) {
+                    const procs: string[] = [];
+                    if (poisonActive) procs.push('40% Poison');
+                    if (igniteActive) procs.push('40% Ignite');
+                    offenseRows.push({ label: 'Procs', value: procs.join(' / '), tip: procs.join(', ') + ' on hit', buffed: true, buffColor: 'text-elvish' });
+                  }
+
+                  const defenseRows: DerivedRow[] = [
+                    { label: 'AC', value: `${totalAC}${acBuffActive ? ` (+${acBuff!.bonus})` : ''}`, tip: `Base ${baseAC}${acBuffActive ? ` + ${acBuff!.bonus} Battle Cry` : ''} vs regular creature atk +${creatureAtkMod}`, buffed: !!acBuffActive, buffColor: 'text-dwarvish' },
+                    { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? 'WIS bonus: chance to reduce incoming creature damage by 25%' : 'WIS 12+ for chance to reduce incoming damage by 25%' },
                     { label: 'Vendor Bonus', value: buyDisc > 0 ? `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%` : '–', tip: buyDisc > 0 ? 'CHA bonus: better buy/sell prices' : 'CHA 12+ for better buy/sell prices' },
                   ];
 
-                  const renderSection = (title: string, rows: { label: string; value: string; tip: string }[], cols: boolean = false) => (
+                  const renderSection = (title: string, rows: DerivedRow[], cols: boolean = false) => (
                     <div className="border-t border-border pt-1.5">
                       <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">{title}</h4>
                       <div className={cols ? 'grid grid-cols-2 gap-x-3' : 'space-y-0'}>
@@ -636,12 +679,12 @@ export default function CharacterPanel({
                             <TooltipTrigger asChild>
                               <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
                                 <span className="text-muted-foreground">{r.label}</span>
-                                <span className="font-display text-foreground tabular-nums">{r.value}</span>
+                                <span className={`font-display tabular-nums ${r.buffed ? `${r.buffColor || 'text-elvish'} font-semibold` : 'text-foreground'}`}>{r.value}</span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent className="bg-popover border-border z-50">
                               <p className="font-display text-sm">{r.label}</p>
-                              <p className="text-xs text-muted-foreground">{r.tip}</p>
+                              <p className="text-xs text-muted-foreground whitespace-pre-line">{r.tip}</p>
                             </TooltipContent>
                           </Tooltip>
                         ))}
