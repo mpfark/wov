@@ -644,7 +644,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">+1 crit range per 2 DEX modifier</code></p>
                 <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">WIS_mod × 3%</code> chance to reduce incoming creature damage by 25% per hit</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod vs player AC</p>
-                <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level/2)) + STR mod</p>
+                <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
                 <p><strong className="text-foreground">Durability:</strong> Each hit has a 25% chance to degrade 1 random equipped item by 1 durability</p>
@@ -795,6 +795,16 @@ export default function GameManual() {
                   </AccordionItem>
                 ))}
               </Accordion>
+
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-display text-primary">Key Ability Formulas</p>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p><strong className="text-foreground">🛡️✨ Force Shield (Wizard T1, 15 CP):</strong> Shield HP = <code className="text-primary">INT_mod + floor(level × 0.5)</code>, Duration = <code className="text-primary">min(15s, 8s + INT_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">📯 Battle Cry (Warrior T2, 25 CP):</strong> AC Bonus = <code className="text-primary">max(3, STR_mod + 2)</code>, Duration = <code className="text-primary">min(25s, 15s + STR_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🛡️💚 Divine Aegis (Healer T4, 60 CP):</strong> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">min(18s, 10s + WIS_mod × 1s)</code></p>
+                  <p className="ml-4 text-[10px]">All modifiers include equipment bonuses. modifier = floor((stat − 10) / 2)</p>
+                </div>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
