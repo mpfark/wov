@@ -217,7 +217,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       if (newMp > mp) {
         updateCharRegenRef.current({ mp: newMp });
       }
-    }, 3000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
