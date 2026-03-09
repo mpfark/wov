@@ -109,8 +109,8 @@ export function useCombat(params: UseCombatParams) {
   const startCombatRef = useRef<(id: string) => void>(() => {});
   const justStoppedRef = useRef(false);
   const prevNodeRef = useRef(character.current_node_id);
-  /** Tracks last counterattack timestamp per creature (3s round timer) */
-  const lastCreatureAttackRef = useRef<Record<string, number>>({});
+   /** Tracks last counterattack timestamp per creature (2s round timer) */
+   const lastCreatureAttackRef = useRef<Record<string, number>>({});
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -528,9 +528,9 @@ export function useCombat(params: UseCombatParams) {
       const engagedIds = [...engagedCreatureIdsRef.current];
       const now = Date.now();
       for (const engagedId of engagedIds) {
-        // Creatures attack once per 3s round, skip if too soon
+        // Creatures attack once per 2s round, skip if too soon
         const lastAtk = lastCreatureAttackRef.current[engagedId] || 0;
-        if (now - lastAtk < 2800) continue; // 2800ms threshold to avoid drift issues
+        if (now - lastAtk < 1800) continue; // 1800ms threshold to avoid drift issues
 
         // Re-read character to get latest HP (may have changed from previous creature's hit)
         const currentChar = ext.current.character;
