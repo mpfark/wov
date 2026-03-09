@@ -123,6 +123,7 @@ export default function NodeView({
                   const creatureIgniteStacks = igniteStacks[c.id];
                   const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
                   const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
+                  const isBleeding = bleedDebuff && bleedDebuff.creatureId === c.id && Date.now() < bleedDebuff.expiresAt;
                   return (
                     <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
