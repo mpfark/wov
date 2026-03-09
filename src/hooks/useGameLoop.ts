@@ -200,7 +200,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     return () => clearInterval(interval);
   }, []);
 
-  // ── MP Regen (every 3s) ────────────────────────────────────────
+  // ── MP Regen (every 2s) ────────────────────────────────────────
   const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level });
   useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level }; }, [character.mp, character.max_mp, character.current_node_id, character.dex, character.level]);
 
