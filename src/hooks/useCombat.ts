@@ -577,7 +577,7 @@ export function useCombat(params: UseCombatParams) {
         if (isEvading && Math.random() < _evasionBuff!.dodgeChance) {
           _addLog(`🌫️ ${tankMember.character.name} dodges ${engagedCreature.name}'s attack from the shadows!`);
         } else if (creatureAtk >= buffedAC) {
-          const rawCreatureDmg = rollCreatureDamage(engagedCreature.level, engagedCreature.rarity, engagedCreature.stats.str || 10);
+          const rawCreatureDmg = rollCreatureDamage(engagedCreature.level, engagedCreature.rarity, engagedCreature.stats.str || 10, char.level);
           const wisChanceTank = iAmTheTank ? getWisDodgeChance(char.wis + (_eqBonuses.wis || 0)) : 0;
           const _absorbBuff = ext.current.absorbBuff;
           const shieldHp = (_absorbBuff && Date.now() < _absorbBuff.expiresAt) ? _absorbBuff.shieldHp : 0;
