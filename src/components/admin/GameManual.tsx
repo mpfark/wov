@@ -838,7 +838,7 @@ export default function GameManual() {
                   <p><strong className="text-foreground">🎶✨ Crescendo (T3, 40 CP):</strong> Party heal = <code className="text-primary">max(1, CHA_mod + 2)</code> per 3s tick, Duration = <code className="text-primary">min(25s, 15s + CHA_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🎵💥 Grand Finale (T4, 60 CP):</strong> Dmg = <code className="text-primary">max(8, CHA_mod × 4 + floor(level × 1.5)) + 1d(CHA_mod × 2)</code></p>
 
-                  <p className="ml-4 text-[10px] mt-2">All modifiers include equipment bonuses unless noted. modifier = floor((stat − 10) / 2). INT hit bonus capped at +3. Lv 39+ milestone: all CP costs −10%.</p>
+                  <p className="ml-4 text-[10px] mt-2">All modifiers include equipment bonuses unless noted. modifier = floor((stat − 10) / 2). INT hit bonus capped at +5. Lv 39+ milestone: all CP costs −10%.</p>
                 </div>
               </div>
             </AccordionContent>
