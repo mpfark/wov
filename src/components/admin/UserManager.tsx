@@ -960,7 +960,7 @@ export default function UserManager({ isValar }: Props) {
         </div>
 
         {/* COL 3 — Actions */}
-        <div className="w-56 shrink-0 border-r border-border flex flex-col overflow-y-auto">
+        <div className="w-70 shrink-0 border-r border-border flex flex-col overflow-y-auto">
           {!selectedChar ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-[10px] text-muted-foreground italic">
