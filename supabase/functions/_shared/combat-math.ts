@@ -82,7 +82,13 @@ const CREATURE_DAMAGE_BASE: Record<string, number> = {
 /** Creature damage die max based on level and rarity */
 export function getCreatureDamageDie(level: number, rarity: string): number {
   const base = CREATURE_DAMAGE_BASE[rarity] || 4;
-  return base + Math.floor(level / 2);
+  return base + Math.floor(level * 0.7);
+}
+
+/** Bonus damage multiplier when creature out-levels the player (+8% per level diff) */
+export function getCreatureLevelGapMultiplier(creatureLevel: number, playerLevel: number): number {
+  const diff = Math.max(creatureLevel - playerLevel, 0);
+  return 1 + diff * 0.08;
 }
 
 // ── XP formulas ──────────────────────────────────────────────────
@@ -282,9 +288,13 @@ export function calculateKillRewards(
 }
 
 /** Resolve creature counterattack damage (before defensive buffs) */
-export function rollCreatureDamage(creatureLevel: number, creatureRarity: string, creatureStr: number): number {
+export function rollCreatureDamage(creatureLevel: number, creatureRarity: string, creatureStr: number, playerLevel?: number): number {
   const dmgDie = getCreatureDamageDie(creatureLevel, creatureRarity);
-  return Math.max(rollDamage(1, dmgDie) + getStatModifier(creatureStr), 1);
+  const baseDmg = Math.max(rollDamage(1, dmgDie) + getStatModifier(creatureStr), 1);
+  if (playerLevel != null) {
+    return Math.max(Math.floor(baseDmg * getCreatureLevelGapMultiplier(creatureLevel, playerLevel)), 1);
+  }
+  return baseDmg;
 }
 
 /**
