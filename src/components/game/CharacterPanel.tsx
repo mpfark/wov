@@ -327,11 +327,12 @@ export default function CharacterPanel({
   isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
-  actionBindings, onAllocateStat, onFullRespec,
+  actionBindings, onAllocateStat, onFullRespec, onBatchAllocateStats,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const [pendingStat, setPendingStat] = useState<string | null>(null);
   const [showRespecConfirm, setShowRespecConfirm] = useState(false);
+  const [statPlannerOpen, setStatPlannerOpen] = useState(false);
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
