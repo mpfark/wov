@@ -793,6 +793,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
               sunderDebuff={sunderDebuff}
+              bleedDebuff={gameLoop.dotDebuff}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const result = await pickUpItem(id);

@@ -157,6 +157,18 @@ export default function NodeView({
                             </TooltipContent>
                           </Tooltip>
                         )}
+                        {isBleeding && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-[10px] text-dot-bleed font-display animate-pulse">
+                                🩸
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              Rend: {bleedDebuff!.damagePerTick} dmg/tick
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         {isSundered && (
                           <Tooltip>
                             <TooltipTrigger asChild>
