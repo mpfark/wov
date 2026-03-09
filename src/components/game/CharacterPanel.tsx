@@ -600,7 +600,7 @@ export default function CharacterPanel({
                   ];
 
                   const totalHitBonus = atkMod + intHit;
-                  const sameLevelAC = Math.round(10 + character.level * 0.6 + 2);
+                  const sameLevelAC = Math.round(10 + character.level * 0.9 + 2);
                   const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
 
                   const totalAC = character.ac + (equipmentBonuses.ac || 0);
