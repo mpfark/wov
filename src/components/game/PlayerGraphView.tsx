@@ -281,7 +281,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
             <g key={`${edge.from}-${edge.to}`}>
               <line
                 x1={from.px} y1={from.py} x2={to.px} y2={to.py}
-                stroke="hsl(35 20% 35%)" strokeWidth={2} strokeDasharray="6 3"
+                stroke={edge.faded ? "hsl(35 20% 35% / 0.3)" : "hsl(35 20% 35%)"}
+                strokeWidth={edge.faded ? 1.5 : 2} strokeDasharray={edge.faded ? "4 4" : "6 3"}
               />
             </g>
           );
