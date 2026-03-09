@@ -109,8 +109,8 @@ export function useCombat(params: UseCombatParams) {
   const startCombatRef = useRef<(id: string) => void>(() => {});
   const justStoppedRef = useRef(false);
   const prevNodeRef = useRef(character.current_node_id);
-  /** Tracks last counterattack timestamp per creature (3s round timer) */
-  const lastCreatureAttackRef = useRef<Record<string, number>>({});
+   /** Tracks last counterattack timestamp per creature (2s round timer) */
+   const lastCreatureAttackRef = useRef<Record<string, number>>({});
 
   // ── Helpers ────────────────────────────────────────────────────
 
