@@ -162,10 +162,6 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   });
   useGameEvent(bus, 'log', ({ message }) => {
     (async () => {
-      // Generate a temporary client-side id and register it BEFORE the async DB insert
-      // to prevent the postgres_changes listener from treating our own message as incoming.
-      const tempId = crypto.randomUUID();
-      ownLogIdsRef.current.add(tempId);
       const id = await addPartyCombatLog(message, character.current_node_id, character.name);
       if (id) {
         ownLogIdsRef.current.add(id);
