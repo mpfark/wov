@@ -462,6 +462,14 @@ export default function CharacterPanel({
                     {character.unspent_stat_points > 0 && (
                       <span className="text-primary">{character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''}</span>
                     )}
+                    {character.unspent_stat_points > 1 && onBatchAllocateStats && (
+                      <button
+                        onClick={() => setStatPlannerOpen(true)}
+                        className="text-chart-2 hover:text-chart-2/80 underline underline-offset-2 transition-colors"
+                      >
+                        Plan Stats
+                      </button>
+                    )}
                     {(character.respec_points || 0) > 0 && onFullRespec && (
                       <button
                         onClick={() => setShowRespecConfirm(true)}
