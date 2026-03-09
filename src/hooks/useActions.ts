@@ -349,6 +349,11 @@ export function useActions(params: UseActionsParams) {
       }
       await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
       p.broadcastMove(p.character.id, p.character.name, nodeId);
+      // Track visited node (fire-and-forget upsert)
+      supabase.from('character_visited_nodes').upsert(
+        { character_id: p.character.id, node_id: nodeId },
+        { onConflict: 'character_id,node_id' }
+      ).then();
       const dirNames: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' };
       const dirLabel = direction ? (dirNames[direction] || direction) : null;
       const targetArea = p.getNodeArea(targetNode);
@@ -382,6 +387,10 @@ export function useActions(params: UseActionsParams) {
     }
     await p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - effectiveCpCost });
     p.broadcastMove(p.character.id, p.character.name, nodeId);
+    supabase.from('character_visited_nodes').upsert(
+      { character_id: p.character.id, node_id: nodeId },
+      { onConflict: 'character_id,node_id' }
+    ).then();
     p.addLog(`🌀 You teleport to ${targetNode.name} for ${effectiveCpCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
@@ -409,6 +418,10 @@ export function useActions(params: UseActionsParams) {
     if ((p.character.cp ?? 0) < effectiveWayCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
     await p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - effectiveWayCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId);
+    supabase.from('character_visited_nodes').upsert(
+      { character_id: p.character.id, node_id: waymarkNodeId },
+      { onConflict: 'character_id,node_id' }
+    ).then();
     p.addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${effectiveWayCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Returned to waymark at ${waymarkNode.name}`, { node_id: waymarkNodeId, cpCost });
     setWaymarkNodeId(null);

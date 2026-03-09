@@ -15,6 +15,7 @@ interface Props {
   partyMembers?: PartyMember[];
   myCharacterId?: string;
   areas?: Area[];
+  characterId?: string;
 }
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
@@ -43,9 +44,10 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
   return positions;
 }
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [] }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
+  const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
   // Filter out hidden connections for player view
@@ -60,12 +62,53 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return nodes.filter(n => connIds.has(n.id));
   }, [currentNode, visibleConnections, nodes]);
 
+  // Compute 2nd-degree visited nodes (neighbors of neighbors that have been visited before)
+  const visitedSecondDegree = useMemo(() => {
+    if (visitedNodeIds.size === 0) return [];
+    const directIds = new Set([currentNodeId, ...neighbors.map(n => n.id)]);
+    const secondDeg: GameNode[] = [];
+    for (const neighbor of neighbors) {
+      for (const conn of neighbor.connections.filter(c => !c.hidden)) {
+        if (directIds.has(conn.node_id)) continue;
+        if (!visitedNodeIds.has(conn.node_id)) continue;
+        const node = nodes.find(n => n.id === conn.node_id);
+        if (node && !secondDeg.some(s => s.id === node.id)) {
+          secondDeg.push(node);
+        }
+      }
+    }
+    return secondDeg;
+  }, [currentNodeId, neighbors, visitedNodeIds, nodes]);
+
   const positions = useMemo(() => {
     if (!currentNode) return new Map<string, { x: number; y: number }>();
     // Use a virtual node with only visible connections for layout
     const virtualNode = { ...currentNode, connections: visibleConnections };
-    return layoutFromCenter(virtualNode, neighbors);
-  }, [currentNode, visibleConnections, neighbors]);
+    const basePositions = layoutFromCenter(virtualNode, neighbors);
+
+    // Place 2nd-degree visited nodes beyond their parent neighbor
+    for (const secNode of visitedSecondDegree) {
+      // Find which neighbor connects to this node
+      for (const neighbor of neighbors) {
+        const conn = neighbor.connections.find(c => c.node_id === secNode.id && !c.hidden);
+        if (!conn) continue;
+        const neighborPos = basePositions.get(neighbor.id);
+        if (!neighborPos) continue;
+        const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+        let nx = neighborPos.x + offset[0];
+        let ny = neighborPos.y + offset[1];
+        // Avoid collisions
+        while ([...basePositions.values()].some(p => p.x === nx && p.y === ny)) {
+          nx += offset[0] || 1;
+          ny += offset[1] || 1;
+        }
+        basePositions.set(secNode.id, { x: nx, y: ny });
+        break;
+      }
+    }
+
+    return basePositions;
+  }, [currentNode, visibleConnections, neighbors, visitedSecondDegree]);
 
   const { nodePositions, svgWidth, svgHeight, SPACING } = useMemo(() => {
     if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250, SPACING: 120 };
@@ -103,23 +146,53 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     };
   }, [positions]);
 
-  // Collect edges
+  const secondDegIds = useMemo(() => new Set(visitedSecondDegree.map(n => n.id)), [visitedSecondDegree]);
+
+  // Collect edges (including edges from neighbors to 2nd-degree visited nodes)
   const edges = useMemo(() => {
     if (!currentNode) return [];
-    const result: Array<{ from: string; to: string; label?: string }> = [];
+    const result: Array<{ from: string; to: string; label?: string; faded?: boolean }> = [];
     for (const conn of visibleConnections) {
       if (nodePositions.has(conn.node_id)) {
         result.push({ from: currentNode.id, to: conn.node_id, label: conn.label });
       }
     }
+    // Add edges from neighbors to 2nd-degree visited nodes
+    for (const neighbor of neighbors) {
+      for (const conn of neighbor.connections.filter(c => !c.hidden)) {
+        if (secondDegIds.has(conn.node_id) && nodePositions.has(conn.node_id)) {
+          result.push({ from: neighbor.id, to: conn.node_id, faded: true });
+        }
+      }
+    }
     return result;
-  }, [currentNode, visibleConnections, nodePositions]);
+  }, [currentNode, visibleConnections, nodePositions, neighbors, secondDegIds]);
 
   // Compute visible node IDs for creature fetch
   const visibleNodeIds = useMemo(() => {
     if (!currentNode) return [];
     return [currentNode.id, ...neighbors.map(n => n.id)];
   }, [currentNode, neighbors]);
+
+  // Fetch visited nodes for this character
+  useEffect(() => {
+    if (!characterId) return;
+    const fetchVisited = async () => {
+      const { data } = await supabase
+        .from('character_visited_nodes')
+        .select('node_id')
+        .eq('character_id', characterId);
+      if (data) {
+        setVisitedNodeIds(new Set(data.map(d => d.node_id)));
+      }
+    };
+    fetchVisited();
+    // Also upsert current node as visited
+    supabase.from('character_visited_nodes').upsert(
+      { character_id: characterId, node_id: currentNodeId },
+      { onConflict: 'character_id,node_id' }
+    ).then();
+  }, [characterId, currentNodeId]);
 
   // Fetch creature presence for all visible nodes
   useEffect(() => {
@@ -149,7 +222,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return <p className="text-xs text-muted-foreground italic p-3">No location data...</p>;
   }
 
-  const allDisplayNodes = [currentNode, ...neighbors];
+  const allDisplayNodes = [currentNode, ...neighbors, ...visitedSecondDegree];
+  
   const displayedIds = new Set(allDisplayNodes.map(n => n.id));
 
   // Compute exit stubs for neighbor nodes (connections leading to nodes not displayed)
@@ -207,7 +281,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
             <g key={`${edge.from}-${edge.to}`}>
               <line
                 x1={from.px} y1={from.py} x2={to.px} y2={to.py}
-                stroke="hsl(35 20% 35%)" strokeWidth={2} strokeDasharray="6 3"
+                stroke={edge.faded ? "hsl(35 20% 35% / 0.3)" : "hsl(35 20% 35%)"}
+                strokeWidth={edge.faded ? 1.5 : 2} strokeDasharray={edge.faded ? "4 4" : "6 3"}
               />
             </g>
           );
@@ -228,11 +303,13 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           if (!pos) return null;
           const isCurrent = node.id === currentNodeId;
           const isHovered = hoveredNode === node.id;
+          const isVisitedGhost = secondDegIds.has(node.id);
 
           return (
             <g key={node.id}
               onMouseEnter={() => setHoveredNode(node.id)}
               onMouseLeave={() => setHoveredNode(null)}
+              opacity={isVisitedGhost ? 0.35 : 1}
             >
               {/* Glow for current node */}
               {isCurrent && (
@@ -243,16 +320,19 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               )}
               {/* Node circle */}
               <circle
-                cx={pos.px} cy={pos.py} r={28}
+                cx={pos.px} cy={pos.py} r={isVisitedGhost ? 22 : 28}
                 className={`transition-all duration-200 ${
                   isCurrent
                     ? 'fill-primary/20 stroke-primary'
+                    : isVisitedGhost
+                    ? 'fill-muted/30 stroke-muted-foreground/30'
                     : isHovered
                     ? 'fill-primary/10 stroke-primary/70 cursor-pointer'
                     : 'fill-card stroke-border cursor-pointer'
                 }`}
-                strokeWidth={isCurrent ? 2.5 : isHovered ? 2 : 1.5}
-                onClick={() => !isCurrent && onNodeClick(node.id)}
+                strokeWidth={isCurrent ? 2.5 : isVisitedGhost ? 1 : isHovered ? 2 : 1.5}
+                strokeDasharray={isVisitedGhost ? "3 2" : undefined}
+                onClick={() => !isCurrent && !isVisitedGhost && onNodeClick(node.id)}
               />
               {/* Creature presence dot */}
               {creatureMap.has(node.id) && (() => {
@@ -312,10 +392,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                 const truncated = displayName.length > 14 ? displayName.slice(0, 13) + '…' : displayName;
                 return (
                   <text
-                    x={pos.px} y={pos.py + 4}
+                    x={pos.px} y={pos.py + (isVisitedGhost ? 3 : 4)}
                     textAnchor="middle"
-                    className={`font-display text-[10px] pointer-events-none select-none ${
-                      isCurrent ? 'fill-primary' : isHovered ? 'fill-primary/80' : 'fill-foreground'
+                    className={`font-display pointer-events-none select-none ${
+                      isVisitedGhost ? 'text-[8px] fill-muted-foreground/50' :
+                      isCurrent ? 'text-[10px] fill-primary' : isHovered ? 'text-[10px] fill-primary/80' : 'text-[10px] fill-foreground'
                     }`}
                   >
                     {truncated}
