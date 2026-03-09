@@ -479,6 +479,10 @@ Deno.serve(async (req) => {
           const fWis = updates.wis ?? c.wis;
           const fCha = updates.cha ?? c.cha;
           const fDex = updates.dex ?? c.dex;
+          const fCon = updates.con ?? c.con;
+          newMaxHp = calcMaxHp(c.class, fCon, newLevel);
+          updates.max_hp = newMaxHp;
+          updates.hp = newMaxHp; // Full heal on level up
           updates.max_cp = calcMaxCp(newLevel, fInt, fWis, fCha);
           updates.max_mp = calcMaxMp(newLevel, fDex);
 
