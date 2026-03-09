@@ -303,11 +303,13 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           if (!pos) return null;
           const isCurrent = node.id === currentNodeId;
           const isHovered = hoveredNode === node.id;
+          const isVisitedGhost = secondDegIds.has(node.id);
 
           return (
             <g key={node.id}
               onMouseEnter={() => setHoveredNode(node.id)}
               onMouseLeave={() => setHoveredNode(null)}
+              opacity={isVisitedGhost ? 0.35 : 1}
             >
               {/* Glow for current node */}
               {isCurrent && (
@@ -318,16 +320,19 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               )}
               {/* Node circle */}
               <circle
-                cx={pos.px} cy={pos.py} r={28}
+                cx={pos.px} cy={pos.py} r={isVisitedGhost ? 22 : 28}
                 className={`transition-all duration-200 ${
                   isCurrent
                     ? 'fill-primary/20 stroke-primary'
+                    : isVisitedGhost
+                    ? 'fill-muted/30 stroke-muted-foreground/30'
                     : isHovered
                     ? 'fill-primary/10 stroke-primary/70 cursor-pointer'
                     : 'fill-card stroke-border cursor-pointer'
                 }`}
-                strokeWidth={isCurrent ? 2.5 : isHovered ? 2 : 1.5}
-                onClick={() => !isCurrent && onNodeClick(node.id)}
+                strokeWidth={isCurrent ? 2.5 : isVisitedGhost ? 1 : isHovered ? 2 : 1.5}
+                strokeDasharray={isVisitedGhost ? "3 2" : undefined}
+                onClick={() => !isCurrent && !isVisitedGhost && onNodeClick(node.id)}
               />
               {/* Creature presence dot */}
               {creatureMap.has(node.id) && (() => {
