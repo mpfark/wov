@@ -117,15 +117,11 @@ export function getBaseRegen(con: number): number {
   return 1 + Math.floor((con - 10) / 4);
 }
 
-// CP (Concentration Points) system
-export function getMaxCp(level: number, int: number = 10, wis: number = 10, cha: number = 10): number {
-  const mentalMod = Math.max(
-    Math.floor((int - 10) / 2),
-    Math.floor((wis - 10) / 2),
-    Math.floor((cha - 10) / 2),
-    0
-  );
-  return 60 + (level - 1) * 3 + mentalMod * 5;
+// CP (Concentration Points) system — scales with INT + WIS
+export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
+  const intMod = Math.max(Math.floor((int - 10) / 2), 0);
+  const wisMod = Math.max(Math.floor((wis - 10) / 2), 0);
+  return 30 + (level - 1) * 3 + (intMod + wisMod) * 3;
 }
 
 // MP (Stamina) system — DEX-based
