@@ -445,6 +445,12 @@ export function useCombat(params: UseCombatParams) {
               }
             }
 
+            // Recalculate max_hp from formula to account for CON changes
+            const finalCon = (levelUpUpdates as any).con ?? char.con;
+            const newMaxHp = getMaxHp(char.class, finalCon, newLevel);
+            levelUpUpdates.max_hp = newMaxHp;
+            levelUpUpdates.hp = newMaxHp;
+
             const finalInt = (levelUpUpdates as any).int ?? char.int;
             const finalWis = (levelUpUpdates as any).wis ?? char.wis;
             const finalCha = (levelUpUpdates as any).cha ?? char.cha;
