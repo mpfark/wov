@@ -472,14 +472,10 @@ Deno.serve(async (req) => {
       // Total unspent = current unspent + spent points (refunded)
       const newUnspent = char.unspent_stat_points + Math.max(totalSpentPoints, 0);
 
-      // Calculate max_cp with mental stat scaling
-      const resetMentalMod = Math.max(
-        Math.floor(((baseStats.int || 10) - 10) / 2),
-        Math.floor(((baseStats.wis || 10) - 10) / 2),
-        Math.floor(((baseStats.cha || 10) - 10) / 2),
-        0
-      );
-      const newMaxCp = 60 + (char.level - 1) * 3 + resetMentalMod * 5;
+      // Calculate max_cp with INT + WIS scaling
+      const resetIntMod = Math.max(Math.floor(((baseStats.int || 10) - 10) / 2), 0);
+      const resetWisMod = Math.max(Math.floor(((baseStats.wis || 10) - 10) / 2), 0);
+      const newMaxCp = 30 + (char.level - 1) * 3 + (resetIntMod + resetWisMod) * 3;
       const { error } = await adminClient.from("characters").update({
         ...baseStats,
         unspent_stat_points: newUnspent,
