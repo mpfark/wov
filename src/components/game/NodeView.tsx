@@ -39,6 +39,7 @@ interface Props {
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string; creatureName: string } | null;
+  bleedDebuff?: { damagePerTick: number; expiresAt: number; creatureId: string } | null;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
@@ -54,6 +55,7 @@ export default function NodeView({
   poisonStacks = {},
   igniteStacks = {},
   sunderDebuff,
+  bleedDebuff,
   groundLoot = [],
   onPickUpLoot,
   partyMemberIds,
@@ -121,6 +123,7 @@ export default function NodeView({
                   const creatureIgniteStacks = igniteStacks[c.id];
                   const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
                   const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
+                  const isBleeding = bleedDebuff && bleedDebuff.creatureId === c.id && Date.now() < bleedDebuff.expiresAt;
                   return (
                     <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
@@ -154,6 +157,18 @@ export default function NodeView({
                             </TooltipContent>
                           </Tooltip>
                         )}
+                        {isBleeding && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-[10px] text-dot-bleed font-display animate-pulse">
+                                🩸
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              Rend: {bleedDebuff!.damagePerTick} dmg/tick
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         {isSundered && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -172,7 +187,9 @@ export default function NodeView({
                               className={`h-full rounded-full transition-all duration-200`}
                               style={{
                                 width: `${hpPct}%`,
-                                backgroundColor: hasIgniteStacks
+                                backgroundColor: isBleeding
+                                  ? 'hsl(var(--dot-bleed))'
+                                  : hasIgniteStacks
                                   ? 'hsl(var(--dwarvish))'
                                   : hasPoisonStacks
                                   ? 'hsl(var(--elvish))'
