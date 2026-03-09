@@ -39,6 +39,7 @@ interface Props {
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string; creatureName: string } | null;
+  bleedDebuff?: { damagePerTick: number; expiresAt: number; creatureId: string } | null;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
