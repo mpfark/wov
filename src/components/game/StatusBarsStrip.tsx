@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate } from '@/lib/game-data';
+import { getXpForLevel, getMaxCp, getMaxMp } from '@/lib/game-data';
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
