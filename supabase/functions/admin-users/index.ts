@@ -161,11 +161,11 @@ Deno.serve(async (req) => {
       // Recalculate stats from scratch: base(8) + race + class + level-up bonuses
       const RACE_STATS: Record<string, Record<string, number>> = {
         human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-        elf:      { str: 0, dex: 2, con: 0, int: 1, wis: 1, cha: 0 },
-        dwarf:    { str: 2, dex: 0, con: 2, int: 0, wis: 1, cha: -1 },
-        halfling: { str: -1, dex: 2, con: 1, int: 0, wis: 1, cha: 1 },
-        edain:    { str: 1, dex: 0, con: 2, int: 1, wis: 1, cha: 1 },
-        half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 2 },
+        elf:      { str: -1, dex: 2, con: -1, int: 2, wis: 3, cha: 0 },
+        dwarf:    { str: 2, dex: -1, con: 4, int: 0, wis: 1, cha: -2 },
+        halfling: { str: -2, dex: 3, con: 1, int: 0, wis: 1, cha: 2 },
+        edain:    { str: 1, dex: 0, con: 3, int: 1, wis: 1, cha: 1 },
+        half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 2, cha: 3 },
       };
       const CLASS_STATS: Record<string, Record<string, number>> = {
         warrior: { str: 3, dex: 1, con: 2, int: 0, wis: 0, cha: 0 },
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
         bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
       };
       const CLASS_BASE_HP: Record<string, number> = {
-        warrior: 24, wizard: 14, ranger: 20, rogue: 16, healer: 18, bard: 16,
+        warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
       };
 
       const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
