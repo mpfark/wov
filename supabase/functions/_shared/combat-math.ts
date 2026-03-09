@@ -40,9 +40,9 @@ export function diminishingFloat(mod: number, perPoint: number, cap: number): nu
 
 // ── Cross-stat bonuses ───────────────────────────────────────────
 
-/** INT → Hit Bonus: sqrt curve, capped at +3 */
+/** INT → Hit Bonus: sqrt curve, capped at +5 */
 export function getIntHitBonus(int: number): number {
-  return diminishing(getStatModifier(int), 3);
+  return diminishing(getStatModifier(int), 5);
 }
 
 /** DEX → Critical Hit Range reduction: sqrt curve, capped at +5 */
