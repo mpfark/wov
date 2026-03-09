@@ -628,9 +628,7 @@ export default function CharacterPanel({
                   const baseDodge = 100 - getHitChance;
                   const effectiveDodge = evasionActive ? Math.min(100, baseDodge + Math.round(evasionBuff!.dodgeChance * 100)) : baseDodge;
 
-                  const dexMod = Math.max(Math.floor((character.dex + (equipmentBonuses.dex || 0) - 10) / 2), 0);
-                  const attackInterval = Math.max(Math.round(3000 - Math.sqrt(dexMod) * 350), 1000);
-                  const atkSpeed = (attackInterval / 1000).toFixed(1);
+                   const atkSpeed = '2.0';
 
                   // Damage multiplier text
                   const dmgMultParts: string[] = [];
