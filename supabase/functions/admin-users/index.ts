@@ -233,14 +233,10 @@ Deno.serve(async (req) => {
       const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
       updates.max_hp = newMaxHp;
       updates.hp = newMaxHp;
-      // Calculate max_cp with mental stat scaling
-      const mentalMod = Math.max(
-        Math.floor((updates.int - 10) / 2),
-        Math.floor((updates.wis - 10) / 2),
-        Math.floor((updates.cha - 10) / 2),
-        0
-      );
-      updates.max_cp = 60 + (new_level - 1) * 3 + mentalMod * 5;
+      // Calculate max_cp with INT + WIS scaling
+      const intMod = Math.max(Math.floor((updates.int - 10) / 2), 0);
+      const wisMod = Math.max(Math.floor((updates.wis - 10) / 2), 0);
+      updates.max_cp = 30 + (new_level - 1) * 3 + (intMod + wisMod) * 3;
       updates.cp = updates.max_cp;
 
       // MP: 100 + dexMod * 10 + (level-1) * 2
