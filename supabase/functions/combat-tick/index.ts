@@ -525,6 +525,11 @@ Deno.serve(async (req) => {
         updates.gold = newGold;
       }
 
+      // BHP award
+      if (mBhp[m.id] > 0) {
+        updates.bhp = (c.bhp || 0) + mBhp[m.id];
+      }
+
       if (Object.keys(updates).length > 0) {
         await db.from('characters').update(updates).eq('id', m.id);
       }
@@ -536,6 +541,7 @@ Deno.serve(async (req) => {
         gold: updates.gold ?? c.gold,
         level: newLevel,
         max_hp: newMaxHp,
+        bhp: updates.bhp ?? (c.bhp || 0),
       });
     }
 
