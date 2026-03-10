@@ -238,7 +238,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                     setPanelOpen(false);
                     setPopulateMode(false);
                     setPopulateSelectedIds(new Set());
-                    setAreaPanelOpen(false);
+                    setEditingAreaId(null);
+                    setIsNewArea(false);
                   }}
                   onDeleteRegion={deleteRegion}
                   populateMode={populateMode}
