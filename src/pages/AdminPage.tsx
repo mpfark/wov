@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, BookOpen, Bug } from 'lucide-react';
+import { ArrowLeft, Bug } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
@@ -154,19 +154,19 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="npcs" className="font-display text-xs">NPCs</TabsTrigger>
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
             <TabsTrigger value="loot-tables" className="font-display text-xs">Loot Tables</TabsTrigger>
-            <TabsTrigger value="item-forge" className="font-display text-xs">🪄 Item Forge</TabsTrigger>
+            <TabsTrigger value="item-forge" className="font-display text-xs">Item Forge</TabsTrigger>
             <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
             {/* Game Systems */}
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
             <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
             {/* Operations */}
             <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
-            <TabsTrigger value="issues" className="font-display text-xs"><Bug className="w-3 h-3 mr-1 inline" />Issues</TabsTrigger>
+            <TabsTrigger value="issues" className="font-display text-xs">Issues</TabsTrigger>
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
             <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
             {/* Reference */}
-            <TabsTrigger value="rulebook" className="font-display text-xs">📖 Rulebook</TabsTrigger>
-            <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
+            <TabsTrigger value="rulebook" className="font-display text-xs">Rulebook</TabsTrigger>
+            <TabsTrigger value="manual" className="font-display text-xs">Manual</TabsTrigger>
           </TabsList>
         </div>
 
