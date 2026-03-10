@@ -502,7 +502,7 @@ export default function ItemManager() {
 
               <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} hands={form.hands ?? 1} itemType={form.item_type} />
 
-              {(form.item_type === 'equipment' || form.item_type === 'shield') && (
+              {form.item_type === 'equipment' && (
                 <div>
                   <label className="text-[10px] text-muted-foreground">Equipment Slot</label>
                   <Select value={form.slot || ''} onValueChange={v => setForm(f => ({ ...f, slot: v || null }))}>
