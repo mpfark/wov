@@ -113,6 +113,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastMove = useCallback((charId: string, charName: string, nodeId: string) => {
+    logBroadcast('out', `party`, 'party_move');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_move',
