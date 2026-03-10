@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Bug } from 'lucide-react';
+import { ArrowLeft, Bug, MapPin } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
@@ -45,6 +45,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [populateMode, setPopulateMode] = useState(false);
   const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
   const [nodePositions, setNodePositions] = useState<Map<string, { px: number; py: number }>>(new Map());
+  const [areaPanelOpen, setAreaPanelOpen] = useState(false);
 
   const [areas, setAreas] = useState<any[]>([]);
 
@@ -89,6 +90,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setIsNewNode(false);
     setAdjacentToNodeId(null);
     setPanelOpen(true);
+    setAreaPanelOpen(false);
   };
 
   const handleAddNodeAdjacent = (fromId: string, direction?: string) => {
@@ -101,6 +103,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setAdjacentToNodeId(fromId || null);
     setAdjacentDirection(direction || null);
     setPanelOpen(true);
+    setAreaPanelOpen(false);
   };
 
   const handleAddNodeBetween = (_fromId: string, _toId: string) => {
@@ -147,7 +150,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           <TabsList className="h-8">
             {/* World Building */}
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
-            <TabsTrigger value="areas" className="font-display text-xs">Areas</TabsTrigger>
             <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
             {/* Entities */}
             <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
@@ -182,16 +184,28 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               onEditDone={() => setEditingRegionId(null)}
             />
             <span className="text-xs text-muted-foreground ml-2">
-              {regions.length} regions · {nodes.length} nodes
+              {regions.length} regions · {nodes.length} nodes · {areas.length} areas
             </span>
             <div className="flex-1" />
+            <Button
+              size="sm"
+              variant={areaPanelOpen ? 'default' : 'outline'}
+              onClick={() => {
+                setAreaPanelOpen(v => !v);
+                if (!areaPanelOpen) { setPanelOpen(false); setPopulateMode(false); setPopulateSelectedIds(new Set()); }
+              }}
+              className="text-xs"
+            >
+              <MapPin className="w-3 h-3 mr-1" />
+              {areaPanelOpen ? 'Close Areas' : 'Areas'}
+            </Button>
             <Button
               size="sm"
               variant={populateMode ? 'default' : 'outline'}
               onClick={() => {
                 setPopulateMode(m => !m);
                 if (populateMode) setPopulateSelectedIds(new Set());
-                if (!populateMode) setPanelOpen(false);
+                if (!populateMode) { setPanelOpen(false); setAreaPanelOpen(false); }
               }}
               className="text-xs"
             >
@@ -264,6 +278,14 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
+              {areaPanelOpen && !populateMode && !panelOpen && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <AreaManager onDataChanged={() => { loadData(); }} />
+                  </ResizablePanel>
+                </>
+              )}
             </ResizablePanelGroup>
           </div>
         </TabsContent>
@@ -304,9 +326,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           {activeTab === 'item-forge' && <ItemForgePanel onDataChanged={loadData} />}
         </TabsContent>
 
-        <TabsContent value="areas" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          {activeTab === 'areas' && <AreaManager onDataChanged={loadData} />}
-        </TabsContent>
 
         <TabsContent value="manual" className="flex-1 min-h-0 mt-0 overflow-hidden">
           {activeTab === 'manual' && <GameManual />}
