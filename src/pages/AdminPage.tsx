@@ -126,7 +126,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col parchment-bg">
+    <div className="h-screen flex flex-col parchment-bg overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-card/50">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-xs">
