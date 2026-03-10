@@ -288,7 +288,7 @@ export default function ItemManager() {
   const filtered = items.filter(i => {
     if (showUnassigned && usedItemIds.has(i.id)) return false;
     if (typeTab !== 'all' && i.item_type !== typeTab) return false;
-    if ((typeTab === 'equipment' || typeTab === 'shield') && slotTab !== 'all') {
+    if (typeTab === 'equipment' && slotTab !== 'all') {
       if (i.slot !== slotTab) return false;
     }
     if (rarityTab !== 'all' && i.rarity !== rarityTab) return false;
