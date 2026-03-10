@@ -671,7 +671,7 @@ export function useCombat(params: UseCombatParams) {
             ext.current.onAbsorbDamage?.(defResult.remainingShield);
             if (defResult.finalDamage > 0) {
               const playerNewHp = Math.max(currentChar.hp - defResult.finalDamage, 0);
-              _addLog(`🛡️✨ Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} damage bleeds through. (Shield broken)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${who} — Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} bleeds through. (Shield broken)`);
               await _updateCharacter({ hp: playerNewHp });
               await _degradeEquipment();
               if (playerNewHp <= 0) {
