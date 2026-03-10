@@ -92,6 +92,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setAdjacentToNodeId(null);
     setPanelOpen(true);
     setAreaPanelOpen(false);
+    setEditingRegionId(null);
   };
 
   const handleAddNodeAdjacent = (fromId: string, direction?: string) => {
