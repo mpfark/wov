@@ -34,6 +34,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
     channel
       .on('broadcast', { event: 'say' }, ({ payload }) => {
         if (payload.senderId === characterId) return;
+        logBroadcast('in', `chat-node`, 'say');
         onMessageRef.current(`💬 ${payload.senderName}: ${payload.text}`);
       })
       .subscribe();
