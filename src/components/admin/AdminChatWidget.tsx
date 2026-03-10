@@ -151,18 +151,13 @@ export default function AdminChatWidget() {
 
     // Say message
     if (nodeId) {
-      const channel = supabase.channel(`admin-say-${nodeId}-${Date.now()}`);
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'say',
-            payload: { senderId: charId, senderName: charName, text },
-          });
-          setTimeout(() => supabase.removeChannel(channel), 2000);
-        }
-      });
-    }
+      if (nodeChannelRef.current) {
+        nodeChannelRef.current.send({
+          type: 'broadcast',
+          event: 'say',
+          payload: { senderId: charId, senderName: charName, text },
+        });
+      }
     addMsg(`💬 ${charName}: ${text}`);
   };
 
