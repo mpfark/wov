@@ -67,7 +67,7 @@ function EntryRow({ entry }: { entry: BroadcastLogEntry }) {
   const age = ((Date.now() - entry.timestamp) / 1000).toFixed(1);
   const isOut = entry.direction === 'out';
   // Shorten channel name for display
-  const shortChannel = entry.channel.replace(/^(chat-|creature-combat-|ground-loot-|party-broadcast-)/, '');
+  const shortChannel = entry.channel.replace(/^(node-|chat-|creature-combat-|ground-loot-|party-broadcast-)/, '');
 
   return (
     <div className={`flex items-start gap-1.5 py-0.5 ${isOut ? 'text-primary/80' : 'text-accent-foreground/70'}`}>
