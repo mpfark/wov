@@ -233,7 +233,7 @@ export default function ItemManager() {
       stats: form.stats,
       value: Math.max(0, form.value),
       max_durability: Math.max(1, form.max_durability),
-      hands: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) || form.item_type === 'shield' ? form.hands : null,
+      hands: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.hands : null,
       level: Math.max(1, Math.min(100, form.level)),
       origin_type: form.rarity === 'unique' ? form.origin_type : null,
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
