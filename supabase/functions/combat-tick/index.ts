@@ -443,10 +443,11 @@ Deno.serve(async (req) => {
         if (!tank || mHp[tankId] <= 0) continue;
         applyCreatureHit(tankId, tank.c.name, tank.c, eq[tankId] || {}, creature, cStr, dmgDie, '🛡️ ');
       } else {
-        for (const m of members) {
-          if (mHp[m.id] <= 0) continue;
-          applyCreatureHit(m.id, m.c.name, m.c, eq[m.id] || {}, creature, cStr, dmgDie, '');
-        }
+        // No tank — creature picks a random alive member to attack
+        const alive = members.filter(m => mHp[m.id] > 0);
+        if (alive.length === 0) continue;
+        const target = alive[Math.floor(Math.random() * alive.length)];
+        applyCreatureHit(target.id, target.c.name, target.c, eq[target.id] || {}, creature, cStr, dmgDie, '');
       }
     }
 
