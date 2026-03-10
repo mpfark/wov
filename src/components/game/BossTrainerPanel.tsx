@@ -111,7 +111,8 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
                 {STAT_KEYS.map(stat => {
                   const rank = trained[stat] || 0;
                   const chance = getSuccessChance(rank);
-                  const canAfford = character.bhp >= TRAINING_COST;
+                  const cost = getTrainingCost(rank);
+                  const canAfford = character.bhp >= cost;
 
                   return (
                     <div key={stat} className="grid grid-cols-[1fr_50px_60px_60px_auto] gap-1 items-center p-1.5 bg-background/50 rounded border border-border">
