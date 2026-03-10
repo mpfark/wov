@@ -1022,6 +1022,7 @@ export type Database = {
         Args: { _character_id: string }
         Returns: undefined
       }
+      find_character_id_by_name: { Args: { _name: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
       has_role: {
         Args: {
