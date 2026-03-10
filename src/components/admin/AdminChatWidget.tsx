@@ -23,6 +23,7 @@ export default function AdminChatWidget() {
   const [nodeId, setNodeId] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const nodeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const openRef = useRef(open);
   openRef.current = open;
 
@@ -54,14 +55,22 @@ export default function AdminChatWidget() {
   // Subscribe to node say channel
   useEffect(() => {
     if (!nodeId || !charId) return;
-    const channel = supabase.channel(`chat-node-${nodeId}`);
+    const channel = supabase.channel(`admin-node-listen-${nodeId}`);
     channel
       .on('broadcast', { event: 'say' }, ({ payload }) => {
         if (payload.senderId === charId) return;
         addMsg(`💬 ${payload.senderName}: ${payload.text}`);
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Also join the actual node channel for sending
+    const sendChannel = supabase.channel(`node-${nodeId}`);
+    sendChannel.subscribe();
+    nodeChannelRef.current = sendChannel;
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(sendChannel);
+      nodeChannelRef.current = null;
+    };
   }, [nodeId, charId, addMsg]);
 
   // Subscribe to whisper channel
@@ -142,17 +151,13 @@ export default function AdminChatWidget() {
 
     // Say message
     if (nodeId) {
-      const channel = supabase.channel(`chat-node-${nodeId}`);
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'say',
-            payload: { senderId: charId, senderName: charName, text },
-          });
-          setTimeout(() => supabase.removeChannel(channel), 2000);
-        }
-      });
+      if (nodeChannelRef.current) {
+        nodeChannelRef.current.send({
+          type: 'broadcast',
+          event: 'say',
+          payload: { senderId: charId, senderName: charName, text },
+        });
+      }
     }
     addMsg(`💬 ${charName}: ${text}`);
   };

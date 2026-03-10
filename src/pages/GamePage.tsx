@@ -8,7 +8,7 @@ import TeleportDialog from '@/components/game/TeleportDialog';
 import { useGroundLoot } from '@/hooks/useGroundLoot';
 import { Character } from '@/hooks/useCharacter';
 import { useNodes, getNodeDisplayName } from '@/hooks/useNodes';
-import { usePresence } from '@/hooks/usePresence';
+import { useNodeChannel } from '@/hooks/useNodeChannel';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/hooks/useCreatures';
@@ -92,10 +92,11 @@ interface Props {
 export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const bus = useCreateGameEventBus();
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
-  const { playersHere } = usePresence(character.current_node_id, character);
+  const nodeChannel = useNodeChannel(character.current_node_id, character);
+  const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(character);
   const { creatures } = useCreatures(character.current_node_id);
-  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(character.current_node_id, character.id);
+  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id);
 
   useEffect(() => {
     cleanupOverrides(creatures.map(c => c.id));
@@ -151,7 +152,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
-  const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(character.current_node_id, character.id);
+  const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(nodeChannel, character.current_node_id, character.id);
 
   const logEndRef = useRef<HTMLDivElement>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -568,6 +569,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, []);
 
   const { sendSay, sendWhisper } = useChat({
+    handle: nodeChannel,
     nodeId: character.current_node_id,
     characterId: character.id,
     characterName: character.name,
