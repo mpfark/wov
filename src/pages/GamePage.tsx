@@ -563,12 +563,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const handleAttackFirst = useCallback(() => {
     if (isDead) return;
-    if (inCombat) return;
-    // If a target is selected via Tab, attack that one
+    // If a target is selected via Tab, engage it (even mid-combat to switch targets)
     if (selectedTargetId) {
       const target = creatures.find(c => c.id === selectedTargetId && c.is_alive);
       if (target) { startCombat(target.id); return; }
     }
+    // If already in combat with no new selection, do nothing
+    if (inCombat) return;
     const firstCreature = creatures.find(c => c.is_alive);
     if (firstCreature) startCombat(firstCreature.id);
   }, [isDead, inCombat, creatures, selectedTargetId, startCombat]);
