@@ -81,9 +81,19 @@ export function useInventory(characterId: string | null) {
   }, [characterId, inventory, fetchInventory]);
 
   const unequipItem = useCallback(async (inventoryId: string) => {
+    // If unequipping a belt, clear all belt_slot assignments
+    const item = inventory.find(i => i.id === inventoryId);
+    if (item?.equipped_slot === 'belt') {
+      const beltedIds = inventory.filter(i => i.belt_slot !== null && i.belt_slot !== undefined).map(i => i.id);
+      if (beltedIds.length > 0) {
+        await Promise.all(beltedIds.map(id =>
+          supabase.from('character_inventory').update({ belt_slot: null } as any).eq('id', id)
+        ));
+      }
+    }
     await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', inventoryId);
     fetchInventory();
-  }, [fetchInventory]);
+  }, [inventory, fetchInventory]);
 
   const dropItem = useCallback(async (inventoryId: string) => {
     await supabase.from('character_inventory').delete().eq('id', inventoryId);
