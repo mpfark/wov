@@ -388,9 +388,9 @@ export default function CreatureManager() {
                 </div>
                 <div>
                   <label className="text-[10px] text-muted-foreground">Level</label>
-                  <Input type="number" min={1} max={40} value={form.level}
+                  <Input type="number" min={1} value={form.level}
                     onChange={e => {
-                      const level = Math.max(1, Math.min(40, +e.target.value));
+                      const level = Math.max(1, +e.target.value);
                       setForm(f => {
                         const updated = { ...f, level };
                         if (updated.is_humanoid) {
