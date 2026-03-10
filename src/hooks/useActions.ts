@@ -440,10 +440,13 @@ export function useActions(params: UseActionsParams) {
         m.character.current_node_id === p.character.current_node_id
       );
       const toMove = p.character.level >= 25 ? coLocated : coLocated.filter(m => m.is_following);
-      for (const f of toMove) {
-        await supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id);
+      if (toMove.length > 0) {
+        await Promise.all(toMove.map(f =>
+          supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id)
+        ));
+        p.addLog('Your party follows you.');
+        p.fetchParty();
       }
-      if (toMove.length > 0) { p.addLog('Your party follows you.'); p.fetchParty(); }
     }
   }, [p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
