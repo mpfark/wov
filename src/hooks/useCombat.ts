@@ -680,7 +680,7 @@ export function useCombat(params: UseCombatParams) {
                 break;
               }
             } else {
-              _addLog(`🛡️✨ Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${who} — Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
             }
           } else {
             const playerNewHp = Math.max(currentChar.hp - defResult.finalDamage, 0);

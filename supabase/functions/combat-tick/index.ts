@@ -417,7 +417,7 @@ Deno.serve(async (req) => {
           const absorbed = Math.min(dmg, mb.absorb_buff.shield_hp);
           mb.absorb_buff.shield_hp -= absorbed;
           dmg -= absorbed;
-          events.push({ type: 'absorb', message: `🛡️✨ ${targetName}'s shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
+          events.push({ type: 'absorb', message: `🛡️✨ ${c.name} hits ${targetName} — shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
           if (dmg <= 0) return;
         }
 
