@@ -77,7 +77,7 @@ export default function NodeView({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="h-full flex flex-col p-3">
+      <div className="h-full flex flex-col p-3 relative">
         {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
           {/* Location Header */}
@@ -107,6 +107,13 @@ export default function NodeView({
             {getNodeDisplayDescription(node, area) || 'A quiet corner of the world...'}
           </p>
         </div>
+
+        {/* Floating heartbeat indicator */}
+        {inCombat && lastTickTime && (
+          <div className="flex justify-center py-0.5">
+            <HeartbeatIndicator lastTickTime={lastTickTime} />
+          </div>
+        )}
 
         {/* In the Area - sticks above action bar, outside scrollable area */}
         {hasAreaContent && (
@@ -324,13 +331,6 @@ export default function NodeView({
 
         {/* Compact Action Bar - pinned to bottom */}
         <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
-          {/* Heartbeat indicator — visible during combat */}
-          {inCombat && lastTickTime && (
-            <HeartbeatIndicator lastTickTime={lastTickTime} />
-          )}
-
-
-
           {/* Row 3: Abilities */}
           {classAbilities.length > 0 && onUseAbility && (
             <div className="flex flex-wrap items-center gap-1 justify-center">
