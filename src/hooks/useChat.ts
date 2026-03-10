@@ -73,6 +73,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
 
   const sendSay = useCallback((text: string) => {
     if (!nodeChannelRef.current) return;
+    logBroadcast('out', `chat-node`, 'say');
     nodeChannelRef.current.send({
       type: 'broadcast',
       event: 'say',
