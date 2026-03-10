@@ -374,6 +374,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   🌀
                 </text>
               )}
+              {(node as any).is_trainer && (
+                <text x={pos.px} y={pos.py + 34} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                  🏋️
+                </text>
+              )}
               {/* Current marker */}
               {isCurrent && (
                 <text x={pos.px} y={pos.py - 16} textAnchor="middle"
