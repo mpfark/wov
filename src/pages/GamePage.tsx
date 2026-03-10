@@ -1005,6 +1005,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           </div>
         </div>
       )}
+
+      {/* Broadcast Debug Overlay — admin only */}
+      {isAdmin && <BroadcastDebugOverlay />}
     </div>
   );
 }
