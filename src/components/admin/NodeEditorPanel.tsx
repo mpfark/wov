@@ -469,7 +469,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, connections: '[]', searchable_items: [], area_id: '' });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, connections: '[]', searchable_items: [], area_id: '' });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
