@@ -487,6 +487,7 @@ export default function NodeEditorPanel({
         is_inn: data.is_inn ?? false,
         is_blacksmith: (data as any).is_blacksmith ?? false,
         is_teleport: (data as any).is_teleport ?? false,
+        is_trainer: (data as any).is_trainer ?? false,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
         area_id: (data as any).area_id || '',
