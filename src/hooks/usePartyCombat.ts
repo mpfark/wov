@@ -73,6 +73,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const [inCombat, setInCombat] = useState(false);
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [engagedCreatureIds, setEngagedCreatureIds] = useState<string[]>([]);
+  const engagedCreatureIdsRef = useRef<string[]>([]);
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
 
