@@ -45,6 +45,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [populateMode, setPopulateMode] = useState(false);
   const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
   const [nodePositions, setNodePositions] = useState<Map<string, { px: number; py: number }>>(new Map());
+  const [areaPanelOpen, setAreaPanelOpen] = useState(false);
 
   const [areas, setAreas] = useState<any[]>([]);
 
