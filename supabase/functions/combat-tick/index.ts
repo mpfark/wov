@@ -139,8 +139,8 @@ Deno.serve(async (req) => {
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; }
 
-    const tankId = party.tank_id ?? party.leader_id;
-    const tankAtNode = members.some(m => m.id === tankId);
+    const tankId = party.tank_id || null;
+    const tankAtNode = tankId ? members.some(m => m.id === tankId) : false;
 
     // ── Member attacks ───────────────────────────────────────────
     const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume
@@ -443,10 +443,11 @@ Deno.serve(async (req) => {
         if (!tank || mHp[tankId] <= 0) continue;
         applyCreatureHit(tankId, tank.c.name, tank.c, eq[tankId] || {}, creature, cStr, dmgDie, '🛡️ ');
       } else {
-        for (const m of members) {
-          if (mHp[m.id] <= 0) continue;
-          applyCreatureHit(m.id, m.c.name, m.c, eq[m.id] || {}, creature, cStr, dmgDie, '');
-        }
+        // No tank — creature picks a random alive member to attack
+        const alive = members.filter(m => mHp[m.id] > 0);
+        if (alive.length === 0) continue;
+        const target = alive[Math.floor(Math.random() * alive.length)];
+        applyCreatureHit(target.id, target.c.name, target.c, eq[target.id] || {}, creature, cStr, dmgDie, '');
       }
     }
 

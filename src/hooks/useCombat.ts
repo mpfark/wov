@@ -510,8 +510,8 @@ export function useCombat(params: UseCombatParams) {
       }
 
       // ── Creature counterattack ─────────────────────────────────
-      const effectiveTankId = _party ? (_party.tank_id ?? _party.leader_id) : null;
-      const iAmTheTank = !_party || effectiveTankId === char.id;
+      const effectiveTankId = _party?.tank_id || null;
+      const iAmTheTank = !_party || !effectiveTankId || effectiveTankId === char.id;
 
       // Check if tank is present at this node (once for all creatures)
       let tankPresentAtNode = false;
