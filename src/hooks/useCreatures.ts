@@ -94,7 +94,7 @@ export function useCreatures(nodeId: string | null) {
       .subscribe();
 
     // Periodic respawn check every 15s (safety net)
-    const interval = setInterval(fetchCreatures, 15000);
+    const interval = setInterval(fetchCreatures, 30000);
 
     return () => {
       supabase.removeChannel(channel);

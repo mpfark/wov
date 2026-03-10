@@ -25,6 +25,8 @@ export interface GroundLootItem {
 export function useGroundLoot(nodeId: string | null, characterId: string | null) {
   const [groundLoot, setGroundLoot] = useState<GroundLootItem[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Suppress Postgres Changes refetch when broadcast already handled the update
+  const suppressRefetchUntilRef = useRef(0);
 
   const fetchGroundLoot = useCallback(async () => {
     if (!nodeId) { setGroundLoot([]); return; }
@@ -44,20 +46,26 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'node_ground_loot',
         filter: `node_id=eq.${nodeId}`,
-      }, () => fetchGroundLoot())
+      }, () => {
+        // Skip refetch if broadcast already handled this update recently
+        if (Date.now() < suppressRefetchUntilRef.current) return;
+        fetchGroundLoot();
+      })
       .on('broadcast', { event: 'loot_picked_up' }, (payload) => {
-        // Another player picked up an item — remove it instantly from our list
         const { ground_loot_id, picker_id } = payload.payload as { ground_loot_id: string; picker_id: string };
-        if (picker_id === characterId) return; // We already removed it optimistically
+        if (picker_id === characterId) return;
         if (ground_loot_id) {
           setGroundLoot(prev => prev.filter(g => g.id !== ground_loot_id));
+          // Suppress the upcoming Postgres Changes refetch for 3s
+          suppressRefetchUntilRef.current = Date.now() + 3000;
         }
       })
       .on('broadcast', { event: 'loot_dropped' }, (payload) => {
-        // Another player dropped an item — refetch to show it
         const { dropper_id } = payload.payload as { dropper_id: string };
-        if (dropper_id === characterId) return; // We already refetched
+        if (dropper_id === characterId) return;
         fetchGroundLoot();
+        // Suppress the upcoming Postgres Changes refetch for 3s
+        suppressRefetchUntilRef.current = Date.now() + 3000;
       })
       .subscribe();
     channelRef.current = channel;
@@ -67,11 +75,13 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
     };
   }, [nodeId, characterId, fetchGroundLoot]);
 
-  // Cleanup expired loot client-side periodically
+  // Cleanup expired loot — only run once per session, not per player on a tight interval
+  // A single call on mount + every 5 minutes is sufficient
   useEffect(() => {
+    supabase.rpc('cleanup_ground_loot' as any).then(() => {});
     const interval = setInterval(() => {
       supabase.rpc('cleanup_ground_loot' as any).then(() => {});
-    }, 60000);
+    }, 300000); // 5 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -82,6 +92,8 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
 
     // Optimistic removal — hide from UI immediately
     setGroundLoot(prev => prev.filter(g => g.id !== groundLootId));
+    // Suppress Postgres Changes refetch since we're handling this ourselves
+    suppressRefetchUntilRef.current = Date.now() + 3000;
 
     // Broadcast to other players at this node so item disappears instantly for them
     channelRef.current?.send({
@@ -96,20 +108,16 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
         p_character_id: characterId, p_item_id: item.item_id,
       });
       if (!acquired) {
-        // Restore if failed
         fetchGroundLoot();
         return false;
       }
       await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId);
     } else {
-      // Delete from ground first — if another player already took it, this is a no-op
       const { data: deleted } = await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId).select();
       if (!deleted || (deleted as any[]).length === 0) {
-        // Someone else already grabbed it
         fetchGroundLoot();
         return false;
       }
-      // Insert into inventory
       await supabase.from('character_inventory').insert({
         character_id: characterId, item_id: item.item_id, current_durability: 100,
       });
@@ -120,15 +128,14 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
 
   const dropItemToGround = useCallback(async (inventoryItemId: string, itemId: string, currentNodeId: string) => {
     if (!characterId || !currentNodeId) return;
-    // Delete from inventory
+    // Suppress Postgres Changes refetch since we broadcast
+    suppressRefetchUntilRef.current = Date.now() + 3000;
     await supabase.from('character_inventory').delete().eq('id', inventoryItemId);
-    // Insert into ground loot
     await supabase.from('node_ground_loot' as any).insert({
       node_id: currentNodeId,
       item_id: itemId,
       dropped_by: characterId,
     });
-    // Broadcast so other players see the new item instantly
     channelRef.current?.send({
       type: 'broadcast',
       event: 'loot_dropped',
