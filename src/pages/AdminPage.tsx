@@ -170,7 +170,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           </TabsList>
         </div>
 
-        <TabsContent value="world" className="flex-1 flex flex-col min-h-0 mt-0 overflow-hidden">
+        <TabsContent value="world" className="flex-1 data-[state=active]:flex flex-col min-h-0 mt-0 overflow-hidden">
           {/* Region controls */}
           <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30 shrink-0">
             <RegionManager
