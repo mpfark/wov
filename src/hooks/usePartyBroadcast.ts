@@ -80,6 +80,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_combat_msg' }, (payload) => {
         const data = payload.payload as PartyCombatMsgEvent;
         if (!data?.id) return;
+        logBroadcast('in', `party`, 'party_combat_msg');
         setBroadcastLogEntries(prev => [...prev.slice(-49), data]);
       })
       .on('broadcast', { event: 'party_reward' }, (payload) => {
