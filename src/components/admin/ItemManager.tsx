@@ -343,9 +343,9 @@ export default function ItemManager() {
             </button>
           ))}
         </div>
-        {(typeTab === 'equipment' || typeTab === 'shield') && (
+        {typeTab === 'equipment' && (
           <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
-            {['all', ...(typeTab === 'shield' ? ['off_hand'] : SLOTS)].map(s => {
+            {['all', ...SLOTS].map(s => {
               const count = items.filter(i => i.item_type === typeTab && (s === 'all' || i.slot === s)).length;
               return (
                 <button
