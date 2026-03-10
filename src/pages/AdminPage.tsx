@@ -126,7 +126,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col parchment-bg">
+    <div className="h-screen flex flex-col parchment-bg overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-card/50">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-xs">
@@ -142,7 +142,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
       <XpBoostPanel />
 
 
-      <Tabs defaultValue="world" value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <Tabs defaultValue="world" value={activeTab} onValueChange={(v) => { setActiveTab(v); }} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="px-4 pt-2 border-b border-border bg-card/30 shrink-0">
           <TabsList className="h-8">
             {/* World Building */}
