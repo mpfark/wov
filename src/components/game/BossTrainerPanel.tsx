@@ -32,16 +32,17 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
   const trained = (character.bhp_trained || {}) as Record<string, number>;
 
   const handleTrain = async (stat: typeof STAT_KEYS[number]) => {
-    if (character.bhp < TRAINING_COST) return;
+    const rank = trainedRef[stat] || 0;
+    const cost = getTrainingCost(rank);
+    if (character.bhp < cost) return;
     if (character.level < 30) return;
 
     setTraining(true);
-    const rank = trained[stat] || 0;
     const chance = getSuccessChance(rank);
     const roll = Math.random() * 100;
     const success = roll < chance;
 
-    const newBhp = character.bhp - TRAINING_COST;
+    const newBhp = character.bhp - cost;
     const newTrained = { ...trained };
 
     if (success) {
