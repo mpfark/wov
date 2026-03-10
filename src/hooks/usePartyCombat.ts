@@ -119,6 +119,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
     lastTickRef.current = Date.now();
+    setLastTickTime(Date.now());
 
     // Update creature HP overrides
     for (const cs of data.creature_states) {
