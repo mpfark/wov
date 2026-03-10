@@ -825,6 +825,11 @@ export default function NodeEditorPanel({
                     onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
                   🌀 Is Teleport Point (fast travel destination)
                 </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_trainer}
+                    onChange={e => setForm(f => ({ ...f, is_trainer: e.target.checked }))} />
+                  🏋️ Is Boss Trainer (BHP attribute training, Lv30+)
+                </label>
               </div>
 
               <div className="flex gap-2">
