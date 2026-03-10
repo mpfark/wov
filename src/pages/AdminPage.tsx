@@ -145,19 +145,28 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
       <Tabs defaultValue="world" value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="px-4 pt-2 border-b border-border bg-card/30 shrink-0">
           <TabsList className="h-8">
+            {/* World Building */}
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
+            <TabsTrigger value="areas" className="font-display text-xs">Areas</TabsTrigger>
+            <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
+            {/* Entities */}
             <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
             <TabsTrigger value="npcs" className="font-display text-xs">NPCs</TabsTrigger>
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
             <TabsTrigger value="loot-tables" className="font-display text-xs">Loot Tables</TabsTrigger>
-            <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
-            <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
-            <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
-            <TabsTrigger value="rulebook" className="font-display text-xs">📖 Rulebook</TabsTrigger>
             <TabsTrigger value="item-forge" className="font-display text-xs">🪄 Item Forge</TabsTrigger>
-            <TabsTrigger value="areas" className="font-display text-xs">🗺️ Areas</TabsTrigger>
-            <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
+            <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
+            {/* Game Systems */}
+            <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
+            <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
+            {/* Operations */}
+            <TabsTrigger value="users" className="font-display text-xs">Users</TabsTrigger>
             <TabsTrigger value="issues" className="font-display text-xs"><Bug className="w-3 h-3 mr-1 inline" />Issues</TabsTrigger>
+            <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
+            <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
+            {/* Reference */}
+            <TabsTrigger value="rulebook" className="font-display text-xs">📖 Rulebook</TabsTrigger>
+            <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
           </TabsList>
         </div>
 
