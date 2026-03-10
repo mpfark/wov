@@ -687,6 +687,14 @@ export default function CharacterPanel({
                   })}
                 </div>
 
+                {/* BHP Balance */}
+                {character.level >= 30 && (
+                  <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/10 rounded border border-elvish/20">
+                    <span className="font-display text-elvish">🏋️ Boss Hunter Points</span>
+                    <span className="font-display text-elvish tabular-nums">{character.bhp || 0}</span>
+                  </div>
+                )}
+
                 {/* Derived Stats */}
                 {(() => {
                   const now = Date.now();
