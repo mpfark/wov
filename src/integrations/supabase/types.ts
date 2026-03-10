@@ -189,6 +189,8 @@ export type Database = {
       characters: {
         Row: {
           ac: number
+          bhp: number
+          bhp_trained: Json
           cha: number
           class: Database["public"]["Enums"]["character_class"]
           con: number
@@ -219,6 +221,8 @@ export type Database = {
         }
         Insert: {
           ac?: number
+          bhp?: number
+          bhp_trained?: Json
           cha?: number
           class: Database["public"]["Enums"]["character_class"]
           con?: number
@@ -249,6 +253,8 @@ export type Database = {
         }
         Update: {
           ac?: number
+          bhp?: number
+          bhp_trained?: Json
           cha?: number
           class?: Database["public"]["Enums"]["character_class"]
           con?: number
@@ -602,6 +608,7 @@ export type Database = {
           is_blacksmith: boolean
           is_inn: boolean
           is_teleport: boolean
+          is_trainer: boolean
           is_vendor: boolean
           name: string
           region_id: string
@@ -616,6 +623,7 @@ export type Database = {
           is_blacksmith?: boolean
           is_inn?: boolean
           is_teleport?: boolean
+          is_trainer?: boolean
           is_vendor?: boolean
           name?: string
           region_id: string
@@ -630,6 +638,7 @@ export type Database = {
           is_blacksmith?: boolean
           is_inn?: boolean
           is_teleport?: boolean
+          is_trainer?: boolean
           is_vendor?: boolean
           name?: string
           region_id?: string
