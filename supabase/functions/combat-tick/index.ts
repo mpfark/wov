@@ -247,6 +247,20 @@ Deno.serve(async (req) => {
               message: `☠️ ${target.name} has been slain! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}`,
             });
 
+            // BHP for boss kills
+            if (target.rarity === 'boss') {
+              const bhpReward = Math.floor(target.level * 0.5);
+              if (bhpReward > 0) {
+                const bhpEach = Math.floor(bhpReward / split);
+                if (bhpEach > 0) {
+                  for (const mm of members) {
+                    if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
+                  }
+                  events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
+                }
+              }
+            }
+
             // Queue loot
             if (target.loot_table_id) {
               lootQueue.push({ nodeId: node_id, lootTableId: target.loot_table_id, itemId: null, creatureName: target.name, dropChance: target.drop_chance ?? 0.5 });
