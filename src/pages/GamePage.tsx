@@ -322,6 +322,24 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     gameLoop.setPartyRegenBuff(incomingPartyRegenBuff);
   }, [incomingPartyRegenBuff]);
 
+  // ── Instant follower movement: when the leader broadcasts a move, followers
+  //    update their own node immediately instead of waiting for Postgres Realtime.
+  const lastLeaderMoveRef = useRef(0);
+  useEffect(() => {
+    if (!party || isLeader || !myMembership?.is_following) return;
+    // Find the leader's latest move event
+    const leaderMoves = partyMoveEvents.filter(e => e.character_id === party.leader_id);
+    if (leaderMoves.length === 0) return;
+    const latestMove = leaderMoves[leaderMoves.length - 1];
+    // Skip if we already processed this (compare node_id + timestamp guard)
+    if (latestMove.node_id === character.current_node_id) return;
+    if (leaderMoves.length <= lastLeaderMoveRef.current) return;
+    lastLeaderMoveRef.current = leaderMoves.length;
+    // Optimistically update our own node to match the leader
+    updateCharacter({ current_node_id: latestMove.node_id });
+    addLocalLog(`You follow ${latestMove.character_name}.`);
+  }, [party, isLeader, myMembership?.is_following, partyMoveEvents, character.current_node_id, updateCharacter, addLocalLog]);
+
   // Broadcast party regen buff when caster sets it
   const prevPartyRegenBuffRef = useRef<typeof partyRegenBuff>(null);
   useEffect(() => {
