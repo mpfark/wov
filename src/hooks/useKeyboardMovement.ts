@@ -110,6 +110,7 @@ interface UseKeyboardMovementOptions {
   onUseBeltPotion?: (index: number) => void;
   onPickUpLoot?: () => void;
   onOpenChat?: () => void;
+  onCycleTarget?: () => void;
 }
 
 export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion, onPickUpLoot, onOpenChat }: UseKeyboardMovementOptions) {
