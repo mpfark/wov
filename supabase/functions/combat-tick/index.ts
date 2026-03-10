@@ -131,12 +131,13 @@ Deno.serve(async (req) => {
     const mHp: Record<string, number> = {};
     const mXp: Record<string, number> = {};
     const mGold: Record<string, number> = {};
+    const mBhp: Record<string, number> = {};
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
-    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; }
+    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; }
 
     const tankId = party.tank_id ?? party.leader_id;
     const tankAtNode = members.some(m => m.id === tankId);
