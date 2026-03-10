@@ -74,6 +74,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_move' }, (payload) => {
         const data = payload.payload as PartyMoveEvent;
         if (!data?.character_id || data.character_id === characterId) return;
+        logBroadcast('in', `party`, 'party_move');
         setMoveEvents(prev => [...prev.slice(-20), data]);
       })
       .on('broadcast', { event: 'party_combat_msg' }, (payload) => {
