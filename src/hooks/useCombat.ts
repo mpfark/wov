@@ -98,6 +98,7 @@ export function useCombat(params: UseCombatParams) {
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const [engagedCreatureIds, setEngagedCreatureIds] = useState<string[]>([]);
+  const [lastTickTime, setLastTickTime] = useState<number | null>(null);
 
   // ── Internal coordination refs ─────────────────────────────────
   const engagedCreatureIdsRef = useRef<Set<string>>(new Set());
