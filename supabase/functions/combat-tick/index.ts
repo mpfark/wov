@@ -59,31 +59,48 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await userDb.auth.getUser();
     if (authErr || !user) throw new Error('Unauthorized');
 
-    const { party_id, node_id, member_buffs, member_dots, engaged_creature_ids } = await req.json();
-    if (!party_id || !node_id) throw new Error('Missing party_id or node_id');
+    const { party_id, character_id, node_id, member_buffs, member_dots, engaged_creature_ids } = await req.json();
+    if (!node_id) throw new Error('Missing node_id');
+    if (!party_id && !character_id) throw new Error('Missing party_id or character_id');
     const buffs: Record<string, any> = member_buffs || {};
     const dots: Record<string, any> = member_dots || {};
     const engagedIds: string[] = engaged_creature_ids || [];
 
-    // ── Verify party leader ──────────────────────────────────────
-    const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
-    if (!party) throw new Error('Party not found');
-    const { data: userChars } = await db.from('characters').select('id').eq('user_id', user.id);
-    if (!userChars?.some(c => c.id === party.leader_id)) throw new Error('Not the party leader');
+    let members: { id: string; c: any }[];
+    let tankId: string | null = null;
+    let tankAtNode = false;
 
-    // ── Fetch party members at node ──────────────────────────────
-    const { data: membersRaw } = await db
-      .from('party_members')
-      .select('character_id, character:characters(*)')
-      .eq('party_id', party_id)
-      .eq('status', 'accepted');
+    if (party_id) {
+      // ── Party mode ───────────────────────────────────────────────
+      const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
+      if (!party) throw new Error('Party not found');
+      const { data: userChars } = await db.from('characters').select('id').eq('user_id', user.id);
+      if (!userChars?.some(c => c.id === party.leader_id)) throw new Error('Not the party leader');
 
-    const members = (membersRaw || [])
-      .filter(m => {
-        const ch = m.character as any;
-        return ch?.current_node_id === node_id && ch?.hp > 0;
-      })
-      .map(m => ({ id: m.character_id, c: m.character as any }));
+      const { data: membersRaw } = await db
+        .from('party_members')
+        .select('character_id, character:characters(*)')
+        .eq('party_id', party_id)
+        .eq('status', 'accepted');
+
+      members = (membersRaw || [])
+        .filter(m => {
+          const ch = m.character as any;
+          return ch?.current_node_id === node_id && ch?.hp > 0;
+        })
+        .map(m => ({ id: m.character_id, c: m.character as any }));
+
+      tankId = party.tank_id || null;
+      tankAtNode = tankId ? members.some(m => m.id === tankId) : false;
+    } else {
+      // ── Solo mode ────────────────────────────────────────────────
+      const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
+      if (!char || char.user_id !== user.id) throw new Error('Not authorized');
+      if (char.current_node_id !== node_id || char.hp <= 0) {
+        return json({ events: [], creature_states: [], member_states: [] });
+      }
+      members = [{ id: character_id, c: char }];
+    }
 
     if (members.length === 0) return json({ events: [], creature_states: [], member_states: [] });
 
@@ -139,8 +156,7 @@ Deno.serve(async (req) => {
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; }
 
-    const tankId = party.tank_id || null;
-    const tankAtNode = tankId ? members.some(m => m.id === tankId) : false;
+    // tankId and tankAtNode already set during party/solo initialization above
 
     // ── Member attacks ───────────────────────────────────────────
     const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume

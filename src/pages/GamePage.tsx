@@ -20,7 +20,6 @@ import NPCDialogPanel from '@/components/game/NPCDialogPanel';
 import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
-import { useCombat } from '@/hooks/useCombat';
 import { usePartyCombat } from '@/hooks/usePartyCombat';
 import { getBagWeight, getStatModifier, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES, calculateHP } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
@@ -357,28 +356,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
   const effectiveAC = character.ac + (equipmentBonuses.ac || 0) + acBuffBonus;
 
-  // ── useCombat (solo mode — disabled when in party) ──────────────
-  const soloCombat = useCombat({
-    character, creatures, updateCharacter, equipmentBonuses, effectiveAC, addLog,
-    rollLoot: useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null) => {
-      await rollLootRef.current(lootTable, creatureName, lootTableId, dropChance, creatureNodeId);
-    }, []),
-    degradeEquipment: useCallback(async () => { await degradeEquipmentRef.current(); }, []),
-    party, partyMembers, isDead, critBuff,
-    stealthBuff, onClearStealthBuff: useCallback(() => gameLoop.setStealthBuff(null), []),
-    damageBuff, rootDebuff, acBuff,
-    poisonBuff, onAddPoisonStack: handleAddPoisonStack,
-    evasionBuff, igniteBuff, onAddIgniteStack: handleAddIgniteStack,
-    absorbBuff, onAbsorbDamage: handleAbsorbDamage,
-    sunderDebuff, disengageNextHit,
-    onClearDisengage: useCallback(() => gameLoop.setDisengageNextHit(null), []),
-    focusStrikeBuff, onClearFocusStrike: useCallback(() => gameLoop.setFocusStrikeBuff(null), []),
-    onCreatureKilled: gameLoop.notifyCreatureKilled,
-    broadcastDamage, broadcastHp, broadcastReward, xpMultiplier,
-    disabled: !!party,
-  });
-
-  // ── usePartyCombat (party mode — dormant when solo) ────────────
+  // ── Unified server-authoritative combat ──────────────────────────
   const gatherBuffs = useCallback(() => {
     const now = Date.now();
     const buffs: Record<string, any> = {};
@@ -436,26 +414,23 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [gameLoop.notifyCreatureKilled]);
 
-  const partyCombat = usePartyCombat({
-    character, creatures, party, isLeader, isDead,
+  // Determine if this character should use party combat mode:
+  // Party mode when in a party AND on the same node as the leader
+  const leaderMember = mergedPartyMembers.find(m => m.character_id === party?.leader_id);
+  const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
+  const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
+
+  const combat = usePartyCombat({
+    character, creatures,
+    party: usePartyCombatMode ? party : null,
+    isLeader, isDead,
     addLocalLog, updateCharacter, fetchGroundLoot,
     gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
     gatherDotStacks, onClearedDots: handleClearedDots,
   });
 
-  // ── Merge combat state ─────────────────────────────────────────
-  // Use party combat only when on the same node as the leader; otherwise fight solo
-  const leaderMember = mergedPartyMembers.find(m => m.character_id === party?.leader_id);
-  const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
-  const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
-  const inCombat = usePartyCombatMode ? partyCombat.inCombat : soloCombat.inCombat;
-  const activeCombatCreatureId = usePartyCombatMode ? partyCombat.activeCombatCreatureId : soloCombat.activeCombatCreatureId;
-  const engagedCreatureIds = usePartyCombatMode ? partyCombat.engagedCreatureIds : soloCombat.engagedCreatureIds;
-  const creatureHpOverrides = usePartyCombatMode ? partyCombat.creatureHpOverrides : soloCombat.creatureHpOverrides;
-  const lastTickTime = usePartyCombatMode ? partyCombat.lastTickTime : soloCombat.lastTickTime;
-  const updateCreatureHp = usePartyCombatMode ? partyCombat.updateCreatureHp : soloCombat.updateCreatureHp;
-  const startCombat = usePartyCombatMode ? partyCombat.startCombat : soloCombat.startCombat;
-  const stopCombatFn = usePartyCombatMode ? partyCombat.stopCombat : soloCombat.stopCombat;
+  const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
+    lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = combat;
 
   // Sync combat state ref for DoT ticks in useGameLoop
   combatStateRef.current = { creatureHpOverrides, updateCreatureHp };

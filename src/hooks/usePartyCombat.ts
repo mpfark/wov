@@ -1,14 +1,16 @@
 /**
- * usePartyCombat — server-authoritative party combat via the combat-tick edge function.
+ * usePartyCombat — unified server-authoritative combat via the combat-tick edge function.
  *
- * Leader: runs a 2s heartbeat calling the edge function, broadcasts results to party.
- * Non-leader: listens for tick results via broadcast, updates local state.
+ * Solo: character runs their own 2s heartbeat calling the edge function directly.
+ * Party leader: runs a 2s heartbeat, broadcasts results to party.
+ * Party non-leader (same node as leader): listens for tick results via broadcast.
  * Non-leaders broadcast their buff and DoT stacks so the leader can include them in the tick.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
 import { supabase } from '@/integrations/supabase/client';
+import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 
 interface Party {
   id: string;
@@ -83,11 +85,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const inCombatRef = useRef(false);
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
+  const justStoppedRef = useRef(false);
 
   // Leader aggregates non-leader buff + DoT stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberDotsRef = useRef<Record<string, DotStackReport>>({});
   const doTickRef = useRef<() => void>(() => {});
+
+  // Derived: is this character the "driver" (runs the tick interval)?
+  // Solo players and party leaders drive their own ticks.
+  const isSolo = !params.party;
+  const isDriver = isSolo || params.isLeader;
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -101,11 +109,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   const stopCombat = useCallback(() => {
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
     inCombatRef.current = false;
     tickBusyRef.current = false;
+    justStoppedRef.current = true;
     setInCombat(false);
     setActiveCombatCreatureId(null);
     setEngagedCreatureIds([]);
@@ -116,7 +125,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     memberDotsRef.current = {};
   }, []);
 
-  // ── Process tick result (shared by leader + non-leader) ────────
+  // ── Process tick result (shared by driver + non-leader) ────────
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
     lastTickRef.current = Date.now();
@@ -135,13 +144,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     const myName = ext.current.character.name;
     for (const ev of data.events) {
       let msg = ev.message;
-      // Convert own character name references to "You" / "Your" for immersion
       if (ev.character_id === ext.current.character.id || msg.includes(myName)) {
-        // Replace "CharName's" → "Your" (possessive, must come before name replacement)
         msg = msg.replace(new RegExp(`${myName}'s`, 'g'), 'Your');
-        // Replace "CharName " at start or after emoji prefix → "You "
         msg = msg.replace(new RegExp(`(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*(?:CRITICAL!\\s*)?))${myName} `, 'u'), '$1You ');
-        // Replace remaining " CharName " mid-sentence
         msg = msg.replace(new RegExp(` ${myName} `, 'g'), ' you ');
         msg = msg.replace(new RegExp(` ${myName}\\.`, 'g'), ' you.');
         msg = msg.replace(new RegExp(` ${myName}!`, 'g'), ' you!');
@@ -190,13 +195,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         setInCombat(true);
       }
       setActiveCombatCreatureId(aliveCreatures[0].id);
-      // Only add new creatures to engaged list, don't replace — passive creatures
-      // should only be engaged if explicitly attacked or if they are aggressive
       setEngagedCreatureIds(prev => {
         const newIds = aliveCreatures.map(cs => cs.id);
         const merged = [...new Set([...prev.filter(id => newIds.includes(id)), ...newIds.filter(id => prev.includes(id))])];
-        // If nothing survived from previous engagement, use whatever the server returned
-        // (this handles the case where all engaged creatures died and server engaged new ones)
         const result = merged.length > 0 ? merged : newIds;
         engagedCreatureIdsRef.current = result;
         return result;
@@ -204,7 +205,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
   }, [stopCombat]);
 
-  // ── Broadcast channel ──────────────────────────────────────────
+  // ── Broadcast channel (party only) ─────────────────────────────
 
   useEffect(() => {
     const partyId = params.party?.id;
@@ -215,17 +216,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     channel
       .on('broadcast', { event: 'combat_tick_result' }, (payload) => {
-        // Non-leaders process tick results from broadcast
         if (ext.current.isLeader) return;
         const data = payload.payload as CombatTickResponse;
         if (data) processTickResult(data);
       })
       .on('broadcast', { event: 'engage_request' }, (payload) => {
-        // Leader processes engagement requests from non-leaders
         if (!ext.current.isLeader) return;
         const { creature_id } = payload.payload as { creature_id: string; character_id: string };
         if (!creature_id) return;
-        // Add to engaged list and start combat if not already running
         setEngagedCreatureIds(prev => {
           if (prev.includes(creature_id)) return prev;
           const next = [...prev, creature_id];
@@ -236,26 +234,20 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         if (!inCombatRef.current) {
           inCombatRef.current = true;
           setInCombat(true);
-          if (intervalRef.current) clearInterval(intervalRef.current);
+          if (intervalRef.current) clearWorkerInterval(intervalRef.current);
           doTickRef.current();
-          intervalRef.current = window.setInterval(() => doTickRef.current(), 2000);
+          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
         }
       })
       .on('broadcast', { event: 'member_dot_state' }, (payload) => {
-        // Leader collects non-leader DoT stacks
         if (!ext.current.isLeader) return;
         const { character_id, dots } = payload.payload as { character_id: string; dots: DotStackReport };
-        if (character_id && dots) {
-          memberDotsRef.current[character_id] = dots;
-        }
+        if (character_id && dots) memberDotsRef.current[character_id] = dots;
       })
       .on('broadcast', { event: 'member_buff_state' }, (payload) => {
-        // Leader collects non-leader buff states
         if (!ext.current.isLeader) return;
         const { character_id, buffs } = payload.payload as { character_id: string; buffs: MemberBuffState };
-        if (character_id && buffs) {
-          memberBuffsRef.current[character_id] = buffs;
-        }
+        if (character_id && buffs) memberBuffsRef.current[character_id] = buffs;
       })
       .subscribe();
 
@@ -270,69 +262,67 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
       if (!channelRef.current) return;
-
-      // Broadcast DoT state
       if (ext.current.gatherDotStacks) {
         const dots = ext.current.gatherDotStacks();
         const hasActiveDots = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
         if (hasActiveDots) {
-          channelRef.current.send({
-            type: 'broadcast',
-            event: 'member_dot_state',
-            payload: { character_id: ext.current.character.id, dots },
-          });
+          channelRef.current.send({ type: 'broadcast', event: 'member_dot_state', payload: { character_id: ext.current.character.id, dots } });
         }
       }
-
-      // Broadcast buff state
       if (ext.current.gatherBuffs) {
         const buffs = ext.current.gatherBuffs();
-        const hasActiveBuffs = Object.keys(buffs).length > 0;
-        if (hasActiveBuffs) {
-          channelRef.current.send({
-            type: 'broadcast',
-            event: 'member_buff_state',
-            payload: { character_id: ext.current.character.id, buffs },
-          });
+        if (Object.keys(buffs).length > 0) {
+          channelRef.current.send({ type: 'broadcast', event: 'member_buff_state', payload: { character_id: ext.current.character.id, buffs } });
         }
       }
-    }, 1800); // Slightly faster than 2s tick to ensure leader has fresh data
+    }, 1800);
     return () => clearInterval(interval);
   }, [params.party, params.isLeader]);
 
-  // ── Leader: tick function ──────────────────────────────────────
+  // ── Driver (solo or party leader): tick function ───────────────
 
   const doTick = useCallback(async () => {
     if (tickBusyRef.current) return;
     tickBusyRef.current = true;
     try {
       const p = ext.current;
-      if (!p.party || !p.isLeader || p.isDead || p.character.hp <= 0) {
+      const solo = !p.party;
+      const driver = solo || p.isLeader;
+
+      if (!driver || p.isDead || p.character.hp <= 0) {
         stopCombat();
         return;
       }
 
-      // Gather buff state: leader's own + collected from non-leaders
-      const memberBuffs: Record<string, MemberBuffState> = { ...memberBuffsRef.current };
+      // Gather buff state: own + collected from non-leaders
+      const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
       if (ext.current.gatherBuffs) {
         memberBuffs[p.character.id] = ext.current.gatherBuffs();
       }
 
-      // Gather DoT stacks: leader's own + collected from non-leaders
-      const memberDots: Record<string, DotStackReport> = { ...memberDotsRef.current };
+      // Gather DoT stacks: own + collected from non-leaders
+      const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
       if (ext.current.gatherDotStacks) {
         memberDots[p.character.id] = ext.current.gatherDotStacks();
       }
 
-      const { data, error } = await supabase.functions.invoke('combat-tick', {
-        body: {
-          party_id: p.party.id,
-          node_id: p.character.current_node_id,
-          member_buffs: memberBuffs,
-          member_dots: memberDots,
-          engaged_creature_ids: engagedCreatureIdsRef.current,
-        },
-      });
+      const body = solo
+        ? {
+            character_id: p.character.id,
+            node_id: p.character.current_node_id,
+            member_buffs: memberBuffs,
+            member_dots: memberDots,
+            engaged_creature_ids: engagedCreatureIdsRef.current,
+          }
+        : {
+            party_id: p.party!.id,
+            node_id: p.character.current_node_id,
+            member_buffs: memberBuffs,
+            member_dots: memberDots,
+            engaged_creature_ids: engagedCreatureIdsRef.current,
+          };
+
+      const { data, error } = await supabase.functions.invoke('combat-tick', { body });
 
       if (error) {
         console.error('Combat tick error:', error);
@@ -345,14 +335,15 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         return;
       }
 
-      // Broadcast to party
-      channelRef.current?.send({
-        type: 'broadcast',
-        event: 'combat_tick_result',
-        payload: result,
-      });
+      // Broadcast to party (only in party mode)
+      if (!solo) {
+        channelRef.current?.send({
+          type: 'broadcast',
+          event: 'combat_tick_result',
+          payload: result,
+        });
+      }
 
-      // Process locally
       processTickResult(result);
     } finally {
       tickBusyRef.current = false;
@@ -361,14 +352,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   useEffect(() => { doTickRef.current = doTick; }, [doTick]);
 
-  // ── Start combat (leader only) ─────────────────────────────────
+  // ── Start combat ───────────────────────────────────────────────
 
   const startCombat = useCallback((creatureId: string) => {
     const p = ext.current;
-    if (!p.party || p.isDead || p.character.hp <= 0) return;
+    if (p.isDead || p.character.hp <= 0) return;
 
-    // Non-leader: broadcast an engagement request to the leader
-    if (!p.isLeader) {
+    // Non-leader in party: broadcast an engagement request to the leader
+    if (p.party && !p.isLeader) {
       channelRef.current?.send({
         type: 'broadcast',
         event: 'engage_request',
@@ -377,7 +368,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       return;
     }
 
-    // Leader: add creature to engaged list
+    // Driver (solo or party leader): add creature to engaged list
     setEngagedCreatureIds(prev => {
       if (prev.includes(creatureId)) return prev;
       const next = [...prev, creatureId];
@@ -389,18 +380,61 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!inCombatRef.current) {
       inCombatRef.current = true;
       setInCombat(true);
-      // Start 2s heartbeat
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTick(); // Immediate first tick
-      intervalRef.current = window.setInterval(doTick, 2000);
+      intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
     }
   }, [doTick]);
 
+  // ── Auto-aggro: re-engage aggressive creatures after combat stops ──
+
+  useEffect(() => {
+    if (inCombat) {
+      justStoppedRef.current = false;
+    }
+  }, [inCombat]);
+
+  useEffect(() => {
+    const p = ext.current;
+    if (inCombat || !justStoppedRef.current || p.isDead) return;
+    // Only drivers auto-re-engage (solo or party leader)
+    if (p.party && !p.isLeader) return;
+    const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
+    if (nextAggro) {
+      justStoppedRef.current = false;
+      const timeout = setTimeout(() => {
+        ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
+        startCombat(nextAggro.id);
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [params.creatures, inCombat, startCombat]);
+
+  // Auto-aggro: during combat, add new aggressive creatures to engaged list
+  useEffect(() => {
+    const p = ext.current;
+    if (!inCombat) return;
+    if (p.party && !p.isLeader) return; // Only drivers manage engagement
+    for (const c of params.creatures) {
+      if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id)) {
+        setEngagedCreatureIds(prev => {
+          if (prev.includes(c.id)) return prev;
+          const next = [...prev, c.id];
+          engagedCreatureIdsRef.current = next;
+          return next;
+        });
+        ext.current.addLocalLog(`⚠️ ${c.name} joins the fight!`);
+      }
+    }
+  }, [params.creatures, inCombat]);
+
   // ── Lifecycle effects ──────────────────────────────────────────
 
-  // Stop when party disbands
+  // Stop when party disbands (party mode only — solo keeps fighting)
+  // Note: transitioning from party to solo or vice versa resets combat
   useEffect(() => {
-    if (!params.party) stopCombat();
+    // If we were in party mode and party dissolved, stop to reset state
+    if (!params.party && channelRef.current) stopCombat();
   }, [params.party, stopCombat]);
 
   // Stop when node changes
@@ -430,7 +464,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) clearWorkerInterval(intervalRef.current);
     };
   }, []);
 
