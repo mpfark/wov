@@ -399,6 +399,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
+    lastTickTime,
     updateCreatureHp,
     startCombat,
     stopCombat,
