@@ -67,6 +67,7 @@ function getNodeLabel(node: any, areas: any[]): string {
   if (node?.is_vendor) flags.push('Vendor');
   if (node?.is_blacksmith) flags.push('Blacksmith');
   if (node?.is_teleport) flags.push('Teleport');
+  if (node?.is_trainer) flags.push('Trainer');
   const area = node?.area_id ? areas.find((a: any) => a.id === node.area_id) : null;
   const areaName = area?.name || 'Unknown';
   const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
