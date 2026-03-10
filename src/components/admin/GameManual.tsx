@@ -1115,7 +1115,33 @@ export default function GameManual() {
                 <div>
                   <p className="font-display text-foreground mb-1">Training</p>
                   <p>Visit a <strong className="text-foreground">🏋️ Boss Trainer</strong> node to spend BHP on permanent attribute ranks beyond the level cap.</p>
-                  <p><strong className="text-foreground">Cost:</strong> 20 BHP per attempt (success or fail).</p>
+                  <p><strong className="text-foreground">Cost:</strong> <code className="text-primary">20 × (rank + 1)</code> BHP per attempt (success or fail).</p>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Rank</TableHead>
+                        <TableHead className="text-xs">0→1</TableHead>
+                        <TableHead className="text-xs">1→2</TableHead>
+                        <TableHead className="text-xs">2→3</TableHead>
+                        <TableHead className="text-xs">3→4</TableHead>
+                        <TableHead className="text-xs">4→5</TableHead>
+                        <TableHead className="text-xs">5→6</TableHead>
+                        <TableHead className="text-xs">6→7</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-xs font-medium">Cost</TableCell>
+                        <TableCell className="text-xs">20</TableCell>
+                        <TableCell className="text-xs">40</TableCell>
+                        <TableCell className="text-xs">60</TableCell>
+                        <TableCell className="text-xs">80</TableCell>
+                        <TableCell className="text-xs">100</TableCell>
+                        <TableCell className="text-xs">120</TableCell>
+                        <TableCell className="text-xs text-destructive">140</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
 
                 <div>

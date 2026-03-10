@@ -159,8 +159,7 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
           )}
 
           <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-            Spend {TRAINING_COST} BHP per attempt to permanently increase an attribute.
-            Success chance decreases with each rank trained in the same stat.
+            Cost per attempt: 20 × (rank + 1) BHP. Success chance decreases with each rank.
             Earn BHP by slaying boss creatures.
           </p>
         </div>
