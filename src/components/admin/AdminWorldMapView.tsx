@@ -745,11 +745,29 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   return (
                     <div
                       key={area.id}
-                      className="w-full text-left px-2.5 py-2 rounded text-xs transition-colors hover:bg-accent text-foreground"
+                      className="group w-full text-left px-2.5 py-2 rounded text-xs transition-colors hover:bg-accent text-foreground cursor-pointer"
                     >
                       <div className="flex items-center gap-1 min-w-0">
                         <span className="text-sm shrink-0">{emojiMap[area.area_type] || '📍'}</span>
                         <span className="font-display truncate max-w-[110px]" title={area.name}>{area.name}</span>
+                        <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
+                          {onEditArea && (
+                            <button
+                              onClick={e => { e.stopPropagation(); onEditArea(area); }}
+                              className="p-0.5 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                          {onDeleteArea && (
+                            <button
+                              onClick={e => { e.stopPropagation(); onDeleteArea(area.id); }}
+                              className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-0.5 pl-[22px]">
                         {!selectedRegionId && regionName ? `${regionName} · ` : ''}{areaNodeCount} nodes
