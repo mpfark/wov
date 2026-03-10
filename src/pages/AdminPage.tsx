@@ -23,6 +23,7 @@ import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
 import AdminChatWidget from '@/components/admin/AdminChatWidget';
+import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -91,6 +92,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setAdjacentToNodeId(null);
     setPanelOpen(true);
     setAreaPanelOpen(false);
+    setEditingRegionId(null);
   };
 
   const handleAddNodeAdjacent = (fromId: string, direction?: string) => {
@@ -104,6 +106,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setAdjacentDirection(direction || null);
     setPanelOpen(true);
     setAreaPanelOpen(false);
+    setEditingRegionId(null);
   };
 
   const handleAddNodeBetween = (_fromId: string, _toId: string) => {
@@ -180,8 +183,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               onCreated={loadData}
               isValar={isValar}
               onDelete={deleteRegion}
-              editingRegionId={editingRegionId}
-              onEditDone={() => setEditingRegionId(null)}
             />
             <span className="text-xs text-muted-foreground ml-2">
               {regions.length} regions · {nodes.length} nodes · {areas.length} areas
@@ -226,7 +227,13 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   npcCounts={npcCounts}
                   onNodeClick={handleNodeClick}
                   onAddNodeAdjacent={handleAddNodeAdjacent}
-                  onEditRegion={(region) => setEditingRegionId(region.id)}
+                  onEditRegion={(region) => {
+                    setEditingRegionId(region.id);
+                    setPanelOpen(false);
+                    setPopulateMode(false);
+                    setPopulateSelectedIds(new Set());
+                    setAreaPanelOpen(false);
+                  }}
                   onDeleteRegion={deleteRegion}
                   populateMode={populateMode}
                   populateSelectedIds={populateSelectedIds}
@@ -240,10 +247,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   }}
                   onPositionsComputed={setNodePositions}
                   onConnectionCreated={loadData}
-                  panelOpen={panelOpen}
+                  panelOpen={panelOpen || !!editingRegionId}
                 />
               </ResizablePanel>
-              {(panelOpen && !populateMode) && (
+              {(panelOpen && !populateMode && !editingRegionId) && (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={35} minSize={25}>
@@ -258,6 +265,19 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                       adjacentToNodeId={adjacentToNodeId}
                       adjacentDirection={adjacentDirection}
                       nodePositions={nodePositions}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+              {editingRegionId && !populateMode && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <RegionEditorPanel
+                      regionId={editingRegionId}
+                      regions={regions}
+                      onClose={() => setEditingRegionId(null)}
+                      onSaved={() => { setEditingRegionId(null); loadData(); }}
                     />
                   </ResizablePanel>
                 </>
@@ -278,7 +298,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
-              {areaPanelOpen && !populateMode && !panelOpen && (
+              {areaPanelOpen && !populateMode && !panelOpen && !editingRegionId && (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={35} minSize={25}>
