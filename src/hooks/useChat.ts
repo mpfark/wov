@@ -23,6 +23,8 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
 
   const nodeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const whisperChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Track temporary whisper channels for cleanup on unmount
+  const tempChannelsRef = useRef<Set<ReturnType<typeof supabase.channel>>>(new Set());
 
   // Subscribe to node-scoped say channel
   useEffect(() => {
@@ -30,7 +32,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
     const channel = supabase.channel(`chat-node-${nodeId}`);
     channel
       .on('broadcast', { event: 'say' }, ({ payload }) => {
-        if (payload.senderId === characterId) return; // skip own
+        if (payload.senderId === characterId) return;
         onMessageRef.current(`💬 ${payload.senderName}: ${payload.text}`);
       })
       .subscribe();
@@ -56,6 +58,16 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
     };
   }, [characterId]);
 
+  // Cleanup any leaked temp channels on unmount
+  useEffect(() => {
+    return () => {
+      for (const ch of tempChannelsRef.current) {
+        supabase.removeChannel(ch);
+      }
+      tempChannelsRef.current.clear();
+    };
+  }, []);
+
   const sendSay = useCallback((text: string) => {
     if (!nodeChannelRef.current) return;
     nodeChannelRef.current.send({
@@ -63,7 +75,6 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
       event: 'say',
       payload: { senderId: characterId, senderName: characterName, text },
     });
-    // Show own message locally
     onMessageRef.current(`💬 ${characterName}: ${text}`);
   }, [characterId, characterName]);
 
@@ -71,8 +82,9 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
     const target = onlinePlayers.find(p => p.name.toLowerCase() === targetName.toLowerCase());
     if (!target) return `Player "${targetName}" not found online.`;
 
-    // Create a temporary channel to send the whisper
     const targetChannel = supabase.channel(`chat-whisper-${target.id}`);
+    tempChannelsRef.current.add(targetChannel);
+
     targetChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         targetChannel.send({
@@ -80,12 +92,14 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
           event: 'whisper',
           payload: { senderId: characterId, senderName: characterName, text },
         });
-        // Clean up after a short delay
-        setTimeout(() => supabase.removeChannel(targetChannel), 2000);
+        // Clean up after send
+        setTimeout(() => {
+          tempChannelsRef.current.delete(targetChannel);
+          supabase.removeChannel(targetChannel);
+        }, 2000);
       }
     });
 
-    // Show own outgoing whisper locally
     onMessageRef.current(`🤫 To ${target.name}: ${text}`);
     return null;
   }, [characterId, characterName, onlinePlayers]);
