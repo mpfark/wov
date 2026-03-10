@@ -55,6 +55,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       .on('broadcast', { event: 'loot_picked_up' }, (payload) => {
         const { ground_loot_id, picker_id } = payload.payload as { ground_loot_id: string; picker_id: string };
         if (picker_id === characterId) return;
+        logBroadcast('in', `ground-loot-${nodeId}`, 'loot_picked_up');
         if (ground_loot_id) {
           setGroundLoot(prev => prev.filter(g => g.id !== ground_loot_id));
           // Suppress the upcoming Postgres Changes refetch for 3s
