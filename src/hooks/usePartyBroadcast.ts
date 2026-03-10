@@ -104,8 +104,9 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, [partyId, characterId]);
 
   const broadcastHp = useCallback((charId: string, hp: number, maxHp: number, source: string) => {
+    if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_hp');
-    channelRef.current?.send({
+    channelRef.current.send({
       type: 'broadcast',
       event: 'party_hp',
       payload: { character_id: charId, hp, max_hp: maxHp, source } satisfies PartyHpEvent,
@@ -113,8 +114,9 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastMove = useCallback((charId: string, charName: string, nodeId: string) => {
+    if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_move');
-    channelRef.current?.send({
+    channelRef.current.send({
       type: 'broadcast',
       event: 'party_move',
       payload: { character_id: charId, character_name: charName, node_id: nodeId } satisfies PartyMoveEvent,
@@ -122,8 +124,9 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastCombatMsg = useCallback((id: string, message: string, nodeId: string | null, characterName: string | null) => {
+    if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_combat_msg');
-    channelRef.current?.send({
+    channelRef.current.send({
       type: 'broadcast',
       event: 'party_combat_msg',
       payload: { id, message, node_id: nodeId, character_name: characterName } satisfies PartyCombatMsgEvent,
@@ -131,8 +134,9 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastReward = useCallback((charId: string, xp: number, gold: number, source: string) => {
+    if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_reward');
-    channelRef.current?.send({
+    channelRef.current.send({
       type: 'broadcast',
       event: 'party_reward',
       payload: { character_id: charId, xp, gold, source } satisfies PartyRewardEvent,
@@ -140,8 +144,9 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastPartyRegenBuff = useCallback((healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string) => {
+    if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_regen_buff');
-    channelRef.current?.send({
+    channelRef.current.send({
       type: 'broadcast',
       event: 'party_regen_buff',
       payload: { healPerTick, expiresAt, source, caster_id: casterId } satisfies PartyRegenBuffEvent,
