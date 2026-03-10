@@ -312,7 +312,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated, panelOpen }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, onEditArea, onDeleteArea, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated, panelOpen }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
