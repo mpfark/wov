@@ -249,8 +249,9 @@ export function useCombat(params: UseCombatParams) {
       }
 
       const creature = e.creatures.find(c => c.id === creatureId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) {
-        // Target died (e.g. killed by another player) — pick next or stop
+      const creatureOverrideHp = creatureHpOverridesRef.current[creatureId];
+      const effectiveCreatureHp = creatureOverrideHp !== undefined ? creatureOverrideHp : creature?.hp ?? 0;
+      if (!creature || !creature.is_alive || effectiveCreatureHp <= 0) {
         engagedCreatureIdsRef.current.delete(creatureId);
         setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
         const nextEngaged = [...engagedCreatureIdsRef.current].find(id => {
