@@ -237,8 +237,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           inCombatRef.current = true;
           setInCombat(true);
           if (intervalRef.current) clearInterval(intervalRef.current);
-          doTick();
-          intervalRef.current = window.setInterval(doTick, 2000);
+          doTickRef.current();
+          intervalRef.current = window.setInterval(() => doTickRef.current(), 2000);
         }
       })
       .on('broadcast', { event: 'member_dot_state' }, (payload) => {
