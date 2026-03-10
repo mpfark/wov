@@ -270,6 +270,20 @@ export function useActions(params: UseActionsParams) {
     } else {
       await p.updateCharacter({ xp: newXp, gold: newGold });
     }
+
+    // Award BHP for boss kills
+    if (creature.rarity === 'boss' && p.character.level >= 30) {
+      const bhpReward = Math.floor(creature.level * 0.5);
+      if (bhpReward > 0) {
+        const bhpShare = Math.floor(bhpReward / splitCount);
+        if (bhpShare > 0) {
+          const newBhp = (p.character.bhp || 0) + bhpShare;
+          await p.updateCharacter({ bhp: newBhp });
+          p.addLog(`🏋️ +${bhpShare} Boss Hunter Points!`);
+        }
+      }
+    }
+
     await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance, creature.node_id);
     if (opts?.stopCombat) p.stopCombat();
   }, [p.character, p.party, p.addLog, p.updateCharacter, rollLoot, p.stopCombat, p.xpMultiplier]);

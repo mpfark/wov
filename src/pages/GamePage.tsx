@@ -934,6 +934,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             onSearch={handleSearch}
             onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
             onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
+            onOpenTrainer={(currentNode.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined}
             onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
               if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
               setTeleportOpen(true);
