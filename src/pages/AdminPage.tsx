@@ -242,6 +242,22 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                     setIsNewArea(false);
                   }}
                   onDeleteRegion={deleteRegion}
+                  onEditArea={(area) => {
+                    setEditingAreaId(area.id);
+                    setIsNewArea(false);
+                    setPanelOpen(false);
+                    setEditingRegionId(null);
+                    setPopulateMode(false);
+                    setPopulateSelectedIds(new Set());
+                  }}
+                  onDeleteArea={async (areaId) => {
+                    const area = areas.find(a => a.id === areaId);
+                    if (!window.confirm(`Delete area "${area?.name}"?`)) return;
+                    const { error } = await supabase.from('areas').delete().eq('id', areaId);
+                    if (error) return toast.error(error.message);
+                    toast.success('Area deleted');
+                    loadData();
+                  }}
                   populateMode={populateMode}
                   populateSelectedIds={populateSelectedIds}
                   onPopulateToggleNode={(id) => {
@@ -254,10 +270,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   }}
                   onPositionsComputed={setNodePositions}
                   onConnectionCreated={loadData}
-                  panelOpen={panelOpen || !!editingRegionId}
+                  panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea}
                 />
               </ResizablePanel>
-              {(panelOpen && !populateMode && !editingRegionId) && (
+              {(panelOpen && !populateMode && !editingRegionId && !editingAreaId && !isNewArea) && (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={35} minSize={25}>
@@ -289,6 +305,23 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
+              {(editingAreaId || isNewArea) && !populateMode && !editingRegionId && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <AreaEditorPanel
+                      areaId={editingAreaId}
+                      isNew={isNewArea}
+                      regions={regions}
+                      areas={areas}
+                      initialRegionId={selectedRegion || regions[0]?.id}
+                      onClose={() => { setEditingAreaId(null); setIsNewArea(false); }}
+                      onSaved={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
+                      onDeleted={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
               {populateMode && populateSelectedIds.size > 0 && (
                 <>
                   <ResizableHandle withHandle />
@@ -305,16 +338,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
-              {areaPanelOpen && !populateMode && !panelOpen && !editingRegionId && (
-                <>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={35} minSize={25}>
-                    <AreaManager onDataChanged={() => { loadData(); }} />
-                  </ResizablePanel>
-                </>
-              )}
             </ResizablePanelGroup>
           </div>
+
+          <AreaTypeDialog open={typeDialogOpen} onOpenChange={setTypeDialogOpen} />
         </TabsContent>
 
         <TabsContent value="creatures" className="flex-1 min-h-0 mt-0 overflow-hidden">
