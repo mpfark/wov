@@ -1,0 +1,1 @@
+UPDATE items SET item_type = 'equipment' WHERE item_type = 'shield';

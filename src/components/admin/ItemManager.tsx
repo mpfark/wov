@@ -27,7 +27,7 @@ interface Item {
 
 const RARITIES = ['common', 'uncommon', 'unique'];
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
-const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest', 'shield'];
+const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];
 
 const STAT_KEY_LABELS: Record<string, string> = {
