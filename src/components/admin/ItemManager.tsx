@@ -27,7 +27,7 @@ interface Item {
 
 const RARITIES = ['common', 'uncommon', 'unique'];
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
-const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest', 'shield'];
+const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];
 
 const STAT_KEY_LABELS: Record<string, string> = {
@@ -229,11 +229,11 @@ export default function ItemManager() {
       description: form.description.trim(),
       item_type: form.item_type,
       rarity: form.rarity as any,
-      slot: (form.item_type === 'equipment' || form.item_type === 'shield') ? form.slot as any : null,
+      slot: form.item_type === 'equipment' ? form.slot as any : null,
       stats: form.stats,
       value: Math.max(0, form.value),
       max_durability: Math.max(1, form.max_durability),
-      hands: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) || form.item_type === 'shield' ? form.hands : null,
+      hands: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.hands : null,
       level: Math.max(1, Math.min(100, form.level)),
       origin_type: form.rarity === 'unique' ? form.origin_type : null,
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
@@ -288,7 +288,7 @@ export default function ItemManager() {
   const filtered = items.filter(i => {
     if (showUnassigned && usedItemIds.has(i.id)) return false;
     if (typeTab !== 'all' && i.item_type !== typeTab) return false;
-    if ((typeTab === 'equipment' || typeTab === 'shield') && slotTab !== 'all') {
+    if (typeTab === 'equipment' && slotTab !== 'all') {
       if (i.slot !== slotTab) return false;
     }
     if (rarityTab !== 'all' && i.rarity !== rarityTab) return false;
@@ -343,9 +343,9 @@ export default function ItemManager() {
             </button>
           ))}
         </div>
-        {(typeTab === 'equipment' || typeTab === 'shield') && (
+        {typeTab === 'equipment' && (
           <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
-            {['all', ...(typeTab === 'shield' ? ['off_hand'] : SLOTS)].map(s => {
+            {['all', ...SLOTS].map(s => {
               const count = items.filter(i => i.item_type === typeTab && (s === 'all' || i.slot === s)).length;
               return (
                 <button
@@ -471,7 +471,7 @@ export default function ItemManager() {
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Type</label>
-                  <Select value={form.item_type} onValueChange={v => setForm(f => ({ ...f, item_type: v, slot: v === 'shield' ? 'off_hand' : f.slot, hands: v === 'shield' ? 1 : f.hands }))}>
+                  <Select value={form.item_type} onValueChange={v => setForm(f => ({ ...f, item_type: v }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border-border z-50">
                       {ITEM_TYPES.map(t => (
@@ -502,13 +502,13 @@ export default function ItemManager() {
 
               <BudgetIndicator level={form.level} rarity={form.rarity} stats={form.stats} hands={form.hands ?? 1} itemType={form.item_type} />
 
-              {(form.item_type === 'equipment' || form.item_type === 'shield') && (
+              {form.item_type === 'equipment' && (
                 <div>
                   <label className="text-[10px] text-muted-foreground">Equipment Slot</label>
                   <Select value={form.slot || ''} onValueChange={v => setForm(f => ({ ...f, slot: v || null }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select slot" /></SelectTrigger>
                     <SelectContent className="bg-popover border-border z-50">
-                      {(form.item_type === 'shield' ? ['off_hand'] : SLOTS).map(s => (
+                      {SLOTS.map(s => (
                         <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace('_', ' ')}</SelectItem>
                       ))}
                     </SelectContent>
@@ -517,7 +517,7 @@ export default function ItemManager() {
               )}
 
               {/* Potion slots for belt items */}
-              {(form.item_type === 'equipment' || form.item_type === 'shield') && form.slot === 'belt' && (
+              {form.item_type === 'equipment' && form.slot === 'belt' && (
                 <div>
                   <label className="text-[10px] text-muted-foreground">Potion Slots</label>
                   <Input type="number" min={0} max={10} value={form.stats.potion_slots || 0}
