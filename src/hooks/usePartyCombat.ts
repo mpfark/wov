@@ -73,6 +73,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const [inCombat, setInCombat] = useState(false);
   const [activeCombatCreatureId, setActiveCombatCreatureId] = useState<string | null>(null);
   const [engagedCreatureIds, setEngagedCreatureIds] = useState<string[]>([]);
+  const engagedCreatureIdsRef = useRef<string[]>([]);
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
 
@@ -107,6 +108,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setInCombat(false);
     setActiveCombatCreatureId(null);
     setEngagedCreatureIds([]);
+    engagedCreatureIdsRef.current = [];
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
@@ -184,7 +186,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         setInCombat(true);
       }
       setActiveCombatCreatureId(aliveCreatures[0].id);
-      setEngagedCreatureIds(aliveCreatures.map(cs => cs.id));
+      // Only add new creatures to engaged list, don't replace — passive creatures
+      // should only be engaged if explicitly attacked or if they are aggressive
+      setEngagedCreatureIds(prev => {
+        const newIds = aliveCreatures.map(cs => cs.id);
+        const merged = [...new Set([...prev.filter(id => newIds.includes(id)), ...newIds.filter(id => prev.includes(id))])];
+        // If nothing survived from previous engagement, use whatever the server returned
+        // (this handles the case where all engaged creatures died and server engaged new ones)
+        const result = merged.length > 0 ? merged : newIds;
+        engagedCreatureIdsRef.current = result;
+        return result;
+      });
     }
   }, [stopCombat]);
 
@@ -293,6 +305,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           node_id: p.character.current_node_id,
           member_buffs: memberBuffs,
           member_dots: memberDots,
+          engaged_creature_ids: engagedCreatureIdsRef.current,
         },
       });
 
@@ -332,6 +345,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setInCombat(true);
     setActiveCombatCreatureId(creatureId);
     setEngagedCreatureIds([creatureId]);
+    engagedCreatureIdsRef.current = [creatureId];
 
     // Start 2s heartbeat
     if (intervalRef.current) clearInterval(intervalRef.current);
