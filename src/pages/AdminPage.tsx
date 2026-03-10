@@ -183,8 +183,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               onCreated={loadData}
               isValar={isValar}
               onDelete={deleteRegion}
-              editingRegionId={editingRegionId}
-              onEditDone={() => setEditingRegionId(null)}
             />
             <span className="text-xs text-muted-foreground ml-2">
               {regions.length} regions · {nodes.length} nodes · {areas.length} areas
