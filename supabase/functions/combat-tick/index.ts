@@ -113,7 +113,11 @@ Deno.serve(async (req) => {
       .eq('node_id', node_id)
       .eq('is_alive', true);
 
-    const creatures = creaturesRaw || [];
+    const allCreatures = creaturesRaw || [];
+    // Only fight creatures that are explicitly engaged OR aggressive
+    const creatures = allCreatures.filter(cr =>
+      engagedIds.includes(cr.id) || cr.is_aggressive
+    );
     if (creatures.length === 0) return json({ events: [], creature_states: [], member_states: [] });
 
     // ── XP boost ─────────────────────────────────────────────────
