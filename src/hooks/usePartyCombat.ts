@@ -359,6 +359,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
   }, [processTickResult, stopCombat]);
 
+  useEffect(() => { doTickRef.current = doTick; }, [doTick]);
+
   // ── Start combat (leader only) ─────────────────────────────────
 
   const startCombat = useCallback((creatureId: string) => {
