@@ -722,7 +722,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
         </div>
 
         {/* Areas sidebar */}
-        <div className="w-48 border-r border-border bg-card/50 flex flex-col">
+        <div className="w-60 border-r border-border bg-card/50 flex flex-col">
           <div className="px-3 py-2 border-b border-border">
             <h3 className="font-display text-xs text-primary">Areas</h3>
           </div>
