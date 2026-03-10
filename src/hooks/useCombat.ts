@@ -611,7 +611,7 @@ export function useCombat(params: UseCombatParams) {
           if (defResult.absorbed > 0) {
             ext.current.onAbsorbDamage?.(defResult.remainingShield);
             if (defResult.finalDamage > 0) {
-              _addLog(`🛡️✨ Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} damage bleeds through. (Shield broken)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${tankMember.character.name} — Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} bleeds through. (Shield broken)`);
               try {
                 const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
                   _character_id: tankMember.character_id,
