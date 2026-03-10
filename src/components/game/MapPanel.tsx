@@ -74,6 +74,7 @@ interface Props {
   onOpenVendor?: () => void;
   onOpenBlacksmith?: () => void;
   onOpenTeleport?: () => void;
+  onOpenTrainer?: () => void;
   searchDisabled?: boolean;
   hasDiscoverable?: boolean;
 }
@@ -85,7 +86,7 @@ export default function MapPanel({
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
-  onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, searchDisabled, hasDiscoverable,
+  onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -333,6 +334,19 @@ export default function MapPanel({
                     <TooltipContent side="top" className="text-xs">
                       {characterLevel >= 25 ? 'Recall' : 'Teleport'}
                     </TooltipContent>
+                  </Tooltip>
+                )}
+                {onOpenTrainer && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onOpenTrainer}
+                        className="h-5 w-5 flex items-center justify-center rounded bg-elvish/15 border border-elvish/40 shadow-[0_0_6px_hsl(var(--elvish)/0.3)] hover:bg-elvish/25 transition-colors"
+                      >
+                        <span className="text-[10px]">🏋️</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Boss Trainer</TooltipContent>
                   </Tooltip>
                 )}
               </TooltipProvider>

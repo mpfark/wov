@@ -4,6 +4,7 @@ import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
 import BlacksmithPanel from '@/components/game/BlacksmithPanel';
+import BossTrainerPanel from '@/components/game/BossTrainerPanel';
 import TeleportDialog from '@/components/game/TeleportDialog';
 import { useGroundLoot } from '@/hooks/useGroundLoot';
 import { Character } from '@/hooks/useCharacter';
@@ -151,6 +152,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  const [trainerOpen, setTrainerOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(nodeChannel, character.current_node_id, character.id);
 
@@ -933,6 +935,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
             onSearch={handleSearch}
             onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
             onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
+            onOpenTrainer={(currentNode.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined}
             onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
               if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
               setTeleportOpen(true);
@@ -970,6 +973,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
+          addLog={addLog}
+        />
+      )}
+
+      {/* Boss Trainer Dialog */}
+      {currentNode.is_trainer && character.level >= 30 && (
+        <BossTrainerPanel
+          open={trainerOpen}
+          onClose={() => setTrainerOpen(false)}
+          character={character}
+          updateCharacter={updateCharacter}
           addLog={addLog}
         />
       )}

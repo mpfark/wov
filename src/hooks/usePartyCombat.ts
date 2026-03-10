@@ -19,7 +19,7 @@ interface Party {
 interface CombatTickResponse {
   events: { type: string; message: string; character_id?: string }[];
   creature_states: { id: string; hp: number; alive: boolean }[];
-  member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number }[];
+  member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number; bhp?: number }[];
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
   cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
 }
@@ -150,13 +150,15 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     // Update own character state from server-authoritative data
     const myState = data.member_states.find(m => m.character_id === ext.current.character.id);
     if (myState) {
-      ext.current.updateCharacter({
+      const updates: Partial<import('@/hooks/useCharacter').Character> = {
         hp: myState.hp,
         xp: myState.xp,
         gold: myState.gold,
         level: myState.level,
         max_hp: myState.max_hp,
-      });
+      };
+      if (myState.bhp !== undefined) updates.bhp = myState.bhp;
+      ext.current.updateCharacter(updates);
     }
 
     // Notify client about consumed one-shot buffs

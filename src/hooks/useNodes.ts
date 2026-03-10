@@ -27,6 +27,7 @@ export interface GameNode {
   is_inn: boolean;
   is_blacksmith: boolean;
   is_teleport: boolean;
+  is_trainer: boolean;
   area_id?: string | null;
 }
 

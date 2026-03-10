@@ -678,11 +678,22 @@ export default function CharacterPanel({
                             </p>
                           )}
                           {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
+                          {((character.bhp_trained || {}) as Record<string, number>)[stat] > 0 && (
+                            <p className="text-[10px] text-elvish mt-0.5">🏋️ +{((character.bhp_trained || {}) as Record<string, number>)[stat]} BHP trained</p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     );
                   })}
                 </div>
+
+                {/* BHP Balance */}
+                {character.level >= 30 && (
+                  <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/10 rounded border border-elvish/20">
+                    <span className="font-display text-elvish">🏋️ Boss Hunter Points</span>
+                    <span className="font-display text-elvish tabular-nums">{character.bhp || 0}</span>
+                  </div>
+                )}
 
                 {/* Derived Stats */}
                 {(() => {

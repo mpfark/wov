@@ -131,12 +131,13 @@ Deno.serve(async (req) => {
     const mHp: Record<string, number> = {};
     const mXp: Record<string, number> = {};
     const mGold: Record<string, number> = {};
+    const mBhp: Record<string, number> = {};
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
-    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; }
+    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; }
 
     const tankId = party.tank_id ?? party.leader_id;
     const tankAtNode = members.some(m => m.id === tankId);
@@ -246,6 +247,20 @@ Deno.serve(async (req) => {
               message: `☠️ ${target.name} has been slain! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}`,
             });
 
+            // BHP for boss kills
+            if (target.rarity === 'boss') {
+              const bhpReward = Math.floor(target.level * 0.5);
+              if (bhpReward > 0) {
+                const bhpEach = Math.floor(bhpReward / split);
+                if (bhpEach > 0) {
+                  for (const mm of members) {
+                    if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
+                  }
+                  events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
+                }
+              }
+            }
+
             // Queue loot
             if (target.loot_table_id) {
               lootQueue.push({ nodeId: node_id, lootTableId: target.loot_table_id, itemId: null, creatureName: target.name, dropChance: target.drop_chance ?? 0.5 });
@@ -288,6 +303,19 @@ Deno.serve(async (req) => {
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
       events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}` });
+      // BHP for boss DoT kills
+      if (creature.rarity === 'boss') {
+        const bhpReward = Math.floor(creature.level * 0.5);
+        if (bhpReward > 0) {
+          const bhpEach = Math.floor(bhpReward / split);
+          if (bhpEach > 0) {
+            for (const mm of members) {
+              if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
+            }
+            events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
+          }
+        }
+      }
       if (creature.loot_table_id) {
         lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
       } else {
@@ -497,6 +525,11 @@ Deno.serve(async (req) => {
         updates.gold = newGold;
       }
 
+      // BHP award
+      if (mBhp[m.id] > 0) {
+        updates.bhp = (c.bhp || 0) + mBhp[m.id];
+      }
+
       if (Object.keys(updates).length > 0) {
         await db.from('characters').update(updates).eq('id', m.id);
       }
@@ -508,6 +541,7 @@ Deno.serve(async (req) => {
         gold: updates.gold ?? c.gold,
         level: newLevel,
         max_hp: newMaxHp,
+        bhp: updates.bhp ?? (c.bhp || 0),
       });
     }
 

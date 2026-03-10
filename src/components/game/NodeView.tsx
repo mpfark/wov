@@ -95,6 +95,7 @@ export default function NodeView({
               {node.is_blacksmith && <span className="text-[10px]" title="Blacksmith">🔨</span>}
               {node.is_vendor && <span className="text-[10px]" title="Vendor">🪙</span>}
               {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
+              {node.is_trainer && <span className="text-[10px]" title="Boss Trainer">🏋️</span>}
             </div>
           </div>
 

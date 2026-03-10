@@ -67,6 +67,7 @@ function getNodeLabel(node: any, areas: any[]): string {
   if (node?.is_vendor) flags.push('Vendor');
   if (node?.is_blacksmith) flags.push('Blacksmith');
   if (node?.is_teleport) flags.push('Teleport');
+  if (node?.is_trainer) flags.push('Trainer');
   const area = node?.area_id ? areas.find((a: any) => a.id === node.area_id) : null;
   const areaName = area?.name || 'Unknown';
   const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
@@ -377,7 +378,7 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection, nodePositions,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false,
+    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
   });
@@ -469,7 +470,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, connections: '[]', searchable_items: [], area_id: '' });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, connections: '[]', searchable_items: [], area_id: '' });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -487,6 +488,7 @@ export default function NodeEditorPanel({
         is_inn: data.is_inn ?? false,
         is_blacksmith: (data as any).is_blacksmith ?? false,
         is_teleport: (data as any).is_teleport ?? false,
+        is_trainer: (data as any).is_trainer ?? false,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
         area_id: (data as any).area_id || '',
@@ -647,7 +649,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, connections, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, connections, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
       } as any).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -662,7 +664,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, connections, searchable_items,
         area_id: form.area_id || null,
       } as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -823,6 +825,11 @@ export default function NodeEditorPanel({
                   <input type="checkbox" checked={form.is_teleport}
                     onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
                   🌀 Is Teleport Point (fast travel destination)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_trainer}
+                    onChange={e => setForm(f => ({ ...f, is_trainer: e.target.checked }))} />
+                  🏋️ Is Boss Trainer (BHP attribute training, Lv30+)
                 </label>
               </div>
 
