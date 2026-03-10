@@ -87,6 +87,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // Leader aggregates non-leader buff + DoT stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberDotsRef = useRef<Record<string, DotStackReport>>({});
+  const doTickRef = useRef<() => void>(() => {});
 
   // ── Helpers ────────────────────────────────────────────────────
 
