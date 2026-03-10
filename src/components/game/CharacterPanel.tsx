@@ -678,6 +678,9 @@ export default function CharacterPanel({
                             </p>
                           )}
                           {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
+                          {((character.bhp_trained || {}) as Record<string, number>)[stat] > 0 && (
+                            <p className="text-[10px] text-elvish mt-0.5">🏋️ +{((character.bhp_trained || {}) as Record<string, number>)[stat]} BHP trained</p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     );
