@@ -92,6 +92,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_regen_buff' }, (payload) => {
         const data = payload.payload as PartyRegenBuffEvent;
         if (!data || data.caster_id === characterId) return;
+        logBroadcast('in', `party`, 'party_regen_buff');
         setIncomingPartyRegenBuff({ healPerTick: data.healPerTick, expiresAt: data.expiresAt, source: data.source });
       })
       .subscribe();
