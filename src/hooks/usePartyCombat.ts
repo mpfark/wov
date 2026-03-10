@@ -305,6 +305,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           node_id: p.character.current_node_id,
           member_buffs: memberBuffs,
           member_dots: memberDots,
+          engaged_creature_ids: engagedCreatureIdsRef.current,
         },
       });
 
