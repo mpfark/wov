@@ -65,6 +65,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       .on('broadcast', { event: 'loot_dropped' }, (payload) => {
         const { dropper_id } = payload.payload as { dropper_id: string };
         if (dropper_id === characterId) return;
+        logBroadcast('in', `ground-loot-${nodeId}`, 'loot_dropped');
         fetchGroundLoot();
         // Suppress the upcoming Postgres Changes refetch for 3s
         suppressRefetchUntilRef.current = Date.now() + 3000;
