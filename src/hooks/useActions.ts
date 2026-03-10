@@ -474,10 +474,13 @@ export function useActions(params: UseActionsParams) {
         m.character_id !== p.character.id && m.status === 'accepted' &&
         m.character.current_node_id === p.character.current_node_id
       );
-      for (const f of coLocated) {
-        await supabase.from('characters').update({ current_node_id: waymarkNodeId }).eq('id', f.character_id);
+      if (coLocated.length > 0) {
+        await Promise.all(coLocated.map(f =>
+          supabase.from('characters').update({ current_node_id: waymarkNodeId }).eq('id', f.character_id)
+        ));
+        p.addLog('Your party follows you.');
+        p.fetchParty();
       }
-      if (coLocated.length > 0) { p.addLog('Your party follows you.'); p.fetchParty(); }
     }
   }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
