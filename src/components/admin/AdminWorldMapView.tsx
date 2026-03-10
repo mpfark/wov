@@ -50,6 +50,8 @@ interface Props {
   onAddNodeAdjacent: (fromId: string, direction?: string) => void;
   onEditRegion?: (region: Region) => void;
   onDeleteRegion?: (regionId: string) => void;
+  onEditArea?: (area: Area) => void;
+  onDeleteArea?: (areaId: string) => void;
   populateMode?: boolean;
   populateSelectedIds?: Set<string>;
   onPopulateToggleNode?: (nodeId: string) => void;
