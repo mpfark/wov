@@ -566,6 +566,16 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (firstCreature) startCombat(firstCreature.id);
   }, [isDead, inCombat, creatures, startCombat]);
 
+  const handleCycleTarget = useCallback(() => {
+    if (isDead) return;
+    const aliveCreatures = creatures.filter(c => c.is_alive);
+    if (aliveCreatures.length === 0) return;
+    const currentIdx = aliveCreatures.findIndex(c => c.id === activeCombatCreatureId);
+    const nextIdx = (currentIdx + 1) % aliveCreatures.length;
+    const next = aliveCreatures[nextIdx];
+    startCombat(next.id);
+  }, [isDead, creatures, activeCombatCreatureId, startCombat]);
+
   const handleChatMessage = useCallback((formatted: string) => {
     setEventLog(prev => [...prev.slice(-49), formatted]);
   }, []);
@@ -605,6 +615,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onAttackFirst: handleAttackFirst, onSearch: handleSearch,
     onUseAbility: handleAbilityKey, onUseBeltPotion: handleBeltPotionKey,
     onPickUpLoot: handlePickUpFirst, onOpenChat: handleOpenChat,
+    onCycleTarget: handleCycleTarget,
   });
 
   // ── Rendering ──────────────────────────────────────────────────
