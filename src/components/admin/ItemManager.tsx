@@ -508,7 +508,7 @@ export default function ItemManager() {
                   <Select value={form.slot || ''} onValueChange={v => setForm(f => ({ ...f, slot: v || null }))}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select slot" /></SelectTrigger>
                     <SelectContent className="bg-popover border-border z-50">
-                      {(form.item_type === 'shield' ? ['off_hand'] : SLOTS).map(s => (
+                      {SLOTS.map(s => (
                         <SelectItem key={s} value={s} className="capitalize text-xs">{s.replace('_', ' ')}</SelectItem>
                       ))}
                     </SelectContent>
