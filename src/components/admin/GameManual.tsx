@@ -1102,6 +1102,60 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Boss Hunter Points */}
+          <AccordionItem value="bhp" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              🏋️ Boss Hunter Points (BHP)
+            </AccordionTrigger>
+            <AccordionContent className="px-4">
+              <div className="space-y-3 text-xs text-muted-foreground">
+                <p><strong className="text-foreground">Unlock:</strong> Level 30+</p>
+                <p><strong className="text-foreground">Earning BHP:</strong> Kill <Badge variant="outline" className="text-xs">boss</Badge> rarity creatures. Award = <code className="text-primary">floor(creatureLevel × 0.5)</code> BHP. Split among party members.</p>
+
+                <div>
+                  <p className="font-display text-foreground mb-1">Training</p>
+                  <p>Visit a <strong className="text-foreground">🏋️ Boss Trainer</strong> node to spend BHP on permanent attribute ranks beyond the level cap.</p>
+                  <p><strong className="text-foreground">Cost:</strong> 20 BHP per attempt (success or fail).</p>
+                </div>
+
+                <div>
+                  <p className="font-display text-foreground mb-1">Success Chance</p>
+                  <p>Formula: <code className="text-primary">max(1%, 95% − rank × 15%)</code></p>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Rank</TableHead>
+                        <TableHead className="text-xs">0→1</TableHead>
+                        <TableHead className="text-xs">1→2</TableHead>
+                        <TableHead className="text-xs">2→3</TableHead>
+                        <TableHead className="text-xs">3→4</TableHead>
+                        <TableHead className="text-xs">4→5</TableHead>
+                        <TableHead className="text-xs">5→6</TableHead>
+                        <TableHead className="text-xs">6→7</TableHead>
+                        <TableHead className="text-xs">7+</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-xs font-medium">Chance</TableCell>
+                        <TableCell className="text-xs">95%</TableCell>
+                        <TableCell className="text-xs">80%</TableCell>
+                        <TableCell className="text-xs">65%</TableCell>
+                        <TableCell className="text-xs">50%</TableCell>
+                        <TableCell className="text-xs">35%</TableCell>
+                        <TableCell className="text-xs">20%</TableCell>
+                        <TableCell className="text-xs">5%</TableCell>
+                        <TableCell className="text-xs text-destructive">1%</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <p className="text-muted-foreground/80 italic">Each trained rank adds +1 to that attribute permanently. Ranks are tracked per-stat, so spreading points is easier than deep-stacking a single attribute.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* Death & Respawn */}
           <AccordionItem value="death" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
