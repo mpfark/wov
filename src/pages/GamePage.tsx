@@ -35,6 +35,7 @@ import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useActions } from '@/hooks/useActions';
+import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 
 function getLogColor(log: string): string {
   if (log.startsWith('💬')) return 'text-foreground';
