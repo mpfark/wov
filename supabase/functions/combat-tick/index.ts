@@ -139,8 +139,8 @@ Deno.serve(async (req) => {
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; }
 
-    const tankId = party.tank_id ?? party.leader_id;
-    const tankAtNode = members.some(m => m.id === tankId);
+    const tankId = party.tank_id || null;
+    const tankAtNode = tankId ? members.some(m => m.id === tankId) : false;
 
     // ── Member attacks ───────────────────────────────────────────
     const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume
