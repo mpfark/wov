@@ -570,11 +570,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     if (isDead) return;
     const aliveCreatures = creatures.filter(c => c.is_alive);
     if (aliveCreatures.length === 0) return;
-    const currentIdx = aliveCreatures.findIndex(c => c.id === activeCombatCreatureId);
-    const nextIdx = (currentIdx + 1) % aliveCreatures.length;
-    const next = aliveCreatures[nextIdx];
+
+    // Only cycle among creatures that are aggressive or already engaged
+    const engagedSet = new Set(engagedCreatureIds);
+    const validTargets = aliveCreatures.filter(c => c.is_aggressive || engagedSet.has(c.id));
+    if (validTargets.length === 0) return;
+
+    const currentIdx = validTargets.findIndex(c => c.id === activeCombatCreatureId);
+    const nextIdx = (currentIdx + 1) % validTargets.length;
+    const next = validTargets[nextIdx];
     startCombat(next.id);
-  }, [isDead, creatures, activeCombatCreatureId, startCombat]);
+  }, [isDead, creatures, activeCombatCreatureId, engagedCreatureIds, startCombat]);
 
   const handleChatMessage = useCallback((formatted: string) => {
     setEventLog(prev => [...prev.slice(-49), formatted]);
