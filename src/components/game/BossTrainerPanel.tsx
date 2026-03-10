@@ -11,7 +11,9 @@ const STAT_LABELS: Record<string, string> = {
   int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
 };
 
-const TRAINING_COST = 20;
+function getTrainingCost(rank: number): number {
+  return 20 * (rank + 1);
+}
 
 function getSuccessChance(rank: number): number {
   return Math.max(1, 95 - rank * 15);
@@ -30,16 +32,17 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
   const trained = (character.bhp_trained || {}) as Record<string, number>;
 
   const handleTrain = async (stat: typeof STAT_KEYS[number]) => {
-    if (character.bhp < TRAINING_COST) return;
+    const rank = trained[stat] || 0;
+    const cost = getTrainingCost(rank);
+    if (character.bhp < cost) return;
     if (character.level < 30) return;
 
     setTraining(true);
-    const rank = trained[stat] || 0;
     const chance = getSuccessChance(rank);
     const roll = Math.random() * 100;
     const success = roll < chance;
 
-    const newBhp = character.bhp - TRAINING_COST;
+    const newBhp = character.bhp - cost;
     const newTrained = { ...trained };
 
     if (success) {
@@ -67,10 +70,10 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
       }
 
       await updateCharacter(updates);
-      addLog(`🏋️ Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${TRAINING_COST} BHP spent.`);
+      addLog(`🏋️ Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${cost} BHP spent.`);
     } else {
       await updateCharacter({ bhp: newBhp, bhp_trained: newTrained });
-      addLog(`🏋️ Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${TRAINING_COST} BHP spent.`);
+      addLog(`🏋️ Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${cost} BHP spent.`);
     }
 
     setTraining(false);
@@ -108,7 +111,8 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
                 {STAT_KEYS.map(stat => {
                   const rank = trained[stat] || 0;
                   const chance = getSuccessChance(rank);
-                  const canAfford = character.bhp >= TRAINING_COST;
+                  const cost = getTrainingCost(rank);
+                  const canAfford = character.bhp >= cost;
 
                   return (
                     <div key={stat} className="grid grid-cols-[1fr_50px_60px_60px_auto] gap-1 items-center p-1.5 bg-background/50 rounded border border-border">
@@ -130,7 +134,7 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
                         {chance}%
                       </span>
                       <span className="text-center text-xs text-muted-foreground tabular-nums">
-                        {TRAINING_COST}
+                        {cost}
                       </span>
                       <Button
                         size="sm"
@@ -155,8 +159,7 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
           )}
 
           <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-            Spend {TRAINING_COST} BHP per attempt to permanently increase an attribute.
-            Success chance decreases with each rank trained in the same stat.
+            Cost per attempt: 20 × (rank + 1) BHP. Success chance decreases with each rank.
             Earn BHP by slaying boss creatures.
           </p>
         </div>
