@@ -341,19 +341,35 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   const startCombat = useCallback((creatureId: string) => {
     const p = ext.current;
-    if (!p.party || !p.isLeader || p.isDead || p.character.hp <= 0) return;
-    if (inCombatRef.current) return;
+    if (!p.party || p.isDead || p.character.hp <= 0) return;
 
-    inCombatRef.current = true;
-    setInCombat(true);
+    // Non-leader: broadcast an engagement request to the leader
+    if (!p.isLeader) {
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'engage_request',
+        payload: { creature_id: creatureId, character_id: p.character.id },
+      });
+      return;
+    }
+
+    // Leader: add creature to engaged list
+    setEngagedCreatureIds(prev => {
+      if (prev.includes(creatureId)) return prev;
+      const next = [...prev, creatureId];
+      engagedCreatureIdsRef.current = next;
+      return next;
+    });
     setActiveCombatCreatureId(creatureId);
-    setEngagedCreatureIds([creatureId]);
-    engagedCreatureIdsRef.current = [creatureId];
 
-    // Start 2s heartbeat
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    doTick(); // Immediate first tick
-    intervalRef.current = window.setInterval(doTick, 2000);
+    if (!inCombatRef.current) {
+      inCombatRef.current = true;
+      setInCombat(true);
+      // Start 2s heartbeat
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      doTick(); // Immediate first tick
+      intervalRef.current = window.setInterval(doTick, 2000);
+    }
   }, [doTick]);
 
   // ── Lifecycle effects ──────────────────────────────────────────
