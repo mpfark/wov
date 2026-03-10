@@ -453,8 +453,7 @@ export default function CharacterPanel({
               )}
             </TabsContent>
 
-            {/* Attributes overlaid — absolute so equipment holds height */}
-            <TabsContent value="attributes" className="mt-0 data-[state=inactive]:!block data-[state=inactive]:invisible">
+            <TabsContent value="attributes" className="mt-0">
               <div className="space-y-2.5">
                 {/* Base stats — single column: STR, DEX, CON, INT, WIS, CHA */}
                 {(character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) && (
