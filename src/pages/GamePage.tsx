@@ -444,14 +444,18 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   });
 
   // ── Merge combat state ─────────────────────────────────────────
-  const inCombat = party ? partyCombat.inCombat : soloCombat.inCombat;
-  const activeCombatCreatureId = party ? partyCombat.activeCombatCreatureId : soloCombat.activeCombatCreatureId;
-  const engagedCreatureIds = party ? partyCombat.engagedCreatureIds : soloCombat.engagedCreatureIds;
-  const creatureHpOverrides = party ? partyCombat.creatureHpOverrides : soloCombat.creatureHpOverrides;
-  const lastTickTime = party ? partyCombat.lastTickTime : soloCombat.lastTickTime;
-  const updateCreatureHp = party ? partyCombat.updateCreatureHp : soloCombat.updateCreatureHp;
-  const startCombat = party ? partyCombat.startCombat : soloCombat.startCombat;
-  const stopCombatFn = party ? partyCombat.stopCombat : soloCombat.stopCombat;
+  // Use party combat only when on the same node as the leader; otherwise fight solo
+  const leaderMember = mergedPartyMembers.find(m => m.character_id === party?.leader_id);
+  const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
+  const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
+  const inCombat = usePartyCombatMode ? partyCombat.inCombat : soloCombat.inCombat;
+  const activeCombatCreatureId = usePartyCombatMode ? partyCombat.activeCombatCreatureId : soloCombat.activeCombatCreatureId;
+  const engagedCreatureIds = usePartyCombatMode ? partyCombat.engagedCreatureIds : soloCombat.engagedCreatureIds;
+  const creatureHpOverrides = usePartyCombatMode ? partyCombat.creatureHpOverrides : soloCombat.creatureHpOverrides;
+  const lastTickTime = usePartyCombatMode ? partyCombat.lastTickTime : soloCombat.lastTickTime;
+  const updateCreatureHp = usePartyCombatMode ? partyCombat.updateCreatureHp : soloCombat.updateCreatureHp;
+  const startCombat = usePartyCombatMode ? partyCombat.startCombat : soloCombat.startCombat;
+  const stopCombatFn = usePartyCombatMode ? partyCombat.stopCombat : soloCombat.stopCombat;
 
   // Sync combat state ref for DoT ticks in useGameLoop
   combatStateRef.current = { creatureHpOverrides, updateCreatureHp };
