@@ -70,10 +70,10 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
       }
 
       await updateCharacter(updates);
-      addLog(`🏋️ Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${TRAINING_COST} BHP spent.`);
+      addLog(`🏋️ Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${cost} BHP spent.`);
     } else {
       await updateCharacter({ bhp: newBhp, bhp_trained: newTrained });
-      addLog(`🏋️ Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${TRAINING_COST} BHP spent.`);
+      addLog(`🏋️ Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${cost} BHP spent.`);
     }
 
     setTraining(false);
