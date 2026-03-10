@@ -65,6 +65,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_hp' }, (payload) => {
         const data = payload.payload as PartyHpEvent;
         if (!data?.character_id || data.character_id === characterId) return;
+        logBroadcast('in', `party`, 'party_hp');
         setHpOverrides(prev => ({
           ...prev,
           [data.character_id]: { hp: data.hp, max_hp: data.max_hp },
