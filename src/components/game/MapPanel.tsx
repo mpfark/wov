@@ -74,6 +74,7 @@ interface Props {
   onOpenVendor?: () => void;
   onOpenBlacksmith?: () => void;
   onOpenTeleport?: () => void;
+  onOpenTrainer?: () => void;
   searchDisabled?: boolean;
   hasDiscoverable?: boolean;
 }
