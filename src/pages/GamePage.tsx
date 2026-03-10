@@ -4,6 +4,7 @@ import NodeView from '@/components/game/NodeView';
 import MapPanel from '@/components/game/MapPanel';
 import VendorPanel from '@/components/game/VendorPanel';
 import BlacksmithPanel from '@/components/game/BlacksmithPanel';
+import BossTrainerPanel from '@/components/game/BossTrainerPanel';
 import TeleportDialog from '@/components/game/TeleportDialog';
 import { useGroundLoot } from '@/hooks/useGroundLoot';
 import { Character } from '@/hooks/useCharacter';
