@@ -224,7 +224,12 @@ export default function StatusBarsStrip({
       <div>
         <div className="flex justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground">XP</span>
-          <span className="text-primary tabular-nums">{character.xp}/{xpForNext}</span>
+          <div className="flex items-center gap-2">
+            {character.level >= 30 && (
+              <span className="text-gold tabular-nums">🏋️ {character.bhp || 0} BHP</span>
+            )}
+            <span className="text-primary tabular-nums">{character.xp}/{xpForNext}</span>
+          </div>
         </div>
         <div className="h-1 bg-background rounded-full overflow-hidden border border-border">
           <div className="h-full bg-primary transition-all duration-500 rounded-full" style={{ width: `${xpPercent}%` }} />
