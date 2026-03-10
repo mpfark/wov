@@ -103,6 +103,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setAdjacentToNodeId(fromId || null);
     setAdjacentDirection(direction || null);
     setPanelOpen(true);
+    setAreaPanelOpen(false);
   };
 
   const handleAddNodeBetween = (_fromId: string, _toId: string) => {
