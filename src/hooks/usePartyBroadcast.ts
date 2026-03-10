@@ -131,6 +131,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastReward = useCallback((charId: string, xp: number, gold: number, source: string) => {
+    logBroadcast('out', `party`, 'party_reward');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_reward',
