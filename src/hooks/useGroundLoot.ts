@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GroundLootItem {
@@ -24,6 +24,7 @@ export interface GroundLootItem {
 
 export function useGroundLoot(nodeId: string | null, characterId: string | null) {
   const [groundLoot, setGroundLoot] = useState<GroundLootItem[]>([]);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const fetchGroundLoot = useCallback(async () => {
     if (!nodeId) { setGroundLoot([]); return; }
@@ -44,11 +45,29 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
         event: '*', schema: 'public', table: 'node_ground_loot',
         filter: `node_id=eq.${nodeId}`,
       }, () => fetchGroundLoot())
+      .on('broadcast', { event: 'loot_picked_up' }, (payload) => {
+        // Another player picked up an item — remove it instantly from our list
+        const { ground_loot_id, picker_id } = payload.payload as { ground_loot_id: string; picker_id: string };
+        if (picker_id === characterId) return; // We already removed it optimistically
+        if (ground_loot_id) {
+          setGroundLoot(prev => prev.filter(g => g.id !== ground_loot_id));
+        }
+      })
+      .on('broadcast', { event: 'loot_dropped' }, (payload) => {
+        // Another player dropped an item — refetch to show it
+        const { dropper_id } = payload.payload as { dropper_id: string };
+        if (dropper_id === characterId) return; // We already refetched
+        fetchGroundLoot();
+      })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [nodeId, fetchGroundLoot]);
+    channelRef.current = channel;
+    return () => {
+      channelRef.current = null;
+      supabase.removeChannel(channel);
+    };
+  }, [nodeId, characterId, fetchGroundLoot]);
 
-  // Also cleanup expired loot client-side periodically
+  // Cleanup expired loot client-side periodically
   useEffect(() => {
     const interval = setInterval(() => {
       supabase.rpc('cleanup_ground_loot' as any).then(() => {});
@@ -63,6 +82,13 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
 
     // Optimistic removal — hide from UI immediately
     setGroundLoot(prev => prev.filter(g => g.id !== groundLootId));
+
+    // Broadcast to other players at this node so item disappears instantly for them
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'loot_picked_up',
+      payload: { ground_loot_id: groundLootId, picker_id: characterId },
+    });
 
     // Unique item guard
     if (item.item.rarity === 'unique') {
@@ -101,6 +127,12 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       node_id: currentNodeId,
       item_id: itemId,
       dropped_by: characterId,
+    });
+    // Broadcast so other players see the new item instantly
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'loot_dropped',
+      payload: { dropper_id: characterId },
     });
     fetchGroundLoot();
   }, [characterId, fetchGroundLoot]);
