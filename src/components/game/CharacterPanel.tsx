@@ -511,7 +511,7 @@ export default function CharacterPanel({
                               {isBroken && <span className="text-[9px] text-destructive ml-1">(Broken)</span>}
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent className="bg-popover border-border z-50">
+                          <TooltipContent className="bg-popover border-border z-50 max-w-xs">
                             <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
                             {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
                             <p className="text-xs text-muted-foreground">{inv.item.description}</p>
@@ -524,6 +524,33 @@ export default function CharacterPanel({
                             ))}
                             <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
                             {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
+                            {/* Gear comparison */}
+                            {inv.item.slot && (() => {
+                              const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
+                              const newStats = inv.item.stats || {};
+                              const oldStats = currentlyEquipped?.item.stats || {};
+                              const allKeys = new Set([...Object.keys(newStats), ...Object.keys(oldStats)]);
+                              if (allKeys.size === 0) return null;
+                              const diffs: { key: string; diff: number }[] = [];
+                              for (const k of allKeys) {
+                                const nv = (newStats[k] as number) || 0;
+                                const ov = (oldStats[k] as number) || 0;
+                                if (nv - ov !== 0) diffs.push({ key: k, diff: nv - ov });
+                              }
+                              if (diffs.length === 0) return null;
+                              return (
+                                <div className="mt-1.5 pt-1.5 border-t border-border">
+                                  <p className="text-[9px] text-muted-foreground mb-0.5">
+                                    vs {currentlyEquipped ? currentlyEquipped.item.name : 'empty slot'}
+                                  </p>
+                                  {diffs.map(({ key, diff }) => (
+                                    <p key={key} className={`text-[10px] font-display ${diff > 0 ? 'text-elvish' : 'text-destructive'}`}>
+                                      {diff > 0 ? '+' : ''}{diff} {key === 'hp_regen' ? 'Regen' : key.toUpperCase()}
+                                    </p>
+                                  ))}
+                                </div>
+                              );
+                            })()}
                           </TooltipContent>
                         </Tooltip>
                         <div className="flex gap-0.5 shrink-0 ml-1">
