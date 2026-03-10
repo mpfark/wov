@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logBroadcast } from '@/hooks/useBroadcastDebug';
 
 export interface GroundLootItem {
   id: string;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logBroadcast } from '@/hooks/useBroadcastDebug';
 import { OnlinePlayer } from '@/hooks/useGlobalPresence';
 
 export interface ChatMessage {
