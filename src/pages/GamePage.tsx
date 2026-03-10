@@ -857,6 +857,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
               onTalkToNPC={npc => setTalkingToNPC(npc)}
               inCombat={inCombat}
+              lastTickTime={lastTickTime}
                activeCombatCreatureId={activeCombatCreatureId}
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}
