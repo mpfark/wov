@@ -74,6 +74,7 @@ export function useCreatureBroadcast(nodeId: string | null, characterId: string 
     killed: boolean,
   ) => {
     if (!channelRef.current) return;
+    logBroadcast('out', `creature-combat-${channelRef.current.topic}`, 'creature_damage');
     channelRef.current.send({
       type: 'broadcast',
       event: 'creature_damage',

@@ -145,6 +145,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       event: 'loot_dropped',
       payload: { dropper_id: characterId },
     });
+    logBroadcast('out', `ground-loot`, 'loot_dropped');
     fetchGroundLoot();
   }, [characterId, fetchGroundLoot]);
 

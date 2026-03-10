@@ -96,6 +96,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
           event: 'whisper',
           payload: { senderId: characterId, senderName: characterName, text },
         });
+        logBroadcast('out', `chat-whisper`, 'whisper');
         // Clean up after send
         setTimeout(() => {
           tempChannelsRef.current.delete(targetChannel);
