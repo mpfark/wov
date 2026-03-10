@@ -134,7 +134,7 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
                         {chance}%
                       </span>
                       <span className="text-center text-xs text-muted-foreground tabular-nums">
-                        {TRAINING_COST}
+                        {cost}
                       </span>
                       <Button
                         size="sm"
