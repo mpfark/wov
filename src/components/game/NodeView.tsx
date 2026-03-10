@@ -29,6 +29,7 @@ interface Props {
   onAttack: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;
   inCombat?: boolean;
+  lastTickTime?: number | null;
   activeCombatCreatureId?: string | null;
   selectedTargetId?: string | null;
   engagedCreatureIds?: string[];
