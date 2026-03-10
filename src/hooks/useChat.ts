@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logBroadcast } from '@/hooks/useBroadcastDebug';
 import { OnlinePlayer } from '@/hooks/useGlobalPresence';
+import type { NodeChannelHandle } from '@/hooks/useNodeChannel';
 
 export interface ChatMessage {
   type: 'say' | 'whisper-in' | 'whisper-out';
@@ -11,6 +12,7 @@ export interface ChatMessage {
 }
 
 interface UseChatOptions {
+  handle: NodeChannelHandle;
   nodeId: string | null;
   characterId: string;
   characterName: string;
@@ -18,34 +20,24 @@ interface UseChatOptions {
   onMessage: (formatted: string) => void;
 }
 
-export function useChat({ nodeId, characterId, characterName, onlinePlayers, onMessage }: UseChatOptions) {
+export function useChat({ handle, nodeId, characterId, characterName, onlinePlayers, onMessage }: UseChatOptions) {
   const onMessageRef = useRef(onMessage);
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
 
-  const nodeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const whisperChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  // Track temporary whisper channels for cleanup on unmount
   const tempChannelsRef = useRef<Set<ReturnType<typeof supabase.channel>>>(new Set());
 
-  // Subscribe to node-scoped say channel
+  // Register callback for incoming say messages via shared channel
   useEffect(() => {
-    if (!nodeId) return;
-    const channel = supabase.channel(`chat-node-${nodeId}`);
-    channel
-      .on('broadcast', { event: 'say' }, ({ payload }) => {
-        if (payload.senderId === characterId) return;
-        logBroadcast('in', `chat-node`, 'say');
-        onMessageRef.current(`💬 ${payload.senderName}: ${payload.text}`);
-      })
-      .subscribe();
-    nodeChannelRef.current = channel;
-    return () => {
-      supabase.removeChannel(channel);
-      nodeChannelRef.current = null;
+    handle.onSay.current = ({ payload }: any) => {
+      if (payload.senderId === characterId) return;
+      logBroadcast('in', `node`, 'say');
+      onMessageRef.current(`💬 ${payload.senderName}: ${payload.text}`);
     };
-  }, [nodeId, characterId]);
+    return () => { handle.onSay.current = null; };
+  }, [handle, characterId]);
 
-  // Subscribe to whisper channel for this character
+  // Subscribe to whisper channel for this character (separate — not node-scoped)
   useEffect(() => {
     const channel = supabase.channel(`chat-whisper-${characterId}`);
     channel
@@ -72,15 +64,15 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
   }, []);
 
   const sendSay = useCallback((text: string) => {
-    if (!nodeChannelRef.current) return;
-    logBroadcast('out', `chat-node`, 'say');
-    nodeChannelRef.current.send({
+    if (!handle.channelRef.current) return;
+    logBroadcast('out', `node`, 'say');
+    handle.channelRef.current.send({
       type: 'broadcast',
       event: 'say',
       payload: { senderId: characterId, senderName: characterName, text },
     });
     onMessageRef.current(`💬 ${characterName}: ${text}`);
-  }, [characterId, characterName]);
+  }, [handle, characterId, characterName]);
 
   const sendWhisper = useCallback((targetName: string, text: string): string | null => {
     const target = onlinePlayers.find(p => p.name.toLowerCase() === targetName.toLowerCase());
@@ -97,7 +89,6 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
           payload: { senderId: characterId, senderName: characterName, text },
         });
         logBroadcast('out', `chat-whisper`, 'whisper');
-        // Clean up after send
         setTimeout(() => {
           tempChannelsRef.current.delete(targetChannel);
           supabase.removeChannel(targetChannel);
