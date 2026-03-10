@@ -142,7 +142,7 @@ export default function AdminChatWidget() {
 
     // Say message
     if (nodeId) {
-      const channel = supabase.channel(`chat-node-${nodeId}`);
+      const channel = supabase.channel(`admin-say-${nodeId}-${Date.now()}`);
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           channel.send({
