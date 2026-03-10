@@ -151,6 +151,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  const [trainerOpen, setTrainerOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(nodeChannel, character.current_node_id, character.id);
 
