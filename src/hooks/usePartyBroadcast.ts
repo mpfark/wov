@@ -104,6 +104,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, [partyId, characterId]);
 
   const broadcastHp = useCallback((charId: string, hp: number, maxHp: number, source: string) => {
+    logBroadcast('out', `party`, 'party_hp');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_hp',
