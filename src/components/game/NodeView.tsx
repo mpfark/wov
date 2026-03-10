@@ -206,6 +206,8 @@ export default function NodeView({
                           <span className="text-[10px] font-display text-destructive animate-pulse flex items-center gap-0.5">⚔️ TARGET</span>
                         ) : isEngaged ? (
                           <span className="text-[10px] font-display text-dwarvish animate-pulse flex items-center gap-0.5">⚔️ ENGAGED</span>
+                        ) : isSelected ? (
+                          <span className="text-[10px] font-display text-primary flex items-center gap-0.5">🎯 SELECTED</span>
                         ) : (
                           <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
                             {CLASS_COMBAT[character.class]?.label || 'Atk'}
