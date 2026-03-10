@@ -92,10 +92,11 @@ interface Props {
 export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const bus = useCreateGameEventBus();
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
-  const { playersHere } = usePresence(character.current_node_id, character);
+  const nodeChannel = useNodeChannel(character.current_node_id, character);
+  const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(character);
   const { creatures } = useCreatures(character.current_node_id);
-  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(character.current_node_id, character.id);
+  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id);
 
   useEffect(() => {
     cleanupOverrides(creatures.map(c => c.id));
