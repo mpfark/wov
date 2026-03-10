@@ -39,6 +39,7 @@ export function useCreatureBroadcast(nodeId: string | null, characterId: string 
         if (!data || !data.creature_id) return;
         // Self-filter: skip broadcasts from own character (local creatureHpOverrides handles it)
         if (data.sender_id === characterId) return;
+        logBroadcast('in', `creature-combat-${nodeId}`, 'creature_damage');
         setBroadcastOverrides(prev => ({
           ...prev,
           [data.creature_id]: data.killed ? 0 : data.new_hp,
