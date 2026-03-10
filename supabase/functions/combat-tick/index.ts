@@ -407,7 +407,9 @@ Deno.serve(async (req) => {
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
       const acBuffBonus = mb.ac_buff || 0;
-      const tAC = (targetC.ac || 10) + (targetEq.ac || 0) + acBuffBonus;
+      // Recalculate AC from class + effective DEX (base + equipment) to avoid stale DB ac column
+      const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
+      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus;
       const roll = rollD20() + cStr;
 
       if (roll >= tAC) {
