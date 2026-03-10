@@ -584,9 +584,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
     setSelectedTargetId(next.id);
 
-    // Only auto-attack if the creature is aggressive or already engaged
+    // Only auto-attack if the creature itself is aggressive or already engaged
     const engagedSet = new Set(engagedCreatureIds);
-    if (next.is_aggressive || engagedSet.has(next.id) || inCombat) {
+    if (next.is_aggressive || engagedSet.has(next.id)) {
       startCombat(next.id);
     }
   }, [isDead, creatures, selectedTargetId, activeCombatCreatureId, engagedCreatureIds, inCombat, startCombat]);

@@ -722,12 +722,17 @@ export function useCombat(params: UseCombatParams) {
     engagedCreatureIdsRef.current.add(creatureId);
     setEngagedCreatureIds([...engagedCreatureIdsRef.current]);
 
+    const wasAlreadyInCombat = inCombatRef.current;
+
     combatCreatureIdRef.current = creatureId;
     inCombatRef.current = true;
     setActiveCombatCreatureId(creatureId);
     setInCombat(true);
 
-    doCombatTick();
+    // Only fire an immediate tick when starting fresh combat, not when switching targets mid-combat
+    if (!wasAlreadyInCombat) {
+      doCombatTick();
+    }
 
     intervalRef.current = setWorkerInterval(() => {
       doCombatTick();
