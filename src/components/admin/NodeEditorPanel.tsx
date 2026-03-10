@@ -648,7 +648,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, connections, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, connections, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
       } as any).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
