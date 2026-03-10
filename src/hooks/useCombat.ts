@@ -611,7 +611,7 @@ export function useCombat(params: UseCombatParams) {
           if (defResult.absorbed > 0) {
             ext.current.onAbsorbDamage?.(defResult.remainingShield);
             if (defResult.finalDamage > 0) {
-              _addLog(`🛡️✨ Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} damage bleeds through. (Shield broken)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${tankMember.character.name} — Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} bleeds through. (Shield broken)`);
               try {
                 const { data: tankNewHp, error: dmgError } = await supabase.rpc('damage_party_member', {
                   _character_id: tankMember.character_id,
@@ -625,7 +625,7 @@ export function useCombat(params: UseCombatParams) {
                 console.error('Failed to update tank HP/equipment:', err);
               }
             } else {
-              _addLog(`🛡️✨ Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${tankMember.character.name} — Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
             }
           } else {
             const totalDmg = defResult.finalDamage;
@@ -671,7 +671,7 @@ export function useCombat(params: UseCombatParams) {
             ext.current.onAbsorbDamage?.(defResult.remainingShield);
             if (defResult.finalDamage > 0) {
               const playerNewHp = Math.max(currentChar.hp - defResult.finalDamage, 0);
-              _addLog(`🛡️✨ Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} damage bleeds through. (Shield broken)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${who} — Force Shield absorbs ${defResult.absorbed} damage! ${defResult.finalDamage} bleeds through. (Shield broken)`);
               await _updateCharacter({ hp: playerNewHp });
               await _degradeEquipment();
               if (playerNewHp <= 0) {
@@ -680,7 +680,7 @@ export function useCombat(params: UseCombatParams) {
                 break;
               }
             } else {
-              _addLog(`🛡️✨ Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${who} — Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
             }
           } else {
             const playerNewHp = Math.max(currentChar.hp - defResult.finalDamage, 0);
