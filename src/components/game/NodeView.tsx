@@ -30,6 +30,7 @@ interface Props {
   onTalkToNPC?: (npc: NPC) => void;
   inCombat?: boolean;
   activeCombatCreatureId?: string | null;
+  selectedTargetId?: string | null;
   engagedCreatureIds?: string[];
   creatureHpOverrides?: Record<string, number>;
   classAbilities?: ClassAbility[];
