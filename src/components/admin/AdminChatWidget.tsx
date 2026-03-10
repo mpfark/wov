@@ -54,7 +54,7 @@ export default function AdminChatWidget() {
   // Subscribe to node say channel
   useEffect(() => {
     if (!nodeId || !charId) return;
-    const channel = supabase.channel(`chat-node-${nodeId}`);
+    const channel = supabase.channel(`node-${nodeId}`);
     channel
       .on('broadcast', { event: 'say' }, ({ payload }) => {
         if (payload.senderId === charId) return;
