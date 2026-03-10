@@ -126,6 +126,18 @@ export function getMaxMp(level: number, dex: number = 10): number {
   return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
 }
 
+// ── AC formula ───────────────────────────────────────────────────
+
+const CLASS_BASE_AC: Record<string, number> = {
+  warrior: 14, wizard: 11, ranger: 12, rogue: 12, healer: 11, bard: 11,
+};
+
+/** AC = base class AC + DEX modifier */
+export function calculateAC(charClass: string, dex: number): number {
+  const baseAC = CLASS_BASE_AC[charClass] || 10;
+  return baseAC + getStatModifier(dex);
+}
+
 // ── Max HP formula ───────────────────────────────────────────────
 
 const CLASS_BASE_HP: Record<string, number> = {
