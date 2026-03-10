@@ -148,7 +148,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           <TabsList className="h-8">
             {/* World Building */}
             <TabsTrigger value="world" className="font-display text-xs">World</TabsTrigger>
-            <TabsTrigger value="areas" className="font-display text-xs">Areas</TabsTrigger>
             <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
             {/* Entities */}
             <TabsTrigger value="creatures" className="font-display text-xs">Creatures</TabsTrigger>
