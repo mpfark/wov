@@ -303,6 +303,19 @@ Deno.serve(async (req) => {
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
       events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}` });
+      // BHP for boss DoT kills
+      if (creature.rarity === 'boss') {
+        const bhpReward = Math.floor(creature.level * 0.5);
+        if (bhpReward > 0) {
+          const bhpEach = Math.floor(bhpReward / split);
+          if (bhpEach > 0) {
+            for (const mm of members) {
+              if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
+            }
+            events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
+          }
+        }
+      }
       if (creature.loot_table_id) {
         lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
       } else {
