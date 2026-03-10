@@ -219,6 +219,27 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         const data = payload.payload as CombatTickResponse;
         if (data) processTickResult(data);
       })
+      .on('broadcast', { event: 'engage_request' }, (payload) => {
+        // Leader processes engagement requests from non-leaders
+        if (!ext.current.isLeader) return;
+        const { creature_id } = payload.payload as { creature_id: string; character_id: string };
+        if (!creature_id) return;
+        // Add to engaged list and start combat if not already running
+        setEngagedCreatureIds(prev => {
+          if (prev.includes(creature_id)) return prev;
+          const next = [...prev, creature_id];
+          engagedCreatureIdsRef.current = next;
+          return next;
+        });
+        setActiveCombatCreatureId(creature_id);
+        if (!inCombatRef.current) {
+          inCombatRef.current = true;
+          setInCombat(true);
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          doTick();
+          intervalRef.current = window.setInterval(doTick, 2000);
+        }
+      })
       .on('broadcast', { event: 'member_dot_state' }, (payload) => {
         // Leader collects non-leader DoT stacks
         if (!ext.current.isLeader) return;
