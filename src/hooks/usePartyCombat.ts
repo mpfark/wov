@@ -262,7 +262,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [params.party?.id, processTickResult]);
+  }, [params.party?.id, processTickResult, doTick]);
 
   // ── Non-leader: broadcast buff + DoT state periodically ─────────
   useEffect(() => {
