@@ -2,8 +2,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/hooks/useNodes';
+import { PartyMember } from '@/hooks/useParty';
 
 interface TeleportDestination {
+  node: GameNode;
+  region: Region;
+  cpCost: number;
+}
+
+interface PartyMemberDestination {
+  member: PartyMember;
   node: GameNode;
   region: Region;
   cpCost: number;
@@ -23,6 +31,8 @@ interface Props {
   onTeleport: (nodeId: string, cpCost: number) => void;
   waymark?: { node: GameNode; region: Region | undefined } | null;
   onReturnToWaymark?: (cpCost: number) => void;
+  partyMembers?: PartyMember[];
+  myCharacterId?: string;
 }
 
 function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Region): number {
