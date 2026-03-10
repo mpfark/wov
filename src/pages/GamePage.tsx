@@ -1039,6 +1039,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
           onTeleport={handleTeleport}
           waymark={waymarkNodeId ? { node: getNode(waymarkNodeId)!, region: getRegion(getNode(waymarkNodeId)?.region_id ?? '') } : null}
           onReturnToWaymark={waymarkNodeId ? handleReturnToWaymark : undefined}
+          partyMembers={mergedPartyMembers}
+          myCharacterId={character.id}
         />
       )}
 

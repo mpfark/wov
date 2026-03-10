@@ -2,8 +2,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/hooks/useNodes';
+import { PartyMember } from '@/hooks/useParty';
 
 interface TeleportDestination {
+  node: GameNode;
+  region: Region;
+  cpCost: number;
+}
+
+interface PartyMemberDestination {
+  member: PartyMember;
   node: GameNode;
   region: Region;
   cpCost: number;
@@ -23,6 +31,8 @@ interface Props {
   onTeleport: (nodeId: string, cpCost: number) => void;
   waymark?: { node: GameNode; region: Region | undefined } | null;
   onReturnToWaymark?: (cpCost: number) => void;
+  partyMembers?: PartyMember[];
+  myCharacterId?: string;
 }
 
 function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Region): number {
@@ -32,7 +42,7 @@ function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Regio
   return Math.min(10 + levelDiff * 2, 30);
 }
 
-export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, areas = [], playerCp, playerMaxCp, characterLevel, onTeleport, waymark, onReturnToWaymark }: Props) {
+export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, areas = [], playerCp, playerMaxCp, characterLevel, onTeleport, waymark, onReturnToWaymark, partyMembers = [], myCharacterId }: Props) {
   const destinations: TeleportDestination[] = nodes
     .filter(n => n.is_teleport && n.id !== currentNode.id)
     .map(n => {
@@ -45,6 +55,18 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
 
   const waymarkCpCost = waymark?.region ? calculateTeleportCpCost(currentRegion, waymark.region) : 15;
   const canAffordWaymark = playerCp >= waymarkCpCost;
+
+  // Party member destinations — members at different nodes
+  const partyDestinations: PartyMemberDestination[] = partyMembers
+    .filter(m => m.character_id !== myCharacterId && m.character?.current_node_id && m.character.current_node_id !== currentNode.id)
+    .map(m => {
+      const node = nodes.find(n => n.id === m.character.current_node_id);
+      if (!node) return null;
+      const region = regions.find(r => r.id === node.region_id);
+      if (!region) return null;
+      return { member: m, node, region, cpCost: calculateTeleportCpCost(currentRegion, region) };
+    })
+    .filter(Boolean) as PartyMemberDestination[];
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
@@ -82,7 +104,39 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
               </div>
             )}
 
-            {destinations.length === 0 && !waymark && (
+            {/* Party Member Destinations */}
+            {partyDestinations.length > 0 && (
+              <>
+                <p className="text-[10px] text-muted-foreground font-display pt-1">👥 Party Members</p>
+                {partyDestinations.map(d => {
+                  const canAfford = playerCp >= d.cpCost;
+                  return (
+                    <div key={d.member.id} className="flex items-center justify-between p-2 rounded border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display text-sm text-primary truncate">
+                          {d.member.character.name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {getNodeDisplayName(d.node, areas.find(a => a.id === d.node.area_id))} — {d.region.name}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!canAfford}
+                        onClick={() => onTeleport(d.node.id, d.cpCost)}
+                        className={`font-display text-[10px] h-6 px-2 ml-2 shrink-0 ${canAfford ? 'text-primary border-primary/50' : 'text-muted-foreground'}`}
+                      >
+                        ⚡ {d.cpCost} CP
+                      </Button>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Regular teleport destinations */}
+            {destinations.length === 0 && !waymark && partyDestinations.length === 0 && (
               <p className="text-xs text-muted-foreground italic py-4 text-center">No teleport destinations available.</p>
             )}
             {destinations.map(d => {
