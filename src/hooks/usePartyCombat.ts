@@ -345,6 +345,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setInCombat(true);
     setActiveCombatCreatureId(creatureId);
     setEngagedCreatureIds([creatureId]);
+    engagedCreatureIdsRef.current = [creatureId];
 
     // Start 2s heartbeat
     if (intervalRef.current) clearInterval(intervalRef.current);
