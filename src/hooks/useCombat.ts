@@ -625,7 +625,7 @@ export function useCombat(params: UseCombatParams) {
                 console.error('Failed to update tank HP/equipment:', err);
               }
             } else {
-              _addLog(`🛡️✨ Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
+              _addLog(`🛡️✨ ${engagedCreature.name} hits ${tankMember.character.name} — Force Shield absorbs all ${defResult.absorbed} damage! (${defResult.remainingShield} shield HP left)`);
             }
           } else {
             const totalDmg = defResult.finalDamage;
