@@ -977,6 +977,17 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
         />
       )}
 
+      {/* Boss Trainer Dialog */}
+      {currentNode.is_trainer && character.level >= 30 && (
+        <BossTrainerPanel
+          open={trainerOpen}
+          onClose={() => setTrainerOpen(false)}
+          character={character}
+          updateCharacter={updateCharacter}
+          addLog={addLog}
+        />
+      )}
+
       {/* Teleport Dialog */}
       {(currentNode.is_teleport || character.level >= 25) && (
         <TeleportDialog
