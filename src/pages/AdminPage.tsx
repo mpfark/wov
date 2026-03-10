@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Bug, MapPin } from 'lucide-react';
+import { ArrowLeft, Bug, Plus, Settings } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
@@ -18,12 +18,13 @@ import LootTableManager from '@/components/admin/LootTableManager';
 import ItemForgePanel from '@/components/admin/ItemForgePanel';
 import GameManual from '@/components/admin/GameManual';
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
-import AreaManager from '@/components/admin/AreaManager';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
 import AdminChatWidget from '@/components/admin/AdminChatWidget';
 import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
+import AreaEditorPanel from '@/components/admin/AreaEditorPanel';
+import AreaTypeDialog from '@/components/admin/AreaTypeDialog';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -42,11 +43,13 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
   const [adjacentDirection, setAdjacentDirection] = useState<string | null>(null);
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
+  const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
+  const [isNewArea, setIsNewArea] = useState(false);
   const [activeTab, setActiveTab] = useState('world');
   const [populateMode, setPopulateMode] = useState(false);
   const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
   const [nodePositions, setNodePositions] = useState<Map<string, { px: number; py: number }>>(new Map());
-  const [areaPanelOpen, setAreaPanelOpen] = useState(false);
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false);
 
   const [areas, setAreas] = useState<any[]>([]);
 
