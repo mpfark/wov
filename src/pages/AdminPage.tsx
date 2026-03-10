@@ -182,16 +182,28 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               onEditDone={() => setEditingRegionId(null)}
             />
             <span className="text-xs text-muted-foreground ml-2">
-              {regions.length} regions · {nodes.length} nodes
+              {regions.length} regions · {nodes.length} nodes · {areas.length} areas
             </span>
             <div className="flex-1" />
+            <Button
+              size="sm"
+              variant={areaPanelOpen ? 'default' : 'outline'}
+              onClick={() => {
+                setAreaPanelOpen(v => !v);
+                if (!areaPanelOpen) { setPanelOpen(false); setPopulateMode(false); setPopulateSelectedIds(new Set()); }
+              }}
+              className="text-xs"
+            >
+              <MapPin className="w-3 h-3 mr-1" />
+              {areaPanelOpen ? 'Close Areas' : 'Areas'}
+            </Button>
             <Button
               size="sm"
               variant={populateMode ? 'default' : 'outline'}
               onClick={() => {
                 setPopulateMode(m => !m);
                 if (populateMode) setPopulateSelectedIds(new Set());
-                if (!populateMode) setPanelOpen(false);
+                if (!populateMode) { setPanelOpen(false); setAreaPanelOpen(false); }
               }}
               className="text-xs"
             >
