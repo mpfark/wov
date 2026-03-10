@@ -165,6 +165,13 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
         return;
       }
 
+      // Tab key cycles targets
+      if (key === 'Tab' && onCycleTargetRef.current) {
+        e.preventDefault();
+        onCycleTargetRef.current();
+        return;
+      }
+
       // Check movement bindings first
       const node = currentNodeRef.current;
       const b = bindingsRef.current;
