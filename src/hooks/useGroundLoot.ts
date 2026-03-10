@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logBroadcast } from '@/hooks/useBroadcastDebug';
 
 export interface GroundLootItem {
   id: string;
@@ -54,6 +55,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       .on('broadcast', { event: 'loot_picked_up' }, (payload) => {
         const { ground_loot_id, picker_id } = payload.payload as { ground_loot_id: string; picker_id: string };
         if (picker_id === characterId) return;
+        logBroadcast('in', `ground-loot-${nodeId}`, 'loot_picked_up');
         if (ground_loot_id) {
           setGroundLoot(prev => prev.filter(g => g.id !== ground_loot_id));
           // Suppress the upcoming Postgres Changes refetch for 3s
@@ -63,6 +65,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       .on('broadcast', { event: 'loot_dropped' }, (payload) => {
         const { dropper_id } = payload.payload as { dropper_id: string };
         if (dropper_id === characterId) return;
+        logBroadcast('in', `ground-loot-${nodeId}`, 'loot_dropped');
         fetchGroundLoot();
         // Suppress the upcoming Postgres Changes refetch for 3s
         suppressRefetchUntilRef.current = Date.now() + 3000;
@@ -101,6 +104,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       event: 'loot_picked_up',
       payload: { ground_loot_id: groundLootId, picker_id: characterId },
     });
+    logBroadcast('out', `ground-loot`, 'loot_picked_up');
 
     // Unique item guard
     if (item.item.rarity === 'unique') {
@@ -141,6 +145,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       event: 'loot_dropped',
       payload: { dropper_id: characterId },
     });
+    logBroadcast('out', `ground-loot`, 'loot_dropped');
     fetchGroundLoot();
   }, [characterId, fetchGroundLoot]);
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logBroadcast } from '@/hooks/useBroadcastDebug';
 
 interface CreatureDamageEvent {
   creature_id: string;
@@ -38,6 +39,7 @@ export function useCreatureBroadcast(nodeId: string | null, characterId: string 
         if (!data || !data.creature_id) return;
         // Self-filter: skip broadcasts from own character (local creatureHpOverrides handles it)
         if (data.sender_id === characterId) return;
+        logBroadcast('in', `creature-combat-${nodeId}`, 'creature_damage');
         setBroadcastOverrides(prev => ({
           ...prev,
           [data.creature_id]: data.killed ? 0 : data.new_hp,
@@ -72,6 +74,7 @@ export function useCreatureBroadcast(nodeId: string | null, characterId: string 
     killed: boolean,
   ) => {
     if (!channelRef.current) return;
+    logBroadcast('out', `creature-combat-${channelRef.current.topic}`, 'creature_damage');
     channelRef.current.send({
       type: 'broadcast',
       event: 'creature_damage',

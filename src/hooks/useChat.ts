@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logBroadcast } from '@/hooks/useBroadcastDebug';
 import { OnlinePlayer } from '@/hooks/useGlobalPresence';
 
 export interface ChatMessage {
@@ -33,6 +34,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
     channel
       .on('broadcast', { event: 'say' }, ({ payload }) => {
         if (payload.senderId === characterId) return;
+        logBroadcast('in', `chat-node`, 'say');
         onMessageRef.current(`💬 ${payload.senderName}: ${payload.text}`);
       })
       .subscribe();
@@ -48,6 +50,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
     const channel = supabase.channel(`chat-whisper-${characterId}`);
     channel
       .on('broadcast', { event: 'whisper' }, ({ payload }) => {
+        logBroadcast('in', `chat-whisper`, 'whisper');
         onMessageRef.current(`🤫 ${payload.senderName} whispers: ${payload.text}`);
       })
       .subscribe();
@@ -70,6 +73,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
 
   const sendSay = useCallback((text: string) => {
     if (!nodeChannelRef.current) return;
+    logBroadcast('out', `chat-node`, 'say');
     nodeChannelRef.current.send({
       type: 'broadcast',
       event: 'say',
@@ -92,6 +96,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
           event: 'whisper',
           payload: { senderId: characterId, senderName: characterName, text },
         });
+        logBroadcast('out', `chat-whisper`, 'whisper');
         // Clean up after send
         setTimeout(() => {
           tempChannelsRef.current.delete(targetChannel);

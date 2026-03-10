@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logBroadcast } from '@/hooks/useBroadcastDebug';
 
 interface PartyHpEvent {
   character_id: string;
@@ -64,6 +65,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_hp' }, (payload) => {
         const data = payload.payload as PartyHpEvent;
         if (!data?.character_id || data.character_id === characterId) return;
+        logBroadcast('in', `party`, 'party_hp');
         setHpOverrides(prev => ({
           ...prev,
           [data.character_id]: { hp: data.hp, max_hp: data.max_hp },
@@ -72,21 +74,25 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_move' }, (payload) => {
         const data = payload.payload as PartyMoveEvent;
         if (!data?.character_id || data.character_id === characterId) return;
+        logBroadcast('in', `party`, 'party_move');
         setMoveEvents(prev => [...prev.slice(-20), data]);
       })
       .on('broadcast', { event: 'party_combat_msg' }, (payload) => {
         const data = payload.payload as PartyCombatMsgEvent;
         if (!data?.id) return;
+        logBroadcast('in', `party`, 'party_combat_msg');
         setBroadcastLogEntries(prev => [...prev.slice(-49), data]);
       })
       .on('broadcast', { event: 'party_reward' }, (payload) => {
         const data = payload.payload as PartyRewardEvent;
         if (!data?.character_id || data.character_id !== characterId) return;
+        logBroadcast('in', `party`, 'party_reward');
         setRewardEvents(prev => [...prev.slice(-9), data]);
       })
       .on('broadcast', { event: 'party_regen_buff' }, (payload) => {
         const data = payload.payload as PartyRegenBuffEvent;
         if (!data || data.caster_id === characterId) return;
+        logBroadcast('in', `party`, 'party_regen_buff');
         setIncomingPartyRegenBuff({ healPerTick: data.healPerTick, expiresAt: data.expiresAt, source: data.source });
       })
       .subscribe();
@@ -98,6 +104,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, [partyId, characterId]);
 
   const broadcastHp = useCallback((charId: string, hp: number, maxHp: number, source: string) => {
+    logBroadcast('out', `party`, 'party_hp');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_hp',
@@ -106,6 +113,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastMove = useCallback((charId: string, charName: string, nodeId: string) => {
+    logBroadcast('out', `party`, 'party_move');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_move',
@@ -114,6 +122,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastCombatMsg = useCallback((id: string, message: string, nodeId: string | null, characterName: string | null) => {
+    logBroadcast('out', `party`, 'party_combat_msg');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_combat_msg',
@@ -122,6 +131,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastReward = useCallback((charId: string, xp: number, gold: number, source: string) => {
+    logBroadcast('out', `party`, 'party_reward');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_reward',
@@ -130,6 +140,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   }, []);
 
   const broadcastPartyRegenBuff = useCallback((healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string) => {
+    logBroadcast('out', `party`, 'party_regen_buff');
     channelRef.current?.send({
       type: 'broadcast',
       event: 'party_regen_buff',
