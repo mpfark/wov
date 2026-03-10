@@ -110,9 +110,10 @@ interface UseKeyboardMovementOptions {
   onUseBeltPotion?: (index: number) => void;
   onPickUpLoot?: () => void;
   onOpenChat?: () => void;
+  onCycleTarget?: () => void;
 }
 
-export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion, onPickUpLoot, onOpenChat }: UseKeyboardMovementOptions) {
+export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion, onPickUpLoot, onOpenChat, onCycleTarget }: UseKeyboardMovementOptions) {
   const [bindings, setBindingsState] = useState<KeyBindings>(loadBindings);
   const [actionBindings, setActionBindingsState] = useState<ActionBindings>(loadActionBindings);
   const [moveCooldown, setMoveCooldown] = useState(false);
@@ -128,6 +129,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
   const onUseBeltPotionRef = useRef(onUseBeltPotion);
   const onPickUpLootRef = useRef(onPickUpLoot);
   const onOpenChatRef = useRef(onOpenChat);
+  const onCycleTargetRef = useRef(onCycleTarget);
 
   useEffect(() => { bindingsRef.current = bindings; }, [bindings]);
   useEffect(() => { moveCooldownRef.current = moveCooldown; }, [moveCooldown]);
@@ -141,6 +143,7 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
   useEffect(() => { onUseBeltPotionRef.current = onUseBeltPotion; }, [onUseBeltPotion]);
   useEffect(() => { onPickUpLootRef.current = onPickUpLoot; }, [onPickUpLoot]);
   useEffect(() => { onOpenChatRef.current = onOpenChat; }, [onOpenChat]);
+  useEffect(() => { onCycleTargetRef.current = onCycleTarget; }, [onCycleTarget]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -159,6 +162,13 @@ export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAt
       if (key === 'Enter' && onOpenChatRef.current) {
         e.preventDefault();
         onOpenChatRef.current();
+        return;
+      }
+
+      // Tab key cycles targets
+      if (key === 'Tab' && onCycleTargetRef.current) {
+        e.preventDefault();
+        onCycleTargetRef.current();
         return;
       }
 
