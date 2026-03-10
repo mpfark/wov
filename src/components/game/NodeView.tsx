@@ -118,6 +118,7 @@ export default function NodeView({
                 {creatures.map(c => {
                   const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
                   const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
+                  const isSelected = !isActiveTarget && !isEngaged && selectedTargetId === c.id;
                   const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
                   const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
                   const creaturePoisonStacks = poisonStacks[c.id];
@@ -127,7 +128,7 @@ export default function NodeView({
                   const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
                   const isBleeding = bleedDebuff && bleedDebuff.creatureId === c.id && Date.now() < bleedDebuff.expiresAt;
                   return (
-                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : 'border-border'}`}>
+                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
                         <span className={`text-xs font-display truncate ${
                           c.rarity === 'boss' ? 'text-primary text-glow' :
