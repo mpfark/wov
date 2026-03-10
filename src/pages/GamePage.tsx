@@ -853,7 +853,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               npcs={npcs}
               character={character}
               eventLog={eventLog}
-              onAttack={handleAttack}
+              onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
               onTalkToNPC={npc => setTalkingToNPC(npc)}
               inCombat={inCombat}
                activeCombatCreatureId={activeCombatCreatureId}
