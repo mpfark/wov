@@ -86,6 +86,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_reward' }, (payload) => {
         const data = payload.payload as PartyRewardEvent;
         if (!data?.character_id || data.character_id !== characterId) return;
+        logBroadcast('in', `party`, 'party_reward');
         setRewardEvents(prev => [...prev.slice(-9), data]);
       })
       .on('broadcast', { event: 'party_regen_buff' }, (payload) => {
