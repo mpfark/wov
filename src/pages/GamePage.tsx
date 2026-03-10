@@ -448,6 +448,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const activeCombatCreatureId = party ? partyCombat.activeCombatCreatureId : soloCombat.activeCombatCreatureId;
   const engagedCreatureIds = party ? partyCombat.engagedCreatureIds : soloCombat.engagedCreatureIds;
   const creatureHpOverrides = party ? partyCombat.creatureHpOverrides : soloCombat.creatureHpOverrides;
+  const lastTickTime = party ? partyCombat.lastTickTime : soloCombat.lastTickTime;
   const updateCreatureHp = party ? partyCombat.updateCreatureHp : soloCombat.updateCreatureHp;
   const startCombat = party ? partyCombat.startCombat : soloCombat.startCombat;
   const stopCombatFn = party ? partyCombat.stopCombat : soloCombat.stopCombat;
@@ -856,6 +857,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
               onTalkToNPC={npc => setTalkingToNPC(npc)}
               inCombat={inCombat}
+              lastTickTime={lastTickTime}
                activeCombatCreatureId={activeCombatCreatureId}
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}

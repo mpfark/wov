@@ -76,7 +76,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const engagedCreatureIdsRef = useRef<string[]>([]);
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
-
+  const [lastTickTime, setLastTickTime] = useState<number | null>(null);
   const intervalRef = useRef<number | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTickRef = useRef<number>(0);
@@ -119,6 +119,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
     lastTickRef.current = Date.now();
+    setLastTickTime(Date.now());
 
     // Update creature HP overrides
     for (const cs of data.creature_states) {
@@ -398,6 +399,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
+    lastTickTime,
     updateCreatureHp,
     startCombat,
     stopCombat,

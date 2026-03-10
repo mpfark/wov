@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusBarsStrip';
-import { useState, useEffect } from 'react';
+import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
 import { getAreaHeaderColor } from '@/lib/area-colors';
@@ -29,6 +30,7 @@ interface Props {
   onAttack: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;
   inCombat?: boolean;
+  lastTickTime?: number | null;
   activeCombatCreatureId?: string | null;
   selectedTargetId?: string | null;
   engagedCreatureIds?: string[];
@@ -51,7 +53,7 @@ interface Props {
 
 export default function NodeView({
   node, region, area, players, creatures, npcs = [], character, eventLog, onAttack, onTalkToNPC,
-  inCombat, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
+  inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   actionBindings,
   poisonStacks = {},
   igniteStacks = {},
@@ -322,8 +324,10 @@ export default function NodeView({
 
         {/* Compact Action Bar - pinned to bottom */}
         <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
-          {/* Abilities */}
-
+          {/* Heartbeat indicator — visible during combat */}
+          {inCombat && lastTickTime && (
+            <HeartbeatIndicator lastTickTime={lastTickTime} />
+          )}
 
 
 

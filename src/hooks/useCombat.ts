@@ -98,6 +98,7 @@ export function useCombat(params: UseCombatParams) {
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const [engagedCreatureIds, setEngagedCreatureIds] = useState<string[]>([]);
+  const [lastTickTime, setLastTickTime] = useState<number | null>(null);
 
   // ── Internal coordination refs ─────────────────────────────────
   const engagedCreatureIdsRef = useRef<Set<string>>(new Set());
@@ -237,6 +238,7 @@ export function useCombat(params: UseCombatParams) {
   const doCombatTick = useCallback(async () => {
     if (combatBusyRef.current) return;
     combatBusyRef.current = true;
+    setLastTickTime(Date.now());
 
     try {
       // Read ALL external state once at tick start
@@ -756,6 +758,7 @@ export function useCombat(params: UseCombatParams) {
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
+    lastTickTime,
     updateCreatureHp,
     startCombat,
     stopCombat,
