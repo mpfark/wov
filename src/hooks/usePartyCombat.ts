@@ -150,13 +150,15 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     // Update own character state from server-authoritative data
     const myState = data.member_states.find(m => m.character_id === ext.current.character.id);
     if (myState) {
-      ext.current.updateCharacter({
+      const updates: Partial<import('@/hooks/useCharacter').Character> = {
         hp: myState.hp,
         xp: myState.xp,
         gold: myState.gold,
         level: myState.level,
         max_hp: myState.max_hp,
-      });
+      };
+      if (myState.bhp !== undefined) updates.bhp = myState.bhp;
+      ext.current.updateCharacter(updates);
     }
 
     // Notify client about consumed one-shot buffs
