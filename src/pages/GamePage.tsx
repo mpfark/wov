@@ -577,14 +577,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     onMessage: handleChatMessage,
   });
 
-  const handleChatSubmit = useCallback(() => {
+  const handleChatSubmit = useCallback(async () => {
     const text = chatInput.trim();
     if (!text) { setChatOpen(false); return; }
     setChatInput('');
     setChatOpen(false);
     const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
     if (whisperMatch) {
-      const err = sendWhisper(whisperMatch[1], whisperMatch[2]);
+      const err = await sendWhisper(whisperMatch[1], whisperMatch[2]);
       if (err) setEventLog(prev => [...prev.slice(-49), `⚠️ ${err}`]);
       return;
     }
