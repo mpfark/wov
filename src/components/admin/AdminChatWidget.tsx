@@ -55,14 +55,22 @@ export default function AdminChatWidget() {
   // Subscribe to node say channel
   useEffect(() => {
     if (!nodeId || !charId) return;
-    const channel = supabase.channel(`node-${nodeId}`);
+    const channel = supabase.channel(`admin-node-listen-${nodeId}`);
     channel
       .on('broadcast', { event: 'say' }, ({ payload }) => {
         if (payload.senderId === charId) return;
         addMsg(`💬 ${payload.senderName}: ${payload.text}`);
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Also join the actual node channel for sending
+    const sendChannel = supabase.channel(`node-${nodeId}`);
+    sendChannel.subscribe();
+    nodeChannelRef.current = sendChannel;
+    return () => {
+      supabase.removeChannel(channel);
+      supabase.removeChannel(sendChannel);
+      nodeChannelRef.current = null;
+    };
   }, [nodeId, charId, addMsg]);
 
   // Subscribe to whisper channel
