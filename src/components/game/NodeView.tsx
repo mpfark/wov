@@ -108,6 +108,13 @@ export default function NodeView({
           </p>
         </div>
 
+        {/* Floating heartbeat indicator */}
+        {inCombat && lastTickTime && (
+          <div className="flex justify-center py-0.5">
+            <HeartbeatIndicator lastTickTime={lastTickTime} />
+          </div>
+        )}
+
         {/* In the Area - sticks above action bar, outside scrollable area */}
         {hasAreaContent && (
           <Collapsible open={areaOpen} onOpenChange={setAreaOpen}>
