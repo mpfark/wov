@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Bug, MapPin } from 'lucide-react';
+import { ArrowLeft, Bug, Plus, Settings } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
@@ -18,12 +18,13 @@ import LootTableManager from '@/components/admin/LootTableManager';
 import ItemForgePanel from '@/components/admin/ItemForgePanel';
 import GameManual from '@/components/admin/GameManual';
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
-import AreaManager from '@/components/admin/AreaManager';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
 import AdminChatWidget from '@/components/admin/AdminChatWidget';
 import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
+import AreaEditorPanel from '@/components/admin/AreaEditorPanel';
+import AreaTypeDialog from '@/components/admin/AreaTypeDialog';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -42,11 +43,13 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
   const [adjacentDirection, setAdjacentDirection] = useState<string | null>(null);
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
+  const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
+  const [isNewArea, setIsNewArea] = useState(false);
   const [activeTab, setActiveTab] = useState('world');
   const [populateMode, setPopulateMode] = useState(false);
   const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
   const [nodePositions, setNodePositions] = useState<Map<string, { px: number; py: number }>>(new Map());
-  const [areaPanelOpen, setAreaPanelOpen] = useState(false);
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false);
 
   const [areas, setAreas] = useState<any[]>([]);
 
@@ -91,8 +94,9 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setIsNewNode(false);
     setAdjacentToNodeId(null);
     setPanelOpen(true);
-    setAreaPanelOpen(false);
     setEditingRegionId(null);
+    setEditingAreaId(null);
+    setIsNewArea(false);
   };
 
   const handleAddNodeAdjacent = (fromId: string, direction?: string) => {
@@ -105,8 +109,9 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setAdjacentToNodeId(fromId || null);
     setAdjacentDirection(direction || null);
     setPanelOpen(true);
-    setAreaPanelOpen(false);
     setEditingRegionId(null);
+    setEditingAreaId(null);
+    setIsNewArea(false);
   };
 
   const handleAddNodeBetween = (_fromId: string, _toId: string) => {
@@ -176,7 +181,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         </div>
 
         <TabsContent value="world" className="flex-1 data-[state=active]:flex flex-col min-h-0 mt-0 overflow-hidden">
-          {/* Region controls */}
+          {/* Region & Area controls */}
           <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30 shrink-0">
             <RegionManager
               regions={regions}
@@ -184,29 +189,30 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               isValar={isValar}
               onDelete={deleteRegion}
             />
+            <Button variant="outline" size="sm" onClick={() => {
+              setIsNewArea(true);
+              setEditingAreaId(null);
+              setPanelOpen(false);
+              setEditingRegionId(null);
+              setPopulateMode(false);
+              setPopulateSelectedIds(new Set());
+            }} className="font-display text-xs">
+              <Plus className="w-3 h-3 mr-1" /> New Area
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setTypeDialogOpen(true)} className="font-display text-xs" title="Manage area types">
+              <Settings className="w-3 h-3 mr-1" /> Types
+            </Button>
             <span className="text-xs text-muted-foreground ml-2">
               {regions.length} regions · {nodes.length} nodes · {areas.length} areas
             </span>
             <div className="flex-1" />
             <Button
               size="sm"
-              variant={areaPanelOpen ? 'default' : 'outline'}
-              onClick={() => {
-                setAreaPanelOpen(v => !v);
-                if (!areaPanelOpen) { setPanelOpen(false); setPopulateMode(false); setPopulateSelectedIds(new Set()); }
-              }}
-              className="text-xs"
-            >
-              <MapPin className="w-3 h-3 mr-1" />
-              {areaPanelOpen ? 'Close Areas' : 'Areas'}
-            </Button>
-            <Button
-              size="sm"
               variant={populateMode ? 'default' : 'outline'}
               onClick={() => {
                 setPopulateMode(m => !m);
                 if (populateMode) setPopulateSelectedIds(new Set());
-                if (!populateMode) { setPanelOpen(false); setAreaPanelOpen(false); }
+                if (!populateMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); }
               }}
               className="text-xs"
             >
@@ -232,9 +238,26 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                     setPanelOpen(false);
                     setPopulateMode(false);
                     setPopulateSelectedIds(new Set());
-                    setAreaPanelOpen(false);
+                    setEditingAreaId(null);
+                    setIsNewArea(false);
                   }}
                   onDeleteRegion={deleteRegion}
+                  onEditArea={(area) => {
+                    setEditingAreaId(area.id);
+                    setIsNewArea(false);
+                    setPanelOpen(false);
+                    setEditingRegionId(null);
+                    setPopulateMode(false);
+                    setPopulateSelectedIds(new Set());
+                  }}
+                  onDeleteArea={async (areaId) => {
+                    const area = areas.find(a => a.id === areaId);
+                    if (!window.confirm(`Delete area "${area?.name}"?`)) return;
+                    const { error } = await supabase.from('areas').delete().eq('id', areaId);
+                    if (error) return toast.error(error.message);
+                    toast.success('Area deleted');
+                    loadData();
+                  }}
                   populateMode={populateMode}
                   populateSelectedIds={populateSelectedIds}
                   onPopulateToggleNode={(id) => {
@@ -247,10 +270,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   }}
                   onPositionsComputed={setNodePositions}
                   onConnectionCreated={loadData}
-                  panelOpen={panelOpen || !!editingRegionId}
+                  panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea}
                 />
               </ResizablePanel>
-              {(panelOpen && !populateMode && !editingRegionId) && (
+              {(panelOpen && !populateMode && !editingRegionId && !editingAreaId && !isNewArea) && (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={35} minSize={25}>
@@ -282,6 +305,23 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
+              {(editingAreaId || isNewArea) && !populateMode && !editingRegionId && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <AreaEditorPanel
+                      areaId={editingAreaId}
+                      isNew={isNewArea}
+                      regions={regions}
+                      areas={areas}
+                      initialRegionId={selectedRegion || regions[0]?.id}
+                      onClose={() => { setEditingAreaId(null); setIsNewArea(false); }}
+                      onSaved={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
+                      onDeleted={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
               {populateMode && populateSelectedIds.size > 0 && (
                 <>
                   <ResizableHandle withHandle />
@@ -298,16 +338,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
-              {areaPanelOpen && !populateMode && !panelOpen && !editingRegionId && (
-                <>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={35} minSize={25}>
-                    <AreaManager onDataChanged={() => { loadData(); }} />
-                  </ResizablePanel>
-                </>
-              )}
             </ResizablePanelGroup>
           </div>
+
+          <AreaTypeDialog open={typeDialogOpen} onOpenChange={setTypeDialogOpen} />
         </TabsContent>
 
         <TabsContent value="creatures" className="flex-1 min-h-0 mt-0 overflow-hidden">

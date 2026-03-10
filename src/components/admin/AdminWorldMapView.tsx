@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin, Pencil, Trash2 } from 'lucide-react';
+import { MapPin, Pencil, Trash2, Layers } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
@@ -50,6 +50,8 @@ interface Props {
   onAddNodeAdjacent: (fromId: string, direction?: string) => void;
   onEditRegion?: (region: Region) => void;
   onDeleteRegion?: (regionId: string) => void;
+  onEditArea?: (area: Area) => void;
+  onDeleteArea?: (areaId: string) => void;
   populateMode?: boolean;
   populateSelectedIds?: Set<string>;
   onPopulateToggleNode?: (nodeId: string) => void;
@@ -310,7 +312,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated, panelOpen }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, onEditArea, onDeleteArea, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated, panelOpen }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -743,11 +745,29 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   return (
                     <div
                       key={area.id}
-                      className="w-full text-left px-2.5 py-2 rounded text-xs transition-colors hover:bg-accent text-foreground"
+                      className="group w-full text-left px-2.5 py-2 rounded text-xs transition-colors hover:bg-accent text-foreground cursor-pointer"
                     >
                       <div className="flex items-center gap-1 min-w-0">
                         <span className="text-sm shrink-0">{emojiMap[area.area_type] || '📍'}</span>
                         <span className="font-display truncate max-w-[110px]" title={area.name}>{area.name}</span>
+                        <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
+                          {onEditArea && (
+                            <button
+                              onClick={e => { e.stopPropagation(); onEditArea(area); }}
+                              className="p-0.5 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                          {onDeleteArea && (
+                            <button
+                              onClick={e => { e.stopPropagation(); onDeleteArea(area.id); }}
+                              className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-0.5 pl-[22px]">
                         {!selectedRegionId && regionName ? `${regionName} · ` : ''}{areaNodeCount} nodes
