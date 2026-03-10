@@ -719,6 +719,47 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
           </ScrollArea>
         </div>
 
+        {/* Areas sidebar */}
+        <div className="w-48 border-r border-border bg-card/50 flex flex-col">
+          <div className="px-3 py-2 border-b border-border">
+            <h3 className="font-display text-xs text-primary">Areas</h3>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-1">
+              {(() => {
+                const filteredAreas = selectedRegionId
+                  ? areas.filter(a => a.region_id === selectedRegionId)
+                  : areas;
+                if (filteredAreas.length === 0) {
+                  return (
+                    <p className="text-[10px] text-muted-foreground italic text-center py-4 px-2">
+                      {selectedRegionId ? 'No areas in this region.' : 'No areas yet.'}
+                    </p>
+                  );
+                }
+                return filteredAreas.map(area => {
+                  const areaNodeCount = nodes.filter(n => n.area_id === area.id).length;
+                  const regionName = regions.find(r => r.id === area.region_id)?.name;
+                  return (
+                    <div
+                      key={area.id}
+                      className="w-full text-left px-2.5 py-2 rounded text-xs transition-colors hover:bg-accent text-foreground"
+                    >
+                      <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-sm shrink-0">{emojiMap[area.area_type] || '📍'}</span>
+                        <span className="font-display truncate max-w-[110px]" title={area.name}>{area.name}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 pl-[22px]">
+                        {!selectedRegionId && regionName ? `${regionName} · ` : ''}{areaNodeCount} nodes
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </ScrollArea>
+        </div>
+
         {/* Map area */}
         <div
           ref={containerRef}
