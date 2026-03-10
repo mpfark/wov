@@ -62,6 +62,9 @@ export function useCharacter(user: User | null) {
       return;
     }
 
+    // Reset loading when user arrives so downstream doesn't see stale false
+    setLoading(true);
+
     const fetchCharacters = async () => {
       const { data, error } = await supabase
         .from('characters')
