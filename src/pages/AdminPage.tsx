@@ -165,8 +165,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="roadmap" className="font-display text-xs">Roadmap</TabsTrigger>
             <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
             {/* Reference */}
-            <TabsTrigger value="rulebook" className="font-display text-xs">📖 Rulebook</TabsTrigger>
-            <TabsTrigger value="manual" className="font-display text-xs"><BookOpen className="w-3 h-3 mr-1 inline" />Manual</TabsTrigger>
+            <TabsTrigger value="rulebook" className="font-display text-xs">Rulebook</TabsTrigger>
+            <TabsTrigger value="manual" className="font-display text-xs">Manual</TabsTrigger>
           </TabsList>
         </div>
 
