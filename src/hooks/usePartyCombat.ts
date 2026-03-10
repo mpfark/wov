@@ -186,7 +186,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         setInCombat(true);
       }
       setActiveCombatCreatureId(aliveCreatures[0].id);
-      setEngagedCreatureIds(aliveCreatures.map(cs => cs.id));
+      // Only add new creatures to engaged list, don't replace — passive creatures
+      // should only be engaged if explicitly attacked or if they are aggressive
+      setEngagedCreatureIds(prev => {
+        const newIds = aliveCreatures.map(cs => cs.id);
+        const merged = [...new Set([...prev.filter(id => newIds.includes(id)), ...newIds.filter(id => prev.includes(id))])];
+        // If nothing survived from previous engagement, use whatever the server returned
+        // (this handles the case where all engaged creatures died and server engaged new ones)
+        const result = merged.length > 0 ? merged : newIds;
+        engagedCreatureIdsRef.current = result;
+        return result;
+      });
     }
   }, [stopCombat]);
 
