@@ -324,8 +324,10 @@ export default function NodeView({
 
         {/* Compact Action Bar - pinned to bottom */}
         <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
-          {/* Abilities */}
-
+          {/* Heartbeat indicator — visible during combat */}
+          {inCombat && lastTickTime && (
+            <HeartbeatIndicator lastTickTime={lastTickTime} />
+          )}
 
 
 
