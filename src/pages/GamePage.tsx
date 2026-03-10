@@ -856,8 +856,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               onAttack={handleAttack}
               onTalkToNPC={npc => setTalkingToNPC(npc)}
               inCombat={inCombat}
-              activeCombatCreatureId={activeCombatCreatureId}
-              engagedCreatureIds={engagedCreatureIds}
+               activeCombatCreatureId={activeCombatCreatureId}
+               selectedTargetId={selectedTargetId}
+               engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
               onUseAbility={handleUseAbility}
