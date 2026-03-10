@@ -23,6 +23,7 @@ import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
 import AdminChatWidget from '@/components/admin/AdminChatWidget';
+import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
 
 interface AdminPageProps {
   onBack: () => void;
