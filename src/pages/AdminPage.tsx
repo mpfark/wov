@@ -181,7 +181,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         </div>
 
         <TabsContent value="world" className="flex-1 data-[state=active]:flex flex-col min-h-0 mt-0 overflow-hidden">
-          {/* Region controls */}
+          {/* Region & Area controls */}
           <div className="flex items-center gap-2 px-4 py-1.5 border-b border-border bg-card/30 shrink-0">
             <RegionManager
               regions={regions}
@@ -189,29 +189,30 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
               isValar={isValar}
               onDelete={deleteRegion}
             />
+            <Button variant="outline" size="sm" onClick={() => {
+              setIsNewArea(true);
+              setEditingAreaId(null);
+              setPanelOpen(false);
+              setEditingRegionId(null);
+              setPopulateMode(false);
+              setPopulateSelectedIds(new Set());
+            }} className="font-display text-xs">
+              <Plus className="w-3 h-3 mr-1" /> New Area
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setTypeDialogOpen(true)} className="font-display text-xs" title="Manage area types">
+              <Settings className="w-3 h-3 mr-1" /> Types
+            </Button>
             <span className="text-xs text-muted-foreground ml-2">
               {regions.length} regions · {nodes.length} nodes · {areas.length} areas
             </span>
             <div className="flex-1" />
             <Button
               size="sm"
-              variant={areaPanelOpen ? 'default' : 'outline'}
-              onClick={() => {
-                setAreaPanelOpen(v => !v);
-                if (!areaPanelOpen) { setPanelOpen(false); setPopulateMode(false); setPopulateSelectedIds(new Set()); }
-              }}
-              className="text-xs"
-            >
-              <MapPin className="w-3 h-3 mr-1" />
-              {areaPanelOpen ? 'Close Areas' : 'Areas'}
-            </Button>
-            <Button
-              size="sm"
               variant={populateMode ? 'default' : 'outline'}
               onClick={() => {
                 setPopulateMode(m => !m);
                 if (populateMode) setPopulateSelectedIds(new Set());
-                if (!populateMode) { setPanelOpen(false); setAreaPanelOpen(false); }
+                if (!populateMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); }
               }}
               className="text-xs"
             >
