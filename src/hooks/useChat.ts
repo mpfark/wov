@@ -75,19 +75,14 @@ export function useChat({ handle, nodeId, characterId, characterName, onlinePlay
   }, [handle, characterId, characterName]);
 
   const sendWhisper = useCallback(async (targetName: string, text: string): Promise<string | null> => {
-    // Try presence list first
+    // Try presence list first (instant, no DB call)
     let target = onlinePlayers.find(p => p.name.toLowerCase() === targetName.toLowerCase());
 
-    // Fallback: DB lookup if presence hasn't synced yet
+    // Fallback: secure RPC lookup if presence hasn't synced yet
     if (!target) {
-      const { data } = await supabase
-        .from('characters')
-        .select('id, name')
-        .ilike('name', targetName)
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        target = { id: data.id, name: data.name, race: '', class: '', level: 0, gender: 'male' as const };
+      const { data: charId } = await supabase.rpc('find_character_id_by_name', { _name: targetName });
+      if (charId) {
+        target = { id: charId, name: targetName, race: '', class: '', level: 0, gender: 'male' as const };
       }
     }
 
