@@ -758,6 +758,7 @@ export function useCombat(params: UseCombatParams) {
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
+    lastTickTime,
     updateCreatureHp,
     startCombat,
     stopCombat,
