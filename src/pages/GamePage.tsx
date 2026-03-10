@@ -569,6 +569,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   }, []);
 
   const { sendSay, sendWhisper } = useChat({
+    handle: nodeChannel,
     nodeId: character.current_node_id,
     characterId: character.id,
     characterName: character.name,
