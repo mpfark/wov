@@ -23,6 +23,7 @@ export default function AdminChatWidget() {
   const [nodeId, setNodeId] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const nodeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const openRef = useRef(open);
   openRef.current = open;
 
