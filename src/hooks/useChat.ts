@@ -50,6 +50,7 @@ export function useChat({ nodeId, characterId, characterName, onlinePlayers, onM
     const channel = supabase.channel(`chat-whisper-${characterId}`);
     channel
       .on('broadcast', { event: 'whisper' }, ({ payload }) => {
+        logBroadcast('in', `chat-whisper`, 'whisper');
         onMessageRef.current(`🤫 ${payload.senderName} whispers: ${payload.text}`);
       })
       .subscribe();
