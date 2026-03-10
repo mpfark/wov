@@ -238,6 +238,7 @@ export function useCombat(params: UseCombatParams) {
   const doCombatTick = useCallback(async () => {
     if (combatBusyRef.current) return;
     combatBusyRef.current = true;
+    setLastTickTime(Date.now());
 
     try {
       // Read ALL external state once at tick start
