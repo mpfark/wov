@@ -383,6 +383,7 @@ export function useActions(params: UseActionsParams) {
         p.addLog('You break away from the party leader.');
       }
       await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
+      // Broadcast move FIRST so followers get instant notification
       p.broadcastMove(p.character.id, p.character.name, nodeId);
       // Track visited node (fire-and-forget upsert)
       supabase.from('character_visited_nodes').upsert(
@@ -397,10 +398,14 @@ export function useActions(params: UseActionsParams) {
       logActivity(p.character.user_id, p.character.id, 'move', `Traveled ${dirLabel || 'to ' + moveName}`, { node_id: nodeId });
       if (p.party && p.isLeader) {
         const followers = p.partyMembers.filter(m => m.is_following && m.character_id !== p.character.id);
-        for (const f of followers) {
-          await supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id);
+        // Update all followers in parallel instead of sequentially
+        if (followers.length > 0) {
+          await Promise.all(followers.map(f =>
+            supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id)
+          ));
+          p.addLog('Your party follows you.');
+          p.fetchParty();
         }
-        if (followers.length > 0) { p.addLog('Your party follows you.'); p.fetchParty(); }
       }
     } catch {
       p.addLog('Failed to move.');
@@ -435,10 +440,13 @@ export function useActions(params: UseActionsParams) {
         m.character.current_node_id === p.character.current_node_id
       );
       const toMove = p.character.level >= 25 ? coLocated : coLocated.filter(m => m.is_following);
-      for (const f of toMove) {
-        await supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id);
+      if (toMove.length > 0) {
+        await Promise.all(toMove.map(f =>
+          supabase.from('characters').update({ current_node_id: nodeId }).eq('id', f.character_id)
+        ));
+        p.addLog('Your party follows you.');
+        p.fetchParty();
       }
-      if (toMove.length > 0) { p.addLog('Your party follows you.'); p.fetchParty(); }
     }
   }, [p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
@@ -466,10 +474,13 @@ export function useActions(params: UseActionsParams) {
         m.character_id !== p.character.id && m.status === 'accepted' &&
         m.character.current_node_id === p.character.current_node_id
       );
-      for (const f of coLocated) {
-        await supabase.from('characters').update({ current_node_id: waymarkNodeId }).eq('id', f.character_id);
+      if (coLocated.length > 0) {
+        await Promise.all(coLocated.map(f =>
+          supabase.from('characters').update({ current_node_id: waymarkNodeId }).eq('id', f.character_id)
+        ));
+        p.addLog('Your party follows you.');
+        p.fetchParty();
       }
-      if (coLocated.length > 0) { p.addLog('Your party follows you.'); p.fetchParty(); }
     }
   }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
