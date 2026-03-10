@@ -227,8 +227,13 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   npcCounts={npcCounts}
                   onNodeClick={handleNodeClick}
                   onAddNodeAdjacent={handleAddNodeAdjacent}
-                  onEditRegion={(region) => setEditingRegionId(region.id)}
-                  onDeleteRegion={deleteRegion}
+                  onEditRegion={(region) => {
+                    setEditingRegionId(region.id);
+                    setPanelOpen(false);
+                    setPopulateMode(false);
+                    setPopulateSelectedIds(new Set());
+                    setAreaPanelOpen(false);
+                  }}
                   populateMode={populateMode}
                   populateSelectedIds={populateSelectedIds}
                   onPopulateToggleNode={(id) => {
