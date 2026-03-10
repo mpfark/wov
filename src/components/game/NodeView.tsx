@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusBarsStrip';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
 import { getAreaHeaderColor } from '@/lib/area-colors';
