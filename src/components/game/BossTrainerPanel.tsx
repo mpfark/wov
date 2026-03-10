@@ -11,7 +11,9 @@ const STAT_LABELS: Record<string, string> = {
   int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
 };
 
-const TRAINING_COST = 20;
+function getTrainingCost(rank: number): number {
+  return 20 * (rank + 1);
+}
 
 function getSuccessChance(rank: number): number {
   return Math.max(1, 95 - rank * 15);
