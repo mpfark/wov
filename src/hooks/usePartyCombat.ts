@@ -87,6 +87,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // Leader aggregates non-leader buff + DoT stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberDotsRef = useRef<Record<string, DotStackReport>>({});
+  const doTickRef = useRef<() => void>(() => {});
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -219,6 +220,27 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         const data = payload.payload as CombatTickResponse;
         if (data) processTickResult(data);
       })
+      .on('broadcast', { event: 'engage_request' }, (payload) => {
+        // Leader processes engagement requests from non-leaders
+        if (!ext.current.isLeader) return;
+        const { creature_id } = payload.payload as { creature_id: string; character_id: string };
+        if (!creature_id) return;
+        // Add to engaged list and start combat if not already running
+        setEngagedCreatureIds(prev => {
+          if (prev.includes(creature_id)) return prev;
+          const next = [...prev, creature_id];
+          engagedCreatureIdsRef.current = next;
+          return next;
+        });
+        setActiveCombatCreatureId(creature_id);
+        if (!inCombatRef.current) {
+          inCombatRef.current = true;
+          setInCombat(true);
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          doTickRef.current();
+          intervalRef.current = window.setInterval(() => doTickRef.current(), 2000);
+        }
+      })
       .on('broadcast', { event: 'member_dot_state' }, (payload) => {
         // Leader collects non-leader DoT stacks
         if (!ext.current.isLeader) return;
@@ -337,23 +359,41 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
   }, [processTickResult, stopCombat]);
 
+  useEffect(() => { doTickRef.current = doTick; }, [doTick]);
+
   // ── Start combat (leader only) ─────────────────────────────────
 
   const startCombat = useCallback((creatureId: string) => {
     const p = ext.current;
-    if (!p.party || !p.isLeader || p.isDead || p.character.hp <= 0) return;
-    if (inCombatRef.current) return;
+    if (!p.party || p.isDead || p.character.hp <= 0) return;
 
-    inCombatRef.current = true;
-    setInCombat(true);
+    // Non-leader: broadcast an engagement request to the leader
+    if (!p.isLeader) {
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'engage_request',
+        payload: { creature_id: creatureId, character_id: p.character.id },
+      });
+      return;
+    }
+
+    // Leader: add creature to engaged list
+    setEngagedCreatureIds(prev => {
+      if (prev.includes(creatureId)) return prev;
+      const next = [...prev, creatureId];
+      engagedCreatureIdsRef.current = next;
+      return next;
+    });
     setActiveCombatCreatureId(creatureId);
-    setEngagedCreatureIds([creatureId]);
-    engagedCreatureIdsRef.current = [creatureId];
 
-    // Start 2s heartbeat
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    doTick(); // Immediate first tick
-    intervalRef.current = window.setInterval(doTick, 2000);
+    if (!inCombatRef.current) {
+      inCombatRef.current = true;
+      setInCombat(true);
+      // Start 2s heartbeat
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      doTick(); // Immediate first tick
+      intervalRef.current = window.setInterval(doTick, 2000);
+    }
   }, [doTick]);
 
   // ── Lifecycle effects ──────────────────────────────────────────
