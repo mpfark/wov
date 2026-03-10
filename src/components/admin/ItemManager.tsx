@@ -229,7 +229,7 @@ export default function ItemManager() {
       description: form.description.trim(),
       item_type: form.item_type,
       rarity: form.rarity as any,
-      slot: (form.item_type === 'equipment' || form.item_type === 'shield') ? form.slot as any : null,
+      slot: form.item_type === 'equipment' ? form.slot as any : null,
       stats: form.stats,
       value: Math.max(0, form.value),
       max_durability: Math.max(1, form.max_durability),
