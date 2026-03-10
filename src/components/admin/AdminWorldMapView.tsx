@@ -691,7 +691,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   >
                     <div className="flex items-center gap-1 min-w-0">
                       <MapPin className="w-3 h-3 shrink-0 text-muted-foreground" />
-                      <span className="font-display truncate max-w-[110px]" title={region.name}>{region.name}</span>
+                      <span className="font-display truncate max-w-[160px]" title={region.name}>{region.name}</span>
                       <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
                         {onEditRegion && (
                           <button
@@ -749,7 +749,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     >
                       <div className="flex items-center gap-1 min-w-0">
                         <span className="text-sm shrink-0">{emojiMap[area.area_type] || '📍'}</span>
-                        <span className="font-display truncate max-w-[110px]" title={area.name}>{area.name}</span>
+                        <span className="font-display truncate max-w-[160px]" title={area.name}>{area.name}</span>
                         <div className="hidden group-hover:flex items-center gap-0.5 shrink-0 ml-auto">
                           {onEditArea && (
                             <button
