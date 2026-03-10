@@ -74,9 +74,19 @@ export function useChat({ handle, nodeId, characterId, characterName, onlinePlay
     onMessageRef.current(`💬 ${characterName}: ${text}`);
   }, [handle, characterId, characterName]);
 
-  const sendWhisper = useCallback((targetName: string, text: string): string | null => {
-    const target = onlinePlayers.find(p => p.name.toLowerCase() === targetName.toLowerCase());
-    if (!target) return `Player "${targetName}" not found online.`;
+  const sendWhisper = useCallback(async (targetName: string, text: string): Promise<string | null> => {
+    // Try presence list first (instant, no DB call)
+    let target = onlinePlayers.find(p => p.name.toLowerCase() === targetName.toLowerCase());
+
+    // Fallback: secure RPC lookup if presence hasn't synced yet
+    if (!target) {
+      const { data: charId } = await supabase.rpc('find_character_id_by_name', { _name: targetName });
+      if (charId) {
+        target = { id: charId, name: targetName, race: '', class: '', level: 0, gender: 'male' as const };
+      }
+    }
+
+    if (!target) return `Player "${targetName}" not found.`;
 
     const targetChannel = supabase.channel(`chat-whisper-${target.id}`);
     tempChannelsRef.current.add(targetChannel);
