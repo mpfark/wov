@@ -324,9 +324,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           {activeTab === 'item-forge' && <ItemForgePanel onDataChanged={loadData} />}
         </TabsContent>
 
-        <TabsContent value="areas" className="flex-1 min-h-0 mt-0 overflow-hidden">
-          {activeTab === 'areas' && <AreaManager onDataChanged={loadData} />}
-        </TabsContent>
 
         <TabsContent value="manual" className="flex-1 min-h-0 mt-0 overflow-hidden">
           {activeTab === 'manual' && <GameManual />}
