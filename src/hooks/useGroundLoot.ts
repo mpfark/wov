@@ -104,6 +104,7 @@ export function useGroundLoot(nodeId: string | null, characterId: string | null)
       event: 'loot_picked_up',
       payload: { ground_loot_id: groundLootId, picker_id: characterId },
     });
+    logBroadcast('out', `ground-loot`, 'loot_picked_up');
 
     // Unique item guard
     if (item.item.rarity === 'unique') {
