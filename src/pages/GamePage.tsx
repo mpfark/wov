@@ -563,25 +563,38 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const handleAttackFirst = useCallback(() => {
     if (isDead) return;
     if (inCombat) return;
+    // If a target is selected via Tab, attack that one
+    if (selectedTargetId) {
+      const target = creatures.find(c => c.id === selectedTargetId && c.is_alive);
+      if (target) { startCombat(target.id); return; }
+    }
     const firstCreature = creatures.find(c => c.is_alive);
     if (firstCreature) startCombat(firstCreature.id);
-  }, [isDead, inCombat, creatures, startCombat]);
+  }, [isDead, inCombat, creatures, selectedTargetId, startCombat]);
 
   const handleCycleTarget = useCallback(() => {
     if (isDead) return;
     const aliveCreatures = creatures.filter(c => c.is_alive);
     if (aliveCreatures.length === 0) return;
 
-    // Only cycle among creatures that are aggressive or already engaged
-    const engagedSet = new Set(engagedCreatureIds);
-    const validTargets = aliveCreatures.filter(c => c.is_aggressive || engagedSet.has(c.id));
-    if (validTargets.length === 0) return;
+    // Cycle through ALL alive creatures
+    const currentIdx = aliveCreatures.findIndex(c => c.id === (selectedTargetId ?? activeCombatCreatureId));
+    const nextIdx = (currentIdx + 1) % aliveCreatures.length;
+    const next = aliveCreatures[nextIdx];
 
-    const currentIdx = validTargets.findIndex(c => c.id === activeCombatCreatureId);
-    const nextIdx = (currentIdx + 1) % validTargets.length;
-    const next = validTargets[nextIdx];
-    startCombat(next.id);
-  }, [isDead, creatures, activeCombatCreatureId, engagedCreatureIds, startCombat]);
+    setSelectedTargetId(next.id);
+
+    // Only auto-attack if the creature is aggressive or already engaged
+    const engagedSet = new Set(engagedCreatureIds);
+    if (next.is_aggressive || engagedSet.has(next.id) || inCombat) {
+      startCombat(next.id);
+    }
+  }, [isDead, creatures, selectedTargetId, activeCombatCreatureId, engagedCreatureIds, inCombat, startCombat]);
+
+  // Clear selected target when changing nodes
+  useEffect(() => {
+    setSelectedTargetId(null);
+  }, [character.current_node_id]);
 
   const handleChatMessage = useCallback((formatted: string) => {
     setEventLog(prev => [...prev.slice(-49), formatted]);
