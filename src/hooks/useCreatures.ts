@@ -45,6 +45,8 @@ export function useCreatures(nodeId: string | null) {
   }, [fetchCreatures]);
 
   useEffect(() => {
+    // Clear stale creatures immediately so downstream effects don't act on old-node data
+    setCreatures([]);
     fetchCreatures();
 
     if (!nodeId) return;
