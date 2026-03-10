@@ -28,6 +28,8 @@ export interface Character {
   mp: number;
   max_mp: number;
   respec_points: number;
+  bhp: number;
+  bhp_trained: Record<string, number>;
 }
 
 export function useCharacter(user: User | null) {
