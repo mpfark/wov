@@ -158,6 +158,7 @@ export default function AdminChatWidget() {
           payload: { senderId: charId, senderName: charName, text },
         });
       }
+    }
     addMsg(`💬 ${charName}: ${text}`);
   };
 
