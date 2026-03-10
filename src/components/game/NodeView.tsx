@@ -77,7 +77,7 @@ export default function NodeView({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="h-full flex flex-col p-3">
+      <div className="h-full flex flex-col p-3 relative">
         {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
           {/* Location Header */}
