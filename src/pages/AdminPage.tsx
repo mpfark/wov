@@ -154,7 +154,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <TabsTrigger value="npcs" className="font-display text-xs">NPCs</TabsTrigger>
             <TabsTrigger value="items" className="font-display text-xs">Items</TabsTrigger>
             <TabsTrigger value="loot-tables" className="font-display text-xs">Loot Tables</TabsTrigger>
-            <TabsTrigger value="item-forge" className="font-display text-xs">🪄 Item Forge</TabsTrigger>
+            <TabsTrigger value="item-forge" className="font-display text-xs">Item Forge</TabsTrigger>
             <div className="w-px h-4 bg-border/50 mx-1 shrink-0" />
             {/* Game Systems */}
             <TabsTrigger value="races-classes" className="font-display text-xs">Races & Classes</TabsTrigger>
