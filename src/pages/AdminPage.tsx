@@ -234,6 +234,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                     setPopulateSelectedIds(new Set());
                     setAreaPanelOpen(false);
                   }}
+                  onDeleteRegion={deleteRegion}
                   populateMode={populateMode}
                   populateSelectedIds={populateSelectedIds}
                   onPopulateToggleNode={(id) => {
@@ -246,10 +247,10 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   }}
                   onPositionsComputed={setNodePositions}
                   onConnectionCreated={loadData}
-                  panelOpen={panelOpen}
+                  panelOpen={panelOpen || !!editingRegionId}
                 />
               </ResizablePanel>
-              {(panelOpen && !populateMode) && (
+              {(panelOpen && !populateMode && !editingRegionId) && (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={35} minSize={25}>
@@ -264,6 +265,19 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                       adjacentToNodeId={adjacentToNodeId}
                       adjacentDirection={adjacentDirection}
                       nodePositions={nodePositions}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+              {editingRegionId && !populateMode && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <RegionEditorPanel
+                      regionId={editingRegionId}
+                      regions={regions}
+                      onClose={() => setEditingRegionId(null)}
+                      onSaved={() => { setEditingRegionId(null); loadData(); }}
                     />
                   </ResizablePanel>
                 </>
@@ -284,7 +298,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
-              {areaPanelOpen && !populateMode && !panelOpen && (
+              {areaPanelOpen && !populateMode && !panelOpen && !editingRegionId && (
                 <>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={35} minSize={25}>
