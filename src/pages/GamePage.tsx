@@ -391,13 +391,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   const gatherDotStacks = useCallback(() => {
     const now = Date.now();
-    const result: { bleed?: { creature_id: string; damage_per_tick: number }; poison: Record<string, { stacks: number; damage_per_tick: number }>; ignite: Record<string, { stacks: number; damage_per_tick: number }> } = {
+    const result: { bleed: Record<string, { damage_per_tick: number }>; poison: Record<string, { stacks: number; damage_per_tick: number }>; ignite: Record<string, { stacks: number; damage_per_tick: number }> } = {
+      bleed: {},
       poison: {},
       ignite: {},
     };
-    const dotD = gameLoop.dotDebuff;
-    if (dotD && now < dotD.expiresAt) {
-      result.bleed = { creature_id: dotD.creatureId, damage_per_tick: dotD.damagePerTick };
+    for (const [cid, s] of Object.entries(gameLoop.bleedStacks)) {
+      if (now < s.expiresAt) result.bleed[cid] = { damage_per_tick: s.damagePerTick };
     }
     for (const [cid, s] of Object.entries(gameLoop.poisonStacks)) {
       if (now < s.expiresAt) result.poison[cid] = { stacks: s.stacks, damage_per_tick: s.damagePerTick };
@@ -406,7 +406,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       if (now < s.expiresAt) result.ignite[cid] = { stacks: s.stacks, damage_per_tick: s.damagePerTick };
     }
     return result;
-  }, [gameLoop.dotDebuff, gameLoop.poisonStacks, gameLoop.igniteStacks]);
+  }, [gameLoop.bleedStacks, gameLoop.poisonStacks, gameLoop.igniteStacks]);
 
   const handleClearedDots = useCallback((cleared: { character_id: string; creature_id: string; dot_type: string }[]) => {
     for (const c of cleared) {
