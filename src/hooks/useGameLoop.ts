@@ -577,7 +577,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     isDead, critBuff, setCritBuff,
     stealthBuff, setStealthBuff, damageBuff, setDamageBuff,
     rootDebuff, setRootDebuff, acBuff, setAcBuff,
-    dotDebuff, setDotDebuff, poisonBuff, setPoisonBuff,
+    bleedStacks, setBleedStacks, poisonBuff, setPoisonBuff,
     poisonStacks, setPoisonStacks,
     evasionBuff, setEvasionBuff, disengageNextHit, setDisengageNextHit,
     igniteBuff, setIgniteBuff, igniteStacks, setIgniteStacks,
