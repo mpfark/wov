@@ -683,8 +683,9 @@ export function useActions(params: UseActionsParams) {
       p.setDamageBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Barrage!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Barrage!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Barrage.`); return; }
       const combat = CLASS_COMBAT.ranger;
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
