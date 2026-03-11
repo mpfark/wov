@@ -595,6 +595,15 @@ export function useActions(params: UseActionsParams) {
     'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   ]);
 
+  // Helper: resolve creature target — prefer explicit targetId (from selected/tab target), fall back to active combat target
+  const resolveCreatureTarget = (targetId?: string): string | null => {
+    if (targetId) {
+      const c = p.creatures.find(cr => cr.id === targetId && cr.is_alive && cr.hp > 0);
+      if (c) return targetId;
+    }
+    return p.activeCombatCreatureId;
+  };
+
   // ── Use Ability (large) ────────────────────────────────────────
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
     if (p.isDead || p.character.hp <= 0) return;
