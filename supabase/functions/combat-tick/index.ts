@@ -360,19 +360,20 @@ Deno.serve(async (req) => {
       const member = members.find(m => m.id === charId);
       const charName = member?.c?.name || 'Unknown';
 
-      // Bleed (Rend) — single target
+      // Bleed (Rend) — keyed by creature_id
       if (dotState.bleed) {
-        const { creature_id, damage_per_tick } = dotState.bleed;
-        const creature = creatures.find(cr => cr.id === creature_id);
-        if (creature && cHp[creature_id] > 0 && !cKilled.has(creature_id)) {
-          cHp[creature_id] = Math.max(cHp[creature_id] - damage_per_tick, 0);
-          events.push({ type: 'dot_tick', message: `🩸 ${creature.name} bleeds for ${damage_per_tick} damage! (${charName}'s Rend)` });
-          if (cHp[creature_id] <= 0) {
-            handleDotKill(creature, charName);
-            clearedDots.push({ character_id: charId, creature_id, dot_type: 'bleed' });
+        for (const [creatureId, bs] of Object.entries(dotState.bleed as Record<string, { damage_per_tick: number }>)) {
+          const creature = creatures.find(cr => cr.id === creatureId);
+          if (!creature || cHp[creatureId] <= 0 || cKilled.has(creatureId)) {
+            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'bleed' });
+            continue;
           }
-        } else if (!creature || cKilled.has(creature_id)) {
-          clearedDots.push({ character_id: charId, creature_id, dot_type: 'bleed' });
+          cHp[creatureId] = Math.max(cHp[creatureId] - bs.damage_per_tick, 0);
+          events.push({ type: 'dot_tick', message: `🩸 ${creature.name} bleeds for ${bs.damage_per_tick} damage! (${charName}'s Rend)` });
+          if (cHp[creatureId] <= 0) {
+            handleDotKill(creature, charName);
+            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'bleed' });
+          }
         }
       }
 

@@ -305,7 +305,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures, combatStateRef, broadcastDamage,
     party, partyMembers, awardKillRewardsRef,
-    inParty: !!party,
+    inParty: true, // All combat (solo + party) uses server-side combat-tick; disable client-side DoT ticking
   });
 
   // Wire setRegenBuff for incoming log processing
