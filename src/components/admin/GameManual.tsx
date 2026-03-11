@@ -111,9 +111,9 @@ export default function GameManual() {
                   <p className="text-xs font-display text-chart-5 mb-1">🔄 Respec Points (Levels 10, 20, 30, 40)</p>
                   <p className="text-xs text-muted-foreground">
                     At each milestone level, you earn <strong className="text-foreground">1 respec point</strong>. 
-                    A respec point lets you remove 1 manually allocated stat point and get it back as an unspent point to reallocate. 
+                    Spending a respec point triggers a <strong className="text-foreground">full reset</strong> of all manually allocated stat points, returning them as unspent points to reallocate freely. 
                     Maximum of <strong className="text-foreground">4 respec points</strong> total across a character's lifetime.
-                    Only manually allocated points can be respec'd — base race, class, and level-up bonuses are permanent.
+                    Only manually allocated points are reset — base race, class, and level-up bonuses are permanent.
                   </p>
                 </CardContent>
               </Card>
