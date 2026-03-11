@@ -217,11 +217,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     // Update combat state — only consider creatures we were actually fighting (engaged)
     const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
     if (engagedAlive.length === 0) {
-      // Don't stop combat if we're in drain mode — stale tick results from before
-      // node change shouldn't kill the drain interval
-      if (!dotDrainNodeRef.current) {
-        stopCombat();
-      }
+      stopCombat();
     } else {
       if (!inCombatRef.current) {
         inCombatRef.current = true;
