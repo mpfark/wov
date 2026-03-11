@@ -59,7 +59,7 @@ export interface UseActionsParams {
   damageBuff: DamageBuff | null; setDamageBuff: (v: DamageBuff | null) => void;
   rootDebuff: RootDebuff | null; setRootDebuff: (v: RootDebuff | null) => void;
   acBuff: AcBuff | null; setAcBuff: (v: AcBuff | null) => void;
-  dotDebuff: DotDebuff | null; setDotDebuff: (v: DotDebuff | null) => void;
+  bleedStacks: Record<string, DotDebuff>; setBleedStacks: (v: any) => void;
   poisonBuff: PoisonBuff | null; setPoisonBuff: (v: PoisonBuff | null) => void;
   poisonStacks: Record<string, PoisonStack>; setPoisonStacks: (v: any) => void;
   evasionBuff: EvasionBuff | null; setEvasionBuff: (v: EvasionBuff | null) => void;
