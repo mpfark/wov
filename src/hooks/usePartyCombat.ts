@@ -143,10 +143,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     pendingAbilityRef.current = { index, targetId };
     setPendingAbility({ index, targetId });
     idleCountRef.current = 0;
-    // Ensure tick interval is running
+    // Ensure tick interval is running — ability executes on the NEXT heartbeat, not immediately
     if (!intervalRef.current) {
-      // Fire first tick immediately for responsiveness, then every 2s
-      doTickRef.current();
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
     }
   }, []);
