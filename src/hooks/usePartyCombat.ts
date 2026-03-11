@@ -162,6 +162,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       });
     }
 
+    // Add tick separator before events
+    if (data.events.length > 0) {
+      ext.current.addLocalLog('---tick---');
+    }
+
     // Display events via local log — convert own character name to "You"
     const myName = ext.current.character.name;
     for (const ev of data.events) {

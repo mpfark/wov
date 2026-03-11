@@ -887,9 +887,13 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
               {eventLog.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
               ) : (
-                eventLog.map((log, i) => (
-                  <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
-                ))
+                eventLog.map((log, i) =>
+                  log === '---tick---' ? (
+                    <div key={i} className="border-t border-border/40 my-1" />
+                  ) : (
+                    <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
+                  )
+                )
               )}
               <div ref={logEndRef} />
             </div>
