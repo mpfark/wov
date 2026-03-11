@@ -326,7 +326,11 @@ Deno.serve(async (req) => {
       }
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-      events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}` });
+      if (split > 1) {
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}` });
+      } else {
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${Math.floor(baseXp)} XP${goldNote}.${xpBoostNote}` });
+      }
       // BHP for boss DoT kills
       if (creature.rarity === 'boss') {
         const bhpReward = Math.floor(creature.level * 0.5);
