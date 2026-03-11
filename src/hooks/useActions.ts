@@ -660,9 +660,8 @@ export function useActions(params: UseActionsParams) {
     // Damage/heal abilities must be queued for the heartbeat tick
     if (!isInstantBuff && !_fromTick) {
       p.queueAbility(abilityIndex, targetId);
-      if (!SILENT_QUEUE_TYPES.has(ability.type)) {
-        p.addLog(`⏳ ${ability.emoji} ${ability.label}...`);
-      }
+      const cTarget = targetId ? p.creatures?.find(c => c.id === targetId) : p.activeCombatCreatureId ? p.creatures?.find(c => c.id === p.activeCombatCreatureId) : undefined;
+      p.addLog(getQueueFlavour(ability, cTarget?.name));
       return;
     }
 
