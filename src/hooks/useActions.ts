@@ -573,7 +573,9 @@ export function useActions(params: UseActionsParams) {
 
   // ── Use Consumable ─────────────────────────────────────────────
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
-    const result = await p.useConsumable(inventoryId, p.character.id, p.character.hp, p.character.max_hp, p.updateCharacter);
+    const consGearConMod = Math.floor((p.equipmentBonuses.con || 0) / 2);
+    const consEffectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + consGearConMod;
+    const result = await p.useConsumable(inventoryId, p.character.id, p.character.hp, consEffectiveMaxHp, p.updateCharacter);
     if (result) {
       if (result.isPotion) {
         if (result.restored > 0) p.addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
