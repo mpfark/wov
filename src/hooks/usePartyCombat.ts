@@ -421,6 +421,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!inCombatRef.current) {
       inCombatRef.current = true;
       setInCombat(true);
+      idleCountRef.current = 0;
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTick(); // Immediate first tick
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
