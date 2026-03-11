@@ -368,6 +368,15 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           if (!error && data) {
             const result = data as CombatTickResponse;
 
+            // Update creature HP overrides so re-engagement has accurate data
+            for (const cs of result.creature_states) {
+              setCreatureHpOverrides(prev => {
+                const next = { ...prev, [cs.id]: cs.hp };
+                creatureHpOverridesRef.current = next;
+                return next;
+              });
+            }
+
             // Log events
             if (result.events?.length) {
               const myName = p.character.name;
