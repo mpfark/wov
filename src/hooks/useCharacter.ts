@@ -71,20 +71,7 @@ export function useCharacter(user: User | null) {
       setLoading(true);
     }
 
-    const fetchCharacters = async () => {
-      const { data, error } = await supabase
-        .from('characters')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
-
-      if (!error && data) {
-        setCharacters(data as Character[]);
-      }
-      setLoading(false);
-    };
-
-    fetchCharacters();
+    fetchCharactersRef.current();
 
     const channel = supabase
       .channel('my-characters')
