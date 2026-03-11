@@ -218,5 +218,6 @@ export function useCharacter(user: User | null) {
     createCharacter,
     updateCharacter,
     selectCharacterAfterCreate,
+    refetchCharacters,
   };
 }
