@@ -561,11 +561,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, []);
 
-  const isDotDraining = dotDrainNodeRef.current !== null;
-
   return {
     inCombat,
-    isDotDraining,
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
