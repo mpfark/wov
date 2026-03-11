@@ -83,7 +83,6 @@ export function useActions(params: UseActionsParams) {
   // ── Equipment degradation ──────────────────────────────────────
   const degradeEquipment = useCallback(async () => {
     if (p.equipped.length === 0) return;
-    if (Math.random() > 0.25) return;
     const shuffled = [...p.equipped].sort(() => Math.random() - 0.5);
     const toDamage = shuffled.slice(0, 1);
     for (const item of toDamage) {

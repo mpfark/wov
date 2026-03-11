@@ -578,7 +578,6 @@ Deno.serve(async (req) => {
 
     // ── Equipment degradation (inline — RPC checks auth.uid) ────
     const degradePromises = [...degradeSet].map(async (cid) => {
-      if (Math.random() > 0.25) return;
       const { data: equipped } = await db
         .from('character_inventory')
         .select('id, current_durability, item:items(rarity, name)')
