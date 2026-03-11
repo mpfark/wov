@@ -119,6 +119,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     inCombatRef.current = false;
     tickBusyRef.current = false;
     justStoppedRef.current = true;
+    dotDrainNodeRef.current = null;
     setInCombat(false);
     setActiveCombatCreatureId(null);
     setEngagedCreatureIds([]);
