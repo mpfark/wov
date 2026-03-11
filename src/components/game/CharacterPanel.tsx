@@ -759,7 +759,7 @@ export default function CharacterPanel({
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
                   const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
-                  const intHit = getIntHitBonus(eInt);
+                  const primaryHit = getPrimaryHitBonus((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
                   const milestoneCrit = character.level >= 28 ? 1 : 0;
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
