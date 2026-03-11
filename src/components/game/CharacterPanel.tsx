@@ -515,7 +515,7 @@ export default function CharacterPanel({
                             <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
                             {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
                             <p className="text-xs text-muted-foreground">{inv.item.description}</p>
-                            {inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[inv.item.slot] || inv.item.slot} · {inv.item.item_type}</p>}
+                            {inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[inv.item.slot] || inv.item.slot} · {inv.item.item_type}{inv.item.hands === 2 ? ' · Two-Handed' : inv.item.hands === 1 ? ' · One-Handed' : ''}</p>}
                             {!inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>}
                             {Object.entries(inv.item.stats || {}).map(([k, v]) => (
                               <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
@@ -526,22 +526,55 @@ export default function CharacterPanel({
                             {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
                             {/* Gear comparison */}
                             {inv.item.slot && (() => {
+                              // For 2H weapons, compare against both main_hand and off_hand combined
+                              const isTwoHandedItem = inv.item.hands === 2;
                               const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
                               const newStats = inv.item.stats || {};
-                              const oldStats = currentlyEquipped?.item.stats || {};
+                              const oldStats: Record<string, number> = {};
+                              
+                              if (isTwoHandedItem) {
+                                // Combine stats from both main_hand and off_hand
+                                const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
+                                const offHand = equipped.find(e => e.equipped_slot === 'off_hand');
+                                for (const item of [mainHand, offHand]) {
+                                  if (item) {
+                                    for (const [k, v] of Object.entries(item.item.stats || {})) {
+                                      oldStats[k] = (oldStats[k] || 0) + (v as number);
+                                    }
+                                  }
+                                }
+                              } else {
+                                // Check if currently equipped main_hand is 2H — compare against full 2H stats
+                                const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
+                                const mainIs2H = mainHand && mainHand.item.hands === 2;
+                                if (mainIs2H && (inv.item.slot === 'main_hand' || inv.item.slot === 'off_hand')) {
+                                  for (const [k, v] of Object.entries(mainHand.item.stats || {})) {
+                                    oldStats[k] = (v as number) || 0;
+                                  }
+                                } else if (currentlyEquipped) {
+                                  for (const [k, v] of Object.entries(currentlyEquipped.item.stats || {})) {
+                                    oldStats[k] = (v as number) || 0;
+                                  }
+                                }
+                              }
+                              
                               const allKeys = new Set([...Object.keys(newStats), ...Object.keys(oldStats)]);
                               if (allKeys.size === 0) return null;
                               const diffs: { key: string; diff: number }[] = [];
                               for (const k of allKeys) {
                                 const nv = (newStats[k] as number) || 0;
-                                const ov = (oldStats[k] as number) || 0;
+                                const ov = oldStats[k] || 0;
                                 if (nv - ov !== 0) diffs.push({ key: k, diff: nv - ov });
                               }
                               if (diffs.length === 0) return null;
                               return (
                                 <div className="mt-1.5 pt-1.5 border-t border-border">
                                   <p className="text-[9px] text-muted-foreground mb-0.5">
-                                    vs {currentlyEquipped ? currentlyEquipped.item.name : 'empty slot'}
+                                    vs {isTwoHandedItem
+                                      ? (equipped.find(e => e.equipped_slot === 'main_hand') || equipped.find(e => e.equipped_slot === 'off_hand')
+                                        ? 'main + off hand'
+                                        : 'empty slots')
+                                      : (currentlyEquipped ? currentlyEquipped.item.name : 'empty slot')}
                                   </p>
                                   {diffs.map(({ key, diff }) => (
                                     <p key={key} className={`text-[10px] font-display ${diff > 0 ? 'text-elvish' : 'text-destructive'}`}>
