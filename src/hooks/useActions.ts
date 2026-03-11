@@ -589,6 +589,13 @@ export function useActions(params: UseActionsParams) {
     }
   }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.updateCharacter, p.addLog]);
 
+  // Ability types that are pure buff flags — resolve instantly client-side
+  const INSTANT_BUFF_TYPES = new Set([
+    'focus_strike', 'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
+    'regen_buff', 'poison_buff', 'evasion_buff', 'disengage_buff', 'ignite_buff',
+    'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
+  ]);
+
   // ── Use Ability (large) ────────────────────────────────────────
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
     if (p.isDead || p.character.hp <= 0) return;
@@ -605,8 +612,11 @@ export function useActions(params: UseActionsParams) {
       return;
     }
 
-    // Queue ability for next heartbeat tick instead of executing immediately
-    if (!_fromTick) {
+    // Buff-only abilities resolve instantly (no tick queue needed)
+    const isInstantBuff = INSTANT_BUFF_TYPES.has(ability.type);
+
+    // Damage/heal abilities must be queued for the heartbeat tick
+    if (!isInstantBuff && !_fromTick) {
       p.queueAbility(abilityIndex, targetId);
       p.addLog(`⏳ ${ability.emoji} ${ability.label}...`);
       return;
