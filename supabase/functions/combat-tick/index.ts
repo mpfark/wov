@@ -16,6 +16,7 @@ import {
   getMaxCp as calcMaxCp,
   getMaxMp as calcMaxMp,
   getMaxHp as calcMaxHp,
+  getAcOverflowMultiplier as acOverflowMult,
   calculateAC as calcAC,
   XP_RARITY_MULTIPLIER as XP_RARITY,
   CLASS_COMBAT_PROFILES,
