@@ -598,8 +598,21 @@ export function useActions(params: UseActionsParams) {
     'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   ]);
 
-  // Ability types that queue silently (no ⏳ message)
-  const SILENT_QUEUE_TYPES = new Set(['self_heal', 'heal']);
+  // Flavour text for queued abilities (shown instead of generic "⏳ Ability...")
+  const getQueueFlavour = (ability: { label: string; emoji: string; type: string }, creatureName?: string): string => {
+    const target = creatureName || 'your target';
+    switch (ability.type) {
+      case 'self_heal': return `${ability.emoji} You brace yourself and begin catching your breath...`;
+      case 'heal': return `${ability.emoji} You channel healing energy...`;
+      case 'dot_debuff': return `${ability.emoji} You look for an opportunity to rend ${target}...`;
+      case 'multi_attack': return `${ability.emoji} You nock multiple arrows...`;
+      case 'execute_attack': return `${ability.emoji} You line up a vicious strike on ${target}...`;
+      case 'ignite_consume': return `${ability.emoji} You gather the flames building on ${target}...`;
+      case 'hp_transfer': return `${ability.emoji} You begin channeling your life force...`;
+      case 'burst_damage': return `${ability.emoji} You draw breath for a devastating crescendo...`;
+      default: return `⏳ ${ability.emoji} ${ability.label}...`;
+    }
+  };
 
   // Ability types that require being in combat with a valid target
   const COMBAT_REQUIRED_TYPES = new Set([
