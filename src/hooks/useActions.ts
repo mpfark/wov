@@ -316,7 +316,8 @@ export function useActions(params: UseActionsParams) {
       const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
       p.addLog(`🏃 You flee${dirText}!`);
-      p.stopCombat();
+      // Don't call stopCombat() here — let the node-change effect in usePartyCombat
+      // handle it so DoT drain mode can activate if there are active DoTs on old node creatures.
     }
 
     // Opportunity attacks
