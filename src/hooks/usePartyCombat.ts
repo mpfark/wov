@@ -44,7 +44,7 @@ export interface MemberBuffState {
 }
 
 export interface DotStackReport {
-  bleed?: { creature_id: string; damage_per_tick: number };
+  bleed: Record<string, { damage_per_tick: number }>;
   poison: Record<string, { stacks: number; damage_per_tick: number }>;
   ignite: Record<string, { stacks: number; damage_per_tick: number }>;
 }
