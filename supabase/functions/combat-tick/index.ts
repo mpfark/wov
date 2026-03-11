@@ -191,7 +191,8 @@ Deno.serve(async (req) => {
 
         const roll = rollD20();
         const total = roll + sMod + ihb;
-        const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
+        const statLabel = atk.stat?.toUpperCase() || 'STR';
+        const ihbLabel = ihb > 0 ? ` + ${ihb} ${statLabel}` : '';
 
         if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
           let raw = rollDmg(atk.min, atk.max) + sMod;

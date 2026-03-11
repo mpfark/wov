@@ -218,7 +218,7 @@ export interface AttackResult {
 export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunderReduction: number = 0): AttackResult {
   const profile = CLASS_COMBAT_PROFILES[ctx.classKey] || CLASS_COMBAT_PROFILES.warrior;
   const sMod = getStatModifier(ctx.attackerStat);
-  const ihb = getIntHitBonus(ctx.int);
+  const ihb = getPrimaryHitBonus(ctx.attackerStat);
   const dcb = getDexCritBonus(ctx.dex);
   const mileCrit = ctx.level >= 28 ? 1 : 0;
   const effCrit = profile.critRange - dcb - mileCrit - (ctx.critBuffBonus || 0);
