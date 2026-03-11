@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc}.`,
+            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${ihbLabel} = ${total} vs AC ${creatureAc}.`,
           });
         }
       }
