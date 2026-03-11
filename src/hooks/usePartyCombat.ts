@@ -629,57 +629,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       aggroProcessedRef.current = new Set();
       pendingAggroRef.current = true;
 
-      // Check if we're returning to the node where DoTs are draining
-      if (dotDrainNodeRef.current && dotDrainNodeRef.current === newNode) {
-        // Returned to drain node — re-engage creatures that have our active DoTs
-        dotDrainNodeRef.current = null;
-        const dots = ext.current.gatherDotStacks?.();
-        if (dots) {
-          const dotCreatureIds = new Set([
-            ...Object.keys(dots.bleed),
-            ...Object.keys(dots.poison),
-            ...Object.keys(dots.ignite),
-          ]);
-          if (dotCreatureIds.size > 0) {
-            const creatureIds = Array.from(dotCreatureIds);
-            setEngagedCreatureIds(creatureIds);
-            engagedCreatureIdsRef.current = creatureIds;
-            setActiveCombatCreatureId(creatureIds[0]);
-            inCombatRef.current = true;
-            setInCombat(true);
-            idleCountRef.current = 0;
-            // Ensure interval is running (might have stopped if drain ended just before return)
-            if (!intervalRef.current) {
-              intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
-            }
-          }
-        }
-        return;
-      }
-
-      // Check if there are active DoTs that should keep ticking on the old node
-      const dots = ext.current.gatherDotStacks?.();
-      const hasActiveDots = dots && (
-        Object.keys(dots.bleed).length > 0 ||
-        Object.keys(dots.poison).length > 0 ||
-        Object.keys(dots.ignite).length > 0
-      );
-
-      if (hasActiveDots && oldNode) {
-        // Enter DoT drain mode: stop combat UI but keep interval ticking
-        dotDrainNodeRef.current = oldNode;
-        inCombatRef.current = false;
-        setInCombat(false);
-        setActiveCombatCreatureId(null);
-        setEngagedCreatureIds([]);
-        engagedCreatureIdsRef.current = [];
-        // Keep interval running for DoT drain ticks
-        if (!intervalRef.current) {
-          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
-        }
-      } else {
-        stopCombat();
-      }
+      // Node changed — stop all combat immediately (DoTs are lost on flee)
+      stopCombat();
     }
   }, [params.character.current_node_id, stopCombat]);
 
