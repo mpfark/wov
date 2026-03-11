@@ -254,11 +254,11 @@ Deno.serve(async (req) => {
 
           // Poison proc (40% chance if poison buff active)
           if (mb.poison_buff && Math.random() < 0.4) {
-            events.push({ type: 'poison_proc', message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
+            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
           }
           // Ignite proc (40% chance if ignite buff active)
           if (mb.ignite_buff && Math.random() < 0.4) {
-            events.push({ type: 'ignite_proc', message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
+            events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
           }
 
           if (cHp[target.id] <= 0) {

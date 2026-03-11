@@ -19,7 +19,7 @@ interface Party {
 }
 
 interface CombatTickResponse {
-  events: { type: string; message: string; character_id?: string }[];
+  events: { type: string; message: string; character_id?: string; creature_id?: string }[];
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number; bhp?: number }[];
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
@@ -66,6 +66,10 @@ export interface UsePartyCombatParams {
   onConsumedBuffs?: (consumed: { buff: string; character_id: string }[]) => void;
   /** Called when server clears DoT stacks (creature died from DoT) */
   onClearedDots?: (cleared: { character_id: string; creature_id: string; dot_type: string }[]) => void;
+  /** Called when server reports a poison proc on a creature */
+  onPoisonProc?: (creatureId: string) => void;
+  /** Called when server reports an ignite proc on a creature */
+  onIgniteProc?: (creatureId: string) => void;
   /** Called on tick to execute a queued ability */
   onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
 }
@@ -212,6 +216,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (data.cleared_dots?.length && ext.current.onClearedDots) {
       const myCleared = data.cleared_dots.filter(d => d.character_id === ext.current.character.id);
       if (myCleared.length) ext.current.onClearedDots(myCleared);
+    }
+
+    // Apply DoT stacks from proc events (poison/ignite)
+    const myId = ext.current.character.id;
+    for (const ev of data.events) {
+      if (ev.character_id === myId && ev.type === 'poison_proc' && ev.creature_id && ext.current.onPoisonProc) {
+        ext.current.onPoisonProc(ev.creature_id);
+      }
+      if (ev.character_id === myId && ev.type === 'ignite_proc' && ev.creature_id && ext.current.onIgniteProc) {
+        ext.current.onIgniteProc(ev.creature_id);
+      }
     }
 
     // Refresh ground loot if any drops occurred

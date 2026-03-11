@@ -433,6 +433,8 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     addLocalLog, updateCharacter, fetchGroundLoot,
     gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
     gatherDotStacks, onClearedDots: handleClearedDots,
+    onPoisonProc: gameLoop.handleAddPoisonStack,
+    onIgniteProc: gameLoop.handleAddIgniteStack,
     onAbilityExecute: async (index, targetId) => {
       await executeAbilityRef.current?.(index, targetId);
     },
