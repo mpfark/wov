@@ -568,6 +568,7 @@ function PlayerLogsColumn({ userId }: { userId: string | null }) {
 }
 
 export default function UserManager({ isValar }: Props) {
+  const { refetchCharacters } = useGameContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
