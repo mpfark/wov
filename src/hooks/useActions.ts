@@ -716,8 +716,9 @@ export function useActions(params: UseActionsParams) {
       p.setAcBuff({ bonus, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Battle Cry! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'dot_debuff') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Rend.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
@@ -725,9 +726,9 @@ export function useActions(params: UseActionsParams) {
       const intervalMs = 2000;
       p.setBleedStacks((prev: Record<string, DotDebuff>) => ({
         ...prev,
-        [p.activeCombatCreatureId]: {
+        [cTargetId]: {
           damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
-          creatureId: p.activeCombatCreatureId, creatureName: creature.name,
+          creatureId: cTargetId, creatureName: creature.name,
           creatureLevel: creature.level, creatureRarity: creature.rarity,
           creatureLootTable: (creature.loot_table as any[]) || [],
           lootTableId: creature.loot_table_id ?? null, dropChance: creature.drop_chance ?? 0.5,
