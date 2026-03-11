@@ -647,7 +647,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             inCombatRef.current = true;
             setInCombat(true);
             idleCountRef.current = 0;
-            // Interval should already be running from drain mode
+            // Ensure interval is running (might have stopped if drain ended just before return)
+            if (!intervalRef.current) {
+              intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+            }
           }
         }
         return;
