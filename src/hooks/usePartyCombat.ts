@@ -66,6 +66,8 @@ export interface UsePartyCombatParams {
   onConsumedBuffs?: (consumed: { buff: string; character_id: string }[]) => void;
   /** Called when server clears DoT stacks (creature died from DoT) */
   onClearedDots?: (cleared: { character_id: string; creature_id: string; dot_type: string }[]) => void;
+  /** Called on tick to execute a queued ability */
+  onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
