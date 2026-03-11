@@ -59,7 +59,7 @@ export interface UseActionsParams {
   damageBuff: DamageBuff | null; setDamageBuff: (v: DamageBuff | null) => void;
   rootDebuff: RootDebuff | null; setRootDebuff: (v: RootDebuff | null) => void;
   acBuff: AcBuff | null; setAcBuff: (v: AcBuff | null) => void;
-  dotDebuff: DotDebuff | null; setDotDebuff: (v: DotDebuff | null) => void;
+  bleedStacks: Record<string, DotDebuff>; setBleedStacks: (v: any) => void;
   poisonBuff: PoisonBuff | null; setPoisonBuff: (v: PoisonBuff | null) => void;
   poisonStacks: Record<string, PoisonStack>; setPoisonStacks: (v: any) => void;
   evasionBuff: EvasionBuff | null; setEvasionBuff: (v: EvasionBuff | null) => void;
@@ -724,15 +724,18 @@ export function useActions(params: UseActionsParams) {
       const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
       const durationMs = Math.min(30000, 20000 + strMod * 1000);
       const intervalMs = 2000;
-      p.setDotDebuff({
-        damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
-        creatureId: p.activeCombatCreatureId, creatureName: creature.name,
-        creatureLevel: creature.level, creatureRarity: creature.rarity,
-        creatureLootTable: (creature.loot_table as any[]) || [],
-        lootTableId: creature.loot_table_id ?? null, dropChance: creature.drop_chance ?? 0.5,
-        creatureNodeId: creature.node_id ?? null,
-        maxHp: creature.max_hp, lastKnownHp: p.creatureHpOverrides[creature.id] ?? creature.hp,
-      });
+      p.setBleedStacks((prev: Record<string, DotDebuff>) => ({
+        ...prev,
+        [p.activeCombatCreatureId]: {
+          damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
+          creatureId: p.activeCombatCreatureId, creatureName: creature.name,
+          creatureLevel: creature.level, creatureRarity: creature.rarity,
+          creatureLootTable: (creature.loot_table as any[]) || [],
+          lootTableId: creature.loot_table_id ?? null, dropChance: creature.drop_chance ?? 0.5,
+          creatureNodeId: creature.node_id ?? null,
+          maxHp: creature.max_hp, lastKnownHp: p.creatureHpOverrides[creature.id] ?? creature.hp,
+        },
+      }));
       p.addLog(`${ability.emoji} Rend! ${creature.name} bleeds for ${dmgPerTick} damage every ${intervalMs / 1000}s for ${durationMs / 1000}s.`);
     } else if (ability.type === 'poison_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));

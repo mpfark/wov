@@ -42,7 +42,7 @@ interface Props {
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string; creatureName: string } | null;
-  bleedDebuff?: { damagePerTick: number; expiresAt: number; creatureId: string } | null;
+  bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
@@ -58,7 +58,7 @@ export default function NodeView({
   poisonStacks = {},
   igniteStacks = {},
   sunderDebuff,
-  bleedDebuff,
+  bleedStacks = {},
   groundLoot = [],
   onPickUpLoot,
   partyMemberIds,
@@ -135,7 +135,8 @@ export default function NodeView({
                   const creatureIgniteStacks = igniteStacks[c.id];
                   const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
                   const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
-                  const isBleeding = bleedDebuff && bleedDebuff.creatureId === c.id && Date.now() < bleedDebuff.expiresAt;
+                  const creatureBleed = bleedStacks[c.id];
+                  const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
                   return (
                     <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
@@ -177,7 +178,7 @@ export default function NodeView({
                               </span>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
-                              Rend: {bleedDebuff!.damagePerTick} dmg/tick
+                              Rend: {creatureBleed!.damagePerTick} dmg/tick
                             </TooltipContent>
                           </Tooltip>
                         )}
