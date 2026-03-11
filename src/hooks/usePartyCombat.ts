@@ -21,7 +21,7 @@ interface Party {
 interface CombatTickResponse {
   events: { type: string; message: string; character_id?: string; creature_id?: string }[];
   creature_states: { id: string; hp: number; alive: boolean }[];
-  member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number; bhp?: number }[];
+  member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number; bhp?: number; unspent_stat_points?: number; max_cp?: number; max_mp?: number; respec_points?: number }[];
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
   cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
 }
