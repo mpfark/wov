@@ -589,7 +589,7 @@ export function useActions(params: UseActionsParams) {
         p.setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 300000 });
       }
     }
-  }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.updateCharacter, p.addLog]);
+  }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.equipmentBonuses, p.updateCharacter, p.addLog]);
 
   // Ability types that are pure buff flags — resolve instantly client-side
   const INSTANT_BUFF_TYPES = new Set([
