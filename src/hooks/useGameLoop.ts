@@ -108,6 +108,8 @@ export function useGameLoop(params: UseGameLoopParams) {
   // Track creatures killed by DoTs to prevent re-damaging after respawn
   const dotKilledRef = useRef<Set<string>>(new Set());
   // Refs for DoT stacks — prevents stale closures in intervals
+  const bleedStacksRef = useRef(bleedStacks);
+  useEffect(() => { bleedStacksRef.current = bleedStacks; }, [bleedStacks]);
   const poisonStacksRef = useRef(poisonStacks);
   useEffect(() => { poisonStacksRef.current = poisonStacks; }, [poisonStacks]);
   const igniteStacksRef = useRef(igniteStacks);
