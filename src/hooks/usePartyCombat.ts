@@ -99,6 +99,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
+  const recentlyKilledRef = useRef<Set<string>>(new Set());
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
