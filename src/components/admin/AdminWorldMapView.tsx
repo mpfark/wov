@@ -449,12 +449,69 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
       }
     }
 
-    // Place disconnected nodes
-    let disconnectedRow = 0;
-    for (const node of nodes) {
-      if (!globalPositions.has(node.id)) {
-        const maxX = Math.max(0, ...[...globalPositions.values()].map(p => p.x));
-        globalPositions.set(node.id, { x: maxX + 2, y: disconnectedRow++ });
+    // Place disconnected clusters — run a secondary BFS per cluster so internal
+    // directions are respected, then offset the entire cluster away from the main graph.
+    const maxXSoFar = globalPositions.size > 0
+      ? Math.max(0, ...[...globalPositions.values()].map(p => p.x))
+      : 0;
+    let clusterOffsetX = maxXSoFar + 3;
+    const unplaced = nodes.filter(n => !globalPositions.has(n.id));
+
+    while (unplaced.length > 0) {
+      // Find a cluster root
+      const root = unplaced[0];
+      const clusterQueue: Array<{ id: string; x: number; y: number }> = [{ id: root.id, x: 0, y: 0 }];
+      const clusterPos = new Map<string, { x: number; y: number }>();
+      const clusterVisited = new Set<string>();
+      clusterVisited.add(root.id);
+      clusterPos.set(root.id, { x: 0, y: 0 });
+
+      while (clusterQueue.length > 0) {
+        const cur = clusterQueue.shift()!;
+        const cNode = nodeMap.get(cur.id);
+        if (!cNode) continue;
+        for (const conn of cNode.connections) {
+          if (clusterVisited.has(conn.node_id) || !nodeMap.has(conn.node_id)) continue;
+          clusterVisited.add(conn.node_id);
+          const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+          let cx = cur.x + offset[0];
+          let cy = cur.y + offset[1];
+          if ([...clusterPos.values()].some(p => p.x === cx && p.y === cy)) {
+            let attempt = 1;
+            let placed = false;
+            while (!placed && attempt < 20) {
+              for (const c of [
+                { x: cx + attempt, y: cy },
+                { x: cx - attempt, y: cy },
+                { x: cx, y: cy + attempt },
+                { x: cx, y: cy - attempt },
+              ]) {
+                if (![...clusterPos.values()].some(p => p.x === c.x && p.y === c.y)) {
+                  cx = c.x; cy = c.y; placed = true; break;
+                }
+              }
+              attempt++;
+            }
+          }
+          clusterPos.set(conn.node_id, { x: cx, y: cy });
+          clusterQueue.push({ id: conn.node_id, x: cx, y: cy });
+        }
+      }
+
+      // Offset the cluster and merge into globalPositions
+      const clusterMinY = Math.min(...[...clusterPos.values()].map(p => p.y));
+      clusterPos.forEach((pos, id) => {
+        globalPositions.set(id, { x: pos.x + clusterOffsetX, y: pos.y - clusterMinY });
+      });
+
+      // Advance offset for next cluster
+      const clusterMaxX = Math.max(...[...clusterPos.values()].map(p => p.x));
+      clusterOffsetX += clusterMaxX + 3;
+
+      // Remove placed nodes from unplaced list
+      for (const id of clusterVisited) {
+        const idx = unplaced.findIndex(n => n.id === id);
+        if (idx >= 0) unplaced.splice(idx, 1);
       }
     }
 
