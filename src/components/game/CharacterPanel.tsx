@@ -355,7 +355,12 @@ export default function CharacterPanel({
         <Tabs defaultValue="equipment" className="space-y-1.5">
           <TabsList className="h-7 w-full bg-muted/50 p-0.5">
             <TabsTrigger value="equipment" className="font-display text-xs h-6 flex-1">Equipment</TabsTrigger>
-            <TabsTrigger value="attributes" className="font-display text-xs h-6 flex-1">Attributes</TabsTrigger>
+            <TabsTrigger value="attributes" className="font-display text-xs h-6 flex-1 relative">
+              Attributes
+              {character.unspent_stat_points > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* Gold — always visible */}
