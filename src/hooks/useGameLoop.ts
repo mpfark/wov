@@ -69,7 +69,7 @@ export interface UseGameLoopParams {
   broadcastDamage: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
   party: any;
   partyMembers: any[];
-  /** When true, DoT ticking is handled server-side by combat-tick */
+  /** When true, DoT ticking is handled server-side by combat-tick (always true now for unified heartbeat) */
   inParty?: boolean;
   awardKillRewardsRef: React.MutableRefObject<(creature: any, opts?: { stopCombat?: boolean }) => Promise<void>>;
 }
