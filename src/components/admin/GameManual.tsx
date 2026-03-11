@@ -620,7 +620,7 @@ export default function GameManual() {
                 <CardContent className="p-3">
                   <p className="text-xs font-display text-primary mb-1">Tactical Example (Level 20 Wizard, ~87 max CP)</p>
                   <div className="text-xs text-muted-foreground space-y-0.5">
-                    <p>• T4 ability (60 CP) + T1 ability (10 CP) = 70 CP spent → 17 CP remaining</p>
+                    <p>• T4 ability (60 CP) + T1 ability (15 CP) = 75 CP spent → 12 CP remaining</p>
                     <p>• A Warrior at level 20 would have ~87 max CP — same base, but less INT/WIS investment</p>
                     <p>• INT + WIS scaling rewards casters who invest in both mental stats</p>
                     <p>• Bard's "Grand Finale" deals massive CHA-scaling burst damage to a single target</p>
