@@ -89,6 +89,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickBusyRef = useRef(false);
   const justStoppedRef = useRef(false);
   const dotDrainNodeRef = useRef<string | null>(null);
+  const pendingAggroRef = useRef(false);
+  const aggroProcessedRef = useRef<Set<string>>(new Set());
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
@@ -450,7 +452,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           console.error('Combat tick error:', error);
         } else {
           const result = data as CombatTickResponse;
-          if (!result || (!result.events?.length && !result.creature_states?.length)) {
+          if (!result) {
+            stopCombat();
+          } else if (result.creature_states && result.creature_states.filter(cs => cs.alive).length === 0 && !result.events?.length) {
+            // Server confirms zero alive creatures AND no events — combat is truly over
             stopCombat();
           } else {
             // Broadcast to party (only in party mode)
@@ -536,6 +541,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (inCombat || !justStoppedRef.current || p.isDead) return;
     // Only drivers auto-re-engage (solo or party leader)
     if (p.party && !p.isLeader) return;
+    if (params.creatures.length === 0) return; // Wait for creatures to load
     const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
     if (nextAggro) {
       justStoppedRef.current = false;
@@ -544,6 +550,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         startCombat(nextAggro.id);
       }, 500);
       return () => clearTimeout(timeout);
+    } else {
+      // Creatures loaded but none aggressive — clear justStopped
+      justStoppedRef.current = false;
     }
   }, [params.creatures, inCombat, startCombat]);
 
@@ -565,6 +574,28 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
   }, [params.creatures, inCombat]);
 
+  // ── Pending aggro: trigger after node change when creatures load ──
+  useEffect(() => {
+    const p = ext.current;
+    if (!pendingAggroRef.current || params.creatures.length === 0 || p.isDead || p.character.hp <= 0) return;
+    if (p.party && !p.isLeader) return; // Only drivers
+    pendingAggroRef.current = false;
+    const aggressiveCreatures = params.creatures.filter(
+      c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
+    );
+    if (aggressiveCreatures.length === 0) return;
+    for (const c of aggressiveCreatures) aggroProcessedRef.current.add(c.id);
+    const timeout = setTimeout(() => {
+      if (ext.current.character.hp <= 0) return;
+      const firstAggro = aggressiveCreatures[0];
+      if (firstAggro) {
+        ext.current.addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
+        startCombat(firstAggro.id);
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [params.creatures, startCombat]);
+
   // ── Lifecycle effects ──────────────────────────────────────────
 
   // Stop when party disbands (party mode only — solo keeps fighting)
@@ -580,6 +611,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       const oldNode = prevNodeRef.current;
       const newNode = params.character.current_node_id;
       prevNodeRef.current = newNode;
+
+      // Reset aggro tracking for new node
+      aggroProcessedRef.current = new Set();
+      pendingAggroRef.current = true;
 
       // Check if we're returning to the node where DoTs are draining
       if (dotDrainNodeRef.current && dotDrainNodeRef.current === newNode) {

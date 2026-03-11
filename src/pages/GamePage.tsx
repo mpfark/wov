@@ -502,37 +502,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     handleUseConsumable, handleUseAbility, handleAttack,
     waymarkNodeId, teleportOpen, setTeleportOpen } = actions;
 
-  // ── Aggro processing ───────────────────────────────────────────
-  const prevNodeRef = useRef<string | null>(null);
-  const aggroProcessedRef = useRef<Set<string>>(new Set());
-  const pendingAggroRef = useRef(false);
-
-  useEffect(() => {
-    if (!character.current_node_id || character.hp <= 0) return;
-    if (prevNodeRef.current === character.current_node_id) return;
-    prevNodeRef.current = character.current_node_id;
-    aggroProcessedRef.current = new Set();
-    pendingAggroRef.current = true;
-  }, [character.current_node_id, character.hp]);
-
-  useEffect(() => {
-    if (!pendingAggroRef.current || !creatures.length || character.hp <= 0) return;
-    pendingAggroRef.current = false;
-    const aggressiveCreatures = creatures.filter(
-      c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
-    );
-    if (aggressiveCreatures.length === 0) return;
-    for (const c of aggressiveCreatures) aggroProcessedRef.current.add(c.id);
-    const timeout = setTimeout(() => {
-      if (character.hp <= 0) return;
-      const firstAggro = aggressiveCreatures[0];
-      if (firstAggro) {
-        addLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
-        startCombat(firstAggro.id);
-      }
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [creatures, character.hp, addLog, startCombat]);
+  // ── Aggro processing is now handled inside usePartyCombat ──
 
   // ── Keyboard + chat ────────────────────────────────────────────
   const handleAbilityKey = useCallback((index: number) => {

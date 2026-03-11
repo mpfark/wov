@@ -156,7 +156,11 @@ Deno.serve(async (req) => {
     const creatures = allCreatures.filter(cr =>
       engagedIds.includes(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
     );
-    if (creatures.length === 0) return json({ events: [], creature_states: [], member_states: [] });
+    if (creatures.length === 0) {
+      // No combat targets, but return all alive creatures so client knows they exist
+      const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
+      return json({ events: [], creature_states, member_states: [] });
+    }
     // Determine if this is a DoT-only tick (player not at node)
     const isDotOnly = engagedIds.length === 0 && dotTargetIds.size > 0;
 
@@ -663,11 +667,17 @@ Deno.serve(async (req) => {
     }
 
     // ── Response ─────────────────────────────────────────────────
-    const creature_states = creatures.map(cr => ({
+    // Include ALL alive creatures at the node (not just combat-filtered) so client can distinguish
+    // "quiet tick with alive creatures" from "no creatures exist"
+    const combatCreatureStates = creatures.map(cr => ({
       id: cr.id,
       hp: cHp[cr.id],
       alive: !cKilled.has(cr.id) && cHp[cr.id] > 0,
     }));
+    const nonCombatAlive = allCreatures
+      .filter(cr => !creatures.some(cc => cc.id === cr.id))
+      .map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
+    const creature_states = [...combatCreatureStates, ...nonCombatAlive];
 
     return json({ events, creature_states, member_states: memberStates, consumed_buffs: consumedBuffsList, cleared_dots: clearedDots });
   } catch (err) {
