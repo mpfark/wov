@@ -594,6 +594,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
       // Reset aggro tracking for new node
       aggroProcessedRef.current = new Set();
+      recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
 
       // Check if we have active DoTs — if so, enter DoT drain mode instead of full stop
