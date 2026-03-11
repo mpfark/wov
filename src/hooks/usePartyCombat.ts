@@ -350,15 +350,50 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       // ── Combat tick (drivers only) ──
       const solo = !p.party;
       const driver = solo || p.isLeader;
+      const drainNode = dotDrainNodeRef.current;
 
-      if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
-        // Gather buff state: own + collected from non-leaders
+      // DoT drain mode: keep ticking with empty engaged list at old node
+      if (driver && drainNode && !p.isDead && p.character.hp > 0) {
+        const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
+        if (ext.current.gatherDotStacks) {
+          memberDots[p.character.id] = ext.current.gatherDotStacks();
+        }
+        // Check if there are actually active DoTs to send
+        const hasAnyDots = Object.values(memberDots).some(d =>
+          Object.keys(d.bleed || {}).length > 0 || Object.keys(d.poison || {}).length > 0 || Object.keys(d.ignite || {}).length > 0
+        );
+        if (!hasAnyDots) {
+          // No more DoTs — stop drain mode
+          dotDrainNodeRef.current = null;
+          setIsDotDraining(false);
+          if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
+        } else {
+          const body = solo
+            ? { character_id: p.character.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [] }
+            : { party_id: p.party!.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [] };
+
+          const { data, error } = await supabase.functions.invoke('combat-tick', { body });
+          if (error) {
+            console.error('DoT drain tick error:', error);
+          } else if (data) {
+            const result = data as CombatTickResponse;
+            if (!solo) {
+              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
+            }
+            processTickResult(result);
+          } else {
+            dotDrainNodeRef.current = null;
+            setIsDotDraining(false);
+            if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
+          }
+        }
+      } else if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
+        // Normal combat tick
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
         }
 
-        // Gather DoT stacks: own + collected from non-leaders
         const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
         if (ext.current.gatherDotStacks) {
           memberDots[p.character.id] = ext.current.gatherDotStacks();
@@ -389,16 +424,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           if (!result) {
             stopCombat();
           } else if (result.creature_states && result.creature_states.filter(cs => cs.alive).length === 0 && !result.events?.length) {
-            // Server confirms zero alive creatures AND no events — combat is truly over
             stopCombat();
           } else {
-            // Broadcast to party (only in party mode)
             if (!solo) {
-              channelRef.current?.send({
-                type: 'broadcast',
-                event: 'combat_tick_result',
-                payload: result,
-              });
+              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
             processTickResult(result);
           }
