@@ -38,6 +38,8 @@ import { useActions } from '@/hooks/useActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 
 function getLogColor(log: string): string {
+  // Queued ability flavour text — consistent italic styling
+  if (log.startsWith('⏳')) return 'text-muted-foreground italic';
   if (log.startsWith('💬')) return 'text-foreground';
   if (log.startsWith('🤫 To ')) return 'text-purple-400/70';
   if (log.startsWith('🤫')) return 'text-purple-400';
