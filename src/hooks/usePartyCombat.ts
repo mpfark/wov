@@ -94,7 +94,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
-  const pendingAbilityRef = useRef<{ index: number; targetId?: string } | null>(null);
+  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
   const idleCountRef = useRef(0);
 
   // Leader aggregates non-leader buff + DoT stacks received via broadcast
