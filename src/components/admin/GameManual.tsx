@@ -859,7 +859,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Base Stat:</strong> 8 + floor(level × 0.7), multiplied by rarity</p>
                 <p><strong className="text-foreground">HP:</strong> (15 + level × 8) × rarity HP multiplier</p>
                 <p><strong className="text-foreground">AC:</strong> 10 + floor(level × 0.575) + rarity AC bonus (+2 regular/rare, +6 boss)</p>
-                <p><strong className="text-foreground">Damage Die:</strong> rarity_base + floor(level / 2)</p>
+                <p><strong className="text-foreground">Damage Die:</strong> rarity_base + floor(level × 0.7)</p>
                 <p><strong className="text-foreground">Humanoid Gold:</strong> min = level × mult, max = level × 3 × mult</p>
               </div>
               <Table>
