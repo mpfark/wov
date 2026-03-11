@@ -331,9 +331,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       const solo = !p.party;
       const driver = solo || p.isLeader;
 
-      // ── Normal combat tick ──
-        // Skip normal combat tick in drain mode
-      } else if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
+      if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
         // Gather buff state: own + collected from non-leaders
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
