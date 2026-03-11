@@ -527,7 +527,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     // Only drivers auto-re-engage (solo or party leader)
     if (p.party && !p.isLeader) return;
     if (params.creatures.length === 0) return; // Wait for creatures to load
-    const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
+    const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive && !recentlyKilledRef.current.has(c.id));
     if (nextAggro) {
       justStoppedRef.current = false;
       ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
