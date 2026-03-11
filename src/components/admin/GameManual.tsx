@@ -806,7 +806,7 @@ export default function GameManual() {
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Warrior —</p>
                   <p><strong className="text-foreground">💪 Second Wind (T1, 15 CP):</strong> Heal = <code className="text-primary">max(3, CON_mod × 3 + level)</code></p>
                   <p><strong className="text-foreground">📯 Battle Cry (T2, 25 CP):</strong> AC Bonus = <code className="text-primary">max(3, DEX_mod + 2)</code>, Duration = <code className="text-primary">min(25s, 15s + DEX_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">🩸 Rend (T3, 40 CP):</strong> Bleed = <code className="text-primary">floor((STR_mod × 1.5 + 2) × 0.67)</code> per 2s tick, Duration = <code className="text-primary">min(30s, 20s + STR_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">🩸 Rend (T3, 40 CP):</strong> Bleed = <code className="text-primary">floor((STR_mod × 1.5 + 2) × 0.67)</code> per 2s tick, Duration = <code className="text-primary">min(30s, 20s + STR_mod × 1s)</code>. <em className="text-muted-foreground">Multi-target: can bleed multiple creatures simultaneously (tracked per creature).</em></p>
                   <p><strong className="text-foreground">🔨 Sunder Armor (T4, 60 CP):</strong> AC Reduction = <code className="text-primary">max(2, STR_mod)</code>, Duration = <code className="text-primary">min(20s, 12s + STR_mod × 1s)</code></p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Wizard —</p>
