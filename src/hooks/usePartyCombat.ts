@@ -612,6 +612,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       const newNode = params.character.current_node_id;
       prevNodeRef.current = newNode;
 
+      // Reset aggro tracking for new node
+      aggroProcessedRef.current = new Set();
+      pendingAggroRef.current = true;
+
       // Check if we're returning to the node where DoTs are draining
       if (dotDrainNodeRef.current && dotDrainNodeRef.current === newNode) {
         // Returned to drain node — re-engage creatures that have our active DoTs
