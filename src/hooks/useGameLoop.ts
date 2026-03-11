@@ -18,6 +18,7 @@ export interface RootDebuff { damageReduction: number; expiresAt: number }
 export interface AcBuff { bonus: number; expiresAt: number }
 export interface DotDebuff {
   damagePerTick: number; intervalMs: number; expiresAt: number;
+  startsAt?: number; // first tick won't fire until this timestamp
   creatureId: string; creatureName: string; creatureLevel: number; creatureRarity: string;
   creatureLootTable: any[]; lootTableId: string | null; dropChance: number;
   creatureNodeId: string | null;
