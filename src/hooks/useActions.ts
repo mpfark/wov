@@ -596,6 +596,12 @@ export function useActions(params: UseActionsParams) {
     'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   ]);
 
+  // Ability types that require being in combat with a valid target
+  const COMBAT_REQUIRED_TYPES = new Set([
+    'multi_attack', 'dot_debuff', 'execute_attack', 'ignite_consume',
+    'burst_damage', 'hp_transfer',
+  ]);
+
   // Helper: resolve creature target — prefer explicit targetId (from selected/tab target), fall back to active combat target
   const resolveCreatureTarget = (targetId?: string): string | null => {
     if (targetId) {
@@ -623,6 +629,15 @@ export function useActions(params: UseActionsParams) {
 
     // Buff-only abilities resolve instantly (no tick queue needed)
     const isInstantBuff = INSTANT_BUFF_TYPES.has(ability.type);
+
+    // Early combat check before queuing — reject abilities that need a target if not in combat
+    if (!isInstantBuff && !_fromTick && COMBAT_REQUIRED_TYPES.has(ability.type)) {
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) {
+        p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`);
+        return;
+      }
+    }
 
     // Damage/heal abilities must be queued for the heartbeat tick
     if (!isInstantBuff && !_fromTick) {
