@@ -526,15 +526,44 @@ export default function CharacterPanel({
                             {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
                             {/* Gear comparison */}
                             {inv.item.slot && (() => {
+                              // For 2H weapons, compare against both main_hand and off_hand combined
+                              const isTwoHandedItem = inv.item.hands === 2;
                               const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
                               const newStats = inv.item.stats || {};
-                              const oldStats = currentlyEquipped?.item.stats || {};
+                              const oldStats: Record<string, number> = {};
+                              
+                              if (isTwoHandedItem) {
+                                // Combine stats from both main_hand and off_hand
+                                const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
+                                const offHand = equipped.find(e => e.equipped_slot === 'off_hand');
+                                for (const item of [mainHand, offHand]) {
+                                  if (item) {
+                                    for (const [k, v] of Object.entries(item.item.stats || {})) {
+                                      oldStats[k] = (oldStats[k] || 0) + (v as number);
+                                    }
+                                  }
+                                }
+                              } else {
+                                // Check if currently equipped main_hand is 2H — compare against full 2H stats
+                                const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
+                                const mainIs2H = mainHand && mainHand.item.hands === 2;
+                                if (mainIs2H && (inv.item.slot === 'main_hand' || inv.item.slot === 'off_hand')) {
+                                  for (const [k, v] of Object.entries(mainHand.item.stats || {})) {
+                                    oldStats[k] = (v as number) || 0;
+                                  }
+                                } else if (currentlyEquipped) {
+                                  for (const [k, v] of Object.entries(currentlyEquipped.item.stats || {})) {
+                                    oldStats[k] = (v as number) || 0;
+                                  }
+                                }
+                              }
+                              
                               const allKeys = new Set([...Object.keys(newStats), ...Object.keys(oldStats)]);
                               if (allKeys.size === 0) return null;
                               const diffs: { key: string; diff: number }[] = [];
                               for (const k of allKeys) {
                                 const nv = (newStats[k] as number) || 0;
-                                const ov = (oldStats[k] as number) || 0;
+                                const ov = oldStats[k] || 0;
                                 if (nv - ov !== 0) diffs.push({ key: k, diff: nv - ov });
                               }
                               if (diffs.length === 0) return null;
