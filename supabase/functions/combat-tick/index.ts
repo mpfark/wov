@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
       const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
       const sMod = sm(effStat);
-      const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
+      const ihb = primaryHitBonus(effStat);
       const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
       const mileCrit = c.level >= 28 ? 1 : 0;
       const critBonusFromBuff = mb.crit_buff?.bonus || 0;
