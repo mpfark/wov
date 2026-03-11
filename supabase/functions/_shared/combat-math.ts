@@ -1,5 +1,5 @@
 /**
- * combat-math.ts — Shared combat formulas used by both client (useCombat.ts)
+ * combat-math.ts — Shared combat formulas used by both client (usePartyCombat.ts)
  * and server (combat-tick edge function).
  *
  * IMPORTANT: This file must remain pure TypeScript with zero framework/browser/Deno
