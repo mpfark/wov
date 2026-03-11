@@ -286,15 +286,16 @@ Deno.serve(async (req) => {
 
             const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
             const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
+            const displayXp = Math.floor(baseXp * xpMult);
             if (split > 1) {
               events.push({
                 type: 'creature_kill',
-                message: `☠️ ${target.name} has been slain! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}`,
+                message: `☠️ ${target.name} has been slain! Rewards split ${split} ways: +${Math.floor(displayXp / split)} XP${goldNote} each.${xpBoostNote}`,
               });
             } else {
               events.push({
                 type: 'creature_kill',
-                message: `☠️ ${target.name} has been slain! +${Math.floor(baseXp)} XP${goldNote}.${xpBoostNote}`,
+                message: `☠️ ${target.name} has been slain! +${displayXp} XP${goldNote}.${xpBoostNote}`,
               });
             }
 
@@ -353,10 +354,11 @@ Deno.serve(async (req) => {
       }
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
+      const displayXp = Math.floor(baseXp * xpMult);
       if (split > 1) {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(baseXp / split)} XP${goldNote} each.${xpBoostNote}` });
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(displayXp / split)} XP${goldNote} each.${xpBoostNote}` });
       } else {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${Math.floor(baseXp)} XP${goldNote}.${xpBoostNote}` });
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${displayXp} XP${goldNote}.${xpBoostNote}` });
       }
       // BHP for boss DoT kills
       if (creature.rarity === 'boss') {
