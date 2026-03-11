@@ -57,14 +57,19 @@ export function useCharacter(user: User | null) {
 
   useEffect(() => {
     if (!user) {
+      prevUserIdRef.current = null;
       setCharacters([]);
       setSelectedCharacterId(null);
       setLoading(false);
       return;
     }
 
-    // Reset loading when user arrives so downstream doesn't see stale false
-    setLoading(true);
+    // Only reset loading + refetch when the actual user changes, not on token refreshes
+    const isNewUser = prevUserIdRef.current !== user.id;
+    prevUserIdRef.current = user.id;
+    if (isNewUser) {
+      setLoading(true);
+    }
 
     const fetchCharacters = async () => {
       const { data, error } = await supabase
