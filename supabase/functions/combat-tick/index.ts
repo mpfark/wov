@@ -145,11 +145,20 @@ Deno.serve(async (req) => {
       .eq('is_alive', true);
 
     const allCreatures = creaturesRaw || [];
-    // Only fight creatures that are explicitly engaged OR aggressive
+    // Collect creature IDs that have active DoTs targeting them
+    const dotTargetIds = new Set<string>();
+    for (const dotState of Object.values(dots)) {
+      for (const creatureId of Object.keys((dotState as any)?.bleed || {})) dotTargetIds.add(creatureId);
+      for (const creatureId of Object.keys((dotState as any)?.poison || {})) dotTargetIds.add(creatureId);
+      for (const creatureId of Object.keys((dotState as any)?.ignite || {})) dotTargetIds.add(creatureId);
+    }
+    // Only fight creatures that are explicitly engaged, aggressive, OR have active DoTs
     const creatures = allCreatures.filter(cr =>
-      engagedIds.includes(cr.id) || cr.is_aggressive
+      engagedIds.includes(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
     );
     if (creatures.length === 0) return json({ events: [], creature_states: [], member_states: [] });
+    // Determine if this is a DoT-only tick (player not at node)
+    const isDotOnly = engagedIds.length === 0 && dotTargetIds.size > 0;
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
