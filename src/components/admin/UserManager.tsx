@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useGameContext } from '@/contexts/GameContext';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -568,6 +569,7 @@ function PlayerLogsColumn({ userId }: { userId: string | null }) {
 }
 
 export default function UserManager({ isValar }: Props) {
+  const { refetchCharacters } = useGameContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -726,6 +728,7 @@ export default function UserManager({ isValar }: Props) {
       if (error) throw error;
       const nodeName = allNodes.find(n => n.id === teleportNodeId)?.name || 'node';
       toast.success(`Teleported to ${nodeName}`);
+      refetchCharacters();
       loadUsers();
     } catch (err: any) { toast.error(err.message); }
   };
