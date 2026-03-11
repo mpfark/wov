@@ -485,7 +485,7 @@ Deno.serve(async (req) => {
       }
     };
 
-    for (const creature of creatures) {
+    if (!isDotOnly) for (const creature of creatures) {
       if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
       const cs = creature.stats as any;
       const cStr = sm(cs.str || 10);
