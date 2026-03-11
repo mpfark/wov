@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES, calculateStats, calculateAC } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getPrimaryHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES, calculateStats, calculateAC } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
