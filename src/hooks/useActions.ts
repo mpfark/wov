@@ -842,13 +842,14 @@ export function useActions(params: UseActionsParams) {
         p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
       }
     } else if (ability.type === 'sunder_debuff') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Sunder Armor!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Sunder Armor!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Sunder Armor.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const acReduction = Math.max(2, strMod);
       const durationSec = Math.min(20, 12 + strMod);
-      p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: p.activeCombatCreatureId, creatureName: creature.name });
+      p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
       if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Grand Finale!`); return; }
