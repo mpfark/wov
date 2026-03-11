@@ -711,8 +711,9 @@ export function useActions(params: UseActionsParams) {
         if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
       }
     } else if (ability.type === 'root_debuff') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for ${ability.label}.`); return; }
       const wisMod = getStatModifier(p.character.wis);
       const durationMs = Math.min(15000, 8000 + wisMod * 1000);
