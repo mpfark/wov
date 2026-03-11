@@ -126,6 +126,21 @@ export function getMaxMp(level: number, dex: number = 10): number {
   return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
 }
 
+// ── AC overflow damage reduction ─────────────────────────────────
+
+/**
+ * When a creature crits (forcing a hit) but its total attack roll is below
+ * the target's AC, the excess AC reduces damage proportionally.
+ * Reduction = (AC - totalAtk) / AC, capped at 50%.
+ * Returns the multiplier to apply to damage (e.g. 0.59 means 41% reduction).
+ */
+export function getAcOverflowMultiplier(totalAtk: number, targetAC: number): number {
+  if (totalAtk >= targetAC || targetAC <= 0) return 1;
+  const overflow = targetAC - totalAtk;
+  const reduction = Math.min(overflow / targetAC, 0.50);
+  return 1 - reduction;
+}
+
 // ── AC formula ───────────────────────────────────────────────────
 
 const CLASS_BASE_AC: Record<string, number> = {

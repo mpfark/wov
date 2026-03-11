@@ -645,6 +645,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">+1 crit range per 2 DEX modifier</code></p>
                 <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">WIS_mod × 3%</code> chance to reduce incoming creature damage by 25% per hit</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod vs player AC</p>
+                <p><strong className="text-foreground">AC Overflow:</strong> When a creature crits but its total roll {'<'} your AC, excess AC reduces damage: <code className="text-primary">reduction = (AC − roll) / AC</code>, capped at <strong>50%</strong>. High AC pays off even against crits!</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
