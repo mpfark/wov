@@ -595,6 +595,7 @@ export function useActions(params: UseActionsParams) {
   const INSTANT_BUFF_TYPES = new Set([
     'focus_strike', 'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
     'regen_buff', 'poison_buff', 'evasion_buff', 'disengage_buff', 'ignite_buff',
+    'self_heal', 'heal',
     'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   ]);
 
