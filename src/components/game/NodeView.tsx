@@ -58,7 +58,7 @@ export default function NodeView({
   poisonStacks = {},
   igniteStacks = {},
   sunderDebuff,
-  bleedDebuff,
+  bleedStacks = {},
   groundLoot = [],
   onPickUpLoot,
   partyMemberIds,
