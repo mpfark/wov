@@ -99,6 +99,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
+  const recentlyKilledRef = useRef<Set<string>>(new Set());
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
@@ -163,6 +164,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const processTickResult = useCallback((data: CombatTickResponse) => {
     lastTickRef.current = Date.now();
     setLastTickTime(Date.now());
+
+    // Track killed creatures to prevent stale re-engage
+    for (const cs of data.creature_states) {
+      if (!cs.alive) recentlyKilledRef.current.add(cs.id);
+    }
 
     // Update creature HP overrides
     for (const cs of data.creature_states) {
@@ -521,7 +527,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     // Only drivers auto-re-engage (solo or party leader)
     if (p.party && !p.isLeader) return;
     if (params.creatures.length === 0) return; // Wait for creatures to load
-    const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
+    const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive && !recentlyKilledRef.current.has(c.id));
     if (nextAggro) {
       justStoppedRef.current = false;
       ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
@@ -538,7 +544,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!inCombat) return;
     if (p.party && !p.isLeader) return; // Only drivers manage engagement
     for (const c of params.creatures) {
-      if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id)) {
+      if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id) && !recentlyKilledRef.current.has(c.id)) {
         setEngagedCreatureIds(prev => {
           if (prev.includes(c.id)) return prev;
           const next = [...prev, c.id];
@@ -588,6 +594,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
       // Reset aggro tracking for new node
       aggroProcessedRef.current = new Set();
+      recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
 
       // Check if we have active DoTs — if so, enter DoT drain mode instead of full stop
