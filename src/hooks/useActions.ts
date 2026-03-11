@@ -647,7 +647,9 @@ export function useActions(params: UseActionsParams) {
     // Damage/heal abilities must be queued for the heartbeat tick
     if (!isInstantBuff && !_fromTick) {
       p.queueAbility(abilityIndex, targetId);
-      p.addLog(`⏳ ${ability.emoji} ${ability.label}...`);
+      if (!SILENT_QUEUE_TYPES.has(ability.type)) {
+        p.addLog(`⏳ ${ability.emoji} ${ability.label}...`);
+      }
       return;
     }
 
