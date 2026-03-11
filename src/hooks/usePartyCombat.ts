@@ -548,7 +548,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   useEffect(() => {
     const p = ext.current;
-    if (inCombat || !justStoppedRef.current || p.isDead) return;
+    if (inCombat || !justStoppedRef.current || p.isDead || pendingAggroRef.current) return;
     // Only drivers auto-re-engage (solo or party leader)
     if (p.party && !p.isLeader) return;
     if (params.creatures.length === 0) return; // Wait for creatures to load
