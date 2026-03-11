@@ -808,25 +808,29 @@ export default function CharacterPanel({
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
                    const totalHitBonus = atkMod + intHit;
-                  const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
-                   // Rolls that meet AC (excluding nat 1 which always misses)
-                   const rollsNeeded = sameLevelAC - totalHitBonus;
-                   const normalHits = Math.max(0, Math.min(19, 20 - rollsNeeded)); // out of 19 non-nat1 rolls
-                   // Crit range adds hits for rolls that would otherwise miss (nat 1 still misses)
-                   const critThreshold = 20 - dexCrit; // e.g. dexCrit=4 → crits on 17-20
-                   const critOnlyHits = Math.max(0, rollsNeeded - critThreshold); // crits below AC that still hit
-                   const totalHits = Math.min(19, normalHits + critOnlyHits); // cap at 19 out of 20
+                   const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
+                   // Player hit chance vs same-level regular creature
+                   const playerCritThreshold = 20 - dexCrit;
+                   const playerCritHits = 20 - playerCritThreshold + 1;
+                   const playerRollNeeded = sameLevelAC - totalHitBonus;
+                   const playerNormalFloor = Math.max(2, playerRollNeeded);
+                   const playerNormalCeiling = playerCritThreshold - 1;
+                   const playerNormalHits = playerNormalCeiling >= playerNormalFloor ? playerNormalCeiling - playerNormalFloor + 1 : 0;
+                   const totalHits = Math.min(19, playerCritHits + playerNormalHits);
                    const hitChance = Math.round((totalHits / 20) * 100);
 
+                   // Creature hit chance vs player AC (same-level regular creature)
                    const creatureBaseStat = Math.round(10 + character.level * 0.7);
                    const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
-                   const creatureDexStat = Math.round((10 + character.level * 0.7 - 1)); // dex = baseStat - 1
+                   const creatureDexStat = Math.round(10 + character.level * 0.7 - 1);
                    const creatureCritBonus = getDexCritBonus(creatureDexStat);
-                   const creatureRollsNeeded = totalAC - creatureAtkMod;
-                   const creatureNormalHits = Math.max(0, Math.min(19, 20 - creatureRollsNeeded));
                    const creatureCritThreshold = 20 - creatureCritBonus;
-                   const creatureCritOnlyHits = Math.max(0, creatureRollsNeeded - creatureCritThreshold);
-                   const creatureTotalHits = Math.min(19, creatureNormalHits + creatureCritOnlyHits);
+                   const crCritHits = 20 - creatureCritThreshold + 1;
+                   const crRollNeeded = totalAC - creatureAtkMod;
+                   const crNormalFloor = Math.max(2, crRollNeeded);
+                   const crNormalCeiling = creatureCritThreshold - 1;
+                   const crNormalHits = crNormalCeiling >= crNormalFloor ? crNormalCeiling - crNormalFloor + 1 : 0;
+                   const creatureTotalHits = Math.min(19, crCritHits + crNormalHits);
                    const getHitChance = Math.round((creatureTotalHits / 20) * 100);
 
                    // Evasion buff dodge bonus
