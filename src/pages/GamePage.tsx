@@ -21,7 +21,7 @@ import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
 import { usePartyCombat } from '@/hooks/usePartyCombat';
-import { getBagWeight, getStatModifier, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES, calculateHP } from '@/lib/game-data';
+import { getBagWeight, getStatModifier, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES, calculateHP, calculateAC } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -352,9 +352,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
   }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
-  // effectiveAC
+  // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
-  const effectiveAC = character.ac + (equipmentBonuses.ac || 0) + acBuffBonus;
+  const effectiveDex = character.dex + (equipmentBonuses.dex || 0);
+  const effectiveAC = calculateAC(character.class, effectiveDex) + (equipmentBonuses.ac || 0) + acBuffBonus;
 
   // ── Unified server-authoritative combat ──────────────────────────
   const gatherBuffs = useCallback(() => {
