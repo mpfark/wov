@@ -352,9 +352,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
   }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
-  // effectiveAC
+  // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
-  const effectiveAC = character.ac + (equipmentBonuses.ac || 0) + acBuffBonus;
+  const effectiveDex = character.dex + (equipmentBonuses.dex || 0);
+  const effectiveAC = calculateAC(character.class, effectiveDex) + (equipmentBonuses.ac || 0) + acBuffBonus;
 
   // ── Unified server-authoritative combat ──────────────────────────
   const gatherBuffs = useCallback(() => {
