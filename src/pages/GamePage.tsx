@@ -475,7 +475,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     damageBuff, setDamageBuff: gameLoop.setDamageBuff,
     rootDebuff, setRootDebuff: gameLoop.setRootDebuff,
     acBuff, setAcBuff: gameLoop.setAcBuff,
-    dotDebuff: gameLoop.dotDebuff, setDotDebuff: gameLoop.setDotDebuff,
+    bleedStacks: gameLoop.bleedStacks, setBleedStacks: gameLoop.setBleedStacks,
     poisonBuff, setPoisonBuff: gameLoop.setPoisonBuff,
     poisonStacks, setPoisonStacks: gameLoop.setPoisonStacks,
     evasionBuff, setEvasionBuff: gameLoop.setEvasionBuff,
