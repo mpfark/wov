@@ -524,11 +524,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
     if (nextAggro) {
       justStoppedRef.current = false;
-      const timeout = setTimeout(() => {
-        ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
-        startCombat(nextAggro.id);
-      }, 500);
-      return () => clearTimeout(timeout);
+      ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
+      startCombat(nextAggro.id);
     } else {
       // Creatures loaded but none aggressive — clear justStopped
       justStoppedRef.current = false;
@@ -565,15 +562,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     );
     if (aggressiveCreatures.length === 0) return;
     for (const c of aggressiveCreatures) aggroProcessedRef.current.add(c.id);
-    const timeout = setTimeout(() => {
-      if (ext.current.character.hp <= 0) return;
-      const firstAggro = aggressiveCreatures[0];
-      if (firstAggro) {
-        ext.current.addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
-        startCombat(firstAggro.id);
-      }
-    }, 500);
-    return () => clearTimeout(timeout);
+    if (ext.current.character.hp <= 0) return;
+    const firstAggro = aggressiveCreatures[0];
+    if (firstAggro) {
+      ext.current.addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
+      startCombat(firstAggro.id);
+    }
   }, [params.creatures, startCombat]);
 
   // ── Lifecycle effects ──────────────────────────────────────────
