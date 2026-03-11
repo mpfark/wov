@@ -852,8 +852,9 @@ export function useActions(params: UseActionsParams) {
       p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Grand Finale!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Grand Finale!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Grand Finale.`); return; }
       const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const baseDmg = Math.max(8, chaMod * 4 + Math.floor(p.character.level * 1.5));
