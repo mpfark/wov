@@ -637,6 +637,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   return {
     inCombat,
+    isDotDraining,
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
