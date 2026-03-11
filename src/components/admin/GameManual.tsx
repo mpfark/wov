@@ -1006,7 +1006,7 @@ export default function GameManual() {
 
                 <div className="space-y-1">
                   <p><strong className="text-foreground">Max MP Formula:</strong> 100 + (DEX mod × 10) + ((level − 1) × 2)</p>
-                  <p><strong className="text-foreground">Regen Rate:</strong> (5 + DEX mod) MP every 3 seconds</p>
+                  <p><strong className="text-foreground">Regen Rate:</strong> floor((5 + DEX mod) × 0.67) MP every 2 seconds</p>
                   <p><strong className="text-foreground">Inn Bonus:</strong> Regen rate tripled (×3) while resting at an Inn</p>
                   <p><strong className="text-foreground">Movement Cost:</strong> 10 MP per node traversal (base)</p>
                 </div>
