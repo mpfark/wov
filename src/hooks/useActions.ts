@@ -573,7 +573,9 @@ export function useActions(params: UseActionsParams) {
 
   // ── Use Consumable ─────────────────────────────────────────────
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
-    const result = await p.useConsumable(inventoryId, p.character.id, p.character.hp, p.character.max_hp, p.updateCharacter);
+    const consGearConMod = Math.floor((p.equipmentBonuses.con || 0) / 2);
+    const consEffectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + consGearConMod;
+    const result = await p.useConsumable(inventoryId, p.character.id, p.character.hp, consEffectiveMaxHp, p.updateCharacter);
     if (result) {
       if (result.isPotion) {
         if (result.restored > 0) p.addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
@@ -587,7 +589,7 @@ export function useActions(params: UseActionsParams) {
         p.setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 300000 });
       }
     }
-  }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.updateCharacter, p.addLog]);
+  }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.equipmentBonuses, p.updateCharacter, p.addLog]);
 
   // Ability types that are pure buff flags — resolve instantly client-side
   const INSTANT_BUFF_TYPES = new Set([
@@ -667,7 +669,8 @@ export function useActions(params: UseActionsParams) {
     } else if (ability.type === 'heal') {
       const wisMod = getStatModifier(p.character.wis);
       const healAmount = Math.max(3, wisMod * 3 + p.character.level);
-      const effectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0);
+      const gearConMod = Math.floor((p.equipmentBonuses.con || 0) / 2);
+      const effectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + gearConMod;
       const newHp = Math.min(effectiveMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`); }
@@ -675,7 +678,8 @@ export function useActions(params: UseActionsParams) {
     } else if (ability.type === 'self_heal') {
       const conMod = getStatModifier(p.character.con);
       const healAmount = Math.max(3, conMod * 3 + p.character.level);
-      const effectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0);
+      const gearConMod = Math.floor((p.equipmentBonuses.con || 0) / 2);
+      const effectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + gearConMod;
       const newHp = Math.min(effectiveMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
