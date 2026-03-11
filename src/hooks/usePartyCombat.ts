@@ -571,11 +571,35 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!params.party && channelRef.current) stopCombat();
   }, [params.party, stopCombat]);
 
-  // Stop when node changes
+  // Handle node changes — enter DoT drain mode if active DoTs, otherwise stop
   useEffect(() => {
     if (params.character.current_node_id !== prevNodeRef.current) {
+      const oldNode = prevNodeRef.current;
       prevNodeRef.current = params.character.current_node_id;
-      stopCombat();
+
+      // Check if there are active DoTs that should keep ticking on the old node
+      const dots = ext.current.gatherDotStacks?.();
+      const hasActiveDots = dots && (
+        Object.keys(dots.bleed).length > 0 ||
+        Object.keys(dots.poison).length > 0 ||
+        Object.keys(dots.ignite).length > 0
+      );
+
+      if (hasActiveDots && oldNode && inCombatRef.current) {
+        // Enter DoT drain mode: stop combat UI but keep interval ticking
+        dotDrainNodeRef.current = oldNode;
+        inCombatRef.current = false;
+        setInCombat(false);
+        setActiveCombatCreatureId(null);
+        setEngagedCreatureIds([]);
+        engagedCreatureIdsRef.current = [];
+        // Keep interval running for DoT drain ticks
+        if (!intervalRef.current) {
+          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+        }
+      } else {
+        stopCombat();
+      }
     }
   }, [params.character.current_node_id, stopCombat]);
 
