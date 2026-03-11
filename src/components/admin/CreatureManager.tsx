@@ -175,6 +175,7 @@ export default function CreatureManager() {
       ac: generated.ac,
       stats: generated.stats,
       is_aggressive: form.is_aggressive,
+      base_aggressive: form.is_aggressive,
       is_humanoid: form.is_humanoid,
       respawn_seconds: Math.max(0, form.respawn_seconds),
       loot_table,
