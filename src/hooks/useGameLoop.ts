@@ -551,7 +551,12 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── Notify that a creature was killed (purge all DoTs targeting it) ──
   const notifyCreatureKilled = useCallback((creatureId: string) => {
     dotKilledRef.current.add(creatureId);
-    setDotDebuff(prev => (prev && prev.creatureId === creatureId) ? null : prev);
+    setBleedStacks(prev => {
+      if (!prev[creatureId]) return prev;
+      const next = { ...prev };
+      delete next[creatureId];
+      return next;
+    });
     setPoisonStacks(prev => {
       if (!prev[creatureId]) return prev;
       const next = { ...prev };
