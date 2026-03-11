@@ -772,7 +772,7 @@ export default function CharacterPanel({
                   const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
-                  const totalHitBonus = atkMod + intHit;
+                  const totalHitBonus = atkMod + primaryHit;
                   const sameLevelAC = Math.round(10 + character.level * 0.9 + 2);
                   const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
 
