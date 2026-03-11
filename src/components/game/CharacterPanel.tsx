@@ -785,13 +785,20 @@ export default function CharacterPanel({
                    const totalHits = Math.min(19, normalHits + critOnlyHits); // cap at 19 out of 20
                    const hitChance = Math.round((totalHits / 20) * 100);
 
-                  const creatureBaseStat = Math.round(10 + character.level * 0.7);
-                  const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
-                  const getHitChance = Math.min(95, Math.max(5, (21 - (totalAC - creatureAtkMod)) * 5));
+                   const creatureBaseStat = Math.round(10 + character.level * 0.7);
+                   const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
+                   const creatureDexStat = Math.round((10 + character.level * 0.7 - 1)); // dex = baseStat - 1
+                   const creatureCritBonus = getDexCritBonus(creatureDexStat);
+                   const creatureRollsNeeded = totalAC - creatureAtkMod;
+                   const creatureNormalHits = Math.max(0, Math.min(19, 20 - creatureRollsNeeded));
+                   const creatureCritThreshold = 20 - creatureCritBonus;
+                   const creatureCritOnlyHits = Math.max(0, creatureRollsNeeded - creatureCritThreshold);
+                   const creatureTotalHits = Math.min(19, creatureNormalHits + creatureCritOnlyHits);
+                   const getHitChance = Math.round((creatureTotalHits / 20) * 100);
 
-                  // Evasion buff dodge bonus
-                  const baseDodge = 100 - getHitChance;
-                  const effectiveDodge = evasionActive ? Math.min(100, baseDodge + Math.round(evasionBuff!.dodgeChance * 100)) : baseDodge;
+                   // Evasion buff dodge bonus
+                   const baseDodge = 100 - getHitChance;
+                   const effectiveDodge = evasionActive ? Math.min(100, baseDodge + Math.round(evasionBuff!.dodgeChance * 100)) : baseDodge;
 
                    const atkSpeed = '2.0';
 
