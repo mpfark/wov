@@ -330,7 +330,92 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       const solo = !p.party;
       const driver = solo || p.isLeader;
 
-      if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
+      // ── DoT drain mode: keep ticking DoTs on old node ──
+      const drainNode = dotDrainNodeRef.current;
+      if (drainNode && driver) {
+        const myDots = ext.current.gatherDotStacks?.();
+        const hasActiveDots = myDots && (
+          Object.keys(myDots.bleed).length > 0 ||
+          Object.keys(myDots.poison).length > 0 ||
+          Object.keys(myDots.ignite).length > 0
+        );
+
+        if (!hasActiveDots) {
+          // All DoTs expired, exit drain mode
+          dotDrainNodeRef.current = null;
+          if (intervalRef.current && !inCombatRef.current && !pendingAbilityRef.current) {
+            clearWorkerInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+        } else {
+          const memberDots: Record<string, DotStackReport> = {};
+          memberDots[p.character.id] = myDots;
+
+          const body = {
+            character_id: p.character.id,
+            node_id: drainNode,
+            member_buffs: {},
+            member_dots: memberDots,
+            engaged_creature_ids: [],
+          };
+
+          const { data, error } = await supabase.functions.invoke('combat-tick', { body });
+          if (!error && data) {
+            const result = data as CombatTickResponse;
+
+            // Log events
+            if (result.events?.length) {
+              const myName = p.character.name;
+              for (const ev of result.events) {
+                let msg = ev.message;
+                if (ev.character_id === p.character.id || msg.includes(myName)) {
+                  msg = msg.replace(new RegExp(`${myName}'s`, 'g'), 'Your');
+                  msg = msg.replace(new RegExp(`(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*(?:CRITICAL!\\s*)?))${myName} `, 'u'), '$1You ');
+                }
+                ext.current.addLocalLog(msg);
+              }
+            }
+
+            // Update character state
+            const myState = result.member_states?.find(m => m.character_id === p.character.id);
+            if (myState) {
+              const updates: Partial<import('@/hooks/useCharacter').Character> = {
+                hp: myState.hp, xp: myState.xp, gold: myState.gold,
+                level: myState.level, max_hp: myState.max_hp,
+              };
+              if (myState.bhp !== undefined) updates.bhp = myState.bhp;
+              ext.current.updateCharacter(updates);
+            }
+
+            // Handle cleared DoTs
+            if (result.cleared_dots?.length && ext.current.onClearedDots) {
+              const myCleared = result.cleared_dots.filter(d => d.character_id === p.character.id);
+              if (myCleared.length) ext.current.onClearedDots(myCleared);
+            }
+
+            // Fetch ground loot if drops occurred (at the old node — player won't see them, but they should exist)
+            if (result.events?.some(e => e.type === 'loot_drop')) {
+              ext.current.fetchGroundLoot();
+            }
+
+            // Check if all DoTs are now cleared after processing
+            const remainingDots = ext.current.gatherDotStacks?.();
+            const stillHasDots = remainingDots && (
+              Object.keys(remainingDots.bleed).length > 0 ||
+              Object.keys(remainingDots.poison).length > 0 ||
+              Object.keys(remainingDots.ignite).length > 0
+            );
+            if (!stillHasDots) {
+              dotDrainNodeRef.current = null;
+              if (intervalRef.current && !inCombatRef.current && !pendingAbilityRef.current) {
+                clearWorkerInterval(intervalRef.current);
+                intervalRef.current = null;
+              }
+            }
+          }
+        }
+        // Skip normal combat tick in drain mode
+      } else if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
         // Gather buff state: own + collected from non-leaders
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
