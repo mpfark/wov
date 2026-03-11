@@ -420,6 +420,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
   const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
 
+  // Ref to break circular dependency: usePartyCombat needs ability executor, useActions needs queueAbility
+  const executeAbilityRef = useRef<(index: number, targetId?: string) => Promise<void>>();
+
   const combat = usePartyCombat({
     character, creatures,
     party: usePartyCombatMode ? party : null,
@@ -427,10 +430,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     addLocalLog, updateCharacter, fetchGroundLoot,
     gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
     gatherDotStacks, onClearedDots: handleClearedDots,
+    onAbilityExecute: async (index, targetId) => {
+      await executeAbilityRef.current?.(index, targetId);
+    },
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = combat;
+    lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
+    pendingAbility, queueAbility } = combat;
 
   // Sync combat state ref for DoT ticks in useGameLoop
   combatStateRef.current = { creatureHpOverrides, updateCreatureHp };
@@ -455,6 +462,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     creatures, creatureHpOverrides, updateCreatureHp,
     party, partyMembers, isLeader, myMembership,
     inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
+    queueAbility,
     isDead, effectiveAC,
     fetchInventory, fetchGroundLoot, fetchParty,
     broadcastMove, broadcastHp, broadcastDamage,
@@ -485,6 +493,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   useEffect(() => { rollLootRef.current = actions.rollLoot; }, [actions.rollLoot]);
   useEffect(() => { degradeEquipmentRef.current = actions.degradeEquipment; }, [actions.degradeEquipment]);
   useEffect(() => { awardKillRewardsRef.current = actions.awardKillRewards; }, [actions.awardKillRewards]);
+
+  // Wire ability executor ref (updated synchronously to avoid stale closures)
+  executeAbilityRef.current = (index: number, targetId?: string) => actions.handleUseAbility(index, targetId, true);
+
 
   const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch,
     handleUseConsumable, handleUseAbility, handleAttack,
