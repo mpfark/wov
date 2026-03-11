@@ -585,7 +585,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         Object.keys(dots.ignite).length > 0
       );
 
-      if (hasActiveDots && oldNode && inCombatRef.current) {
+      if (hasActiveDots && oldNode) {
         // Enter DoT drain mode: stop combat UI but keep interval ticking
         dotDrainNodeRef.current = oldNode;
         inCombatRef.current = false;
