@@ -219,22 +219,37 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.fetchGroundLoot();
     }
 
-    // Update combat state — only consider creatures we were actually fighting (engaged)
-    const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
-    if (engagedAlive.length === 0) {
-      stopCombat();
-    } else {
-      if (!inCombatRef.current) {
-        inCombatRef.current = true;
-        setInCombat(true);
+    // Update combat state
+    if (dotDrainNodeRef.current) {
+      // In DoT drain mode: check if any creatures still alive with active DoTs
+      const anyAlive = data.creature_states.some(cs => cs.alive);
+      if (!anyAlive || data.events.length === 0) {
+        // All creatures dead or no more DoT events — stop draining
+        dotDrainNodeRef.current = null;
+        setIsDotDraining(false);
+        if (intervalRef.current) {
+          clearWorkerInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       }
-      setActiveCombatCreatureId(engagedAlive[0].id);
-      setEngagedCreatureIds(prev => {
-        const aliveIds = new Set(engagedAlive.map(cs => cs.id));
-        const result = prev.filter(id => aliveIds.has(id));
-        engagedCreatureIdsRef.current = result;
-        return result;
-      });
+    } else {
+      // Normal combat: only consider creatures we were actually fighting (engaged)
+      const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
+      if (engagedAlive.length === 0) {
+        stopCombat();
+      } else {
+        if (!inCombatRef.current) {
+          inCombatRef.current = true;
+          setInCombat(true);
+        }
+        setActiveCombatCreatureId(engagedAlive[0].id);
+        setEngagedCreatureIds(prev => {
+          const aliveIds = new Set(engagedAlive.map(cs => cs.id));
+          const result = prev.filter(id => aliveIds.has(id));
+          engagedCreatureIdsRef.current = result;
+          return result;
+        });
+      }
     }
   }, [stopCombat]);
 
