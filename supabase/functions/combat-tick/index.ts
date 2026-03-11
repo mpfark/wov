@@ -97,8 +97,21 @@ Deno.serve(async (req) => {
       // ── Solo mode ────────────────────────────────────────────────
       const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
       if (!char || char.user_id !== user.id) throw new Error('Not authorized');
-      if (char.current_node_id !== node_id || char.hp <= 0) {
+      if (char.hp <= 0) {
         return json({ events: [], creature_states: [], member_states: [] });
+      }
+      // Allow DoT-only ticks from a different node
+      const charAtNode = char.current_node_id === node_id;
+      if (!charAtNode) {
+        const charDots = dots[character_id];
+        const hasDots = charDots && (
+          Object.keys(charDots?.bleed || {}).length > 0 ||
+          Object.keys(charDots?.poison || {}).length > 0 ||
+          Object.keys(charDots?.ignite || {}).length > 0
+        );
+        if (!hasDots) {
+          return json({ events: [], creature_states: [], member_states: [] });
+        }
       }
       members = [{ id: character_id, c: char }];
     }
@@ -132,11 +145,20 @@ Deno.serve(async (req) => {
       .eq('is_alive', true);
 
     const allCreatures = creaturesRaw || [];
-    // Only fight creatures that are explicitly engaged OR aggressive
+    // Collect creature IDs that have active DoTs targeting them
+    const dotTargetIds = new Set<string>();
+    for (const dotState of Object.values(dots)) {
+      for (const creatureId of Object.keys((dotState as any)?.bleed || {})) dotTargetIds.add(creatureId);
+      for (const creatureId of Object.keys((dotState as any)?.poison || {})) dotTargetIds.add(creatureId);
+      for (const creatureId of Object.keys((dotState as any)?.ignite || {})) dotTargetIds.add(creatureId);
+    }
+    // Only fight creatures that are explicitly engaged, aggressive, OR have active DoTs
     const creatures = allCreatures.filter(cr =>
-      engagedIds.includes(cr.id) || cr.is_aggressive
+      engagedIds.includes(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
     );
     if (creatures.length === 0) return json({ events: [], creature_states: [], member_states: [] });
+    // Determine if this is a DoT-only tick (player not at node)
+    const isDotOnly = engagedIds.length === 0 && dotTargetIds.size > 0;
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
@@ -159,9 +181,9 @@ Deno.serve(async (req) => {
 
     // tankId and tankAtNode already set during party/solo initialization above
 
-    // ── Member attacks ───────────────────────────────────────────
+    // ── Member attacks (skip in DoT-only mode) ─────────────────
     const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume
-    for (const m of members) {
+    if (!isDotOnly) for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
       const mb = buffs[m.id] || {};
@@ -463,7 +485,7 @@ Deno.serve(async (req) => {
       }
     };
 
-    for (const creature of creatures) {
+    if (!isDotOnly) for (const creature of creatures) {
       if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
       const cs = creature.stats as any;
       const cStr = sm(cs.str || 10);
