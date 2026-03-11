@@ -147,7 +147,8 @@ export default function GameManual() {
                   const primaryStat = CLASS_PRIMARY_STAT[cls] || 'int';
                   const cpRegen = getCpRegenRate(stats[primaryStat]);
                   const mpRegen = getMpRegenRate(stats.dex);
-                  const hitBonus = getIntHitBonus(stats.int);
+                  const atkStat = CLASS_COMBAT[cls]?.stat || 'str';
+                  const hitBonus = getPrimaryHitBonus(stats[atkStat]);
                   const critBonus = getDexCritBonus(stats.dex);
                   const dmgFloor = getStrDamageFloor(stats.str);
                   const carry = getCarryCapacity(stats.str);

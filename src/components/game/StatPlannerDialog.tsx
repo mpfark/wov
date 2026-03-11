@@ -89,7 +89,7 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const combat = CLASS_COMBAT[character.class];
       const atkStat = combat?.stat || 'str';
       const atkMod = getStatModifier(stats[atkStat] + (equipmentBonuses[atkStat] || 0));
-      const intHit = getIntHitBonus(eInt);
+      const intHit = getPrimaryHitBonus(stats[atkStat] + (equipmentBonuses[atkStat] || 0));
       const totalHit = atkMod + intHit;
       const milestoneCrit = character.level >= 28 ? 1 : 0;
       const dexCrit = getDexCritBonus(eDex);
