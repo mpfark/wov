@@ -3,7 +3,7 @@ import {
   getStatModifier as sm,
   rollD20,
   rollDamage as rollDmg,
-  getIntHitBonus as intHitBonus,
+  getPrimaryHitBonus as primaryHitBonus,
   getDexCritBonus as dexCritBonus,
   getWisDodgeChance as wisAwareness,
   getStrDamageFloor as strDmgFloor,
