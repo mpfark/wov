@@ -315,41 +315,69 @@ export function useGameLoop(params: UseGameLoopParams) {
     });
   }, []);
 
-  // ── DoT: Bleed (Rend) ─────────────────────────────────────────
+  // ── DoT: Bleed (Rend) — per-creature map ────────────────────────
   useEffect(() => {
-    if (!dotDebuff || Date.now() >= dotDebuff.expiresAt) return;
+    const activeEntries = Object.entries(bleedStacks).filter(([, s]) => Date.now() < s.expiresAt);
+    if (activeEntries.length === 0) return;
     if (params.inParty) return; // Server handles DoT in party mode
     const interval = setInterval(async () => {
-      if (Date.now() >= dotDebuff.expiresAt) {
-        setDotDebuff(null); clearInterval(interval); return;
-      }
+      const currentStacks = bleedStacksRef.current;
       const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
-      const localCreature = creatures.find(c => c.id === dotDebuff.creatureId);
-      const currentHp = creatureHpOverrides[dotDebuff.creatureId] ?? localCreature?.hp ?? dotDebuff.lastKnownHp;
-      if (currentHp <= 0 || dotKilledRef.current.has(dotDebuff.creatureId)) { setDotDebuff(null); clearInterval(interval); return; }
-      const newHp = Math.max(currentHp - dotDebuff.damagePerTick, 0);
-      if (localCreature) {
-        updateCreatureHp(dotDebuff.creatureId, newHp);
-        broadcastDamage(dotDebuff.creatureId, newHp, dotDebuff.damagePerTick, character.name, newHp <= 0);
+      for (const [creatureId, stack] of Object.entries(currentStacks)) {
+        if (Date.now() >= stack.expiresAt) {
+          setBleedStacks(prev => {
+            const next = { ...prev };
+            delete next[creatureId];
+            return next;
+          });
+          continue;
+        }
+        if (dotKilledRef.current.has(creatureId)) {
+          setBleedStacks(prev => {
+            const next = { ...prev };
+            delete next[creatureId];
+            return next;
+          });
+          continue;
+        }
+        const localCreature = creatures.find(c => c.id === creatureId);
+        const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
+        if (currentHp <= 0) {
+          setBleedStacks(prev => {
+            const next = { ...prev };
+            delete next[creatureId];
+            return next;
+          });
+          continue;
+        }
+        const newHp = Math.max(currentHp - stack.damagePerTick, 0);
+        if (localCreature) {
+          updateCreatureHp(creatureId, newHp);
+          broadcastDamage(creatureId, newHp, stack.damagePerTick, character.name, newHp <= 0);
+        }
+        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
+        setBleedStacks(prev => prev[creatureId] ? { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } } : prev);
+        const cName = localCreature?.name || stack.creatureName;
+        const isRemote = stack.creatureNodeId !== character.current_node_id;
+        addLog(`🩸${isRemote ? '📡 ' : ' '}${cName} bleeds for ${stack.damagePerTick} damage!${isRemote ? ' (remote)' : ''}`);
+        if (newHp <= 0) {
+          dotKilledRef.current.add(creatureId);
+          setBleedStacks(prev => {
+            const next = { ...prev };
+            delete next[creatureId];
+            return next;
+          });
+          const creatureData = localCreature || {
+            name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
+            loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
+            node_id: stack.creatureNodeId,
+          };
+          await awardKillRewardsRef.current(creatureData, { stopCombat: true });
+        }
       }
-      await supabase.rpc('damage_creature', { _creature_id: dotDebuff.creatureId, _new_hp: newHp, _killed: newHp <= 0 });
-      setDotDebuff(prev => prev ? { ...prev, lastKnownHp: newHp } : null);
-      const cName = localCreature?.name || dotDebuff.creatureName;
-      const isRemote = dotDebuff.creatureNodeId !== character.current_node_id;
-      addLog(`🩸${isRemote ? '📡 ' : ' '}${cName} bleeds for ${dotDebuff.damagePerTick} damage!${isRemote ? ' (remote)' : ''}`);
-      if (newHp <= 0) {
-        dotKilledRef.current.add(dotDebuff.creatureId);
-        setDotDebuff(null); clearInterval(interval);
-        const creatureData = localCreature || {
-          name: dotDebuff.creatureName, level: dotDebuff.creatureLevel, rarity: dotDebuff.creatureRarity,
-          loot_table: dotDebuff.creatureLootTable, loot_table_id: dotDebuff.lootTableId, drop_chance: dotDebuff.dropChance,
-          node_id: dotDebuff.creatureNodeId,
-        };
-        await awardKillRewardsRef.current(creatureData, { stopCombat: true });
-      }
-    }, dotDebuff.intervalMs);
+    }, 2000);
     return () => clearInterval(interval);
-  }, [dotDebuff, creatures, addLog]);
+  }, [bleedStacks, creatures, addLog]);
 
   // ── DoT: Poison ────────────────────────────────────────────────
   useEffect(() => {
