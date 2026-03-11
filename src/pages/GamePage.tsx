@@ -536,8 +536,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
 
   // ── Keyboard + chat ────────────────────────────────────────────
   const handleAbilityKey = useCallback((index: number) => {
-    handleUseAbility(index, abilityTargetId ?? undefined);
-  }, [handleUseAbility, abilityTargetId]);
+    // For creature-targeting abilities, prefer selectedTargetId; for ally abilities, prefer abilityTargetId
+    handleUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);
+  }, [handleUseAbility, abilityTargetId, selectedTargetId]);
 
   const handleBeltPotionKey = useCallback((index: number) => {
     if (beltedPotions[index]) handleUseConsumable(beltedPotions[index].id);
@@ -855,7 +856,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
-              onUseAbility={handleUseAbility}
+              onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
               actionBindings={keyboardMovement.actionBindings}
               poisonStacks={poisonStacks}

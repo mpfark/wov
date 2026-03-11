@@ -595,6 +595,15 @@ export function useActions(params: UseActionsParams) {
     'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
   ]);
 
+  // Helper: resolve creature target — prefer explicit targetId (from selected/tab target), fall back to active combat target
+  const resolveCreatureTarget = (targetId?: string): string | null => {
+    if (targetId) {
+      const c = p.creatures.find(cr => cr.id === targetId && cr.is_alive && cr.hp > 0);
+      if (c) return targetId;
+    }
+    return p.activeCombatCreatureId;
+  };
+
   // ── Use Ability (large) ────────────────────────────────────────
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
     if (p.isDead || p.character.hp <= 0) return;
@@ -674,8 +683,9 @@ export function useActions(params: UseActionsParams) {
       p.setDamageBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Barrage!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Barrage!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Barrage.`); return; }
       const combat = CLASS_COMBAT.ranger;
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
@@ -701,8 +711,9 @@ export function useActions(params: UseActionsParams) {
         if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
       }
     } else if (ability.type === 'root_debuff') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for ${ability.label}.`); return; }
       const wisMod = getStatModifier(p.character.wis);
       const durationMs = Math.min(15000, 8000 + wisMod * 1000);
@@ -716,8 +727,9 @@ export function useActions(params: UseActionsParams) {
       p.setAcBuff({ bonus, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Battle Cry! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'dot_debuff') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Rend.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
@@ -725,9 +737,9 @@ export function useActions(params: UseActionsParams) {
       const intervalMs = 2000;
       p.setBleedStacks((prev: Record<string, DotDebuff>) => ({
         ...prev,
-        [p.activeCombatCreatureId]: {
+        [cTargetId]: {
           damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
-          creatureId: p.activeCombatCreatureId, creatureName: creature.name,
+          creatureId: cTargetId, creatureName: creature.name,
           creatureLevel: creature.level, creatureRarity: creature.rarity,
           creatureLootTable: (creature.loot_table as any[]) || [],
           lootTableId: creature.loot_table_id ?? null, dropChance: creature.drop_chance ?? 0.5,
@@ -830,17 +842,19 @@ export function useActions(params: UseActionsParams) {
         p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
       }
     } else if (ability.type === 'sunder_debuff') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Sunder Armor!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Sunder Armor!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Sunder Armor.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const acReduction = Math.max(2, strMod);
       const durationSec = Math.min(20, 12 + strMod);
-      p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: p.activeCombatCreatureId, creatureName: creature.name });
+      p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Grand Finale!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
+      const cTargetId = resolveCreatureTarget(targetId);
+      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Grand Finale!`); return; }
+      const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Grand Finale.`); return; }
       const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const baseDmg = Math.max(8, chaMod * 4 + Math.floor(p.character.level * 1.5));
