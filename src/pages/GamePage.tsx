@@ -462,6 +462,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     creatures, creatureHpOverrides, updateCreatureHp,
     party, partyMembers, isLeader, myMembership,
     inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
+    queueAbility,
     isDead, effectiveAC,
     fetchInventory, fetchGroundLoot, fetchParty,
     broadcastMove, broadcastHp, broadcastDamage,
