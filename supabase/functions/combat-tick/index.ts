@@ -97,8 +97,21 @@ Deno.serve(async (req) => {
       // ── Solo mode ────────────────────────────────────────────────
       const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
       if (!char || char.user_id !== user.id) throw new Error('Not authorized');
-      if (char.current_node_id !== node_id || char.hp <= 0) {
+      if (char.hp <= 0) {
         return json({ events: [], creature_states: [], member_states: [] });
+      }
+      // Allow DoT-only ticks from a different node
+      const charAtNode = char.current_node_id === node_id;
+      if (!charAtNode) {
+        const charDots = dots[character_id];
+        const hasDots = charDots && (
+          Object.keys(charDots?.bleed || {}).length > 0 ||
+          Object.keys(charDots?.poison || {}).length > 0 ||
+          Object.keys(charDots?.ignite || {}).length > 0
+        );
+        if (!hasDots) {
+          return json({ events: [], creature_states: [], member_states: [] });
+        }
       }
       members = [{ id: character_id, c: char }];
     }
