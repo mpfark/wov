@@ -108,8 +108,8 @@ export default function NodeView({
           </p>
         </div>
 
-        {/* Floating heartbeat indicator */}
-        {inCombat && lastTickTime && (
+        {/* Floating heartbeat indicator — visible during combat or DoT drain */}
+        {lastTickTime && (Date.now() - lastTickTime < 4000 || inCombat) && (
           <div className="flex justify-center py-0.5">
             <HeartbeatIndicator lastTickTime={lastTickTime} />
           </div>
