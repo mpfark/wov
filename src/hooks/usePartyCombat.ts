@@ -308,65 +308,84 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     tickBusyRef.current = true;
     try {
       const p = ext.current;
+
+      // ── Execute pending ability (all players, not just drivers) ──
+      const pending = pendingAbilityRef.current;
+      if (pending) {
+        pendingAbilityRef.current = null;
+        setPendingAbility(null);
+        if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
+          await p.onAbilityExecute(pending.index, pending.targetId);
+        }
+      }
+
+      // ── Combat tick (drivers only) ──
       const solo = !p.party;
       const driver = solo || p.isLeader;
 
-      if (!driver || p.isDead || p.character.hp <= 0) {
-        stopCombat();
-        return;
-      }
+      if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
+        // Gather buff state: own + collected from non-leaders
+        const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
+        if (ext.current.gatherBuffs) {
+          memberBuffs[p.character.id] = ext.current.gatherBuffs();
+        }
 
-      // Gather buff state: own + collected from non-leaders
-      const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
-      if (ext.current.gatherBuffs) {
-        memberBuffs[p.character.id] = ext.current.gatherBuffs();
-      }
+        // Gather DoT stacks: own + collected from non-leaders
+        const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
+        if (ext.current.gatherDotStacks) {
+          memberDots[p.character.id] = ext.current.gatherDotStacks();
+        }
 
-      // Gather DoT stacks: own + collected from non-leaders
-      const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
-      if (ext.current.gatherDotStacks) {
-        memberDots[p.character.id] = ext.current.gatherDotStacks();
-      }
+        const body = solo
+          ? {
+              character_id: p.character.id,
+              node_id: p.character.current_node_id,
+              member_buffs: memberBuffs,
+              member_dots: memberDots,
+              engaged_creature_ids: engagedCreatureIdsRef.current,
+            }
+          : {
+              party_id: p.party!.id,
+              node_id: p.character.current_node_id,
+              member_buffs: memberBuffs,
+              member_dots: memberDots,
+              engaged_creature_ids: engagedCreatureIdsRef.current,
+            };
 
-      const body = solo
-        ? {
-            character_id: p.character.id,
-            node_id: p.character.current_node_id,
-            member_buffs: memberBuffs,
-            member_dots: memberDots,
-            engaged_creature_ids: engagedCreatureIdsRef.current,
+        const { data, error } = await supabase.functions.invoke('combat-tick', { body });
+
+        if (error) {
+          console.error('Combat tick error:', error);
+        } else {
+          const result = data as CombatTickResponse;
+          if (!result || (!result.events?.length && !result.creature_states?.length)) {
+            stopCombat();
+          } else {
+            // Broadcast to party (only in party mode)
+            if (!solo) {
+              channelRef.current?.send({
+                type: 'broadcast',
+                event: 'combat_tick_result',
+                payload: result,
+              });
+            }
+            processTickResult(result);
           }
-        : {
-            party_id: p.party!.id,
-            node_id: p.character.current_node_id,
-            member_buffs: memberBuffs,
-            member_dots: memberDots,
-            engaged_creature_ids: engagedCreatureIdsRef.current,
-          };
-
-      const { data, error } = await supabase.functions.invoke('combat-tick', { body });
-
-      if (error) {
-        console.error('Combat tick error:', error);
-        return;
-      }
-
-      const result = data as CombatTickResponse;
-      if (!result || (!result.events?.length && !result.creature_states?.length)) {
+        }
+      } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
         stopCombat();
-        return;
       }
 
-      // Broadcast to party (only in party mode)
-      if (!solo) {
-        channelRef.current?.send({
-          type: 'broadcast',
-          event: 'combat_tick_result',
-          payload: result,
-        });
+      // ── Idle detection: stop interval if no combat and no pending ability ──
+      if (!inCombatRef.current && !pendingAbilityRef.current) {
+        idleCountRef.current++;
+        if (idleCountRef.current >= 2 && intervalRef.current) {
+          clearWorkerInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } else {
+        idleCountRef.current = 0;
       }
-
-      processTickResult(result);
     } finally {
       tickBusyRef.current = false;
     }
