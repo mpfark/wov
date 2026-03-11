@@ -590,7 +590,7 @@ export function useActions(params: UseActionsParams) {
   }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.updateCharacter, p.addLog]);
 
   // ── Use Ability (large) ────────────────────────────────────────
-  const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string) => {
+  const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
     if (p.isDead || p.character.hp <= 0) return;
     const allAbilities = [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[p.character.class] || [])];
     if (!allAbilities[abilityIndex]) return;
@@ -602,6 +602,13 @@ export function useActions(params: UseActionsParams) {
     const effectiveCpCost = p.character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
     if ((p.character.cp ?? 0) < effectiveCpCost) {
       p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${p.character.cp ?? 0} available)`);
+      return;
+    }
+
+    // Queue ability for next heartbeat tick instead of executing immediately
+    if (!_fromTick) {
+      p.queueAbility(abilityIndex, targetId);
+      p.addLog(`⏳ ${ability.emoji} ${ability.label}...`);
       return;
     }
 

@@ -519,5 +519,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     updateCreatureHp,
     startCombat,
     stopCombat,
+    pendingAbility,
+    queueAbility,
   };
 }
