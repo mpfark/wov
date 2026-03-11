@@ -48,6 +48,7 @@ export function useCharacter(user: User | null) {
   }, [selectedCharacterId]);
 
   const [loading, setLoading] = useState(true);
+  const prevUserIdRef = useRef<string | null>(null);
 
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
