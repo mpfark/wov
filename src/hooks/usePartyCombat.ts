@@ -580,8 +580,34 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       aggroProcessedRef.current = new Set();
       pendingAggroRef.current = true;
 
-      // Node changed — stop all combat immediately (DoTs are lost on flee)
-      stopCombat();
+      // Check if we have active DoTs — if so, enter DoT drain mode instead of full stop
+      let hasActiveDots = false;
+      if (ext.current.gatherDotStacks && inCombatRef.current) {
+        const dots = ext.current.gatherDotStacks();
+        hasActiveDots = Object.keys(dots.bleed || {}).length > 0
+          || Object.keys(dots.poison || {}).length > 0
+          || Object.keys(dots.ignite || {}).length > 0;
+      }
+
+      if (hasActiveDots && oldNode) {
+        // Enter DoT drain mode: stop auto-attacks but keep heartbeat for DoT ticking
+        inCombatRef.current = false;
+        setInCombat(false);
+        setActiveCombatCreatureId(null);
+        setEngagedCreatureIds([]);
+        engagedCreatureIdsRef.current = [];
+        memberBuffsRef.current = {};
+        dotDrainNodeRef.current = oldNode;
+        setIsDotDraining(true);
+        ext.current.addLocalLog('🩸 You flee, but your damage effects continue...');
+        // Ensure interval keeps running for DoT drain ticks
+        if (!intervalRef.current) {
+          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+        }
+      } else {
+        // No active DoTs — fully stop combat
+        stopCombat();
+      }
     }
   }, [params.character.current_node_id, stopCombat]);
 
