@@ -875,7 +875,7 @@ export default function GameManual() {
                 </TableHeader>
                 <TableBody>
                   {[
-                    { r: 'Regular', stat: 1, hp: 1, ac: 0, dmg: 4, gold: 1 },
+                    { r: 'Regular', stat: 1, hp: 1, ac: 2, dmg: 4, gold: 1 },
                     { r: 'Rare', stat: 1.3, hp: 1.5, ac: 2, dmg: 6, gold: 1.5 },
                     { r: 'Boss', stat: 2.5, hp: 6.0, ac: 6, dmg: 10, gold: 3 },
                   ].map(row => (
