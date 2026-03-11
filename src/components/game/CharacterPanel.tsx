@@ -822,11 +822,15 @@ export default function CharacterPanel({
                    const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
                    const creatureDexStat = Math.round((10 + character.level * 0.7 - 1)); // dex = baseStat - 1
                    const creatureCritBonus = getDexCritBonus(creatureDexStat);
-                   const creatureRollsNeeded = totalAC - creatureAtkMod;
-                   const creatureNormalHits = Math.max(0, Math.min(19, 20 - creatureRollsNeeded));
                    const creatureCritThreshold = 20 - creatureCritBonus;
-                   const creatureCritOnlyHits = Math.max(0, creatureRollsNeeded - creatureCritThreshold);
-                   const creatureTotalHits = Math.min(19, creatureNormalHits + creatureCritOnlyHits);
+                   // Crit rolls always hit: rolls >= critThreshold (range: critThreshold..20)
+                   const critHits = 20 - creatureCritThreshold + 1;
+                   // Normal (non-crit) hits: rolls 2..(critThreshold-1) where roll + atkMod >= AC
+                   const rollNeeded = totalAC - creatureAtkMod; // min roll to hit normally
+                   const normalHitFloor = Math.max(2, rollNeeded); // nat 1 always misses
+                   const normalHitCeiling = creatureCritThreshold - 1; // crits already counted
+                   const normalHits = normalHitCeiling >= normalHitFloor ? normalHitCeiling - normalHitFloor + 1 : 0;
+                   const creatureTotalHits = Math.min(19, critHits + normalHits); // max 19 (nat 1 always misses)
                    const getHitChance = Math.round((creatureTotalHits / 20) * 100);
 
                    // Evasion buff dodge bonus
