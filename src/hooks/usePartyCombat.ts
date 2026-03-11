@@ -578,7 +578,33 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   useEffect(() => {
     if (params.character.current_node_id !== prevNodeRef.current) {
       const oldNode = prevNodeRef.current;
-      prevNodeRef.current = params.character.current_node_id;
+      const newNode = params.character.current_node_id;
+      prevNodeRef.current = newNode;
+
+      // Check if we're returning to the node where DoTs are draining
+      if (dotDrainNodeRef.current && dotDrainNodeRef.current === newNode) {
+        // Returned to drain node — re-engage creatures that have our active DoTs
+        dotDrainNodeRef.current = null;
+        const dots = ext.current.gatherDotStacks?.();
+        if (dots) {
+          const dotCreatureIds = new Set([
+            ...Object.keys(dots.bleed),
+            ...Object.keys(dots.poison),
+            ...Object.keys(dots.ignite),
+          ]);
+          if (dotCreatureIds.size > 0) {
+            const creatureIds = Array.from(dotCreatureIds);
+            setEngagedCreatureIds(creatureIds);
+            engagedCreatureIdsRef.current = creatureIds;
+            setActiveCombatCreatureId(creatureIds[0]);
+            inCombatRef.current = true;
+            setInCombat(true);
+            idleCountRef.current = 0;
+            // Interval should already be running from drain mode
+          }
+        }
+        return;
+      }
 
       // Check if there are active DoTs that should keep ticking on the old node
       const dots = ext.current.gatherDotStacks?.();
