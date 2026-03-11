@@ -115,10 +115,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   }, []);
 
   const stopCombat = useCallback(() => {
-    if (intervalRef.current) {
-      clearWorkerInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
     inCombatRef.current = false;
     tickBusyRef.current = false;
     justStoppedRef.current = true;
@@ -130,6 +126,25 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberDotsRef.current = {};
+    // Only clear interval if no pending ability — let it keep running for ability execution
+    if (!pendingAbilityRef.current && intervalRef.current) {
+      clearWorkerInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  // ── Queue ability for next tick ────────────────────────────────
+
+  const queueAbility = useCallback((index: number, targetId?: string) => {
+    pendingAbilityRef.current = { index, targetId };
+    setPendingAbility({ index, targetId });
+    idleCountRef.current = 0;
+    // Ensure tick interval is running
+    if (!intervalRef.current) {
+      // Fire first tick immediately for responsiveness, then every 2s
+      doTickRef.current();
+      intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+    }
   }, []);
 
   // ── Process tick result (shared by driver + non-leader) ────────
