@@ -359,6 +359,6 @@ export function generateCreatureStats(level: number, rarity: string) {
     cha: Math.round((baseStat - 3) * mult.stat),
   };
   const hp = Math.round((15 + level * 8) * mult.hp);
-  const ac = Math.round(10 + level * 0.9 + mult.ac);
+  const ac = Math.round(10 + level * 0.4 + mult.ac);
   return { stats, hp, ac };
 }
