@@ -474,6 +474,15 @@ Deno.serve(async (req) => {
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
+        // AC overflow reduction: when a crit forces a hit but roll < AC, excess AC reduces damage
+        if (isCrit && roll < tAC) {
+          const overflowMult = acOverflowMult(roll, tAC);
+          const preDmg = dmg;
+          dmg = Math.max(Math.floor(dmg * overflowMult), 1);
+          const pctReduced = Math.round((1 - overflowMult) * 100);
+          events.push({ type: 'ac_overflow', message: `🛡️ ${targetName}'s armor absorbs the blow! AC ${tAC} vs ${roll} — ${pctReduced}% damage reduced (${preDmg} → ${dmg}).` });
+        }
+
         // WIS awareness
         const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0));
         if (wis > 0 && Math.random() < wis) {
