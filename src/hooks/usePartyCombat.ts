@@ -450,7 +450,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           console.error('Combat tick error:', error);
         } else {
           const result = data as CombatTickResponse;
-          if (!result || (!result.events?.length && !result.creature_states?.length)) {
+          if (!result) {
+            stopCombat();
+          } else if (result.creature_states && result.creature_states.filter(cs => cs.alive).length === 0 && !result.events?.length) {
+            // Server confirms zero alive creatures AND no events — combat is truly over
             stopCombat();
           } else {
             // Broadcast to party (only in party mode)
