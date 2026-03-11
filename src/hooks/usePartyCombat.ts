@@ -88,6 +88,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
   const justStoppedRef = useRef(false);
+
+  // DoT drain mode: after fleeing, keep ticking DoTs on the old node without auto-attacks
+  const dotDrainNodeRef = useRef<string | null>(null);
+  const [isDotDraining, setIsDotDraining] = useState(false);
   
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
@@ -121,6 +125,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     inCombatRef.current = false;
     tickBusyRef.current = false;
     justStoppedRef.current = true;
+    dotDrainNodeRef.current = null;
+    setIsDotDraining(false);
     setInCombat(false);
     setActiveCombatCreatureId(null);
     setEngagedCreatureIds([]);
@@ -213,22 +219,37 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.fetchGroundLoot();
     }
 
-    // Update combat state — only consider creatures we were actually fighting (engaged)
-    const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
-    if (engagedAlive.length === 0) {
-      stopCombat();
-    } else {
-      if (!inCombatRef.current) {
-        inCombatRef.current = true;
-        setInCombat(true);
+    // Update combat state
+    if (dotDrainNodeRef.current) {
+      // In DoT drain mode: check if any creatures still alive with active DoTs
+      const anyAlive = data.creature_states.some(cs => cs.alive);
+      if (!anyAlive || data.events.length === 0) {
+        // All creatures dead or no more DoT events — stop draining
+        dotDrainNodeRef.current = null;
+        setIsDotDraining(false);
+        if (intervalRef.current) {
+          clearWorkerInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       }
-      setActiveCombatCreatureId(engagedAlive[0].id);
-      setEngagedCreatureIds(prev => {
-        const aliveIds = new Set(engagedAlive.map(cs => cs.id));
-        const result = prev.filter(id => aliveIds.has(id));
-        engagedCreatureIdsRef.current = result;
-        return result;
-      });
+    } else {
+      // Normal combat: only consider creatures we were actually fighting (engaged)
+      const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
+      if (engagedAlive.length === 0) {
+        stopCombat();
+      } else {
+        if (!inCombatRef.current) {
+          inCombatRef.current = true;
+          setInCombat(true);
+        }
+        setActiveCombatCreatureId(engagedAlive[0].id);
+        setEngagedCreatureIds(prev => {
+          const aliveIds = new Set(engagedAlive.map(cs => cs.id));
+          const result = prev.filter(id => aliveIds.has(id));
+          engagedCreatureIdsRef.current = result;
+          return result;
+        });
+      }
     }
   }, [stopCombat]);
 
@@ -329,15 +350,50 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       // ── Combat tick (drivers only) ──
       const solo = !p.party;
       const driver = solo || p.isLeader;
+      const drainNode = dotDrainNodeRef.current;
 
-      if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
-        // Gather buff state: own + collected from non-leaders
+      // DoT drain mode: keep ticking with empty engaged list at old node
+      if (driver && drainNode && !p.isDead && p.character.hp > 0) {
+        const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
+        if (ext.current.gatherDotStacks) {
+          memberDots[p.character.id] = ext.current.gatherDotStacks();
+        }
+        // Check if there are actually active DoTs to send
+        const hasAnyDots = Object.values(memberDots).some(d =>
+          Object.keys(d.bleed || {}).length > 0 || Object.keys(d.poison || {}).length > 0 || Object.keys(d.ignite || {}).length > 0
+        );
+        if (!hasAnyDots) {
+          // No more DoTs — stop drain mode
+          dotDrainNodeRef.current = null;
+          setIsDotDraining(false);
+          if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
+        } else {
+          const body = solo
+            ? { character_id: p.character.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [] }
+            : { party_id: p.party!.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [] };
+
+          const { data, error } = await supabase.functions.invoke('combat-tick', { body });
+          if (error) {
+            console.error('DoT drain tick error:', error);
+          } else if (data) {
+            const result = data as CombatTickResponse;
+            if (!solo) {
+              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
+            }
+            processTickResult(result);
+          } else {
+            dotDrainNodeRef.current = null;
+            setIsDotDraining(false);
+            if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
+          }
+        }
+      } else if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
+        // Normal combat tick
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
         }
 
-        // Gather DoT stacks: own + collected from non-leaders
         const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
         if (ext.current.gatherDotStacks) {
           memberDots[p.character.id] = ext.current.gatherDotStacks();
@@ -368,16 +424,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           if (!result) {
             stopCombat();
           } else if (result.creature_states && result.creature_states.filter(cs => cs.alive).length === 0 && !result.events?.length) {
-            // Server confirms zero alive creatures AND no events — combat is truly over
             stopCombat();
           } else {
-            // Broadcast to party (only in party mode)
             if (!solo) {
-              channelRef.current?.send({
-                type: 'broadcast',
-                event: 'combat_tick_result',
-                payload: result,
-              });
+              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
             processTickResult(result);
           }
@@ -386,8 +436,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         stopCombat();
       }
 
-      // ── Idle detection: stop interval if no combat and no pending ability ──
-      if (!inCombatRef.current && !pendingAbilityRef.current) {
+      // ── Idle detection: stop interval if no combat, no pending ability, and no DoT drain ──
+      if (!inCombatRef.current && !pendingAbilityRef.current && !dotDrainNodeRef.current) {
         idleCountRef.current++;
         if (idleCountRef.current >= 2 && intervalRef.current) {
           clearWorkerInterval(intervalRef.current);
@@ -421,7 +471,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     // Driver (solo or party leader): add creature to engaged list
     // Clear any active DoT drain mode — new combat takes priority
-    
+    dotDrainNodeRef.current = null;
+    setIsDotDraining(false);
 
     setEngagedCreatureIds(prev => {
       if (prev.includes(creatureId)) return prev;
@@ -530,8 +581,34 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       aggroProcessedRef.current = new Set();
       pendingAggroRef.current = true;
 
-      // Node changed — stop all combat immediately (DoTs are lost on flee)
-      stopCombat();
+      // Check if we have active DoTs — if so, enter DoT drain mode instead of full stop
+      let hasActiveDots = false;
+      if (ext.current.gatherDotStacks && inCombatRef.current) {
+        const dots = ext.current.gatherDotStacks();
+        hasActiveDots = Object.keys(dots.bleed || {}).length > 0
+          || Object.keys(dots.poison || {}).length > 0
+          || Object.keys(dots.ignite || {}).length > 0;
+      }
+
+      if (hasActiveDots && oldNode) {
+        // Enter DoT drain mode: stop auto-attacks but keep heartbeat for DoT ticking
+        inCombatRef.current = false;
+        setInCombat(false);
+        setActiveCombatCreatureId(null);
+        setEngagedCreatureIds([]);
+        engagedCreatureIdsRef.current = [];
+        memberBuffsRef.current = {};
+        dotDrainNodeRef.current = oldNode;
+        setIsDotDraining(true);
+        ext.current.addLocalLog('🩸 You flee, but your damage effects continue...');
+        // Ensure interval keeps running for DoT drain ticks
+        if (!intervalRef.current) {
+          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+        }
+      } else {
+        // No active DoTs — fully stop combat
+        stopCombat();
+      }
     }
   }, [params.character.current_node_id, stopCombat]);
 
@@ -560,6 +637,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   return {
     inCombat,
+    isDotDraining,
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
