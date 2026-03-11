@@ -667,7 +667,8 @@ export function useActions(params: UseActionsParams) {
     } else if (ability.type === 'heal') {
       const wisMod = getStatModifier(p.character.wis);
       const healAmount = Math.max(3, wisMod * 3 + p.character.level);
-      const effectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0);
+      const gearConMod = Math.floor((p.equipmentBonuses.con || 0) / 2);
+      const effectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + gearConMod;
       const newHp = Math.min(effectiveMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`); }
