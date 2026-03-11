@@ -181,9 +181,9 @@ Deno.serve(async (req) => {
 
     // tankId and tankAtNode already set during party/solo initialization above
 
-    // ── Member attacks ───────────────────────────────────────────
+    // ── Member attacks (skip in DoT-only mode) ─────────────────
     const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume
-    for (const m of members) {
+    if (!isDotOnly) for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
       const mb = buffs[m.id] || {};
