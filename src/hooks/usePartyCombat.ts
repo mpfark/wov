@@ -216,20 +216,19 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.fetchGroundLoot();
     }
 
-    // Update combat state
-    const aliveCreatures = data.creature_states.filter(cs => cs.alive);
-    if (aliveCreatures.length === 0) {
+    // Update combat state — only consider creatures we were actually fighting (engaged)
+    const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
+    if (engagedAlive.length === 0) {
       stopCombat();
     } else {
       if (!inCombatRef.current) {
         inCombatRef.current = true;
         setInCombat(true);
       }
-      setActiveCombatCreatureId(aliveCreatures[0].id);
+      setActiveCombatCreatureId(engagedAlive[0].id);
       setEngagedCreatureIds(prev => {
-        const newIds = aliveCreatures.map(cs => cs.id);
-        const merged = [...new Set([...prev.filter(id => newIds.includes(id)), ...newIds.filter(id => prev.includes(id))])];
-        const result = merged.length > 0 ? merged : newIds;
+        const aliveIds = new Set(engagedAlive.map(cs => cs.id));
+        const result = prev.filter(id => aliveIds.has(id));
         engagedCreatureIdsRef.current = result;
         return result;
       });
