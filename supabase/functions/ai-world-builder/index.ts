@@ -225,12 +225,12 @@ RULES:
 - Every node must reference an area_temp_id — either a new area temp ID or "existing_area:<uuid>" for an existing area
 
 CREATURE STAT FORMULAS (YOU MUST USE THESE EXACTLY):
-- Base stats (str, dex, con, int, wis, cha): round(10 + level * 0.7). For bosses, multiply by 2.0.
-- HP: round((15 + level * 8) * rarity_multiplier). Rarity multipliers: regular=1.0, rare=1.5, boss=4.0. Set hp = max_hp.
-- AC: round(10 + level * 0.6 + rarity_ac_bonus). Rarity AC bonus: regular=+2, rare=+2, boss=+6.
+- Base stat value: 8 + floor(level * 0.7). Then multiply by rarity: regular=1.0, rare=1.3, boss=2.5. Round the result.
+- HP: round((15 + level * 8) * rarity_hp_multiplier). Rarity HP multipliers: regular=1.0, rare=1.5, boss=6.0. Set hp = max_hp.
+- AC: round(10 + level * 0.575 + rarity_ac_bonus). Rarity AC bonus: regular=+2, rare=+2, boss=+6.
 - respawn_seconds: regular=120, rare=300, boss=600
-- Example: A level 5 regular creature: stats=round(10+5*0.7)=14 each, HP=round((15+40)*1.0)=55, AC=round(10+3+2)=15
-- Example: A level 10 boss creature: stats=round(10+7)*2=34 each, HP=round((15+80)*4.0)=380, AC=round(10+6+6)=22
+- Example: A level 5 regular creature: base=8+floor(3.5)=11, stats=round(11*1.0)=11 each, HP=round((15+40)*1.0)=55, AC=round(10+2.875+2)=15
+- Example: A level 10 boss creature: base=8+floor(7)=15, stats=round(15*2.5)=38 each, HP=round((15+80)*6.0)=570, AC=round(10+5.75+6)=22
 - IMPORTANT: Do NOT invent your own stat values. Calculate them from these formulas.
 
 LOOT TABLE ASSIGNMENT RULES:
