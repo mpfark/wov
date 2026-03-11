@@ -781,7 +781,7 @@ export default function CharacterPanel({
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
                   const totalHitBonus = atkMod + primaryHit;
-                  const sameLevelAC = Math.round(10 + character.level * 0.9 + 2);
+                  const sameLevelAC = Math.round(10 + character.level * 0.4 + 2);
                   const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
 
                   const creatureBaseStat = Math.round(10 + character.level * 0.7);
