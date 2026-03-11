@@ -140,7 +140,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Queue ability for next tick ────────────────────────────────
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
-    pendingAbilityRef.current = { index, targetId };
+    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000 };
     setPendingAbility({ index, targetId });
     idleCountRef.current = 0;
     // Ensure tick interval is running — ability executes on the NEXT heartbeat, not immediately
