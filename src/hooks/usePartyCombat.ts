@@ -218,6 +218,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (myCleared.length) ext.current.onClearedDots(myCleared);
     }
 
+    // Apply DoT stacks from proc events (poison/ignite)
+    const myId = ext.current.character.id;
+    for (const ev of data.events) {
+      if (ev.character_id === myId && ev.type === 'poison_proc' && ev.creature_id && ext.current.onPoisonProc) {
+        ext.current.onPoisonProc(ev.creature_id);
+      }
+      if (ev.character_id === myId && ev.type === 'ignite_proc' && ev.creature_id && ext.current.onIgniteProc) {
+        ext.current.onIgniteProc(ev.creature_id);
+      }
+    }
+
     // Refresh ground loot if any drops occurred
     if (data.events.some(e => e.type === 'loot_drop')) {
       ext.current.fetchGroundLoot();
