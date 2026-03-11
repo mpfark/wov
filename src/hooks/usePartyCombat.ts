@@ -88,6 +88,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
   const justStoppedRef = useRef(false);
+  const dotDrainNodeRef = useRef<string | null>(null);
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
