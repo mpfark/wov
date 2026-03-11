@@ -654,10 +654,8 @@ export default function CharacterPanel({
                         ? `+${critBonus} Crit Range (cap: +5)` 
                         : 'Crit Range at 14+ (cap: +5)';
                     } else if (stat === 'int') {
-                      const hitBonus = getIntHitBonus(effective);
-                      derivedBonus = hitBonus > 0 
-                        ? `+${hitBonus} Hit Chance (cap: +5)` 
-                        : 'Hit Chance at 12+ (cap: +5)';
+                      // INT no longer grants universal hit bonus — only primary stat does
+                      derivedBonus = '';
                     } else if (stat === 'wis') {
                       const dodgeChance = getWisDodgeChance(effective);
                       derivedBonus = dodgeChance > 0 
