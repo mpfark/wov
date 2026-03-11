@@ -642,8 +642,19 @@ export default function CharacterPanel({
                     const manualPoints = base - nonManualBase;
                     
                     // Calculate derived bonuses for each stat
+                    const combat = CLASS_COMBAT[character.class];
+                    const primaryAtkStat = combat?.stat || 'str';
                     let derivedBonus = '';
-                    if (stat === 'str') {
+                    // Primary attack stat gets hit bonus display
+                    if (stat === primaryAtkStat) {
+                      const hitBonus = getPrimaryHitBonus(effective);
+                      const otherBonus = stat === 'str' ? (() => { const f = getStrDamageFloor(effective); return f > 0 ? ` / +${f} Min Dmg` : ''; })()
+                        : stat === 'dex' ? (() => { const c = getDexCritBonus(effective); return c > 0 ? ` / +${c} Crit` : ''; })()
+                        : '';
+                      derivedBonus = hitBonus > 0 
+                        ? `+${hitBonus} Hit Chance (cap: +5)${otherBonus}` 
+                        : `Hit Chance at 12+ (cap: +5)${otherBonus}`;
+                    } else if (stat === 'str') {
                       const dmgFloor = getStrDamageFloor(effective);
                       derivedBonus = dmgFloor > 0 
                         ? `+${dmgFloor} Min Damage (cap: +5)` 
@@ -653,9 +664,6 @@ export default function CharacterPanel({
                       derivedBonus = critBonus > 0 
                         ? `+${critBonus} Crit Range (cap: +5)` 
                         : 'Crit Range at 14+ (cap: +5)';
-                    } else if (stat === 'int') {
-                      // INT no longer grants universal hit bonus — only primary stat does
-                      derivedBonus = '';
                     } else if (stat === 'wis') {
                       const dodgeChance = getWisDodgeChance(effective);
                       derivedBonus = dodgeChance > 0 
