@@ -640,10 +640,10 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Attack Speed:</strong> Fixed <code className="text-primary">2.0s</code> heartbeat for all classes. One attack per tick.</p>
                 <p><strong className="text-foreground">Attack Roll:</strong> d20 + stat modifier ≥ target AC → hit</p>
                 <p><strong className="text-foreground">Damage:</strong> class dice (min–max) + stat modifier</p>
-                <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">1 + floor(STR_mod / 2)</code> damage (even spells)</p>
-                <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">+1 to attack rolls per 2 INT modifier</code> (INT 14 = +1 hit)</p>
-                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">+1 crit range per 2 DEX modifier</code></p>
-                <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">WIS_mod × 3%</code> chance to reduce incoming creature damage by 25% per hit</p>
+                <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">min(3, floor(√STR_mod))</code> damage (even spells)</p>
+                <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">min(5, floor(√INT_mod))</code> bonus to attack rolls — diminishing returns</p>
+                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> — max crit on 16-20</p>
+                <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">min(15%, √WIS_mod × 3%)</code> chance to reduce incoming creature damage by 25% per hit</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod vs player AC</p>
                 <p><strong className="text-foreground">AC Overflow:</strong> When a creature crits but its total roll {'<'} your AC, excess AC reduces damage: <code className="text-primary">reduction = (AC − roll) / AC</code>, capped at <strong>50%</strong>. High AC pays off even against crits!</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
