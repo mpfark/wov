@@ -602,14 +602,14 @@ export function useActions(params: UseActionsParams) {
   const getQueueFlavour = (ability: { label: string; emoji: string; type: string }, creatureName?: string): string => {
     const target = creatureName || 'your target';
     switch (ability.type) {
-      case 'self_heal': return `${ability.emoji} You brace yourself and begin catching your breath...`;
-      case 'heal': return `${ability.emoji} You channel healing energy...`;
-      case 'dot_debuff': return `${ability.emoji} You look for an opportunity to rend ${target}...`;
-      case 'multi_attack': return `${ability.emoji} You nock multiple arrows...`;
-      case 'execute_attack': return `${ability.emoji} You line up a vicious strike on ${target}...`;
-      case 'ignite_consume': return `${ability.emoji} You gather the flames building on ${target}...`;
-      case 'hp_transfer': return `${ability.emoji} You begin channeling your life force...`;
-      case 'burst_damage': return `${ability.emoji} You draw breath for a devastating crescendo...`;
+      case 'self_heal': return `⏳ ${ability.emoji} You brace yourself and begin catching your breath...`;
+      case 'heal': return `⏳ ${ability.emoji} You channel healing energy...`;
+      case 'dot_debuff': return `⏳ ${ability.emoji} You look for an opportunity to rend ${target}...`;
+      case 'multi_attack': return `⏳ ${ability.emoji} You nock multiple arrows...`;
+      case 'execute_attack': return `⏳ ${ability.emoji} You line up a vicious strike on ${target}...`;
+      case 'ignite_consume': return `⏳ ${ability.emoji} You gather the flames building on ${target}...`;
+      case 'hp_transfer': return `⏳ ${ability.emoji} You begin channeling your life force...`;
+      case 'burst_damage': return `⏳ ${ability.emoji} You draw breath for a devastating crescendo...`;
       default: return `⏳ ${ability.emoji} ${ability.label}...`;
     }
   };
