@@ -591,11 +591,12 @@ export function useActions(params: UseActionsParams) {
     }
   }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.equipmentBonuses, p.updateCharacter, p.addLog]);
 
-  // Ability types that are pure buff flags — resolve instantly client-side
+  // Ability types that resolve instantly client-side (buffs + self-heals)
   const INSTANT_BUFF_TYPES = new Set([
     'focus_strike', 'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
     'regen_buff', 'poison_buff', 'evasion_buff', 'disengage_buff', 'ignite_buff',
     'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
+    'self_heal', 'heal',
   ]);
 
   // Ability types that require being in combat with a valid target
