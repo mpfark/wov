@@ -111,9 +111,9 @@ export default function GameManual() {
                   <p className="text-xs font-display text-chart-5 mb-1">🔄 Respec Points (Levels 10, 20, 30, 40)</p>
                   <p className="text-xs text-muted-foreground">
                     At each milestone level, you earn <strong className="text-foreground">1 respec point</strong>. 
-                    A respec point lets you remove 1 manually allocated stat point and get it back as an unspent point to reallocate. 
+                    Spending a respec point triggers a <strong className="text-foreground">full reset</strong> of all manually allocated stat points, returning them as unspent points to reallocate freely. 
                     Maximum of <strong className="text-foreground">4 respec points</strong> total across a character's lifetime.
-                    Only manually allocated points can be respec'd — base race, class, and level-up bonuses are permanent.
+                    Only manually allocated points are reset — base race, class, and level-up bonuses are permanent.
                   </p>
                 </CardContent>
               </Card>
@@ -238,12 +238,12 @@ export default function GameManual() {
                 <CardContent className="p-3 space-y-2">
                   <p className="text-xs font-display text-primary">📋 Attribute Effects</p>
                   <div className="text-xs text-muted-foreground space-y-1.5">
-                    <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">min(5, floor(√mod))</code> min damage.</p>
-                    <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and <strong>improves critical hit range</strong>: <code className="text-primary">min(5, floor(√mod))</code> — max crit on 15-20.</p>
+                    <p><strong className="text-foreground">STR (Strength)</strong> — Increases melee attack bonus, carry capacity, and provides a <strong>minimum damage floor</strong> on all attacks (even spells): <code className="text-primary">min(3, floor(√mod))</code> min damage.</p>
+                    <p><strong className="text-foreground">DEX (Dexterity)</strong> — Increases AC (dodge chance), ranged/finesse attack bonus, max Stamina (MP), MP regen rate, and <strong>improves critical hit range</strong>: <code className="text-primary">min(4, floor(√mod))</code> — max crit on 16-20.</p>
                     <p><strong className="text-foreground">CON (Constitution)</strong> — Increases max HP, passive HP regeneration rate, and resistance to DoT effects. Primary stat for Warrior CP regen.</p>
                     <p><strong className="text-foreground">INT (Intelligence)</strong> — Increases max CP (via INT modifier), spell damage bonus, CP regen for Wizards, and <strong>improves hit chance</strong>: <code className="text-primary">min(5, floor(√mod))</code> bonus to attack rolls.</p>
-                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP (via WIS modifier), healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(20%, √mod × 3%)</code>.</p>
-                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +35%.</p>
+                    <p><strong className="text-foreground">WIS (Wisdom)</strong> — Increases max CP (via WIS modifier), healing power, CP regen for Healers/Rangers, search bonus, and a <strong>chance to reduce incoming damage by 25%</strong>: <code className="text-primary">min(15%, √mod × 3%)</code>.</p>
+                    <p><strong className="text-foreground">CHA (Charisma)</strong> — Bard ability effectiveness, CP regen for Bards/Rogues, <strong>vendor prices</strong> (sell up to 80%, buy discount capped at 10%), and <strong>humanoid gold bonus</strong> capped at +25%.</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground/70 mt-1">
                     Stat modifier = <code className="text-primary">floor((stat − 10) / 2)</code>. A stat of 10 gives +0, 12 gives +1, 14 gives +2, etc.
@@ -620,7 +620,7 @@ export default function GameManual() {
                 <CardContent className="p-3">
                   <p className="text-xs font-display text-primary mb-1">Tactical Example (Level 20 Wizard, ~87 max CP)</p>
                   <div className="text-xs text-muted-foreground space-y-0.5">
-                    <p>• T4 ability (60 CP) + T1 ability (10 CP) = 70 CP spent → 17 CP remaining</p>
+                    <p>• T4 ability (60 CP) + T1 ability (15 CP) = 75 CP spent → 12 CP remaining</p>
                     <p>• A Warrior at level 20 would have ~87 max CP — same base, but less INT/WIS investment</p>
                     <p>• INT + WIS scaling rewards casters who invest in both mental stats</p>
                     <p>• Bard's "Grand Finale" deals massive CHA-scaling burst damage to a single target</p>
@@ -640,10 +640,10 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Attack Speed:</strong> Fixed <code className="text-primary">2.0s</code> heartbeat for all classes. One attack per tick.</p>
                 <p><strong className="text-foreground">Attack Roll:</strong> d20 + stat modifier ≥ target AC → hit</p>
                 <p><strong className="text-foreground">Damage:</strong> class dice (min–max) + stat modifier</p>
-                <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">1 + floor(STR_mod / 2)</code> damage (even spells)</p>
-                <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">+1 to attack rolls per 2 INT modifier</code> (INT 14 = +1 hit)</p>
-                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">+1 crit range per 2 DEX modifier</code></p>
-                <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">WIS_mod × 3%</code> chance to reduce incoming creature damage by 25% per hit</p>
+                <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">min(3, floor(√STR_mod))</code> damage (even spells)</p>
+                <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">min(5, floor(√INT_mod))</code> bonus to attack rolls — diminishing returns</p>
+                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> — max crit on 16-20</p>
+                <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">min(15%, √WIS_mod × 3%)</code> chance to reduce incoming creature damage by 25% per hit</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod vs player AC</p>
                 <p><strong className="text-foreground">AC Overflow:</strong> When a creature crits but its total roll {'<'} your AC, excess AC reduces damage: <code className="text-primary">reduction = (AC − roll) / AC</code>, capped at <strong>50%</strong>. High AC pays off even against crits!</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
@@ -684,7 +684,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">XP Curve:</strong> XP to next level = <code className="text-primary">floor(level^1.5 × 50)</code></p>
+                <p><strong className="text-foreground">XP Curve:</strong> XP to next level = <code className="text-primary">floor(level^2.0 × 50)</code></p>
                 <p><strong className="text-foreground">Creature XP:</strong> <code className="text-primary">creature_level × 10 × rarity_mult</code></p>
                 <p><strong className="text-foreground">Level Penalty:</strong> Graduated: −10%/lvl (Lv1-5), −15%/lvl (Lv6-10), −20%/lvl (Lv11+). Min 10% reward.</p>
                 <p><strong className="text-foreground">Party Split:</strong> XP divided equally among party members at the node</p>
@@ -859,7 +859,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Base Stat:</strong> 8 + floor(level × 0.7), multiplied by rarity</p>
                 <p><strong className="text-foreground">HP:</strong> (15 + level × 8) × rarity HP multiplier</p>
                 <p><strong className="text-foreground">AC:</strong> 10 + floor(level × 0.575) + rarity AC bonus (+2 regular/rare, +6 boss)</p>
-                <p><strong className="text-foreground">Damage Die:</strong> rarity_base + floor(level / 2)</p>
+                <p><strong className="text-foreground">Damage Die:</strong> rarity_base + floor(level × 0.7)</p>
                 <p><strong className="text-foreground">Humanoid Gold:</strong> min = level × mult, max = level × 3 × mult</p>
               </div>
               <Table>
@@ -875,7 +875,7 @@ export default function GameManual() {
                 </TableHeader>
                 <TableBody>
                   {[
-                    { r: 'Regular', stat: 1, hp: 1, ac: 0, dmg: 4, gold: 1 },
+                    { r: 'Regular', stat: 1, hp: 1, ac: 2, dmg: 4, gold: 1 },
                     { r: 'Rare', stat: 1.3, hp: 1.5, ac: 2, dmg: 6, gold: 1.5 },
                     { r: 'Boss', stat: 2.5, hp: 6.0, ac: 6, dmg: 10, gold: 3 },
                   ].map(row => (
@@ -1006,7 +1006,7 @@ export default function GameManual() {
 
                 <div className="space-y-1">
                   <p><strong className="text-foreground">Max MP Formula:</strong> 100 + (DEX mod × 10) + ((level − 1) × 2)</p>
-                  <p><strong className="text-foreground">Regen Rate:</strong> (5 + DEX mod) MP every 3 seconds</p>
+                  <p><strong className="text-foreground">Regen Rate:</strong> floor((5 + DEX mod) × 0.67) MP every 2 seconds</p>
                   <p><strong className="text-foreground">Inn Bonus:</strong> Regen rate tripled (×3) while resting at an Inn</p>
                   <p><strong className="text-foreground">Movement Cost:</strong> 10 MP per node traversal (base)</p>
                 </div>
@@ -1042,7 +1042,7 @@ export default function GameManual() {
                           const regenRate = getMpRegenRate(stats.dex);
                           return (
                             <TableCell key={classKey} className="text-xs text-center">
-                              {maxMp} <span className="text-muted-foreground/60">({regenRate}/3s)</span>
+                              {maxMp} <span className="text-muted-foreground/60">({regenRate}/2s)</span>
                             </TableCell>
                           );
                         })}
