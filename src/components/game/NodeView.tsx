@@ -178,7 +178,7 @@ export default function NodeView({
                               </span>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
-                              Rend: {bleedDebuff!.damagePerTick} dmg/tick
+                              Rend: {creatureBleed!.damagePerTick} dmg/tick
                             </TooltipContent>
                           </Tooltip>
                         )}
