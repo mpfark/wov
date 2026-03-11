@@ -40,10 +40,12 @@ export function diminishingFloat(mod: number, perPoint: number, cap: number): nu
 
 // ── Cross-stat bonuses ───────────────────────────────────────────
 
-/** INT → Hit Bonus: sqrt curve, capped at +5 */
-export function getIntHitBonus(int: number): number {
-  return diminishing(getStatModifier(int), 5);
+/** Primary Stat → Hit Bonus: sqrt curve, capped at +5 */
+export function getPrimaryHitBonus(stat: number): number {
+  return diminishing(getStatModifier(stat), 5);
 }
+/** @deprecated Use getPrimaryHitBonus instead */
+export const getIntHitBonus = getPrimaryHitBonus;
 
 /** DEX → Critical Hit Range reduction: sqrt curve, capped at +5 */
 export function getDexCritBonus(dex: number): number {
@@ -216,7 +218,7 @@ export interface AttackResult {
 export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunderReduction: number = 0): AttackResult {
   const profile = CLASS_COMBAT_PROFILES[ctx.classKey] || CLASS_COMBAT_PROFILES.warrior;
   const sMod = getStatModifier(ctx.attackerStat);
-  const ihb = getIntHitBonus(ctx.int);
+  const ihb = getPrimaryHitBonus(ctx.attackerStat);
   const dcb = getDexCritBonus(ctx.dex);
   const mileCrit = ctx.level >= 28 ? 1 : 0;
   const effCrit = profile.critRange - dcb - mileCrit - (ctx.critBuffBonus || 0);

@@ -12,7 +12,7 @@ import {
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
   XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
   CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate,
-  getIntHitBonus, getDexCritBonus, getStrDamageFloor, getCarryCapacity, getWisDodgeChance,
+  getPrimaryHitBonus, getDexCritBonus, getStrDamageFloor, getCarryCapacity, getWisDodgeChance,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
@@ -147,7 +147,8 @@ export default function GameManual() {
                   const primaryStat = CLASS_PRIMARY_STAT[cls] || 'int';
                   const cpRegen = getCpRegenRate(stats[primaryStat]);
                   const mpRegen = getMpRegenRate(stats.dex);
-                  const hitBonus = getIntHitBonus(stats.int);
+                  const atkStat = CLASS_COMBAT[cls]?.stat || 'str';
+                  const hitBonus = getPrimaryHitBonus(stats[atkStat]);
                   const critBonus = getDexCritBonus(stats.dex);
                   const dmgFloor = getStrDamageFloor(stats.str);
                   const carry = getCarryCapacity(stats.str);

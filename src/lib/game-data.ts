@@ -261,10 +261,12 @@ function diminishingFloat(mod: number, perPoint: number, cap: number): number {
   return Math.min(cap, Math.sqrt(Math.max(0, mod)) * perPoint);
 }
 
-// INT → Hit Bonus: sqrt curve, capped at +5
-export function getIntHitBonus(int: number): number {
-  return diminishing(getStatModifier(int), 5);
+// Primary Stat → Hit Bonus: sqrt curve, capped at +5
+export function getPrimaryHitBonus(stat: number): number {
+  return diminishing(getStatModifier(stat), 5);
 }
+/** @deprecated Use getPrimaryHitBonus instead */
+export const getIntHitBonus = getPrimaryHitBonus;
 
 // DEX → Critical Hit Chance: sqrt curve, capped at +4 (crit on 16-20 max)
 export function getDexCritBonus(dex: number): number {

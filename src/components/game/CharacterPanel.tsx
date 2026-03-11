@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES, calculateStats, calculateAC } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getPrimaryHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES, calculateStats, calculateAC } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -642,8 +642,19 @@ export default function CharacterPanel({
                     const manualPoints = base - nonManualBase;
                     
                     // Calculate derived bonuses for each stat
+                    const combat = CLASS_COMBAT[character.class];
+                    const primaryAtkStat = combat?.stat || 'str';
                     let derivedBonus = '';
-                    if (stat === 'str') {
+                    // Primary attack stat gets hit bonus display
+                    if (stat === primaryAtkStat) {
+                      const hitBonus = getPrimaryHitBonus(effective);
+                      const otherBonus = stat === 'str' ? (() => { const f = getStrDamageFloor(effective); return f > 0 ? ` / +${f} Min Dmg` : ''; })()
+                        : stat === 'dex' ? (() => { const c = getDexCritBonus(effective); return c > 0 ? ` / +${c} Crit` : ''; })()
+                        : '';
+                      derivedBonus = hitBonus > 0 
+                        ? `+${hitBonus} Hit Chance (cap: +5)${otherBonus}` 
+                        : `Hit Chance at 12+ (cap: +5)${otherBonus}`;
+                    } else if (stat === 'str') {
                       const dmgFloor = getStrDamageFloor(effective);
                       derivedBonus = dmgFloor > 0 
                         ? `+${dmgFloor} Min Damage (cap: +5)` 
@@ -653,11 +664,6 @@ export default function CharacterPanel({
                       derivedBonus = critBonus > 0 
                         ? `+${critBonus} Crit Range (cap: +5)` 
                         : 'Crit Range at 14+ (cap: +5)';
-                    } else if (stat === 'int') {
-                      const hitBonus = getIntHitBonus(effective);
-                      derivedBonus = hitBonus > 0 
-                        ? `+${hitBonus} Hit Chance (cap: +5)` 
-                        : 'Hit Chance at 12+ (cap: +5)';
                     } else if (stat === 'wis') {
                       const dodgeChance = getWisDodgeChance(effective);
                       derivedBonus = dodgeChance > 0 
@@ -761,7 +767,7 @@ export default function CharacterPanel({
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
                   const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
-                  const intHit = getIntHitBonus(eInt);
+                  const primaryHit = getPrimaryHitBonus((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
                   const milestoneCrit = character.level >= 28 ? 1 : 0;
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
@@ -774,7 +780,7 @@ export default function CharacterPanel({
                   const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
-                  const totalHitBonus = atkMod + intHit;
+                  const totalHitBonus = atkMod + primaryHit;
                   const sameLevelAC = Math.round(10 + character.level * 0.9 + 2);
                   const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
 
@@ -813,7 +819,7 @@ export default function CharacterPanel({
                   const offenseRows: DerivedRow[] = [
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
-                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
+                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${primaryHit} ${atkStat.toUpperCase()} hit → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
                     { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];

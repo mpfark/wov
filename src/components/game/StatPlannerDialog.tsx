@@ -7,7 +7,7 @@ import {
   STAT_LABELS, calculateHP, calculateAC,
   getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
   getBaseRegen, getCpRegenRate, CLASS_PRIMARY_STAT,
-  getIntHitBonus, getDexCritBonus, getWisDodgeChance,
+  getPrimaryHitBonus, getDexCritBonus, getWisDodgeChance,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
 } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
@@ -89,7 +89,7 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const combat = CLASS_COMBAT[character.class];
       const atkStat = combat?.stat || 'str';
       const atkMod = getStatModifier(stats[atkStat] + (equipmentBonuses[atkStat] || 0));
-      const intHit = getIntHitBonus(eInt);
+      const intHit = getPrimaryHitBonus(stats[atkStat] + (equipmentBonuses[atkStat] || 0));
       const totalHit = atkMod + intHit;
       const milestoneCrit = character.level >= 28 ? 1 : 0;
       const dexCrit = getDexCritBonus(eDex);
