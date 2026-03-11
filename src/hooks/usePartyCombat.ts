@@ -524,11 +524,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
     if (nextAggro) {
       justStoppedRef.current = false;
-      const timeout = setTimeout(() => {
-        ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
-        startCombat(nextAggro.id);
-      }, 500);
-      return () => clearTimeout(timeout);
+      ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
+      startCombat(nextAggro.id);
     } else {
       // Creatures loaded but none aggressive — clear justStopped
       justStoppedRef.current = false;
