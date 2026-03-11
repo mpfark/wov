@@ -325,6 +325,7 @@ export type Database = {
       creatures: {
         Row: {
           ac: number
+          base_aggressive: boolean
           created_at: string
           description: string
           died_at: string | null
@@ -346,6 +347,7 @@ export type Database = {
         }
         Insert: {
           ac?: number
+          base_aggressive?: boolean
           created_at?: string
           description?: string
           died_at?: string | null
@@ -367,6 +369,7 @@ export type Database = {
         }
         Update: {
           ac?: number
+          base_aggressive?: boolean
           created_at?: string
           description?: string
           died_at?: string | null
