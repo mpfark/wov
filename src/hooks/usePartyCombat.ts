@@ -471,7 +471,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     // Driver (solo or party leader): add creature to engaged list
     // Clear any active DoT drain mode — new combat takes priority
-    
+    dotDrainNodeRef.current = null;
+    setIsDotDraining(false);
 
     setEngagedCreatureIds(prev => {
       if (prev.includes(creatureId)) return prev;
