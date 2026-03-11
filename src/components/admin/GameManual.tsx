@@ -1042,7 +1042,7 @@ export default function GameManual() {
                           const regenRate = getMpRegenRate(stats.dex);
                           return (
                             <TableCell key={classKey} className="text-xs text-center">
-                              {maxMp} <span className="text-muted-foreground/60">({regenRate}/3s)</span>
+                              {maxMp} <span className="text-muted-foreground/60">({regenRate}/2s)</span>
                             </TableCell>
                           );
                         })}
