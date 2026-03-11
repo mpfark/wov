@@ -624,6 +624,10 @@ Deno.serve(async (req) => {
         level: newLevel,
         max_hp: newMaxHp,
         bhp: updates.bhp ?? (c.bhp || 0),
+        unspent_stat_points: updates.unspent_stat_points ?? c.unspent_stat_points ?? 0,
+        max_cp: updates.max_cp ?? c.max_cp,
+        max_mp: updates.max_mp ?? c.max_mp,
+        respec_points: updates.respec_points ?? c.respec_points ?? 0,
       });
     }
 

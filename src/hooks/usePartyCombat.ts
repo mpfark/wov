@@ -209,6 +209,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         max_hp: myState.max_hp,
       };
       if (myState.bhp !== undefined) updates.bhp = myState.bhp;
+      if (myState.unspent_stat_points !== undefined) updates.unspent_stat_points = myState.unspent_stat_points;
+      if (myState.max_cp !== undefined) updates.max_cp = myState.max_cp;
+      if (myState.max_mp !== undefined) updates.max_mp = myState.max_mp;
+      if (myState.respec_points !== undefined) updates.respec_points = myState.respec_points;
       ext.current.updateCharacter(updates);
     }
 
