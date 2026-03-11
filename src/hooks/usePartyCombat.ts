@@ -562,15 +562,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     );
     if (aggressiveCreatures.length === 0) return;
     for (const c of aggressiveCreatures) aggroProcessedRef.current.add(c.id);
-    const timeout = setTimeout(() => {
-      if (ext.current.character.hp <= 0) return;
-      const firstAggro = aggressiveCreatures[0];
-      if (firstAggro) {
-        ext.current.addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
-        startCombat(firstAggro.id);
-      }
-    }, 500);
-    return () => clearTimeout(timeout);
+    if (ext.current.character.hp <= 0) return;
+    const firstAggro = aggressiveCreatures[0];
+    if (firstAggro) {
+      ext.current.addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
+      startCombat(firstAggro.id);
+    }
   }, [params.creatures, startCombat]);
 
   // ── Lifecycle effects ──────────────────────────────────────────
