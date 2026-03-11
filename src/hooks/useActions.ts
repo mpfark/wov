@@ -757,6 +757,7 @@ export function useActions(params: UseActionsParams) {
         ...prev,
         [cTargetId]: {
           damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
+          startsAt: Date.now() + intervalMs, // first tick fires on the NEXT heartbeat
           creatureId: cTargetId, creatureName: creature.name,
           creatureLevel: creature.level, creatureRarity: creature.rarity,
           creatureLootTable: (creature.loot_table as any[]) || [],

@@ -398,7 +398,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
       ignite: {},
     };
     for (const [cid, s] of Object.entries(gameLoop.bleedStacks)) {
-      if (now < s.expiresAt) result.bleed[cid] = { damage_per_tick: s.damagePerTick };
+      if (now < s.expiresAt && (!s.startsAt || now >= s.startsAt)) result.bleed[cid] = { damage_per_tick: s.damagePerTick };
     }
     for (const [cid, s] of Object.entries(gameLoop.poisonStacks)) {
       if (now < s.expiresAt) result.poison[cid] = { stacks: s.stacks, damage_per_tick: s.damagePerTick };
