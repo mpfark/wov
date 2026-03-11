@@ -165,6 +165,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     lastTickRef.current = Date.now();
     setLastTickTime(Date.now());
 
+    // Track killed creatures to prevent stale re-engage
+    for (const cs of data.creature_states) {
+      if (!cs.alive) recentlyKilledRef.current.add(cs.id);
+    }
+
     // Update creature HP overrides
     for (const cs of data.creature_states) {
       setCreatureHpOverrides(prev => {
