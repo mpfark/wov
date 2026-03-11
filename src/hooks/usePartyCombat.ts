@@ -88,6 +88,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
   const justStoppedRef = useRef(false);
+
+  // DoT drain mode: after fleeing, keep ticking DoTs on the old node without auto-attacks
+  const dotDrainNodeRef = useRef<string | null>(null);
+  const [isDotDraining, setIsDotDraining] = useState(false);
   
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
