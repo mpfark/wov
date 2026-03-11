@@ -3,7 +3,7 @@ import {
   getStatModifier as sm,
   rollD20,
   rollDamage as rollDmg,
-  getPrimaryHitBonus as primaryHitBonus,
+  getIntHitBonus as intHitBonus,
   getDexCritBonus as dexCritBonus,
   getWisDodgeChance as wisAwareness,
   getStrDamageFloor as strDmgFloor,
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
       const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
       const sMod = sm(effStat);
-      const ihb = primaryHitBonus(effStat);
+      const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
       const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
       const mileCrit = c.level >= 28 ? 1 : 0;
       const critBonusFromBuff = mb.crit_buff?.bonus || 0;
@@ -191,8 +191,7 @@ Deno.serve(async (req) => {
 
         const roll = rollD20();
         const total = roll + sMod + ihb;
-        const statLabel = atk.stat?.toUpperCase() || 'STR';
-        const ihbLabel = ihb > 0 ? ` + ${ihb} ${statLabel}` : '';
+        const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
 
         if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
           let raw = rollDmg(atk.min, atk.max) + sMod;
@@ -223,7 +222,7 @@ Deno.serve(async (req) => {
 
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${ihbLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
+            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
           });
 
           // Poison proc (40% chance if poison buff active)
@@ -294,7 +293,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${ihbLabel} = ${total} vs AC ${creatureAc}.`,
+            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc}.`,
           });
         }
       }

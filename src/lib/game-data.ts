@@ -261,12 +261,10 @@ function diminishingFloat(mod: number, perPoint: number, cap: number): number {
   return Math.min(cap, Math.sqrt(Math.max(0, mod)) * perPoint);
 }
 
-// Primary Stat → Hit Bonus: sqrt curve, capped at +5
-export function getPrimaryHitBonus(stat: number): number {
-  return diminishing(getStatModifier(stat), 5);
+// INT → Hit Bonus: sqrt curve, capped at +5
+export function getIntHitBonus(int: number): number {
+  return diminishing(getStatModifier(int), 5);
 }
-/** @deprecated Use getPrimaryHitBonus instead */
-export const getIntHitBonus = getPrimaryHitBonus;
 
 // DEX → Critical Hit Chance: sqrt curve, capped at +4 (crit on 16-20 max)
 export function getDexCritBonus(dex: number): number {
@@ -359,6 +357,6 @@ export function generateCreatureStats(level: number, rarity: string) {
     cha: Math.round((baseStat - 3) * mult.stat),
   };
   const hp = Math.round((15 + level * 8) * mult.hp);
-  const ac = Math.round(10 + level * 0.4 + mult.ac);
+  const ac = Math.round(10 + level * 0.9 + mult.ac);
   return { stats, hp, ac };
 }
