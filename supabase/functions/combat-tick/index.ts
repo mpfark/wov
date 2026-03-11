@@ -448,16 +448,27 @@ Deno.serve(async (req) => {
       // Recalculate AC from class + effective DEX (base + equipment) to avoid stale DB ac column
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
       const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus;
-      const roll = rollD20() + cStr;
+      const d20 = rollD20();
+      const roll = d20 + cStr;
 
-      if (roll >= tAC) {
+      // Creature crit range: based on creature's DEX
+      const cs = creature.stats as any;
+      const cDex = cs.dex || 10;
+      const cCritBonus = dexCritBonus(cDex);
+      const cCritThreshold = 20 - cCritBonus;
+      const isCrit = d20 >= cCritThreshold;
+      const isNat1 = d20 === 1;
+
+      // Hit if: crit (always hits), or (not nat 1 and roll >= AC)
+      if (!isNat1 && (isCrit || roll >= tAC)) {
         // Evasion check (Cloak of Shadows / Disengage)
         if (mb.evasion_buff?.dodge_chance && Math.random() < mb.evasion_buff.dodge_chance) {
           events.push({ type: 'evasion_dodge', message: `🦘 ${targetName} dodges ${creature.name}'s attack!`, character_id: targetId });
           return;
         }
 
-        let dmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
+        let baseDmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
+        let dmg = isCrit ? Math.max(Math.floor(baseDmg * 1.5), 1) : baseDmg;
         // Level-gap bonus: creatures deal more damage when they out-level the target
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
@@ -480,12 +491,13 @@ Deno.serve(async (req) => {
 
         mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
         degradeSet.add(targetId);
-        events.push({ type: 'creature_hit', message: `${tankLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${roll} vs AC ${tAC} — ${dmg} damage.` });
+        const critLabel = isCrit ? 'CRITICAL! ' : '';
+        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC} — ${dmg} damage.` });
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
       } else {
-        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${roll} vs AC ${tAC}.` });
+        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC}.` });
       }
     };
 
