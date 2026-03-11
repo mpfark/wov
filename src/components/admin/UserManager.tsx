@@ -728,6 +728,7 @@ export default function UserManager({ isValar }: Props) {
       if (error) throw error;
       const nodeName = allNodes.find(n => n.id === teleportNodeId)?.name || 'node';
       toast.success(`Teleported to ${nodeName}`);
+      refetchCharacters();
       loadUsers();
     } catch (err: any) { toast.error(err.message); }
   };
