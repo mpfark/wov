@@ -913,7 +913,7 @@ export function useActions(params: UseActionsParams) {
       const avgMod = getStatModifier(avgStat);
       const bonusDmg = Math.max(3, Math.floor(avgMod * 2) + Math.floor(p.character.level / 2));
       p.setFocusStrikeBuff({ bonusDmg });
-      p.addLog(`${ability.emoji} Focus Strike! Your next attack will deal +${bonusDmg} bonus damage.`);
+      p.addLog(`${ability.emoji} You steady your breathing and channel every ounce of your being — your next attack will deal +${bonusDmg} bonus damage.`);
     }
 
     // Deduct CP
