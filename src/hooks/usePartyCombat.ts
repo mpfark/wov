@@ -219,7 +219,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     // Update combat state — only consider creatures we were actually fighting (engaged)
     const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
     if (engagedAlive.length === 0) {
-      stopCombat();
+      // Don't stop combat if we're in drain mode — stale tick results from before
+      // node change shouldn't kill the drain interval
+      if (!dotDrainNodeRef.current) {
+        stopCombat();
+      }
     } else {
       if (!inCombatRef.current) {
         inCombatRef.current = true;
@@ -363,6 +367,15 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           const { data, error } = await supabase.functions.invoke('combat-tick', { body });
           if (!error && data) {
             const result = data as CombatTickResponse;
+
+            // Update creature HP overrides so re-engagement has accurate data
+            for (const cs of result.creature_states) {
+              setCreatureHpOverrides(prev => {
+                const next = { ...prev, [cs.id]: cs.hp };
+                creatureHpOverridesRef.current = next;
+                return next;
+              });
+            }
 
             // Log events
             if (result.events?.length) {
@@ -634,7 +647,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             inCombatRef.current = true;
             setInCombat(true);
             idleCountRef.current = 0;
-            // Interval should already be running from drain mode
+            // Ensure interval is running (might have stopped if drain ended just before return)
+            if (!intervalRef.current) {
+              intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+            }
           }
         }
         return;
