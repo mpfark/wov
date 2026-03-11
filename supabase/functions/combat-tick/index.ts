@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
 
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
+            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${ihbLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
           });
 
           // Poison proc (40% chance if poison buff active)
