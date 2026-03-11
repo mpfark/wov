@@ -89,6 +89,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickBusyRef = useRef(false);
   const justStoppedRef = useRef(false);
 
+  // Ability queue state
+  const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
+  const pendingAbilityRef = useRef<{ index: number; targetId?: string } | null>(null);
+  const idleCountRef = useRef(0);
+
   // Leader aggregates non-leader buff + DoT stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberDotsRef = useRef<Record<string, DotStackReport>>({});
