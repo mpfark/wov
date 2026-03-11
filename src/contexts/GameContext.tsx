@@ -22,6 +22,7 @@ interface GameContextValue {
   createCharacter: (data: any) => Promise<any>;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   selectCharacterAfterCreate: (id: string) => void;
+  refetchCharacters: () => void;
 
   // Role
   isAdmin: boolean;
