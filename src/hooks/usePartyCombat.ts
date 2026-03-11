@@ -94,7 +94,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
-  const pendingAbilityRef = useRef<{ index: number; targetId?: string } | null>(null);
+  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
   const idleCountRef = useRef(0);
 
   // Leader aggregates non-leader buff + DoT stacks received via broadcast
@@ -140,7 +140,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Queue ability for next tick ────────────────────────────────
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
-    pendingAbilityRef.current = { index, targetId };
+    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000 };
     setPendingAbility({ index, targetId });
     idleCountRef.current = 0;
     // Ensure tick interval is running — ability executes on the NEXT heartbeat, not immediately
@@ -322,10 +322,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       // ── Execute pending ability (all players, not just drivers) ──
       const pending = pendingAbilityRef.current;
       if (pending) {
-        pendingAbilityRef.current = null;
-        setPendingAbility(null);
-        if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
-          await p.onAbilityExecute(pending.index, pending.targetId);
+        if (Date.now() >= pending.readyAt) {
+          pendingAbilityRef.current = null;
+          setPendingAbility(null);
+          if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
+            await p.onAbilityExecute(pending.index, pending.targetId);
+          }
         }
       }
 
