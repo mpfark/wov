@@ -7,7 +7,7 @@ import {
   STAT_LABELS, calculateHP, calculateAC,
   getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
   getBaseRegen, getCpRegenRate, CLASS_PRIMARY_STAT,
-  getIntHitBonus, getDexCritBonus, getWisDodgeChance,
+  getPrimaryHitBonus, getDexCritBonus, getWisDodgeChance,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
 } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
