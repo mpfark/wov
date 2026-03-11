@@ -856,7 +856,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
                engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
-              onUseAbility={handleUseAbility}
+              onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
               actionBindings={keyboardMovement.actionBindings}
               poisonStacks={poisonStacks}
