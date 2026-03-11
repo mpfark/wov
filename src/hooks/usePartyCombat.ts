@@ -389,8 +389,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         stopCombat();
       }
 
-      // ── Idle detection: stop interval if no combat, no pending ability, and no DoT drain ──
-      if (!inCombatRef.current && !pendingAbilityRef.current && !dotDrainNodeRef.current) {
+      // ── Idle detection: stop interval if no combat and no pending ability ──
+      if (!inCombatRef.current && !pendingAbilityRef.current) {
         idleCountRef.current++;
         if (idleCountRef.current >= 2 && intervalRef.current) {
           clearWorkerInterval(intervalRef.current);
