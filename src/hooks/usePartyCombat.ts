@@ -590,6 +590,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!pendingAggroRef.current || params.creatures.length === 0 || p.isDead || p.character.hp <= 0) return;
     if (p.party && !p.isLeader) return; // Only drivers
     pendingAggroRef.current = false;
+    justStoppedRef.current = false; // Prevent duplicate "attacks!" from re-engage effect
     const aggressiveCreatures = params.creatures.filter(
       c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
     );
