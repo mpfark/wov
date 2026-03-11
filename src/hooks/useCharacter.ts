@@ -48,6 +48,7 @@ export function useCharacter(user: User | null) {
   }, [selectedCharacterId]);
 
   const [loading, setLoading] = useState(true);
+  const prevUserIdRef = useRef<string | null>(null);
 
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
@@ -56,14 +57,19 @@ export function useCharacter(user: User | null) {
 
   useEffect(() => {
     if (!user) {
+      prevUserIdRef.current = null;
       setCharacters([]);
       setSelectedCharacterId(null);
       setLoading(false);
       return;
     }
 
-    // Reset loading when user arrives so downstream doesn't see stale false
-    setLoading(true);
+    // Only reset loading + refetch when the actual user changes, not on token refreshes
+    const isNewUser = prevUserIdRef.current !== user.id;
+    prevUserIdRef.current = user.id;
+    if (isNewUser) {
+      setLoading(true);
+    }
 
     const fetchCharacters = async () => {
       const { data, error } = await supabase
