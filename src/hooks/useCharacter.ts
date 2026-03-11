@@ -50,6 +50,24 @@ export function useCharacter(user: User | null) {
   const [loading, setLoading] = useState(true);
   const prevUserIdRef = useRef<string | null>(null);
 
+  const fetchCharactersRef = useRef(async () => {});
+  fetchCharactersRef.current = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('characters')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
+    if (!error && data) {
+      setCharacters(data as Character[]);
+    }
+    setLoading(false);
+  };
+
+  const refetchCharacters = useCallback(() => {
+    fetchCharactersRef.current();
+  }, []);
+
   // Track fields with pending DB writes so realtime doesn't revert optimistic updates
   const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
 
