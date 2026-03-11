@@ -494,6 +494,10 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   useEffect(() => { degradeEquipmentRef.current = actions.degradeEquipment; }, [actions.degradeEquipment]);
   useEffect(() => { awardKillRewardsRef.current = actions.awardKillRewards; }, [actions.awardKillRewards]);
 
+  // Wire ability executor ref (updated synchronously to avoid stale closures)
+  executeAbilityRef.current = (index: number, targetId?: string) => actions.handleUseAbility(index, targetId, true);
+
+
   const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch,
     handleUseConsumable, handleUseAbility, handleAttack,
     waymarkNodeId, teleportOpen, setTeleportOpen } = actions;
