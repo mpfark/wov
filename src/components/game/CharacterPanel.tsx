@@ -774,9 +774,16 @@ export default function CharacterPanel({
                   const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
-                  const totalHitBonus = atkMod + intHit;
+                   const totalHitBonus = atkMod + intHit;
                   const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
-                  const hitChance = Math.min(100, Math.max(5, (21 - (sameLevelAC - totalHitBonus)) * 5));
+                   // Rolls that meet AC (excluding nat 1 which always misses)
+                   const rollsNeeded = sameLevelAC - totalHitBonus;
+                   const normalHits = Math.max(0, Math.min(19, 20 - rollsNeeded)); // out of 19 non-nat1 rolls
+                   // Crit range adds hits for rolls that would otherwise miss (nat 1 still misses)
+                   const critThreshold = 20 - dexCrit; // e.g. dexCrit=4 → crits on 17-20
+                   const critOnlyHits = Math.max(0, rollsNeeded - critThreshold); // crits below AC that still hit
+                   const totalHits = Math.min(19, normalHits + critOnlyHits); // cap at 19 out of 20
+                   const hitChance = Math.round((totalHits / 20) * 100);
 
                   const creatureBaseStat = Math.round(10 + character.level * 0.7);
                   const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
