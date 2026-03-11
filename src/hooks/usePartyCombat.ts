@@ -322,10 +322,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       // ── Execute pending ability (all players, not just drivers) ──
       const pending = pendingAbilityRef.current;
       if (pending) {
-        pendingAbilityRef.current = null;
-        setPendingAbility(null);
-        if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
-          await p.onAbilityExecute(pending.index, pending.targetId);
+        if (Date.now() >= pending.readyAt) {
+          pendingAbilityRef.current = null;
+          setPendingAbility(null);
+          if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
+            await p.onAbilityExecute(pending.index, pending.targetId);
+          }
         }
       }
 
