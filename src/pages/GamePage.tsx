@@ -420,6 +420,9 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
   const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
   const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
 
+  // Ref to break circular dependency: usePartyCombat needs ability executor, useActions needs queueAbility
+  const executeAbilityRef = useRef<(index: number, targetId?: string) => Promise<void>>();
+
   const combat = usePartyCombat({
     character, creatures,
     party: usePartyCombatMode ? party : null,
@@ -427,10 +430,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     addLocalLog, updateCharacter, fetchGroundLoot,
     gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
     gatherDotStacks, onClearedDots: handleClearedDots,
+    onAbilityExecute: async (index, targetId) => {
+      await executeAbilityRef.current?.(index, targetId);
+    },
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn } = combat;
+    lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
+    pendingAbility, queueAbility } = combat;
 
   // Sync combat state ref for DoT ticks in useGameLoop
   combatStateRef.current = { creatureHpOverrides, updateCreatureHp };
