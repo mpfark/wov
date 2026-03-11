@@ -570,7 +570,11 @@ export default function CharacterPanel({
                               return (
                                 <div className="mt-1.5 pt-1.5 border-t border-border">
                                   <p className="text-[9px] text-muted-foreground mb-0.5">
-                                    vs {currentlyEquipped ? currentlyEquipped.item.name : 'empty slot'}
+                                    vs {isTwoHandedItem
+                                      ? (equipped.find(e => e.equipped_slot === 'main_hand') || equipped.find(e => e.equipped_slot === 'off_hand')
+                                        ? 'main + off hand'
+                                        : 'empty slots')
+                                      : (currentlyEquipped ? currentlyEquipped.item.name : 'empty slot')}
                                   </p>
                                   {diffs.map(({ key, diff }) => (
                                     <p key={key} className={`text-[10px] font-display ${diff > 0 ? 'text-elvish' : 'text-destructive'}`}>
