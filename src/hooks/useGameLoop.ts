@@ -91,7 +91,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const [damageBuff, setDamageBuff] = useState<DamageBuff | null>(null);
   const [rootDebuff, setRootDebuff] = useState<RootDebuff | null>(null);
   const [acBuff, setAcBuff] = useState<AcBuff | null>(null);
-  const [dotDebuff, setDotDebuff] = useState<DotDebuff | null>(null);
+  const [bleedStacks, setBleedStacks] = useState<Record<string, DotDebuff>>({});
   const [poisonBuff, setPoisonBuff] = useState<PoisonBuff | null>(null);
   const [poisonStacks, setPoisonStacks] = useState<Record<string, PoisonStack>>({});
   const [evasionBuff, setEvasionBuff] = useState<EvasionBuff | null>(null);
