@@ -1017,6 +1017,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_teleport: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: undefined
+      }
       award_party_member: {
         Args: { _character_id: string; _gold: number; _xp: number }
         Returns: undefined

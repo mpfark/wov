@@ -719,7 +719,11 @@ export default function UserManager({ isValar }: Props) {
   const handleTeleport = async (characterId: string) => {
     if (!teleportNodeId) return;
     try {
-      await callAdmin('teleport', 'POST', { character_id: characterId, node_id: teleportNodeId });
+      const { error } = await supabase.rpc('admin_teleport', {
+        _character_id: characterId,
+        _node_id: teleportNodeId,
+      });
+      if (error) throw error;
       const nodeName = allNodes.find(n => n.id === teleportNodeId)?.name || 'node';
       toast.success(`Teleported to ${nodeName}`);
       loadUsers();
