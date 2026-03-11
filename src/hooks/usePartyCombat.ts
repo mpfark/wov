@@ -541,6 +541,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (inCombat || !justStoppedRef.current || p.isDead) return;
     // Only drivers auto-re-engage (solo or party leader)
     if (p.party && !p.isLeader) return;
+    if (params.creatures.length === 0) return; // Wait for creatures to load
     const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive);
     if (nextAggro) {
       justStoppedRef.current = false;
@@ -549,6 +550,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         startCombat(nextAggro.id);
       }, 500);
       return () => clearTimeout(timeout);
+    } else {
+      // Creatures loaded but none aggressive — clear justStopped
+      justStoppedRef.current = false;
     }
   }, [params.creatures, inCombat, startCombat]);
 
@@ -569,6 +573,28 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       }
     }
   }, [params.creatures, inCombat]);
+
+  // ── Pending aggro: trigger after node change when creatures load ──
+  useEffect(() => {
+    const p = ext.current;
+    if (!pendingAggroRef.current || params.creatures.length === 0 || p.isDead || p.character.hp <= 0) return;
+    if (p.party && !p.isLeader) return; // Only drivers
+    pendingAggroRef.current = false;
+    const aggressiveCreatures = params.creatures.filter(
+      c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
+    );
+    if (aggressiveCreatures.length === 0) return;
+    for (const c of aggressiveCreatures) aggroProcessedRef.current.add(c.id);
+    const timeout = setTimeout(() => {
+      if (ext.current.character.hp <= 0) return;
+      const firstAggro = aggressiveCreatures[0];
+      if (firstAggro) {
+        ext.current.addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
+        startCombat(firstAggro.id);
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [params.creatures, startCombat]);
 
   // ── Lifecycle effects ──────────────────────────────────────────
 
