@@ -1075,65 +1075,137 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
         </div>
 
-        {/* Right: Map + Party */}
-        <div className="h-full w-[400px] shrink-0 ornate-border bg-card/60 overflow-y-auto">
-          <MapPanel
-            regions={regions}
-            nodes={nodes}
-            areas={areas}
-            currentNodeId={character.current_node_id}
-            currentRegionId={currentNode.region_id}
-            characterLevel={character.level}
-            onNodeClick={handleMove}
-            partyMembers={mergedPartyMembers}
-            myCharacterId={character.id}
-            character={character}
-            party={party}
-            pendingInvites={pendingInvites}
-            isLeader={isLeader}
-            isTank={isTank}
-            myMembership={myMembership}
-            playersHere={playersHere}
-            onCreateParty={createParty}
-            onInvite={invitePlayer}
-            onAcceptInvite={acceptInvite}
-            onDeclineInvite={declineInvite}
-            onLeaveParty={leaveParty}
-            onKick={kickMember}
-            onSetTank={setTank}
-            onToggleFollow={toggleFollow}
-            keyboardBindings={keyboardMovement}
-            activeBuffs={{
-              stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
-              damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
-              acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
-              acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
-              poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
-              evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
-              ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
-              absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
-              absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
-              root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
-              sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
-              focusStrike: !!focusStrikeBuff,
-            }}
-            abilityTargetId={abilityTargetId}
-            onSetAbilityTarget={setAbilityTargetId}
-            showTargetSelector={
-              [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb')
-            }
-            onSearch={handleSearch}
-            onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
-            onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
-            onOpenTrainer={(currentNode.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined}
-            onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
-              if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
-              setTeleportOpen(true);
-            } : undefined}
-            searchDisabled={character.cp < 5}
-            hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
-          />
-        </div>
+        {/* Right: Map + Party — desktop: fixed sidebar, tablet: sheet overlay */}
+        {isTablet ? (
+          <Sheet open={mapPanelOpen} onOpenChange={setMapPanelOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="fixed right-2 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full ornate-border bg-card/90 shadow-lg"
+              >
+                <MapIconLucide className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[400px] max-w-[90vw] p-0 overflow-y-auto bg-card/95">
+              <MapPanel
+                regions={regions}
+                nodes={nodes}
+                areas={areas}
+                currentNodeId={character.current_node_id}
+                currentRegionId={currentNode.region_id}
+                characterLevel={character.level}
+                onNodeClick={handleMove}
+                partyMembers={mergedPartyMembers}
+                myCharacterId={character.id}
+                character={character}
+                party={party}
+                pendingInvites={pendingInvites}
+                isLeader={isLeader}
+                isTank={isTank}
+                myMembership={myMembership}
+                playersHere={playersHere}
+                onCreateParty={createParty}
+                onInvite={invitePlayer}
+                onAcceptInvite={acceptInvite}
+                onDeclineInvite={declineInvite}
+                onLeaveParty={leaveParty}
+                onKick={kickMember}
+                onSetTank={setTank}
+                onToggleFollow={toggleFollow}
+                keyboardBindings={keyboardMovement}
+                activeBuffs={{
+                  stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
+                  damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
+                  acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
+                  acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
+                  poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
+                  evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
+                  ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
+                  absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
+                  absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
+                  root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
+                  sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
+                  focusStrike: !!focusStrikeBuff,
+                }}
+                abilityTargetId={abilityTargetId}
+                onSetAbilityTarget={setAbilityTargetId}
+                showTargetSelector={
+                  [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb')
+                }
+                onSearch={handleSearch}
+                onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
+                onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
+                onOpenTrainer={(currentNode.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined}
+                onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
+                  if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
+                  setTeleportOpen(true);
+                } : undefined}
+                searchDisabled={character.cp < 5}
+                hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
+              />
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <div className="h-full w-[400px] shrink-0 ornate-border bg-card/60 overflow-y-auto">
+            <MapPanel
+              regions={regions}
+              nodes={nodes}
+              areas={areas}
+              currentNodeId={character.current_node_id}
+              currentRegionId={currentNode.region_id}
+              characterLevel={character.level}
+              onNodeClick={handleMove}
+              partyMembers={mergedPartyMembers}
+              myCharacterId={character.id}
+              character={character}
+              party={party}
+              pendingInvites={pendingInvites}
+              isLeader={isLeader}
+              isTank={isTank}
+              myMembership={myMembership}
+              playersHere={playersHere}
+              onCreateParty={createParty}
+              onInvite={invitePlayer}
+              onAcceptInvite={acceptInvite}
+              onDeclineInvite={declineInvite}
+              onLeaveParty={leaveParty}
+              onKick={kickMember}
+              onSetTank={setTank}
+              onToggleFollow={toggleFollow}
+              keyboardBindings={keyboardMovement}
+              activeBuffs={{
+                stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
+                damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
+                acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
+                acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
+                poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
+                evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
+                ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
+                absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
+                absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
+                root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
+                sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
+                focusStrike: !!focusStrikeBuff,
+              }}
+              abilityTargetId={abilityTargetId}
+              onSetAbilityTarget={setAbilityTargetId}
+              showTargetSelector={
+                [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb')
+              }
+              onSearch={handleSearch}
+              onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
+              onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
+              onOpenTrainer={(currentNode.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined}
+              onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
+                if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
+                setTeleportOpen(true);
+              } : undefined}
+              searchDisabled={character.cp < 5}
+              hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
+            />
+          </div>
+        )}
       </div>
 
       {/* Vendor Dialog */}
