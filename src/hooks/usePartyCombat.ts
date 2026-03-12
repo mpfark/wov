@@ -337,14 +337,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, [params.party?.id, processTickResult]);
 
-  // ── Non-leader: broadcast buff + DoT state periodically ─────────
+  // ── Non-leader: broadcast buff + DoT state periodically (guarded) ─
   useEffect(() => {
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
       if (!channelRef.current) return;
+      // Only broadcast when in combat and there's data to send
+      if (!inCombatRef.current) return;
       if (ext.current.gatherDotStacks) {
         const dots = ext.current.gatherDotStacks();
-        const hasActiveDots = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
+        const hasActiveDots = Object.keys(dots.bleed || {}).length > 0 || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
         if (hasActiveDots) {
           channelRef.current.send({ type: 'broadcast', event: 'member_dot_state', payload: { character_id: ext.current.character.id, dots } });
         }
