@@ -1290,6 +1290,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
       {/* Broadcast Debug Overlay — admin only */}
       {isAdmin && <BroadcastDebugOverlay />}
+
+      {/* Movement Pad — tablet only */}
+      {isTablet && <MovementPad currentNode={currentNode} onMove={handleMove} disabled={isDead} />}
     </div>
   );
 }
