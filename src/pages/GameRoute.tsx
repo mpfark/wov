@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import GamePage from './GamePage';
 
 export default function GameRoute() {
-  const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter } = useGameContext();
+  const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter } = useGameContext();
   const navigate = useNavigate();
 
   if (authLoading || charLoading || nodesLoading) {
