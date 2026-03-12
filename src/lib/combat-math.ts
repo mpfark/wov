@@ -45,24 +45,24 @@ export function getIntHitBonus(int: number): number {
   return diminishing(getStatModifier(int), 5);
 }
 
-/** DEX → Critical Hit Range reduction: sqrt curve, capped at +5 */
+/** DEX → Critical Hit Range reduction: sqrt curve, capped at +4 (16-20 max) */
 export function getDexCritBonus(dex: number): number {
-  return diminishing(getStatModifier(dex), 5);
+  return diminishing(getStatModifier(dex), 4);
 }
 
-/** WIS → Awareness (chance to reduce incoming damage by 25%): sqrt curve, capped at 20% */
+/** WIS → Awareness (chance to reduce incoming damage by 25%): sqrt curve, capped at 15% */
 export function getWisDodgeChance(wis: number): number {
-  return diminishingFloat(getStatModifier(wis), 0.03, 0.20);
+  return diminishingFloat(getStatModifier(wis), 0.03, 0.15);
 }
 
-/** STR → Minimum damage floor: sqrt curve, capped at +5 */
+/** STR → Minimum damage floor: sqrt curve, capped at +3 */
 export function getStrDamageFloor(str: number): number {
-  return diminishing(getStatModifier(str), 5);
+  return diminishing(getStatModifier(str), 3);
 }
 
-/** CHA → Bonus gold multiplier from humanoid kills: sqrt curve, capped at +35% */
+/** CHA → Bonus gold multiplier from humanoid kills: sqrt curve, capped at +25% */
 export function getChaGoldMultiplier(cha: number): number {
-  return 1 + diminishingFloat(getStatModifier(cha), 0.05, 0.35);
+  return 1 + diminishingFloat(getStatModifier(cha), 0.05, 0.25);
 }
 
 // ── DEX multi-attack (party mode) ───────────────────────────────
