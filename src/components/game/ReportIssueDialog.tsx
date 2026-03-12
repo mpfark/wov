@@ -10,9 +10,10 @@ interface Props {
   userId: string;
   characterId: string;
   characterName: string;
+  compact?: boolean;
 }
 
-export default function ReportIssueDialog({ userId, characterId, characterName }: Props) {
+export default function ReportIssueDialog({ userId, characterId, characterName, compact }: Props) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -43,10 +44,16 @@ export default function ReportIssueDialog({ userId, characterId, characterName }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1">
-          <Bug className="h-3 w-3" />
-          Report
-        </Button>
+        {compact ? (
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+            <Bug className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1">
+            <Bug className="h-3 w-3" />
+            Report
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>

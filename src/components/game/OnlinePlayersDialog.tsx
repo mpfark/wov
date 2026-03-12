@@ -17,16 +17,24 @@ const CLASS_LABELS: Record<string, string> = {
 interface Props {
   onlinePlayers: OnlinePlayer[];
   myCharacterId?: string;
+  compact?: boolean;
 }
 
-export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId }: Props) {
+export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId, compact }: Props) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-xs font-display gap-1.5">
-          <Users className="h-3.5 w-3.5" />
-          <span>{onlinePlayers.length} Online</span>
-        </Button>
+        {compact ? (
+          <Button variant="outline" size="icon" className="h-8 w-8 relative">
+            <Users className="h-4 w-4" />
+            <span className="absolute -top-1 -right-1 text-[9px] bg-primary text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center">{onlinePlayers.length}</span>
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" className="text-xs font-display gap-1.5">
+            <Users className="h-3.5 w-3.5" />
+            <span>{onlinePlayers.length} Online</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
