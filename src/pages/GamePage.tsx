@@ -26,6 +26,9 @@ import { getBagWeight, getStatModifier, getMaxCp, getMaxMp, calculateStats, CLAS
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { User } from 'lucide-react';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 import { useChat } from '@/hooks/useChat';
