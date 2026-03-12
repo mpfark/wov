@@ -271,7 +271,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [partyCombatEntries, party, processIncomingLog, character.name]);
 
-  useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [eventLog]);
+  // Debounced scroll — prevent layout thrashing on rapid log updates
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, [eventLog]);
 
   // Update last_online periodically
   useEffect(() => {
