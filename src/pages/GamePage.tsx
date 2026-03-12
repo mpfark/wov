@@ -106,8 +106,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const nodeChannel = useNodeChannel(character.current_node_id, character);
   const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(character);
-  const currentNode = getNode(character.current_node_id || '');
-  const { creatures } = useCreatures(character.current_node_id, nodeChannel, currentNode);
+  const currentNodeForPrefetch = getNode(character.current_node_id || '');
+  const { creatures } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch);
   const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id);
 
   useEffect(() => {
