@@ -10,6 +10,7 @@ import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-
 import { getNodeDisplayName } from '@/hooks/useNodes';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
+import { getCachedItemAsync } from '@/hooks/useItemCache';
 import type {
   RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, AcBuff,
   DotDebuff, PoisonBuff, EvasionBuff, DisengageNextHit, IgniteBuff, AbsorbBuff,
@@ -123,7 +124,7 @@ export function useActions(params: UseActionsParams) {
         if (roll <= 0) { pickedItemId = entry.item_id; break; }
       }
       if (!pickedItemId) pickedItemId = tableEntries[tableEntries.length - 1].item_id;
-      const { data: item } = await supabase.from('items').select('name, rarity').eq('id', pickedItemId).single();
+      const item = await getCachedItemAsync(pickedItemId);
       if (item) {
         if (item.rarity === 'unique') {
           const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', pickedItemId);
@@ -149,7 +150,7 @@ export function useActions(params: UseActionsParams) {
     for (const entry of lootTable) {
       if (entry.type === 'gold') continue;
       if (Math.random() <= (entry.chance || 0.1)) {
-        const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
+        const item = await getCachedItemAsync(entry.item_id);
         if (item) {
           if (item.rarity === 'unique') {
             const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', entry.item_id);
@@ -534,7 +535,7 @@ export function useActions(params: UseActionsParams) {
     if (canFindLoot) {
       for (const entry of searchItems) {
         if (Math.random() <= (entry.chance || 0.5)) {
-          const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
+          const item = await getCachedItemAsync(entry.item_id);
           if (item) {
             if (item.rarity === 'unique') {
               const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {

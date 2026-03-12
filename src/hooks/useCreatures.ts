@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { NodeChannelHandle } from '@/hooks/useNodeChannel';
+import type { GameNode } from '@/hooks/useNodes';
 
 export interface Creature {
   id: string;
@@ -22,11 +23,24 @@ export interface Creature {
   drop_chance: number;
 }
 
-export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle) {
+// Module-level prefetch cache: nodeId → creatures[]
+const prefetchCache = new Map<string, { data: Creature[]; ts: number }>();
+const PREFETCH_TTL = 30_000; // 30s
+
+export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
 
   const fetchCreatures = useCallback(async () => {
     if (!nodeId) { setCreatures([]); return; }
+
+    // Check prefetch cache first
+    const cached = prefetchCache.get(nodeId);
+    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
+      setCreatures(cached.data);
+      prefetchCache.delete(nodeId); // consumed — live data will take over
+      return;
+    }
+
     const { data } = await supabase
       .from('creatures')
       .select('*')
@@ -98,6 +112,42 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle) 
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
   }, [nodeId, fetchCreatures]);
+
+  // ── Prefetch adjacent nodes' creatures ──────────────────────────
+  useEffect(() => {
+    if (!currentNode || !currentNode.connections || currentNode.connections.length === 0) return;
+
+    const adjacentNodeIds = currentNode.connections
+      .filter(c => !c.hidden)
+      .map(c => c.node_id)
+      .filter(id => {
+        const cached = prefetchCache.get(id);
+        return !cached || Date.now() - cached.ts >= PREFETCH_TTL;
+      });
+
+    if (adjacentNodeIds.length === 0) return;
+
+    // Single batched query for all adjacent nodes
+    supabase
+      .from('creatures')
+      .select('*')
+      .in('node_id', adjacentNodeIds)
+      .eq('is_alive', true)
+      .then(({ data }) => {
+        if (!data) return;
+        // Group by node_id
+        const byNode = new Map<string, Creature[]>();
+        for (const id of adjacentNodeIds) byNode.set(id, []);
+        for (const c of data as Creature[]) {
+          const arr = byNode.get(c.node_id!);
+          if (arr) arr.push(c);
+        }
+        const now = Date.now();
+        for (const [nid, creatures] of byNode) {
+          prefetchCache.set(nid, { data: creatures, ts: now });
+        }
+      });
+  }, [currentNode?.id]); // re-prefetch when node changes
 
   return { creatures };
 }

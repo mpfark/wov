@@ -13,6 +13,7 @@ import { useNodeChannel } from '@/hooks/useNodeChannel';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/hooks/useCreatures';
+import { useItemCache } from '@/hooks/useItemCache';
 import { useCreatureBroadcast } from '@/hooks/useCreatureBroadcast';
 import { usePartyBroadcast } from '@/hooks/usePartyBroadcast';
 import { useNPCs, NPC } from '@/hooks/useNPCs';
@@ -101,11 +102,13 @@ interface Props {
 
 export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const bus = useCreateGameEventBus();
+  useItemCache(); // Preload item cache on game entry
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const nodeChannel = useNodeChannel(character.current_node_id, character);
   const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(character);
-  const { creatures } = useCreatures(character.current_node_id, nodeChannel);
+  const currentNodeForPrefetch = getNode(character.current_node_id || '');
+  const { creatures } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch);
   const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id);
 
   useEffect(() => {
