@@ -120,7 +120,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
-  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
+  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null); // entries now always empty — log arrives via broadcast
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
