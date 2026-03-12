@@ -13,6 +13,7 @@ import { useNodeChannel } from '@/hooks/useNodeChannel';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/hooks/useCreatures';
+import { useItemCache } from '@/hooks/useItemCache';
 import { useCreatureBroadcast } from '@/hooks/useCreatureBroadcast';
 import { usePartyBroadcast } from '@/hooks/usePartyBroadcast';
 import { useNPCs, NPC } from '@/hooks/useNPCs';
