@@ -1086,8 +1086,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
         </div>
 
-        {/* Right: Map + Party — desktop: fixed sidebar, tablet: sheet overlay */}
-        {isTablet ? (
+        {/* Right: Map + Party — desktop/tablet: fixed sidebar, mobile: sheet overlay */}
+        {isMobile ? (
           <Sheet open={mapPanelOpen} onOpenChange={setMapPanelOpen}>
             <SheetTrigger asChild>
               <Button
