@@ -27,7 +27,7 @@ import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User } from 'lucide-react';
+import { User, Map as MapIconLucide } from 'lucide-react';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 import { useChat } from '@/hooks/useChat';
