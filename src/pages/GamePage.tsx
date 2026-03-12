@@ -39,6 +39,7 @@ import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/hooks/useGameLoop';
 import { useActions } from '@/hooks/useActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
+import MovementPad from '@/components/game/MovementPad';
 
 // Memoized log color cache to avoid re-running 20+ regex checks per render
 const logColorCache = new Map<string, string>();
