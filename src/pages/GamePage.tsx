@@ -109,6 +109,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Tablet detection: left panel becomes a slide-out sheet on screens ≤1024px
   const [isTablet, setIsTablet] = useState(false);
   const [charPanelOpen, setCharPanelOpen] = useState(false);
+  const [mapPanelOpen, setMapPanelOpen] = useState(false);
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 1024px)');
     const onChange = () => setIsTablet(mql.matches);
