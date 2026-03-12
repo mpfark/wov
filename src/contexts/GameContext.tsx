@@ -21,6 +21,7 @@ interface GameContextValue {
   deleteCharacter: (id: string) => Promise<void>;
   createCharacter: (data: any) => Promise<any>;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacterLocal: (updates: Partial<Character>) => void;
   selectCharacterAfterCreate: (id: string) => void;
   refetchCharacters: () => void;
 
@@ -42,7 +43,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const {
     characters, character, loading: charLoading,
     selectCharacter, clearSelectedCharacter, deleteCharacter,
-    createCharacter, updateCharacter, selectCharacterAfterCreate,
+    createCharacter, updateCharacter, updateCharacterLocal, selectCharacterAfterCreate,
     refetchCharacters,
   } = useCharacter(user);
   const { nodes, regions, loading: nodesLoading } = useNodes(!!user);
@@ -71,7 +72,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       user, authLoading, signOut,
       characters, character, charLoading,
       selectCharacter, clearSelectedCharacter, deleteCharacter,
-      createCharacter, updateCharacter, selectCharacterAfterCreate, refetchCharacters,
+      createCharacter, updateCharacter, updateCharacterLocal, selectCharacterAfterCreate, refetchCharacters,
       isAdmin, isValar,
       nodes, regions, nodesLoading, startingNode,
     }}>

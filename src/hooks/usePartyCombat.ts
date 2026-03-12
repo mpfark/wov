@@ -57,6 +57,8 @@ export interface UsePartyCombatParams {
   isDead: boolean;
   addLocalLog: (msg: string) => void;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  /** Local-only state update (no DB write) — used for combat tick results already persisted by server */
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   fetchGroundLoot: () => void;
   /** Gather current buff state for combat-tick payload */
   gatherBuffs?: () => MemberBuffState;
@@ -198,7 +200,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.addLocalLog(msg);
     }
 
-    // Update own character state from server-authoritative data
+    // Update own character state from server-authoritative data (local only — server already persisted)
     const myState = data.member_states.find(m => m.character_id === ext.current.character.id);
     if (myState) {
       const updates: Partial<import('@/hooks/useCharacter').Character> = {
@@ -213,7 +215,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (myState.max_cp !== undefined) updates.max_cp = myState.max_cp;
       if (myState.max_mp !== undefined) updates.max_mp = myState.max_mp;
       if (myState.respec_points !== undefined) updates.respec_points = myState.respec_points;
-      ext.current.updateCharacter(updates);
+      // Use local-only update to avoid redundant DB write (server already wrote these)
+      if (ext.current.updateCharacterLocal) {
+        ext.current.updateCharacterLocal(updates);
+      } else {
+        ext.current.updateCharacter(updates);
+      }
     }
 
     // Notify client about consumed one-shot buffs
@@ -330,14 +337,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, [params.party?.id, processTickResult]);
 
-  // ── Non-leader: broadcast buff + DoT state periodically ─────────
+  // ── Non-leader: broadcast buff + DoT state periodically (guarded) ─
   useEffect(() => {
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
       if (!channelRef.current) return;
+      // Only broadcast when in combat and there's data to send
+      if (!inCombatRef.current) return;
       if (ext.current.gatherDotStacks) {
         const dots = ext.current.gatherDotStacks();
-        const hasActiveDots = dots.bleed || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
+        const hasActiveDots = Object.keys(dots.bleed || {}).length > 0 || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
         if (hasActiveDots) {
           channelRef.current.send({ type: 'broadcast', event: 'member_dot_state', payload: { character_id: ext.current.character.id, dots } });
         }

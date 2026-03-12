@@ -37,53 +37,61 @@ import { useGameLoop } from '@/hooks/useGameLoop';
 import { useActions } from '@/hooks/useActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 
+// Memoized log color cache to avoid re-running 20+ regex checks per render
+const logColorCache = new Map<string, string>();
 function getLogColor(log: string): string {
-  // Queued ability flavour text — consistent italic styling
-  if (log.startsWith('⏳')) return 'text-muted-foreground italic';
-  if (log.startsWith('💬')) return 'text-foreground';
-  if (log.startsWith('🤫 To ')) return 'text-purple-400/70';
-  if (log.startsWith('🤫')) return 'text-purple-400';
-  if (log.includes('(remote)') && (log.startsWith('🩸') || log.startsWith('🧪') || log.startsWith('🔥'))) return 'text-muted-foreground/60 italic text-[10px]';
-  if (log.includes('bleeds for') && log.startsWith('🩸')) return 'text-dot-bleed italic';
-  if (log.includes('poison damage') && log.startsWith('🧪')) return 'text-dot-poison italic';
-  if (log.includes('burns for') && log.startsWith('🔥')) return 'text-dot-burn italic';
-  if (log.includes('CRITICAL!')) return 'text-primary font-semibold';
-  if (log.startsWith('💀') || log.includes('been defeated') || log.includes('struck down')) return 'text-destructive';
-  if (log.startsWith('☠️')) return 'text-elvish';
-  if (log.startsWith('🎉') || log.includes('Level Up')) return 'text-primary font-semibold';
-  if (log.startsWith('📈')) return 'text-primary';
-  if (log.startsWith('⚠️')) return 'text-dwarvish';
-  if (log.startsWith('💔')) return 'text-destructive/80';
-  if (log.startsWith('💉')) return 'text-blood font-semibold';
-  if (log.startsWith('💚') || log.startsWith('💪') || log.includes('restore') || log.includes('recover')) return 'text-elvish';
-  if (log.startsWith('🌑')) return 'text-primary';
-  if (log.startsWith('🦅')) return 'text-primary';
-  if (log.startsWith('🎶') || log.startsWith('✨')) return 'text-elvish';
-  if (log.startsWith('🌿')) return 'text-elvish';
-  if (log.startsWith('🏹🏹')) return 'text-primary';
-  if (log.startsWith('🛡️')) return 'text-dwarvish';
-  if (log.startsWith('📯')) return 'text-dwarvish';
-  if (log.startsWith('🩸')) return 'text-blood';
-  if (log.startsWith('🧪')) return 'text-elvish';
-  if (log.startsWith('🔪')) return 'text-primary font-semibold';
-  if (log.startsWith('🌫️')) return 'text-primary';
-  if (log.startsWith('🔥🔥') || log.startsWith('🔥')) return 'text-dwarvish';
-  if (log.startsWith('🦘')) return 'text-elvish font-semibold';
-  if (log.startsWith('🎯')) return 'text-primary font-semibold';
-  if (log.startsWith('💥')) return 'text-primary font-semibold';
-  if (log.startsWith('🛡️✨')) return 'text-primary';
-  if (log.startsWith('🎵💢')) return 'text-dwarvish';
-  if (log.startsWith('🎶✨')) return 'text-elvish';
-  if (log.startsWith('🔄🎭')) return 'text-primary font-semibold';
-  if (log.startsWith('🔨')) return 'text-dwarvish font-semibold';
-  if (log.includes('miss')) return 'text-muted-foreground';
-  if (log.includes('damage')) return 'text-foreground/90';
-  return 'text-foreground/80';
+  const cached = logColorCache.get(log);
+  if (cached) return cached;
+  let color = 'text-foreground/80';
+  if (log.startsWith('⏳')) color = 'text-muted-foreground italic';
+  else if (log.startsWith('💬')) color = 'text-foreground';
+  else if (log.startsWith('🤫 To ')) color = 'text-purple-400/70';
+  else if (log.startsWith('🤫')) color = 'text-purple-400';
+  else if (log.includes('(remote)') && (log.startsWith('🩸') || log.startsWith('🧪') || log.startsWith('🔥'))) color = 'text-muted-foreground/60 italic text-[10px]';
+  else if (log.includes('bleeds for') && log.startsWith('🩸')) color = 'text-dot-bleed italic';
+  else if (log.includes('poison damage') && log.startsWith('🧪')) color = 'text-dot-poison italic';
+  else if (log.includes('burns for') && log.startsWith('🔥')) color = 'text-dot-burn italic';
+  else if (log.includes('CRITICAL!')) color = 'text-primary font-semibold';
+  else if (log.startsWith('💀') || log.includes('been defeated') || log.includes('struck down')) color = 'text-destructive';
+  else if (log.startsWith('☠️')) color = 'text-elvish';
+  else if (log.startsWith('🎉') || log.includes('Level Up')) color = 'text-primary font-semibold';
+  else if (log.startsWith('📈')) color = 'text-primary';
+  else if (log.startsWith('⚠️')) color = 'text-dwarvish';
+  else if (log.startsWith('💔')) color = 'text-destructive/80';
+  else if (log.startsWith('💉')) color = 'text-blood font-semibold';
+  else if (log.startsWith('💚') || log.startsWith('💪') || log.includes('restore') || log.includes('recover')) color = 'text-elvish';
+  else if (log.startsWith('🌑')) color = 'text-primary';
+  else if (log.startsWith('🦅')) color = 'text-primary';
+  else if (log.startsWith('🎶') || log.startsWith('✨')) color = 'text-elvish';
+  else if (log.startsWith('🌿')) color = 'text-elvish';
+  else if (log.startsWith('🏹🏹')) color = 'text-primary';
+  else if (log.startsWith('🛡️')) color = 'text-dwarvish';
+  else if (log.startsWith('📯')) color = 'text-dwarvish';
+  else if (log.startsWith('🩸')) color = 'text-blood';
+  else if (log.startsWith('🧪')) color = 'text-elvish';
+  else if (log.startsWith('🔪')) color = 'text-primary font-semibold';
+  else if (log.startsWith('🌫️')) color = 'text-primary';
+  else if (log.startsWith('🔥🔥') || log.startsWith('🔥')) color = 'text-dwarvish';
+  else if (log.startsWith('🦘')) color = 'text-elvish font-semibold';
+  else if (log.startsWith('🎯')) color = 'text-primary font-semibold';
+  else if (log.startsWith('💥')) color = 'text-primary font-semibold';
+  else if (log.startsWith('🛡️✨')) color = 'text-primary';
+  else if (log.startsWith('🎵💢')) color = 'text-dwarvish';
+  else if (log.startsWith('🎶✨')) color = 'text-elvish';
+  else if (log.startsWith('🔄🎭')) color = 'text-primary font-semibold';
+  else if (log.startsWith('🔨')) color = 'text-dwarvish font-semibold';
+  else if (log.includes('miss')) color = 'text-muted-foreground';
+  else if (log.includes('damage')) color = 'text-foreground/90';
+  // Keep cache bounded
+  if (logColorCache.size > 200) logColorCache.clear();
+  logColorCache.set(log, color);
+  return color;
 }
 
 interface Props {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   onSignOut: () => void;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
@@ -91,13 +99,13 @@ interface Props {
   onSwitchCharacter?: () => void;
 }
 
-export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
+export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const bus = useCreateGameEventBus();
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const nodeChannel = useNodeChannel(character.current_node_id, character);
   const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(character);
-  const { creatures } = useCreatures(character.current_node_id);
+  const { creatures } = useCreatures(character.current_node_id, nodeChannel);
   const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id);
 
   useEffect(() => {
@@ -113,7 +121,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
-  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
+  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null); // entries now always empty — log arrives via broadcast
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
@@ -264,7 +272,14 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     }
   }, [partyCombatEntries, party, processIncomingLog, character.name]);
 
-  useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [eventLog]);
+  // Debounced scroll — prevent layout thrashing on rapid log updates
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  }, [eventLog]);
 
   // Update last_online periodically
   useEffect(() => {
@@ -430,7 +445,7 @@ export default function GamePage({ character, updateCharacter, onSignOut, isAdmi
     character, creatures,
     party: usePartyCombatMode ? party : null,
     isLeader, isDead,
-    addLocalLog, updateCharacter, fetchGroundLoot,
+    addLocalLog, updateCharacter, updateCharacterLocal, fetchGroundLoot,
     gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
     gatherDotStacks, onClearedDots: handleClearedDots,
     onPoisonProc: gameLoop.handleAddPoisonStack,
