@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { GameNode, Area, getNodeDisplayName } from '@/hooks/useNodes';
 import { PartyMember } from '@/hooks/useParty';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,7 +47,9 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
+  // Client-side cache for visited nodes — grows as the player moves, only fetched once on mount
   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
+  const initialFetchDone = useRef(false);
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
   // Filter out hidden connections for player view
@@ -181,9 +183,10 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return [currentNode.id, ...neighbors.map(n => n.id)];
   }, [currentNode, neighbors]);
 
-  // Fetch visited nodes for this character
+  // Fetch visited nodes ONCE on mount, then accumulate client-side
   useEffect(() => {
-    if (!characterId) return;
+    if (!characterId || initialFetchDone.current) return;
+    initialFetchDone.current = true;
     const fetchVisited = async () => {
       const { data } = await supabase
         .from('character_visited_nodes')
@@ -194,14 +197,24 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       }
     };
     fetchVisited();
-    // Also upsert current node as visited
+  }, [characterId]);
+
+  // Accumulate current node into visited set + upsert to DB
+  useEffect(() => {
+    if (!characterId) return;
+    setVisitedNodeIds(prev => {
+      if (prev.has(currentNodeId)) return prev;
+      const next = new Set(prev);
+      next.add(currentNodeId);
+      return next;
+    });
     supabase.from('character_visited_nodes').upsert(
       { character_id: characterId, node_id: currentNodeId },
       { onConflict: 'character_id,node_id' }
     ).then();
   }, [characterId, currentNodeId]);
 
-  // Fetch creature presence for all visible nodes
+  // Fetch creature presence for all visible nodes (batched query)
   useEffect(() => {
     if (visibleNodeIds.length === 0) return;
     const fetchCreaturePresence = async () => {
