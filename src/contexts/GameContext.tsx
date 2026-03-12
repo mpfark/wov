@@ -43,7 +43,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const {
     characters, character, loading: charLoading,
     selectCharacter, clearSelectedCharacter, deleteCharacter,
-    createCharacter, updateCharacter, selectCharacterAfterCreate,
+    createCharacter, updateCharacter, updateCharacterLocal, selectCharacterAfterCreate,
     refetchCharacters,
   } = useCharacter(user);
   const { nodes, regions, loading: nodesLoading } = useNodes(!!user);
