@@ -150,7 +150,7 @@ export function useActions(params: UseActionsParams) {
     for (const entry of lootTable) {
       if (entry.type === 'gold') continue;
       if (Math.random() <= (entry.chance || 0.1)) {
-        const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
+        const item = await getCachedItemAsync(entry.item_id);
         if (item) {
           if (item.rarity === 'unique') {
             const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', entry.item_id);
