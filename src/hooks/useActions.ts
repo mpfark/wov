@@ -124,7 +124,7 @@ export function useActions(params: UseActionsParams) {
         if (roll <= 0) { pickedItemId = entry.item_id; break; }
       }
       if (!pickedItemId) pickedItemId = tableEntries[tableEntries.length - 1].item_id;
-      const { data: item } = await supabase.from('items').select('name, rarity').eq('id', pickedItemId).single();
+      const item = await getCachedItemAsync(pickedItemId);
       if (item) {
         if (item.rarity === 'unique') {
           const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', pickedItemId);
