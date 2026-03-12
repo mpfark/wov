@@ -102,6 +102,7 @@ interface Props {
 
 export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const bus = useCreateGameEventBus();
+  useItemCache(); // Preload item cache on game entry
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const nodeChannel = useNodeChannel(character.current_node_id, character);
   const { playersHere } = nodeChannel;
