@@ -99,7 +99,7 @@ interface Props {
   onSwitchCharacter?: () => void;
 }
 
-export default function GamePage({ character, updateCharacter, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
+export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const bus = useCreateGameEventBus();
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const nodeChannel = useNodeChannel(character.current_node_id, character);

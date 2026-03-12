@@ -72,7 +72,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       user, authLoading, signOut,
       characters, character, charLoading,
       selectCharacter, clearSelectedCharacter, deleteCharacter,
-      createCharacter, updateCharacter, selectCharacterAfterCreate, refetchCharacters,
+      createCharacter, updateCharacter, updateCharacterLocal, selectCharacterAfterCreate, refetchCharacters,
       isAdmin, isValar,
       nodes, regions, nodesLoading, startingNode,
     }}>

@@ -23,6 +23,7 @@ export default function GameRoute() {
     <GamePage
       character={character}
       updateCharacter={updateCharacter}
+      updateCharacterLocal={updateCharacterLocal}
       onSignOut={signOut}
       isAdmin={isAdmin}
       onOpenAdmin={() => navigate('/admin')}
