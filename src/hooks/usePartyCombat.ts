@@ -57,6 +57,8 @@ export interface UsePartyCombatParams {
   isDead: boolean;
   addLocalLog: (msg: string) => void;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  /** Local-only state update (no DB write) — used for combat tick results already persisted by server */
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   fetchGroundLoot: () => void;
   /** Gather current buff state for combat-tick payload */
   gatherBuffs?: () => MemberBuffState;
