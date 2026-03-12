@@ -105,6 +105,17 @@ interface Props {
 export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
+
+  // Tablet detection: left panel becomes a slide-out sheet on screens ≤1024px
+  const [isTablet, setIsTablet] = useState(false);
+  const [charPanelOpen, setCharPanelOpen] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1024px)');
+    const onChange = () => setIsTablet(mql.matches);
+    mql.addEventListener('change', onChange);
+    setIsTablet(mql.matches);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const nodeChannel = useNodeChannel(character.current_node_id, character);
   const { playersHere } = nodeChannel;
