@@ -535,7 +535,7 @@ export function useActions(params: UseActionsParams) {
     if (canFindLoot) {
       for (const entry of searchItems) {
         if (Math.random() <= (entry.chance || 0.5)) {
-          const { data: item } = await supabase.from('items').select('name, rarity').eq('id', entry.item_id).single();
+          const item = await getCachedItemAsync(entry.item_id);
           if (item) {
             if (item.rarity === 'unique') {
               const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
