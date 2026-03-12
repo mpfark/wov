@@ -10,6 +10,7 @@ import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-
 import { getNodeDisplayName } from '@/hooks/useNodes';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
+import { getCachedItemAsync } from '@/hooks/useItemCache';
 import type {
   RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, AcBuff,
   DotDebuff, PoisonBuff, EvasionBuff, DisengageNextHit, IgniteBuff, AbsorbBuff,
