@@ -200,7 +200,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.addLocalLog(msg);
     }
 
-    // Update own character state from server-authoritative data
+    // Update own character state from server-authoritative data (local only — server already persisted)
     const myState = data.member_states.find(m => m.character_id === ext.current.character.id);
     if (myState) {
       const updates: Partial<import('@/hooks/useCharacter').Character> = {
@@ -215,7 +215,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (myState.max_cp !== undefined) updates.max_cp = myState.max_cp;
       if (myState.max_mp !== undefined) updates.max_mp = myState.max_mp;
       if (myState.respec_points !== undefined) updates.respec_points = myState.respec_points;
-      ext.current.updateCharacter(updates);
+      // Use local-only update to avoid redundant DB write (server already wrote these)
+      if (ext.current.updateCharacterLocal) {
+        ext.current.updateCharacterLocal(updates);
+      } else {
+        ext.current.updateCharacter(updates);
+      }
     }
 
     // Notify client about consumed one-shot buffs
