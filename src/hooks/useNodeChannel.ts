@@ -23,6 +23,10 @@ export interface NodeChannelHandle {
   onGroundLootDbChange: React.MutableRefObject<(() => void) | null>;
   /** Callback ref — set by useChat */
   onSay: React.MutableRefObject<((payload: any) => void) | null>;
+  /** Callback ref — set by useCreatures for creature DB changes */
+  onCreatureUpdate: React.MutableRefObject<((payload: any) => void) | null>;
+  onCreatureInsert: React.MutableRefObject<(() => void) | null>;
+  onCreatureDelete: React.MutableRefObject<((payload: any) => void) | null>;
   /** Presence data */
   playersHere: PlayerPresence[];
 }
@@ -39,7 +43,7 @@ interface PresenceCharacter {
 /**
  * Creates ONE shared Supabase Realtime channel per node.
  * Consolidates: presence, creature-damage broadcast, ground-loot broadcast,
- * ground-loot postgres-changes, and chat-say broadcast.
+ * ground-loot postgres-changes, creature postgres-changes, and chat-say broadcast.
  *
  * Consuming hooks set the callback refs to receive events.
  */
@@ -56,6 +60,9 @@ export function useNodeChannel(
   const onLootDropped = useRef<((payload: any) => void) | null>(null);
   const onGroundLootDbChange = useRef<(() => void) | null>(null);
   const onSay = useRef<((payload: any) => void) | null>(null);
+  const onCreatureUpdate = useRef<((payload: any) => void) | null>(null);
+  const onCreatureInsert = useRef<(() => void) | null>(null);
+  const onCreatureDelete = useRef<((payload: any) => void) | null>(null);
 
   // Memoize character data to avoid unnecessary re-subscriptions
   const charData = useMemo(() => {
@@ -121,6 +128,32 @@ export function useNodeChannel(
         onGroundLootDbChange.current?.();
       })
 
+      // ── Postgres Changes (creatures) — merged from useCreatures ──
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'creatures',
+        filter: `node_id=eq.${nodeId}`,
+      }, (payload) => {
+        onCreatureUpdate.current?.(payload);
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'creatures',
+        filter: `node_id=eq.${nodeId}`,
+      }, () => {
+        onCreatureInsert.current?.();
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'creatures',
+        filter: `node_id=eq.${nodeId}`,
+      }, (payload) => {
+        onCreatureDelete.current?.(payload);
+      })
+
       // ── Subscribe + track presence ──
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -148,6 +181,9 @@ export function useNodeChannel(
     onLootDropped,
     onGroundLootDbChange,
     onSay,
+    onCreatureUpdate,
+    onCreatureInsert,
+    onCreatureDelete,
     playersHere,
   };
 }

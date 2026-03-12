@@ -40,17 +40,7 @@ export function useInventory(characterId: string | null) {
 
   useEffect(() => {
     fetchInventory();
-
-    if (!characterId) return;
-    const channel = supabase
-      .channel(`inventory-${characterId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'character_inventory',
-        filter: `character_id=eq.${characterId}`,
-      }, () => fetchInventory())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    // No realtime subscription — every inventory mutation already calls fetchInventory()
   }, [characterId, fetchInventory]);
 
   const equipItem = useCallback(async (inventoryId: string, slot: string) => {

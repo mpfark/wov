@@ -180,6 +180,7 @@ export function useCharacter(user: User | null) {
     setSelectedCharacterId(id);
   }, []);
 
+  /** Update character state locally AND persist to DB (for player-initiated actions) */
   const updateCharacter = async (updates: Partial<Character>) => {
     if (!selectedCharacter) return;
     const charId = selectedCharacter.id;
@@ -208,6 +209,30 @@ export function useCharacter(user: User | null) {
     }
   };
 
+  /** Update character state locally only — no DB write.
+   *  Used by combat tick processing where the server already persisted the values. */
+  const updateCharacterLocal = useCallback((updates: Partial<Character>) => {
+    if (!selectedCharacterId) return;
+    const charId = selectedCharacterId;
+    const fields = Object.keys(updates);
+
+    // Mark fields as pending so realtime won't revert optimistic values
+    const pending = pendingWritesRef.current.get(charId) || new Set<string>();
+    fields.forEach(f => pending.add(f));
+    pendingWritesRef.current.set(charId, pending);
+
+    setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
+
+    // Clear pending after a short delay to let realtime catch up
+    setTimeout(() => {
+      const current = pendingWritesRef.current.get(charId);
+      if (current) {
+        fields.forEach(f => current.delete(f));
+        if (current.size === 0) pendingWritesRef.current.delete(charId);
+      }
+    }, 3000);
+  }, [selectedCharacterId]);
+
   return {
     characters,
     character: selectedCharacter,
@@ -217,6 +242,7 @@ export function useCharacter(user: User | null) {
     deleteCharacter,
     createCharacter,
     updateCharacter,
+    updateCharacterLocal,
     selectCharacterAfterCreate,
     refetchCharacters,
   };
