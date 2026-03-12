@@ -686,7 +686,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           )}
         </div>
         <div className="flex items-center gap-1">
-          <OnlinePlayersDialog onlinePlayers={onlinePlayers} myCharacterId={character.id} />
+          <OnlinePlayersDialog onlinePlayers={onlinePlayers} myCharacterId={character.id} compact={isTablet} />
           {isAdmin && (
             isTablet ? (
               <Button variant="outline" size="icon" onClick={onOpenAdmin} className="h-8 w-8">
