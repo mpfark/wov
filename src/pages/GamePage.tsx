@@ -709,7 +709,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               </Button>
             )
           )}
-          <ReportIssueDialog userId={character.user_id} characterId={character.id} characterName={character.name} />
+          <ReportIssueDialog userId={character.user_id} characterId={character.id} characterName={character.name} compact={isTablet} />
           {isTablet ? (
             <Button variant="ghost" size="icon" onClick={onSignOut} className="h-8 w-8 text-muted-foreground">
               <LogOut className="h-4 w-4" />
