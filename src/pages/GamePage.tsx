@@ -108,15 +108,25 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   useItemCache(); // Preload item cache on game entry
 
   // Tablet detection: left panel becomes a slide-out sheet on screens ≤1024px
+  // Mobile detection: right panel also becomes a sheet on screens ≤768px
   const [isTablet, setIsTablet] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [charPanelOpen, setCharPanelOpen] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(false);
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 1024px)');
-    const onChange = () => setIsTablet(mql.matches);
-    mql.addEventListener('change', onChange);
-    setIsTablet(mql.matches);
-    return () => mql.removeEventListener('change', onChange);
+    const tabletMql = window.matchMedia('(max-width: 1024px)');
+    const mobileMql = window.matchMedia('(max-width: 768px)');
+    const onChange = () => {
+      setIsTablet(tabletMql.matches);
+      setIsMobile(mobileMql.matches);
+    };
+    tabletMql.addEventListener('change', onChange);
+    mobileMql.addEventListener('change', onChange);
+    onChange();
+    return () => {
+      tabletMql.removeEventListener('change', onChange);
+      mobileMql.removeEventListener('change', onChange);
+    };
   }, []);
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
   const nodeChannel = useNodeChannel(character.current_node_id, character);
@@ -1076,8 +1086,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
         </div>
 
-        {/* Right: Map + Party — desktop: fixed sidebar, tablet: sheet overlay */}
-        {isTablet ? (
+        {/* Right: Map + Party — desktop/tablet: fixed sidebar, mobile: sheet overlay */}
+        {isMobile ? (
           <Sheet open={mapPanelOpen} onOpenChange={setMapPanelOpen}>
             <SheetTrigger asChild>
               <Button
