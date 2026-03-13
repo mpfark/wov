@@ -110,7 +110,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
       </TooltipTrigger>
       {item && !blocked && (
         <TooltipContent className="bg-popover border-border z-50">
-          <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
+          <p className={`font-display ${getItemColor(item.item)}`}>{item.item.name}</p>
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
           {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
           {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
