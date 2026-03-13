@@ -105,7 +105,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
     <Dialog open={open} onOpenChange={v => { if (!v) { onClose(); reset(); } }}>
       <DialogContent className="sm:max-w-lg border-soulforged/30 bg-card max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-elvish text-glow flex items-center gap-2">
+          <DialogTitle className="font-display text-soulforged text-glow flex items-center gap-2">
             ⚒️ The Soulwright
           </DialogTitle>
           <DialogDescription className="text-xs italic text-muted-foreground">
