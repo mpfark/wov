@@ -96,6 +96,11 @@
   text-shadow: 0 0 10px hsl(38 80% 50% / 0.3), 0 0 30px hsl(38 80% 50% / 0.1);
 }
 
+/* Soulforged text glow */
+.text-glow-soulforged {
+  text-shadow: 0 0 10px hsl(200 70% 55% / 0.4), 0 0 25px hsl(200 70% 55% / 0.15);
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
