@@ -17,7 +17,7 @@ import {
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
-const MAX_LEVEL = 40;
+const MAX_LEVEL = 42;
 
 export default function GameManual() {
   const [playerCounts, setPlayerCounts] = useState<Record<number, number>>({});

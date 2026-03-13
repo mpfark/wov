@@ -348,9 +348,9 @@ Deno.serve(async (req) => {
       for (const s of statKeys) statIncreases[s] = 0;
       let statPoints = 0;
 
-      // Process multiple level-ups
+      // Process multiple level-ups (cap at level 42)
       let xpForNext = newLevel * 100;
-      while (newXp >= xpForNext && newLevel < 100) {
+      while (newXp >= xpForNext && newLevel < 42) {
         newXp -= xpForNext;
         newLevel++;
         newMaxHp += 5;
