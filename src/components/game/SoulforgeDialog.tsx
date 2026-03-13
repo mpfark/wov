@@ -212,12 +212,12 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
 
             {/* Preview */}
             {slot && statCount >= 2 && (
-              <div className="p-2 rounded border border-elvish/30 bg-elvish/5">
-                <p className="text-xs font-display text-elvish">{itemName || 'Unnamed'}</p>
+              <div className="p-2 rounded border border-soulforged/30 bg-soulforged/5">
+                <p className="text-xs font-display text-soulforged">{itemName || 'Unnamed'}</p>
                 <p className="text-[10px] text-muted-foreground">Uncommon · Lvl 42 · Soulbound</p>
                 <p className="text-[10px] text-muted-foreground capitalize">{SLOTS.find(s => s.value === slot)?.label}{slot === 'main_hand' ? ` · ${hands === 2 ? 'Two-Handed' : 'One-Handed'}` : ''}</p>
                 {Object.entries(stats).filter(([, v]) => v > 0).map(([k, v]) => (
-                  <p key={k} className="text-[10px] text-elvish">+{v} {STAT_LABELS[k]}</p>
+                  <p key={k} className="text-[10px] text-soulforged">+{v} {STAT_LABELS[k]}</p>
                 ))}
               </div>
             )}
