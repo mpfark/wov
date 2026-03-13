@@ -511,7 +511,7 @@ export default function CharacterPanel({
                       <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
+                            <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
                               {isBroken && <span className="text-destructive mr-1">⚒</span>}
                               {inv.item.name}
                               {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
