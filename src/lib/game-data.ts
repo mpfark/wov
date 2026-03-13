@@ -327,8 +327,9 @@ export function getCreatureDamageDie(level: number, rarity: string): number {
   return base + Math.floor(level * 0.7);
 }
 
-// Nobility titles by level (every 2 levels from 28–40)
+// Nobility titles by level (every 2 levels from 28–42)
 const MILESTONE_TITLES: { level: number; male: string; female: string }[] = [
+  { level: 42, male: 'Emperor', female: 'Empress' },
   { level: 40, male: 'King', female: 'Queen' },
   { level: 38, male: 'Prince', female: 'Princess' },
   { level: 36, male: 'Duke', female: 'Duchess' },
