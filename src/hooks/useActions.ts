@@ -247,6 +247,27 @@ export function useActions(params: UseActionsParams) {
         }
       }
 
+      // Special level 42 notification - Soulforge unlocked
+      if (newLevel === 42) {
+        // Send whisper from The Soulwright to player's whisper channel
+        const whisperChannel = supabase.channel(`chat-whisper-${p.character.id}`);
+        whisperChannel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            whisperChannel.send({
+              type: 'broadcast',
+              event: 'whisper',
+              payload: {
+                senderId: 'soulwright',
+                senderName: 'The Soulwright',
+                text: 'You have reached the pinnacle of mortal power. Come find me at The Echoing Vein in the Ash-Veil Perimeter, and I shall forge for you a weapon born of your own soul. This gift can only be claimed once.',
+              },
+            });
+            setTimeout(() => supabase.removeChannel(whisperChannel), 2000);
+          }
+        });
+        p.addLog(`🌟 You feel a strange presence calling to you from the Ash-Veil Perimeter...`);
+      }
+
       // Recalculate derived stats using potentially updated values
       const finalCon = (levelUpUpdates as any).con ?? p.character.con;
       const newMaxHp = getMaxHp(p.character.class, finalCon, newLevel);
