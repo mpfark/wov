@@ -108,7 +108,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, inve
               <div key={inv.id} className={`p-2 rounded border border-border bg-background/40 space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className={`text-sm font-display ${RARITY_COLORS[inv.item.rarity] || ''}`}>{inv.item.name}</span>
+                    <span className={`text-sm font-display ${getItemColor(inv.item)}`}>{inv.item.name}</span>
                     {inv.equipped_slot && <span className="text-[10px] text-muted-foreground ml-1 capitalize">({inv.equipped_slot.replace('_', ' ')})</span>}
                   </div>
                   {cantRepair ? (
