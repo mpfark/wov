@@ -146,7 +146,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
                     </span>
                   )}
                   <div>
-                    <span className={`text-sm font-display ${RARITY_COLORS[vi.item.rarity] || ''}`}>{vi.item.name}</span>
+                    <span className={`text-sm font-display ${getItemColor(vi.item)}`}>{vi.item.name}</span>
                     <span className="text-xs text-muted-foreground ml-2">{vi.item.slot || vi.item.item_type}</span>
                     {totalStock > 0 && <span className="text-xs text-muted-foreground ml-1">(×{totalStock})</span>}
                   </div>
