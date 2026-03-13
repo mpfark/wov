@@ -731,7 +731,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               <Button
                 variant="ghost"
                 size="icon"
-                className="fixed left-2 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full ornate-border bg-card/90 shadow-lg"
+                className="fixed left-2 top-1/3 -translate-y-1/2 z-30 h-10 w-10 rounded-full ornate-border bg-card/90 shadow-lg"
               >
                 <User className="h-5 w-5" />
               </Button>
@@ -1114,7 +1114,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               <Button
                 variant="ghost"
                 size="icon"
-                className="fixed right-2 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full ornate-border bg-card/90 shadow-lg"
+                className="fixed right-2 top-1/3 -translate-y-1/2 z-30 h-10 w-10 rounded-full ornate-border bg-card/90 shadow-lg"
               >
                 <MapIconLucide className="h-5 w-5" />
               </Button>
