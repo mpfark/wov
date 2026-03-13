@@ -217,8 +217,9 @@ export function useActions(params: UseActionsParams) {
     const newXp = p.character.xp + xpShare;
     const newGold = p.character.gold + goldShare;
     const xpForNext = getXpForLevel(p.character.level);
-    if (newXp >= xpForNext) {
-      const newLevel = p.character.level + 1;
+    // Level 42 is the max level cap - no further progression
+    if (newXp >= xpForNext && p.character.level < 42) {
+      const newLevel = Math.min(p.character.level + 1, 42);
       const levelUpUpdates: Partial<Character> = {
         xp: newXp - xpForNext, level: newLevel, gold: newGold,
         unspent_stat_points: (p.character.unspent_stat_points || 0) + 1,
