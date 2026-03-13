@@ -1057,7 +1057,7 @@ export default function GameManual() {
           {/* 9. Milestone Rewards */}
           <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏆 Milestone Rewards (Levels 28-40)
+              🏆 Milestone Rewards (Levels 28-42)
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-3 text-xs text-muted-foreground">
