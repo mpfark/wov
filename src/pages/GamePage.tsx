@@ -1304,8 +1304,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
       )}
 
-      {/* NPC Dialog */}
-      <NPCDialogPanel npc={talkingToNPC} open={!!talkingToNPC} onClose={() => setTalkingToNPC(null)} />
+      {/* NPC Dialog — route Soulwright to special dialog */}
+      {talkingToNPC?.name === 'The Soulwright' ? (
+        <SoulforgeDialog
+          open={!!talkingToNPC}
+          onClose={() => setTalkingToNPC(null)}
+          character={character}
+          onForged={() => { fetchInventory(); }}
+        />
+      ) : (
+        <NPCDialogPanel npc={talkingToNPC} open={!!talkingToNPC} onClose={() => setTalkingToNPC(null)} />
+      )}
 
       {/* Death Overlay */}
       {isDead && (

@@ -610,16 +610,18 @@ export default function CharacterPanel({
                               <Shield className="w-3 h-3 text-primary" />
                             </Button>
                           )}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                                onClick={() => onDrop(all[0].id)}>
-                                <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">Drop on ground</TooltipContent>
-                          </Tooltip>
-                          {onDestroy && (
+                          {!inv.item.is_soulbound && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onDrop(all[0].id)}>
+                                  <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">Drop on ground</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {onDestroy && !inv.item.is_soulbound && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
