@@ -424,7 +424,7 @@ export default function CharacterPanel({
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-popover border-border z-50">
-                                  <p className={`font-display ${RARITY_COLORS[potion.item.rarity]}`}>{potion.item.name}</p>
+                                  <p className={`font-display ${getItemColor(potion.item)}`}>{potion.item.name}</p>
                                   <p className="text-xs text-muted-foreground">{potion.item.description}</p>
                                   <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
                                   {Object.entries(potion.item.stats || {}).map(([k, v]) => (
