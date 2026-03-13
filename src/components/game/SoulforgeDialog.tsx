@@ -175,7 +175,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-display text-muted-foreground">Allocate Stats</label>
-                  <span className={`text-xs font-display tabular-nums ${remaining < 0 ? 'text-destructive' : remaining === 0 ? 'text-elvish' : 'text-muted-foreground'}`}>
+                  <span className={`text-xs font-display tabular-nums ${remaining < 0 ? 'text-destructive' : remaining === 0 ? 'text-soulforged' : 'text-muted-foreground'}`}>
                     {remaining} / {budget} pts remaining
                   </span>
                 </div>
