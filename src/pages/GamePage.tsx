@@ -18,6 +18,7 @@ import { useCreatureBroadcast } from '@/hooks/useCreatureBroadcast';
 import { usePartyBroadcast } from '@/hooks/usePartyBroadcast';
 import { useNPCs, NPC } from '@/hooks/useNPCs';
 import NPCDialogPanel from '@/components/game/NPCDialogPanel';
+import SoulforgeDialog from '@/components/game/SoulforgeDialog';
 import { useInventory } from '@/hooks/useInventory';
 import { useParty } from '@/hooks/useParty';
 import { usePartyCombatLog } from '@/hooks/usePartyCombatLog';
