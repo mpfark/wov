@@ -25,7 +25,7 @@ const RARITY_COLORS: Record<string, string> = {
 };
 
 const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
-  item.is_soulbound ? 'text-soulforged' : (RARITY_COLORS[item.rarity] || '');
+  item.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[item.rarity] || '');
 
 export default function BlacksmithPanel({ open, onClose, characterId, gold, inventory, onGoldChange, onInventoryChange, addLog }: Props) {
   const [repairing, setRepairing] = useState(false);
