@@ -42,6 +42,9 @@ const RARITY_COLORS: Record<string, string> = {
   unique: 'text-primary text-glow',
 };
 
+const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
+  item.is_soulbound ? 'text-soulforged' : (RARITY_COLORS[item.rarity] || '');
+
 export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog }: Props) {
   const effectiveCha = cha + (equipmentBonuses.cha || 0);
   const buyDiscount = getChaBuyDiscount(effectiveCha);
@@ -143,7 +146,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
                     </span>
                   )}
                   <div>
-                    <span className={`text-sm font-display ${RARITY_COLORS[vi.item.rarity] || ''}`}>{vi.item.name}</span>
+                    <span className={`text-sm font-display ${getItemColor(vi.item)}`}>{vi.item.name}</span>
                     <span className="text-xs text-muted-foreground ml-2">{vi.item.slot || vi.item.item_type}</span>
                     {totalStock > 0 && <span className="text-xs text-muted-foreground ml-1">(×{totalStock})</span>}
                   </div>
@@ -181,7 +184,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
                     </span>
                   )}
                   <div>
-                    <span className={`text-sm font-display ${RARITY_COLORS[inv.item.rarity] || ''}`}>{inv.item.name}</span>
+                    <span className={`text-sm font-display ${getItemColor(inv.item)}`}>{inv.item.name}</span>
                     <span className="text-xs text-muted-foreground ml-2">{inv.item.slot || inv.item.item_type}</span>
                   </div>
                 </div>

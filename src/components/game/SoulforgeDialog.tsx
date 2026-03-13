@@ -103,9 +103,9 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { onClose(); reset(); } }}>
-      <DialogContent className="sm:max-w-lg border-elvish/30 bg-card max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg border-soulforged/30 bg-card max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-elvish text-glow flex items-center gap-2">
+          <DialogTitle className="font-display text-soulforged text-glow flex items-center gap-2">
             ⚒️ The Soulwright
           </DialogTitle>
           <DialogDescription className="text-xs italic text-muted-foreground">
@@ -175,7 +175,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-display text-muted-foreground">Allocate Stats</label>
-                  <span className={`text-xs font-display tabular-nums ${remaining < 0 ? 'text-destructive' : remaining === 0 ? 'text-elvish' : 'text-muted-foreground'}`}>
+                  <span className={`text-xs font-display tabular-nums ${remaining < 0 ? 'text-destructive' : remaining === 0 ? 'text-soulforged' : 'text-muted-foreground'}`}>
                     {remaining} / {budget} pts remaining
                   </span>
                 </div>
@@ -193,7 +193,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
                         <div className="flex items-center gap-1">
                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-xs"
                             onClick={() => removeStat(key)} disabled={val <= 0}>−</Button>
-                          <span className={`w-5 text-center text-xs tabular-nums font-display ${val > 0 ? 'text-elvish' : 'text-muted-foreground'}`}>
+                          <span className={`w-5 text-center text-xs tabular-nums font-display ${val > 0 ? 'text-soulforged' : 'text-muted-foreground'}`}>
                             {val}
                           </span>
                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-xs"
@@ -212,12 +212,12 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
 
             {/* Preview */}
             {slot && statCount >= 2 && (
-              <div className="p-2 rounded border border-elvish/30 bg-elvish/5">
-                <p className="text-xs font-display text-elvish">{itemName || 'Unnamed'}</p>
+              <div className="p-2 rounded border border-soulforged/30 bg-soulforged/5">
+                <p className="text-xs font-display text-soulforged">{itemName || 'Unnamed'}</p>
                 <p className="text-[10px] text-muted-foreground">Uncommon · Lvl 42 · Soulbound</p>
                 <p className="text-[10px] text-muted-foreground capitalize">{SLOTS.find(s => s.value === slot)?.label}{slot === 'main_hand' ? ` · ${hands === 2 ? 'Two-Handed' : 'One-Handed'}` : ''}</p>
                 {Object.entries(stats).filter(([, v]) => v > 0).map(([k, v]) => (
-                  <p key={k} className="text-[10px] text-elvish">+{v} {STAT_LABELS[k]}</p>
+                  <p key={k} className="text-[10px] text-soulforged">+{v} {STAT_LABELS[k]}</p>
                 ))}
               </div>
             )}

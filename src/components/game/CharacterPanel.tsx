@@ -56,6 +56,9 @@ const RARITY_COLORS: Record<string, string> = {
   unique: 'text-primary text-glow',
 };
 
+const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
+  item.is_soulbound ? 'text-soulforged' : (RARITY_COLORS[item.rarity] || '');
+
 const STAT_FULL_NAMES: Record<string, string> = {
   str: 'Strength', dex: 'Dexterity', con: 'Constitution',
   int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
@@ -95,7 +98,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
             <div className="text-[10px] text-muted-foreground/50">2H</div>
           ) : item ? (
             <>
-              <div className={`text-[10px] font-display truncate ${RARITY_COLORS[item.item.rarity]}`}>
+              <div className={`text-[10px] font-display truncate ${getItemColor(item.item)}`}>
                 {item.item.name}
               </div>
               <div className="text-[9px] text-muted-foreground">{item.current_durability}%</div>
@@ -107,7 +110,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
       </TooltipTrigger>
       {item && !blocked && (
         <TooltipContent className="bg-popover border-border z-50">
-          <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
+          <p className={`font-display ${getItemColor(item.item)}`}>{item.item.name}</p>
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
           {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
           {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
@@ -416,12 +419,12 @@ export default function CharacterPanel({
                             <>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[potion.item.rarity]}`}>
+                                  <span className={`font-display truncate flex-1 cursor-help ${getItemColor(potion.item)}`}>
                                     {potion.item.name}
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-popover border-border z-50">
-                                  <p className={`font-display ${RARITY_COLORS[potion.item.rarity]}`}>{potion.item.name}</p>
+                                  <p className={`font-display ${getItemColor(potion.item)}`}>{potion.item.name}</p>
                                   <p className="text-xs text-muted-foreground">{potion.item.description}</p>
                                   <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
                                   {Object.entries(potion.item.stats || {}).map(([k, v]) => (
@@ -508,7 +511,7 @@ export default function CharacterPanel({
                       <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[inv.item.rarity]}`}>
+                            <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
                               {isBroken && <span className="text-destructive mr-1">⚒</span>}
                               {inv.item.name}
                               {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
@@ -517,7 +520,7 @@ export default function CharacterPanel({
                             </span>
                           </TooltipTrigger>
                           <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-                            <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
+                            <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
                             {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
                             <p className="text-xs text-muted-foreground">{inv.item.description}</p>
                             {inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[inv.item.slot] || inv.item.slot} · {inv.item.item_type}{inv.item.hands === 2 ? ' · Two-Handed' : inv.item.hands === 1 ? ' · One-Handed' : ''}</p>}

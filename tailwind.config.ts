@@ -75,6 +75,7 @@ export default {
         "dot-poison": "hsl(var(--dot-poison))",
         "dot-burn": "hsl(var(--dot-burn))",
         "dot-bleed": "hsl(var(--dot-bleed))",
+        soulforged: "hsl(var(--soulforged))",
       },
       borderRadius: {
         lg: "var(--radius)",
