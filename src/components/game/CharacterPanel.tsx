@@ -419,7 +419,7 @@ export default function CharacterPanel({
                             <>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className={`font-display truncate flex-1 cursor-help ${RARITY_COLORS[potion.item.rarity]}`}>
+                                  <span className={`font-display truncate flex-1 cursor-help ${getItemColor(potion.item)}`}>
                                     {potion.item.name}
                                   </span>
                                 </TooltipTrigger>
