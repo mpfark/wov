@@ -193,7 +193,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
                         <div className="flex items-center gap-1">
                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-xs"
                             onClick={() => removeStat(key)} disabled={val <= 0}>−</Button>
-                          <span className={`w-5 text-center text-xs tabular-nums font-display ${val > 0 ? 'text-elvish' : 'text-muted-foreground'}`}>
+                          <span className={`w-5 text-center text-xs tabular-nums font-display ${val > 0 ? 'text-soulforged' : 'text-muted-foreground'}`}>
                             {val}
                           </span>
                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-xs"
