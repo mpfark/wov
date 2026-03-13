@@ -1080,7 +1080,9 @@ export default function GameManual() {
                     <TableRow><TableCell className="text-xs">36</TableCell><TableCell className="text-xs">🏅 Title: Duke / Duchess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">38</TableCell><TableCell className="text-xs">🏅 Title: Prince / Princess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">39</TableCell><TableCell className="text-xs">🔮 CP Discount</TableCell><TableCell className="text-xs">All ability CP costs reduced by 10%</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: King / Queen</TableCell><TableCell className="text-xs">Highest prestige title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: King / Queen</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">42</TableCell><TableCell className="text-xs">🏅 Title: Emperor / Empress</TableCell><TableCell className="text-xs">Maximum title — pinnacle of mortal power</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">42</TableCell><TableCell className="text-xs">⚒️ Soulforge</TableCell><TableCell className="text-xs">One-time crafting of a custom soulbound uncommon item via "The Soulwright" NPC in The Echoing Vein (Dwarven Kingdom). Choose slot, allocate stats within budget (1H: 19pts, 2H: 28pts). Item cannot be dropped or sold.</TableCell></TableRow>
                   </TableBody>
                 </Table>
               </div>
