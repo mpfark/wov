@@ -184,7 +184,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
                     </span>
                   )}
                   <div>
-                    <span className={`text-sm font-display ${RARITY_COLORS[inv.item.rarity] || ''}`}>{inv.item.name}</span>
+                    <span className={`text-sm font-display ${getItemColor(inv.item)}`}>{inv.item.name}</span>
                     <span className="text-xs text-muted-foreground ml-2">{inv.item.slot || inv.item.item_type}</span>
                   </div>
                 </div>
