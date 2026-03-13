@@ -19,6 +19,7 @@ export interface InventoryItem {
     value: number;
     max_durability: number;
     hands: number | null;
+    is_soulbound?: boolean;
   };
 }
 
@@ -86,9 +87,11 @@ export function useInventory(characterId: string | null) {
   }, [inventory, fetchInventory]);
 
   const dropItem = useCallback(async (inventoryId: string) => {
+    const item = inventory.find(i => i.id === inventoryId);
+    if (item?.item.is_soulbound) return; // Cannot drop soulbound items
     await supabase.from('character_inventory').delete().eq('id', inventoryId);
     fetchInventory();
-  }, [fetchInventory]);
+  }, [inventory, fetchInventory]);
 
   const useConsumable = useCallback(async (inventoryId: string, characterId: string, currentHp: number, maxHp: number, updateCharacter: (updates: { hp: number }) => Promise<void>) => {
     const inv = inventory.find(i => i.id === inventoryId);

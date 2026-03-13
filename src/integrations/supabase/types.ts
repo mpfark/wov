@@ -212,6 +212,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           respec_points: number
+          soulforged_item_created: boolean
           str: number
           unspent_stat_points: number
           updated_at: string
@@ -244,6 +245,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           respec_points?: number
+          soulforged_item_created?: boolean
           str?: number
           unspent_stat_points?: number
           updated_at?: string
@@ -276,6 +278,7 @@ export type Database = {
           name?: string
           race?: Database["public"]["Enums"]["character_race"]
           respec_points?: number
+          soulforged_item_created?: boolean
           str?: number
           unspent_stat_points?: number
           updated_at?: string
@@ -450,6 +453,7 @@ export type Database = {
           description: string
           hands: number | null
           id: string
+          is_soulbound: boolean
           item_type: string
           level: number
           max_durability: number
@@ -466,6 +470,7 @@ export type Database = {
           description?: string
           hands?: number | null
           id?: string
+          is_soulbound?: boolean
           item_type?: string
           level?: number
           max_durability?: number
@@ -482,6 +487,7 @@ export type Database = {
           description?: string
           hands?: number | null
           id?: string
+          is_soulbound?: boolean
           item_type?: string
           level?: number
           max_durability?: number
