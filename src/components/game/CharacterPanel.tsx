@@ -56,6 +56,9 @@ const RARITY_COLORS: Record<string, string> = {
   unique: 'text-primary text-glow',
 };
 
+const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
+  item.is_soulbound ? 'text-soulforged' : (RARITY_COLORS[item.rarity] || '');
+
 const STAT_FULL_NAMES: Record<string, string> = {
   str: 'Strength', dex: 'Dexterity', con: 'Constitution',
   int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
