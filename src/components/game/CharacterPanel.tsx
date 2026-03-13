@@ -98,7 +98,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
             <div className="text-[10px] text-muted-foreground/50">2H</div>
           ) : item ? (
             <>
-              <div className={`text-[10px] font-display truncate ${RARITY_COLORS[item.item.rarity]}`}>
+              <div className={`text-[10px] font-display truncate ${getItemColor(item.item)}`}>
                 {item.item.name}
               </div>
               <div className="text-[9px] text-muted-foreground">{item.current_durability}%</div>
