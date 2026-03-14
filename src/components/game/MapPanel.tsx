@@ -419,9 +419,20 @@ export default function MapPanel({
                 </div>
               </HoverCardContent>
             </HoverCard>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* World Map Dialog */}
+        <PlayerWorldMapDialog
+          open={worldMapOpen}
+          onOpenChange={setWorldMapOpen}
+          characterId={character.id}
+          currentNodeId={currentNodeId}
+          nodes={nodes}
+          regions={regions}
+          areas={areas}
+        />
 
       {/* Party Section */}
       <div className="border-t border-border pt-2">
