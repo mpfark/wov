@@ -185,10 +185,11 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
                     const cap = getItemStatCap(key, 42);
                     const statCost = ITEM_STAT_COSTS[key] || 1;
                     const costLabel = statCost !== 1 ? ` (${statCost}pt${statCost !== 1 ? '' : ''})` : '';
-                    return (
+                     return (
                       <div key={key} className="flex items-center justify-between py-0.5 px-1 rounded hover:bg-accent/20">
-                        <span className="text-xs font-display text-foreground">
+                        <span className="text-xs font-display text-foreground" title={key === 'potion_slots' ? `Determines how many potions you can load into this belt for quick use in combat. Costs ${statCost}pts per slot, max ${cap}.` : undefined}>
                           {STAT_LABELS[key]}{costLabel}
+                          {key === 'potion_slots' && <span className="text-[9px] text-muted-foreground ml-1">max {cap}</span>}
                         </span>
                         <div className="flex items-center gap-1">
                           <Button size="sm" variant="ghost" className="h-5 w-5 p-0 text-xs"
