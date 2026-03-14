@@ -364,7 +364,11 @@ Deno.serve(async (req) => {
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
       const dotPenaltyNote = dotPenalty < 1 ? ` (${Math.round(dotPenalty * 100)}% XP — level penalty)` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-      if (split > 1) {
+      const allDotCapped = members.every((mm: any) => mm.c.level >= 42);
+      if (allDotCapped) {
+        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${split > 1 ? ' each' : ''}.` : '';
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT!${cappedGoldNote} Your power transcends experience.` });
+      } else if (split > 1) {
         events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${dotKillerXp} XP${goldNote} each.${dotPenaltyNote}${xpBoostNote}` });
       } else {
         events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${dotKillerXp} XP${goldNote}.${dotPenaltyNote}${xpBoostNote}` });
