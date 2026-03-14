@@ -213,7 +213,12 @@ export function useActions(params: UseActionsParams) {
     const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
     const boostNote = p.xpMultiplier > 1 ? ` ⚡${p.xpMultiplier}x` : '';
     const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
-    p.addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}${boostNote}`);
+    if (p.character.level >= 42) {
+      const maxGoldNote = goldShare > 0 ? ` +${goldShare} gold.` : '';
+      p.addLog(`☠️ ${creature.name} has been slain!${maxGoldNote} Your power transcends experience.`);
+    } else {
+      p.addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}${boostNote}`);
+    }
     const newXp = p.character.xp + xpShare;
     const newGold = p.character.gold + goldShare;
     const xpForNext = getXpForLevel(p.character.level);
