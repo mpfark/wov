@@ -238,19 +238,48 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     }));
   }, [nodes, visitedIds]);
 
+  // Ghost nodes: unvisited neighbors of visited nodes (fog-of-war hints)
+  const ghostNodes = useMemo(() => {
+    const ghosts = new Map<string, { parentId: string; direction: string }>();
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+    for (const node of nodes) {
+      if (!visitedIds.has(node.id)) continue;
+      for (const conn of node.connections) {
+        if (conn.hidden || visitedIds.has(conn.node_id) || ghosts.has(conn.node_id)) continue;
+        if (!nodeMap.has(conn.node_id)) continue;
+        ghosts.set(conn.node_id, { parentId: node.id, direction: conn.direction });
+      }
+    }
+    return ghosts;
+  }, [nodes, visitedIds]);
+
   // Layout
   const positions = useMemo(() => layoutNodes(visibleNodes), [visibleNodes]);
 
-  // Pixel positions
+  // Pixel positions (visited + ghosts)
   const nodePositions = useMemo(() => {
     const map = new Map<string, { px: number; py: number }>();
     positions.forEach((pos, id) => {
       map.set(id, { px: pos.x * SPACING, py: pos.y * SPACING });
     });
+    // Position ghost nodes relative to their parent
+    ghostNodes.forEach(({ parentId, direction }, ghostId) => {
+      const parentPos = positions.get(parentId);
+      if (!parentPos) return;
+      const offset = DIRECTION_OFFSETS[direction] || [1, 0];
+      let gx = parentPos.x + offset[0];
+      let gy = parentPos.y + offset[1];
+      // Simple collision check with existing positions
+      if ([...map.values()].some(p => Math.abs(p.px - gx * SPACING) < 5 && Math.abs(p.py - gy * SPACING) < 5)) {
+        gx += offset[0] * 0.5;
+        gy += offset[1] * 0.5;
+      }
+      map.set(ghostId, { px: gx * SPACING, py: gy * SPACING });
+    });
     return map;
-  }, [positions]);
+  }, [positions, ghostNodes]);
 
-  // Edges
+  // Edges (visited-to-visited only)
   const edges = useMemo(() => {
     const edgeSet = new Set<string>();
     const result: Array<{ from: string; to: string }> = [];
@@ -265,6 +294,17 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     }
     return result;
   }, [visibleNodes, nodePositions]);
+
+  // Ghost edges (visited-to-ghost)
+  const ghostEdges = useMemo(() => {
+    const result: Array<{ from: string; to: string }> = [];
+    ghostNodes.forEach(({ parentId }, ghostId) => {
+      if (nodePositions.has(parentId) && nodePositions.has(ghostId)) {
+        result.push({ from: parentId, to: ghostId });
+      }
+    });
+    return result;
+  }, [ghostNodes, nodePositions]);
 
   // Region outlines
   const regionOutlines = useMemo(() => {
@@ -503,6 +543,54 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                       strokeWidth={1.2}
                       opacity={0.5}
                     />
+                  );
+                })}
+
+                {/* Ghost edges (dashed, dim) */}
+                {ghostEdges.map(({ from, to }) => {
+                  const a = nodePositions.get(from);
+                  const b = nodePositions.get(to);
+                  if (!a || !b) return null;
+                  return (
+                    <line
+                      key={`ghost-${from}-${to}`}
+                      x1={a.px} y1={a.py} x2={b.px} y2={b.py}
+                      stroke="hsl(var(--muted-foreground))"
+                      strokeWidth={1}
+                      strokeDasharray="3 4"
+                      opacity={0.2}
+                    />
+                  );
+                })}
+
+                {/* Ghost nodes (unvisited neighbors) */}
+                {[...ghostNodes.keys()].map(ghostId => {
+                  const p = nodePositions.get(ghostId);
+                  if (!p) return null;
+                  return (
+                    <g key={`ghost-${ghostId}`}>
+                      <circle
+                        cx={p.px}
+                        cy={p.py}
+                        r={NODE_R * 0.75}
+                        fill="hsl(var(--muted) / 0.3)"
+                        stroke="hsl(var(--muted-foreground) / 0.25)"
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
+                      />
+                      <text
+                        x={p.px}
+                        y={p.py + 1}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="hsl(var(--muted-foreground))"
+                        fontSize={13}
+                        fontWeight={700}
+                        opacity={0.35}
+                      >
+                        ?
+                      </text>
+                    </g>
                   );
                 })}
 
