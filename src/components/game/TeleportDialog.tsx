@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/hooks/useNodes';
 import { PartyMember } from '@/hooks/useParty';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeleportDestination {
   node: GameNode;
@@ -28,6 +30,7 @@ interface Props {
   playerCp: number;
   playerMaxCp: number;
   characterLevel: number;
+  characterId?: string;
   onTeleport: (nodeId: string, cpCost: number) => void;
   waymark?: { node: GameNode; region: Region | undefined } | null;
   onReturnToWaymark?: (cpCost: number) => void;
@@ -42,9 +45,20 @@ function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Regio
   return Math.min(10 + levelDiff * 2, 30);
 }
 
-export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, areas = [], playerCp, playerMaxCp, characterLevel, onTeleport, waymark, onReturnToWaymark, partyMembers = [], myCharacterId }: Props) {
+export default function TeleportDialog({ open, onClose, currentNode, currentRegion, regions, nodes, areas = [], playerCp, playerMaxCp, characterLevel, characterId, onTeleport, waymark, onReturnToWaymark, partyMembers = [], myCharacterId }: Props) {
+  // Fetch visited node IDs to filter teleport destinations
+  const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!open || !characterId) return;
+    supabase.from('character_visited_nodes').select('node_id').eq('character_id', characterId)
+      .then(({ data }) => {
+        if (data) setVisitedIds(new Set(data.map(r => r.node_id)));
+      });
+  }, [open, characterId]);
+
   const destinations: TeleportDestination[] = nodes
-    .filter(n => n.is_teleport && n.id !== currentNode.id)
+    .filter(n => n.is_teleport && n.id !== currentNode.id && visitedIds.has(n.id))
     .map(n => {
       const region = regions.find(r => r.id === n.region_id);
       return region ? { node: n, region, cpCost: calculateTeleportCpCost(currentRegion, region) } : null;
