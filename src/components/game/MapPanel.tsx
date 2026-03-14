@@ -5,7 +5,8 @@ import { PlayerPresence } from '@/hooks/usePresence';
 import { Character } from '@/hooks/useCharacter';
 import PlayerGraphView from './PlayerGraphView';
 import PartyPanel from './PartyPanel';
-import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer } from 'lucide-react';
+import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe } from 'lucide-react';
+import PlayerWorldMapDialog from './PlayerWorldMapDialog';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -91,6 +92,7 @@ export default function MapPanel({
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
   const [rebindingAction, setRebindingAction] = useState<ActionName | null>(null);
+  const [worldMapOpen, setWorldMapOpen] = useState(false);
 
   const handleKeyCapture = useCallback((e: React.KeyboardEvent) => {
     if (!keyboardBindings) return;
@@ -351,12 +353,26 @@ export default function MapPanel({
                 )}
               </TooltipProvider>
             </div>
-            <HoverCard openDelay={100} closeDelay={200}>
-              <HoverCardTrigger asChild>
-                <button className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors">
-                  <MapIcon className="h-3 w-3 text-muted-foreground" />
-                </button>
-              </HoverCardTrigger>
+            <div className="flex items-center gap-1">
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setWorldMapOpen(true)}
+                      className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors"
+                    >
+                      <Globe className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">World Map</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <HoverCard openDelay={100} closeDelay={200}>
+                <HoverCardTrigger asChild>
+                  <button className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors">
+                    <MapIcon className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                </HoverCardTrigger>
               <HoverCardContent side="top" align="end" className="w-56 p-2.5">
                 <h4 className="font-display text-[10px] text-muted-foreground mb-1.5">Map</h4>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
@@ -403,9 +419,21 @@ export default function MapPanel({
                 </div>
               </HoverCardContent>
             </HoverCard>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* World Map Dialog */}
+      <PlayerWorldMapDialog
+        open={worldMapOpen}
+        onOpenChange={setWorldMapOpen}
+        characterId={character.id}
+        currentNodeId={currentNodeId}
+        nodes={nodes}
+        regions={regions}
+        areas={areas}
+      />
 
       {/* Party Section */}
       <div className="border-t border-border pt-2">
