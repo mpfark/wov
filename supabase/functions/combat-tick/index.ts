@@ -276,27 +276,31 @@ Deno.serve(async (req) => {
               totalGold = Math.floor(totalGold * chaGoldMult((c.cha || 10) + (eb.cha || 0)));
             }
 
-            const split = members.length;
-            const goldEach = Math.floor(totalGold / split);
+            const goldSplit = members.length;
+            const uncappedMembers = members.filter(mm => mm.c.level < 42);
+            const xpSplit = uncappedMembers.length || 1;
+            const goldEach = Math.floor(totalGold / goldSplit);
             for (const mm of members) {
-              const penalty = xpPenalty(mm.c.level, target.level);
-              mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / split);
+              if (mm.c.level < 42) {
+                const penalty = xpPenalty(mm.c.level, target.level);
+                mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplit);
+              }
               mGold[mm.id] += goldEach;
             }
 
             const killerPenalty = xpPenalty(c.level, target.level);
-            const killerXp = Math.floor(Math.floor(baseXp * killerPenalty * xpMult) / split);
+            const killerXp = c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * killerPenalty * xpMult) / xpSplit);
             const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
             const penaltyNote = killerPenalty < 1 ? ` (${Math.round(killerPenalty * 100)}% XP — level penalty)` : '';
             const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-            const allCapped = members.every((mm: any) => mm.c.level >= 42);
+            const allCapped = uncappedMembers.length === 0;
             if (allCapped) {
-              const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${split > 1 ? ' each' : ''}.` : '';
+              const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
               events.push({ type: 'creature_kill', message: `☠️ ${target.name} has been slain!${cappedGoldNote} Your power transcends experience.` });
-            } else if (split > 1) {
+            } else if (goldSplit > 1) {
               events.push({
                 type: 'creature_kill',
-                message: `☠️ ${target.name} has been slain! Rewards split ${split} ways: +${killerXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}`,
+                message: `☠️ ${target.name} has been slain! Rewards split ${xpSplit} ways: +${killerXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}`,
               });
             } else {
               events.push({
@@ -351,25 +355,29 @@ Deno.serve(async (req) => {
       if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
         totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
       }
-      const split = members.length;
-      const goldEach = Math.floor(totalGold / split);
+      const goldSplit = members.length;
+      const uncappedDot = members.filter(mm => mm.c.level < 42);
+      const xpSplitDot = uncappedDot.length || 1;
+      const goldEach = Math.floor(totalGold / goldSplit);
       for (const mm of members) {
-        const penalty = xpPenalty(mm.c.level, creature.level);
-        mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / split);
+        if (mm.c.level < 42) {
+          const penalty = xpPenalty(mm.c.level, creature.level);
+          mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplitDot);
+        }
         mGold[mm.id] += goldEach;
       }
-      const dotKillerMember = members[0]; // use first member for penalty display in solo
+      const dotKillerMember = uncappedDot[0] || members[0];
       const dotPenalty = xpPenalty(dotKillerMember.c.level, creature.level);
-      const dotKillerXp = Math.floor(Math.floor(baseXp * dotPenalty * xpMult) / split);
+      const dotKillerXp = dotKillerMember.c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * dotPenalty * xpMult) / xpSplitDot);
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
       const dotPenaltyNote = dotPenalty < 1 ? ` (${Math.round(dotPenalty * 100)}% XP — level penalty)` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-      const allDotCapped = members.every((mm: any) => mm.c.level >= 42);
+      const allDotCapped = uncappedDot.length === 0;
       if (allDotCapped) {
-        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${split > 1 ? ' each' : ''}.` : '';
+        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
         events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT!${cappedGoldNote} Your power transcends experience.` });
-      } else if (split > 1) {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${dotKillerXp} XP${goldNote} each.${dotPenaltyNote}${xpBoostNote}` });
+      } else if (goldSplit > 1) {
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${xpSplitDot} ways: +${dotKillerXp} XP${goldNote} each.${dotPenaltyNote}${xpBoostNote}` });
       } else {
         events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${dotKillerXp} XP${goldNote}.${dotPenaltyNote}${xpBoostNote}` });
       }

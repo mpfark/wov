@@ -188,28 +188,33 @@ export function useActions(params: UseActionsParams) {
         totalGold = Math.floor(totalGold * getChaGoldMultiplier(effectiveCha));
       }
     }
-    let splitCount = 1;
+    let goldSplitCount = 1;
+    let xpSplitCount = 1;
     if (p.party?.id) {
       const { data: freshMembers } = await supabase
         .from('party_members')
-        .select('character_id, character:characters(current_node_id)')
+        .select('character_id, character:characters(current_node_id, level)')
         .eq('party_id', p.party.id)
         .eq('status', 'accepted');
       const membersHere = (freshMembers || []).filter(
         (m: any) => m.character?.current_node_id === p.character.current_node_id
       );
-      splitCount = membersHere.length > 1 ? membersHere.length : 1;
-      const xpShare = Math.floor(totalXp / splitCount);
-      const goldShare = Math.floor(totalGold / splitCount);
+      goldSplitCount = membersHere.length > 1 ? membersHere.length : 1;
+      const uncappedHere = membersHere.filter((m: any) => (m.character?.level || 0) < 42);
+      xpSplitCount = uncappedHere.length > 0 ? uncappedHere.length : 1;
+      const xpShare = p.character.level >= 42 ? 0 : Math.floor(totalXp / xpSplitCount);
+      const goldShare = Math.floor(totalGold / goldSplitCount);
       for (const m of membersHere) {
         if (m.character_id === p.character.id || !m.character_id) continue;
+        const memberCapped = (m.character?.level || 0) >= 42;
+        const memberXp = memberCapped ? 0 : Math.floor(totalXp / xpSplitCount);
         try {
-          await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: xpShare, _gold: goldShare });
+          await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: memberXp, _gold: goldShare });
         } catch (e) { console.error('Failed to award party member:', e); }
       }
     }
-    const xpShare = Math.floor(totalXp / splitCount);
-    const goldShare = Math.floor(totalGold / splitCount);
+    const xpShare = p.character.level >= 42 ? 0 : Math.floor(totalXp / xpSplitCount);
+    const goldShare = Math.floor(totalGold / goldSplitCount);
     const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
     const boostNote = p.xpMultiplier > 1 ? ` ⚡${p.xpMultiplier}x` : '';
     const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
@@ -303,7 +308,7 @@ export function useActions(params: UseActionsParams) {
     if (creature.rarity === 'boss' && p.character.level >= 30) {
       const bhpReward = Math.floor(creature.level * 0.5);
       if (bhpReward > 0) {
-        const bhpShare = Math.floor(bhpReward / splitCount);
+        const bhpShare = Math.floor(bhpReward / goldSplitCount);
         if (bhpShare > 0) {
           const newBhp = (p.character.bhp || 0) + bhpShare;
           await p.updateCharacter({ bhp: newBhp });
