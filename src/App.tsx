@@ -25,6 +25,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PwaUpdatePrompt />
       <BrowserRouter>
         <GameProvider>
           <Suspense fallback={<LoadingFallback />}>
