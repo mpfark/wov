@@ -92,6 +92,7 @@ export default function MapPanel({
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
   const [rebindingAction, setRebindingAction] = useState<ActionName | null>(null);
+  const [worldMapOpen, setWorldMapOpen] = useState(false);
 
   const handleKeyCapture = useCallback((e: React.KeyboardEvent) => {
     if (!keyboardBindings) return;
