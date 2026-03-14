@@ -16,8 +16,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    mode === "production" &&
-      VitePWA({
+    VitePWA({
         registerType: "autoUpdate",
         devOptions: { enabled: false },
         workbox: {
