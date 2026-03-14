@@ -253,8 +253,15 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     return ghosts;
   }, [nodes, visitedIds]);
 
-  // Layout
-  const positions = useMemo(() => layoutNodes(visibleNodes), [visibleNodes]);
+  // Layout uses ALL nodes for BFS so visited clusters stay spatially connected
+  // even when bridge nodes between them haven't been visited
+  const positions = useMemo(() => {
+    const allNodesForLayout = nodes.map(n => ({
+      ...n,
+      connections: n.connections.filter(c => !c.hidden),
+    }));
+    return layoutNodes(allNodesForLayout);
+  }, [nodes]);
 
   // Pixel positions (visited + ghosts)
   const nodePositions = useMemo(() => {
