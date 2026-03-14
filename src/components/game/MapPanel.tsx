@@ -353,12 +353,26 @@ export default function MapPanel({
                 )}
               </TooltipProvider>
             </div>
-            <HoverCard openDelay={100} closeDelay={200}>
-              <HoverCardTrigger asChild>
-                <button className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors">
-                  <MapIcon className="h-3 w-3 text-muted-foreground" />
-                </button>
-              </HoverCardTrigger>
+            <div className="flex items-center gap-1">
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setWorldMapOpen(true)}
+                      className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors"
+                    >
+                      <Globe className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">World Map</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <HoverCard openDelay={100} closeDelay={200}>
+                <HoverCardTrigger asChild>
+                  <button className="h-5 w-5 flex items-center justify-center rounded bg-background/70 border border-border/50 hover:bg-muted/60 transition-colors">
+                    <MapIcon className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                </HoverCardTrigger>
               <HoverCardContent side="top" align="end" className="w-56 p-2.5">
                 <h4 className="font-display text-[10px] text-muted-foreground mb-1.5">Map</h4>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
