@@ -123,7 +123,7 @@ export function useInventory(characterId: string | null) {
   // Belt potion system
   const equippedBelt = equipped.find(i => i.equipped_slot === 'belt');
   const beltCapacity = equippedBelt
-    ? ((equippedBelt.item.stats?.potion_slots as number) || 3)
+    ? ((equippedBelt.item.stats?.potion_slots as number) ?? 0)
     : 0;
   const beltedPotions = inventory.filter(i => i.belt_slot !== null && i.belt_slot !== undefined);
 

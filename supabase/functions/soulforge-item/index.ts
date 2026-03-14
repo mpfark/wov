@@ -9,9 +9,9 @@ const corsHeaders = {
 const VALID_SLOTS = [
   "head","amulet","shoulders","chest","gloves","belt","pants","ring","trinket","main_hand","off_hand","boots",
 ];
-const STAT_KEYS = ["str","dex","con","int","wis","cha","ac","hp","hp_regen"];
+const STAT_KEYS = ["str","dex","con","int","wis","cha","ac","hp","hp_regen","potion_slots"];
 const STAT_COSTS: Record<string, number> = {
-  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2,
+  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2, potion_slots: 3,
 };
 
 function getStatBudget(hands: number): number {
@@ -21,6 +21,7 @@ function getStatBudget(hands: number): number {
 }
 
 function getStatCap(key: string): number {
+  if (key === "potion_slots") return 4;
   if (key === "ac" || key === "hp_regen") return 2 + Math.floor(42 / 10);
   if (key === "hp") return 6 + Math.floor(42 / 5) * 2;
   return 4 + Math.floor(42 / 4);

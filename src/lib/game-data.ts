@@ -106,7 +106,7 @@ export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {
 };
 
 export const ITEM_STAT_COSTS: Record<string, number> = {
-  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2,
+  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2, potion_slots: 3,
 };
 
 export const ITEM_STAT_CAPS: Record<string, number> = {
@@ -185,6 +185,7 @@ export function calculateItemStatCost(stats: Record<string, number>): number {
 export function getItemStatCap(statKey: string, level: number = 1, itemType: string = 'equipment'): number {
   // Consumables have no stat caps (single-use)
   if (itemType === 'consumable') return 9999;
+  if (statKey === 'potion_slots') return 4;
   if (statKey === 'ac' || statKey === 'hp_regen') {
     return 2 + Math.floor(level / 10);
   }
