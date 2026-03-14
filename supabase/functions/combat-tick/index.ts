@@ -571,7 +571,7 @@ Deno.serve(async (req) => {
 
       if (mXp[m.id] > 0 || mGold[m.id] > 0) {
         const needed = xpForLevel(c.level);
-        if (newXp >= needed) {
+        if (newXp >= needed && c.level < 42) {
           newLevel = c.level + 1;
           newXp -= needed;
           updates.level = newLevel;
@@ -608,6 +608,7 @@ Deno.serve(async (req) => {
           events.push({ type: 'level_up', character_id: m.id, message: `🎉 Level Up! ${c.name} is now level ${newLevel}!` });
           events.push({ type: 'stat_point', message: `📊 ${c.name} gained 1 stat point to allocate!` });
         }
+        if (newLevel >= 42) newXp = 0;
         updates.xp = newXp;
         updates.gold = newGold;
       }
