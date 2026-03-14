@@ -284,18 +284,20 @@ Deno.serve(async (req) => {
               mGold[mm.id] += goldEach;
             }
 
+            const killerPenalty = xpPenalty(c.level, target.level);
+            const killerXp = Math.floor(Math.floor(baseXp * killerPenalty * xpMult) / split);
             const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
+            const penaltyNote = killerPenalty < 1 ? ` (${Math.round(killerPenalty * 100)}% XP — level penalty)` : '';
             const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-            const displayXp = Math.floor(baseXp * xpMult);
             if (split > 1) {
               events.push({
                 type: 'creature_kill',
-                message: `☠️ ${target.name} has been slain! Rewards split ${split} ways: +${Math.floor(displayXp / split)} XP${goldNote} each.${xpBoostNote}`,
+                message: `☠️ ${target.name} has been slain! Rewards split ${split} ways: +${killerXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}`,
               });
             } else {
               events.push({
                 type: 'creature_kill',
-                message: `☠️ ${target.name} has been slain! +${displayXp} XP${goldNote}.${xpBoostNote}`,
+                message: `☠️ ${target.name} has been slain! +${killerXp} XP${goldNote}.${penaltyNote}${xpBoostNote}`,
               });
             }
 
