@@ -354,13 +354,16 @@ Deno.serve(async (req) => {
         mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / split);
         mGold[mm.id] += goldEach;
       }
+      const dotKillerMember = members[0]; // use first member for penalty display in solo
+      const dotPenalty = xpPenalty(dotKillerMember.c.level, creature.level);
+      const dotKillerXp = Math.floor(Math.floor(baseXp * dotPenalty * xpMult) / split);
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
+      const dotPenaltyNote = dotPenalty < 1 ? ` (${Math.round(dotPenalty * 100)}% XP — level penalty)` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-      const displayXp = Math.floor(baseXp * xpMult);
       if (split > 1) {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${Math.floor(displayXp / split)} XP${goldNote} each.${xpBoostNote}` });
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${split} ways: +${dotKillerXp} XP${goldNote} each.${dotPenaltyNote}${xpBoostNote}` });
       } else {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${displayXp} XP${goldNote}.${xpBoostNote}` });
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${dotKillerXp} XP${goldNote}.${dotPenaltyNote}${xpBoostNote}` });
       }
       // BHP for boss DoT kills
       if (creature.rarity === 'boss') {
