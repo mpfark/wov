@@ -180,7 +180,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
                   </span>
                 </div>
                 <div className="space-y-1">
-                  {STAT_KEYS.map(key => {
+                  {STAT_KEYS.filter(key => key !== 'potion_slots' || slot === 'belt').map(key => {
                     const val = stats[key] || 0;
                     const cap = getItemStatCap(key, 42);
                     const statCost = ITEM_STAT_COSTS[key] || 1;

@@ -185,6 +185,7 @@ export function calculateItemStatCost(stats: Record<string, number>): number {
 export function getItemStatCap(statKey: string, level: number = 1, itemType: string = 'equipment'): number {
   // Consumables have no stat caps (single-use)
   if (itemType === 'consumable') return 9999;
+  if (statKey === 'potion_slots') return 4;
   if (statKey === 'ac' || statKey === 'hp_regen') {
     return 2 + Math.floor(level / 10);
   }

@@ -21,6 +21,7 @@ function getStatBudget(hands: number): number {
 }
 
 function getStatCap(key: string): number {
+  if (key === "potion_slots") return 4;
   if (key === "ac" || key === "hp_regen") return 2 + Math.floor(42 / 10);
   if (key === "hp") return 6 + Math.floor(42 / 5) * 2;
   return 4 + Math.floor(42 / 4);
