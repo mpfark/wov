@@ -608,6 +608,7 @@ Deno.serve(async (req) => {
           events.push({ type: 'level_up', character_id: m.id, message: `🎉 Level Up! ${c.name} is now level ${newLevel}!` });
           events.push({ type: 'stat_point', message: `📊 ${c.name} gained 1 stat point to allocate!` });
         }
+        if (newLevel >= 42) newXp = 0;
         updates.xp = newXp;
         updates.gold = newGold;
       }
