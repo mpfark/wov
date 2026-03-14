@@ -32,10 +32,10 @@ const SLOTS = [
 
 const STAT_LABELS: Record<string, string> = {
   str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA',
-  ac: 'AC', hp: 'HP', hp_regen: 'Regen',
+  ac: 'AC', hp: 'HP', hp_regen: 'Regen', potion_slots: 'Potion Slots',
 };
 
-const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];
+const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen', 'potion_slots'];
 
 export default function SoulforgeDialog({ open, onClose, character, onForged }: Props) {
   const [itemName, setItemName] = useState('');
