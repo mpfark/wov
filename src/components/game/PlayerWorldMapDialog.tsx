@@ -546,6 +546,54 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   );
                 })}
 
+                {/* Ghost edges (dashed, dim) */}
+                {ghostEdges.map(({ from, to }) => {
+                  const a = nodePositions.get(from);
+                  const b = nodePositions.get(to);
+                  if (!a || !b) return null;
+                  return (
+                    <line
+                      key={`ghost-${from}-${to}`}
+                      x1={a.px} y1={a.py} x2={b.px} y2={b.py}
+                      stroke="hsl(var(--muted-foreground))"
+                      strokeWidth={1}
+                      strokeDasharray="3 4"
+                      opacity={0.2}
+                    />
+                  );
+                })}
+
+                {/* Ghost nodes (unvisited neighbors) */}
+                {[...ghostNodes.keys()].map(ghostId => {
+                  const p = nodePositions.get(ghostId);
+                  if (!p) return null;
+                  return (
+                    <g key={`ghost-${ghostId}`}>
+                      <circle
+                        cx={p.px}
+                        cy={p.py}
+                        r={NODE_R * 0.75}
+                        fill="hsl(var(--muted) / 0.3)"
+                        stroke="hsl(var(--muted-foreground) / 0.25)"
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
+                      />
+                      <text
+                        x={p.px}
+                        y={p.py + 1}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="hsl(var(--muted-foreground))"
+                        fontSize={13}
+                        fontWeight={700}
+                        opacity={0.35}
+                      >
+                        ?
+                      </text>
+                    </g>
+                  );
+                })}
+
                 {/* Nodes */}
                 {visibleNodes.map(node => {
                   const p = nodePositions.get(node.id);
