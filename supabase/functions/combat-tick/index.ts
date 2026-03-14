@@ -571,7 +571,7 @@ Deno.serve(async (req) => {
 
       if (mXp[m.id] > 0 || mGold[m.id] > 0) {
         const needed = xpForLevel(c.level);
-        if (newXp >= needed) {
+        if (newXp >= needed && c.level < 42) {
           newLevel = c.level + 1;
           newXp -= needed;
           updates.level = newLevel;
