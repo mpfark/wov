@@ -98,7 +98,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
   const [editLocked, setEditLocked] = useState(false);
   const [editLockKey, setEditLockKey] = useState('');
 
-  const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean }[] = (() => {
+  const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string }[] = (() => {
     try { return JSON.parse(connections) || []; } catch { return []; }
   })();
 
