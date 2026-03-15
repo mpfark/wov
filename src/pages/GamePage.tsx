@@ -195,6 +195,70 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(nodeChannel, character.current_node_id, character.id);
 
+  // ── Locked connections — temporary unlock state ──
+  const [unlockedConnections, setUnlockedConnections] = useState<Map<string, number>>(new Map());
+  const unlockTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Clear unlock state on node change
+  useEffect(() => {
+    unlockTimersRef.current.forEach(t => clearTimeout(t));
+    unlockTimersRef.current.clear();
+    setUnlockedConnections(new Map());
+  }, [character.current_node_id]);
+
+  // Handle unlock_path broadcasts from other players
+  useEffect(() => {
+    nodeChannel.onUnlockPath.current = (payload: any) => {
+      const { direction, node_id, expires } = payload.payload || {};
+      if (!direction || !expires) return;
+      const key = `${character.current_node_id}-${direction}`;
+      const remaining = expires - Date.now();
+      if (remaining <= 0) return;
+      setUnlockedConnections(prev => {
+        const next = new Map(prev);
+        next.set(key, expires);
+        return next;
+      });
+      // Clear existing timer for this key
+      const existing = unlockTimersRef.current.get(key);
+      if (existing) clearTimeout(existing);
+      unlockTimersRef.current.set(key, setTimeout(() => {
+        setUnlockedConnections(prev => {
+          const next = new Map(prev);
+          next.delete(key);
+          return next;
+        });
+        unlockTimersRef.current.delete(key);
+      }, remaining));
+    };
+  }, [character.current_node_id, nodeChannel]);
+
+  const handleUnlockPath = useCallback((direction: string, targetNodeId: string, expires: number) => {
+    const key = `${character.current_node_id}-${direction}`;
+    setUnlockedConnections(prev => {
+      const next = new Map(prev);
+      next.set(key, expires);
+      return next;
+    });
+    const remaining = expires - Date.now();
+    const existing = unlockTimersRef.current.get(key);
+    if (existing) clearTimeout(existing);
+    unlockTimersRef.current.set(key, setTimeout(() => {
+      setUnlockedConnections(prev => {
+        const next = new Map(prev);
+        next.delete(key);
+        return next;
+      });
+      unlockTimersRef.current.delete(key);
+    }, remaining));
+    // Broadcast to other players at this node
+    nodeChannel.channelRef.current?.send({
+      type: 'broadcast',
+      event: 'unlock_path',
+      payload: { direction, node_id: targetNodeId, expires },
+    });
+  }, [character.current_node_id, nodeChannel]);
+
   const logEndRef = useRef<HTMLDivElement>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
