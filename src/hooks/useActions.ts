@@ -537,6 +537,10 @@ export function useActions(params: UseActionsParams) {
   const handleSearch = useCallback(async () => {
     if (p.isDead) return;
     if (!p.currentNode) return;
+    if (p.creatures && p.creatures.length > 0) {
+      p.addLog('❌ You cannot search while creatures are nearby!');
+      return;
+    }
     if ((p.character.cp ?? 0) < SEARCH_CP_COST) {
       p.addLog('❌ Not enough CP to search! (Need 5 CP)');
       return;
