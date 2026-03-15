@@ -78,6 +78,7 @@ interface Props {
   onOpenTrainer?: () => void;
   searchDisabled?: boolean;
   hasDiscoverable?: boolean;
+  unlockedConnections?: Map<string, number>;
 }
 
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
