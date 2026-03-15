@@ -89,6 +89,7 @@ export default function MapPanel({
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
+  unlockedConnections,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
