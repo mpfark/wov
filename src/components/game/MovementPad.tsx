@@ -22,7 +22,7 @@ const DIR_ARROWS: Record<Direction, string> = {
   SW: '↙', S: '↓', SE: '↘',
 };
 
-export default function MovementPad({ currentNode, onMove, disabled }: Props) {
+export default function MovementPad({ currentNode, onMove, disabled, unlockedConnections }: Props) {
   const [pos, setPos] = useState({ x: 16, y: -1 }); // -1 means "use bottom default"
   const [dragging, setDragging] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -30,11 +30,24 @@ export default function MovementPad({ currentNode, onMove, disabled }: Props) {
   const padRef = useRef<HTMLDivElement>(null);
   const [cooldown, setCooldown] = useState(false);
 
-  // Compute available directions from current node connections
+  // Compute available directions from current node connections (including locked)
   const availableDirs = new Set<string>();
+  const lockedDirs = new Map<string, string>(); // direction → lock_key
   if (currentNode?.connections) {
     for (const conn of currentNode.connections as any[]) {
-      if (!conn.hidden) availableDirs.add(conn.direction);
+      if (conn.hidden) continue;
+      if (conn.locked) {
+        const unlockKey = `${currentNode.id}-${conn.direction}`;
+        const expiry = unlockedConnections?.get(unlockKey);
+        if (expiry && Date.now() < expiry) {
+          availableDirs.add(conn.direction);
+        } else {
+          availableDirs.add(conn.direction); // Show as available but with lock icon
+          lockedDirs.set(conn.direction, conn.lock_key || 'Unknown Key');
+        }
+      } else {
+        availableDirs.add(conn.direction);
+      }
     }
   }
 
