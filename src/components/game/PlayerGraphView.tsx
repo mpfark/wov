@@ -161,10 +161,14 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   // Collect edges (including edges from neighbors to 2nd-degree visited nodes)
   const edges = useMemo(() => {
     if (!currentNode) return [];
-    const result: Array<{ from: string; to: string; label?: string; faded?: boolean }> = [];
+    const result: Array<{ from: string; to: string; label?: string; faded?: boolean; locked?: boolean }> = [];
     for (const conn of visibleConnections) {
       if (nodePositions.has(conn.node_id)) {
-        result.push({ from: currentNode.id, to: conn.node_id, label: conn.label });
+        const isLocked = !!conn.locked;
+        const unlockKey = `${currentNode.id}-${conn.direction}`;
+        const expiry = unlockedConnections?.get(unlockKey);
+        const isUnlocked = expiry && Date.now() < expiry;
+        result.push({ from: currentNode.id, to: conn.node_id, label: conn.label, locked: isLocked && !isUnlocked });
       }
     }
     // Add edges from neighbors to 2nd-degree visited nodes
