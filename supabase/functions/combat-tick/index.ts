@@ -162,8 +162,9 @@ Deno.serve(async (req) => {
       const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
       return json({ events: [], creature_states, member_states: [] });
     }
-    // Determine if this is a DoT-only tick (player not at node)
-    const isDotOnly = engagedIds.length === 0 && dotTargetIds.size > 0;
+    // Determine if this is a DoT-only tick (player fled or no engaged targets)
+    const anyMemberAtNode = members.some(m => m.c.current_node_id === node_id);
+    const isDotOnly = !anyMemberAtNode || (engagedIds.length === 0 && dotTargetIds.size > 0);
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
