@@ -245,7 +245,7 @@ export default function NodeView({
                   const hpData = partyMemberHp?.get(p.id);
                   return (
                     <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
-                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5">
                         <span className="text-xs font-display text-primary truncate">
                           {getCharacterTitle(p.level, p.gender) && <span className="text-primary/60 text-[9px] mr-0.5">{getCharacterTitle(p.level, p.gender)}</span>}
                           {p.name}
