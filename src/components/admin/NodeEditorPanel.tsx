@@ -88,11 +88,15 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
   const [addNodeId, setAddNodeId] = useState('');
   const [addLabel, setAddLabel] = useState('');
   const [addHidden, setAddHidden] = useState(false);
+  const [addLocked, setAddLocked] = useState(false);
+  const [addLockKey, setAddLockKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [editDir, setEditDir] = useState('N');
   const [editLabel, setEditLabel] = useState('');
   const [editHidden, setEditHidden] = useState(false);
+  const [editLocked, setEditLocked] = useState(false);
+  const [editLockKey, setEditLockKey] = useState('');
 
   const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean }[] = (() => {
     try { return JSON.parse(connections) || []; } catch { return []; }
