@@ -107,11 +107,13 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
     return n ? getNodeLabel(n, allAreas) : `#${id.slice(0, 6)}`;
   };
 
-  const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean }) => {
+  const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string }) => {
     setEditingConnId(c.node_id);
     setEditDir(c.direction);
     setEditLabel(c.label || '');
     setEditHidden(!!c.hidden);
+    setEditLocked(!!c.locked);
+    setEditLockKey(c.lock_key || '');
   };
 
   const saveEditConnection = async () => {
