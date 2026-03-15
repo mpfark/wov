@@ -1400,7 +1400,7 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
       {isAdmin && <BroadcastDebugOverlay />}
 
       {/* Movement Pad — tablet only */}
-      {isTablet && <MovementPad currentNode={currentNode} onMove={handleMove} disabled={isDead} />}
+      {isTablet && <MovementPad currentNode={currentNode} onMove={handleMove} disabled={isDead} unlockedConnections={unlockedConnections} />}
     </div>
   );
 }
