@@ -159,6 +159,8 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
     setAddNodeId('');
     setAddLabel('');
     setAddHidden(false);
+    setAddLocked(false);
+    setAddLockKey('');
     setSaving(false);
     onUpdated();
   };
