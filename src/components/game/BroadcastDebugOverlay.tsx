@@ -1,12 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBroadcastDebug, BroadcastLogEntry } from '@/hooks/useBroadcastDebug';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Radio, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity } from 'lucide-react';
+
+function usePing() {
+  const [latency, setLatency] = useState<number | null>(null);
+  const pingChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const pendingRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const ch = supabase.channel('debug-ping', { config: { broadcast: { self: true } } });
+    pingChannelRef.current = ch;
+
+    ch.on('broadcast', { event: 'pong' }, (payload) => {
+      const sent = payload.payload?.t as number | undefined;
+      if (sent && pendingRef.current === sent) {
+        setLatency(Date.now() - sent);
+        pendingRef.current = null;
+      }
+    }).subscribe();
+
+    const iv = setInterval(() => {
+      if (!pingChannelRef.current) return;
+      const t = Date.now();
+      pendingRef.current = t;
+      pingChannelRef.current.send({ type: 'broadcast', event: 'pong', payload: { t } });
+    }, 5000);
+
+    return () => {
+      clearInterval(iv);
+      if (pingChannelRef.current) supabase.removeChannel(pingChannelRef.current);
+      pingChannelRef.current = null;
+    };
+  }, []);
+
+  return latency;
+}
+
+function latencyColor(ms: number | null): string {
+  if (ms === null) return 'text-muted-foreground';
+  if (ms < 100) return 'text-green-500';
+  if (ms < 250) return 'text-yellow-500';
+  return 'text-destructive';
+}
 
 export default function BroadcastDebugOverlay() {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const { entries, clear } = useBroadcastDebug(true);
+  const latency = usePing();
 
   const recent = entries.slice(-30);
   const inCount = entries.filter(e => e.direction === 'in').length;
@@ -20,6 +63,9 @@ export default function BroadcastDebugOverlay() {
       >
         <Radio className="h-3 w-3 text-primary animate-pulse" />
         <span>{entries.length}</span>
+        {latency !== null && (
+          <span className={`ml-1 ${latencyColor(latency)}`}>{latency}ms</span>
+        )}
       </button>
     );
   }
@@ -33,6 +79,10 @@ export default function BroadcastDebugOverlay() {
           <span className="font-semibold text-xs">Broadcast Debug</span>
           <span className="text-muted-foreground">
             ↑{outCount} ↓{inCount}
+          </span>
+          <span className={`flex items-center gap-0.5 ${latencyColor(latency)}`} title="Broadcast round-trip latency (ping)">
+            <Activity className="h-3 w-3" />
+            {latency !== null ? `${latency}ms` : '…'}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -66,7 +116,6 @@ export default function BroadcastDebugOverlay() {
 function EntryRow({ entry }: { entry: BroadcastLogEntry }) {
   const age = ((Date.now() - entry.timestamp) / 1000).toFixed(1);
   const isOut = entry.direction === 'out';
-  // Shorten channel name for display
   const shortChannel = entry.channel.replace(/^(node-|chat-|creature-combat-|ground-loot-|party-broadcast-)/, '');
 
   return (
