@@ -72,6 +72,9 @@ export interface UseActionsParams {
   sunderDebuff: SunderDebuff | null; setSunderDebuff: (v: SunderDebuff | null) => void;
   focusStrikeBuff: FocusStrikeBuff | null; setFocusStrikeBuff: (v: FocusStrikeBuff | null) => void;
   notifyCreatureKilled?: (creatureId: string) => void;
+  // Locked connections
+  unlockedConnections?: Map<string, number>;
+  onUnlockPath?: (direction: string, nodeId: string, expires: number) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
