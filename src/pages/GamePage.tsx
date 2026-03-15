@@ -1234,7 +1234,7 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
                 if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
                 setTeleportOpen(true);
               } : undefined}
-              searchDisabled={character.cp < 5}
+              searchDisabled={character.cp < 5 || creatures.length > 0}
               hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
             />
           </div>
