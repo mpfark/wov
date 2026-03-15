@@ -33,12 +33,12 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
   const fetchCreatures = useCallback(async () => {
     if (!nodeId) { setCreatures([]); return; }
 
-    // Check prefetch cache first
+    // Check prefetch cache for instant render, but always follow up with a fresh fetch
     const cached = prefetchCache.get(nodeId);
     if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
       setCreatures(cached.data);
-      prefetchCache.delete(nodeId); // consumed — live data will take over
-      return;
+      prefetchCache.delete(nodeId);
+      // Don't return — fall through to fresh fetch to catch kills that happened after prefetch
     }
 
     const { data } = await supabase
