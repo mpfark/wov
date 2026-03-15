@@ -257,7 +257,8 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
                 <span className="font-display text-sm flex-1">{nodeName(c.node_id)}</span>
                 <span className="text-xs text-muted-foreground font-mono">{c.direction}</span>
                 {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
-                {c.hidden && <span className="text-[10px] text-primary/70 font-mono">🔒 Hidden</span>}
+                {c.hidden && <span className="text-[10px] text-primary/70 font-mono">👁️ Hidden</span>}
+                {c.locked && <span className="text-[10px] text-amber-500/70 font-mono">🔒 {c.lock_key}</span>}
                 <Button size="sm" variant="ghost" disabled={saving} onClick={() => startEditConnection(c)} className="h-6 px-2 text-[10px]">
                   Edit
                 </Button>
