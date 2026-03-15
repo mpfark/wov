@@ -129,20 +129,24 @@ export default function MovementPad({ currentNode, onMove, disabled, unlockedCon
               return <div key={i} className="w-10 h-10" />;
             }
             const available = availableDirs.has(dir);
+            const isLocked = lockedDirs.has(dir);
             return (
               <button
                 key={dir}
                 onClick={() => handleDirClick(dir)}
                 disabled={!available || disabled || cooldown}
-                className={`w-10 h-10 rounded border text-sm font-bold flex items-center justify-center transition-colors
+                className={`w-10 h-10 rounded border text-sm font-bold flex items-center justify-center transition-colors relative
                   ${available
-                    ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/25 active:bg-primary/40'
+                    ? isLocked
+                      ? 'border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25 active:bg-amber-500/40'
+                      : 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/25 active:bg-primary/40'
                     : 'border-border/30 bg-muted/20 text-muted-foreground/30 cursor-not-allowed'
                   }
                   ${cooldown && available ? 'opacity-60' : ''}
                 `}
+                title={isLocked ? `Locked — requires: ${lockedDirs.get(dir)}` : undefined}
               >
-                {DIR_ARROWS[dir]}
+                {isLocked ? '🔒' : DIR_ARROWS[dir]}
               </button>
             );
           })}
