@@ -302,6 +302,14 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
           <input type="checkbox" checked={addHidden} onChange={e => setAddHidden(e.target.checked)} />
           Hidden (discoverable via search)
         </label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" checked={addLocked} onChange={e => setAddLocked(e.target.checked)} />
+          🔒 Locked (requires key item)
+        </label>
+        {addLocked && (
+          <Input placeholder="Lock Key (item name)" value={addLockKey}
+            onChange={e => setAddLockKey(e.target.value)} className="h-8 text-xs" />
+        )}
         <Button onClick={addConnection} disabled={saving || !addNodeId} className="font-display text-xs">
           <Plus className="w-3 h-3 mr-1" /> Add Connection
         </Button>
