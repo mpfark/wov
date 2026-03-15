@@ -272,6 +272,7 @@ export default function MapPanel({
               myCharacterId={myCharacterId}
               areas={areas}
               characterId={character.id}
+              unlockedConnections={unlockedConnections}
             />
           ) : (
             <p className="text-xs text-muted-foreground italic">No locations mapped...</p>
