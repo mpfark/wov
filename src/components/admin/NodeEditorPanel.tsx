@@ -145,7 +145,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
     if (!addNodeId) return toast.error('Select a target node');
     if (parsed.some(c => c.node_id === addNodeId)) return toast.error('Already connected to that node');
     setSaving(true);
-    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}) }];
+    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}), ...(addLocked ? { locked: true, lock_key: addLockKey } : {}) }];
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
     const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
     if (targetNode) {
