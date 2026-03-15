@@ -190,6 +190,7 @@ export function useNodeChannel(
     onCreatureUpdate,
     onCreatureInsert,
     onCreatureDelete,
+    onUnlockPath,
     playersHere,
   };
 }
