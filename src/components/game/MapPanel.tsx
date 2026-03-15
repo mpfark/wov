@@ -78,6 +78,7 @@ interface Props {
   onOpenTrainer?: () => void;
   searchDisabled?: boolean;
   hasDiscoverable?: boolean;
+  unlockedConnections?: Map<string, number>;
 }
 
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
@@ -88,6 +89,7 @@ export default function MapPanel({
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
+  unlockedConnections,
 }: Props) {
   const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -270,6 +272,7 @@ export default function MapPanel({
               myCharacterId={myCharacterId}
               areas={areas}
               characterId={character.id}
+              unlockedConnections={unlockedConnections}
             />
           ) : (
             <p className="text-xs text-muted-foreground italic">No locations mapped...</p>

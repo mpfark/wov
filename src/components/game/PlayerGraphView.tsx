@@ -16,6 +16,7 @@ interface Props {
   myCharacterId?: string;
   areas?: Area[];
   characterId?: string;
+  unlockedConnections?: Map<string, number>;
 }
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
@@ -44,7 +45,7 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
   return positions;
 }
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId, unlockedConnections }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
   // Client-side cache for visited nodes — grows as the player moves, only fetched once on mount
@@ -52,7 +53,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const initialFetchDone = useRef(false);
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
-  // Filter out hidden connections for player view
+  // Filter out hidden connections for player view (locked connections ARE visible)
   const visibleConnections = useMemo(() => {
     if (!currentNode) return [];
     return currentNode.connections.filter(c => !c.hidden);
@@ -160,10 +161,14 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   // Collect edges (including edges from neighbors to 2nd-degree visited nodes)
   const edges = useMemo(() => {
     if (!currentNode) return [];
-    const result: Array<{ from: string; to: string; label?: string; faded?: boolean }> = [];
+    const result: Array<{ from: string; to: string; label?: string; faded?: boolean; locked?: boolean }> = [];
     for (const conn of visibleConnections) {
       if (nodePositions.has(conn.node_id)) {
-        result.push({ from: currentNode.id, to: conn.node_id, label: conn.label });
+        const isLocked = !!conn.locked;
+        const unlockKey = `${currentNode.id}-${conn.direction}`;
+        const expiry = unlockedConnections?.get(unlockKey);
+        const isUnlocked = expiry && Date.now() < expiry;
+        result.push({ from: currentNode.id, to: conn.node_id, label: conn.label, locked: isLocked && !isUnlocked });
       }
     }
     // Add edges from neighbors to 2nd-degree visited nodes
@@ -301,9 +306,14 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
             <g key={`${edge.from}-${edge.to}`}>
               <line
                 x1={from.px} y1={from.py} x2={to.px} y2={to.py}
-                stroke={edge.faded ? "hsl(35 20% 35% / 0.3)" : "hsl(35 20% 35%)"}
-                strokeWidth={edge.faded ? 1.5 : 2} strokeDasharray={edge.faded ? "4 4" : "6 3"}
+                stroke={edge.locked ? "hsl(35 80% 50%)" : edge.faded ? "hsl(35 20% 35% / 0.3)" : "hsl(35 20% 35%)"}
+                strokeWidth={edge.faded ? 1.5 : 2} strokeDasharray={edge.locked ? "3 5" : edge.faded ? "4 4" : "6 3"}
               />
+              {edge.locked && (
+                <text x={midX} y={midY} textAnchor="middle" dominantBaseline="central" className="text-[10px] select-none pointer-events-none">
+                  🔒
+                </text>
+              )}
             </g>
           );
         })}

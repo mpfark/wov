@@ -27,6 +27,8 @@ export interface NodeChannelHandle {
   onCreatureUpdate: React.MutableRefObject<((payload: any) => void) | null>;
   onCreatureInsert: React.MutableRefObject<(() => void) | null>;
   onCreatureDelete: React.MutableRefObject<((payload: any) => void) | null>;
+  /** Callback ref — set by GamePage for unlock_path broadcasts */
+  onUnlockPath: React.MutableRefObject<((payload: any) => void) | null>;
   /** Presence data */
   playersHere: PlayerPresence[];
 }
@@ -63,6 +65,7 @@ export function useNodeChannel(
   const onCreatureUpdate = useRef<((payload: any) => void) | null>(null);
   const onCreatureInsert = useRef<(() => void) | null>(null);
   const onCreatureDelete = useRef<((payload: any) => void) | null>(null);
+  const onUnlockPath = useRef<((payload: any) => void) | null>(null);
 
   // Memoize character data to avoid unnecessary re-subscriptions
   const charData = useMemo(() => {
@@ -116,6 +119,9 @@ export function useNodeChannel(
       })
       .on('broadcast', { event: 'say' }, (payload) => {
         onSay.current?.(payload);
+      })
+      .on('broadcast', { event: 'unlock_path' }, (payload) => {
+        onUnlockPath.current?.(payload);
       })
 
       // ── Postgres Changes (ground loot) ──
@@ -184,6 +190,7 @@ export function useNodeChannel(
     onCreatureUpdate,
     onCreatureInsert,
     onCreatureDelete,
+    onUnlockPath,
     playersHere,
   };
 }

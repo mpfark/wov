@@ -72,6 +72,9 @@ export interface UseActionsParams {
   sunderDebuff: SunderDebuff | null; setSunderDebuff: (v: SunderDebuff | null) => void;
   focusStrikeBuff: FocusStrikeBuff | null; setFocusStrikeBuff: (v: FocusStrikeBuff | null) => void;
   notifyCreatureKilled?: (creatureId: string) => void;
+  // Locked connections
+  unlockedConnections?: Map<string, number>;
+  onUnlockPath?: (direction: string, nodeId: string, expires: number) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
@@ -324,6 +327,33 @@ export function useActions(params: UseActionsParams) {
   // ── Movement ───────────────────────────────────────────────────
   const handleMove = useCallback(async (nodeId: string, direction?: string) => {
     if (p.isDead) return;
+
+    // ── Locked connection check ──
+    if (direction && p.currentNode) {
+      const conn = (p.currentNode.connections as any[])?.find(
+        (c: any) => c.node_id === nodeId && c.direction === direction
+      );
+      if (conn?.locked) {
+        const unlockKey = `${p.currentNode.id}-${direction}`;
+        const unlockExpiry = p.unlockedConnections?.get(unlockKey);
+        if (!unlockExpiry || Date.now() > unlockExpiry) {
+          // Check inventory for the key item
+          const allItems = [...p.equipped, ...p.unequipped];
+          const hasKey = allItems.some(
+            inv => inv.item?.name?.toLowerCase() === (conn.lock_key || '').toLowerCase()
+          );
+          if (!hasKey) {
+            p.addLog(`🔒 This path is locked. You need a "${conn.lock_key}" to pass.`);
+            return;
+          }
+          // Player has the key — unlock for everyone at this node
+          const expires = Date.now() + 30_000;
+          p.onUnlockPath?.(direction, nodeId, expires);
+          p.addLog(`🔓 You use your ${conn.lock_key} to unlock the path...`);
+        }
+      }
+    }
+
     const effectiveStr = p.character.str + (p.equipmentBonuses.str || 0);
     const bagItems = p.unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
     const bagWeight = getBagWeight(bagItems);

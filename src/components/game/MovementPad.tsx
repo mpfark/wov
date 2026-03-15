@@ -7,6 +7,7 @@ interface Props {
   currentNode: GameNode | undefined;
   onMove: (nodeId: string, direction?: Direction) => void;
   disabled?: boolean;
+  unlockedConnections?: Map<string, number>;
 }
 
 const DIR_GRID: (Direction | null)[] = [
@@ -21,7 +22,7 @@ const DIR_ARROWS: Record<Direction, string> = {
   SW: '↙', S: '↓', SE: '↘',
 };
 
-export default function MovementPad({ currentNode, onMove, disabled }: Props) {
+export default function MovementPad({ currentNode, onMove, disabled, unlockedConnections }: Props) {
   const [pos, setPos] = useState({ x: 16, y: -1 }); // -1 means "use bottom default"
   const [dragging, setDragging] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -29,11 +30,24 @@ export default function MovementPad({ currentNode, onMove, disabled }: Props) {
   const padRef = useRef<HTMLDivElement>(null);
   const [cooldown, setCooldown] = useState(false);
 
-  // Compute available directions from current node connections
+  // Compute available directions from current node connections (including locked)
   const availableDirs = new Set<string>();
+  const lockedDirs = new Map<string, string>(); // direction → lock_key
   if (currentNode?.connections) {
     for (const conn of currentNode.connections as any[]) {
-      if (!conn.hidden) availableDirs.add(conn.direction);
+      if (conn.hidden) continue;
+      if (conn.locked) {
+        const unlockKey = `${currentNode.id}-${conn.direction}`;
+        const expiry = unlockedConnections?.get(unlockKey);
+        if (expiry && Date.now() < expiry) {
+          availableDirs.add(conn.direction);
+        } else {
+          availableDirs.add(conn.direction); // Show as available but with lock icon
+          lockedDirs.set(conn.direction, conn.lock_key || 'Unknown Key');
+        }
+      } else {
+        availableDirs.add(conn.direction);
+      }
     }
   }
 
@@ -115,20 +129,24 @@ export default function MovementPad({ currentNode, onMove, disabled }: Props) {
               return <div key={i} className="w-10 h-10" />;
             }
             const available = availableDirs.has(dir);
+            const isLocked = lockedDirs.has(dir);
             return (
               <button
                 key={dir}
                 onClick={() => handleDirClick(dir)}
                 disabled={!available || disabled || cooldown}
-                className={`w-10 h-10 rounded border text-sm font-bold flex items-center justify-center transition-colors
+                className={`w-10 h-10 rounded border text-sm font-bold flex items-center justify-center transition-colors relative
                   ${available
-                    ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/25 active:bg-primary/40'
+                    ? isLocked
+                      ? 'border-amber-500/50 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25 active:bg-amber-500/40'
+                      : 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/25 active:bg-primary/40'
                     : 'border-border/30 bg-muted/20 text-muted-foreground/30 cursor-not-allowed'
                   }
                   ${cooldown && available ? 'opacity-60' : ''}
                 `}
+                title={isLocked ? `Locked — requires: ${lockedDirs.get(dir)}` : undefined}
               >
-                {DIR_ARROWS[dir]}
+                {isLocked ? '🔒' : DIR_ARROWS[dir]}
               </button>
             );
           })}
