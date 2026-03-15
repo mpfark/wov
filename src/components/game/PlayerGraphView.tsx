@@ -45,7 +45,7 @@ function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
   return positions;
 }
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId, unlockedConnections }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
   // Client-side cache for visited nodes — grows as the player moves, only fetched once on mount
@@ -53,7 +53,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const initialFetchDone = useRef(false);
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
-  // Filter out hidden connections for player view
+  // Filter out hidden connections for player view (locked connections ARE visible)
   const visibleConnections = useMemo(() => {
     if (!currentNode) return [];
     return currentNode.connections.filter(c => !c.hidden);
