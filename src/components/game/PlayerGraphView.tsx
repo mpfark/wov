@@ -16,6 +16,7 @@ interface Props {
   myCharacterId?: string;
   areas?: Area[];
   characterId?: string;
+  unlockedConnections?: Map<string, number>;
 }
 
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
