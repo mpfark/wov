@@ -140,6 +140,7 @@ export default function NodeView({
                   return (
                     <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
+                        {/* Left: Name, level, debuffs */}
                         <span className={`text-xs font-display truncate ${
                           c.rarity === 'boss' ? 'text-primary text-glow' :
                           c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
@@ -194,10 +195,17 @@ export default function NodeView({
                             </TooltipContent>
                           </Tooltip>
                         )}
+                        {/* Right: combat icon, HP bar, HP numbers, attack button */}
                         <div className="ml-auto flex items-center gap-1 shrink-0">
+                          {(isActiveTarget || isEngaged) && (
+                            <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'} animate-pulse`}>⚔️</span>
+                          )}
+                          {isSelected && !isActiveTarget && !isEngaged && (
+                            <span className="text-[10px] text-primary">🎯</span>
+                          )}
                           <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
                             <div
-                              className={`h-full rounded-full transition-all duration-200`}
+                              className="h-full rounded-full transition-all duration-200"
                               style={{
                                 width: `${hpPct}%`,
                                 backgroundColor: isBleeding
@@ -211,18 +219,12 @@ export default function NodeView({
                             />
                           </div>
                           <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
+                          {!isActiveTarget && !isEngaged && !isSelected && (
+                            <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
+                              {CLASS_COMBAT[character.class]?.label || 'Atk'}
+                            </Button>
+                          )}
                         </div>
-                        {isActiveTarget ? (
-                          <span className="text-[10px] font-display text-destructive animate-pulse flex items-center gap-0.5">⚔️ TARGET</span>
-                        ) : isEngaged ? (
-                          <span className="text-[10px] font-display text-dwarvish animate-pulse flex items-center gap-0.5">⚔️ ENGAGED</span>
-                        ) : isSelected ? (
-                          <span className="text-[10px] font-display text-primary flex items-center gap-0.5">🎯 SELECTED</span>
-                        ) : (
-                          <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
-                            {CLASS_COMBAT[character.class]?.label || 'Atk'}
-                          </Button>
-                        )}
                       </div>
                     </div>
                   );
@@ -243,7 +245,7 @@ export default function NodeView({
                   const hpData = partyMemberHp?.get(p.id);
                   return (
                     <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
-                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5">
                         <span className="text-xs font-display text-primary truncate">
                           {getCharacterTitle(p.level, p.gender) && <span className="text-primary/60 text-[9px] mr-0.5">{getCharacterTitle(p.level, p.gender)}</span>}
                           {p.name}
