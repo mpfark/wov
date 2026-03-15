@@ -7,6 +7,7 @@ interface Props {
   currentNode: GameNode | undefined;
   onMove: (nodeId: string, direction?: Direction) => void;
   disabled?: boolean;
+  unlockedConnections?: Map<string, number>;
 }
 
 const DIR_GRID: (Direction | null)[] = [
