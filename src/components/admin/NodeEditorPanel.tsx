@@ -121,7 +121,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
     setSaving(true);
     const newConns = parsed.map(c =>
       c.node_id === editingConnId
-        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}) }
+        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}), ...(editLocked ? { locked: true, lock_key: editLockKey } : {}) }
         : c
     );
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
