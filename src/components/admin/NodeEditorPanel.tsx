@@ -238,6 +238,13 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
                   <input type="checkbox" checked={editHidden} onChange={e => setEditHidden(e.target.checked)} />
                   Hidden (discoverable via search)
                 </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={editLocked} onChange={e => setEditLocked(e.target.checked)} />
+                  🔒 Locked (requires key item)
+                </label>
+                {editLocked && (
+                  <Input value={editLockKey} onChange={e => setEditLockKey(e.target.value)} className="h-8 text-xs" placeholder="Lock Key (item name)" />
+                )}
                 <div className="flex gap-2">
                   <Button size="sm" onClick={saveEditConnection} disabled={saving} className="h-7 text-xs font-display">
                     <Save className="w-3 h-3 mr-1" /> Save
