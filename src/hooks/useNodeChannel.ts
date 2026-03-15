@@ -120,6 +120,9 @@ export function useNodeChannel(
       .on('broadcast', { event: 'say' }, (payload) => {
         onSay.current?.(payload);
       })
+      .on('broadcast', { event: 'unlock_path' }, (payload) => {
+        onUnlockPath.current?.(payload);
+      })
 
       // ── Postgres Changes (ground loot) ──
       .on('postgres_changes', {
