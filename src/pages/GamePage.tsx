@@ -1303,6 +1303,7 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
               } : undefined}
               searchDisabled={character.cp < 5 || creatures.length > 0}
               hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
+              unlockedConnections={unlockedConnections}
             />
           </div>
         )}
