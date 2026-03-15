@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
             if (target.rarity === 'boss') {
               const bhpReward = Math.floor(target.level * 0.5);
               if (bhpReward > 0) {
-                const bhpEach = Math.floor(bhpReward / split);
+                const bhpEach = Math.floor(bhpReward / members.length);
                 if (bhpEach > 0) {
                   for (const mm of members) {
                     if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
