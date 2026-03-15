@@ -600,6 +600,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     sunderDebuff, setSunderDebuff: gameLoop.setSunderDebuff,
     focusStrikeBuff, setFocusStrikeBuff: gameLoop.setFocusStrikeBuff,
     notifyCreatureKilled: gameLoop.notifyCreatureKilled,
+    unlockedConnections,
+    onUnlockPath: handleUnlockPath,
   });
 
   // Wire forward-declared refs
