@@ -1,127 +1,106 @@
 
-## Cross-Stat & Combat System ✅ IMPLEMENTED
 
-### Cross-Stat Bonuses (Diminishing Returns via sqrt curves)
-
-1. **INT → Hit Bonus**: `+floor(sqrt(INT_mod))`, capped at +3. Improves attack rolls.
-2. **DEX → Critical Hit Chance**: `+floor(sqrt(DEX_mod))`, capped at +4. Crit on 16-20 max.
-3. **WIS → Awareness (Damage Reduction Chance)**: `sqrt(WIS_mod) × 3%`, capped at 15%. Chance to reduce incoming damage by 25%.
-4. **CHA → Better Vendor Prices & Humanoid Gold**: Sell multiplier = `0.5 + sqrt(CHA_mod) × 0.03` (cap 0.8). Buy discount = `sqrt(CHA_mod) × 2%` (cap 10%). Humanoid gold = `+sqrt(CHA_mod) × 5%` (cap 25%).
-5. **STR → Minimum Damage Floor**: `+floor(sqrt(STR_mod))`, capped at +3. All attacks deal at least this much.
-
-### Attack Speed
-
-- **Solo play**: Formula: `max(3.0 − DEX_mod × 0.25, 1.0)` seconds per attack (unchanged)
-- **Party play**: Fixed 3s heartbeat tick; DEX grants multi-attack (see Server-Side Party Combat below)
-
-### Character Panel Display
-
-- All cross-stat bonus rows always visible; shows "–" when modifier too low
-- Tooltips explain unlock thresholds (e.g. "STR 14+", "WIS 12+", "CHA 12+")
-
-### Files Changed
-
-- `src/lib/game-data.ts` — Helper functions: `getIntHitBonus`, `getDexCritBonus`, `getWisDodgeChance`, `getChaSellMultiplier`, `getChaBuyDiscount`, `getChaGoldMultiplier`, `getStrDamageFloor`
-- `src/hooks/useCombat.ts` — Applied INT hit bonus, DEX crit range, STR damage floor, WIS awareness, CHA humanoid gold bonus, DEX attack speed
-- `src/hooks/useActions.ts` — CHA humanoid gold bonus in `awardKillRewards`
-- `src/components/game/VendorPanel.tsx` — CHA-based buy/sell price modifiers with UI indicators
-- `src/components/game/CharacterPanel.tsx` — Shows all cross-stat bonuses in Attributes tab (always visible, "–" when inactive), attack speed display
-- `src/components/admin/GameManual.tsx` — Documented all cross-stat bonuses and attack speed formula
-
----
-
-## Server-Side Party Combat (Hybrid Architecture) ✅ COMPLETE
+## World Map Rebuild — Towns, Roads & Scale
 
 ### Overview
+Purge all existing nodes, areas, and regions (preserving The Soulwright NPC). Rebuild using only **towns/villages as named nodes** connected by **road nodes** (unnamed waypoints). Scale: Hearthvale → Havenport = ~20 nodes.
 
-Party combat resolution runs on a server-authoritative edge function (`combat-tick`) to eliminate race conditions, double-awards, and inconsistent state. Solo combat remains client-driven for zero-latency feel.
+### Phase 1: Purge (same FK-safe order as before)
+```sql
+DELETE FROM node_ground_loot;
+DELETE FROM character_inventory;
+DELETE FROM vendor_inventory;
+DELETE FROM loot_table_entries;
+DELETE FROM universal_starting_gear;
+DELETE FROM class_starting_gear;
+DELETE FROM creatures;
+UPDATE npcs SET node_id = NULL WHERE id = 'bcbb3e17-9696-4ebc-965d-a4c8e253c963';
+DELETE FROM character_visited_nodes;
+DELETE FROM party_combat_log;
+DELETE FROM party_members;
+DELETE FROM parties;
+UPDATE characters SET current_node_id = NULL;
+DELETE FROM nodes;
+DELETE FROM areas;
+DELETE FROM loot_tables;
+DELETE FROM items;
+DELETE FROM regions;
+```
 
-### Final Architecture
+### Phase 2: Create Regions (same 11)
 
-| Aspect | Solo (unchanged) | Party (server-authoritative) |
+| Region | Lvl | Map Position |
 |---|---|---|
-| Tick driver | Client `setInterval` (DEX-based speed) | Leader client calls `combat-tick` edge function every **3s** |
-| Attack speed | Faster ticks = faster attacks | Fixed heartbeat; DEX mod → multi-attack per tick |
-| Authority | Client resolves all damage/rewards | Edge function resolves all damage/rewards atomically |
-| UI sync | Direct state updates + local overrides | Leader broadcasts tick results to party via Supabase Broadcast |
-| Buff/debuff state | Client-managed (useGameLoop) | Client-managed; **all members** broadcast buff state every 2.5s; leader aggregates into `member_buffs` payload |
-| DoT state | Client ticks DoTs locally | **All members** broadcast DoT state every 2.5s; leader aggregates into `member_dots` payload; server resolves DoT damage |
+| The Hearthlands | 1-5 | Center |
+| The Glimmering Coast | 6-10 | West |
+| The Weeping Fens | 11-15 | Southwest |
+| The Sun-Scorched Wastes | 16-20 | South |
+| Eldritch Rest | 16-20 | East |
+| Kharak-Dum | 21-25 | North |
+| The Great Steppe | 21-25 | Southeast |
+| The Mourn-Woods | 26-30 | Far East |
+| The Iron Crags | 31-35 | Northeast |
+| The Frostpeaks | 36-40 | North |
+| The Frozen Reach | 41-50 | Northwest |
 
----
+### Phase 3: Create Town/Village Nodes + Road Nodes
 
-### What the Edge Function Handles (Server-Side)
+Based on the map, named settlement nodes with road waypoints between them. Using Hearthvale→Havenport (~20 nodes) as the distance scale:
 
-1. **Auto-attack resolution** — d20 rolls, damage calc, crit logic, DEX multi-attack
-2. **Offensive buffs** — Stealth (×2), Arcane Surge (×1.5), Focus Strike (flat bonus), Disengage (bonus mult), Sunder (AC reduction), Poison/Ignite procs (40% chance)
-3. **Defensive buffs** — AC buffs (Battle Cry), Evasion (dodge chance), Absorb shields (Force Shield/Divine Aegis), WIS Awareness (25% damage reduction)
-4. **Creature counterattacks** — Target selection (tank priority), damage, Root debuff reduction
-5. **Kill detection** — Atomic; only one tick can kill a creature
-6. **Reward calculation & distribution** — XP/gold split via `award_party_member` RPC, level-up stat grants
-7. **Loot rolling** — Weighted loot table selection, unique item checks via `try_acquire_unique_item`, ground loot insertion
-8. **Equipment degradation** — 25% chance per counterattack hit via `degrade_party_member_equipment` RPC
-9. **DoT ticking** — Bleed, Poison, Ignite damage per tick; DoT kills award rewards and clear client-side stacks via `cleared_dots` response
-10. **One-shot buff consumption** — Returns `consumed_buffs` so clients clear stealth, focus_strike, disengage locally
+**Named Settlements (from map):**
+1. **Hearthvale** (Hearthlands) — HUB, inn, vendor, blacksmith, teleport
+2. **The Broken Wheel Inn** (Glimmering Coast) — Lvl 7 road stop, inn
+3. **Oakhaven Village** (Glimmering Coast) — Lvl 6, vendor
+4. **Havenport** (Glimmering Coast) — Lvl 6-10 city, inn, vendor, blacksmith, teleport
+5. **Aethel-by-the-Sea** (Weeping Fens) — Lvl 8 fishing hamlet, inn, vendor
+6. **Icewatch** (Kharak-Dum) — Lvl 23 fortified village, inn, vendor, blacksmith
+7. **Kharak-Dum** (Kharak-Dum) — Lvl 21-25 city, inn, vendor, blacksmith, teleport
+8. **Eldritch Rest** (Eldritch Rest) — Lvl 16-20 settlement, inn, vendor, blacksmith, teleport
+9. **Dusthaven** (Sun-Scorched Wastes) — town, inn, vendor, blacksmith, teleport
 
-### What Stays Client-Side
+**Named Landmarks (non-town, but named on map):**
+- Miller's Crossing, The Cleft, The Shepherd's Gate, Caves, Silvershale River crossings, The King's Trace, Rubble Pass, Remnants of Osgil-Gard, Forest Trail, The West-Way waypoints
 
-1. **Buff/Debuff lifecycle** (`useGameLoop`): Regen, buff expiration, death detection
-2. **Ability activation** (`useActions.handleUseAbility`): Client applies ability effect locally, reports state to server next tick
-3. **DoT state management**: Client maintains DoT stacks locally; non-leaders broadcast state to leader; server resolves damage
-4. **Movement, searching, consumables**: Unchanged
-5. **Solo combat**: Unchanged (`useCombat` with variable DEX-based interval)
+**Road segments (unnamed nodes between towns):**
 
----
+```text
+Hearthvale ──(~2 road nodes)── Miller's Crossing ──(~13 road nodes)── Eldritch Rest
+     │                                    │
+     │ (~5 road)                    (~8 road via Forest Trail)
+     │                                    │
+  The Cleft ──(~3)── Shepherd's Gate   Remnants of Osgil-Gard
+     │                    │
+  (~5 road)          (~5 road)
+     │                    │
+  Broken Wheel Inn    Icewatch ──(~5)── Kharak-Dum
+     │                                      │
+  (~4 road via Oakhaven)              (~8 road)── Frostpeaks/Iron Crags
+     │
+  Havenport ──(~8 road S)── Aethel-by-the-Sea
 
-### Communication Flow
+Hearthvale ──(~5 road S via Silvershale)── Weeping Fens ──(~8)── Sun-Scorched Wastes
+                                                                      │
+                                                               (~8)── Great Steppe
 
+Eldritch Rest ──(~8 E)── Mourn-Woods ──(~8 N)── Iron Crags
+Kharak-Dum ──(~8 NW)── Frostpeaks ──(~8 W)── Frozen Reach
+Havenport ──(~10 NW)── Frozen Reach
 ```
-Non-leader clients ──(broadcast: member_buff_state every 2.5s)──► Leader client
-Non-leader clients ──(broadcast: member_dot_state every 2.5s)───► Leader client
-                                                                       │
-Leader client ──(POST /combat-tick with member_buffs + member_dots)──► Edge Function
-                                                                       │
-Edge Function ──(response: events, creature_states, member_states)──► Leader client
-                                                                       │
-Leader client ──(broadcast: combat_tick_result)──► All party members
-                                                       │
-All members: update local HP, XP, gold, creature HP, clear consumed buffs/dots
-```
 
----
+**Estimated total: ~150-170 nodes** (15 named settlements/landmarks + ~140 road waypoints)
 
-### Implementation Phases — All Complete
+Road nodes will be unnamed (empty `name`), inheriting direction labels in-game. Each road node connects to exactly 2 neighbors (linear paths) unless at a fork.
 
-#### Phase 1: Edge Function + Leader Driver ✅
-- Created `combat-tick` edge function with full auto-attack resolution, counterattacks, kill detection, XP/gold/loot
-- Created `usePartyCombat` hook with 3s leader heartbeat and broadcast distribution
-- Wired `GamePage` to use `usePartyCombat` when in party, `useCombat` when solo
+### Phase 4: Post-setup
+- Reassign Soulwright NPC to new Kharak-Dum node (e.g., "The Soulwright's Forge" sub-node)
+- Teleport all characters to Hearthvale
+- Update whisper text if node name changes
 
-#### Phase 2: Full Buff Integration ✅
-- All members report `member_buffs` via `gatherBuffs` callback; non-leaders broadcast every 2.5s, leader aggregates
-- Edge function applies all offensive buffs (stealth, arcane surge, disengage, focus strike, sunder, poison/ignite procs)
-- Edge function applies all defensive buffs (AC buff, evasion, absorb shields, WIS awareness)
-- Returns `consumed_buffs` for one-shot buff cleanup on all clients (leader + non-leaders)
+### Phase 5: No areas initially
+Skip area creation entirely — just regions and nodes. Areas can be added later via admin tools to group nodes thematically.
 
-#### Phase 3: Loot & Level-Up ✅
-- Loot rolling with weighted tables and unique item checks implemented in Phase 1
-- Level-up logic with stat bonuses and respec points implemented in Phase 1
-- Equipment degradation (25% chance per hit) implemented in Phase 1
+### Files Changed
+- Database operations only (purge + insert regions, nodes, update NPC, update characters)
+- `src/hooks/useActions.ts` — update Soulwright whisper text only if location name changes
+- Copy new map image to `public/images/Edhelard_WorldMap.png` (replacing old jpg)
 
-#### Phase 4: Server-Side DoT Ticking ✅
-- All members broadcast DoT state (bleed, poison, ignite) every 2.5s via `member_dot_state` broadcast
-- Leader aggregates all members' DoT stacks into `member_dots` payload
-- Edge function resolves DoT damage, handles DoT kills with reward splitting
-- Returns `cleared_dots` so all clients remove stale DoT timers
-- `useGameLoop` suppresses local DoT ticking when `inParty` is true
-
----
-
-### Files Created/Modified
-
-#### New Files
-- `supabase/functions/combat-tick/index.ts` — Server-authoritative combat edge function
-- `src/hooks/usePartyCombat.ts` — Client hook for party combat (leader tick driver + non-leader listener + buff/DoT broadcast)
-
-#### Modified Files
-- `src/pages/GamePage.tsx` — Conditional: `usePartyCombat` when in party, `useCombat` when solo; `gatherBuffs`/`gatherDotStacks` callbacks; `onConsumedBuffs`/`onClearedDots` handlers
-- `src/hooks/useGameLoop.ts` — Added `inParty` flag to suppress local DoT ticking during party combat
