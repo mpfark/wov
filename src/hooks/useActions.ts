@@ -272,7 +272,7 @@ export function useActions(params: UseActionsParams) {
               payload: {
                 senderId: 'soulwright',
                 senderName: 'The Soulwright',
-                text: 'You have reached the pinnacle of mortal power. Come find me at The Echoing Vein in the Ash-Veil Perimeter, and I shall forge for you a weapon born of your own soul. This gift can only be claimed once.',
+                text: 'You have reached the pinnacle of mortal power. Come find me at The Soulwright\'s Forge deep within Kharak-Dum, and I shall forge for you a weapon born of your own soul. This gift can only be claimed once.',
               },
             });
             setTimeout(() => supabase.removeChannel(whisperChannel), 2000);
