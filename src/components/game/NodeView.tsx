@@ -356,7 +356,6 @@ export default function NodeView({
                           className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
                         >
                           {ability.emoji} {ability.label}
-                          {!levelLocked && <span className="ml-0.5 text-muted-foreground">({ability.cpCost})</span>}
                           {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && !levelLocked && !notEnoughCp && (
                             <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`ability${idx + 1}` as keyof ActionBindings][0])}]</span>
                           )}
