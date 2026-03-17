@@ -1324,6 +1324,38 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
             />
           </div>
         )}
+
+        {/* Wide-screen Chat Panel — 4th column */}
+        {isWideScreen && !isTablet && (
+          <div className="h-full w-[320px] shrink-0 ornate-border bg-card/60 flex flex-col">
+            <div className="px-3 py-2 border-b border-border shrink-0">
+              <h3 className="font-display text-xs text-muted-foreground">Chat</h3>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
+              {chatMessages.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No messages yet. Press Enter to chat.</p>
+              ) : (
+                chatMessages.map((log, i) => (
+                  <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
+                ))
+              )}
+            </div>
+            <div className="shrink-0 px-2 pb-2">
+              <Input
+                ref={isWideScreen ? chatInputRef : undefined}
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleChatSubmit(); }
+                  if (e.key === 'Escape') { setChatInput(''); }
+                }}
+                placeholder="/w name msg to whisper"
+                className="h-7 text-xs bg-background/50 border-border"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Vendor Dialog */}
