@@ -31,7 +31,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { User, Map as MapIconLucide, Zap, Users, LogOut, Bug, RefreshCw } from 'lucide-react';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
-import { useViewportZoom } from '@/hooks/useViewportZoom';
+
 import { useChat } from '@/hooks/useChat';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
