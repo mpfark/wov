@@ -1031,6 +1031,14 @@ export type Database = {
         Args: { _character_id: string; _gold: number; _xp: number }
         Returns: undefined
       }
+      buy_vendor_item: {
+        Args: {
+          p_character_id: string
+          p_price: number
+          p_vendor_item_id: string
+        }
+        Returns: boolean
+      }
       cleanup_ground_loot: { Args: never; Returns: undefined }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
@@ -1044,8 +1052,16 @@ export type Database = {
         Args: { _character_id: string }
         Returns: undefined
       }
+      drop_item_to_ground: {
+        Args: { p_character_id: string; p_inventory_id: string }
+        Returns: boolean
+      }
       find_character_id_by_name: { Args: { _name: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
+      grant_starting_gear: {
+        Args: { p_character_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1076,6 +1092,10 @@ export type Database = {
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_steward_or_overlord: { Args: never; Returns: boolean }
       owns_character: { Args: { _character_id: string }; Returns: boolean }
+      pickup_ground_loot: {
+        Args: { p_character_id: string; p_loot_id: string }
+        Returns: boolean
+      }
       regen_creature_hp: { Args: never; Returns: undefined }
       respawn_creatures: { Args: never; Returns: undefined }
       return_unique_items: { Args: never; Returns: undefined }
