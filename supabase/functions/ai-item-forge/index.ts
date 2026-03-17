@@ -61,7 +61,7 @@ serve(async (req) => {
     const body = await req.json();
     const {
       prompt,
-      count = 5,
+      count: rawCount,
       level_min = 1,
       level_max = 10,
       item_type = "random",       // "equipment" | "consumable" | "random"
