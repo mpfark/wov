@@ -1159,10 +1159,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
             <h3 className="font-display text-xs text-muted-foreground mb-1 shrink-0">Event Log</h3>
             <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
-              {eventLog.length === 0 ? (
+              {filteredEventLog.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
               ) : (
-                eventLog.map((log, i) =>
+                filteredEventLog.map((log, i) =>
                   log === '---tick---' ? (
                     <div key={i} className="border-t-2 border-border/60 my-2" />
                   ) : (
@@ -1172,7 +1172,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               )}
               <div ref={logEndRef} />
             </div>
-            {chatOpen && (
+            {(!isWideScreen && chatOpen) && (
               <div className="shrink-0 mt-1">
                 <Input
                   ref={chatInputRef}
