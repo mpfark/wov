@@ -26,7 +26,7 @@ export default function GameRoute() {
       updateCharacterLocal={updateCharacterLocal}
       onSignOut={signOut}
       isAdmin={isAdmin}
-      onOpenAdmin={() => navigate('/admin')}
+      onOpenAdmin={() => window.open('/admin', '_blank')}
       startingNodeId={startingNode?.id ?? nodes[0]?.id}
       onSwitchCharacter={() => { clearSelectedCharacter(); navigate('/'); }}
     />

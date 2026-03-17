@@ -19,5 +19,5 @@ export default function AdminRoute() {
     return null;
   }
 
-  return <AdminPage onBack={() => navigate(-1)} isValar={isValar} />;
+  return <AdminPage onBack={() => { window.close(); navigate('/'); }} isValar={isValar} />;
 }
