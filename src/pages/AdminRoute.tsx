@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import AdminPage from './AdminPage';
 
 export default function AdminRoute() {
-  const { user, authLoading, isAdmin, isValar } = useGameContext();
+  const { user, authLoading, isAdmin, isValar, roleLoading } = useGameContext();
   const navigate = useNavigate();
 
-  if (authLoading) {
+  if (authLoading || roleLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center parchment-bg">
         <p className="font-display text-primary text-glow animate-pulse">Loading...</p>
