@@ -47,7 +47,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     refetchCharacters,
   } = useCharacter(user);
   const { nodes, regions, loading: nodesLoading } = useNodes(!!user);
-  const { isAdmin, isValar } = useRole(user);
+  const { isAdmin, isValar, loading: roleLoading } = useRole(user);
 
   const handleInactiveLogout = useCallback(() => {
     if (user) signOut();
