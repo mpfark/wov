@@ -61,7 +61,7 @@ serve(async (req) => {
     const body = await req.json();
     const {
       prompt,
-      count = 5,
+      count: rawCount,
       level_min = 1,
       level_max = 10,
       item_type = "random",       // "equipment" | "consumable" | "random"
@@ -69,6 +69,7 @@ serve(async (req) => {
       rarity = "random",          // "common" | "uncommon" | "random"
       stats_focus = "random",     // "random" | "offensive" | "defensive" | "utility"
     } = body;
+    const count = Math.min(Math.max(1, parseInt(rawCount) || 5), 20);
 
     // Fetch existing item names to avoid duplicates
     const { data: existingItems } = await supabase.from("items").select("name").limit(500);
