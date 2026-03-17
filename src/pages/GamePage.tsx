@@ -31,7 +31,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { User, Map as MapIconLucide, Zap, Users, LogOut, Bug, RefreshCw } from 'lucide-react';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
-import { useViewportZoom } from '@/hooks/useViewportZoom';
+
 import { useChat } from '@/hooks/useChat';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
@@ -106,7 +106,7 @@ interface Props {
 }
 
 export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
-  useViewportZoom();
+  
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
 
@@ -116,19 +116,24 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [isMobile, setIsMobile] = useState(false);
   const [charPanelOpen, setCharPanelOpen] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(false);
+  const [isWideScreen, setIsWideScreen] = useState(false);
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
+    const wideMql = window.matchMedia('(min-width: 1600px)');
     const onChange = () => {
       setIsTablet(tabletMql.matches);
       setIsMobile(mobileMql.matches);
+      setIsWideScreen(wideMql.matches);
     };
     tabletMql.addEventListener('change', onChange);
     mobileMql.addEventListener('change', onChange);
+    wideMql.addEventListener('change', onChange);
     onChange();
     return () => {
       tabletMql.removeEventListener('change', onChange);
       mobileMql.removeEventListener('change', onChange);
+      wideMql.removeEventListener('change', onChange);
     };
   }, []);
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
@@ -719,6 +724,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onCycleTarget: handleCycleTarget,
   });
 
+  // Separate chat messages from event log for wide-screen chat panel
+  const chatMessages = useMemo(() =>
+    eventLog.filter(log => log.startsWith('💬') || log.startsWith('🤫')),
+    [eventLog]
+  );
+  const filteredEventLog = useMemo(() =>
+    isWideScreen ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
+    [eventLog, isWideScreen]
+  );
+
   // ── Rendering ──────────────────────────────────────────────────
   if (nodesLoading) {
     return (
@@ -740,7 +755,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }
 
   return (
-    <div className="h-screen flex flex-col parchment-bg">
+    <div className="h-screen flex flex-col parchment-bg max-w-[1920px] mx-auto w-full">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
         <div className="flex items-center gap-2">
@@ -1144,10 +1159,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
             <h3 className="font-display text-xs text-muted-foreground mb-1 shrink-0">Event Log</h3>
             <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
-              {eventLog.length === 0 ? (
+              {filteredEventLog.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
               ) : (
-                eventLog.map((log, i) =>
+                filteredEventLog.map((log, i) =>
                   log === '---tick---' ? (
                     <div key={i} className="border-t-2 border-border/60 my-2" />
                   ) : (
@@ -1157,7 +1172,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               )}
               <div ref={logEndRef} />
             </div>
-            {chatOpen && (
+            {(!isWideScreen && chatOpen) && (
               <div className="shrink-0 mt-1">
                 <Input
                   ref={chatInputRef}
@@ -1307,6 +1322,38 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
               hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
               unlockedConnections={unlockedConnections}
             />
+          </div>
+        )}
+
+        {/* Wide-screen Chat Panel — 4th column */}
+        {isWideScreen && !isTablet && (
+          <div className="h-full w-[320px] shrink-0 ornate-border bg-card/60 flex flex-col">
+            <div className="px-3 py-2 border-b border-border shrink-0">
+              <h3 className="font-display text-xs text-muted-foreground">Chat</h3>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
+              {chatMessages.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No messages yet. Press Enter to chat.</p>
+              ) : (
+                chatMessages.map((log, i) => (
+                  <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
+                ))
+              )}
+            </div>
+            <div className="shrink-0 px-2 pb-2">
+              <Input
+                ref={isWideScreen ? chatInputRef : undefined}
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); handleChatSubmit(); }
+                  if (e.key === 'Escape') { setChatInput(''); }
+                }}
+                placeholder="/w name msg to whisper"
+                className="h-7 text-xs bg-background/50 border-border"
+                autoComplete="off"
+              />
+            </div>
           </div>
         )}
       </div>
