@@ -1031,14 +1031,19 @@ export type Database = {
         Args: { _character_id: string; _gold: number; _xp: number }
         Returns: undefined
       }
-      buy_vendor_item: {
-        Args: {
-          p_character_id: string
-          p_price: number
-          p_vendor_item_id: string
-        }
-        Returns: boolean
-      }
+      buy_vendor_item:
+        | {
+            Args: { p_character_id: string; p_vendor_item_id: string }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_character_id: string
+              p_price: number
+              p_vendor_item_id: string
+            }
+            Returns: boolean
+          }
       cleanup_ground_loot: { Args: never; Returns: undefined }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
