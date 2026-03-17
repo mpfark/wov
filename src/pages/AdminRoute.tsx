@@ -1,10 +1,11 @@
-import { useGameContext } from '@/contexts/GameContext';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
+import { Navigate } from 'react-router-dom';
 import AdminPage from './AdminPage';
 
 export default function AdminRoute() {
-  const { user, authLoading, isAdmin, isValar, roleLoading } = useGameContext();
-  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, isValar, loading: roleLoading } = useRole(user);
 
   if (authLoading || roleLoading) {
     return (
@@ -15,9 +16,8 @@ export default function AdminRoute() {
   }
 
   if (!user || !isAdmin) {
-    navigate('/', { replace: true });
-    return null;
+    return <Navigate to="/game" replace />;
   }
 
-  return <AdminPage onBack={() => { window.close(); navigate('/'); }} isValar={isValar} />;
+  return <AdminPage onBack={() => { window.close(); window.location.href = '/'; }} isValar={isValar} />;
 }
