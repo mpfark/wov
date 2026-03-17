@@ -71,11 +71,10 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       addLog('❌ Not enough gold!');
       return;
     }
-    // Atomic purchase via server-side RPC (verifies ownership, location, gold, stock)
+    // Atomic purchase via server-side RPC (verifies ownership, location, gold, stock, price)
     const { error } = await supabase.rpc('buy_vendor_item' as any, {
       p_character_id: characterId,
       p_vendor_item_id: vi.id,
-      p_price: finalPrice,
     });
     if (error) { addLog(`❌ ${error.message}`); return; }
 
