@@ -116,19 +116,24 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [isMobile, setIsMobile] = useState(false);
   const [charPanelOpen, setCharPanelOpen] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(false);
+  const [isWideScreen, setIsWideScreen] = useState(false);
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
+    const wideMql = window.matchMedia('(min-width: 1600px)');
     const onChange = () => {
       setIsTablet(tabletMql.matches);
       setIsMobile(mobileMql.matches);
+      setIsWideScreen(wideMql.matches);
     };
     tabletMql.addEventListener('change', onChange);
     mobileMql.addEventListener('change', onChange);
+    wideMql.addEventListener('change', onChange);
     onChange();
     return () => {
       tabletMql.removeEventListener('change', onChange);
       mobileMql.removeEventListener('change', onChange);
+      wideMql.removeEventListener('change', onChange);
     };
   }, []);
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
