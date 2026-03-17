@@ -31,6 +31,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { User, Map as MapIconLucide, Zap, Users, LogOut, Bug, RefreshCw } from 'lucide-react';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
+import { useViewportZoom } from '@/hooks/useViewportZoom';
 import { useChat } from '@/hooks/useChat';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
@@ -105,6 +106,7 @@ interface Props {
 }
 
 export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
+  useViewportZoom();
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
 
