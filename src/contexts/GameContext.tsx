@@ -28,6 +28,7 @@ interface GameContextValue {
   // Role
   isAdmin: boolean;
   isValar: boolean;
+  roleLoading: boolean;
 
   // Nodes
   nodes: GameNode[];
