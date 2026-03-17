@@ -724,6 +724,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onCycleTarget: handleCycleTarget,
   });
 
+  // Separate chat messages from event log for wide-screen chat panel
+  const chatMessages = useMemo(() =>
+    eventLog.filter(log => log.startsWith('💬') || log.startsWith('🤫')),
+    [eventLog]
+  );
+  const filteredEventLog = useMemo(() =>
+    isWideScreen ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
+    [eventLog, isWideScreen]
+  );
+
   // ── Rendering ──────────────────────────────────────────────────
   if (nodesLoading) {
     return (
@@ -743,16 +753,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       </div>
     );
   }
-
-  // Separate chat messages from event log for wide-screen chat panel
-  const chatMessages = useMemo(() =>
-    eventLog.filter(log => log.startsWith('💬') || log.startsWith('🤫')),
-    [eventLog]
-  );
-  const filteredEventLog = useMemo(() =>
-    isWideScreen ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
-    [eventLog, isWideScreen]
-  );
 
   return (
     <div className="h-screen flex flex-col parchment-bg max-w-[1920px] mx-auto w-full">
