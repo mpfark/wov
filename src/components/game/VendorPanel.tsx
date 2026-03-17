@@ -71,22 +71,21 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       addLog('❌ Not enough gold!');
       return;
     }
-    const { error } = await supabase.from('character_inventory').insert({
-      character_id: characterId,
-      item_id: vi.item_id,
-      current_durability: 100,
+    // Atomic purchase via server-side RPC (verifies ownership, location, gold, stock)
+    const { error } = await supabase.rpc('buy_vendor_item' as any, {
+      p_character_id: characterId,
+      p_vendor_item_id: vi.id,
+      p_price: finalPrice,
     });
     if (error) { addLog(`❌ ${error.message}`); return; }
 
     const newGold = gold - finalPrice;
-    await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
     const discountNote = buyDiscount > 0 ? ` (${Math.round(buyDiscount * 100)}% CHA discount)` : '';
     addLog(`🪙 Purchased ${vi.item.name} for ${finalPrice} gold.${discountNote}`);
 
     if (vi.stock > 0) {
-      await supabase.from('vendor_inventory').update({ stock: vi.stock - 1 }).eq('id', vi.id);
       setVendorItems(prev => prev.map(v => v.id === vi.id ? { ...v, stock: v.stock - 1 } : v).filter(v => v.stock !== 0));
     }
   };

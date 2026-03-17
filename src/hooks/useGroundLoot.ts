@@ -100,38 +100,26 @@ export function useGroundLoot(handle: NodeChannelHandle, nodeId: string | null, 
     });
     logBroadcast('out', `node`, 'loot_picked_up');
 
-    // Unique item guard
-    if (item.item.rarity === 'unique') {
-      const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
-        p_character_id: characterId, p_item_id: item.item_id,
-      });
-      if (!acquired) {
-        fetchGroundLoot();
-        return false;
-      }
-      await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId);
-    } else {
-      const { data: deleted } = await supabase.from('node_ground_loot' as any).delete().eq('id', groundLootId).select();
-      if (!deleted || (deleted as any[]).length === 0) {
-        fetchGroundLoot();
-        return false;
-      }
-      await supabase.from('character_inventory').insert({
-        character_id: characterId, item_id: item.item_id, current_durability: 100,
-      });
+    // Atomic pickup via server-side RPC (handles both regular and unique items)
+    const { data: success, error } = await supabase.rpc('pickup_ground_loot' as any, {
+      p_loot_id: groundLootId,
+      p_character_id: characterId,
+    });
+    if (error || !success) {
+      fetchGroundLoot();
+      return false;
     }
     fetchGroundLoot();
     return true;
   }, [characterId, groundLoot, fetchGroundLoot, handle]);
 
-  const dropItemToGround = useCallback(async (inventoryItemId: string, itemId: string, currentNodeId: string) => {
-    if (!characterId || !currentNodeId) return;
+  const dropItemToGround = useCallback(async (inventoryItemId: string, _itemId: string, _currentNodeId: string) => {
+    if (!characterId) return;
     suppressRefetchUntilRef.current = Date.now() + 3000;
-    await supabase.from('character_inventory').delete().eq('id', inventoryItemId);
-    await supabase.from('node_ground_loot' as any).insert({
-      node_id: currentNodeId,
-      item_id: itemId,
-      dropped_by: characterId,
+    // Atomic drop via server-side RPC (verifies ownership, soulbound check, uses character's current node)
+    await supabase.rpc('drop_item_to_ground' as any, {
+      p_inventory_id: inventoryItemId,
+      p_character_id: characterId,
     });
     handle.channelRef.current?.send({
       type: 'broadcast',
