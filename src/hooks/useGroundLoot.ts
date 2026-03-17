@@ -133,14 +133,13 @@ export function useGroundLoot(handle: NodeChannelHandle, nodeId: string | null, 
     return true;
   }, [characterId, groundLoot, fetchGroundLoot, handle]);
 
-  const dropItemToGround = useCallback(async (inventoryItemId: string, itemId: string, currentNodeId: string) => {
-    if (!characterId || !currentNodeId) return;
+  const dropItemToGround = useCallback(async (inventoryItemId: string, _itemId: string, _currentNodeId: string) => {
+    if (!characterId) return;
     suppressRefetchUntilRef.current = Date.now() + 3000;
-    await supabase.from('character_inventory').delete().eq('id', inventoryItemId);
-    await supabase.from('node_ground_loot' as any).insert({
-      node_id: currentNodeId,
-      item_id: itemId,
-      dropped_by: characterId,
+    // Atomic drop via server-side RPC (verifies ownership, soulbound check, uses character's current node)
+    await supabase.rpc('drop_item_to_ground' as any, {
+      p_inventory_id: inventoryItemId,
+      p_character_id: characterId,
     });
     handle.channelRef.current?.send({
       type: 'broadcast',

@@ -40,36 +40,9 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
         current_node_id: startingNodeId,
         cp: maxCp, max_cp: maxCp,
       });
-      // Grant starting gear if configured
+      // Grant starting gear via server-side RPC (handles class + universal gear atomically)
       if (char?.id) {
-        // Class-specific weapon
-        const { data: classGear } = await supabase
-          .from('class_starting_gear')
-          .select('item_id')
-          .eq('class', charClass as any)
-          .maybeSingle();
-        if (classGear?.item_id) {
-          await supabase.from('character_inventory').insert({
-            character_id: char.id,
-            item_id: classGear.item_id,
-            equipped_slot: 'main_hand' as any,
-            current_durability: 100,
-          });
-        }
-        // Universal starting gear (shared across all classes)
-        const { data: universalGear } = await supabase
-          .from('universal_starting_gear')
-          .select('item_id, equipped_slot');
-        if (universalGear && universalGear.length > 0) {
-          const inserts = universalGear.map(g => ({
-            character_id: char.id,
-            item_id: g.item_id,
-            equipped_slot: g.equipped_slot as any,
-            current_durability: 100,
-          }));
-          await supabase.from('character_inventory').insert(inserts);
-        }
-        // All gear granted — now select the character so GamePage mounts with full inventory
+        await supabase.rpc('grant_starting_gear' as any, { p_character_id: char.id });
         onCharacterReady?.(char.id);
       }
       toast.success(`${name} has begun their adventure!`);
