@@ -744,8 +744,18 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     );
   }
 
+  // Separate chat messages from event log for wide-screen chat panel
+  const chatMessages = useMemo(() =>
+    eventLog.filter(log => log.startsWith('💬') || log.startsWith('🤫')),
+    [eventLog]
+  );
+  const filteredEventLog = useMemo(() =>
+    isWideScreen ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
+    [eventLog, isWideScreen]
+  );
+
   return (
-    <div className="h-screen flex flex-col parchment-bg">
+    <div className="h-screen flex flex-col parchment-bg max-w-[1920px] mx-auto w-full">
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
         <div className="flex items-center gap-2">
