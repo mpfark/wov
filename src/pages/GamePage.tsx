@@ -106,6 +106,7 @@ interface Props {
 }
 
 export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
+  useViewportZoom();
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
 
