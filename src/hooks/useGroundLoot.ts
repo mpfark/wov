@@ -100,27 +100,7 @@ export function useGroundLoot(handle: NodeChannelHandle, nodeId: string | null, 
     });
     logBroadcast('out', `node`, 'loot_picked_up');
 
-    // Unique item guard
-    if (item.item.rarity === 'unique') {
-      const { data: acquired } = await supabase.rpc('try_acquire_unique_item', {
-        p_character_id: characterId, p_item_id: item.item_id,
-      });
-      if (!acquired) {
-        fetchGroundLoot();
-        return false;
-      }
-      // Unique item RPC already inserted into inventory; just clean up ground loot
-      // Ground loot deletion is handled inside the RPC or we use pickup_ground_loot
-      // For uniques, try_acquire_unique_item handles inventory; we still need to remove ground loot
-      // Since direct DELETE is now locked, use pickup for non-unique; for unique the RPC already inserted
-      // We need a small cleanup — delete via service role isn't available client-side
-      // Actually the unique flow: try_acquire_unique_item inserts inventory but doesn't delete ground loot
-      // Use pickup_ground_loot for everything instead:
-      fetchGroundLoot();
-      return true;
-    }
-
-    // Atomic pickup via server-side RPC (verifies ownership + location)
+    // Atomic pickup via server-side RPC (handles both regular and unique items)
     const { data: success, error } = await supabase.rpc('pickup_ground_loot' as any, {
       p_loot_id: groundLootId,
       p_character_id: characterId,
