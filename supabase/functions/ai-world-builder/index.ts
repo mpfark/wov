@@ -64,7 +64,7 @@ serve(async (req) => {
     // Fetch current world state for context
     const [regRes, nodeRes, creatureRes, npcRes, ltRes, lteRes, areaRes] = await Promise.all([
       supabase.from("regions").select("id, name, description, min_level, max_level").order("min_level"),
-      supabase.from("nodes").select("id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, connections"),
+      supabase.from("nodes").select("id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, connections, x, y"),
       supabase.from("creatures").select("name, node_id, rarity, level"),
       supabase.from("npcs").select("name, node_id"),
       supabase.from("loot_tables").select("id, name"),
