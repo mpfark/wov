@@ -19,70 +19,10 @@ interface Props {
 
 // ── Layout ──────────────────────────────────────────────────────
 
-const DIRECTION_OFFSETS: Record<string, [number, number]> = {
-  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
-  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
-};
-
 const SPACING = 90;
 const NODE_R = 22;
 const OUTLINE_PAD = 18;
 const AREA_PAD = 10;
-
-function layoutNodes(nodes: GameNode[]) {
-  if (nodes.length === 0) return new Map<string, { x: number; y: number }>();
-  const positions = new Map<string, { x: number; y: number }>();
-  const visited = new Set<string>();
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-  // Start from first node
-  const startId = nodes[0].id;
-  const queue: Array<{ id: string; x: number; y: number }> = [{ id: startId, x: 0, y: 0 }];
-  visited.add(startId);
-  positions.set(startId, { x: 0, y: 0 });
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const node = nodeMap.get(current.id);
-    if (!node) continue;
-    for (const conn of node.connections) {
-      if (visited.has(conn.node_id) || !nodeMap.has(conn.node_id)) continue;
-      visited.add(conn.node_id);
-      const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
-      let nx = current.x + offset[0];
-      let ny = current.y + offset[1];
-      // Collision resolution
-      if ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
-        const primaryAxis = Math.abs(offset[0]) >= Math.abs(offset[1]) ? 'x' : 'y';
-        let attempt = 1;
-        let placed = false;
-        while (!placed && attempt < 20) {
-          const candidates = primaryAxis === 'x'
-            ? [{ x: nx, y: ny + attempt }, { x: nx, y: ny - attempt }, { x: nx + (offset[0] >= 0 ? attempt : -attempt), y: ny }]
-            : [{ x: nx + attempt, y: ny }, { x: nx - attempt, y: ny }, { x: nx, y: ny + (offset[1] >= 0 ? attempt : -attempt) }];
-          for (const c of candidates) {
-            if (![...positions.values()].some(p => p.x === c.x && p.y === c.y)) {
-              nx = c.x; ny = c.y; placed = true; break;
-            }
-          }
-          attempt++;
-        }
-      }
-      positions.set(conn.node_id, { x: nx, y: ny });
-      queue.push({ id: conn.node_id, x: nx, y: ny });
-    }
-  }
-
-  // Disconnected nodes
-  let row = 0;
-  for (const node of nodes) {
-    if (!positions.has(node.id)) {
-      const maxX = Math.max(0, ...[...positions.values()].map(p => p.x));
-      positions.set(node.id, { x: maxX + 2, y: row++ });
-    }
-  }
-  return positions;
-}
 
 // ── Union-of-circles outline ──────────────────────────────────
 
@@ -253,38 +193,21 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     return ghosts;
   }, [nodes, visitedIds]);
 
-  // Layout uses ALL nodes for BFS so visited clusters stay spatially connected
-  // even when bridge nodes between them haven't been visited
+  // Use stored coordinates directly for all nodes
   const positions = useMemo(() => {
-    const allNodesForLayout = nodes.map(n => ({
-      ...n,
-      connections: n.connections.filter(c => !c.hidden),
-    }));
-    return layoutNodes(allNodesForLayout);
+    const map = new Map<string, { x: number; y: number }>();
+    for (const n of nodes) map.set(n.id, { x: n.x, y: n.y });
+    return map;
   }, [nodes]);
 
-  // Pixel positions (visited + ghosts)
+  // Pixel positions (visited + ghosts) — ghosts use stored coords too
   const nodePositions = useMemo(() => {
     const map = new Map<string, { px: number; py: number }>();
     positions.forEach((pos, id) => {
       map.set(id, { px: pos.x * SPACING, py: pos.y * SPACING });
     });
-    // Position ghost nodes relative to their parent
-    ghostNodes.forEach(({ parentId, direction }, ghostId) => {
-      const parentPos = positions.get(parentId);
-      if (!parentPos) return;
-      const offset = DIRECTION_OFFSETS[direction] || [1, 0];
-      let gx = parentPos.x + offset[0];
-      let gy = parentPos.y + offset[1];
-      // Simple collision check with existing positions
-      if ([...map.values()].some(p => Math.abs(p.px - gx * SPACING) < 5 && Math.abs(p.py - gy * SPACING) < 5)) {
-        gx += offset[0] * 0.5;
-        gy += offset[1] * 0.5;
-      }
-      map.set(ghostId, { px: gx * SPACING, py: gy * SPACING });
-    });
     return map;
-  }, [positions, ghostNodes]);
+  }, [positions]);
 
   // Edges (visited-to-visited only)
   const edges = useMemo(() => {

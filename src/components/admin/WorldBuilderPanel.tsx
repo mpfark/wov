@@ -37,6 +37,8 @@ interface GeneratedNode {
   is_vendor?: boolean;
   is_blacksmith?: boolean;
   connections: { target_temp_id: string; direction: string }[];
+  x?: number;
+  y?: number;
 }
 
 interface GeneratedCreature {
@@ -322,6 +324,8 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
             is_vendor: node.is_vendor || false,
             is_blacksmith: node.is_blacksmith || false,
             connections: [],
+            x: node.x ?? 0,
+            y: node.y ?? 0,
           })
           .select('id')
           .single();

@@ -1,0 +1,2 @@
+ALTER TABLE public.nodes ADD COLUMN x integer NOT NULL DEFAULT 0;
+ALTER TABLE public.nodes ADD COLUMN y integer NOT NULL DEFAULT 0;

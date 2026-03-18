@@ -24,27 +24,6 @@ const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
 };
 
-function layoutFromCenter(currentNode: GameNode, neighbors: GameNode[]) {
-  const positions = new Map<string, { x: number; y: number }>();
-  positions.set(currentNode.id, { x: 0, y: 0 });
-
-  for (const conn of currentNode.connections) {
-    const neighbor = neighbors.find(n => n.id === conn.node_id);
-    if (!neighbor) continue;
-    const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
-    let nx = offset[0];
-    let ny = offset[1];
-    // Avoid collisions
-    while ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
-      nx += offset[0] || 1;
-      ny += offset[1] || 1;
-    }
-    positions.set(neighbor.id, { x: nx, y: ny });
-  }
-
-  return positions;
-}
-
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId, unlockedConnections }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
@@ -85,33 +64,23 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
 
   const positions = useMemo(() => {
     if (!currentNode) return new Map<string, { x: number; y: number }>();
-    // Use a virtual node with only visible connections for layout
-    const virtualNode = { ...currentNode, connections: visibleConnections };
-    const basePositions = layoutFromCenter(virtualNode, neighbors);
+    // Use stored coordinates, translated so current node is at center (0,0)
+    const basePositions = new Map<string, { x: number; y: number }>();
+    basePositions.set(currentNode.id, { x: 0, y: 0 });
 
-    // Place 2nd-degree visited nodes beyond their parent neighbor
+    for (const neighbor of neighbors) {
+      basePositions.set(neighbor.id, { x: neighbor.x - currentNode.x, y: neighbor.y - currentNode.y });
+    }
+
+    // Place 2nd-degree visited nodes using stored coords relative to current
     for (const secNode of visitedSecondDegree) {
-      // Find which neighbor connects to this node
-      for (const neighbor of neighbors) {
-        const conn = neighbor.connections.find(c => c.node_id === secNode.id && !c.hidden);
-        if (!conn) continue;
-        const neighborPos = basePositions.get(neighbor.id);
-        if (!neighborPos) continue;
-        const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
-        let nx = neighborPos.x + offset[0];
-        let ny = neighborPos.y + offset[1];
-        // Avoid collisions
-        while ([...basePositions.values()].some(p => p.x === nx && p.y === ny)) {
-          nx += offset[0] || 1;
-          ny += offset[1] || 1;
-        }
-        basePositions.set(secNode.id, { x: nx, y: ny });
-        break;
+      if (!basePositions.has(secNode.id)) {
+        basePositions.set(secNode.id, { x: secNode.x - currentNode.x, y: secNode.y - currentNode.y });
       }
     }
 
     return basePositions;
-  }, [currentNode, visibleConnections, neighbors, visitedSecondDegree]);
+  }, [currentNode, neighbors, visitedSecondDegree]);
 
   const { nodePositions, svgWidth, svgHeight, SPACING } = useMemo(() => {
     if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250, SPACING: 120 };

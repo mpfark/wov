@@ -622,6 +622,8 @@ export type Database = {
           name: string
           region_id: string
           searchable_items: Json
+          x: number
+          y: number
         }
         Insert: {
           area_id?: string | null
@@ -637,6 +639,8 @@ export type Database = {
           name?: string
           region_id: string
           searchable_items?: Json
+          x?: number
+          y?: number
         }
         Update: {
           area_id?: string | null
@@ -652,6 +656,8 @@ export type Database = {
           name?: string
           region_id?: string
           searchable_items?: Json
+          x?: number
+          y?: number
         }
         Relationships: [
           {

@@ -18,6 +18,8 @@ interface GeneratedNode {
   is_vendor?: boolean;
   is_blacksmith?: boolean;
   connections: { target_temp_id: string; direction: string }[];
+  x?: number;
+  y?: number;
 }
 
 interface GeneratedCreature {
@@ -71,9 +73,32 @@ function layoutPreviewNodes(
   const positions = new Map<string, { x: number; y: number; isExisting: boolean }>();
   if (nodes.length === 0 && existingAnchors.length === 0) return positions;
 
+  const existingIds = new Set(existingAnchors.map(a => `existing:${a.id}`));
+
+  // If nodes have stored x/y, use those directly
+  const hasCoords = nodes.some(n => n.x !== undefined && n.y !== undefined);
+  if (hasCoords) {
+    for (const node of nodes) {
+      positions.set(node.temp_id, { x: node.x ?? 0, y: node.y ?? 0, isExisting: false });
+    }
+    // Place existing anchors via connections
+    for (const node of nodes) {
+      for (const conn of node.connections) {
+        if (existingIds.has(conn.target_temp_id) && !positions.has(conn.target_temp_id)) {
+          const nodePos = positions.get(node.temp_id);
+          if (nodePos) {
+            const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
+            positions.set(conn.target_temp_id, { x: nodePos.x + offset[0], y: nodePos.y + offset[1], isExisting: true });
+          }
+        }
+      }
+    }
+    return positions;
+  }
+
+  // Fallback: BFS layout from connections
   const visited = new Set<string>();
   const nodeMap = new Map(nodes.map(n => [n.temp_id, n]));
-  const existingIds = new Set(existingAnchors.map(a => `existing:${a.id}`));
 
   if (nodes.length > 0) {
     const startId = nodes[0].temp_id;
