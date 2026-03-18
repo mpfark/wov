@@ -321,153 +321,28 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
     return map;
   }, [regions, nodes]);
 
-  // ---- Global node layout from center + convex hull per region ----
+  // ---- Use stored x/y coordinates for node layout ----
   const { regionHulls, areaHulls, allNodePositions, canvasW, canvasH } = useMemo(() => {
     const MIN_NODE_GAP = 90;
+    const MARGIN = 60;
 
-    // 1. Global BFS layout from Hearthvale Square using connection directions
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
-    const globalPositions = new Map<string, { x: number; y: number }>();
-    const visited = new Set<string>();
-
-    // Find center node
-    const centerNode = nodeMap.get(CENTER_NODE_ID);
-    const startId = centerNode ? CENTER_NODE_ID : (nodes.length > 0 ? nodes[0].id : null);
-    if (!startId) {
+    if (nodes.length === 0) {
       return { regionHulls: new Map(), areaHulls: new Map(), allNodePositions: new Map(), canvasW: CANVAS_W, canvasH: CANVAS_H };
     }
 
-    // BFS from center
-    const queue: Array<{ id: string; x: number; y: number }> = [{ id: startId, x: 0, y: 0 }];
-    visited.add(startId);
-    globalPositions.set(startId, { x: 0, y: 0 });
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const node = nodeMap.get(current.id);
-      if (!node) continue;
-
-      for (const conn of node.connections) {
-        if (visited.has(conn.node_id) || !nodeMap.has(conn.node_id)) continue;
-        visited.add(conn.node_id);
-
-        const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
-        let nx = current.x + offset[0];
-        let ny = current.y + offset[1];
-
-        // Collision avoidance
-        if ([...globalPositions.values()].some(p => p.x === nx && p.y === ny)) {
-          const primaryAxis = Math.abs(offset[0]) >= Math.abs(offset[1]) ? 'x' : 'y';
-          let attempt = 1;
-          let placed = false;
-          while (!placed && attempt < 20) {
-            const candidates = primaryAxis === 'x'
-              ? [
-                  { x: nx, y: ny + attempt },
-                  { x: nx, y: ny - attempt },
-                  { x: nx + (offset[0] >= 0 ? attempt : -attempt), y: ny },
-                ]
-              : [
-                  { x: nx + attempt, y: ny },
-                  { x: nx - attempt, y: ny },
-                  { x: nx, y: ny + (offset[1] >= 0 ? attempt : -attempt) },
-                ];
-            for (const c of candidates) {
-              if (![...globalPositions.values()].some(p => p.x === c.x && p.y === c.y)) {
-                nx = c.x;
-                ny = c.y;
-                placed = true;
-                break;
-              }
-            }
-            attempt++;
-          }
-        }
-
-        globalPositions.set(conn.node_id, { x: nx, y: ny });
-        queue.push({ id: conn.node_id, x: nx, y: ny });
-      }
-    }
-
-    // Place disconnected clusters — run a secondary BFS per cluster so internal
-    // directions are respected, then offset the entire cluster away from the main graph.
-    const maxXSoFar = globalPositions.size > 0
-      ? Math.max(0, ...[...globalPositions.values()].map(p => p.x))
-      : 0;
-    let clusterOffsetX = maxXSoFar + 3;
-    const unplaced = nodes.filter(n => !globalPositions.has(n.id));
-
-    while (unplaced.length > 0) {
-      // Find a cluster root
-      const root = unplaced[0];
-      const clusterQueue: Array<{ id: string; x: number; y: number }> = [{ id: root.id, x: 0, y: 0 }];
-      const clusterPos = new Map<string, { x: number; y: number }>();
-      const clusterVisited = new Set<string>();
-      clusterVisited.add(root.id);
-      clusterPos.set(root.id, { x: 0, y: 0 });
-
-      while (clusterQueue.length > 0) {
-        const cur = clusterQueue.shift()!;
-        const cNode = nodeMap.get(cur.id);
-        if (!cNode) continue;
-        for (const conn of cNode.connections) {
-          if (clusterVisited.has(conn.node_id) || !nodeMap.has(conn.node_id)) continue;
-          clusterVisited.add(conn.node_id);
-          const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
-          let cx = cur.x + offset[0];
-          let cy = cur.y + offset[1];
-          if ([...clusterPos.values()].some(p => p.x === cx && p.y === cy)) {
-            let attempt = 1;
-            let placed = false;
-            while (!placed && attempt < 20) {
-              for (const c of [
-                { x: cx + attempt, y: cy },
-                { x: cx - attempt, y: cy },
-                { x: cx, y: cy + attempt },
-                { x: cx, y: cy - attempt },
-              ]) {
-                if (![...clusterPos.values()].some(p => p.x === c.x && p.y === c.y)) {
-                  cx = c.x; cy = c.y; placed = true; break;
-                }
-              }
-              attempt++;
-            }
-          }
-          clusterPos.set(conn.node_id, { x: cx, y: cy });
-          clusterQueue.push({ id: conn.node_id, x: cx, y: cy });
-        }
-      }
-
-      // Offset the cluster and merge into globalPositions
-      const clusterMinY = Math.min(...[...clusterPos.values()].map(p => p.y));
-      clusterPos.forEach((pos, id) => {
-        globalPositions.set(id, { x: pos.x + clusterOffsetX, y: pos.y - clusterMinY });
-      });
-
-      // Advance offset for next cluster
-      const clusterMaxX = Math.max(...[...clusterPos.values()].map(p => p.x));
-      clusterOffsetX += clusterMaxX + 3;
-
-      // Remove placed nodes from unplaced list
-      for (const id of clusterVisited) {
-        const idx = unplaced.findIndex(n => n.id === id);
-        if (idx >= 0) unplaced.splice(idx, 1);
-      }
-    }
-
-    // 2. Convert grid coords to pixel coords
-    const MARGIN = 60;
+    // Read stored coordinates directly
     const nodePos = new Map<string, { px: number; py: number }>();
-    const vals = [...globalPositions.values()];
-    const minGX = Math.min(...vals.map(p => p.x));
-    const minGY = Math.min(...vals.map(p => p.y));
+    const xs = nodes.map(n => n.x);
+    const ys = nodes.map(n => n.y);
+    const minGX = Math.min(...xs);
+    const minGY = Math.min(...ys);
 
-    globalPositions.forEach((pos, id) => {
-      nodePos.set(id, {
-        px: (pos.x - minGX) * MIN_NODE_GAP + MARGIN,
-        py: (pos.y - minGY) * MIN_NODE_GAP + MARGIN,
+    for (const n of nodes) {
+      nodePos.set(n.id, {
+        px: (n.x - minGX) * MIN_NODE_GAP + MARGIN,
+        py: (n.y - minGY) * MIN_NODE_GAP + MARGIN,
       });
-    });
+    }
 
     // 3. Compute union-of-circles outlines per region
     const hulls = new Map<string, { path: string; paths: string[]; bbox: OutlineBBox; region: Region }>();
