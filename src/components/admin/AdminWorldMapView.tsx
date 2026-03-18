@@ -69,68 +69,6 @@ const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
 };
 
-function layoutNodes(nodes: GraphNode[]) {
-  if (nodes.length === 0) return new Map<string, { x: number; y: number }>();
-  const positions = new Map<string, { x: number; y: number }>();
-  const visited = new Set<string>();
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-  const queue: Array<{ id: string; x: number; y: number }> = [{ id: nodes[0].id, x: 0, y: 0 }];
-  visited.add(nodes[0].id);
-  positions.set(nodes[0].id, { x: 0, y: 0 });
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const node = nodeMap.get(current.id);
-    if (!node) continue;
-    for (const conn of node.connections) {
-      if (visited.has(conn.node_id) || !nodeMap.has(conn.node_id)) continue;
-      visited.add(conn.node_id);
-      const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
-      let nx = current.x + offset[0];
-      let ny = current.y + offset[1];
-      if ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
-        const primaryAxis = Math.abs(offset[0]) >= Math.abs(offset[1]) ? 'x' : 'y';
-        let attempt = 1;
-        let placed = false;
-        while (!placed && attempt < 20) {
-          const candidates = primaryAxis === 'x'
-            ? [
-                { x: nx, y: ny + attempt },
-                { x: nx, y: ny - attempt },
-                { x: nx + (offset[0] >= 0 ? attempt : -attempt), y: ny },
-              ]
-            : [
-                { x: nx + attempt, y: ny },
-                { x: nx - attempt, y: ny },
-                { x: nx, y: ny + (offset[1] >= 0 ? attempt : -attempt) },
-              ];
-          for (const c of candidates) {
-            if (![...positions.values()].some(p => p.x === c.x && p.y === c.y)) {
-              nx = c.x;
-              ny = c.y;
-              placed = true;
-              break;
-            }
-          }
-          attempt++;
-        }
-      }
-      positions.set(conn.node_id, { x: nx, y: ny });
-      queue.push({ id: conn.node_id, x: nx, y: ny });
-    }
-  }
-
-  let row = 0;
-  for (const node of nodes) {
-    if (!positions.has(node.id)) {
-      const maxX = Math.max(0, ...[...positions.values()].map(p => p.x));
-      positions.set(node.id, { x: maxX + 2, y: row++ });
-    }
-  }
-  return positions;
-}
-
 // ---- Union-of-Circles Region Outline ----
 const NODE_DRAW_RADIUS = 28;
 const BORDER_PAD = 20;
