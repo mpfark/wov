@@ -686,10 +686,21 @@ export default function NodeEditorPanel({
           connections = [{ node_id: adjacentToNodeId, direction: reverseDir, label: '' }];
         }
       }
+      // Calculate x/y from parent node + direction offset
+      let newX = 0, newY = 0;
+      if (adjacentToNodeId && adjacentDirection) {
+        const parentNode = allNodesGlobal.find(n => n.id === adjacentToNodeId);
+        if (parentNode) {
+          const offset = DIRECTION_OFFSETS[adjacentDirection] || [1, 0];
+          newX = (parentNode.x ?? 0) + offset[0];
+          newY = (parentNode.y ?? 0) + offset[1];
+        }
+      }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
         is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, connections, searchable_items,
         area_id: form.area_id || null,
+        x: newX, y: newY,
       } as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
 
