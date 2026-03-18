@@ -37,6 +37,8 @@ interface GeneratedNode {
   is_vendor?: boolean;
   is_blacksmith?: boolean;
   connections: { target_temp_id: string; direction: string }[];
+  x?: number;
+  y?: number;
 }
 
 interface GeneratedCreature {
