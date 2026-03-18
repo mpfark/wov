@@ -22,55 +22,6 @@ const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
 };
 
-function layoutNodes(nodes: GraphNode[]) {
-  if (nodes.length === 0) return new Map<string, { x: number; y: number }>();
-
-  const positions = new Map<string, { x: number; y: number }>();
-  const visited = new Set<string>();
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-  // BFS from first node
-  const queue: Array<{ id: string; x: number; y: number }> = [{ id: nodes[0].id, x: 0, y: 0 }];
-  visited.add(nodes[0].id);
-  positions.set(nodes[0].id, { x: 0, y: 0 });
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    const node = nodeMap.get(current.id);
-    if (!node) continue;
-
-    for (const conn of node.connections) {
-      if (visited.has(conn.node_id)) continue;
-      if (!nodeMap.has(conn.node_id)) continue;
-      visited.add(conn.node_id);
-
-      const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
-      let nx = current.x + offset[0];
-      let ny = current.y + offset[1];
-
-      // Avoid collisions
-      while ([...positions.values()].some(p => p.x === nx && p.y === ny)) {
-        nx += offset[0] || 1;
-        ny += offset[1] || 1;
-      }
-
-      positions.set(conn.node_id, { x: nx, y: ny });
-      queue.push({ id: conn.node_id, x: nx, y: ny });
-    }
-  }
-
-  // Place disconnected nodes
-  let row = 0;
-  for (const node of nodes) {
-    if (!positions.has(node.id)) {
-      const maxX = Math.max(0, ...[...positions.values()].map(p => p.x));
-      positions.set(node.id, { x: maxX + 2, y: row++ });
-    }
-  }
-
-  return positions;
-}
-
 export default function RegionGraphView({ nodes, onNodeClick, onAddNodeAdjacent }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
