@@ -307,6 +307,8 @@ Call the generate_world tool with the structured output.`;
                         is_inn: { type: "boolean" },
                         is_vendor: { type: "boolean" },
                         is_blacksmith: { type: "boolean" },
+                        x: { type: "integer", description: "Grid x coordinate. Use compass offsets from connected nodes: E=+1x, W=-1x, N=-1y, S=+1y, NE=(+1,-1), etc." },
+                        y: { type: "integer", description: "Grid y coordinate. Use compass offsets from connected nodes." },
                         connections: {
                           type: "array",
                           items: {
@@ -319,7 +321,7 @@ Call the generate_world tool with the structured output.`;
                           },
                         },
                       },
-                      required: ["temp_id", "area_temp_id", "connections"],
+                      required: ["temp_id", "area_temp_id", "connections", "x", "y"],
                     },
                   },
                   creatures: {
