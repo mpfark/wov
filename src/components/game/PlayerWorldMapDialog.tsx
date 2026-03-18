@@ -205,28 +205,14 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     return map;
   }, [nodes]);
 
-  // Pixel positions (visited + ghosts)
+  // Pixel positions (visited + ghosts) — ghosts use stored coords too
   const nodePositions = useMemo(() => {
     const map = new Map<string, { px: number; py: number }>();
     positions.forEach((pos, id) => {
       map.set(id, { px: pos.x * SPACING, py: pos.y * SPACING });
     });
-    // Position ghost nodes relative to their parent
-    ghostNodes.forEach(({ parentId, direction }, ghostId) => {
-      const parentPos = positions.get(parentId);
-      if (!parentPos) return;
-      const offset = DIRECTION_OFFSETS[direction] || [1, 0];
-      let gx = parentPos.x + offset[0];
-      let gy = parentPos.y + offset[1];
-      // Simple collision check with existing positions
-      if ([...map.values()].some(p => Math.abs(p.px - gx * SPACING) < 5 && Math.abs(p.py - gy * SPACING) < 5)) {
-        gx += offset[0] * 0.5;
-        gy += offset[1] * 0.5;
-      }
-      map.set(ghostId, { px: gx * SPACING, py: gy * SPACING });
-    });
     return map;
-  }, [positions, ghostNodes]);
+  }, [positions]);
 
   // Edges (visited-to-visited only)
   const edges = useMemo(() => {
