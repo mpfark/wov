@@ -275,9 +275,26 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
         }
       }
 
+      // Calculate x/y from adjacent node
+      let newX = 0, newY = 0;
+      if (adjacentToNodeId) {
+        const parentNode = allNodes.find(n => n.id === adjacentToNodeId);
+        if (parentNode) {
+          const dirOffsets: Record<string, [number, number]> = {
+            N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
+            NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
+          };
+          // Use the direction from parent's connection or default S
+          const dir = connections?.[0]?.direction === 'S' ? 'N' : 'S';
+          const offset = dirOffsets[dir] || [0, 1];
+          newX = (parentNode.x ?? 0) + offset[0];
+          newY = (parentNode.y ?? 0) + offset[1];
+        }
+      }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: regionId,
         is_vendor: form.is_vendor, connections, searchable_items,
+        x: newX, y: newY,
       }).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
 
