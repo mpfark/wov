@@ -147,7 +147,7 @@ IMPORTANT RULES FOR POPULATING:
           const nodeNpcs = npcs.filter((np: any) => np.node_id === n.id).map((np: any) => np.name).join(", ");
           const nodeArea = existingAreas.find((a: any) => a.id === n.area_id);
           const areaInfo = nodeArea ? ` [Area: ${nodeArea.name} (${nodeArea.area_type})]` : "";
-          return `  - ${n.name || "(unnamed)"}${flags.length ? ` (${flags.join(", ")})` : ""} [id: ${n.id}]${areaInfo}\n    Exits: ${conns || "none"}\n    Creatures: ${nodeCreatures || "none"}\n    NPCs: ${nodeNpcs || "none"}`;
+          return `  - ${n.name || "(unnamed)"}${flags.length ? ` (${flags.join(", ")})` : ""} [id: ${n.id}] at (${n.x},${n.y})${areaInfo}\n    Exits: ${conns || "none"}\n    Creatures: ${nodeCreatures || "none"}\n    NPCs: ${nodeNpcs || "none"}`;
         }).join("\n");
 
         const areaDetails = existingAreas.map((a: any) => {
