@@ -208,6 +208,7 @@ INN RULE: ${innInstruction}
 
 RULES:
 - Nodes must have directional connections using SHORT codes ONLY: N, S, E, W, NE, NW, SE, SW. NEVER use full words like "north" or "south".
+- Each node must have x and y grid coordinates. Place nodes using compass offsets: N=(0,-1), S=(0,1), E=(1,0), W=(-1,0), NE=(1,-1), NW=(-1,-1), SE=(1,1), SW=(-1,1). When expanding, offset from existing node coordinates. When creating new regions, start the first node at (0,0) and place subsequent nodes relative to it. No two nodes should share the same (x,y) coordinate.
 - ALL names (region, area, node, creature, NPC) must use ONLY standard English alphabet letters (A-Z, a-z), spaces, hyphens, and apostrophes. NO accented characters, NO diacritics, NO special Unicode letters (e.g. no ë, ú, â, ñ, ö). Use plain English equivalents instead.
 - Each area should have an area_type that matches its theme (forest, town, cave, ruins, plains, mountain, swamp, desert, coast, dungeon, other).
 - Group nodes into areas logically: a cluster of forest nodes in one area, town nodes in another, etc.
