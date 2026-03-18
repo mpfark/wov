@@ -25,7 +25,11 @@ const DIRECTION_OFFSETS: Record<string, [number, number]> = {
 export default function RegionGraphView({ nodes, onNodeClick, onAddNodeAdjacent }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-  const positions = useMemo(() => layoutNodes(nodes), [nodes]);
+  const positions = useMemo(() => {
+    const map = new Map<string, { x: number; y: number }>();
+    for (const node of nodes) map.set(node.id, { x: node.x, y: node.y });
+    return map;
+  }, [nodes]);
 
   // Normalize positions to pixel space
   const { nodePositions, svgWidth, svgHeight } = useMemo(() => {
