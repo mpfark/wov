@@ -324,6 +324,8 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
             is_vendor: node.is_vendor || false,
             is_blacksmith: node.is_blacksmith || false,
             connections: [],
+            x: node.x ?? 0,
+            y: node.y ?? 0,
           })
           .select('id')
           .single();
