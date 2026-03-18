@@ -7,6 +7,8 @@ interface GraphNode {
   name: string;
   is_vendor: boolean;
   connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
+  x: number;
+  y: number;
 }
 
 interface Props {

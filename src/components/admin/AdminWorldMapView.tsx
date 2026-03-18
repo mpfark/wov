@@ -16,6 +16,8 @@ interface GraphNode {
   is_inn: boolean;
   is_blacksmith: boolean;
   connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
+  x: number;
+  y: number;
 }
 
 interface Area {

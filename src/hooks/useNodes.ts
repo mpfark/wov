@@ -29,6 +29,8 @@ export interface GameNode {
   is_teleport: boolean;
   is_trainer: boolean;
   area_id?: string | null;
+  x: number;
+  y: number;
 }
 
 export interface Region {
