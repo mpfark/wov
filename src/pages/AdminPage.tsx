@@ -51,6 +51,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
   const [nodePositions, setNodePositions] = useState<Map<string, { px: number; py: number }>>(new Map());
   const [typeDialogOpen, setTypeDialogOpen] = useState(false);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [multiSelectedIds, setMultiSelectedIds] = useState<Set<string>>(new Set());
 
   const [areas, setAreas] = useState<any[]>([]);
 
