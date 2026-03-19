@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Bug, Plus, Settings } from 'lucide-react';
+import { ArrowLeft, Bug, MousePointer2, Plus, Settings } from 'lucide-react';
 import AdminWorldMapView from '@/components/admin/AdminWorldMapView';
 import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
@@ -25,6 +25,7 @@ import AdminChatWidget from '@/components/admin/AdminChatWidget';
 import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
 import AreaEditorPanel from '@/components/admin/AreaEditorPanel';
 import AreaTypeDialog from '@/components/admin/AreaTypeDialog';
+import BatchNodeEditPanel from '@/components/admin/BatchNodeEditPanel';
 
 interface AdminPageProps {
   onBack: () => void;
@@ -50,6 +51,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [populateSelectedIds, setPopulateSelectedIds] = useState<Set<string>>(new Set());
   const [nodePositions, setNodePositions] = useState<Map<string, { px: number; py: number }>>(new Map());
   const [typeDialogOpen, setTypeDialogOpen] = useState(false);
+  const [multiSelectMode, setMultiSelectMode] = useState(false);
+  const [multiSelectedIds, setMultiSelectedIds] = useState<Set<string>>(new Set());
 
   const [areas, setAreas] = useState<any[]>([]);
 
@@ -208,11 +211,24 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <div className="flex-1" />
             <Button
               size="sm"
+              variant={multiSelectMode ? 'default' : 'outline'}
+              onClick={() => {
+                setMultiSelectMode(m => !m);
+                if (multiSelectMode) setMultiSelectedIds(new Set());
+                if (!multiSelectMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); setPopulateMode(false); setPopulateSelectedIds(new Set()); }
+              }}
+              className="text-xs"
+            >
+              <MousePointer2 className="w-3 h-3 mr-1" />
+              {multiSelectMode ? 'Exit Select' : 'Multi-Select'}
+            </Button>
+            <Button
+              size="sm"
               variant={populateMode ? 'default' : 'outline'}
               onClick={() => {
                 setPopulateMode(m => !m);
                 if (populateMode) setPopulateSelectedIds(new Set());
-                if (!populateMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); }
+                if (!populateMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); setMultiSelectMode(false); setMultiSelectedIds(new Set()); }
               }}
               className="text-xs"
             >
@@ -270,7 +286,17 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   }}
                   onPositionsComputed={setNodePositions}
                   onConnectionCreated={loadData}
-                  panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea}
+                  panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea || (multiSelectMode && multiSelectedIds.size > 0)}
+                  multiSelectMode={multiSelectMode}
+                  multiSelectedIds={multiSelectedIds}
+                  onMultiSelectToggleNode={(id) => {
+                    setMultiSelectedIds(prev => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    });
+                  }}
                 />
               </ResizablePanel>
               {(panelOpen && !populateMode && !editingRegionId && !editingAreaId && !isNewArea) && (
@@ -334,6 +360,20 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                       })}
                       onClose={() => { setPopulateMode(false); setPopulateSelectedIds(new Set()); }}
                       onDataChanged={loadData}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
+              {multiSelectMode && multiSelectedIds.size > 0 && !populateMode && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <BatchNodeEditPanel
+                      selectedNodeIds={multiSelectedIds}
+                      regions={regions}
+                      areas={areas}
+                      onClose={() => { setMultiSelectMode(false); setMultiSelectedIds(new Set()); }}
+                      onSaved={() => { setMultiSelectedIds(new Set()); loadData(); }}
                     />
                   </ResizablePanel>
                 </>
