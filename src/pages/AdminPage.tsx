@@ -121,7 +121,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         const reverseDir = REVERSE_DIR[direction] || 'S';
 
         const { data: inserted, error } = await supabase.from('nodes').insert({
-          name: 'New Node',
+          name: '',
           description: '',
           region_id: parentNode.region_id,
           area_id: parentNode.area_id || null,
