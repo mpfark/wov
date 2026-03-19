@@ -295,7 +295,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             </Button>
           </div>
 
-          {/* Resizable map + properties panel */}
+          {/* Overlay map + properties panel */}
           <div className="flex-1 overflow-hidden relative">
             <AdminWorldMapView
               regions={regions}
