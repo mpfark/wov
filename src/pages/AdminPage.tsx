@@ -135,7 +135,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         if (inserted) {
           // Add connection from parent to new node
           const parentConns = Array.isArray(parentNode.connections) ? [...parentNode.connections] : [];
-          parentConns.push({ node_id: inserted.id, direction, label: 'New Node' });
+          parentConns.push({ node_id: inserted.id, direction, label: '' });
           await supabase.from('nodes').update({ connections: parentConns }).eq('id', fromId);
 
           await loadData();
