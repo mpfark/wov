@@ -25,6 +25,7 @@ import AdminChatWidget from '@/components/admin/AdminChatWidget';
 import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
 import AreaEditorPanel from '@/components/admin/AreaEditorPanel';
 import AreaTypeDialog from '@/components/admin/AreaTypeDialog';
+import BatchNodeEditPanel from '@/components/admin/BatchNodeEditPanel';
 
 interface AdminPageProps {
   onBack: () => void;
