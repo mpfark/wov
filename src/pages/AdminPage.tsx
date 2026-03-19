@@ -364,6 +364,20 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   </ResizablePanel>
                 </>
               )}
+              {multiSelectMode && multiSelectedIds.size > 0 && !populateMode && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={35} minSize={25}>
+                    <BatchNodeEditPanel
+                      selectedNodeIds={multiSelectedIds}
+                      regions={regions}
+                      areas={areas}
+                      onClose={() => { setMultiSelectMode(false); setMultiSelectedIds(new Set()); }}
+                      onSaved={() => { setMultiSelectedIds(new Set()); loadData(); }}
+                    />
+                  </ResizablePanel>
+                </>
+              )}
             </ResizablePanelGroup>
           </div>
 
