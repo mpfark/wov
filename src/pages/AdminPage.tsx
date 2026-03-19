@@ -211,11 +211,24 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
             <div className="flex-1" />
             <Button
               size="sm"
+              variant={multiSelectMode ? 'default' : 'outline'}
+              onClick={() => {
+                setMultiSelectMode(m => !m);
+                if (multiSelectMode) setMultiSelectedIds(new Set());
+                if (!multiSelectMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); setPopulateMode(false); setPopulateSelectedIds(new Set()); }
+              }}
+              className="text-xs"
+            >
+              <MousePointer2 className="w-3 h-3 mr-1" />
+              {multiSelectMode ? 'Exit Select' : 'Multi-Select'}
+            </Button>
+            <Button
+              size="sm"
               variant={populateMode ? 'default' : 'outline'}
               onClick={() => {
                 setPopulateMode(m => !m);
                 if (populateMode) setPopulateSelectedIds(new Set());
-                if (!populateMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); }
+                if (!populateMode) { setPanelOpen(false); setEditingAreaId(null); setIsNewArea(false); setMultiSelectMode(false); setMultiSelectedIds(new Set()); }
               }}
               className="text-xs"
             >
