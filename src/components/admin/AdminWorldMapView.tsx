@@ -904,11 +904,11 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                   <circle
                     cx={pos.px} cy={pos.py} r={28}
                     className={`cursor-pointer transition-all duration-200 ${
-                      populateMode && populateSelectedIds?.has(node.id)
+                      (populateMode && populateSelectedIds?.has(node.id)) || multiSelectedIds?.has(node.id)
                         ? 'fill-primary/25 stroke-primary'
                         : isActive ? 'fill-primary/20 stroke-primary' : 'fill-card stroke-border'
                     }`}
-                    strokeWidth={populateMode && populateSelectedIds?.has(node.id) ? 3 : isActive ? 2.5 : 1.5}
+                    strokeWidth={(populateMode && populateSelectedIds?.has(node.id)) || multiSelectedIds?.has(node.id) ? 3 : isActive ? 2.5 : 1.5}
                     onClick={(e) => {
                       if (populateMode && onPopulateToggleNode) {
                         onPopulateToggleNode(node.id);
@@ -922,7 +922,7 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                       }
                     }}
                   />
-                  {populateMode && populateSelectedIds?.has(node.id) && (
+                  {(populateMode && populateSelectedIds?.has(node.id) || multiSelectedIds?.has(node.id)) && (
                     <text x={pos.px + 20} y={pos.py - 20} textAnchor="middle"
                       className="fill-primary text-[10px] font-bold pointer-events-none select-none">✓</text>
                   )}
