@@ -286,7 +286,17 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
                   }}
                   onPositionsComputed={setNodePositions}
                   onConnectionCreated={loadData}
-                  panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea}
+                  panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea || (multiSelectMode && multiSelectedIds.size > 0)}
+                  multiSelectMode={multiSelectMode}
+                  multiSelectedIds={multiSelectedIds}
+                  onMultiSelectToggleNode={(id) => {
+                    setMultiSelectedIds(prev => {
+                      const next = new Set(prev);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    });
+                  }}
                 />
               </ResizablePanel>
               {(panelOpen && !populateMode && !editingRegionId && !editingAreaId && !isNewArea) && (
