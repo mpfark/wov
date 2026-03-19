@@ -27,7 +27,7 @@ interface NodeEditorPanelProps {
   initialRegionId: string;
   allNodesGlobal: any[];
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (newNodeId?: string) => void;
   isValar: boolean;
   adjacentToNodeId?: string | null;
   adjacentDirection?: string | null;
