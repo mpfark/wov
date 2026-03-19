@@ -724,7 +724,7 @@ export default function NodeEditorPanel({
       }
     }
     setLoading(false);
-    onSaved();
+    onSaved(inserted?.id);
   };
 
   const deleteNode = async () => {
