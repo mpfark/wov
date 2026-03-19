@@ -60,6 +60,9 @@ interface Props {
   onPositionsComputed?: (positions: Map<string, { px: number; py: number }>) => void;
   onConnectionCreated?: () => void;
   panelOpen?: boolean;
+  multiSelectMode?: boolean;
+  multiSelectedIds?: Set<string>;
+  onMultiSelectToggleNode?: (nodeId: string) => void;
 }
 
 const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
