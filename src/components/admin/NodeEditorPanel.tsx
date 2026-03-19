@@ -27,7 +27,7 @@ interface NodeEditorPanelProps {
   initialRegionId: string;
   allNodesGlobal: any[];
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (newNodeId?: string) => void;
   isValar: boolean;
   adjacentToNodeId?: string | null;
   adjacentDirection?: string | null;
@@ -674,6 +674,7 @@ export default function NodeEditorPanel({
     try { connections = JSON.parse(form.connections); } catch { return toast.error('Invalid connections JSON'); }
 
     setLoading(true);
+    let createdNodeId: string | undefined;
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
@@ -719,12 +720,13 @@ export default function NodeEditorPanel({
 
       toast.success('Node created');
       if (inserted) {
+        createdNodeId = inserted.id;
         setActiveNodeId(inserted.id);
         loadNode(inserted.id);
       }
     }
     setLoading(false);
-    onSaved();
+    onSaved(createdNodeId);
   };
 
   const deleteNode = async () => {

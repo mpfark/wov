@@ -121,8 +121,14 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     // No longer used
   };
 
-  const handleEditorSaved = () => {
+  const handleEditorSaved = (newNodeId?: string) => {
     loadData();
+    if (newNodeId) {
+      setEditingNodeId(newNodeId);
+      setIsNewNode(false);
+      setAdjacentToNodeId(null);
+      setAdjacentDirection(null);
+    }
   };
 
   const deleteRegion = async (id: string) => {

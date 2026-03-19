@@ -917,7 +917,6 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                       } else {
                         const newSelected = selectedNode === node.id ? null : node.id;
                         setSelectedNode(newSelected);
-                        if (newSelected) centerOnNode(newSelected);
                         onNodeClick(node.id);
                       }
                     }}
