@@ -296,147 +296,130 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
           </div>
 
           {/* Resizable map + properties panel */}
-          <div className="flex-1 overflow-hidden">
-            <ResizablePanelGroup direction="horizontal">
-              <ResizablePanel defaultSize={panelOpen ? 65 : 100} minSize={40}>
-                <AdminWorldMapView
+          <div className="flex-1 overflow-hidden relative">
+            <AdminWorldMapView
+              regions={regions}
+              nodes={nodes}
+              areas={areas}
+              creatureCounts={creatureCounts}
+              npcCounts={npcCounts}
+              onNodeClick={handleNodeClick}
+              onAddNodeAdjacent={handleAddNodeAdjacent}
+              onEditRegion={(region) => {
+                setEditingRegionId(region.id);
+                setPanelOpen(false);
+                setPopulateMode(false);
+                setPopulateSelectedIds(new Set());
+                setEditingAreaId(null);
+                setIsNewArea(false);
+              }}
+              onDeleteRegion={deleteRegion}
+              onEditArea={(area) => {
+                setEditingAreaId(area.id);
+                setIsNewArea(false);
+                setPanelOpen(false);
+                setEditingRegionId(null);
+                setPopulateMode(false);
+                setPopulateSelectedIds(new Set());
+              }}
+              onDeleteArea={async (areaId) => {
+                const area = areas.find(a => a.id === areaId);
+                if (!window.confirm(`Delete area "${area?.name}"?`)) return;
+                const { error } = await supabase.from('areas').delete().eq('id', areaId);
+                if (error) return toast.error(error.message);
+                toast.success('Area deleted');
+                loadData();
+              }}
+              populateMode={populateMode}
+              populateSelectedIds={populateSelectedIds}
+              onPopulateToggleNode={(id) => {
+                setPopulateSelectedIds(prev => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                });
+              }}
+              onPositionsComputed={setNodePositions}
+              onConnectionCreated={loadData}
+              panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea || (multiSelectMode && multiSelectedIds.size > 0)}
+              multiSelectMode={multiSelectMode}
+              multiSelectedIds={multiSelectedIds}
+              onMultiSelectToggleNode={(id) => {
+                setMultiSelectedIds(prev => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                });
+              }}
+            />
+
+            {/* Overlay editor panels */}
+            {(panelOpen && !populateMode && !editingRegionId && !editingAreaId && !isNewArea) && (
+              <div className="absolute top-0 right-0 h-full w-[35%] min-w-[360px] bg-card border-l border-border shadow-xl z-10">
+                <NodeEditorPanel
+                  nodeId={editingNodeId}
                   regions={regions}
-                  nodes={nodes}
-                  areas={areas}
-                  creatureCounts={creatureCounts}
-                  npcCounts={npcCounts}
-                  onNodeClick={handleNodeClick}
-                  onAddNodeAdjacent={handleAddNodeAdjacent}
-                  onEditRegion={(region) => {
-                    setEditingRegionId(region.id);
-                    setPanelOpen(false);
-                    setPopulateMode(false);
-                    setPopulateSelectedIds(new Set());
-                    setEditingAreaId(null);
-                    setIsNewArea(false);
-                  }}
-                  onDeleteRegion={deleteRegion}
-                  onEditArea={(area) => {
-                    setEditingAreaId(area.id);
-                    setIsNewArea(false);
-                    setPanelOpen(false);
-                    setEditingRegionId(null);
-                    setPopulateMode(false);
-                    setPopulateSelectedIds(new Set());
-                  }}
-                  onDeleteArea={async (areaId) => {
-                    const area = areas.find(a => a.id === areaId);
-                    if (!window.confirm(`Delete area "${area?.name}"?`)) return;
-                    const { error } = await supabase.from('areas').delete().eq('id', areaId);
-                    if (error) return toast.error(error.message);
-                    toast.success('Area deleted');
-                    loadData();
-                  }}
-                  populateMode={populateMode}
-                  populateSelectedIds={populateSelectedIds}
-                  onPopulateToggleNode={(id) => {
-                    setPopulateSelectedIds(prev => {
-                      const next = new Set(prev);
-                      if (next.has(id)) next.delete(id);
-                      else next.add(id);
-                      return next;
-                    });
-                  }}
-                  onPositionsComputed={setNodePositions}
-                  onConnectionCreated={loadData}
-                  panelOpen={panelOpen || !!editingRegionId || !!editingAreaId || isNewArea || (multiSelectMode && multiSelectedIds.size > 0)}
-                  multiSelectMode={multiSelectMode}
-                  multiSelectedIds={multiSelectedIds}
-                  onMultiSelectToggleNode={(id) => {
-                    setMultiSelectedIds(prev => {
-                      const next = new Set(prev);
-                      if (next.has(id)) next.delete(id);
-                      else next.add(id);
-                      return next;
-                    });
-                  }}
+                  initialRegionId={selectedRegion || (regions[0]?.id ?? '')}
+                  allNodesGlobal={nodes}
+                  onClose={() => setPanelOpen(false)}
+                  onSaved={handleEditorSaved}
+                  isValar={isValar}
+                  adjacentToNodeId={adjacentToNodeId}
+                  adjacentDirection={adjacentDirection}
+                  nodePositions={nodePositions}
                 />
-              </ResizablePanel>
-              {(panelOpen && !populateMode && !editingRegionId && !editingAreaId && !isNewArea) && (
-                <>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={35} minSize={25}>
-                    <NodeEditorPanel
-                      nodeId={editingNodeId}
-                      regions={regions}
-                      initialRegionId={selectedRegion || (regions[0]?.id ?? '')}
-                      allNodesGlobal={nodes}
-                      onClose={() => setPanelOpen(false)}
-                      onSaved={handleEditorSaved}
-                      isValar={isValar}
-                      adjacentToNodeId={adjacentToNodeId}
-                      adjacentDirection={adjacentDirection}
-                      nodePositions={nodePositions}
-                    />
-                  </ResizablePanel>
-                </>
-              )}
-              {editingRegionId && !populateMode && (
-                <>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={35} minSize={25}>
-                    <RegionEditorPanel
-                      regionId={editingRegionId}
-                      regions={regions}
-                      onClose={() => setEditingRegionId(null)}
-                      onSaved={() => { setEditingRegionId(null); loadData(); }}
-                    />
-                  </ResizablePanel>
-                </>
-              )}
-              {(editingAreaId || isNewArea) && !populateMode && !editingRegionId && (
-                <>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={35} minSize={25}>
-                    <AreaEditorPanel
-                      areaId={editingAreaId}
-                      isNew={isNewArea}
-                      regions={regions}
-                      areas={areas}
-                      initialRegionId={selectedRegion || regions[0]?.id}
-                      onClose={() => { setEditingAreaId(null); setIsNewArea(false); }}
-                      onSaved={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
-                      onDeleted={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
-                    />
-                  </ResizablePanel>
-                </>
-              )}
-              {populateMode && populateSelectedIds.size > 0 && (
-                <>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={35} minSize={25}>
-                    <PopulatePanel
-                      selectedNodeIds={populateSelectedIds}
-                      allNodes={nodes.map(n => {
-                        const r = regions.find(reg => reg.id === n.region_id);
-                        return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level };
-                      })}
-                      onClose={() => { setPopulateMode(false); setPopulateSelectedIds(new Set()); }}
-                      onDataChanged={loadData}
-                    />
-                  </ResizablePanel>
-                </>
-              )}
-              {multiSelectMode && multiSelectedIds.size > 0 && !populateMode && (
-                <>
-                  <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={35} minSize={25}>
-                    <BatchNodeEditPanel
-                      selectedNodeIds={multiSelectedIds}
-                      regions={regions}
-                      areas={areas}
-                      onClose={() => { setMultiSelectMode(false); setMultiSelectedIds(new Set()); }}
-                      onSaved={() => { setMultiSelectedIds(new Set()); loadData(); }}
-                    />
-                  </ResizablePanel>
-                </>
-              )}
-            </ResizablePanelGroup>
+              </div>
+            )}
+            {editingRegionId && !populateMode && (
+              <div className="absolute top-0 right-0 h-full w-[35%] min-w-[360px] bg-card border-l border-border shadow-xl z-10">
+                <RegionEditorPanel
+                  regionId={editingRegionId}
+                  regions={regions}
+                  onClose={() => setEditingRegionId(null)}
+                  onSaved={() => { setEditingRegionId(null); loadData(); }}
+                />
+              </div>
+            )}
+            {(editingAreaId || isNewArea) && !populateMode && !editingRegionId && (
+              <div className="absolute top-0 right-0 h-full w-[35%] min-w-[360px] bg-card border-l border-border shadow-xl z-10">
+                <AreaEditorPanel
+                  areaId={editingAreaId}
+                  isNew={isNewArea}
+                  regions={regions}
+                  areas={areas}
+                  initialRegionId={selectedRegion || regions[0]?.id}
+                  onClose={() => { setEditingAreaId(null); setIsNewArea(false); }}
+                  onSaved={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
+                  onDeleted={() => { setEditingAreaId(null); setIsNewArea(false); loadData(); }}
+                />
+              </div>
+            )}
+            {populateMode && populateSelectedIds.size > 0 && (
+              <div className="absolute top-0 right-0 h-full w-[35%] min-w-[360px] bg-card border-l border-border shadow-xl z-10">
+                <PopulatePanel
+                  selectedNodeIds={populateSelectedIds}
+                  allNodes={nodes.map(n => {
+                    const r = regions.find(reg => reg.id === n.region_id);
+                    return { ...n, region_name: r?.name, min_level: r?.min_level, max_level: r?.max_level };
+                  })}
+                  onClose={() => { setPopulateMode(false); setPopulateSelectedIds(new Set()); }}
+                  onDataChanged={loadData}
+                />
+              </div>
+            )}
+            {multiSelectMode && multiSelectedIds.size > 0 && !populateMode && (
+              <div className="absolute top-0 right-0 h-full w-[35%] min-w-[360px] bg-card border-l border-border shadow-xl z-10">
+                <BatchNodeEditPanel
+                  selectedNodeIds={multiSelectedIds}
+                  regions={regions}
+                  areas={areas}
+                  onClose={() => { setMultiSelectMode(false); setMultiSelectedIds(new Set()); }}
+                  onSaved={() => { setMultiSelectedIds(new Set()); loadData(); }}
+                />
+              </div>
+            )}
           </div>
 
           <AreaTypeDialog open={typeDialogOpen} onOpenChange={setTypeDialogOpen} />
