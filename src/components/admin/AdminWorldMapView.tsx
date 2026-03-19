@@ -912,6 +912,8 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     onClick={(e) => {
                       if (populateMode && onPopulateToggleNode) {
                         onPopulateToggleNode(node.id);
+                      } else if ((multiSelectMode || e.shiftKey) && onMultiSelectToggleNode) {
+                        onMultiSelectToggleNode(node.id);
                       } else {
                         const newSelected = selectedNode === node.id ? null : node.id;
                         setSelectedNode(newSelected);
