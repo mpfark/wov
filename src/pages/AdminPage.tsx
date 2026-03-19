@@ -121,7 +121,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         const reverseDir = REVERSE_DIR[direction] || 'S';
 
         const { data: inserted, error } = await supabase.from('nodes').insert({
-          name: 'New Node',
+          name: '',
           description: '',
           region_id: parentNode.region_id,
           area_id: parentNode.area_id || null,
@@ -135,7 +135,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         if (inserted) {
           // Add connection from parent to new node
           const parentConns = Array.isArray(parentNode.connections) ? [...parentNode.connections] : [];
-          parentConns.push({ node_id: inserted.id, direction, label: 'New Node' });
+          parentConns.push({ node_id: inserted.id, direction, label: '' });
           await supabase.from('nodes').update({ connections: parentConns }).eq('id', fromId);
 
           await loadData();
