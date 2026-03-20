@@ -29,16 +29,16 @@ interface Props {
 
 export default function AreaEditorPanel({ areaId, isNew, regions, areas, initialRegionId, onClose, onSaved, onDeleted }: Props) {
   const { areaTypes } = useAreaTypes();
-  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other' });
+  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (isNew) {
-      setForm({ name: '', description: '', region_id: initialRegionId || regions[0]?.id || '', area_type: 'other' });
+      setForm({ name: '', description: '', region_id: initialRegionId || regions[0]?.id || '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
     } else if (areaId) {
       const area = areas.find(a => a.id === areaId);
       if (area) {
-        setForm({ name: area.name, description: area.description, region_id: area.region_id, area_type: area.area_type });
+        setForm({ name: area.name, description: area.description, region_id: area.region_id, area_type: area.area_type, min_level: area.min_level ?? 0, max_level: area.max_level ?? 0, creature_types: area.creature_types ?? '', flavor_text: area.flavor_text ?? '' });
       }
     }
   }, [areaId, isNew, initialRegionId]);
@@ -58,6 +58,8 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
             min_level: region?.min_level,
             max_level: region?.max_level,
             existing_areas: existingAreas || 'none',
+            creature_types: form.creature_types || undefined,
+            flavor_text: form.flavor_text || undefined,
           },
         },
       });
@@ -81,6 +83,10 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
         description: form.description.trim(),
         region_id: form.region_id,
         area_type: form.area_type,
+        min_level: form.min_level,
+        max_level: form.max_level,
+        creature_types: form.creature_types.trim(),
+        flavor_text: form.flavor_text.trim(),
       } as any);
       if (error) return toast.error(error.message);
       toast.success('Area created');
@@ -90,6 +96,10 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
         description: form.description.trim(),
         region_id: form.region_id,
         area_type: form.area_type,
+        min_level: form.min_level,
+        max_level: form.max_level,
+        creature_types: form.creature_types.trim(),
+        flavor_text: form.flavor_text.trim(),
       } as any).eq('id', areaId);
       if (error) return toast.error(error.message);
       toast.success('Area updated');
@@ -157,6 +167,24 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground font-display mb-1 block">Min Level</label>
+              <Input type="number" min={0} max={99} value={form.min_level} onChange={e => setForm(f => ({ ...f, min_level: parseInt(e.target.value) || 0 }))} className="text-xs" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground font-display mb-1 block">Max Level</label>
+              <Input type="number" min={0} max={99} value={form.max_level} onChange={e => setForm(f => ({ ...f, max_level: parseInt(e.target.value) || 0 }))} className="text-xs" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground font-display mb-1 block">Creature Types</label>
+            <Input placeholder="e.g. undead, wolves, bandits" value={form.creature_types} onChange={e => setForm(f => ({ ...f, creature_types: e.target.value }))} className="text-xs" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground font-display mb-1 block">Flavor Text</label>
+            <Textarea placeholder="Atmospheric hints for AI generation..." value={form.flavor_text} onChange={e => setForm(f => ({ ...f, flavor_text: e.target.value }))} rows={3} className="text-xs" />
           </div>
           <Button onClick={save} className="font-display text-xs w-full">
             <Save className="w-3 h-3 mr-1" /> {isNew ? 'Create Area' : 'Save Changes'}
