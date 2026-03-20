@@ -137,6 +137,7 @@ IMPORTANT RULES FOR POPULATING:
 - Use the real node IDs (e.g. "${populate_nodes[0].id}") as the node_temp_id for creatures
 - Generate 1-4 creatures per node (mix of aggressive and passive)
 - Creature levels must match each node's region level range
+- Use the Area's creature_types and flavor_text fields as INSPIRATION for what kinds of creatures to generate. If creature_types says "wolves, bears" then generate wolf/bear-type creatures. If flavor_text describes a haunted atmosphere, generate undead or spectral creatures.
 - Do NOT duplicate existing creature names on the same node
 - The "region" field should use name "Populate" with description "Populating existing nodes" min_level 1 max_level 1 (placeholder)
 - Mark each creature as is_humanoid: true or false (humanoids are bandits, soldiers, cultists, mages, etc. — anything with a roughly human form)
