@@ -734,8 +734,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     [eventLog]
   );
   const filteredEventLog = useMemo(() =>
-    isWideScreen ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
-    [eventLog, isWideScreen]
+    (isWideScreen && chatPanelOpen) ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
+    [eventLog, isWideScreen, chatPanelOpen]
   );
 
   // ── Rendering ──────────────────────────────────────────────────
