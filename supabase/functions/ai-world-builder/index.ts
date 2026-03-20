@@ -69,7 +69,7 @@ serve(async (req) => {
       supabase.from("npcs").select("name, node_id"),
       supabase.from("loot_tables").select("id, name"),
       supabase.from("loot_table_entries").select("loot_table_id, item_id, weight, items:item_id(name, level, rarity)"),
-      supabase.from("areas").select("id, name, description, area_type, region_id"),
+      supabase.from("areas").select("id, name, description, area_type, region_id, min_level, max_level, creature_types, flavor_text"),
     ]);
 
     const regions = regRes.data || [];
@@ -114,7 +114,16 @@ serve(async (req) => {
       isPopulateMode = true;
       const nodeDetails = populate_nodes.map((pn: any) => {
         const nodeCreatures = creatures.filter((c: any) => c.node_id === pn.id).map((c: any) => `${c.name} (${c.rarity}, lvl ${c.level})`).join(", ");
-        return `  - ${pn.name || "(unnamed)"} [id: ${pn.id}] (Region: ${pn.region_name}, Lvl ${pn.min_level}-${pn.max_level})\n    Description: ${pn.description}\n    Existing creatures: ${nodeCreatures || "none"}`;
+        // Find the area for this node to include area metadata
+        const nodeArea = areas.find((a: any) => a.id === pn.area_id);
+        let areaContext = "";
+        if (nodeArea) {
+          areaContext = `\n    Area: ${nodeArea.name} (${nodeArea.area_type})`;
+          if (nodeArea.min_level || nodeArea.max_level) areaContext += ` [Lvl ${nodeArea.min_level}-${nodeArea.max_level}]`;
+          if (nodeArea.creature_types) areaContext += `\n    Creature types: ${nodeArea.creature_types}`;
+          if (nodeArea.flavor_text) areaContext += `\n    Flavor: ${nodeArea.flavor_text}`;
+        }
+        return `  - ${pn.name || "(unnamed)"} [id: ${pn.id}] (Region: ${pn.region_name}, Lvl ${pn.min_level}-${pn.max_level})\n    Description: ${pn.description}${areaContext}\n    Existing creatures: ${nodeCreatures || "none"}`;
       }).join("\n");
 
       expandContext = `\n\nYOU ARE POPULATING EXISTING NODES WITH CREATURES. Do NOT generate new nodes, NPCs, or areas.
@@ -128,6 +137,7 @@ IMPORTANT RULES FOR POPULATING:
 - Use the real node IDs (e.g. "${populate_nodes[0].id}") as the node_temp_id for creatures
 - Generate 1-4 creatures per node (mix of aggressive and passive)
 - Creature levels must match each node's region level range
+- Use the Area's creature_types and flavor_text fields as INSPIRATION for what kinds of creatures to generate. If creature_types says "wolves, bears" then generate wolf/bear-type creatures. If flavor_text describes a haunted atmosphere, generate undead or spectral creatures.
 - Do NOT duplicate existing creature names on the same node
 - The "region" field should use name "Populate" with description "Populating existing nodes" min_level 1 max_level 1 (placeholder)
 - Mark each creature as is_humanoid: true or false (humanoids are bandits, soldiers, cultists, mages, etc. — anything with a roughly human form)
