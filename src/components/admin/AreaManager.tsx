@@ -81,7 +81,7 @@ export default function AreaManager({ onDataChanged }: Props) {
 
   const startCreate = () => {
     setEditingId(null);
-    setForm({ name: '', description: '', region_id: regions[0]?.id || '', area_type: 'other' });
+    setForm({ name: '', description: '', region_id: regions[0]?.id || '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
     setCreating(true);
   };
 
