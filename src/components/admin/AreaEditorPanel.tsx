@@ -29,7 +29,7 @@ interface Props {
 
 export default function AreaEditorPanel({ areaId, isNew, regions, areas, initialRegionId, onClose, onSaved, onDeleted }: Props) {
   const { areaTypes } = useAreaTypes();
-  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other' });
+  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
