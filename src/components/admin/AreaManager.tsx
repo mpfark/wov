@@ -27,7 +27,7 @@ export default function AreaManager({ onDataChanged }: Props) {
   const [areas, setAreas] = useState<Area[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other' });
+  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [filterRegionId, setFilterRegionId] = useState<string>('');
