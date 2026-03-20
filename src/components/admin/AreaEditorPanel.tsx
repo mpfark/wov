@@ -34,11 +34,11 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
 
   useEffect(() => {
     if (isNew) {
-      setForm({ name: '', description: '', region_id: initialRegionId || regions[0]?.id || '', area_type: 'other' });
+      setForm({ name: '', description: '', region_id: initialRegionId || regions[0]?.id || '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
     } else if (areaId) {
       const area = areas.find(a => a.id === areaId);
       if (area) {
-        setForm({ name: area.name, description: area.description, region_id: area.region_id, area_type: area.area_type });
+        setForm({ name: area.name, description: area.description, region_id: area.region_id, area_type: area.area_type, min_level: area.min_level ?? 0, max_level: area.max_level ?? 0, creature_types: area.creature_types ?? '', flavor_text: area.flavor_text ?? '' });
       }
     }
   }, [areaId, isNew, initialRegionId]);
