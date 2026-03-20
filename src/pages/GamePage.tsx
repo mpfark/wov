@@ -117,6 +117,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [charPanelOpen, setCharPanelOpen] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(false);
   const [isWideScreen, setIsWideScreen] = useState(false);
+  const [chatPanelOpen, setChatPanelOpen] = useState(() => {
+    const stored = localStorage.getItem('chatPanelOpen');
+    return stored !== null ? stored === 'true' : true;
+  });
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
