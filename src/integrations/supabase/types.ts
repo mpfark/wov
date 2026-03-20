@@ -74,24 +74,36 @@ export type Database = {
         Row: {
           area_type: string
           created_at: string
+          creature_types: string
           description: string
+          flavor_text: string
           id: string
+          max_level: number
+          min_level: number
           name: string
           region_id: string
         }
         Insert: {
           area_type?: string
           created_at?: string
+          creature_types?: string
           description?: string
+          flavor_text?: string
           id?: string
+          max_level?: number
+          min_level?: number
           name: string
           region_id: string
         }
         Update: {
           area_type?: string
           created_at?: string
+          creature_types?: string
           description?: string
+          flavor_text?: string
           id?: string
+          max_level?: number
+          min_level?: number
           name?: string
           region_id?: string
         }
