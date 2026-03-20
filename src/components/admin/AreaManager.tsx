@@ -259,6 +259,24 @@ export default function AreaManager({ onDataChanged }: Props) {
                   </Select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Min Level</label>
+                  <Input type="number" min={0} max={99} value={form.min_level} onChange={e => setForm(f => ({ ...f, min_level: parseInt(e.target.value) || 0 }))} className="h-8 text-xs" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Max Level</label>
+                  <Input type="number" min={0} max={99} value={form.max_level} onChange={e => setForm(f => ({ ...f, max_level: parseInt(e.target.value) || 0 }))} className="h-8 text-xs" />
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground">Creature Types</label>
+                <Input placeholder="e.g. undead, wolves, bandits" value={form.creature_types} onChange={e => setForm(f => ({ ...f, creature_types: e.target.value }))} className="h-8 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-muted-foreground">Flavor Text</label>
+                <Textarea placeholder="Atmospheric hints for AI generation..." value={form.flavor_text} onChange={e => setForm(f => ({ ...f, flavor_text: e.target.value }))} rows={2} className="text-xs" />
+              </div>
               <Button onClick={save} disabled={saving} className="font-display text-xs">
                 <Save className="w-3 h-3 mr-1" /> {creating ? 'Create' : 'Save'}
               </Button>
