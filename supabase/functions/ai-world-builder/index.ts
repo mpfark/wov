@@ -114,7 +114,16 @@ serve(async (req) => {
       isPopulateMode = true;
       const nodeDetails = populate_nodes.map((pn: any) => {
         const nodeCreatures = creatures.filter((c: any) => c.node_id === pn.id).map((c: any) => `${c.name} (${c.rarity}, lvl ${c.level})`).join(", ");
-        return `  - ${pn.name || "(unnamed)"} [id: ${pn.id}] (Region: ${pn.region_name}, Lvl ${pn.min_level}-${pn.max_level})\n    Description: ${pn.description}\n    Existing creatures: ${nodeCreatures || "none"}`;
+        // Find the area for this node to include area metadata
+        const nodeArea = areas.find((a: any) => a.id === pn.area_id);
+        let areaContext = "";
+        if (nodeArea) {
+          areaContext = `\n    Area: ${nodeArea.name} (${nodeArea.area_type})`;
+          if (nodeArea.min_level || nodeArea.max_level) areaContext += ` [Lvl ${nodeArea.min_level}-${nodeArea.max_level}]`;
+          if (nodeArea.creature_types) areaContext += `\n    Creature types: ${nodeArea.creature_types}`;
+          if (nodeArea.flavor_text) areaContext += `\n    Flavor: ${nodeArea.flavor_text}`;
+        }
+        return `  - ${pn.name || "(unnamed)"} [id: ${pn.id}] (Region: ${pn.region_name}, Lvl ${pn.min_level}-${pn.max_level})\n    Description: ${pn.description}${areaContext}\n    Existing creatures: ${nodeCreatures || "none"}`;
       }).join("\n");
 
       expandContext = `\n\nYOU ARE POPULATING EXISTING NODES WITH CREATURES. Do NOT generate new nodes, NPCs, or areas.
