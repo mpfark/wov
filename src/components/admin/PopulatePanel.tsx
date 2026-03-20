@@ -84,6 +84,7 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
           region_name: n.region_name,
           min_level: n.min_level,
           max_level: n.max_level,
+          area_id: n.area_id,
         })),
       };
 
