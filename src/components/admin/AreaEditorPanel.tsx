@@ -166,6 +166,24 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
               </SelectContent>
             </Select>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground font-display mb-1 block">Min Level</label>
+              <Input type="number" min={0} max={99} value={form.min_level} onChange={e => setForm(f => ({ ...f, min_level: parseInt(e.target.value) || 0 }))} className="text-xs" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground font-display mb-1 block">Max Level</label>
+              <Input type="number" min={0} max={99} value={form.max_level} onChange={e => setForm(f => ({ ...f, max_level: parseInt(e.target.value) || 0 }))} className="text-xs" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground font-display mb-1 block">Creature Types</label>
+            <Input placeholder="e.g. undead, wolves, bandits" value={form.creature_types} onChange={e => setForm(f => ({ ...f, creature_types: e.target.value }))} className="text-xs" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground font-display mb-1 block">Flavor Text</label>
+            <Textarea placeholder="Atmospheric hints for AI generation..." value={form.flavor_text} onChange={e => setForm(f => ({ ...f, flavor_text: e.target.value }))} rows={3} className="text-xs" />
+          </div>
           <Button onClick={save} className="font-display text-xs w-full">
             <Save className="w-3 h-3 mr-1" /> {isNew ? 'Create Area' : 'Save Changes'}
           </Button>
