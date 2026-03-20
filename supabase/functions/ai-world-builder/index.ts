@@ -69,7 +69,7 @@ serve(async (req) => {
       supabase.from("npcs").select("name, node_id"),
       supabase.from("loot_tables").select("id, name"),
       supabase.from("loot_table_entries").select("loot_table_id, item_id, weight, items:item_id(name, level, rarity)"),
-      supabase.from("areas").select("id, name, description, area_type, region_id"),
+      supabase.from("areas").select("id, name, description, area_type, region_id, min_level, max_level, creature_types, flavor_text"),
     ]);
 
     const regions = regRes.data || [];
