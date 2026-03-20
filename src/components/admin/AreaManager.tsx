@@ -55,6 +55,8 @@ export default function AreaManager({ onDataChanged }: Props) {
             min_level: region?.min_level,
             max_level: region?.max_level,
             existing_areas: existingAreas || 'none',
+            creature_types: form.creature_types || undefined,
+            flavor_text: form.flavor_text || undefined,
           },
         },
       });

@@ -77,6 +77,8 @@ ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
 Area type: ${context.area_type}.
 Region: ${context.region_name || "unknown"} (levels ${context.min_level || "?"}-${context.max_level || "?"}).
 Existing areas in this region: ${context.existing_areas || "none"}.
+${context.creature_types ? `Creature types found here: ${context.creature_types}` : ""}
+${context.flavor_text ? `Flavor/atmosphere: ${context.flavor_text}` : ""}
 ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
     } else if (type === "node") {
       userPrompt = `Generate a name and description for a specific location (node) within an area.
