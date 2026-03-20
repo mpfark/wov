@@ -1,23 +1,29 @@
 
 
-## Collapsible Wide-Screen Chat Panel
+## Fix: Region Starting Node Coordinates
 
 ### Problem
-On laptops near the 1600px breakpoint, the chat panel appears but takes up valuable screen space. Users should be able to collapse it and bring it back via a toggle button.
+When creating a new region via the "New Region" button, the starting node is always placed at coordinates `(0, 0)` with no connections. Since Hearthvale Square is also at `(0, 0)`, new region nodes stack on top of it. There's no mechanism to connect the new region's entrance to the existing world.
+
+### Solution
+Improve the region creation dialog to let the admin optionally connect the new region's starting node to an existing node, and auto-calculate appropriate coordinates.
 
 ### Changes
 
-**`src/pages/GamePage.tsx`**
+**`src/components/admin/RegionManager.tsx`**
 
-1. **Add state**: `const [chatPanelOpen, setChatPanelOpen] = useState(true)` — defaults to open when wide screen is active.
+1. **Add a "Connect to node" selector**: Add an optional dropdown/combobox that lets the admin pick an existing node to connect the new region's entrance to, plus a direction (N/S/E/W/etc.).
 
-2. **Toggle button**: When `isWideScreen && !isTablet`, render a small toggle button on the right edge of the main content area (or left edge of the chat panel). Use a `MessageCircle` icon similar to the admin chat widget, positioned as a fixed/absolute button at the right side.
+2. **Auto-calculate coordinates**: When a connecting node is selected, compute the new node's `x, y` from the selected node's coordinates + direction offset (same logic used in `AdminPage.tsx` quick-add).
 
-3. **Conditional render**: Change the chat panel condition from `{isWideScreen && !isTablet && (` to `{isWideScreen && !isTablet && chatPanelOpen && (`. When collapsed, chat messages flow back into the event log (reuse the existing `filteredEventLog` logic by factoring in `chatPanelOpen`).
+3. **Create bidirectional connection**: Insert the new node with a connection back to the selected node, and update the selected node's connections to include the new region entrance.
 
-4. **When collapsed**: Show a small floating button (right edge, vertically centered) with `MessageCircle` icon to re-open. Style it like the admin chat widget's bubble button.
+4. **Fallback for standalone regions**: If no connecting node is selected, place the node at a large offset (e.g., `x = max_x + 10`) so it doesn't overlap existing nodes.
 
-5. **Filter logic update**: Change `filteredEventLog` to only filter out chat when `isWideScreen && chatPanelOpen`, so collapsing the panel restores chat to the event log.
+**Props change**: Pass `allNodes` (the full nodes array) into `RegionManager` so it can populate the connector dropdown and read coordinates.
 
-6. **Persist preference** (optional): Store in `localStorage` so it remembers across sessions.
+### Technical Details
+- Reuse `DIRECTION_OFFSETS` and `REVERSE_DIR` maps already defined in `AdminPage.tsx` (extract to a shared util or inline).
+- The connector UI: a `Select` for choosing a node (searchable, showing node name + region) and a direction picker.
+- On create: insert node with computed `x, y` and connection, then update the parent node's connections array.
 
