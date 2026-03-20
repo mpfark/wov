@@ -117,6 +117,10 @@ export default function AreaManager({ onDataChanged }: Props) {
         description: form.description.trim(),
         region_id: form.region_id,
         area_type: form.area_type,
+        min_level: form.min_level,
+        max_level: form.max_level,
+        creature_types: form.creature_types.trim(),
+        flavor_text: form.flavor_text.trim(),
       } as any).eq('id', editingId);
       if (error) { toast.error(error.message); setSaving(false); return; }
       toast.success('Area updated');

@@ -14,6 +14,10 @@ export interface Area {
   description: string;
   area_type: string;
   created_at: string;
+  min_level?: number;
+  max_level?: number;
+  creature_types?: string;
+  flavor_text?: string;
 }
 
 export interface GameNode {
