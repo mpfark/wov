@@ -28,7 +28,7 @@ import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User, Map as MapIconLucide, Zap, Users, LogOut, Bug, RefreshCw } from 'lucide-react';
+import { User, Map as MapIconLucide, Zap, Users, LogOut, Bug, RefreshCw, MessageCircle } from 'lucide-react';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 
@@ -117,6 +117,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [charPanelOpen, setCharPanelOpen] = useState(false);
   const [mapPanelOpen, setMapPanelOpen] = useState(false);
   const [isWideScreen, setIsWideScreen] = useState(false);
+  const [chatPanelOpen, setChatPanelOpen] = useState(() => {
+    const stored = localStorage.getItem('chatPanelOpen');
+    return stored !== null ? stored === 'true' : true;
+  });
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
@@ -730,8 +734,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     [eventLog]
   );
   const filteredEventLog = useMemo(() =>
-    isWideScreen ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
-    [eventLog, isWideScreen]
+    (isWideScreen && chatPanelOpen) ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
+    [eventLog, isWideScreen, chatPanelOpen]
   );
 
   // ── Rendering ──────────────────────────────────────────────────
@@ -1325,11 +1329,33 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
           </div>
         )}
 
+        {/* Wide-screen Chat Panel toggle button */}
+        {isWideScreen && !isTablet && !chatPanelOpen && (
+          <Button
+            size="icon"
+            className="h-full w-8 shrink-0 rounded-none border-l border-border bg-card/60 hover:bg-accent/60"
+            variant="ghost"
+            onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
+            title="Open chat panel"
+          >
+            <MessageCircle className="w-4 h-4" />
+          </Button>
+        )}
+
         {/* Wide-screen Chat Panel — 4th column */}
-        {isWideScreen && !isTablet && (
+        {isWideScreen && !isTablet && chatPanelOpen && (
           <div className="h-full w-[320px] shrink-0 ornate-border bg-card/60 flex flex-col">
-            <div className="px-3 py-2 border-b border-border shrink-0">
+            <div className="px-3 py-2 border-b border-border shrink-0 flex items-center justify-between">
               <h3 className="font-display text-xs text-muted-foreground">Chat</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-6 h-6"
+                onClick={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
+                title="Collapse chat panel"
+              >
+                <MessageCircle className="w-3 h-3" />
+              </Button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
               {chatMessages.length === 0 ? (
