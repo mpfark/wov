@@ -1,29 +1,59 @@
 
 
-## Fix: Region Starting Node Coordinates
+## Salvage & Blacksmith Crafting System
 
-### Problem
-When creating a new region via the "New Region" button, the starting node is always placed at coordinates `(0, 0)` with no connections. Since Hearthvale Square is also at `(0, 0)`, new region nodes stack on top of it. There's no mechanism to connect the new region's entrance to the existing world.
+### Overview
+Non-humanoid creatures drop "Salvage" — a character currency (like gold). Players visit a blacksmith, choose an equipment slot, pay Salvage + Gold, and receive a randomly generated item for that slot scaled to their level.
 
-### Solution
-Improve the region creation dialog to let the admin optionally connect the new region's starting node to an existing node, and auto-calculate appropriate coordinates.
+### Database Changes
 
-### Changes
+**`characters` table** — add column:
+- `salvage integer NOT NULL DEFAULT 0`
 
-**`src/components/admin/RegionManager.tsx`**
+**Security**: Update `restrict_party_leader_updates` trigger to lock `salvage` in the party leader path (same as `gold`), and prevent client-side increases in the owner path.
 
-1. **Add a "Connect to node" selector**: Add an optional dropdown/combobox that lets the admin pick an existing node to connect the new region's entrance to, plus a direction (N/S/E/W/etc.).
+### Salvage Drop Logic
 
-2. **Auto-calculate coordinates**: When a connecting node is selected, compute the new node's `x, y` from the selected node's coordinates + direction offset (same logic used in `AdminPage.tsx` quick-add).
+**`useActions.ts`** (`awardKillRewards`) and **`combat-tick/index.ts`**:
+- After gold calc, if `!creature.is_humanoid`, roll salvage:
+  - Base: `1 + floor(creature.level / 5)`
+  - Rare creatures: x2, Bosses: x4
+  - Split among party members (same as gold)
+- Log: `🔩 You salvaged 3 materials.`
 
-3. **Create bidirectional connection**: Insert the new node with a connection back to the selected node, and update the selected node's connections to include the new region entrance.
+### Blacksmith Crafting UI
 
-4. **Fallback for standalone regions**: If no connecting node is selected, place the node at a large offset (e.g., `x = max_x + 10`) so it doesn't overlap existing nodes.
+**`BlacksmithPanel.tsx`** — add a "Forge" tab:
+- Slot picker (all equipment slots)
+- Cost: `5 + level * 2` salvage, `level * 5` gold
+- Rarity chances: **Common 65%, Uncommon 35%** (no Unique — unique items are world-drops only)
+- "Forge" button calls `blacksmith-forge` edge function
 
-**Props change**: Pass `allNodes` (the full nodes array) into `RegionManager` so it can populate the connector dropdown and read coordinates.
+### Edge Function: `blacksmith-forge`
 
-### Technical Details
-- Reuse `DIRECTION_OFFSETS` and `REVERSE_DIR` maps already defined in `AdminPage.tsx` (extract to a shared util or inline).
-- The connector UI: a `Select` for choosing a node (searchable, showing node name + region) and a direction picker.
-- On create: insert node with computed `x, y` and connection, then update the parent node's connections array.
+1. Authenticate user, verify character ownership
+2. Verify character is at a blacksmith node
+3. Check salvage + gold balance
+4. Deduct salvage + gold
+5. Roll rarity (Common 65%, Uncommon 35%)
+6. Call Lovable AI to generate item name, description, and stats for the rolled rarity/level/slot (reuse patterns from `ai-item-forge`)
+7. Insert item into `items` table, then into `character_inventory`
+8. Return the created item
+
+### Props & Wiring
+
+- Pass `salvage` into `BlacksmithPanel`, add `onSalvageChange` callback
+- Add `salvage` to `Character` interface in `useCharacter.ts`
+- Update `restrict_party_leader_updates` trigger for salvage security
+
+### Files to Change
+
+1. **Migration SQL** — add `salvage` column, update trigger
+2. **`src/hooks/useCharacter.ts`** — add `salvage` to Character interface
+3. **`src/hooks/useActions.ts`** — salvage drops in `awardKillRewards`
+4. **`supabase/functions/combat-tick/index.ts`** — salvage drops in server combat
+5. **`src/components/game/BlacksmithPanel.tsx`** — add Forge tab UI
+6. **`supabase/functions/blacksmith-forge/index.ts`** — new edge function
+7. **`src/pages/GamePage.tsx`** — pass salvage prop to BlacksmithPanel
+8. **`src/components/game/StatusBarsStrip.tsx`** — show salvage count
 
