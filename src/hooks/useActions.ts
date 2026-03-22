@@ -820,26 +820,8 @@ export function useActions(params: UseActionsParams) {
       p.setDamageBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
-      const cTargetId = resolveCreatureTarget(targetId);
-      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Barrage!`); return; }
-      const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Barrage.`); return; }
-      const combat = CLASS_COMBAT.ranger;
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const arrowCount = dexMod >= 3 ? 3 : 2;
-      let totalDmg = 0;
-      for (let i = 0; i < arrowCount; i++) {
-        const atkRoll = rollD20();
-        const totalAtk = atkRoll + dexMod;
-        if (atkRoll !== 1 && (atkRoll === 20 || totalAtk >= creature.ac)) {
-          const rawDmg = rollDamage(combat.diceMin, combat.diceMax) + dexMod;
-          const arrowDmg = Math.max(Math.floor(rawDmg * 0.7), 1);
-          totalDmg += arrowDmg;
-          p.addLog(`${ability.emoji} Arrow ${i + 1}: Hit! Rolled ${atkRoll}+${dexMod}=${totalAtk} vs AC ${creature.ac} — ${arrowDmg} damage.`);
-        } else {
-          p.addLog(`${ability.emoji} Arrow ${i + 1}: Miss! Rolled ${atkRoll}+${dexMod}=${totalAtk} vs AC ${creature.ac}.`);
-        }
-      }
+      // Processed server-side via combat-tick heartbeat
+    }
       if (totalDmg > 0) {
         const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - totalDmg, 0);
         p.updateCreatureHp(creature.id, newHp);
@@ -892,25 +874,8 @@ export function useActions(params: UseActionsParams) {
       p.setPoisonBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'execute_attack') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Eviscerate!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Eviscerate.`); return; }
-      const stacks = p.poisonStacks[p.activeCombatCreatureId];
-      const stackCount = stacks?.stacks || 0;
-      const combat = CLASS_COMBAT.rogue;
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const baseDmg = rollDamage(combat.diceMin, combat.diceMax) + dexMod;
-      const multiplier = 1 + 0.5 * stackCount;
-      const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
-      const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
-      p.updateCreatureHp(creature.id, newHp);
-      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-      if (stackCount > 0) {
-        p.setPoisonStacks((prev: Record<string, PoisonStack>) => { const next = { ...prev }; delete next[p.activeCombatCreatureId!]; return next; });
-        p.addLog(`${ability.emoji} Eviscerate! You rip through ${creature.name} consuming ${stackCount} poison stack${stackCount > 1 ? 's' : ''} for ${finalDmg} damage!`);
-      } else {
-        p.addLog(`${ability.emoji} Eviscerate! You strike ${creature.name} for ${finalDmg} damage. (No poison stacks to consume)`);
-      }
+      // Processed server-side via combat-tick heartbeat
+    }
       if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
@@ -930,25 +895,8 @@ export function useActions(params: UseActionsParams) {
       p.setIgniteBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ignite_consume') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Conflagrate!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Conflagrate.`); return; }
-      const stacks = p.igniteStacks[p.activeCombatCreatureId];
-      const stackCount = stacks?.stacks || 0;
-      const combat = CLASS_COMBAT.wizard;
-      const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
-      const baseDmg = rollDamage(combat.diceMin, combat.diceMax) + intMod;
-      const multiplier = 1 + 0.5 * stackCount;
-      const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
-      const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
-      p.updateCreatureHp(creature.id, newHp);
-      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-      if (stackCount > 0) {
-        p.setIgniteStacks((prev: Record<string, IgniteStack>) => { const next = { ...prev }; delete next[p.activeCombatCreatureId!]; return next; });
-        p.addLog(`${ability.emoji} Conflagrate! You detonate ${stackCount} burn stack${stackCount > 1 ? 's' : ''} on ${creature.name} for ${finalDmg} damage!`);
-      } else {
-        p.addLog(`${ability.emoji} Conflagrate! You blast ${creature.name} for ${finalDmg} damage. (No burn stacks to consume)`);
-      }
+      // Processed server-side via combat-tick heartbeat
+    }
       if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'absorb_buff') {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
@@ -990,28 +938,7 @@ export function useActions(params: UseActionsParams) {
       p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
-      const cTargetId = resolveCreatureTarget(targetId);
-      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Grand Finale!`); return; }
-      const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Grand Finale.`); return; }
-      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
-      const baseDmg = Math.max(8, chaMod * 4 + Math.floor(p.character.level * 1.5));
-      const damage = baseDmg + rollDamage(1, Math.max(1, chaMod * 2));
-      const creatureCurrentHp = p.creatureHpOverrides[creature.id] ?? creature.hp;
-      const newHp = Math.max(0, creatureCurrentHp - damage);
-      const killed = newHp <= 0;
-      p.updateCreatureHp(creature.id, newHp);
-      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: killed });
-      p.addLog(`${ability.emoji} Grand Finale! A devastating blast of sound strikes ${creature.name} for ${damage} damage!`);
-      if (killed) { await awardKillRewards(creature, { stopCombat: true }); return; }
-    } else if (ability.type === 'focus_strike') {
-      const totalStats = p.character.str + p.character.dex + p.character.con
-                       + p.character.int + p.character.wis + p.character.cha;
-      const avgStat = Math.floor(totalStats / 6);
-      const avgMod = getStatModifier(avgStat);
-      const bonusDmg = Math.max(3, Math.floor(avgMod * 2) + Math.floor(p.character.level / 2));
-      p.setFocusStrikeBuff({ bonusDmg });
-      p.addLog(`${ability.emoji} You steady your breathing and channel every ounce of your being — your next attack will deal +${bonusDmg} bonus damage.`);
+      // Processed server-side via combat-tick heartbeat
     }
 
     // Deduct CP

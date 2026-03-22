@@ -61,12 +61,13 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await userDb.auth.getUser();
     if (authErr || !user) throw new Error('Unauthorized');
 
-    const { party_id, character_id, node_id, member_buffs, member_dots, engaged_creature_ids } = await req.json();
+    const { party_id, character_id, node_id, member_buffs, member_dots, engaged_creature_ids, pending_abilities: rawPendingAbilities } = await req.json();
     if (!node_id) throw new Error('Missing node_id');
     if (!party_id && !character_id) throw new Error('Missing party_id or character_id');
     const buffs: Record<string, any> = member_buffs || {};
     const dots: Record<string, any> = member_dots || {};
     const engagedIds: string[] = engaged_creature_ids || [];
+    const pendingAbilities: any[] = rawPendingAbilities || [];
 
     let members: { id: string; c: any }[];
     let tankId: string | null = null;
@@ -153,7 +154,11 @@ Deno.serve(async (req) => {
       for (const creatureId of Object.keys((dotState as any)?.poison || {})) dotTargetIds.add(creatureId);
       for (const creatureId of Object.keys((dotState as any)?.ignite || {})) dotTargetIds.add(creatureId);
     }
-    // Only fight creatures that are explicitly engaged, aggressive, OR have active DoTs
+    // Also include creatures targeted by pending abilities
+    for (const pa of pendingAbilities) {
+      if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
+    }
+    // Only fight creatures that are explicitly engaged, aggressive, OR have active DoTs/abilities
     const creatures = allCreatures.filter(cr =>
       engagedIds.includes(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
     );
@@ -164,7 +169,7 @@ Deno.serve(async (req) => {
     }
     // Determine if this is a DoT-only tick (player fled or no engaged targets)
     const anyMemberAtNode = members.some(m => m.c.current_node_id === node_id);
-    const isDotOnly = !anyMemberAtNode || (engagedIds.length === 0 && dotTargetIds.size > 0);
+    const isDotOnly = !anyMemberAtNode || (engagedIds.length === 0 && dotTargetIds.size > 0 && pendingAbilities.length === 0);
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
@@ -179,12 +184,191 @@ Deno.serve(async (req) => {
     const mGold: Record<string, number> = {};
     const mBhp: Record<string, number> = {};
     const mSalvage: Record<string, number> = {};
+    const mCp: Record<string, number> = {};
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
+    const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
-    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; }
+    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; mCp[m.id] = m.c.cp ?? 0; }
+
+    // ── Unified creature kill handler ────────────────────────────
+    const handleCreatureKill = (creature: any, killerLabel: string, chaForGold: number = 0) => {
+      cKilled.add(creature.id);
+      const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
+      const lt = (creature.loot_table || []) as any[];
+      const goldEntry = lt.find((e: any) => e.type === 'gold');
+      let totalGold = 0;
+      if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+        totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+        if (creature.is_humanoid && chaForGold > 0) {
+          totalGold = Math.floor(totalGold * chaGoldMult(chaForGold));
+        }
+      }
+      const goldSplit = members.length;
+      const uncapped = members.filter(mm => mm.c.level < 42);
+      const xpSplit = uncapped.length || 1;
+      const goldEach = Math.floor(totalGold / goldSplit);
+      for (const mm of members) {
+        if (mm.c.level < 42) {
+          const penalty = xpPenalty(mm.c.level, creature.level);
+          mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplit);
+        }
+        mGold[mm.id] += goldEach;
+      }
+      const displayMember = uncapped[0] || members[0];
+      const displayPenalty = xpPenalty(displayMember.c.level, creature.level);
+      const displayXp = displayMember.c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * displayPenalty * xpMult) / xpSplit);
+      const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
+      const penaltyNote = displayPenalty < 1 ? ` (${Math.round(displayPenalty * 100)}% XP — level penalty)` : '';
+      const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
+      const allCapped = uncapped.length === 0;
+      if (allCapped) {
+        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain!${cappedGoldNote} Your power transcends experience.` });
+      } else if (goldSplit > 1) {
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! Rewards split ${xpSplit} ways: +${displayXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}` });
+      } else {
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! +${displayXp} XP${goldNote}.${penaltyNote}${xpBoostNote}` });
+      }
+      // BHP for boss kills
+      if (creature.rarity === 'boss') {
+        const bhpReward = Math.floor(creature.level * 0.5);
+        if (bhpReward > 0) {
+          const bhpEach = Math.floor(bhpReward / members.length);
+          if (bhpEach > 0) {
+            for (const mm of members) {
+              if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
+            }
+            events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
+          }
+        }
+      }
+      // Salvage for non-humanoid kills
+      if (!creature.is_humanoid) {
+        const baseSalvage = 1 + Math.floor(creature.level / 5);
+        const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
+        const totalSalvage = baseSalvage * rarityMult;
+        const salvageEach = Math.floor(totalSalvage / members.length);
+        if (salvageEach > 0) {
+          for (const mm of members) mSalvage[mm.id] += salvageEach;
+          events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${creature.name}.` });
+        }
+      }
+      // Queue loot
+      if (creature.loot_table_id) {
+        lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
+      } else {
+        for (const entry of lt) {
+          if (entry.type === 'gold') continue;
+          if (Math.random() <= (entry.chance || 0.1)) {
+            lootQueue.push({ nodeId: node_id, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1 });
+          }
+        }
+      }
+    };
+
+    // ── Pending abilities (server-side processing) ───────────────
+    if (!isDotOnly) for (const pa of pendingAbilities) {
+      const member = members.find(m => m.id === pa.character_id);
+      if (!member) continue;
+      const c = member.c;
+      const eb = eq[member.id] || {};
+
+      // CP check & deduction
+      const cpCost = pa.cp_cost || 0;
+      if (mCp[member.id] < cpCost) {
+        events.push({ type: 'ability_fail', message: `⚠️ ${c.name} doesn't have enough CP!`, character_id: member.id });
+        continue;
+      }
+      mCp[member.id] -= cpCost;
+
+      const target = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
+      if (!target) {
+        events.push({ type: 'ability_fail', message: `⚠️ ${c.name}'s target is no longer valid.`, character_id: member.id });
+        continue;
+      }
+
+      if (pa.ability_type === 'multi_attack') {
+        // Barrage — 2-3 arrows at 70% damage
+        const effDex = (c.dex || 10) + (eb.dex || 0);
+        const dexMod = sm(effDex);
+        const arrowCount = dexMod >= 3 ? 3 : 2;
+        let totalDmg = 0;
+        for (let i = 0; i < arrowCount; i++) {
+          const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
+          if (!t) break;
+          const roll = rollD20();
+          const totalAtk = roll + dexMod;
+          if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
+            const rawDmg = rollDmg(CLASS_ATK.ranger.min, CLASS_ATK.ranger.max) + dexMod;
+            const arrowDmg = Math.max(Math.floor(rawDmg * 0.7), 1);
+            totalDmg += arrowDmg;
+            cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
+            events.push({ type: 'ability_hit', message: `🏹🏹 Arrow ${i + 1}: ${c.name} hits ${t.name}! Rolled ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — ${arrowDmg} damage.`, character_id: member.id });
+          } else {
+            events.push({ type: 'ability_miss', message: `🏹🏹 Arrow ${i + 1}: ${c.name} misses ${t.name}! Rolled ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac}.`, character_id: member.id });
+          }
+          if (cHp[t.id] <= 0 && !cKilled.has(t.id)) {
+            handleCreatureKill(t, c.name, (c.cha || 10) + (eb.cha || 0));
+          }
+        }
+        if (totalDmg > 0) {
+          events.push({ type: 'ability_hit', message: `🏹🏹 Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`, character_id: member.id });
+        }
+
+      } else if (pa.ability_type === 'execute_attack') {
+        // Eviscerate — base damage * (1 + 0.5 * stacks)
+        const effDex = (c.dex || 10) + (eb.dex || 0);
+        const dexMod = sm(effDex);
+        const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const baseDmg = rollDmg(CLASS_ATK.rogue.min, CLASS_ATK.rogue.max) + dexMod;
+        const multiplier = 1 + 0.5 * stacks;
+        const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+        cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
+        if (stacks > 0) {
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''} for ${finalDmg} damage!`, character_id: member.id });
+          consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
+        } else {
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} for ${finalDmg} damage. (No poison stacks)`, character_id: member.id });
+        }
+        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+        }
+
+      } else if (pa.ability_type === 'ignite_consume') {
+        // Conflagrate — base damage * (1 + 0.5 * stacks)
+        const effInt = (c.int || 10) + (eb.int || 0);
+        const intMod = sm(effInt);
+        const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const baseDmg = rollDmg(CLASS_ATK.wizard.min, CLASS_ATK.wizard.max) + intMod;
+        const multiplier = 1 + 0.5 * stacks;
+        const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+        cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
+        if (stacks > 0) {
+          events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name} for ${finalDmg} damage!`, character_id: member.id });
+          consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
+        } else {
+          events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} for ${finalDmg} damage. (No burn stacks)`, character_id: member.id });
+        }
+        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+        }
+
+      } else if (pa.ability_type === 'burst_damage') {
+        // Grand Finale — CHA-based burst
+        const effCha = (c.cha || 10) + (eb.cha || 0);
+        const chaMod = sm(effCha);
+        const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
+        const damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
+        cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
+        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale! ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage!`, character_id: member.id });
+        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+          handleCreatureKill(target, c.name, effCha);
+        }
+      }
+    }
 
     // tankId and tankAtNode already set during party/solo initialization above
 
@@ -263,91 +447,8 @@ Deno.serve(async (req) => {
             events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
           }
 
-          if (cHp[target.id] <= 0) {
-            cKilled.add(target.id);
-
-            // Calculate rewards
-            const baseXp = Math.floor(target.level * 10 * (XP_RARITY[target.rarity] || 1));
-            const lt = (target.loot_table || []) as any[];
-            const goldEntry = lt.find((e: any) => e.type === 'gold');
-            let totalGold = 0;
-            if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-              totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-            }
-            if (target.is_humanoid) {
-              totalGold = Math.floor(totalGold * chaGoldMult((c.cha || 10) + (eb.cha || 0)));
-            }
-
-            const goldSplit = members.length;
-            const uncappedMembers = members.filter(mm => mm.c.level < 42);
-            const xpSplit = uncappedMembers.length || 1;
-            const goldEach = Math.floor(totalGold / goldSplit);
-            for (const mm of members) {
-              if (mm.c.level < 42) {
-                const penalty = xpPenalty(mm.c.level, target.level);
-                mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplit);
-              }
-              mGold[mm.id] += goldEach;
-            }
-
-            const killerPenalty = xpPenalty(c.level, target.level);
-            const killerXp = c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * killerPenalty * xpMult) / xpSplit);
-            const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
-            const penaltyNote = killerPenalty < 1 ? ` (${Math.round(killerPenalty * 100)}% XP — level penalty)` : '';
-            const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-            const allCapped = uncappedMembers.length === 0;
-            if (allCapped) {
-              const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
-              events.push({ type: 'creature_kill', message: `☠️ ${target.name} has been slain!${cappedGoldNote} Your power transcends experience.` });
-            } else if (goldSplit > 1) {
-              events.push({
-                type: 'creature_kill',
-                message: `☠️ ${target.name} has been slain! Rewards split ${xpSplit} ways: +${killerXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}`,
-              });
-            } else {
-              events.push({
-                type: 'creature_kill',
-                message: `☠️ ${target.name} has been slain! +${killerXp} XP${goldNote}.${penaltyNote}${xpBoostNote}`,
-              });
-            }
-
-            // BHP for boss kills
-            if (target.rarity === 'boss') {
-              const bhpReward = Math.floor(target.level * 0.5);
-              if (bhpReward > 0) {
-                const bhpEach = Math.floor(bhpReward / members.length);
-                if (bhpEach > 0) {
-                  for (const mm of members) {
-                    if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
-                  }
-                  events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
-                }
-              }
-            }
-
-            // Salvage for non-humanoid kills
-            if (!target.is_humanoid) {
-              const baseSalvage = 1 + Math.floor(target.level / 5);
-              const rarityMult = target.rarity === 'boss' ? 4 : target.rarity === 'rare' ? 2 : 1;
-              const totalSalvage = baseSalvage * rarityMult;
-              const salvageEach = Math.floor(totalSalvage / members.length);
-              if (salvageEach > 0) {
-                for (const mm of members) mSalvage[mm.id] += salvageEach;
-                events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${target.name}.` });
-              }
-            }
-
-            // Queue loot
-            if (target.loot_table_id) {
-              lootQueue.push({ nodeId: node_id, lootTableId: target.loot_table_id, itemId: null, creatureName: target.name, dropChance: target.drop_chance ?? 0.5 });
-            } else {
-              for (const entry of lt) {
-                if (entry.type === 'gold') continue;
-                if (Math.random() <= (entry.chance || 0.1)) {
-                  lootQueue.push({ nodeId: node_id, lootTableId: null, itemId: entry.item_id, creatureName: target.name, dropChance: 1 });
-                }
-              }
-            }
+          if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
           }
         } else {
           events.push({
@@ -359,77 +460,6 @@ Deno.serve(async (req) => {
     }
 
     // ── DoT ticking (Bleed, Poison, Ignite) ──────────────────────
-    // Helper: handle DoT kill reward/loot
-    const handleDotKill = (creature: any, killerName: string) => {
-      cKilled.add(creature.id);
-      const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
-      const lt = (creature.loot_table || []) as any[];
-      const goldEntry = lt.find((e: any) => e.type === 'gold');
-      let totalGold = 0;
-      if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-        totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-      }
-      const goldSplit = members.length;
-      const uncappedDot = members.filter(mm => mm.c.level < 42);
-      const xpSplitDot = uncappedDot.length || 1;
-      const goldEach = Math.floor(totalGold / goldSplit);
-      for (const mm of members) {
-        if (mm.c.level < 42) {
-          const penalty = xpPenalty(mm.c.level, creature.level);
-          mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplitDot);
-        }
-        mGold[mm.id] += goldEach;
-      }
-      const dotKillerMember = uncappedDot[0] || members[0];
-      const dotPenalty = xpPenalty(dotKillerMember.c.level, creature.level);
-      const dotKillerXp = dotKillerMember.c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * dotPenalty * xpMult) / xpSplitDot);
-      const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
-      const dotPenaltyNote = dotPenalty < 1 ? ` (${Math.round(dotPenalty * 100)}% XP — level penalty)` : '';
-      const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-      const allDotCapped = uncappedDot.length === 0;
-      if (allDotCapped) {
-        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT!${cappedGoldNote} Your power transcends experience.` });
-      } else if (goldSplit > 1) {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! Rewards split ${xpSplitDot} ways: +${dotKillerXp} XP${goldNote} each.${dotPenaltyNote}${xpBoostNote}` });
-      } else {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain by ${killerName}'s DoT! +${dotKillerXp} XP${goldNote}.${dotPenaltyNote}${xpBoostNote}` });
-      }
-      // BHP for boss DoT kills
-      if (creature.rarity === 'boss') {
-        const bhpReward = Math.floor(creature.level * 0.5);
-        if (bhpReward > 0) {
-          const bhpEach = Math.floor(bhpReward / members.length);
-          if (bhpEach > 0) {
-            for (const mm of members) {
-              if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
-            }
-            events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
-          }
-        }
-      }
-      // Salvage for non-humanoid DoT kills
-      if (!creature.is_humanoid) {
-        const baseSalvage = 1 + Math.floor(creature.level / 5);
-        const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
-        const totalSalvage = baseSalvage * rarityMult;
-        const salvageEach = Math.floor(totalSalvage / members.length);
-        if (salvageEach > 0) {
-          for (const mm of members) mSalvage[mm.id] += salvageEach;
-          events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${creature.name}.` });
-        }
-      }
-      if (creature.loot_table_id) {
-        lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
-      } else {
-        for (const entry of lt) {
-          if (entry.type === 'gold') continue;
-          if (Math.random() <= (entry.chance || 0.1)) {
-            lootQueue.push({ nodeId: node_id, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1 });
-          }
-        }
-      }
-    };
 
     for (const [charId, dotState] of Object.entries(dots)) {
       const member = members.find(m => m.id === charId);
@@ -446,7 +476,7 @@ Deno.serve(async (req) => {
           cHp[creatureId] = Math.max(cHp[creatureId] - bs.damage_per_tick, 0);
           events.push({ type: 'dot_tick', message: `🩸 ${creature.name} bleeds for ${bs.damage_per_tick} damage! (${charName}'s Rend)` });
           if (cHp[creatureId] <= 0) {
-            handleDotKill(creature, charName);
+            handleCreatureKill(creature, charName);
             clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'bleed' });
           }
         }
@@ -464,7 +494,7 @@ Deno.serve(async (req) => {
           cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
           events.push({ type: 'dot_tick', message: `🧪 ${creature.name} takes ${totalDmg} poison damage! (${ps.stacks} stack${ps.stacks > 1 ? 's' : ''}, ${charName})` });
           if (cHp[creatureId] <= 0) {
-            handleDotKill(creature, charName);
+            handleCreatureKill(creature, charName);
             clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'poison' });
           }
         }
@@ -482,7 +512,7 @@ Deno.serve(async (req) => {
           cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
           events.push({ type: 'dot_tick', message: `🔥 ${creature.name} burns for ${totalDmg} fire damage! (${is.stacks} stack${is.stacks > 1 ? 's' : ''}, ${charName})` });
           if (cHp[creatureId] <= 0) {
-            handleDotKill(creature, charName);
+            handleCreatureKill(creature, charName);
             clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'ignite' });
           }
         }
@@ -597,13 +627,16 @@ Deno.serve(async (req) => {
     });
     await Promise.all(creaturePromises);
 
-    // ── Write state: member HP, XP, gold, level-ups ─────────────
+    // ── Write state: member HP, XP, gold, CP, level-ups ─────────
     const memberStates: any[] = [];
     for (const m of members) {
       const c = m.c;
       const updates: Record<string, any> = {};
 
       if (mHp[m.id] !== c.hp) updates.hp = mHp[m.id];
+
+      // CP changes from abilities
+      if (mCp[m.id] !== (c.cp ?? 0)) updates.cp = mCp[m.id];
 
       let newXp = c.xp + mXp[m.id];
       let newGold = c.gold + mGold[m.id];
@@ -681,6 +714,7 @@ Deno.serve(async (req) => {
         max_mp: updates.max_mp ?? c.max_mp,
         respec_points: updates.respec_points ?? c.respec_points ?? 0,
         salvage: updates.salvage ?? (c.salvage || 0),
+        cp: updates.cp ?? mCp[m.id],
       });
     }
 
@@ -760,8 +794,9 @@ Deno.serve(async (req) => {
       .map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
     const creature_states = [...combatCreatureStates, ...nonCombatAlive];
 
-    return json({ events, creature_states, member_states: memberStates, consumed_buffs: consumedBuffsList, cleared_dots: clearedDots });
+    return json({ events, creature_states, member_states: memberStates, consumed_buffs: consumedBuffsList, cleared_dots: clearedDots, consumed_ability_stacks: consumedAbilityStacks });
   } catch (err) {
+    console.error('Combat tick error:', err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
