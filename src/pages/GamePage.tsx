@@ -580,7 +580,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── useActions: all player action handlers ─────────────────────
   const actions = useActions({
-    character, updateCharacter, addLog,
+    character, updateCharacter, updateCharacterLocal, addLog,
     equipped, unequipped, equipmentBonuses,
     getNode, getRegion, getNodeArea, currentNode,
     creatures, creatureHpOverrides, updateCreatureHp,

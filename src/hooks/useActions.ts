@@ -21,6 +21,7 @@ import type {
 export interface UseActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacterLocal: (updates: Partial<Character>) => void;
   addLog: (msg: string) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   unequipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; belt_slot: number | null; [k: string]: any }[];
@@ -328,7 +329,8 @@ export function useActions(params: UseActionsParams) {
       const salvageShare = Math.floor(totalSalvage / goldSplitCount);
       if (salvageShare > 0) {
         const newSalvage = (p.character.salvage || 0) + salvageShare;
-        await p.updateCharacter({ salvage: newSalvage });
+        await supabase.rpc('award_party_member', { _character_id: p.character.id, _xp: 0, _gold: 0, _salvage: salvageShare });
+        p.updateCharacterLocal({ salvage: newSalvage });
         // Award party members
         if (p.party?.id) {
           const { data: freshMembers } = await supabase
