@@ -895,25 +895,8 @@ export function useActions(params: UseActionsParams) {
       p.setIgniteBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ignite_consume') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Conflagrate!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Conflagrate.`); return; }
-      const stacks = p.igniteStacks[p.activeCombatCreatureId];
-      const stackCount = stacks?.stacks || 0;
-      const combat = CLASS_COMBAT.wizard;
-      const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
-      const baseDmg = rollDamage(combat.diceMin, combat.diceMax) + intMod;
-      const multiplier = 1 + 0.5 * stackCount;
-      const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
-      const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
-      p.updateCreatureHp(creature.id, newHp);
-      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-      if (stackCount > 0) {
-        p.setIgniteStacks((prev: Record<string, IgniteStack>) => { const next = { ...prev }; delete next[p.activeCombatCreatureId!]; return next; });
-        p.addLog(`${ability.emoji} Conflagrate! You detonate ${stackCount} burn stack${stackCount > 1 ? 's' : ''} on ${creature.name} for ${finalDmg} damage!`);
-      } else {
-        p.addLog(`${ability.emoji} Conflagrate! You blast ${creature.name} for ${finalDmg} damage. (No burn stacks to consume)`);
-      }
+      // Processed server-side via combat-tick heartbeat
+    }
       if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'absorb_buff') {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
