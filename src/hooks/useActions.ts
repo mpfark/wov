@@ -874,25 +874,8 @@ export function useActions(params: UseActionsParams) {
       p.setPoisonBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'execute_attack') {
-      if (!p.inCombat || !p.activeCombatCreatureId) { p.addLog(`${ability.emoji} You must be in combat to use Eviscerate!`); return; }
-      const creature = p.creatures.find(c => c.id === p.activeCombatCreatureId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Eviscerate.`); return; }
-      const stacks = p.poisonStacks[p.activeCombatCreatureId];
-      const stackCount = stacks?.stacks || 0;
-      const combat = CLASS_COMBAT.rogue;
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const baseDmg = rollDamage(combat.diceMin, combat.diceMax) + dexMod;
-      const multiplier = 1 + 0.5 * stackCount;
-      const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
-      const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - finalDmg, 0);
-      p.updateCreatureHp(creature.id, newHp);
-      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-      if (stackCount > 0) {
-        p.setPoisonStacks((prev: Record<string, PoisonStack>) => { const next = { ...prev }; delete next[p.activeCombatCreatureId!]; return next; });
-        p.addLog(`${ability.emoji} Eviscerate! You rip through ${creature.name} consuming ${stackCount} poison stack${stackCount > 1 ? 's' : ''} for ${finalDmg} damage!`);
-      } else {
-        p.addLog(`${ability.emoji} Eviscerate! You strike ${creature.name} for ${finalDmg} damage. (No poison stacks to consume)`);
-      }
+      // Processed server-side via combat-tick heartbeat
+    }
       if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
