@@ -178,12 +178,13 @@ Deno.serve(async (req) => {
     const mXp: Record<string, number> = {};
     const mGold: Record<string, number> = {};
     const mBhp: Record<string, number> = {};
+    const mSalvage: Record<string, number> = {};
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
-    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; }
+    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; }
 
     // tankId and tankAtNode already set during party/solo initialization above
 
