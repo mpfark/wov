@@ -28,6 +28,7 @@ export interface Character {
   mp: number;
   max_mp: number;
   respec_points: number;
+  salvage: number;
   bhp: number;
   bhp_trained: Record<string, number>;
 }

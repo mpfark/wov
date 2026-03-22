@@ -215,6 +215,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (myState.max_cp !== undefined) updates.max_cp = myState.max_cp;
       if (myState.max_mp !== undefined) updates.max_mp = myState.max_mp;
       if (myState.respec_points !== undefined) updates.respec_points = myState.respec_points;
+      if (myState.salvage !== undefined) updates.salvage = myState.salvage;
       // Use local-only update to avoid redundant DB write (server already wrote these)
       if (ext.current.updateCharacterLocal) {
         ext.current.updateCharacterLocal(updates);
