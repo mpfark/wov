@@ -1,59 +1,22 @@
 
 
-## Salvage & Blacksmith Crafting System
+## Fix: Salvage Awards in Client-Side Ability Kills
 
-### Overview
-Non-humanoid creatures drop "Salvage" — a character currency (like gold). Players visit a blacksmith, choose an equipment slot, pay Salvage + Gold, and receive a randomly generated item for that slot scaled to their level.
+### Problem
+The server-side `combat-tick` already correctly awards salvage (lines 328-338). The client picks it up via `member_states.salvage` in `usePartyCombat.ts` — this path works fine.
 
-### Database Changes
+However, **instant ability kills** (Barrage, Eviscerate, Conflagrate, Grand Finale, Focus Strike) bypass the combat tick and call `awardKillRewards` in `useActions.ts` directly. That function uses `updateCharacter({ salvage: newSalvage })`, which the `restrict_party_leader_updates` trigger blocks (salvage can only decrease client-side).
 
-**`characters` table** — add column:
-- `salvage integer NOT NULL DEFAULT 0`
+### Solution
+In `awardKillRewards`, route the salvage award through the `award_party_member` RPC (which is `SECURITY DEFINER` and bypasses the trigger), then update the local state with `updateCharacterLocal`.
 
-**Security**: Update `restrict_party_leader_updates` trigger to lock `salvage` in the party leader path (same as `gold`), and prevent client-side increases in the owner path.
+### Changes
 
-### Salvage Drop Logic
+**`src/hooks/useActions.ts`** — In `awardKillRewards` (around lines 323-349):
+- Replace `await p.updateCharacter({ salvage: newSalvage })` with:
+  1. `await supabase.rpc('award_party_member', { _character_id: p.character.id, _xp: 0, _gold: 0, _salvage: salvageShare })`
+  2. `p.updateCharacterLocal({ salvage: newSalvage })` for instant UI update
+- The party member award loop already uses the RPC correctly — no change needed there.
 
-**`useActions.ts`** (`awardKillRewards`) and **`combat-tick/index.ts`**:
-- After gold calc, if `!creature.is_humanoid`, roll salvage:
-  - Base: `1 + floor(creature.level / 5)`
-  - Rare creatures: x2, Bosses: x4
-  - Split among party members (same as gold)
-- Log: `🔩 You salvaged 3 materials.`
-
-### Blacksmith Crafting UI
-
-**`BlacksmithPanel.tsx`** — add a "Forge" tab:
-- Slot picker (all equipment slots)
-- Cost: `5 + level * 2` salvage, `level * 5` gold
-- Rarity chances: **Common 65%, Uncommon 35%** (no Unique — unique items are world-drops only)
-- "Forge" button calls `blacksmith-forge` edge function
-
-### Edge Function: `blacksmith-forge`
-
-1. Authenticate user, verify character ownership
-2. Verify character is at a blacksmith node
-3. Check salvage + gold balance
-4. Deduct salvage + gold
-5. Roll rarity (Common 65%, Uncommon 35%)
-6. Call Lovable AI to generate item name, description, and stats for the rolled rarity/level/slot (reuse patterns from `ai-item-forge`)
-7. Insert item into `items` table, then into `character_inventory`
-8. Return the created item
-
-### Props & Wiring
-
-- Pass `salvage` into `BlacksmithPanel`, add `onSalvageChange` callback
-- Add `salvage` to `Character` interface in `useCharacter.ts`
-- Update `restrict_party_leader_updates` trigger for salvage security
-
-### Files to Change
-
-1. **Migration SQL** — add `salvage` column, update trigger
-2. **`src/hooks/useCharacter.ts`** — add `salvage` to Character interface
-3. **`src/hooks/useActions.ts`** — salvage drops in `awardKillRewards`
-4. **`supabase/functions/combat-tick/index.ts`** — salvage drops in server combat
-5. **`src/components/game/BlacksmithPanel.tsx`** — add Forge tab UI
-6. **`supabase/functions/blacksmith-forge/index.ts`** — new edge function
-7. **`src/pages/GamePage.tsx`** — pass salvage prop to BlacksmithPanel
-8. **`src/components/game/StatusBarsStrip.tsx`** — show salvage count
+This is a single-line fix in one file. The server-side combat-tick path is already correct.
 
