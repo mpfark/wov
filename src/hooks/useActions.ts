@@ -820,26 +820,8 @@ export function useActions(params: UseActionsParams) {
       p.setDamageBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
-      const cTargetId = resolveCreatureTarget(targetId);
-      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Barrage!`); return; }
-      const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Barrage.`); return; }
-      const combat = CLASS_COMBAT.ranger;
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const arrowCount = dexMod >= 3 ? 3 : 2;
-      let totalDmg = 0;
-      for (let i = 0; i < arrowCount; i++) {
-        const atkRoll = rollD20();
-        const totalAtk = atkRoll + dexMod;
-        if (atkRoll !== 1 && (atkRoll === 20 || totalAtk >= creature.ac)) {
-          const rawDmg = rollDamage(combat.diceMin, combat.diceMax) + dexMod;
-          const arrowDmg = Math.max(Math.floor(rawDmg * 0.7), 1);
-          totalDmg += arrowDmg;
-          p.addLog(`${ability.emoji} Arrow ${i + 1}: Hit! Rolled ${atkRoll}+${dexMod}=${totalAtk} vs AC ${creature.ac} — ${arrowDmg} damage.`);
-        } else {
-          p.addLog(`${ability.emoji} Arrow ${i + 1}: Miss! Rolled ${atkRoll}+${dexMod}=${totalAtk} vs AC ${creature.ac}.`);
-        }
-      }
+      // Processed server-side via combat-tick heartbeat
+    }
       if (totalDmg > 0) {
         const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - totalDmg, 0);
         p.updateCreatureHp(creature.id, newHp);
