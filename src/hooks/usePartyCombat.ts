@@ -11,6 +11,10 @@ import { Character } from '@/hooks/useCharacter';
 import { Creature } from '@/hooks/useCreatures';
 import { supabase } from '@/integrations/supabase/client';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
+import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/lib/class-abilities';
+
+/** Ability types that are processed server-side in the combat-tick */
+const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage']);
 
 interface Party {
   id: string;
@@ -21,9 +25,10 @@ interface Party {
 interface CombatTickResponse {
   events: { type: string; message: string; character_id?: string; creature_id?: string }[];
   creature_states: { id: string; hp: number; alive: boolean }[];
-  member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number; bhp?: number; unspent_stat_points?: number; max_cp?: number; max_mp?: number; respec_points?: number; salvage?: number }[];
+  member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number; bhp?: number; unspent_stat_points?: number; max_cp?: number; max_mp?: number; respec_points?: number; salvage?: number; cp?: number }[];
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
   cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
+  consumed_ability_stacks?: { character_id: string; creature_id: string; stack_type: string }[];
 }
 
 export interface MemberBuffState {
@@ -72,8 +77,10 @@ export interface UsePartyCombatParams {
   onPoisonProc?: (creatureId: string) => void;
   /** Called when server reports an ignite proc on a creature */
   onIgniteProc?: (creatureId: string) => void;
-  /** Called on tick to execute a queued ability */
+  /** Called on tick to execute a queued ability (buff/heal abilities only — damage abilities go to server) */
   onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
+  /** Called when server consumes ability stacks (Eviscerate/Conflagrate) */
+  onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
@@ -111,6 +118,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // Leader aggregates non-leader buff + DoT stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberDotsRef = useRef<Record<string, DotStackReport>>({});
+  // Leader aggregates non-leader pending abilities received via broadcast
+  const memberAbilitiesRef = useRef<any[]>([]);
   const doTickRef = useRef<() => void>(() => {});
 
   // Derived: is this character the "driver" (runs the tick interval)?
@@ -142,6 +151,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberDotsRef.current = {};
+    memberAbilitiesRef.current = [];
     // Only clear interval if no pending ability — let it keep running for ability execution
     if (!pendingAbilityRef.current && intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
@@ -216,6 +226,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (myState.max_mp !== undefined) updates.max_mp = myState.max_mp;
       if (myState.respec_points !== undefined) updates.respec_points = myState.respec_points;
       if (myState.salvage !== undefined) updates.salvage = myState.salvage;
+      if (myState.cp !== undefined) updates.cp = myState.cp;
       // Use local-only update to avoid redundant DB write (server already wrote these)
       if (ext.current.updateCharacterLocal) {
         ext.current.updateCharacterLocal(updates);
@@ -234,6 +245,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (data.cleared_dots?.length && ext.current.onClearedDots) {
       const myCleared = data.cleared_dots.filter(d => d.character_id === ext.current.character.id);
       if (myCleared.length) ext.current.onClearedDots(myCleared);
+    }
+
+    // Notify client about consumed ability stacks (Eviscerate/Conflagrate)
+    if (data.consumed_ability_stacks?.length && ext.current.onConsumedAbilityStacks) {
+      const myStacks = data.consumed_ability_stacks.filter(s => s.character_id === ext.current.character.id);
+      if (myStacks.length) ext.current.onConsumedAbilityStacks(myStacks);
     }
 
     // Apply DoT stacks from proc events (poison/ignite)
@@ -330,6 +347,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         const { character_id, buffs } = payload.payload as { character_id: string; buffs: MemberBuffState };
         if (character_id && buffs) memberBuffsRef.current[character_id] = buffs;
       })
+      .on('broadcast', { event: 'member_pending_ability' }, (payload) => {
+        if (!ext.current.isLeader) return;
+        const { ability } = payload.payload as { ability: any };
+        if (ability) memberAbilitiesRef.current.push(ability);
+      })
       .subscribe();
 
     return () => {
@@ -370,12 +392,55 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     try {
       const p = ext.current;
 
-      // ── Execute pending ability (all players, not just drivers) ──
+      // ── Process pending ability ──
       const pending = pendingAbilityRef.current;
-      if (pending) {
-        if (Date.now() >= pending.readyAt) {
-          pendingAbilityRef.current = null;
-          setPendingAbility(null);
+      let pendingAbilitiesForServer: any[] = [];
+
+      if (pending && Date.now() >= pending.readyAt) {
+        pendingAbilityRef.current = null;
+        setPendingAbility(null);
+
+        // Resolve ability type
+        const allAbilities = [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[p.character.class] || [])];
+        const ability = allAbilities[pending.index];
+
+        if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
+          // Damage ability → route to server via combat-tick
+          const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
+
+          // Gather consume stacks for execute/conflagrate
+          let consumeStacks = 0;
+          if (ability.type === 'execute_attack' && p.gatherDotStacks) {
+            const dots = p.gatherDotStacks();
+            consumeStacks = dots.poison[targetId]?.stacks || 0;
+          } else if (ability.type === 'ignite_consume' && p.gatherDotStacks) {
+            const dots = p.gatherDotStacks();
+            consumeStacks = dots.ignite[targetId]?.stacks || 0;
+          }
+
+          const cpCost = p.character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
+
+          const abilityPayload = {
+            character_id: p.character.id,
+            ability_type: ability.type,
+            target_creature_id: targetId,
+            consume_stacks: consumeStacks,
+            cp_cost: cpCost,
+          };
+
+          if (p.party && !p.isLeader) {
+            // Non-leader in party: broadcast to leader
+            channelRef.current?.send({
+              type: 'broadcast',
+              event: 'member_pending_ability',
+              payload: { ability: abilityPayload },
+            });
+          } else {
+            // Solo or leader: include directly
+            pendingAbilitiesForServer.push(abilityPayload);
+          }
+        } else {
+          // Buff/heal ability → execute client-side as before
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
             await p.onAbilityExecute(pending.index, pending.targetId);
           }
@@ -386,6 +451,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       const solo = !p.party;
       const driver = solo || p.isLeader;
       const drainNode = dotDrainNodeRef.current;
+
+      // Collect member abilities (leader only, from broadcasts)
+      if (driver && !solo) {
+        pendingAbilitiesForServer = [...pendingAbilitiesForServer, ...memberAbilitiesRef.current];
+        memberAbilitiesRef.current = [];
+      }
 
       // DoT drain mode: keep ticking with empty engaged list at old node
       if (driver && drainNode && !p.isDead && p.character.hp > 0) {
@@ -404,8 +475,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
         } else {
           const body = solo
-            ? { character_id: p.character.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [] }
-            : { party_id: p.party!.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [] };
+            ? { character_id: p.character.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [], pending_abilities: [] }
+            : { party_id: p.party!.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [], pending_abilities: [] };
 
           const { data, error } = await supabase.functions.invoke('combat-tick', { body });
           if (error) {
@@ -422,7 +493,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
           }
         }
-      } else if (driver && !p.isDead && p.character.hp > 0 && engagedCreatureIdsRef.current.length > 0) {
+      } else if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || pendingAbilitiesForServer.length > 0)) {
         // Normal combat tick
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
@@ -441,6 +512,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               member_buffs: memberBuffs,
               member_dots: memberDots,
               engaged_creature_ids: engagedCreatureIdsRef.current,
+              pending_abilities: pendingAbilitiesForServer,
             }
           : {
               party_id: p.party!.id,
@@ -448,6 +520,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               member_buffs: memberBuffs,
               member_dots: memberDots,
               engaged_creature_ids: engagedCreatureIdsRef.current,
+              pending_abilities: pendingAbilitiesForServer,
             };
 
         const { data, error } = await supabase.functions.invoke('combat-tick', { body });

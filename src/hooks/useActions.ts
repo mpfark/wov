@@ -938,28 +938,7 @@ export function useActions(params: UseActionsParams) {
       p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
-      const cTargetId = resolveCreatureTarget(targetId);
-      if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Grand Finale!`); return; }
-      const creature = p.creatures.find(c => c.id === cTargetId);
-      if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Grand Finale.`); return; }
-      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
-      const baseDmg = Math.max(8, chaMod * 4 + Math.floor(p.character.level * 1.5));
-      const damage = baseDmg + rollDamage(1, Math.max(1, chaMod * 2));
-      const creatureCurrentHp = p.creatureHpOverrides[creature.id] ?? creature.hp;
-      const newHp = Math.max(0, creatureCurrentHp - damage);
-      const killed = newHp <= 0;
-      p.updateCreatureHp(creature.id, newHp);
-      await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: killed });
-      p.addLog(`${ability.emoji} Grand Finale! A devastating blast of sound strikes ${creature.name} for ${damage} damage!`);
-      if (killed) { await awardKillRewards(creature, { stopCombat: true }); return; }
-    } else if (ability.type === 'focus_strike') {
-      const totalStats = p.character.str + p.character.dex + p.character.con
-                       + p.character.int + p.character.wis + p.character.cha;
-      const avgStat = Math.floor(totalStats / 6);
-      const avgMod = getStatModifier(avgStat);
-      const bonusDmg = Math.max(3, Math.floor(avgMod * 2) + Math.floor(p.character.level / 2));
-      p.setFocusStrikeBuff({ bonusDmg });
-      p.addLog(`${ability.emoji} You steady your breathing and channel every ounce of your being — your next attack will deal +${bonusDmg} bonus damage.`);
+      // Processed server-side via combat-tick heartbeat
     }
 
     // Deduct CP
