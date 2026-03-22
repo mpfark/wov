@@ -178,12 +178,13 @@ Deno.serve(async (req) => {
     const mXp: Record<string, number> = {};
     const mGold: Record<string, number> = {};
     const mBhp: Record<string, number> = {};
+    const mSalvage: Record<string, number> = {};
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
-    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; }
+    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; }
 
     // tankId and tankAtNode already set during party/solo initialization above
 
@@ -324,6 +325,18 @@ Deno.serve(async (req) => {
               }
             }
 
+            // Salvage for non-humanoid kills
+            if (!target.is_humanoid) {
+              const baseSalvage = 1 + Math.floor(target.level / 5);
+              const rarityMult = target.rarity === 'boss' ? 4 : target.rarity === 'rare' ? 2 : 1;
+              const totalSalvage = baseSalvage * rarityMult;
+              const salvageEach = Math.floor(totalSalvage / members.length);
+              if (salvageEach > 0) {
+                for (const mm of members) mSalvage[mm.id] += salvageEach;
+                events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${target.name}.` });
+              }
+            }
+
             // Queue loot
             if (target.loot_table_id) {
               lootQueue.push({ nodeId: node_id, lootTableId: target.loot_table_id, itemId: null, creatureName: target.name, dropChance: target.drop_chance ?? 0.5 });
@@ -393,6 +406,17 @@ Deno.serve(async (req) => {
             }
             events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
           }
+        }
+      }
+      // Salvage for non-humanoid DoT kills
+      if (!creature.is_humanoid) {
+        const baseSalvage = 1 + Math.floor(creature.level / 5);
+        const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
+        const totalSalvage = baseSalvage * rarityMult;
+        const salvageEach = Math.floor(totalSalvage / members.length);
+        if (salvageEach > 0) {
+          for (const mm of members) mSalvage[mm.id] += salvageEach;
+          events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${creature.name}.` });
         }
       }
       if (creature.loot_table_id) {
@@ -635,6 +659,11 @@ Deno.serve(async (req) => {
         updates.bhp = (c.bhp || 0) + mBhp[m.id];
       }
 
+      // Salvage award
+      if (mSalvage[m.id] > 0) {
+        updates.salvage = (c.salvage || 0) + mSalvage[m.id];
+      }
+
       if (Object.keys(updates).length > 0) {
         await db.from('characters').update(updates).eq('id', m.id);
       }
@@ -651,6 +680,7 @@ Deno.serve(async (req) => {
         max_cp: updates.max_cp ?? c.max_cp,
         max_mp: updates.max_mp ?? c.max_mp,
         respec_points: updates.respec_points ?? c.respec_points ?? 0,
+        salvage: updates.salvage ?? (c.salvage || 0),
       });
     }
 

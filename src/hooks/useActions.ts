@@ -320,6 +320,35 @@ export function useActions(params: UseActionsParams) {
       }
     }
 
+    // Award salvage for non-humanoid kills
+    if (!creature.is_humanoid) {
+      const baseSalvage = 1 + Math.floor(creature.level / 5);
+      const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
+      const totalSalvage = baseSalvage * rarityMult;
+      const salvageShare = Math.floor(totalSalvage / goldSplitCount);
+      if (salvageShare > 0) {
+        const newSalvage = (p.character.salvage || 0) + salvageShare;
+        await p.updateCharacter({ salvage: newSalvage });
+        // Award party members
+        if (p.party?.id) {
+          const { data: freshMembers } = await supabase
+            .from('party_members')
+            .select('character_id, character:characters(current_node_id)')
+            .eq('party_id', p.party.id)
+            .eq('status', 'accepted');
+          const membersHere = (freshMembers || []).filter(
+            (m: any) => m.character?.current_node_id === p.character.current_node_id && m.character_id !== p.character.id
+          );
+          for (const m of membersHere) {
+            try {
+              await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: 0, _gold: 0, _salvage: salvageShare });
+            } catch (e) { console.error('Failed to award salvage to party member:', e); }
+          }
+        }
+        p.addLog(`🔩 You salvaged ${salvageShare} materials from ${creature.name}.`);
+      }
+    }
+
     await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance, creature.node_id);
     if (opts?.stopCombat) p.stopCombat();
   }, [p.character, p.party, p.addLog, p.updateCharacter, rollLoot, p.stopCombat, p.xpMultiplier]);

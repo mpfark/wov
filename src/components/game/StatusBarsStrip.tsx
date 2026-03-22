@@ -225,6 +225,9 @@ export default function StatusBarsStrip({
         <div className="flex justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground">XP</span>
           <div className="flex items-center gap-2">
+            {(character.salvage ?? 0) > 0 && (
+              <span className="text-dwarvish tabular-nums">🔩 {character.salvage}</span>
+            )}
             {character.level >= 30 && (
               <span className="text-gold tabular-nums">🏋️ {character.bhp || 0} BHP</span>
             )}

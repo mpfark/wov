@@ -224,6 +224,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           respec_points: number
+          salvage: number
           soulforged_item_created: boolean
           str: number
           unspent_stat_points: number
@@ -257,6 +258,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           respec_points?: number
+          salvage?: number
           soulforged_item_created?: boolean
           str?: number
           unspent_stat_points?: number
@@ -290,6 +292,7 @@ export type Database = {
           name?: string
           race?: Database["public"]["Enums"]["character_race"]
           respec_points?: number
+          salvage?: number
           soulforged_item_created?: boolean
           str?: number
           unspent_stat_points?: number
@@ -1045,10 +1048,20 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
       }
-      award_party_member: {
-        Args: { _character_id: string; _gold: number; _xp: number }
-        Returns: undefined
-      }
+      award_party_member:
+        | {
+            Args: { _character_id: string; _gold: number; _xp: number }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _character_id: string
+              _gold: number
+              _salvage?: number
+              _xp: number
+            }
+            Returns: undefined
+          }
       buy_vendor_item:
         | {
             Args: { p_character_id: string; p_vendor_item_id: string }

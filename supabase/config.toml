@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.soulforge-item]
 verify_jwt = false
+
+[functions.blacksmith-forge]
+verify_jwt = false
