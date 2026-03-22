@@ -408,6 +408,17 @@ Deno.serve(async (req) => {
           }
         }
       }
+      // Salvage for non-humanoid DoT kills
+      if (!creature.is_humanoid) {
+        const baseSalvage = 1 + Math.floor(creature.level / 5);
+        const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
+        const totalSalvage = baseSalvage * rarityMult;
+        const salvageEach = Math.floor(totalSalvage / members.length);
+        if (salvageEach > 0) {
+          for (const mm of members) mSalvage[mm.id] += salvageEach;
+          events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${creature.name}.` });
+        }
+      }
       if (creature.loot_table_id) {
         lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
       } else {
