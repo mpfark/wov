@@ -21,6 +21,7 @@ import type {
 export interface UseActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacterLocal: (updates: Partial<Character>) => void;
   addLog: (msg: string) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   unequipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; belt_slot: number | null; [k: string]: any }[];
