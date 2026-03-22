@@ -325,6 +325,18 @@ Deno.serve(async (req) => {
               }
             }
 
+            // Salvage for non-humanoid kills
+            if (!target.is_humanoid) {
+              const baseSalvage = 1 + Math.floor(target.level / 5);
+              const rarityMult = target.rarity === 'boss' ? 4 : target.rarity === 'rare' ? 2 : 1;
+              const totalSalvage = baseSalvage * rarityMult;
+              const salvageEach = Math.floor(totalSalvage / members.length);
+              if (salvageEach > 0) {
+                for (const mm of members) mSalvage[mm.id] += salvageEach;
+                events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${target.name}.` });
+              }
+            }
+
             // Queue loot
             if (target.loot_table_id) {
               lootQueue.push({ nodeId: node_id, lootTableId: target.loot_table_id, itemId: null, creatureName: target.name, dropChance: target.drop_chance ?? 0.5 });
