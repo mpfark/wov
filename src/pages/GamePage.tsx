@@ -1408,8 +1408,11 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
           onClose={() => setBlacksmithOpen(false)}
           characterId={character.id}
           gold={character.gold}
+          salvage={character.salvage ?? 0}
+          level={character.level}
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
+          onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
         />
