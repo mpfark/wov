@@ -328,7 +328,8 @@ export function useActions(params: UseActionsParams) {
       const salvageShare = Math.floor(totalSalvage / goldSplitCount);
       if (salvageShare > 0) {
         const newSalvage = (p.character.salvage || 0) + salvageShare;
-        await p.updateCharacter({ salvage: newSalvage });
+        await supabase.rpc('award_party_member', { _character_id: p.character.id, _xp: 0, _gold: 0, _salvage: salvageShare });
+        p.updateCharacterLocal({ salvage: newSalvage });
         // Award party members
         if (p.party?.id) {
           const { data: freshMembers } = await supabase
