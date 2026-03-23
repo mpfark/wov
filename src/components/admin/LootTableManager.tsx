@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, X, Package } from 'lucide-react';
+import ItemPicker from './ItemPicker';
 
 interface LootTable {
   id: string;
@@ -219,17 +219,15 @@ export default function LootTableManager() {
                     const pct = totalWeight > 0 ? ((entry.weight / totalWeight) * 100).toFixed(1) : '0.0';
                     return (
                       <div key={entry.id} className="flex items-center gap-2 p-2 bg-background/50 rounded border border-border">
-                        <Select value={entry.item_id} onValueChange={v => updateEntry(idx, 'item_id', v)}>
-                          <SelectTrigger className="h-7 text-xs flex-1"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-popover border-border z-50 max-h-60">
-                            {items.map(item => (
-                              <SelectItem key={item.id} value={item.id} className="text-xs">
-                                <span className={RARITY_COLORS[item.rarity]}>{item.name}</span>
-                                <span className="text-muted-foreground ml-1">L{item.level}</span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex-1">
+                          <ItemPicker
+                            items={items}
+                            value={entry.item_id}
+                            onChange={v => { if (v) updateEntry(idx, 'item_id', v); }}
+                            placeholder="Select item…"
+                            className="h-7"
+                          />
+                        </div>
                         <div className="flex items-center gap-1 w-32 shrink-0">
                           <Slider
                             value={[entry.weight]}

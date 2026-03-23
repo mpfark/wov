@@ -11,6 +11,7 @@ import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, get
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
+import LootTablePicker from './LootTablePicker';
 
 interface Creature {
   id: string;
@@ -508,20 +509,17 @@ export default function CreatureManager() {
                     <span className="text-[9px] text-dwarvish border border-dwarvish/40 rounded px-1 py-0.5">linked</span>
                   )}
                 </div>
-                <Select value={form.loot_table_id || 'none'} onValueChange={v => {
-                  const tableId = v === 'none' ? null : v;
-                  setForm(f => ({ ...f, loot_table_id: tableId }));
-                  if (tableId) loadLootTableEntries(tableId);
-                  else setLootTableEntries([]);
-                }}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select loot table" /></SelectTrigger>
-                  <SelectContent className="bg-popover border-border z-50 max-h-60">
-                    <SelectItem value="none" className="text-xs text-muted-foreground">None — use per-item loot below</SelectItem>
-                    {lootTables.map(lt => (
-                      <SelectItem key={lt.id} value={lt.id} className="text-xs">{lt.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <LootTablePicker
+                  tables={lootTables}
+                  value={form.loot_table_id}
+                  onChange={v => {
+                    setForm(f => ({ ...f, loot_table_id: v }));
+                    if (v) loadLootTableEntries(v);
+                    else setLootTableEntries([]);
+                  }}
+                  allowNone
+                  placeholder="Select loot table"
+                />
 
                 {form.loot_table_id ? (
                   <div className="space-y-1">

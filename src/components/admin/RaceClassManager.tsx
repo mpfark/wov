@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ItemPicker from './ItemPicker';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Sword, Shield } from 'lucide-react';
@@ -231,23 +232,15 @@ export default function RaceClassManager() {
                           <Sword className="w-3 h-3" /> Starting Weapon
                         </p>
                         <div className="flex items-center gap-2">
-                          <Select
-                            value={currentWeaponId || ''}
-                            onValueChange={(val) => handleSetWeapon(cls, val)}
-                            disabled={saving === cls}
-                          >
-                            <SelectTrigger className="h-7 text-xs flex-1">
-                              <SelectValue placeholder="None assigned" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {weapons.map(w => (
-                                <SelectItem key={w.id} value={w.id} className="text-xs">
-                                  {w.name}
-                                  <span className="text-muted-foreground ml-1">({w.rarity})</span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex-1">
+                            <ItemPicker
+                              items={weapons}
+                              value={currentWeaponId || null}
+                              onChange={v => { if (v) handleSetWeapon(cls, v); }}
+                              placeholder="None assigned"
+                              className="h-7"
+                            />
+                          </div>
                           {currentWeaponId && (
                             <Button
                               variant="ghost"
@@ -316,23 +309,15 @@ export default function RaceClassManager() {
                       <CardContent className="p-3 space-y-2">
                         <p className="text-xs font-display text-foreground">{label}</p>
                         <div className="flex items-center gap-2">
-                          <Select
-                            value={currentItemId || ''}
-                            onValueChange={(val) => handleSetUniversalGear(key, val)}
-                            disabled={saving === `u_${key}`}
-                          >
-                            <SelectTrigger className="h-7 text-xs flex-1">
-                              <SelectValue placeholder="None" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {slotItems.map(w => (
-                                <SelectItem key={w.id} value={w.id} className="text-xs">
-                                  {w.name}
-                                  <span className="text-muted-foreground ml-1">({w.rarity})</span>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex-1">
+                            <ItemPicker
+                              items={slotItems}
+                              value={currentItemId || null}
+                              onChange={v => { if (v) handleSetUniversalGear(key, v); }}
+                              placeholder="None"
+                              className="h-7"
+                            />
+                          </div>
                           {currentItemId && (
                             <Button
                               variant="ghost"

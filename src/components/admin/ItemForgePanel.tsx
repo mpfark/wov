@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import CreaturePicker from './CreaturePicker';
 
 /* ─── Types ─────────────────────────────────────────────── */
 
@@ -460,19 +461,15 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                   <div className="flex items-center gap-2 pt-1 border-t border-border">
                     <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
                     <span className="text-[10px] text-muted-foreground shrink-0">Assign to creature:</span>
-                    <Select value={assignCreatureId} onValueChange={setAssignCreatureId}>
-                      <SelectTrigger className="h-6 text-[10px] flex-1">
-                        <SelectValue placeholder="Pick a creature…" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60">
-                        {creatures.map(c => (
-                          <SelectItem key={c.id} value={c.id} className="text-xs">
-                            {c.name} <span className="text-muted-foreground">(Lv {c.level})</span>
-                            {c.loot_table_id ? ' 🔗' : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <CreaturePicker
+                        creatures={creatures}
+                        value={assignCreatureId || null}
+                        onChange={v => setAssignCreatureId(v || '')}
+                        placeholder="Pick a creature…"
+                        className="h-6"
+                      />
+                    </div>
                     <Button
                       size="sm"
                       variant="outline"

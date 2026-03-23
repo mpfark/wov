@@ -11,6 +11,7 @@ import { Save, Trash2, Plus, Pencil, X, ShoppingCart } from 'lucide-react';
 import { generateCreatureStats } from '@/lib/game-data';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
+import ItemPicker from './ItemPicker';
 
 interface VendorEntry {
   id: string;
@@ -586,19 +587,15 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <label className="text-[10px] text-muted-foreground">Item</label>
-                    <Select value={vendorForm.item_id} onValueChange={v => {
-                      const item = allItems.find(i => i.id === v);
-                      setVendorForm(f => ({ ...f, item_id: v, price: item?.value || 10 }));
-                    }}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select item..." /></SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-60">
-                        {allItems.filter(i => !vendorItems.some(v => v.item_id === i.id)).map(item => (
-                          <SelectItem key={item.id} value={item.id} className="text-xs">
-                            {item.name} <span className="text-muted-foreground capitalize">({item.rarity})</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ItemPicker
+                      items={allItems.filter(i => !vendorItems.some(v => v.item_id === i.id))}
+                      value={vendorForm.item_id || null}
+                      onChange={v => {
+                        const item = allItems.find(i => i.id === v);
+                        setVendorForm(f => ({ ...f, item_id: v || '', price: item?.value || 10 }));
+                      }}
+                      placeholder="Select item..."
+                    />
                   </div>
                   <div>
                     <label className="text-[10px] text-muted-foreground">Price</label>

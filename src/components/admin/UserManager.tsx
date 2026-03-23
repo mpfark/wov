@@ -10,6 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
+import ItemPicker from './ItemPicker';
+import NodePicker from './NodePicker';
 import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getCharacterTitle } from '@/lib/game-data';
 
 interface AdminInventoryItem {
@@ -582,7 +584,9 @@ export default function UserManager({ isValar }: Props) {
   const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; level: number; slot: string | null }[]>([]);
   const [giveItemId, setGiveItemId] = useState<string>('');
   const [givingItem, setGivingItem] = useState(false);
-  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_name: string }[]>([]);
+  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id: string; region_name: string; area_id?: string | null; is_inn?: boolean; is_vendor?: boolean; is_blacksmith?: boolean; is_teleport?: boolean; is_trainer?: boolean }[]>([]);
+  const [allRegions, setAllRegions] = useState<{ id: string; name: string }[]>([]);
+  const [allAreas, setAllAreas] = useState<{ id: string; name: string }[]>([]);
   const [teleportNodeId, setTeleportNodeId] = useState<string>('');
   const [grantXpAmount, setGrantXpAmount] = useState<number>(100);
   const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
@@ -624,16 +628,19 @@ export default function UserManager({ isValar }: Props) {
   useEffect(() => {
     Promise.all([
       supabase.from('items').select('id, name, rarity, level, slot').order('name'),
-      supabase.from('nodes').select('id, name, region_id').order('name'),
+      supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
       supabase.from('regions').select('id, name'),
-    ]).then(([itemsRes, nodesRes, regionsRes]) => {
+      supabase.from('areas').select('id, name'),
+    ]).then(([itemsRes, nodesRes, regionsRes, areasRes]) => {
       if (itemsRes.data) {
         setAllItems(itemsRes.data);
         if (itemsRes.data.length > 0 && !giveItemId) setGiveItemId(itemsRes.data[0].id);
       }
+      if (regionsRes.data) setAllRegions(regionsRes.data);
+      if (areasRes.data) setAllAreas(areasRes.data);
       if (nodesRes.data && regionsRes.data) {
         const regionMap = Object.fromEntries((regionsRes.data || []).map(r => [r.id, r.name]));
-        setAllNodes(nodesRes.data.map(n => ({ id: n.id, name: n.name, region_name: regionMap[n.region_id] || 'Unknown' })));
+        setAllNodes(nodesRes.data.map(n => ({ ...n, region_name: regionMap[n.region_id] || 'Unknown' })));
         if (nodesRes.data.length > 0) setTeleportNodeId(nodesRes.data[0].id);
       }
     });
@@ -991,19 +998,15 @@ export default function UserManager({ isValar }: Props) {
                 {/* Give Item */}
                 <div className="space-y-1">
                   <div className="flex gap-1">
-                    <Select value={giveItemId} onValueChange={setGiveItemId}>
-                      <SelectTrigger className="h-7 flex-1 text-[10px]">
-                        <SelectValue placeholder="Item..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-60">
-                        {allItems.map(item => (
-                          <SelectItem key={item.id} value={item.id} className="text-xs">
-                            <span className={rarityColor(item.rarity)}>{item.name}</span>
-                            <span className="text-muted-foreground ml-1">L{item.level}{item.slot ? ` · ${item.slot.replace('_', ' ')}` : ''}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <ItemPicker
+                        items={allItems}
+                        value={giveItemId || null}
+                        onChange={v => setGiveItemId(v || '')}
+                        placeholder="Item..."
+                        className="h-7"
+                      />
+                    </div>
                     <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
                       disabled={!giveItemId || givingItem} onClick={() => handleGiveItem(selectedChar.id)}>
                       <Gift className="w-3 h-3" /> Give
@@ -1014,18 +1017,17 @@ export default function UserManager({ isValar }: Props) {
                 {/* Teleport */}
                 <div className="space-y-1">
                   <div className="flex gap-1">
-                    <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
-                      <SelectTrigger className="h-7 flex-1 text-[10px]">
-                        <SelectValue placeholder="Node..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-60">
-                        {allNodes.map(node => (
-                          <SelectItem key={node.id} value={node.id} className="text-xs">
-                            {node.name} <span className="text-muted-foreground">({node.region_name})</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <NodePicker
+                        nodes={allNodes}
+                        regions={allRegions}
+                        areas={allAreas}
+                        value={teleportNodeId || null}
+                        onChange={v => setTeleportNodeId(v || '')}
+                        placeholder="Node..."
+                        className="h-7"
+                      />
+                    </div>
                     <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
                       disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
                       <MapPin className="w-3 h-3" /> Tp
