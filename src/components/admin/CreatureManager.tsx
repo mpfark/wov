@@ -10,6 +10,7 @@ import { Plus, Pencil, Trash2, Save, X, Skull } from 'lucide-react';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
+import NodePicker from './NodePicker';
 
 interface Creature {
   id: string;
@@ -39,7 +40,24 @@ interface LootTableOption {
 interface NodeOption {
   id: string;
   name: string;
+  region_id: string;
   region_name?: string;
+  area_id?: string | null;
+  is_inn?: boolean;
+  is_vendor?: boolean;
+  is_blacksmith?: boolean;
+  is_teleport?: boolean;
+  is_trainer?: boolean;
+}
+
+interface RegionOption {
+  id: string;
+  name: string;
+}
+
+interface AreaOption {
+  id: string;
+  name: string;
 }
 
 const RARITIES = ['regular', 'rare', 'boss'] as const;
@@ -76,21 +94,34 @@ export default function CreatureManager() {
   const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
   const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
 
+  const [cmRegions, setCmRegions] = useState<RegionOption[]>([]);
+  const [cmAreas, setCmAreas] = useState<AreaOption[]>([]);
+
   const loadData = async () => {
-    const [c, n, r, lt] = await Promise.all([
+    const [c, n, r, lt, a] = await Promise.all([
       supabase.from('creatures').select('*').order('name'),
-      supabase.from('nodes').select('id, name, region_id').order('name'),
+      supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
       supabase.from('regions').select('id, name'),
       supabase.from('loot_tables').select('id, name').order('name'),
+      supabase.from('areas').select('id, name'),
     ]);
     if (lt.data) setLootTables(lt.data as LootTableOption[]);
     if (c.data) setCreatures(c.data as unknown as Creature[]);
+    if (r.data) setCmRegions(r.data as RegionOption[]);
+    if (a.data) setCmAreas(a.data as AreaOption[]);
     if (n.data && r.data) {
       const regionMap = Object.fromEntries(r.data.map(reg => [reg.id, reg.name]));
       setNodes(n.data.map(node => ({
         id: node.id,
         name: node.name,
+        region_id: node.region_id,
         region_name: regionMap[node.region_id] || 'Unknown',
+        area_id: node.area_id,
+        is_inn: node.is_inn,
+        is_vendor: node.is_vendor,
+        is_blacksmith: node.is_blacksmith,
+        is_teleport: node.is_teleport,
+        is_trainer: node.is_trainer,
       })));
     }
   };
@@ -407,17 +438,15 @@ export default function CreatureManager() {
 
               <div>
                 <label className="text-[10px] text-muted-foreground">Spawn Location</label>
-                <Select value={form.node_id || 'none'} onValueChange={v => setForm(f => ({ ...f, node_id: v === 'none' ? null : v }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node" /></SelectTrigger>
-                  <SelectContent className="bg-popover border-border z-50 max-h-60">
-                    <SelectItem value="none" className="text-xs text-muted-foreground">Unassigned</SelectItem>
-                    {nodes.map(n => (
-                      <SelectItem key={n.id} value={n.id} className="text-xs">
-                        {n.name} <span className="text-muted-foreground ml-1">({n.region_name})</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <NodePicker
+                  nodes={nodes}
+                  regions={cmRegions}
+                  areas={cmAreas}
+                  value={form.node_id}
+                  onChange={v => setForm(f => ({ ...f, node_id: v }))}
+                  allowNone
+                  placeholder="Select node"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-2">

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { type AreaType } from '@/hooks/useNodes';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
 import ItemPickerList from './ItemPickerList';
+import NodePicker from './NodePicker';
 
 interface VendorEntry {
   id: string;
@@ -80,11 +81,12 @@ function getNodeLabel(node: any, areas: any[]): string {
 }
 
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated, suggestedNodes }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, suggestedNodes }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
   allAreas: any[];
+  allRegions: any[];
   onUpdated: () => void;
   suggestedNodes?: Array<{ id: string; direction: string; name: string }>;
 }) {
@@ -279,14 +281,14 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onU
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <div>
             <label className="text-[10px] text-muted-foreground">Target Node</label>
-            <Select value={addNodeId} onValueChange={setAddNodeId}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node..." /></SelectTrigger>
-              <SelectContent className="bg-popover border-border z-50 max-h-60">
-                {availableNodes.map((n: any) => (
-                  <SelectItem key={n.id} value={n.id} className="text-xs">{getNodeLabel(n, allAreas)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NodePicker
+              nodes={availableNodes}
+              regions={allRegions}
+              areas={allAreas}
+              value={addNodeId || null}
+              onChange={v => setAddNodeId(v || '')}
+              placeholder="Select node..."
+            />
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground">Direction</label>
@@ -1146,6 +1148,7 @@ export default function NodeEditorPanel({
                   connections={form.connections}
                   allNodesGlobal={allNodesGlobal}
                   allAreas={allAreas}
+                  allRegions={regions}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
                   suggestedNodes={suggestedNodes}
                 />

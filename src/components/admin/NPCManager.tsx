@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, X, MessageCircle } from 'lucide-react';
+import NodePicker from './NodePicker';
 
 interface NPC {
   id: string;
@@ -20,7 +21,24 @@ interface NPC {
 interface NodeOption {
   id: string;
   name: string;
+  region_id: string;
   region_name?: string;
+  area_id?: string | null;
+  is_inn?: boolean;
+  is_vendor?: boolean;
+  is_blacksmith?: boolean;
+  is_teleport?: boolean;
+  is_trainer?: boolean;
+}
+
+interface RegionOption {
+  id: string;
+  name: string;
+}
+
+interface AreaOption {
+  id: string;
+  name: string;
 }
 
 const defaultForm = () => ({
@@ -39,20 +57,32 @@ export default function NPCManager() {
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [npcRegions, setNpcRegions] = useState<RegionOption[]>([]);
+  const [npcAreas, setNpcAreas] = useState<AreaOption[]>([]);
 
   const loadData = async () => {
-    const [n, nd, r] = await Promise.all([
+    const [n, nd, r, a] = await Promise.all([
       supabase.from('npcs').select('*').order('name'),
-      supabase.from('nodes').select('id, name, region_id').order('name'),
+      supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
       supabase.from('regions').select('id, name'),
+      supabase.from('areas').select('id, name'),
     ]);
     if (n.data) setNPCs(n.data as NPC[]);
+    if (r.data) setNpcRegions(r.data as RegionOption[]);
+    if (a.data) setNpcAreas(a.data as AreaOption[]);
     if (nd.data && r.data) {
       const regionMap = Object.fromEntries(r.data.map(reg => [reg.id, reg.name]));
       setNodes(nd.data.map(node => ({
         id: node.id,
         name: node.name,
+        region_id: node.region_id,
         region_name: regionMap[node.region_id] || 'Unknown',
+        area_id: node.area_id,
+        is_inn: node.is_inn,
+        is_vendor: node.is_vendor,
+        is_blacksmith: node.is_blacksmith,
+        is_teleport: node.is_teleport,
+        is_trainer: node.is_trainer,
       })));
     }
   };
@@ -227,17 +257,15 @@ export default function NPCManager() {
 
                 <div>
                   <label className="text-[10px] text-muted-foreground">Location</label>
-                  <Select value={form.node_id || 'none'} onValueChange={v => setForm(f => ({ ...f, node_id: v === 'none' ? null : v }))}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node" /></SelectTrigger>
-                    <SelectContent className="bg-popover border-border z-50 max-h-60">
-                      <SelectItem value="none" className="text-xs text-muted-foreground">Unassigned</SelectItem>
-                      {nodes.map(n => (
-                        <SelectItem key={n.id} value={n.id} className="text-xs">
-                          {n.name} <span className="text-muted-foreground ml-1">({n.region_name})</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NodePicker
+                    nodes={nodes}
+                    regions={npcRegions}
+                    areas={npcAreas}
+                    value={form.node_id}
+                    onChange={v => setForm(f => ({ ...f, node_id: v }))}
+                    allowNone
+                    placeholder="Select node"
+                  />
                 </div>
 
                 <div className="flex gap-2 pt-2">

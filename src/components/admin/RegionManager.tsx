@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import NodePicker from './NodePicker';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Sparkles, Loader2 } from 'lucide-react';
@@ -165,20 +166,15 @@ export default function RegionManager({ regions, allNodes, onCreated, isValar, o
             {/* Connect to existing node */}
             <div className="border border-border rounded-md p-2 space-y-2">
               <label className="text-xs text-muted-foreground font-display block">Connect to existing node (optional)</label>
-              <Select value={connectNodeId} onValueChange={setConnectNodeId}>
-                <SelectTrigger className="text-xs">
-                  <SelectValue placeholder="No connection" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No connection</SelectItem>
-                  {allNodes.map(n => (
-                    <SelectItem key={n.id} value={n.id} className="text-xs">
-                      {getNodeLabel(n)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {connectNodeId && connectNodeId !== 'none' && (
+              <NodePicker
+                nodes={allNodes.map(n => ({ id: n.id, name: n.name, region_id: n.region_id, x: n.x, y: n.y }))}
+                regions={regions}
+                value={connectNodeId || null}
+                onChange={v => setConnectNodeId(v || '')}
+                allowNone
+                placeholder="No connection"
+              />
+              {connectNodeId && (
                 <div>
                   <label className="text-xs text-muted-foreground font-display block mb-1">Direction from parent</label>
                   <Select value={connectDirection} onValueChange={setConnectDirection}>
