@@ -10,6 +10,7 @@ import { Plus, Pencil, Trash2, Save, X, Skull } from 'lucide-react';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
+import NodePicker from './NodePicker';
 
 interface Creature {
   id: string;
