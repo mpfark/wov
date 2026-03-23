@@ -13,6 +13,8 @@ import { type AreaType } from '@/hooks/useNodes';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
+import CreaturePicker from './CreaturePicker';
+import ItemPicker from './ItemPicker';
 
 interface VendorEntry {
   id: string;
