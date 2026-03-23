@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { type AreaType } from '@/hooks/useNodes';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
 import ItemPickerList from './ItemPickerList';
+import NodePicker from './NodePicker';
 
 interface VendorEntry {
   id: string;
