@@ -14,6 +14,7 @@ import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusB
 import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
+import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
 import { getAreaHeaderColor } from '@/lib/area-colors';
 
@@ -67,6 +68,7 @@ export default function NodeView({
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [areaOpen, setAreaOpen] = useState(true);
+  const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; level: number; race?: string; class?: string; gender?: string } | null>(null);
   const { emojiMap } = useAreaTypes();
 
   // hasTargetedAbility check no longer needed — targeting is handled in PartyPanel
@@ -246,10 +248,13 @@ export default function NodeView({
                   return (
                     <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-display text-primary truncate">
+                        <button
+                          className="text-xs font-display text-primary truncate text-left hover:underline cursor-pointer"
+                          onClick={() => setInspectPlayer({ id: p.id, name: p.name, level: p.level, race: p.race, class: p.class, gender: p.gender })}
+                        >
                           {getCharacterTitle(p.level, p.gender) && <span className="text-primary/60 text-[9px] mr-0.5">{getCharacterTitle(p.level, p.gender)}</span>}
                           {p.name}
-                        </span>
+                        </button>
                         <span className="text-[10px] text-muted-foreground">L{p.level}</span>
                         {isPartyMate && hpData && (
                           <div className="ml-auto flex items-center gap-1 shrink-0">
@@ -374,6 +379,11 @@ export default function NodeView({
             </div>
           )}
         </div>
+        <InspectPlayerDialog
+          player={inspectPlayer}
+          open={!!inspectPlayer}
+          onOpenChange={(open) => { if (!open) setInspectPlayer(null); }}
+        />
       </div>
     </TooltipProvider>
   );
