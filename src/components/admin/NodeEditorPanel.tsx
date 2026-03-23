@@ -81,11 +81,12 @@ function getNodeLabel(node: any, areas: any[]): string {
 }
 
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, onUpdated, suggestedNodes }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, suggestedNodes }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
   allAreas: any[];
+  allRegions: any[];
   onUpdated: () => void;
   suggestedNodes?: Array<{ id: string; direction: string; name: string }>;
 }) {
