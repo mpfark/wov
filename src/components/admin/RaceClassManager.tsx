@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ItemPicker from './ItemPicker';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Sword, Shield } from 'lucide-react';
