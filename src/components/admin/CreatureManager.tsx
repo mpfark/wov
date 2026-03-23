@@ -93,21 +93,34 @@ export default function CreatureManager() {
   const [lootTables, setLootTables] = useState<LootTableOption[]>([]);
   const [lootTableEntries, setLootTableEntries] = useState<{ item_id: string; weight: number; item_name: string }[]>([]);
 
+  const [cmRegions, setCmRegions] = useState<RegionOption[]>([]);
+  const [cmAreas, setCmAreas] = useState<AreaOption[]>([]);
+
   const loadData = async () => {
-    const [c, n, r, lt] = await Promise.all([
+    const [c, n, r, lt, a] = await Promise.all([
       supabase.from('creatures').select('*').order('name'),
-      supabase.from('nodes').select('id, name, region_id').order('name'),
+      supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
       supabase.from('regions').select('id, name'),
       supabase.from('loot_tables').select('id, name').order('name'),
+      supabase.from('areas').select('id, name'),
     ]);
     if (lt.data) setLootTables(lt.data as LootTableOption[]);
     if (c.data) setCreatures(c.data as unknown as Creature[]);
+    if (r.data) setCmRegions(r.data as RegionOption[]);
+    if (a.data) setCmAreas(a.data as AreaOption[]);
     if (n.data && r.data) {
       const regionMap = Object.fromEntries(r.data.map(reg => [reg.id, reg.name]));
       setNodes(n.data.map(node => ({
         id: node.id,
         name: node.name,
+        region_id: node.region_id,
         region_name: regionMap[node.region_id] || 'Unknown',
+        area_id: node.area_id,
+        is_inn: node.is_inn,
+        is_vendor: node.is_vendor,
+        is_blacksmith: node.is_blacksmith,
+        is_teleport: node.is_teleport,
+        is_trainer: node.is_trainer,
       })));
     }
   };

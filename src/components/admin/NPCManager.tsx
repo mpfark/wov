@@ -56,20 +56,32 @@ export default function NPCManager() {
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [npcRegions, setNpcRegions] = useState<RegionOption[]>([]);
+  const [npcAreas, setNpcAreas] = useState<AreaOption[]>([]);
 
   const loadData = async () => {
-    const [n, nd, r] = await Promise.all([
+    const [n, nd, r, a] = await Promise.all([
       supabase.from('npcs').select('*').order('name'),
-      supabase.from('nodes').select('id, name, region_id').order('name'),
+      supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
       supabase.from('regions').select('id, name'),
+      supabase.from('areas').select('id, name'),
     ]);
     if (n.data) setNPCs(n.data as NPC[]);
+    if (r.data) setNpcRegions(r.data as RegionOption[]);
+    if (a.data) setNpcAreas(a.data as AreaOption[]);
     if (nd.data && r.data) {
       const regionMap = Object.fromEntries(r.data.map(reg => [reg.id, reg.name]));
       setNodes(nd.data.map(node => ({
         id: node.id,
         name: node.name,
+        region_id: node.region_id,
         region_name: regionMap[node.region_id] || 'Unknown',
+        area_id: node.area_id,
+        is_inn: node.is_inn,
+        is_vendor: node.is_vendor,
+        is_blacksmith: node.is_blacksmith,
+        is_teleport: node.is_teleport,
+        is_trainer: node.is_trainer,
       })));
     }
   };
