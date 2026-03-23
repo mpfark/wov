@@ -821,14 +821,6 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
-    }
-      if (totalDmg > 0) {
-        const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - totalDmg, 0);
-        p.updateCreatureHp(creature.id, newHp);
-        await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-        p.addLog(`${ability.emoji} Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`);
-        if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
-      }
     } else if (ability.type === 'root_debuff') {
       const cTargetId = resolveCreatureTarget(targetId);
       if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
