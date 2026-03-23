@@ -174,7 +174,7 @@ export default function RegionManager({ regions, allNodes, onCreated, isValar, o
                 allowNone
                 placeholder="No connection"
               />
-              {connectNodeId && connectNodeId !== 'none' && (
+              {connectNodeId && (
                 <div>
                   <label className="text-xs text-muted-foreground font-display block mb-1">Direction from parent</label>
                   <Select value={connectDirection} onValueChange={setConnectDirection}>
