@@ -886,8 +886,6 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
-    }
-      if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'absorb_buff') {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
       const shieldHp = intMod + Math.floor(p.character.level * 0.5);
