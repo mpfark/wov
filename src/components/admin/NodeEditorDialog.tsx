@@ -126,17 +126,15 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
       {/* Add connection */}
       <div className="border-t border-border pt-3 space-y-2">
         <p className="font-display text-xs text-primary">Add Connection</p>
-        <div className="grid grid-cols-[1fr_auto] gap-2">
           <div>
             <label className="text-[10px] text-muted-foreground">Target Node</label>
-            <Select value={addNodeId} onValueChange={setAddNodeId}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node..." /></SelectTrigger>
-              <SelectContent className="bg-popover border-border z-50 max-h-60">
-                {availableNodes.map((n: any) => (
-                  <SelectItem key={n.id} value={n.id} className="text-xs">{n.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NodePicker
+              nodes={availableNodes}
+              regions={[]}
+              value={addNodeId || null}
+              onChange={v => setAddNodeId(v || '')}
+              placeholder="Select node..."
+            />
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground">Direction</label>
