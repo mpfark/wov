@@ -974,22 +974,14 @@ export default function NodeEditorPanel({
                   <p className="font-display text-xs text-primary">Assign Creature to Node</p>
                   <p className="text-[10px] text-muted-foreground">Pick an existing creature from the Creature Manager to spawn here.</p>
                   <div className="flex gap-2">
-                    <Select value={assignCreatureId} onValueChange={setAssignCreatureId}>
-                      <SelectTrigger className="h-8 text-xs flex-1">
-                        <SelectValue placeholder="Select creature…" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-60">
-                        {unassignedCreatures.length === 0 ? (
-                          <div className="px-2 py-3 text-xs text-muted-foreground text-center">All creatures are assigned</div>
-                        ) : unassignedCreatures.map((c: any) => (
-                          <SelectItem key={c.id} value={c.id} className="text-xs">
-                            <span className={RARITY_COLORS[c.rarity]}>{c.name}</span>
-                            <span className="text-muted-foreground ml-1">Lv {c.level} {c.rarity}</span>
-                            {c.node_id && <span className="text-[9px] text-muted-foreground/60 ml-1">(currently elsewhere)</span>}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <CreaturePicker
+                        creatures={unassignedCreatures}
+                        value={assignCreatureId || null}
+                        onChange={v => setAssignCreatureId(v || '')}
+                        placeholder="Select creature…"
+                      />
+                    </div>
                     <Button
                       size="sm"
                       disabled={!assignCreatureId || assigning}
