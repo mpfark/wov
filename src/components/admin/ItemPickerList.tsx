@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Trash2, ArrowUpDown } from 'lucide-react';
+import ItemPicker from './ItemPicker';
 
 interface LootEntry {
   item_id: string;
