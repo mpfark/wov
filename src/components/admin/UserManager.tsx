@@ -628,16 +628,19 @@ export default function UserManager({ isValar }: Props) {
   useEffect(() => {
     Promise.all([
       supabase.from('items').select('id, name, rarity, level, slot').order('name'),
-      supabase.from('nodes').select('id, name, region_id').order('name'),
+      supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
       supabase.from('regions').select('id, name'),
-    ]).then(([itemsRes, nodesRes, regionsRes]) => {
+      supabase.from('areas').select('id, name'),
+    ]).then(([itemsRes, nodesRes, regionsRes, areasRes]) => {
       if (itemsRes.data) {
         setAllItems(itemsRes.data);
         if (itemsRes.data.length > 0 && !giveItemId) setGiveItemId(itemsRes.data[0].id);
       }
+      if (regionsRes.data) setAllRegions(regionsRes.data);
+      if (areasRes.data) setAllAreas(areasRes.data);
       if (nodesRes.data && regionsRes.data) {
         const regionMap = Object.fromEntries((regionsRes.data || []).map(r => [r.id, r.name]));
-        setAllNodes(nodesRes.data.map(n => ({ id: n.id, name: n.name, region_name: regionMap[n.region_id] || 'Unknown' })));
+        setAllNodes(nodesRes.data.map(n => ({ ...n, region_name: regionMap[n.region_id] || 'Unknown' })));
         if (nodesRes.data.length > 0) setTeleportNodeId(nodesRes.data[0].id);
       }
     });
