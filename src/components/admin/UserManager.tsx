@@ -1017,18 +1017,17 @@ export default function UserManager({ isValar }: Props) {
                 {/* Teleport */}
                 <div className="space-y-1">
                   <div className="flex gap-1">
-                    <Select value={teleportNodeId} onValueChange={setTeleportNodeId}>
-                      <SelectTrigger className="h-7 flex-1 text-[10px]">
-                        <SelectValue placeholder="Node..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-60">
-                        {allNodes.map(node => (
-                          <SelectItem key={node.id} value={node.id} className="text-xs">
-                            {node.name} <span className="text-muted-foreground">({node.region_name})</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <NodePicker
+                        nodes={allNodes}
+                        regions={allRegions}
+                        areas={allAreas}
+                        value={teleportNodeId || null}
+                        onChange={v => setTeleportNodeId(v || '')}
+                        placeholder="Node..."
+                        className="h-7"
+                      />
+                    </div>
                     <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
                       disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
                       <MapPin className="w-3 h-3" /> Tp

@@ -115,19 +115,15 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
 
       {value.map((entry, i) => (
         <div key={i} className="flex items-center gap-2 p-1.5 rounded border border-border bg-background/40">
-          <Select value={entry.item_id} onValueChange={v => updateEntry(i, 'item_id', v)}>
-            <SelectTrigger className="flex-1 h-7 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border z-50">
-              {sortedItems.map(item => (
-                <SelectItem key={item.id} value={item.id}>
-                  <span className={rarityColor(item.id)}>{item.name}</span>
-                  <span className="text-muted-foreground ml-1">Lv{item.level}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex-1">
+            <ItemPicker
+              items={sortedItems}
+              value={entry.item_id}
+              onChange={v => { if (v) updateEntry(i, 'item_id', v); }}
+              placeholder="Select item…"
+              className="h-7"
+            />
+          </div>
           <div className="flex items-center gap-1 shrink-0">
             <Input
               type="number" min={0} max={1} step={0.05}
