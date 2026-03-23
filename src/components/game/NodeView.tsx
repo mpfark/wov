@@ -1,5 +1,5 @@
 import { GameNode, Region, Area, getNodeDisplayName, getNodeDisplayDescription } from '@/hooks/useNodes';
-import { PlayerPresence } from '@/hooks/usePresence';
+import { PlayerPresence } from '@/hooks/useNodeChannel';
 import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Region, GameNode, Area } from '@/hooks/useNodes';
 import { Party, PartyMember } from '@/hooks/useParty';
-import { PlayerPresence } from '@/hooks/usePresence';
+import { PlayerPresence } from '@/hooks/useNodeChannel';
 import { Character } from '@/hooks/useCharacter';
 import PlayerGraphView from './PlayerGraphView';
 import PartyPanel from './PartyPanel';
