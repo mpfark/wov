@@ -1123,6 +1123,20 @@ export type Database = {
             }
             Returns: number
           }
+      inspect_character_equipment: {
+        Args: { _character_id: string }
+        Returns: {
+          description: string
+          durability_pct: number
+          hands: number
+          item_level: number
+          item_name: string
+          item_type: string
+          rarity: string
+          slot: string
+          stats: Json
+        }[]
+      }
       is_overlord: { Args: never; Returns: boolean }
       is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
