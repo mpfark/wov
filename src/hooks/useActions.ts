@@ -867,8 +867,6 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'execute_attack') {
       // Processed server-side via combat-tick heartbeat
-    }
-      if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
