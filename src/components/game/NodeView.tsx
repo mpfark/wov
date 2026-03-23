@@ -68,6 +68,7 @@ export default function NodeView({
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [areaOpen, setAreaOpen] = useState(true);
+  const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; level: number; race?: string; class?: string; gender?: string } | null>(null);
   const { emojiMap } = useAreaTypes();
 
   // hasTargetedAbility check no longer needed — targeting is handled in PartyPanel
