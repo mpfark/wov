@@ -11,6 +11,7 @@ import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, get
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
+import LootTablePicker from './LootTablePicker';
 
 interface Creature {
   id: string;
