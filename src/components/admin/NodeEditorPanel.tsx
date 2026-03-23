@@ -281,14 +281,14 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <div>
             <label className="text-[10px] text-muted-foreground">Target Node</label>
-            <Select value={addNodeId} onValueChange={setAddNodeId}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node..." /></SelectTrigger>
-              <SelectContent className="bg-popover border-border z-50 max-h-60">
-                {availableNodes.map((n: any) => (
-                  <SelectItem key={n.id} value={n.id} className="text-xs">{getNodeLabel(n, allAreas)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <NodePicker
+              nodes={availableNodes}
+              regions={allRegions}
+              areas={allAreas}
+              value={addNodeId || null}
+              onChange={v => setAddNodeId(v || '')}
+              placeholder="Select node..."
+            />
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground">Direction</label>
