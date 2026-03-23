@@ -584,7 +584,9 @@ export default function UserManager({ isValar }: Props) {
   const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; level: number; slot: string | null }[]>([]);
   const [giveItemId, setGiveItemId] = useState<string>('');
   const [givingItem, setGivingItem] = useState(false);
-  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_name: string }[]>([]);
+  const [allNodes, setAllNodes] = useState<{ id: string; name: string; region_id: string; region_name: string; area_id?: string | null; is_inn?: boolean; is_vendor?: boolean; is_blacksmith?: boolean; is_teleport?: boolean; is_trainer?: boolean }[]>([]);
+  const [allRegions, setAllRegions] = useState<{ id: string; name: string }[]>([]);
+  const [allAreas, setAllAreas] = useState<{ id: string; name: string }[]>([]);
   const [teleportNodeId, setTeleportNodeId] = useState<string>('');
   const [grantXpAmount, setGrantXpAmount] = useState<number>(100);
   const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
