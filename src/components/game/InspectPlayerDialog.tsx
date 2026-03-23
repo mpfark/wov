@@ -67,7 +67,7 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
   if (!player) return null;
 
   const sorted = [...items].sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
-  const title = getCharacterTitle(player.level, player.gender);
+  const title = getCharacterTitle(player.level, player.gender as 'male' | 'female' | undefined);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
