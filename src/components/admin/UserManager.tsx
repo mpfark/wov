@@ -998,19 +998,15 @@ export default function UserManager({ isValar }: Props) {
                 {/* Give Item */}
                 <div className="space-y-1">
                   <div className="flex gap-1">
-                    <Select value={giveItemId} onValueChange={setGiveItemId}>
-                      <SelectTrigger className="h-7 flex-1 text-[10px]">
-                        <SelectValue placeholder="Item..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border z-50 max-h-60">
-                        {allItems.map(item => (
-                          <SelectItem key={item.id} value={item.id} className="text-xs">
-                            <span className={rarityColor(item.rarity)}>{item.name}</span>
-                            <span className="text-muted-foreground ml-1">L{item.level}{item.slot ? ` · ${item.slot.replace('_', ' ')}` : ''}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex-1">
+                      <ItemPicker
+                        items={allItems}
+                        value={giveItemId || null}
+                        onChange={v => setGiveItemId(v || '')}
+                        placeholder="Item..."
+                        className="h-7"
+                      />
+                    </div>
                     <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 shrink-0"
                       disabled={!giveItemId || givingItem} onClick={() => handleGiveItem(selectedChar.id)}>
                       <Gift className="w-3 h-3" /> Give
