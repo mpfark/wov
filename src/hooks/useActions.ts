@@ -821,14 +821,6 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
-    }
-      if (totalDmg > 0) {
-        const newHp = Math.max((p.creatureHpOverrides[creature.id] ?? creature.hp) - totalDmg, 0);
-        p.updateCreatureHp(creature.id, newHp);
-        await supabase.rpc('damage_creature', { _creature_id: creature.id, _new_hp: newHp, _killed: newHp <= 0 });
-        p.addLog(`${ability.emoji} Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`);
-        if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
-      }
     } else if (ability.type === 'root_debuff') {
       const cTargetId = resolveCreatureTarget(targetId);
       if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
@@ -875,8 +867,6 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'execute_attack') {
       // Processed server-side via combat-tick heartbeat
-    }
-      if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
@@ -896,8 +886,6 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
-    }
-      if (newHp <= 0) { await awardKillRewards(creature, { stopCombat: true }); return; }
     } else if (ability.type === 'absorb_buff') {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
       const shieldHp = intMod + Math.floor(p.character.level * 0.5);
