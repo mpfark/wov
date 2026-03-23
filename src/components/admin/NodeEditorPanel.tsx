@@ -1148,6 +1148,7 @@ export default function NodeEditorPanel({
                   connections={form.connections}
                   allNodesGlobal={allNodesGlobal}
                   allAreas={allAreas}
+                  allRegions={regions}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
                   suggestedNodes={suggestedNodes}
                 />
