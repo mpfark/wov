@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-/** @deprecated Use useAreaTypes hook instead for dynamic area types */
-export const AREA_TYPES = [
-  'forest', 'town', 'cave', 'ruins', 'plains', 'mountain', 'swamp', 'desert', 'coast', 'dungeon', 'other',
-] as const;
 export type AreaType = string;
 
 export interface Area {
