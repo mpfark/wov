@@ -39,7 +39,24 @@ interface LootTableOption {
 interface NodeOption {
   id: string;
   name: string;
+  region_id: string;
   region_name?: string;
+  area_id?: string | null;
+  is_inn?: boolean;
+  is_vendor?: boolean;
+  is_blacksmith?: boolean;
+  is_teleport?: boolean;
+  is_trainer?: boolean;
+}
+
+interface RegionOption {
+  id: string;
+  name: string;
+}
+
+interface AreaOption {
+  id: string;
+  name: string;
 }
 
 const RARITIES = ['regular', 'rare', 'boss'] as const;
