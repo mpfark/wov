@@ -1,56 +1,47 @@
 
 
-## Searchable Entity Pickers Across Admin UI
+## Inspect Other Players' Equipped Gear
 
 ### Problem
-The NodePicker pattern works well for nodes, but all other entity selectors (items, creatures, loot tables, NPCs) still use flat `<Select>` dropdowns with no search capability. As the database grows, finding specific items, creatures, or loot tables becomes painful.
+Players can see other characters at the same node but cannot view their equipment. This is a common social feature in MUD-style games — inspecting another player's gear.
 
-### Solution
-Create two new reusable searchable picker components following the NodePicker pattern, then replace flat dropdowns across the admin UI.
+### Approach
+Add a click-to-inspect interaction on player names in NodeView (and optionally the Online Players dialog). Clicking opens a dialog showing the target's equipped items, fetched on-demand via a server-side RPC.
 
-### New Components
+### Why an RPC?
+The `character_inventory` table's RLS only allows owners (and admins) to SELECT. We need a `SECURITY DEFINER` function that returns only equipped items for a given character — no inventory snooping, just what's visibly worn.
 
-**1. `ItemPicker.tsx`** — Searchable item selector
-- Groups items by rarity (Unique, Uncommon, Common)
-- Shows: item name, level, rarity color, slot type
-- Search by name
-- Props: `items`, `value`, `onChange`, `placeholder?`, `allowNone?`, `excludeIds?`, `filterSlot?`
+### Database Changes
 
-**2. `CreaturePicker.tsx`** — Searchable creature selector
-- Groups by rarity (Boss, Rare, Regular)
-- Shows: creature name, level, rarity, assigned/unassigned status
-- Search by name
-- Props: `creatures`, `value`, `onChange`, `placeholder?`, `allowNone?`
+**New RPC: `inspect_character_equipment`**
+- Input: `_character_id uuid`
+- Returns: table of equipped item details (slot, item name, rarity, stats, item_type, hands, durability percentage)
+- Only returns rows where `equipped_slot IS NOT NULL`
+- No authorization restriction — anyone can see equipped gear (it's public in a MUD)
 
-**3. `LootTablePicker.tsx`** — Searchable loot table selector
-- Flat list (no grouping needed, smaller dataset), but with search
-- Shows: table name, item count if available
-- Props: `tables`, `value`, `onChange`, `placeholder?`, `allowNone?`
+### Frontend Changes
 
-### Files to Update
+**1. New component: `src/components/game/InspectPlayerDialog.tsx`**
+- Dialog triggered by clicking a player name
+- Calls `supabase.rpc('inspect_character_equipment', { _character_id })` on open
+- Displays a paper-doll-style or list view of equipped items with rarity colors, stats, and slot labels
+- Shows player name, race, class, level in the header
 
-| File | Selector | Replacement |
-|------|----------|-------------|
-| **ItemPickerList.tsx** | Item `<Select>` per loot entry | `ItemPicker` |
-| **LootTableManager.tsx** | Item `<Select>` per weighted entry | `ItemPicker` |
-| **CreatureManager.tsx** | Loot table `<Select>` | `LootTablePicker` |
-| **NodeEditorPanel.tsx** | Creature assign `<Select>` | `CreaturePicker` |
-| **NodeEditorPanel.tsx** | NPC assign `<Select>` — small list, skip for now |
-| **NodeEditorPanel.tsx** | Vendor item `<Select>` | `ItemPicker` |
-| **NodeEditorDialog.tsx** | Same patterns as NodeEditorPanel | Same replacements |
-| **ItemForgePanel.tsx** | Creature assign `<Select>` | `CreaturePicker` |
-| **RaceClassManager.tsx** | Starting weapon `<Select>` | `ItemPicker` (filtered to weapons) |
-| **RaceClassManager.tsx** | Universal gear slot `<Select>` | `ItemPicker` (filtered by slot) |
-| **UserManager.tsx** | Gift item `<Select>` | `ItemPicker` |
-| **UserManager.tsx** | Teleport node `<Select>` | `NodePicker` (already exists) |
-| **UserManager.tsx** | Remove item `<Select>` — character-specific inventory, skip |
+**2. `src/components/game/NodeView.tsx`**
+- Wrap each player name in the "Others Here" section with a clickable element that opens `InspectPlayerDialog`
+- Pass the player's presence data (id, name, race, class, level, gender)
 
-### What stays as flat `<Select>`
-- Enum selectors (rarity, category, role, status, area type, region filter) — small fixed lists, no search needed
-- NPC assign in NodeEditorPanel — typically very few unassigned NPCs
+**3. `src/components/game/OnlinePlayersDialog.tsx`** (optional enhancement)
+- Make player names clickable to inspect, but only if they're at the same node (or always allow it for online players)
+
+### Security
+- The RPC only exposes equipped items — unequipped inventory stays private
+- No sensitive data exposed (no HP, gold, stats of the character — just their gear)
+- Item stats are already publicly viewable via the `items` table
 
 ### Summary
-- **3 new components** created (ItemPicker, CreaturePicker, LootTablePicker)
-- **~10 flat dropdowns** replaced with searchable pickers
-- All follow the same Popover + Command pattern as NodePicker
+- 1 new database function
+- 1 new component (`InspectPlayerDialog`)
+- 1 file updated (`NodeView.tsx` — make player names clickable)
+- Optional: `OnlinePlayersDialog.tsx` update
 
