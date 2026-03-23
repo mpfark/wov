@@ -126,6 +126,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, onUpdated }: 
       {/* Add connection */}
       <div className="border-t border-border pt-3 space-y-2">
         <p className="font-display text-xs text-primary">Add Connection</p>
+        <div className="grid grid-cols-[1fr_auto] gap-2">
           <div>
             <label className="text-[10px] text-muted-foreground">Target Node</label>
             <NodePicker
