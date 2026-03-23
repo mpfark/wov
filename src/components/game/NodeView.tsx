@@ -14,6 +14,7 @@ import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusB
 import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
+import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
 import { getAreaHeaderColor } from '@/lib/area-colors';
 
