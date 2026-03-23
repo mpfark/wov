@@ -1,22 +1,35 @@
 
 
-## Fix: Salvage Awards in Client-Side Ability Kills
+## Searchable Node Picker Component
 
 ### Problem
-The server-side `combat-tick` already correctly awards salvage (lines 328-338). The client picks it up via `member_states.salvage` in `usePartyCombat.ts` — this path works fine.
-
-However, **instant ability kills** (Barrage, Eviscerate, Conflagrate, Grand Finale, Focus Strike) bypass the combat tick and call `awardKillRewards` in `useActions.ts` directly. That function uses `updateCharacter({ salvage: newSalvage })`, which the `restrict_party_leader_updates` trigger blocks (salvage can only decrease client-side).
+Node dropdowns across the admin UI (RegionManager, CreatureManager, NPCManager, NodeEditorDialog) render all nodes in a flat `<Select>` list with no search/filter capability. With hundreds of nodes, finding a specific one is painful.
 
 ### Solution
-In `awardKillRewards`, route the salvage award through the `award_party_member` RPC (which is `SECURITY DEFINER` and bypasses the trigger), then update the local state with `updateCharacterLocal`.
+Create a reusable `NodePicker` combobox component that provides:
+- **Type-to-search** filtering by node name, area name, or region name
+- **Grouped by region** for visual organization
+- **Rich labels**: Node name, area name, region, and flag icons (inn, vendor, blacksmith, etc.)
+- **Optional "Unassigned" option** for creature/NPC spawn location pickers
 
-### Changes
+Built using the existing `cmdk` (Command) + Popover pattern already in the project.
 
-**`src/hooks/useActions.ts`** — In `awardKillRewards` (around lines 323-349):
-- Replace `await p.updateCharacter({ salvage: newSalvage })` with:
-  1. `await supabase.rpc('award_party_member', { _character_id: p.character.id, _xp: 0, _gold: 0, _salvage: salvageShare })`
-  2. `p.updateCharacterLocal({ salvage: newSalvage })` for instant UI update
-- The party member award loop already uses the RPC correctly — no change needed there.
+### New Component
 
-This is a single-line fix in one file. The server-side combat-tick path is already correct.
+**`src/components/admin/NodePicker.tsx`**
+- Props: `nodes`, `regions`, `areas`, `value`, `onChange`, `placeholder?`, `allowNone?`
+- Uses `Popover` + `Command` (CommandInput, CommandList, CommandGroup, CommandItem)
+- Groups items by region name
+- Each item shows: `{nodeName || areaName || #shortId} — {areaName} [{flags}]`
+- Filters on node name, area name, region name
+
+### Files to Update
+
+1. **`src/components/admin/RegionManager.tsx`** — Replace the `<Select>` for "Connect to existing node" with `<NodePicker>`
+2. **`src/components/admin/CreatureManager.tsx`** — Replace spawn location `<Select>` with `<NodePicker allowNone>`
+3. **`src/components/admin/NPCManager.tsx`** — Replace location `<Select>` with `<NodePicker allowNone>`
+4. **`src/components/admin/NodeEditorDialog.tsx`** — Replace target node `<Select>` in ConnectionsManager with `<NodePicker>`
+5. **`src/components/admin/NodeEditorPanel.tsx`** — Replace any node selectors in the connections section with `<NodePicker>`
+
+Each replacement passes the same `nodes`, `regions`, `areas` data already available in those components (fetched from Supabase or passed as props).
 
