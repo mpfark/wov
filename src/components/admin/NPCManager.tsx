@@ -257,17 +257,15 @@ export default function NPCManager() {
 
                 <div>
                   <label className="text-[10px] text-muted-foreground">Location</label>
-                  <Select value={form.node_id || 'none'} onValueChange={v => setForm(f => ({ ...f, node_id: v === 'none' ? null : v }))}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select node" /></SelectTrigger>
-                    <SelectContent className="bg-popover border-border z-50 max-h-60">
-                      <SelectItem value="none" className="text-xs text-muted-foreground">Unassigned</SelectItem>
-                      {nodes.map(n => (
-                        <SelectItem key={n.id} value={n.id} className="text-xs">
-                          {n.name} <span className="text-muted-foreground ml-1">({n.region_name})</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <NodePicker
+                    nodes={nodes}
+                    regions={npcRegions}
+                    areas={npcAreas}
+                    value={form.node_id}
+                    onChange={v => setForm(f => ({ ...f, node_id: v }))}
+                    allowNone
+                    placeholder="Select node"
+                  />
                 </div>
 
                 <div className="flex gap-2 pt-2">
