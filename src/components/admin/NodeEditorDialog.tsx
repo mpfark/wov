@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Save, Trash2, Plus, Pencil, X, ShoppingCart } from 'lucide-react';
 import { generateCreatureStats } from '@/lib/game-data';
 import ItemPickerList from './ItemPickerList';
+import NodePicker from './NodePicker';
 
 interface VendorEntry {
   id: string;
