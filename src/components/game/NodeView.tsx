@@ -379,6 +379,11 @@ export default function NodeView({
             </div>
           )}
         </div>
+        <InspectPlayerDialog
+          player={inspectPlayer}
+          open={!!inspectPlayer}
+          onOpenChange={(open) => { if (!open) setInspectPlayer(null); }}
+        />
       </div>
     </TooltipProvider>
   );
