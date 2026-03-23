@@ -1135,6 +1135,10 @@ export type Database = {
       regen_creature_hp: { Args: never; Returns: undefined }
       respawn_creatures: { Args: never; Returns: undefined }
       return_unique_items: { Args: never; Returns: undefined }
+      sell_item: {
+        Args: { p_character_id: string; p_inventory_id: string }
+        Returns: number
+      }
       try_acquire_unique_item: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
