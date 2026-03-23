@@ -1,5 +1,5 @@
 import { Party, PartyMember, useParty } from '@/hooks/useParty';
-import { PlayerPresence } from '@/hooks/usePresence';
+import { PlayerPresence } from '@/hooks/useNodeChannel';
 import { Character } from '@/hooks/useCharacter';
 import { Button } from '@/components/ui/button';
 import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
