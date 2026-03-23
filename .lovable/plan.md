@@ -1,35 +1,32 @@
 
 
-## Searchable Node Picker Component
+## Dead Code Cleanup
 
-### Problem
-Node dropdowns across the admin UI (RegionManager, CreatureManager, NPCManager, NodeEditorDialog) render all nodes in a flat `<Select>` list with no search/filter capability. With hundreds of nodes, finding a specific one is painful.
+### Confirmed Unused Files to Delete
 
-### Solution
-Create a reusable `NodePicker` combobox component that provides:
-- **Type-to-search** filtering by node name, area name, or region name
-- **Grouped by region** for visual organization
-- **Rich labels**: Node name, area name, region, and flag icons (inn, vendor, blacksmith, etc.)
-- **Optional "Unassigned" option** for creature/NPC spawn location pickers
+| File | Reason |
+|------|--------|
+| `src/components/NavLink.tsx` | Never imported anywhere |
+| `src/components/admin/RegionGraphView.tsx` | Never imported anywhere |
+| `src/hooks/usePresence.ts` | Thin re-export shim — update 3 imports to use `useNodeChannel` directly |
 
-Built using the existing `cmdk` (Command) + Popover pattern already in the project.
+### Deprecated Code to Remove
 
-### New Component
+| Location | What | Reason |
+|----------|------|--------|
+| `src/hooks/useNodes.ts` | `AREA_TYPES` constant (lines 4-7) | Marked `@deprecated`, never imported — fully replaced by `useAreaTypes` hook |
 
-**`src/components/admin/NodePicker.tsx`**
-- Props: `nodes`, `regions`, `areas`, `value`, `onChange`, `placeholder?`, `allowNone?`
-- Uses `Popover` + `Command` (CommandInput, CommandList, CommandGroup, CommandItem)
-- Groups items by region name
-- Each item shows: `{nodeName || areaName || #shortId} — {areaName} [{flags}]`
-- Filters on node name, area name, region name
+### Import Updates (usePresence elimination)
 
-### Files to Update
+These 3 files import `PlayerPresence` from `usePresence.ts` and should import from `useNodeChannel` directly:
+- `src/components/game/NodeView.tsx`
+- `src/components/game/MapPanel.tsx`
+- `src/components/game/PartyPanel.tsx`
 
-1. **`src/components/admin/RegionManager.tsx`** — Replace the `<Select>` for "Connect to existing node" with `<NodePicker>`
-2. **`src/components/admin/CreatureManager.tsx`** — Replace spawn location `<Select>` with `<NodePicker allowNone>`
-3. **`src/components/admin/NPCManager.tsx`** — Replace location `<Select>` with `<NodePicker allowNone>`
-4. **`src/components/admin/NodeEditorDialog.tsx`** — Replace target node `<Select>` in ConnectionsManager with `<NodePicker>`
-5. **`src/components/admin/NodeEditorPanel.tsx`** — Replace any node selectors in the connections section with `<NodePicker>`
+### Summary
+- **3 files deleted** (NavLink, RegionGraphView, usePresence)
+- **1 deprecated constant removed** (AREA_TYPES)
+- **3 import paths updated** (PlayerPresence → useNodeChannel)
 
-Each replacement passes the same `nodes`, `regions`, `areas` data already available in those components (fetched from Supabase or passed as props).
+All other files I checked (BroadcastDebugOverlay, worker-timer, area-colors, useItemCache, useGameEvents, useKeyboardMovement, PopulateNodeSelector, ItemPickerList, GameManual, PwaUpdatePrompt, HeartbeatIndicator, version) are actively used.
 
