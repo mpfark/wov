@@ -92,14 +92,16 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const getSellPrice = (inv: InventoryItem) => Math.max(1, Math.floor(inv.item.value * sellMultiplier));
 
   const sellItem = async (inv: InventoryItem) => {
-    const sellPrice = getSellPrice(inv);
-    await supabase.from('character_inventory').delete().eq('id', inv.id);
-    const newGold = gold + sellPrice;
-    await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
-    onGoldChange(newGold);
+    const { data: sellPrice, error } = await supabase.rpc('sell_item' as any, {
+      p_character_id: characterId,
+      p_inventory_id: inv.id,
+    });
+    if (error) { addLog(`❌ ${error.message}`); return; }
+    const actualPrice = sellPrice as number;
+    onGoldChange(gold + actualPrice);
     onInventoryChange();
     const chaNote = chaMod > 0 ? ` (CHA bonus)` : '';
-    addLog(`🪙 Sold ${inv.item.name} for ${sellPrice} gold.${chaNote}`);
+    addLog(`🪙 Sold ${inv.item.name} for ${actualPrice} gold.${chaNote}`);
   };
 
   const sellableItems = inventory.filter(i => !i.equipped_slot && !i.item.is_soulbound);
