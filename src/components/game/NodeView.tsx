@@ -248,10 +248,13 @@ export default function NodeView({
                   return (
                     <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-display text-primary truncate">
+                        <button
+                          className="text-xs font-display text-primary truncate text-left hover:underline cursor-pointer"
+                          onClick={() => setInspectPlayer({ id: p.id, name: p.name, level: p.level, race: p.race, class: p.class, gender: p.gender })}
+                        >
                           {getCharacterTitle(p.level, p.gender) && <span className="text-primary/60 text-[9px] mr-0.5">{getCharacterTitle(p.level, p.gender)}</span>}
                           {p.name}
-                        </span>
+                        </button>
                         <span className="text-[10px] text-muted-foreground">L{p.level}</span>
                         {isPartyMate && hpData && (
                           <div className="ml-auto flex items-center gap-1 shrink-0">
