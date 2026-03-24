@@ -131,7 +131,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
     setLootTables(ltRes.data || []);
   }, []);
 
-  useEffect(() => { loadSupport(); }, [loadSupport]);
+  useEffect(() => { loadSupport(); loadPoolStock(); }, [loadSupport, loadPoolStock]);
 
   /* Validate level range */
   const safeMin = Math.max(1, Math.min(levelMin, levelMax));
