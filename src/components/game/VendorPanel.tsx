@@ -109,12 +109,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto bg-card border-border">
-        <DialogHeader>
-          <DialogTitle className="font-display text-primary text-glow flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5" /> Vendor
-          </DialogTitle>
-        </DialogHeader>
+      <ScrollPanel icon="🪙" title="Vendor" className="max-w-lg">
 
         <div className="flex items-center gap-2 text-sm mb-3">
           <Coins className="w-4 h-4 text-primary" />
