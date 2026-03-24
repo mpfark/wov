@@ -1,66 +1,74 @@
 
 
-## Ornate Scroll UI for Service Dialogs
+## Pool-Based Blacksmith Forge System
 
-### Problem
-The Vendor, Blacksmith, and Teleport dialogs use the default shadcn Dialog styling — flat, modern, and out of place in a dark fantasy parchment-themed game.
+### Overview
+Replace the per-forge AI call with a pre-generated item pool. Admins use the existing Item Forge to batch-create items tagged with `origin_type = 'forge_pool'`. When a player forges, the edge function randomly picks a level-appropriate item from the pool, clones it into the `items` table as their personal copy, and adds it to inventory.
 
-### Approach
-Create a shared `ScrollPanel` wrapper component that replaces the plain `DialogContent` with an ornate scroll aesthetic. All three dialogs get the same decorative frame, differentiated only by header icon and accent color.
+### Database Changes
 
-### New Component: `src/components/game/ScrollPanel.tsx`
+**New table: `forge_pool`**
+Stores pre-generated template items available for the blacksmith to draw from. Separated from `items` to keep pool management clean.
 
-A reusable wrapper that replaces `DialogContent` with:
+```sql
+CREATE TABLE public.forge_pool (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  slot item_slot NOT NULL,
+  rarity item_rarity NOT NULL DEFAULT 'common',
+  level integer NOT NULL DEFAULT 1,
+  hands smallint,
+  stats jsonb NOT NULL DEFAULT '{}',
+  value integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 
-- **Parchment background** — layered radial gradients over `bg-card` to simulate aged paper
-- **Gold filigree border** — double border with inner glow using `box-shadow` (gold-tinted inset shadows)
-- **Corner flourishes** — CSS `::before` / `::after` pseudo-elements on corner divs with decorative unicode characters (❧, ❦) or small SVG ornaments in gold
-- **Wax-seal close button** — replace the plain X with a circular seal-styled button (dark red circle with embossed X)
-- **Ornate header divider** — a centered decorative rule below the title (e.g., `── ✦ ──`)
-- **Aged edges** — subtle vignette effect via inset box-shadow darkening the corners
+ALTER TABLE public.forge_pool ENABLE ROW LEVEL SECURITY;
 
-```text
-╔══════════════════════════╗
-║  ❧                    ❧  ║
-║     🪙 Vendor            ║  ← header with icon
-║   ─── ✦ ───              ║  ← ornate divider
-║                          ║
-║   [ content area ]       ║
-║                          ║
-║  ❧                    ❧  ║
-╚══════════════════════════╝
+CREATE POLICY "Anyone can view forge pool" ON public.forge_pool FOR SELECT USING (true);
+CREATE POLICY "Admins can manage forge pool" ON public.forge_pool FOR ALL USING (is_steward_or_overlord());
 ```
 
-### CSS Additions to `src/index.css`
+### Edge Function: `blacksmith-forge` (rewrite)
 
-- `.scroll-panel` — the ornate background, border, and shadow styles
-- `.scroll-corner` — positioned decorative flourishes
-- `.scroll-divider` — the `── ✦ ──` header separator
-- `.wax-seal-close` — circular red close button with embossed feel
+Replace AI generation with pool lookup:
+1. Authenticate user, verify ownership, verify at blacksmith node
+2. Deduct salvage & gold costs (same formula: salvage = 5 + level*2, gold = level*5)
+3. Roll rarity (65% common, 35% uncommon)
+4. Query `forge_pool` for matching items: same slot, same rarity, level within ±2 of character level
+5. Pick one at random; if pool is empty for that combo, fall back to ±5 level range, then error if still empty
+6. Clone the pool item into `items` table with `origin_type = 'blacksmith_forge'`
+7. Add to `character_inventory`, return result
 
-### File Changes
+This eliminates AI latency, API costs, and rate-limit issues entirely.
 
-1. **Create `src/components/game/ScrollPanel.tsx`**
-   - Wraps `DialogContent` with ornate styling
-   - Props: `icon` (emoji/element), `title` (string), `children`, standard dialog props
-   - Renders corner flourishes, ornate divider, and wax-seal close button
-   - Applies `scroll-panel` class for the parchment texture
+### Admin: Item Forge Integration
 
-2. **Update `src/index.css`**
-   - Add `.scroll-panel`, `.scroll-corner`, `.scroll-divider`, `.wax-seal-close` CSS classes
+Update `ItemForgePanel.tsx` to add a third forge mode: `'forge_pool'` alongside existing `'single'` and `'loot_table'` modes.
 
-3. **Update `src/components/game/VendorPanel.tsx`**
-   - Replace `<DialogContent>` + `<DialogHeader>` + `<DialogTitle>` with `<ScrollPanel icon="🪙" title="Vendor">`
+When mode is `forge_pool`:
+- The "Apply" action inserts generated items into `forge_pool` table instead of `items`
+- No loot table name needed
+- Show current pool stock counts by level/slot in the right panel
 
-4. **Update `src/components/game/BlacksmithPanel.tsx`**
-   - Replace with `<ScrollPanel icon="🔨" title="Blacksmith">`
+### Admin: Pool Stock Overview
 
-5. **Update `src/components/game/TeleportDialog.tsx`**
-   - Replace with `<ScrollPanel icon="🌀" title="Teleport">`
+Add a small stock summary in the Item Forge panel when `forge_pool` mode is selected, showing counts grouped by level range and slot so admins know where gaps exist.
 
-### Summary
-- 1 new component (`ScrollPanel.tsx`)
-- 1 CSS file updated (`index.css`)
-- 3 dialog files updated (swap `DialogContent` for `ScrollPanel`)
-- No logic changes — purely visual
+### Client: `BlacksmithPanel.tsx`
+
+Minimal changes:
+- Same UI, same `supabase.functions.invoke('blacksmith-forge', ...)` call
+- Remove the "forging..." delay expectation text if any (it'll be near-instant now)
+- No other changes needed since the API contract stays the same
+
+### Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| Migration SQL | Create `forge_pool` table |
+| `supabase/functions/blacksmith-forge/index.ts` | Rewrite: pool lookup instead of AI |
+| `src/components/admin/ItemForgePanel.tsx` | Add `forge_pool` mode + stock view |
+| `src/integrations/supabase/types.ts` | Auto-updated after migration |
 
