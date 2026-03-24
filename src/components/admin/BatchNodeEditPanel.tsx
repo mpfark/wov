@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -55,6 +55,19 @@ export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, on
   const filteredAreas = regionId
     ? areas.filter(a => a.region_id === regionId)
     : areas;
+
+  const groupedAreas = useMemo(() => {
+    const groups: Record<string, { regionName: string; areas: Array<{ id: string; name: string; region_id: string }> }> = {};
+    for (const a of filteredAreas) {
+      const rid = a.region_id;
+      if (!groups[rid]) {
+        const reg = regions.find(r => r.id === rid);
+        groups[rid] = { regionName: reg?.name || 'Unknown', areas: [] };
+      }
+      groups[rid].areas.push(a);
+    }
+    return Object.entries(groups).sort((a, b) => a[1].regionName.localeCompare(b[1].regionName));
+  }, [filteredAreas, regions]);
 
   const selectedRegionName = regions.find(r => r.id === regionId)?.name;
   const selectedAreaName = areaId === '__clear__' ? 'Clear area' : areas.find(a => a.id === areaId)?.name;
@@ -129,18 +142,22 @@ export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, on
                       <Check className={cn('mr-1.5 h-3 w-3', areaId === '__clear__' ? 'opacity-100' : 'opacity-0')} />
                       Clear area
                     </CommandItem>
-                    {filteredAreas.map(a => (
-                      <CommandItem
-                        key={a.id}
-                        value={a.name}
-                        onSelect={() => { setAreaId(a.id); setAreaOpen(false); }}
-                        className="text-xs"
-                      >
-                        <Check className={cn('mr-1.5 h-3 w-3', areaId === a.id ? 'opacity-100' : 'opacity-0')} />
-                        {a.name}
-                      </CommandItem>
-                    ))}
                   </CommandGroup>
+                  {groupedAreas.map(([rId, { regionName, areas: grpAreas }]) => (
+                    <CommandGroup key={rId} heading={regionName}>
+                      {grpAreas.map(a => (
+                        <CommandItem
+                          key={a.id}
+                          value={a.name}
+                          onSelect={() => { setAreaId(a.id); setAreaOpen(false); }}
+                          className="text-xs"
+                        >
+                          <Check className={cn('mr-1.5 h-3 w-3', areaId === a.id ? 'opacity-100' : 'opacity-0')} />
+                          {a.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ))}
                 </CommandList>
               </Command>
             </PopoverContent>
