@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -9,11 +9,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Loader2, Wand2, Check, Package, Sword, Shield, Sparkles,
-  ChevronRight, Layers, Star, Hash, BarChart2, ArrowRight,
+  ChevronRight, Layers, Star, Hash, BarChart2, ArrowRight, Database,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import CreaturePicker from './CreaturePicker';
+
+interface PoolStock { slot: string; rarity: string; level: number; count: number; }
 
 /* ─── Types ─────────────────────────────────────────────── */
 
@@ -75,7 +77,7 @@ interface ItemForgePanelProps {
 
 export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = {}) {
   /* Forge mode */
-  const [forgeMode, setForgeMode] = useState<'loot_table' | 'single'>('loot_table');
+  const [forgeMode, setForgeMode] = useState<'loot_table' | 'single' | 'forge_pool'>('loot_table');
 
   /* Generation params */
   const [count, setCount] = useState(6);
@@ -100,6 +102,25 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
   const [lootTables, setLootTables] = useState<LootTable[]>([]);
   const [assignCreatureId, setAssignCreatureId] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
+  const [poolStock, setPoolStock] = useState<PoolStock[]>([]);
+
+  const loadPoolStock = useCallback(async () => {
+    const { data } = await supabase.from('forge_pool').select('slot, rarity, level');
+    if (!data) { setPoolStock([]); return; }
+    const map = new Map<string, number>();
+    for (const row of data) {
+      const bucket = Math.floor((row.level - 1) / 5) * 5 + 1;
+      const key = `${row.slot}|${row.rarity}|${bucket}`;
+      map.set(key, (map.get(key) || 0) + 1);
+    }
+    const stocks: PoolStock[] = [];
+    for (const [key, count] of map) {
+      const [slot, rarity, lvl] = key.split('|');
+      stocks.push({ slot, rarity, level: Number(lvl), count });
+    }
+    stocks.sort((a, b) => a.level - b.level || a.slot.localeCompare(b.slot));
+    setPoolStock(stocks);
+  }, []);
 
   const loadSupport = useCallback(async () => {
     const [crRes, ltRes] = await Promise.all([
@@ -110,7 +131,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
     setLootTables(ltRes.data || []);
   }, []);
 
-  useEffect(() => { loadSupport(); }, [loadSupport]);
+  useEffect(() => { loadSupport(); loadPoolStock(); }, [loadSupport, loadPoolStock]);
 
   /* Validate level range */
   const safeMin = Math.max(1, Math.min(levelMin, levelMax));
@@ -176,59 +197,78 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
     if (generated.length === 0) return;
     setApplying(true);
     try {
-      // Insert items
-      const insertedIds: Array<{ item_id: string; drop_chance: number }> = [];
-      for (const item of generated) {
-        const { data: itemData, error: itemErr } = await supabase
-          .from('items')
-          .insert({
+      if (forgeMode === 'forge_pool') {
+        // Insert directly into forge_pool table
+        for (const item of generated) {
+          if (item.item_type !== 'equipment' || !item.slot) continue;
+          const { error } = await supabase.from('forge_pool').insert({
             name: item.name,
             description: item.description,
-            item_type: item.item_type,
+            slot: item.slot as any,
             rarity: item.rarity as any,
-            slot: item.slot as any || null,
             level: item.level,
             hands: item.hands || null,
             stats: item.stats || {},
             value: item.value,
-            max_durability: 100,
-          })
-          .select('id')
-          .single();
-        if (itemErr) throw itemErr;
-        insertedIds.push({ item_id: itemData.id, drop_chance: item.drop_chance });
-      }
-
-      if (forgeMode === 'single') {
-        // Single item mode — just save the item, no loot table
-        setSavedItemIds(insertedIds.map(i => i.item_id));
-        toast.success(`Item "${generated[0].name}" saved to the database!`);
+          });
+          if (error) throw error;
+        }
+        const equipCount = generated.filter(i => i.item_type === 'equipment' && i.slot).length;
+        toast.success(`${equipCount} item(s) added to the forge pool!`);
+        setSavedItemIds(generated.map((_, i) => String(i)));
+        await loadPoolStock();
         onDataChanged?.();
       } else {
-        // Loot table mode
-        if (!tableName.trim()) { toast.error('Enter a loot table name first.'); setApplying(false); return; }
-
-        // Create loot table
-        const { data: ltData, error: ltErr } = await supabase
-          .from('loot_tables')
-          .insert({ name: tableName.trim() })
-          .select('id')
-          .single();
-        if (ltErr) throw ltErr;
-
-        // Insert entries
-        for (const { item_id, drop_chance } of insertedIds) {
-          const weight = Math.round(drop_chance * 100);
-          const { error: lteErr } = await supabase
-            .from('loot_table_entries')
-            .insert({ loot_table_id: ltData.id, item_id, weight });
-          if (lteErr) throw lteErr;
+        // Insert items into items table
+        const insertedIds: Array<{ item_id: string; drop_chance: number }> = [];
+        for (const item of generated) {
+          const { data: itemData, error: itemErr } = await supabase
+            .from('items')
+            .insert({
+              name: item.name,
+              description: item.description,
+              item_type: item.item_type,
+              rarity: item.rarity as any,
+              slot: item.slot as any || null,
+              level: item.level,
+              hands: item.hands || null,
+              stats: item.stats || {},
+              value: item.value,
+              max_durability: 100,
+            })
+            .select('id')
+            .single();
+          if (itemErr) throw itemErr;
+          insertedIds.push({ item_id: itemData.id, drop_chance: item.drop_chance });
         }
 
-        setSavedTableId(ltData.id);
-        toast.success(`Loot table "${tableName}" created with ${generated.length} items!`);
-        await loadSupport();
-        onDataChanged?.();
+        if (forgeMode === 'single') {
+          setSavedItemIds(insertedIds.map(i => i.item_id));
+          toast.success(`Item "${generated[0].name}" saved to the database!`);
+          onDataChanged?.();
+        } else {
+          if (!tableName.trim()) { toast.error('Enter a loot table name first.'); setApplying(false); return; }
+
+          const { data: ltData, error: ltErr } = await supabase
+            .from('loot_tables')
+            .insert({ name: tableName.trim() })
+            .select('id')
+            .single();
+          if (ltErr) throw ltErr;
+
+          for (const { item_id, drop_chance } of insertedIds) {
+            const weight = Math.round(drop_chance * 100);
+            const { error: lteErr } = await supabase
+              .from('loot_table_entries')
+              .insert({ loot_table_id: ltData.id, item_id, weight });
+            if (lteErr) throw lteErr;
+          }
+
+          setSavedTableId(ltData.id);
+          toast.success(`Loot table "${tableName}" created with ${generated.length} items!`);
+          await loadSupport();
+          onDataChanged?.();
+        }
       }
     } catch (e: any) {
       toast.error(e.message || 'Apply failed');
@@ -284,12 +324,13 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                 <SelectContent>
                   <SelectItem value="loot_table">📦 Loot Table (batch)</SelectItem>
                   <SelectItem value="single">🔮 Single Item</SelectItem>
+                  <SelectItem value="forge_pool">🔨 Forge Pool (blacksmith)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Count (only for loot table mode) */}
-            {forgeMode === 'loot_table' && (
+            {forgeMode !== 'single' && (
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
                 <Hash className="w-3 h-3" /> Items to Generate
@@ -482,6 +523,24 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                   </div>
                 )}
               </>
+            ) : forgeMode === 'forge_pool' ? (
+              <div className="flex items-center gap-2">
+                <Database className="w-3.5 h-3.5 text-primary" />
+                <span className="font-display text-xs text-primary">Add to Forge Pool</span>
+                <div className="flex-1" />
+                <Button
+                  onClick={applyAll}
+                  disabled={applying || savedItemIds.length > 0}
+                  size="sm"
+                  className="font-display text-xs shrink-0"
+                >
+                  {applying
+                    ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Saving…</>
+                    : savedItemIds.length > 0
+                      ? <><Check className="w-3 h-3 mr-1" />Added</>
+                      : <><Check className="w-3 h-3 mr-1" />Add to Pool ({generated.filter(i => i.item_type === 'equipment' && i.slot).length})</>}
+                </Button>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Package className="w-3.5 h-3.5 text-primary" />
@@ -513,8 +572,29 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
               <p className="text-xs text-muted-foreground/60">
                 {forgeMode === 'single'
                   ? 'Generate a single item to save directly to the database.'
-                  : 'The generated items will form a reusable loot table you can assign to any creature.'}
+                  : forgeMode === 'forge_pool'
+                    ? 'Generated equipment will be added to the blacksmith forge pool.'
+                    : 'The generated items will form a reusable loot table you can assign to any creature.'}
               </p>
+              {forgeMode === 'forge_pool' && poolStock.length > 0 && (
+                <div className="w-full max-w-md mt-4 text-left">
+                  <p className="text-[10px] font-display text-muted-foreground mb-2 flex items-center gap-1">
+                    <Database className="w-3 h-3" /> Pool Stock ({poolStock.reduce((s, r) => s + r.count, 0)} total)
+                  </p>
+                  <div className="grid grid-cols-3 gap-1 text-[9px]">
+                    <span className="font-semibold text-muted-foreground">Slot</span>
+                    <span className="font-semibold text-muted-foreground">Levels</span>
+                    <span className="font-semibold text-muted-foreground text-right">Count</span>
+                    {poolStock.map((s, i) => (
+                      <React.Fragment key={i}>
+                        <span className="text-foreground">{s.slot.replace('_', ' ')}</span>
+                        <span className="text-muted-foreground">{s.level}–{s.level + 4} ({s.rarity})</span>
+                        <span className="text-right text-primary">{s.count}</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

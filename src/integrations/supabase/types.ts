@@ -424,6 +424,45 @@ export type Database = {
           },
         ]
       }
+      forge_pool: {
+        Row: {
+          created_at: string
+          description: string
+          hands: number | null
+          id: string
+          level: number
+          name: string
+          rarity: Database["public"]["Enums"]["item_rarity"]
+          slot: Database["public"]["Enums"]["item_slot"]
+          stats: Json
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          hands?: number | null
+          id?: string
+          level?: number
+          name: string
+          rarity?: Database["public"]["Enums"]["item_rarity"]
+          slot: Database["public"]["Enums"]["item_slot"]
+          stats?: Json
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          hands?: number | null
+          id?: string
+          level?: number
+          name?: string
+          rarity?: Database["public"]["Enums"]["item_rarity"]
+          slot?: Database["public"]["Enums"]["item_slot"]
+          stats?: Json
+          value?: number
+        }
+        Relationships: []
+      }
       issue_reports: {
         Row: {
           character_id: string | null
