@@ -191,7 +191,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
             ));
           })()}
         </div>
-      </DialogContent>
+      </ScrollPanel>
     </Dialog>
   );
 }

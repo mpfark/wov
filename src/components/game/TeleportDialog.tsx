@@ -175,7 +175,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
             })}
           </div>
         </ScrollArea>
-      </DialogContent>
+      </ScrollPanel>
     </Dialog>
   );
 }
