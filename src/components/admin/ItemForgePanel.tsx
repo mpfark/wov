@@ -324,6 +324,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                 <SelectContent>
                   <SelectItem value="loot_table">📦 Loot Table (batch)</SelectItem>
                   <SelectItem value="single">🔮 Single Item</SelectItem>
+                  <SelectItem value="forge_pool">🔨 Forge Pool (blacksmith)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
