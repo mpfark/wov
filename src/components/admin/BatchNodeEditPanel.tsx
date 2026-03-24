@@ -56,6 +56,19 @@ export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, on
     ? areas.filter(a => a.region_id === regionId)
     : areas;
 
+  const groupedAreas = useMemo(() => {
+    const groups: Record<string, { regionName: string; areas: Array<{ id: string; name: string; region_id: string }> }> = {};
+    for (const a of filteredAreas) {
+      const rid = a.region_id;
+      if (!groups[rid]) {
+        const reg = regions.find(r => r.id === rid);
+        groups[rid] = { regionName: reg?.name || 'Unknown', areas: [] };
+      }
+      groups[rid].areas.push(a);
+    }
+    return Object.entries(groups).sort((a, b) => a[1].regionName.localeCompare(b[1].regionName));
+  }, [filteredAreas, regions]);
+
   const selectedRegionName = regions.find(r => r.id === regionId)?.name;
   const selectedAreaName = areaId === '__clear__' ? 'Clear area' : areas.find(a => a.id === areaId)?.name;
 
