@@ -523,6 +523,24 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                   </div>
                 )}
               </>
+            ) : forgeMode === 'forge_pool' ? (
+              <div className="flex items-center gap-2">
+                <Database className="w-3.5 h-3.5 text-primary" />
+                <span className="font-display text-xs text-primary">Add to Forge Pool</span>
+                <div className="flex-1" />
+                <Button
+                  onClick={applyAll}
+                  disabled={applying || savedItemIds.length > 0}
+                  size="sm"
+                  className="font-display text-xs shrink-0"
+                >
+                  {applying
+                    ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Saving…</>
+                    : savedItemIds.length > 0
+                      ? <><Check className="w-3 h-3 mr-1" />Added</>
+                      : <><Check className="w-3 h-3 mr-1" />Add to Pool ({generated.filter(i => i.item_type === 'equipment' && i.slot).length})</>}
+                </Button>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <Package className="w-3.5 h-3.5 text-primary" />
