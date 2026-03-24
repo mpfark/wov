@@ -28,6 +28,7 @@ const App = () => (
       <Sonner />
       <PwaUpdatePrompt />
       <OfflineOverlay />
+      <BrowserRouter>
         <GameProvider>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
