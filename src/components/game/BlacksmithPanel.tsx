@@ -271,7 +271,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
             )}
           </TabsContent>
         </Tabs>
-      </DialogContent>
+      </ScrollPanel>
     </Dialog>
   );
 }
