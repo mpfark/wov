@@ -330,7 +330,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
             </div>
 
             {/* Count (only for loot table mode) */}
-            {forgeMode === 'loot_table' && (
+            {forgeMode !== 'single' && (
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
                 <Hash className="w-3 h-3" /> Items to Generate
