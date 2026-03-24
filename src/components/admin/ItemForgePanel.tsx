@@ -77,7 +77,7 @@ interface ItemForgePanelProps {
 
 export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = {}) {
   /* Forge mode */
-  const [forgeMode, setForgeMode] = useState<'loot_table' | 'single'>('loot_table');
+  const [forgeMode, setForgeMode] = useState<'loot_table' | 'single' | 'forge_pool'>('loot_table');
 
   /* Generation params */
   const [count, setCount] = useState(6);
