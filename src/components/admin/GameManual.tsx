@@ -11,8 +11,7 @@ import {
   ITEM_STAT_COSTS, calculateStats, calculateHP, calculateAC, getBaseRegen, getItemStatBudget,
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
   XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
-  CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate,
-  getIntHitBonus, getDexCritBonus, getStrDamageFloor, getCarryCapacity, getWisDodgeChance,
+  CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate, getCarryCapacity,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
