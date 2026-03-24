@@ -1,14 +1,66 @@
 
 
-## Update Game Manual — Remove Class Balance Simulation
+## Ornate Scroll UI for Service Dialogs
 
-### Change
-Remove the "⚖️ Class Balance Simulation (Lv 20 & 40)" accordion section (lines 123–223) from `src/components/admin/GameManual.tsx`. This section simulates classes with no gear, which is misleading since actual balance is gear-dependent.
+### Problem
+The Vendor, Blacksmith, and Teleport dialogs use the default shadcn Dialog styling — flat, modern, and out of place in a dark fantasy parchment-themed game.
 
-### Cleanup
-- Remove unused imports that were only used by the simulation: `getCarryCapacity` (check if used elsewhere in the file — it is used in the Stamina section's encumbrance, so keep it). All other imports are used by remaining sections.
-- No other files affected.
+### Approach
+Create a shared `ScrollPanel` wrapper component that replaces the plain `DialogContent` with an ornate scroll aesthetic. All three dialogs get the same decorative frame, differentiated only by header icon and accent color.
+
+### New Component: `src/components/game/ScrollPanel.tsx`
+
+A reusable wrapper that replaces `DialogContent` with:
+
+- **Parchment background** — layered radial gradients over `bg-card` to simulate aged paper
+- **Gold filigree border** — double border with inner glow using `box-shadow` (gold-tinted inset shadows)
+- **Corner flourishes** — CSS `::before` / `::after` pseudo-elements on corner divs with decorative unicode characters (❧, ❦) or small SVG ornaments in gold
+- **Wax-seal close button** — replace the plain X with a circular seal-styled button (dark red circle with embossed X)
+- **Ornate header divider** — a centered decorative rule below the title (e.g., `── ✦ ──`)
+- **Aged edges** — subtle vignette effect via inset box-shadow darkening the corners
+
+```text
+╔══════════════════════════╗
+║  ❧                    ❧  ║
+║     🪙 Vendor            ║  ← header with icon
+║   ─── ✦ ───              ║  ← ornate divider
+║                          ║
+║   [ content area ]       ║
+║                          ║
+║  ❧                    ❧  ║
+╚══════════════════════════╝
+```
+
+### CSS Additions to `src/index.css`
+
+- `.scroll-panel` — the ornate background, border, and shadow styles
+- `.scroll-corner` — positioned decorative flourishes
+- `.scroll-divider` — the `── ✦ ──` header separator
+- `.wax-seal-close` — circular red close button with embossed feel
+
+### File Changes
+
+1. **Create `src/components/game/ScrollPanel.tsx`**
+   - Wraps `DialogContent` with ornate styling
+   - Props: `icon` (emoji/element), `title` (string), `children`, standard dialog props
+   - Renders corner flourishes, ornate divider, and wax-seal close button
+   - Applies `scroll-panel` class for the parchment texture
+
+2. **Update `src/index.css`**
+   - Add `.scroll-panel`, `.scroll-corner`, `.scroll-divider`, `.wax-seal-close` CSS classes
+
+3. **Update `src/components/game/VendorPanel.tsx`**
+   - Replace `<DialogContent>` + `<DialogHeader>` + `<DialogTitle>` with `<ScrollPanel icon="🪙" title="Vendor">`
+
+4. **Update `src/components/game/BlacksmithPanel.tsx`**
+   - Replace with `<ScrollPanel icon="🔨" title="Blacksmith">`
+
+5. **Update `src/components/game/TeleportDialog.tsx`**
+   - Replace with `<ScrollPanel icon="🌀" title="Teleport">`
 
 ### Summary
-- **1 file edited** (`GameManual.tsx`) — delete ~100 lines (the balance-sim AccordionItem block)
+- 1 new component (`ScrollPanel.tsx`)
+- 1 CSS file updated (`index.css`)
+- 3 dialog files updated (swap `DialogContent` for `ScrollPanel`)
+- No logic changes — purely visual
 
