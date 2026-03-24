@@ -129,18 +129,22 @@ export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, on
                       <Check className={cn('mr-1.5 h-3 w-3', areaId === '__clear__' ? 'opacity-100' : 'opacity-0')} />
                       Clear area
                     </CommandItem>
-                    {filteredAreas.map(a => (
-                      <CommandItem
-                        key={a.id}
-                        value={a.name}
-                        onSelect={() => { setAreaId(a.id); setAreaOpen(false); }}
-                        className="text-xs"
-                      >
-                        <Check className={cn('mr-1.5 h-3 w-3', areaId === a.id ? 'opacity-100' : 'opacity-0')} />
-                        {a.name}
-                      </CommandItem>
-                    ))}
                   </CommandGroup>
+                  {groupedAreas.map(([rId, { regionName, areas: grpAreas }]) => (
+                    <CommandGroup key={rId} heading={regionName}>
+                      {grpAreas.map(a => (
+                        <CommandItem
+                          key={a.id}
+                          value={a.name}
+                          onSelect={() => { setAreaId(a.id); setAreaOpen(false); }}
+                          className="text-xs"
+                        >
+                          <Check className={cn('mr-1.5 h-3 w-3', areaId === a.id ? 'opacity-100' : 'opacity-0')} />
+                          {a.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  ))}
                 </CommandList>
               </Command>
             </PopoverContent>
