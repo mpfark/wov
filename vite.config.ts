@@ -21,8 +21,14 @@ export default defineConfig(({ mode }) => ({
         devOptions: { enabled: false },
         workbox: {
           navigateFallbackDenylist: [/^\/~oauth/],
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          // Network-only for everything — game is online-only
+          globPatterns: [],
+          runtimeCaching: [
+            {
+              urlPattern: /.*$/,
+              handler: "NetworkOnly",
+            },
+          ],
         },
         manifest: {
           name: "Wayfarers of Edhelard",
