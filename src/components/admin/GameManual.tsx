@@ -1085,6 +1085,74 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
+          {/* Economy */}
+          <AccordionItem value="economy" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              💰 Economy — Gold, Salvage & Trading
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <Card className="bg-card/30 border-border">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">🪙 Gold</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>The primary trade currency. Earned from killing creatures and selling items.</p>
+                    <p><strong className="text-foreground">Creature drops:</strong> Gold scales with creature level and rarity. Humanoid creatures give a CHA-based bonus: <code className="text-primary">min(25%, modifier × 5%)</code> extra gold.</p>
+                    <p><strong className="text-foreground">Selling items:</strong> Items sell for a percentage of their value. CHA improves sell price up to <strong className="text-foreground">80%</strong> and gives a buy discount capped at <strong className="text-foreground">10%</strong>.</p>
+                    <p><strong className="text-foreground">Death penalty:</strong> <span className="text-destructive">10%</span> of current gold is lost on death.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/30 border-border">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-dwarvish">🔩 Salvage</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>A crafting currency used at the <strong className="text-foreground">Blacksmith Forge</strong>. Dropped only by <strong className="text-foreground">non-humanoid creatures</strong> (beasts, monsters, etc.).</p>
+                    <p><strong className="text-foreground">Drop formula:</strong> <code className="text-primary">1 + floor(level / 5)</code></p>
+                    <p><strong className="text-foreground">Rarity multiplier:</strong> Regular ×1, <span className="text-elvish">Rare ×2</span>, <span className="text-destructive">Boss ×4</span></p>
+                    <p><strong className="text-foreground">Forge cost:</strong> <code className="text-primary">🔩 5 + level×2</code> salvage + <code className="text-primary">level×5</code> gold per forge attempt</p>
+                    <p><strong className="text-foreground">Forge output:</strong> Random item for chosen slot — <span className="text-foreground">Common 65%</span> / <span className="text-elvish">Uncommon 35%</span>. Unique items cannot be forged.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/30 border-border">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">🏪 Vendor Trading</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Vendors are found at specific nodes and carry a fixed stock of items.</p>
+                    <p><strong className="text-foreground">Buying:</strong> Prices are set per item. CHA discount: <code className="text-primary">min(10%, modifier × 2%)</code> off.</p>
+                    <p><strong className="text-foreground">Selling:</strong> Base sell price is 50% of item value. CHA bonus: <code className="text-primary">min(80%, 50% + modifier × 5%)</code>.</p>
+                    <p><strong className="text-foreground">Stock:</strong> Each vendor item has limited stock. Identical items are grouped in the UI.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/30 border-border">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">👥 Party Loot Splitting</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>When a creature dies, <strong className="text-foreground">XP, gold, and salvage</strong> are split equally among all party members at the same node.</p>
+                    <p><strong className="text-foreground">Item drops:</strong> Loot drops to the ground at the creature's node of death. Any player can pick it up (first come, first served).</p>
+                    <p><strong className="text-foreground">Remote kills:</strong> If a creature dies from a DoT while you've moved away, loot drops at the creature's node — not yours.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/30 border-border">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">🔨 Blacksmith — Repairs</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Blacksmith nodes allow repairing damaged equipment for gold.</p>
+                    <p><strong className="text-foreground">Repair cost:</strong> <code className="text-primary">ceil((100 − durability) × itemValue × rarityMult / 100)</code></p>
+                    <p><strong className="text-foreground">Unique items:</strong> <span className="text-destructive">Cannot be repaired</span> — they are permanently destroyed at 0% durability.</p>
+                    <p><strong className="text-foreground">Common/Uncommon:</strong> Persist at 0% but become unequipped and unusable until repaired.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </AccordionContent>
+          </AccordionItem>
+
           {/* Death & Respawn */}
           <AccordionItem value="death" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
