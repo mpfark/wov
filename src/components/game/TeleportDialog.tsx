@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import ScrollPanel from './ScrollPanel';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/hooks/useNodes';
@@ -84,10 +85,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-sm bg-card border-border">
-        <DialogHeader>
-          <DialogTitle className="font-display text-primary text-glow">🌀 Teleport</DialogTitle>
-        </DialogHeader>
+      <ScrollPanel icon="🌀" title="Teleport" className="max-w-sm">
         <p className="text-xs text-muted-foreground">
           {characterLevel >= 25 && !currentNode.is_teleport && (
             <span className="text-primary font-display">⚡ Arcane Recall active — </span>
@@ -177,7 +175,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
             })}
           </div>
         </ScrollArea>
-      </DialogContent>
+      </ScrollPanel>
     </Dialog>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import ScrollPanel from './ScrollPanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -125,12 +126,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto bg-card border-border">
-        <DialogHeader>
-          <DialogTitle className="font-display text-primary text-glow flex items-center gap-2">
-            <Hammer className="w-5 h-5" /> Blacksmith
-          </DialogTitle>
-        </DialogHeader>
+      <ScrollPanel icon="🔨" title="Blacksmith" className="max-w-lg">
 
         <div className="flex items-center justify-between text-sm mb-2">
           <div className="flex items-center gap-3">
@@ -275,7 +271,7 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
             )}
           </TabsContent>
         </Tabs>
-      </DialogContent>
+      </ScrollPanel>
     </Dialog>
   );
 }
