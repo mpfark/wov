@@ -197,59 +197,78 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
     if (generated.length === 0) return;
     setApplying(true);
     try {
-      // Insert items
-      const insertedIds: Array<{ item_id: string; drop_chance: number }> = [];
-      for (const item of generated) {
-        const { data: itemData, error: itemErr } = await supabase
-          .from('items')
-          .insert({
+      if (forgeMode === 'forge_pool') {
+        // Insert directly into forge_pool table
+        for (const item of generated) {
+          if (item.item_type !== 'equipment' || !item.slot) continue;
+          const { error } = await supabase.from('forge_pool').insert({
             name: item.name,
             description: item.description,
-            item_type: item.item_type,
+            slot: item.slot as any,
             rarity: item.rarity as any,
-            slot: item.slot as any || null,
             level: item.level,
             hands: item.hands || null,
             stats: item.stats || {},
             value: item.value,
-            max_durability: 100,
-          })
-          .select('id')
-          .single();
-        if (itemErr) throw itemErr;
-        insertedIds.push({ item_id: itemData.id, drop_chance: item.drop_chance });
-      }
-
-      if (forgeMode === 'single') {
-        // Single item mode — just save the item, no loot table
-        setSavedItemIds(insertedIds.map(i => i.item_id));
-        toast.success(`Item "${generated[0].name}" saved to the database!`);
+          });
+          if (error) throw error;
+        }
+        const equipCount = generated.filter(i => i.item_type === 'equipment' && i.slot).length;
+        toast.success(`${equipCount} item(s) added to the forge pool!`);
+        setSavedItemIds(generated.map((_, i) => String(i)));
+        await loadPoolStock();
         onDataChanged?.();
       } else {
-        // Loot table mode
-        if (!tableName.trim()) { toast.error('Enter a loot table name first.'); setApplying(false); return; }
-
-        // Create loot table
-        const { data: ltData, error: ltErr } = await supabase
-          .from('loot_tables')
-          .insert({ name: tableName.trim() })
-          .select('id')
-          .single();
-        if (ltErr) throw ltErr;
-
-        // Insert entries
-        for (const { item_id, drop_chance } of insertedIds) {
-          const weight = Math.round(drop_chance * 100);
-          const { error: lteErr } = await supabase
-            .from('loot_table_entries')
-            .insert({ loot_table_id: ltData.id, item_id, weight });
-          if (lteErr) throw lteErr;
+        // Insert items into items table
+        const insertedIds: Array<{ item_id: string; drop_chance: number }> = [];
+        for (const item of generated) {
+          const { data: itemData, error: itemErr } = await supabase
+            .from('items')
+            .insert({
+              name: item.name,
+              description: item.description,
+              item_type: item.item_type,
+              rarity: item.rarity as any,
+              slot: item.slot as any || null,
+              level: item.level,
+              hands: item.hands || null,
+              stats: item.stats || {},
+              value: item.value,
+              max_durability: 100,
+            })
+            .select('id')
+            .single();
+          if (itemErr) throw itemErr;
+          insertedIds.push({ item_id: itemData.id, drop_chance: item.drop_chance });
         }
 
-        setSavedTableId(ltData.id);
-        toast.success(`Loot table "${tableName}" created with ${generated.length} items!`);
-        await loadSupport();
-        onDataChanged?.();
+        if (forgeMode === 'single') {
+          setSavedItemIds(insertedIds.map(i => i.item_id));
+          toast.success(`Item "${generated[0].name}" saved to the database!`);
+          onDataChanged?.();
+        } else {
+          if (!tableName.trim()) { toast.error('Enter a loot table name first.'); setApplying(false); return; }
+
+          const { data: ltData, error: ltErr } = await supabase
+            .from('loot_tables')
+            .insert({ name: tableName.trim() })
+            .select('id')
+            .single();
+          if (ltErr) throw ltErr;
+
+          for (const { item_id, drop_chance } of insertedIds) {
+            const weight = Math.round(drop_chance * 100);
+            const { error: lteErr } = await supabase
+              .from('loot_table_entries')
+              .insert({ loot_table_id: ltData.id, item_id, weight });
+            if (lteErr) throw lteErr;
+          }
+
+          setSavedTableId(ltData.id);
+          toast.success(`Loot table "${tableName}" created with ${generated.length} items!`);
+          await loadSupport();
+          onDataChanged?.();
+        }
       }
     } catch (e: any) {
       toast.error(e.message || 'Apply failed');
