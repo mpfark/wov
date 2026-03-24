@@ -572,8 +572,29 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
               <p className="text-xs text-muted-foreground/60">
                 {forgeMode === 'single'
                   ? 'Generate a single item to save directly to the database.'
-                  : 'The generated items will form a reusable loot table you can assign to any creature.'}
+                  : forgeMode === 'forge_pool'
+                    ? 'Generated equipment will be added to the blacksmith forge pool.'
+                    : 'The generated items will form a reusable loot table you can assign to any creature.'}
               </p>
+              {forgeMode === 'forge_pool' && poolStock.length > 0 && (
+                <div className="w-full max-w-md mt-4 text-left">
+                  <p className="text-[10px] font-display text-muted-foreground mb-2 flex items-center gap-1">
+                    <Database className="w-3 h-3" /> Pool Stock ({poolStock.reduce((s, r) => s + r.count, 0)} total)
+                  </p>
+                  <div className="grid grid-cols-3 gap-1 text-[9px]">
+                    <span className="font-semibold text-muted-foreground">Slot</span>
+                    <span className="font-semibold text-muted-foreground">Levels</span>
+                    <span className="font-semibold text-muted-foreground text-right">Count</span>
+                    {poolStock.map((s, i) => (
+                      <React.Fragment key={i}>
+                        <span className="text-foreground">{s.slot.replace('_', ' ')}</span>
+                        <span className="text-muted-foreground">{s.level}–{s.level + 4} ({s.rarity})</span>
+                        <span className="text-right text-primary">{s.count}</span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
