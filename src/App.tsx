@@ -27,7 +27,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <PwaUpdatePrompt />
-      <BrowserRouter>
+      <OfflineOverlay />
         <GameProvider>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
