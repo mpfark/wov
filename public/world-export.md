@@ -1,256 +1,1058 @@
-# World of Edhelard - Node Data Export
+# Wayfarers of Edhelard — World Export
 
-## Coordinate System
-- Grid coordinates (x, y) where Hearthvale Square is the origin (0, 0)
-- North = y decreases, South = y increases, East = x increases, West = x decreases
-- Diagonal directions: NE = (x+1, y-1), NW = (x-1, y-1), SE = (x+1, y+1), SW = (x-1, y+1)
-- Connections use compass directions: N, S, E, W, NE, NW, SE, SW
+Generated for AI map rendering assistance.
 
-## Regions Overview
-| Region | Levels | Nodes | Description |
-|--------|--------|-------|-------------|
-| The Hearthlands | 1-5 | 62 | Gentle rolling hills and farmland surrounding the central hub of Hearthvale |
-| The Glimmering Coast | 6-10 | 31 | Coastal region west of Hearthvale |
-| The Weeping Fens | 10-15 | 10 | Swamplands far to the southwest |
-| The Sun-Scorched Wastes | 15-20 | 13 | Desert region south of the world |
-| The Frostpeaks Foothills | 20-25 | 21 | Mountain region far to the north |
-| The Mourn-Woods | 25-30 | 12 | Dark forest region to the east |
+## Regions
 
-## Nodes by Region
+### The Abyssal Vaults (Lv 40–45)
+> The silence is so absolute it makes your ears ring, broken only by the rhythmic thump-hiss of ancient, failing geothermal pumps or the skittering of many-legged things in the dark.
 
-### The Frostpeaks Foothills (Lvl 20-25)
+### The Frostpeaks Foothills (Lv 20–25)
 
-#### Kharak-Dum (town area)
-| Node | x | y | Connections | Flags |
-|------|---|---|-------------|-------|
-| The Stone-Sleeper's Hall | 3 | -27 | S→Hall of Merchants | inn |
-| The Deep-Way Tunnel | 4 | -27 | SW→Hall of Merchants | |
-| The Deep-Core Forge | 2 | -26 | E→Hall of Merchants | blacksmith |
-| The Hall of Merchants | 3 | -26 | S, W→Deep-Core Forge, N→Stone-Sleeper's Hall, E→Throne of Stone, NE→Deep-Way Tunnel | vendor |
-| The Throne of Stone | 4 | -26 | W→Hall of Merchants | |
-| The Great Brass Gates | 3 | -25 | S, N→Hall of Merchants | |
+### The Glimmering Coast (Lv 5–10)
 
-#### Icewatch Village (town area)
-| Node | x | y | Connections | Flags |
-|------|---|---|-------------|-------|
-| The Watchtower | 1 | -21 | SE→Frozen Square | teleport |
-| Kharak-Dum Approach | 2 | -21 | S→Frozen Square, N→(path to Kharak-Dum) | |
-| The High-Pass Armory | 1 | -20 | E→Frozen Square | blacksmith |
-| The Frozen Square | 2 | -20 | S→Southern Bastion, E→Anvil Rest, W→High-Pass Armory, N→Kharak-Dum Approach, NW→Watchtower, SE→Provisioner's Vault | |
-| The Anvil Rest | 3 | -20 | W→Frozen Square | inn |
-| The Southern Bastion | 2 | -19 | S, N→Frozen Square | |
-| The Provisioner's Vault | 3 | -19 | NW→Frozen Square | vendor |
+### The Great Steppe (Lv 30–35)
+> The horizon feels endless. The grass is waist-high and glows like gold under the sun. The wind is a constant player—it creates "grass waves" that can hide enemies and carries the scent of dry earth an
 
-#### Unnamed path nodes (Frostpeaks → Hearthlands)
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | 2 | -18 | SW, N→Southern Bastion |
-| (unnamed) | 1 | -17 | S, NE |
-| (unnamed) | 1 | -16 | SE, N |
-| (unnamed) | 2 | -15 | S, NW |
-| The Frostpeaks Foothills Entrance | 2 | -14 | S→(Hearthlands), N |
-| (unnamed) | 3 | -24 | SW, N→Great Brass Gates |
-| (unnamed) | 2 | -23 | S, NE |
-| (unnamed) | 2 | -22 | S→Kharak-Dum Approach, N |
+### The Mourn-Woods (Lv 25–30)
 
----
+### The Shivering Skerries (Lv 35–40)
+> THE SHIVERING SKERRIES
 
-### The Mourn-Woods (Lvl 25-30)
+### The Sun-Scorched Wastes (Lv 15–20)
 
-#### Eldritch Rest (town area)
-| Node | x | y | Connections | Flags |
-|------|---|---|-------------|-------|
-| The Star-Gazer's Inn | 19 | -7 | S→Emerald Plaza | inn |
-| The Emerald Plaza | 19 | -6 | S→Canopy Lift, N→Star-Gazer's Inn, E→Fletcher's Loft, SW→Warden's Spire | vendor |
-| The Fletcher's Loft | 20 | -6 | W→Emerald Plaza | |
-| The Warden's Spire | 18 | -5 | NE→Emerald Plaza | teleport |
-| The Canopy Lift | 19 | -5 | S, N→Emerald Plaza | |
+### The Weeping Fens (Lv 10–15)
 
-#### Unnamed path nodes (Mourn-Woods → Hearthlands)
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | 19 | -4 | S, N→Canopy Lift |
-| (unnamed) | 18 | -3 | SW, E |
-| (unnamed) | 19 | -3 | W, N |
-| (unnamed) | 16 | -2 | SW→(from Hearthlands), E |
-| (unnamed) | 17 | -2 | W, NE |
-| The Mourn-Woods Entrance | 14 | -1 | W→(Hearthlands), E |
-| (unnamed) | 15 | -1 | W→Entrance, NE |
+### The Hearthlands (Lv 1–5)
+> Gentle rolling hills and farmland surrounding the central hub of Hearthvale.
 
----
+## Areas
 
-### The Glimmering Coast (Lvl 6-10)
+| Area | Type | Region | Level |
+|------|------|--------|-------|
+| Aethel-by-the-Sea | town | The Weeping Fens | 1–10 |
+| Eldritch Rest | town | The Mourn-Woods | 1–10 |
+| Havenport | town | The Glimmering Coast | 1–10 |
+| Hearthvale | town | The Hearthlands | 1–10 |
+| Icewatch Village | town | The Frostpeaks Foothills | 1–10 |
+| Karkas | town | The Sun-Scorched Wastes | 1–10 |
+| Kharak-Dum | town | The Frostpeaks Foothills | 1–10 |
+| Skard-Post | camp | The Shivering Skerries | 1–10 |
+| The Amber Caravan | camp | The Great Steppe | 1–10 |
+| The Brine-Choked Skerries | coast | The Glimmering Coast | 1–10 |
+| The Coastal Highroad | trail | The Glimmering Coast | 1–10 |
+| The Coastal Highroad | trail | The Shivering Skerries | 1–10 |
+| The Dust-Bowl | desert | The Sun-Scorched Wastes | 1–10 |
+| The Eastern Road | trail | The Mourn-Woods | 1–10 |
+| The Eastern Road | trail | The Hearthlands | 1–10 |
+| The Echoing Deeps | cave | The Abyssal Vaults | 40–41 |
+| The Forge of Silence | cave | The Abyssal Vaults | 42–44 |
+| The Frozen Cord | trail | The Shivering Skerries | 1–10 |
+| The Gilded Weave | trail | The Hearthlands | 0–0 |
+| The Glass-Step Crags | mountain | The Shivering Skerries | 35–40 |
+| The Gloom-Weave | forest | The Mourn-Woods | 1–10 |
+| The Granite Stair | mountain | The Frostpeaks Foothills | 1–10 |
+| The King's Pastures | plains | The Hearthlands | 1–10 |
+| The Maw of the World | cave | The Abyssal Vaults | 45–50 |
+| The Red-Rock Canyons | mountain | The Sun-Scorched Wastes | 1–10 |
+| The road between Havenport and Hearthvale | trail | The Glimmering Coast | 1–10 |
+| The road between Hearthvale and Havenport | trail | The Hearthlands | 1–10 |
+| The Road North | trail | The Hearthlands | 1–10 |
+| The Sea of Amber | plains | The Great Steppe | 13–35 |
+| The Shaded Verges | forest | The Hearthlands | 1–10 |
+| The Silken Ascent | forest | The Mourn-Woods | 1–10 |
+| The Southern Way | trail | The Hearthlands | 1–10 |
+| The Thorn-Wall | forest | The Mourn-Woods | 20–25 |
+| The Whispering Grasses | desert | The Great Steppe | 30–32 |
+| The Whispering Thicket | forest | The Hearthlands | 1–10 |
 
-#### Havenport (town area)
-| Node | x | y | Connections | Flags |
-|------|---|---|-------------|-------|
-| Black-Salt Forge | -30 | 2 | SE→Admiral's Plaza | blacksmith |
-| The Gilded Anchor Inn | -29 | 2 | S→Admiral's Plaza | inn |
-| The Great Lighthouse | -30 | 3 | E→Admiral's Plaza | teleport |
-| The Admiral's Plaza | -29 | 3 | E→High Market, N→Gilded Anchor Inn, NW→Black-Salt Forge, W→Great Lighthouse, SW→The Docks, S→Mariner's Chapel | vendor |
-| The High Market | -28 | 3 | E→Havenport Main Gate, W→Admiral's Plaza | |
-| Havenport Main Gate | -27 | 3 | E→(road), W→High Market | |
-| The Docks | -30 | 4 | NE→Admiral's Plaza | |
-| The Mariner's Chapel | -29 | 4 | N→Admiral's Plaza | |
+## Nodes (with coordinates & connections)
 
-#### The road between Havenport and Hearthvale (trail area)
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | -26 | 3 | E, W→Havenport Main Gate, S |
-| (unnamed) | -25 | 3 | E, W, S |
-| (unnamed) | -24 | 3 | NE, W |
-| (unnamed) | -23 | 2 | E, SW |
-| (unnamed) | -22 | 2 | SE, W |
-| (unnamed) | -21 | 3 | E, W→(unnamed at -22,2 NW) |
-| (unnamed) | -20 | 3 | E, N→Broken Wheel Inn, W |
-| The Broken Wheel Inn | -20 | 2 | S→(road) | inn |
-| (unnamed) | -19 | 3 | E, W |
-| (unnamed) | -18 | 3 | SE, W |
-| (unnamed) | -17 | 4 | E, NW |
-| (unnamed) | -16 | 4 | NE, W |
-| (unnamed) | -15 | 3 | E→Glimmering Coast Entrance, SW |
-| The Glimmering Coast Entrance | -14 | 3 | NE→(Hearthlands), W |
+Each node has grid coordinates (x, y) and directional connections to other nodes.
 
-#### Southern coastal path
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | -25 | 4 | N→(road), S |
-| (unnamed) | -25 | 5 | N, SE |
-| (unnamed) | -24 | 6 | NW, S |
-| (unnamed) | -24 | 7 | N, S |
-| (unnamed) | -24 | 8 | N, SW |
-| (unnamed) | -25 | 9 | NE, SW |
-| (unnamed) | -26 | 10 | NE, S |
-| (unnamed) | -26 | 11 | N, S |
-| (unnamed) | -26 | 12 | N→(above), S |
+### The Abyssal Vaults
 
----
+- **(unnamed)** [The Echoing Deeps / cave] @ (5, -29) 
+  Connections: S→The Abyssal Vaults Entrance, NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (9, -29) 
+  Connections: W→(unnamed), SE→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (4, -29) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (7, -30) 
+  Connections: W→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (7, -28) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (10, -30) 
+  Connections: SW→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (10, -28) 
+  Connections: NW→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (8, -29) 
+  Connections: NW→(unnamed), E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Echoing Deeps / cave] @ (6, -30) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **The Abyssal Vaults Entrance** [The Echoing Deeps / cave] @ (5, -28) 
+  Connections: SW→The Deep-Way Tunnel, N→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (15, -25) 
+  Connections: W→(unnamed), NE→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (12, -27) 
+  Connections: W→(unnamed), E→(unnamed), N→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (14, -25) 
+  Connections: N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (17, -26) 
+  Connections: W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (11, -27) 
+  Connections: NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (12, -26) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (16, -24) 
+  Connections: NW→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (13, -27) 
+  Connections: W→(unnamed), SE→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (12, -28) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (16, -26) 
+  Connections: SW→(unnamed), E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (15, -27) 
+  Connections: SW→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Forge of Silence / cave] @ (14, -26) 
+  Connections: NW→(unnamed), S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Maw of the World / cave] @ (18, -28) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The Maw of the World / cave] @ (18, -27) 
+  Connections: SW→(unnamed), N→(unnamed)
 
-### The Hearthlands (Lvl 1-5)
+### The Frostpeaks Foothills
 
-#### Hearthvale (town area)
-| Node | x | y | Connections | Flags |
-|------|---|---|-------------|-------|
-| The Northern Gate | 0 | -1 | S→Hearthvale Square, N→(north road) | |
-| Hearthvale Square | 0 | 0 | N→Northern Gate, S→Southern Gate, E→Eastern Postern, W→Western Arch | vendor, inn, blacksmith, teleport, trainer |
-| The Southern Gate | 0 | 1 | N→Hearthvale Square, S→(south road) | |
-| The Western Arch | -1 | 0 | E→Hearthvale Square, W→(west road) | |
-| The Eastern Postern | 1 | 0 | W→Hearthvale Square, E→(east road) | |
+- **Kharak-Dum Approach** [Icewatch Village / town] @ (2, -21) 
+  Connections: S→The Frozen Square, N→(unnamed)
+- **The Anvil Rest** [Icewatch Village / town] @ (3, -20) 🏨Inn
+  Connections: W→The Frozen Square
+- **The Frozen Square** [Icewatch Village / town] @ (2, -20) 
+  Connections: S→The Southern Bastion, E→The Anvil Rest, W→The High-Pass Armory, N→Kharak-Dum Approach, NW→The Watchtower, SE→The Provisioner's Vault
+- **The High-Pass Armory** [Icewatch Village / town] @ (1, -20) 🔨Blacksmith
+  Connections: E→The Frozen Square
+- **The Provisioner's Vault** [Icewatch Village / town] @ (3, -19) 🛒Vendor
+  Connections: NW→The Frozen Square
+- **The Southern Bastion** [Icewatch Village / town] @ (2, -19) 
+  Connections: S→(unnamed), N→The Frozen Square
+- **The Watchtower** [Icewatch Village / town] @ (1, -21) ✨Teleport
+  Connections: SE→The Frozen Square
+- **The Deep-Core Forge** [Kharak-Dum / town] @ (2, -26) 🔨Blacksmith
+  Connections: E→The Hall of Merchants
+- **The Deep-Way Tunnel** [Kharak-Dum / town] @ (4, -27) 
+  Connections: SW→The Hall of Merchants, NE→51ac7d89, NE→8f10b2bc, NE→The Abyssal Vaults Entrance
+- **The Great Brass Gates** [Kharak-Dum / town] @ (3, -25) 
+  Connections: S→(unnamed), N→The Hall of Merchants
+- **The Hall of Merchants** [Kharak-Dum / town] @ (3, -26) 🛒Vendor
+  Connections: S→The Great Brass Gates, W→The Deep-Core Forge, N→The Stone-Sleeper’s Hall, E→The Throne of Stone, NE→The Deep-Way Tunnel
+- **The Stone-Sleeper’s Hall** [Kharak-Dum / town] @ (3, -27) 🏨Inn
+  Connections: S→The Hall of Merchants
+- **The Throne of Stone** [Kharak-Dum / town] @ (4, -26) 
+  Connections: W→The Hall of Merchants
+- **(unnamed)** [The Granite Stair / mountain] @ (0, -16) 
+  Connections: E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (2, -18) 
+  Connections: SW→(unnamed), N→The Southern Bastion, SE→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (0, -22) 
+  Connections: S→(unnamed), NE→(unnamed), NW→(unnamed), W→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (0, -18) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (1, -16) 
+  Connections: SE→(unnamed), N→(unnamed), W→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (1, -17) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (5, -19) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (3, -15) 
+  Connections: W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (5, -22) 
+  Connections: SW→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (2, -23) 
+  Connections: S→(unnamed), NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (5, -16) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (4, -17) 
+  Connections: S→(unnamed), W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (4, -16) 
+  Connections: SW→(unnamed), N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (-1, -15) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (2, -15) 
+  Connections: S→The Frostpeaks Foothills Entrance, NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (0, -21) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (3, -17) 
+  Connections: E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (4, -21) 
+  Connections: S→(unnamed), NW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (-1, -23) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (1, -23) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (5, -18) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (1, -19) 
+  Connections: SE→(unnamed), NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (3, -24) 
+  Connections: SW→(unnamed), N→The Great Brass Gates
+- **(unnamed)** [The Granite Stair / mountain] @ (3, -22) 
+  Connections: W→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (4, -20) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (0, -20) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The Granite Stair / mountain] @ (2, -22) 
+  Connections: S→Kharak-Dum Approach, N→(unnamed), E→(unnamed)
+- **The Frostpeaks Foothills Entrance** @ (2, -14) 
+  Connections: S→The Rubble Pass, N→(unnamed)
 
-#### Northern road (Hearthlands → Frostpeaks)
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | 0 | -2 | S→Northern Gate, NE |
-| (unnamed) | 1 | -3 | S, SW |
-| (unnamed) | 1 | -4 | S, N |
-| (unnamed) | 1 | -5 | S, NE |
-| (unnamed) | 2 | -6 | S, SW |
-| (unnamed) | 2 | -7 | N, S |
-| (unnamed) | 2 | -8 | N, S |
-| (unnamed) | 2 | -9 | N, S |
-| (unnamed) | 2 | -10 | N, NE |
-| (unnamed) | 3 | -11 | N, SW |
-| (unnamed) | 2 | -12 | NE, S |
-| (unnamed) | 2 | -13 | N, S→Frostpeaks Entrance (2,-14) |
+### The Glimmering Coast
 
-#### Eastern road (Hearthlands → Mourn-Woods)
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | 2 | 0 | W→Eastern Postern, E |
-| (unnamed) | 3 | 0 | W, E |
-| (unnamed) | 4 | 0 | W, NE |
-| (unnamed) | 5 | -1 | SW, E |
-| (unnamed) | 6 | -1 | W, NE |
-| (unnamed) | 7 | -2 | SW, E |
-| (unnamed) | 8 | -2 | W, E |
-| (unnamed) | 9 | -2 | W, NE |
-| (unnamed) | 10 | -3 | SW, E |
-| (unnamed) | 11 | -3 | W, E |
-| (unnamed) | 12 | -3 | W, SE |
-| (unnamed) | 13 | -2 | NW, E→Mourn-Woods Entrance (14,-1) |
+- **Black-Salt Forge** [Havenport / town] @ (-30, 2) 🔨Blacksmith
+  Connections: SE→The Admiral’s Plaza
+- **Havenport Main Gate** [Havenport / town] @ (-27, 3) 
+  Connections: E→(unnamed), W→The High Market
+- **The Admiral’s Plaza** [Havenport / town] @ (-29, 3) 
+  Connections: E→The High Market, N→The Gilded Anchor Inn, NW→Black-Salt Forge, W→The Great Lighthouse, SW→The Docks, S→The Mariner's Chapel
+- **The Docks** [Havenport / town] @ (-30, 4) 
+  Connections: NE→The Admiral’s Plaza
+- **The Gilded Anchor Inn** [Havenport / town] @ (-29, 2) 🏨Inn
+  Connections: S→The Admiral’s Plaza
+- **The Great Lighthouse** [Havenport / town] @ (-30, 3) ✨Teleport
+  Connections: E→The Admiral’s Plaza, NW→(unnamed)
+- **The High Market** [Havenport / town] @ (-28, 3) 
+  Connections: E→Havenport Main Gate, W→The Admiral’s Plaza
+- **The Mariner's Chapel** [Havenport / town] @ (-29, 4) 
+  Connections: N→The Admiral’s Plaza
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-30, -4) 
+  Connections: SE→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-29, -5) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-28, -1) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-28, -3) 
+  Connections: W→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-28, 0) 
+  Connections: N→(unnamed), W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-27, -2) 
+  Connections: NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-27, 2) 
+  Connections: NW→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-31, 1) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-29, -6) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-29, -3) 
+  Connections: S→(unnamed), NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-29, 0) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-30, 0) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-28, 1) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-31, 2) 
+  Connections: SE→The Great Lighthouse, N→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-30, -1) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-30, -7) 
+  Connections: SE→(unnamed), N→The Driftwood Camp
+- **(unnamed)** [The Brine-Choked Skerries / coast] @ (-29, -2) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **The Driftwood Camp** [The Brine-Choked Skerries / coast] @ (-30, -8) 🏨Inn
+  Connections: S→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-19, 2) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-20, -2) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-19, 1) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-20, -1) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-20, 0) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-19, -3) 
+  Connections: SW→(unnamed), N→The Salt-Frost Capstan
+- **The Salt-Frost Capstan** [The Coastal Highroad / trail] @ (-19, -4) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-18, 3) 
+  Connections: SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-17, 4) 
+  Connections: E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-25, 3) 
+  Connections: E→(unnamed), W→(unnamed), S→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-15, 3) 
+  Connections: E→The Glimmering Coast Entrance, SW→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-20, 3) 
+  Connections: E→(unnamed), N→The Broken Wheel Inn, W→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-16, 4) 
+  Connections: NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-23, 2) 
+  Connections: E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-22, 2) 
+  Connections: SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-26, 3) 
+  Connections: E→(unnamed), W→Havenport Main Gate, NW→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-21, 3) 
+  Connections: E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-19, 3) 
+  Connections: E→(unnamed), W→(unnamed), N→(unnamed)
+- **(unnamed)** [The road between Havenport and Hearthvale / trail] @ (-24, 3) 
+  Connections: NE→(unnamed), W→(unnamed)
+- **The Glimmering Coast Entrance** [The road between Havenport and Hearthvale / trail] @ (-14, 3) 
+  Connections: NE→The Verdant Overlook, W→(unnamed)
+- **(unnamed)** @ (-24, 8) 
+  Connections: N→(unnamed), SW→(unnamed)
+- **(unnamed)** @ (-25, 5) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** @ (-26, 10) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** @ (-25, 9) 
+  Connections: NE→(unnamed), SW→(unnamed)
+- **(unnamed)** @ (-25, 4) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** @ (-26, 11) 
+  Connections: N→(unnamed), S→The Sluice-Gate
+- **(unnamed)** @ (-24, 7) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** @ (-24, 6) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **The Broken Wheel Inn** @ (-20, 2) 🏨Inn 🛒Vendor
+  Connections: S→(unnamed)
+- **The Sluice-Gate** @ (-26, 12) 
+  Connections: N→(unnamed), SW→The Weeping Fens Entrance
 
-#### Western road (Hearthlands → Glimmering Coast)
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | -2 | 0 | E→Western Arch, W |
-| (unnamed) | -3 | 0 | E, W |
-| (unnamed) | -4 | 0 | E, SW |
-| (unnamed) | -5 | 1 | NE, W |
-| (unnamed) | -6 | 1 | E, SW |
-| (unnamed) | -7 | 2 | NE, W |
-| (unnamed) | -8 | 2 | E, W |
-| (unnamed) | -9 | 2 | E, SW |
-| (unnamed) | -10 | 3 | NE, W |
-| (unnamed) | -11 | 3 | E, SW |
-| (unnamed) | -12 | 4 | NE, SE→Glimmering Coast Entrance |
-| The Glimmering Coast Entrance (Hearthlands side) | -13 | 3 | NW→(road), SW→(into Coast) |
+### The Great Steppe
 
-#### Southern road (Hearthlands → Sun-Scorched Wastes)
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | 0 | 2 | N→Southern Gate, SE |
-| (unnamed) | 1 | 3 | NW, S |
-| (unnamed) | 1 | 4 | N, S |
-| (unnamed) | 1 | 5 | N, SW |
-| (unnamed) | 0 | 6 | NE, S |
-| (unnamed) | 0 | 7 | N, SE |
-| (unnamed) | 1 | 8 | NW, S |
-| (unnamed) | 1 | 9 | N, SW |
-| (unnamed) | 0 | 10 | NE, S |
-| (unnamed) | 0 | 11 | N, SW→(to Weeping Fens path) |
-| The Great Cataract | -2 | 11 | N→(above), SW→(Weeping Fens path) |
+- **The Bazaar of Bales** [The Amber Caravan / camp] @ (12, 12) 🛒Vendor
+  Connections: SW→The Wind-Tower
+- **The Khan’s Pavilion** [The Amber Caravan / camp] @ (10, 13) 🏨Inn
+  Connections: E→The Wind-Tower
+- **The Wind-Tower** [The Amber Caravan / camp] @ (11, 13) ✨Teleport
+  Connections: NW→(unnamed), W→The Khan’s Pavilion, NE→The Bazaar of Bales, SE→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (10, 16) 
+  Connections: N→(unnamed), SE→(unnamed), NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (12, 18) 
+  Connections: NW→(unnamed), E→(unnamed), W→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (11, 14) 
+  Connections: E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (14, 19) 
+  Connections: NW→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (14, 16) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (11, 15) 
+  Connections: SW→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (14, 15) 
+  Connections: NW→(unnamed), S→(unnamed), E→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (11, 18) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (12, 15) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (15, 15) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (10, 15) 
+  Connections: NE→(unnamed), S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (13, 18) 
+  Connections: W→(unnamed), NE→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (12, 14) 
+  Connections: E→(unnamed), NW→The Wind-Tower, W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (13, 14) 
+  Connections: NE→(unnamed), SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (9, 13) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (14, 17) 
+  Connections: SW→(unnamed), N→(unnamed), W→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (13, 16) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (12, 16) 
+  Connections: SW→(unnamed), N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (9, 14) 
+  Connections: SE→(unnamed), N→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (11, 17) 
+  Connections: NW→(unnamed), SE→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (14, 13) 
+  Connections: NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (8, 15) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (10, 17) 
+  Connections: N→(unnamed)
+- **(unnamed)** [The Sea of Amber / plains] @ (13, 17) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (13, 11) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (10, 9) 
+  Connections: E→(unnamed), SW→(unnamed), W→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (10, 10) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (14, 10) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (11, 11) 
+  Connections: NE→(unnamed), SW→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (9, 11) 
+  Connections: N→(unnamed), SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (14, 11) 
+  Connections: N→(unnamed), SW→(unnamed), W→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (14, 8) 
+  Connections: SW→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (12, 10) 
+  Connections: NW→(unnamed), NE→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (13, 12) 
+  Connections: NE→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (11, 9) 
+  Connections: N→The Great Steppe Entrance, SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (9, 10) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (13, 9) 
+  Connections: NW→(unnamed), SE→(unnamed), SW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (8, 11) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (10, 12) 
+  Connections: NW→(unnamed), NE→(unnamed), SE→The Wind-Tower, SW→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (9, 9) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Whispering Grasses / desert] @ (12, 8) 
+  Connections: W→The Great Steppe Entrance, SE→(unnamed)
+- **The Great Steppe Entrance** [The Whispering Grasses / desert] @ (11, 8) 
+  Connections: NW→The Vigil-Gate, S→(unnamed), E→(unnamed)
 
-#### Path to Sun-Scorched Wastes
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | -1 | 12 | NE→Great Cataract, S |
-| (unnamed) | -1 | 13 | N, SW→(to Wastes) |
-| (unnamed) | -2 | 13 | NE→(above), S→(Wastes entrance) |
-| Sun-Scorched Wastes Entrance | -3 | 13 | N, S→(into Wastes) |
+### The Hearthlands
 
----
+- **Hammer-Fall Smithy** [Hearthvale / town] @ (1, -1) 🔨Blacksmith
+  Connections: SW→Hearthvale Square
+- **Hearthvale Square** [Hearthvale / town] @ (0, 0) 
+  Connections: N→The Northern Gate, S→The Southern Gate, W→The Western Arch, E→The Eastern Postern, NW→The Sleeping Dragon Inn, NE→Hammer-Fall Smithy, SW→The Traveler’s Chest, SE→The Archive of Ages
+- **The Archive of Ages** [Hearthvale / town] @ (1, 1) ✨Teleport 📖Trainer
+  Connections: NW→Hearthvale Square
+- **The Eastern Postern** [Hearthvale / town] @ (1, 0) 
+  Connections: W→Hearthvale Square, E→(unnamed)
+- **The Northern Gate** [Hearthvale / town] @ (0, -1) 
+  Connections: S→Hearthvale Square, N→(unnamed)
+- **The Sleeping Dragon Inn** [Hearthvale / town] @ (-1, -1) 🏨Inn
+  Connections: SE→Hearthvale Square
+- **The Southern Gate** [Hearthvale / town] @ (0, 1) 
+  Connections: N→Hearthvale Square, S→(unnamed)
+- **The Traveler’s Chest** [Hearthvale / town] @ (-1, 1) 🛒Vendor
+  Connections: NE→Hearthvale Square
+- **The Western Arch** [Hearthvale / town] @ (-1, 0) 
+  Connections: E→Hearthvale Square, W→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (10, 0) 
+  Connections: W→(unnamed), E→(unnamed), N→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (2, 0) 
+  Connections: W→The Eastern Postern, E→(unnamed), N→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (9, 0) 
+  Connections: W→(unnamed), E→(unnamed), N→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (5, 1) 
+  Connections: NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (6, 1) 
+  Connections: W→(unnamed), E→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (7, 1) 
+  Connections: W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (8, 0) 
+  Connections: SW→(unnamed), E→(unnamed), W→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (11, 0) 
+  Connections: W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (3, 0) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (12, -1) 
+  Connections: SW→(unnamed), E→Miller’s Crossing, N→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (4, 0) 
+  Connections: W→(unnamed), SE→(unnamed), N→(unnamed), S→(unnamed)
+- **Miller’s Crossing** [The Eastern Road / trail] @ (13, -1) 
+  Connections: W→(unnamed), E→The Mourn-Woods Entrance
+- **(unnamed)** [The Gilded Weave / trail] @ (9, 4) 
+  Connections: W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Gilded Weave / trail] @ (9, 5) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Gilded Weave / trail] @ (10, 6) 
+  Connections: NW→(unnamed), S→The Vigil-Gate
+- **(unnamed)** [The Gilded Weave / trail] @ (7, 3) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Gilded Weave / trail] @ (8, 4) 
+  Connections: NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Gilded Weave / trail] @ (7, 2) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **The Vigil-Gate** [The Gilded Weave / trail] @ (10, 7) 
+  Connections: N→(unnamed), SE→The Great Steppe Entrance
+- **(unnamed)** [The King's Pastures / plains] @ (-5, 1) 
+  Connections: E→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (10, -2) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (12, -5) 
+  Connections: NW→(unnamed), S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (7, 0) 
+  Connections: NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (10, -5) 
+  Connections: SW→(unnamed), NE→(unnamed), SE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-4, 2) 
+  Connections: S→(unnamed), N→(unnamed), SW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (5, 2) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (7, -3) 
+  Connections: S→(unnamed), W→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, -1) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-2, 4) 
+  Connections: NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (11, -6) 
+  Connections: SW→(unnamed), SE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (6, -1) 
+  Connections: W→(unnamed), SE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (3, -2) 
+  Connections: SE→(unnamed), NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-4, 1) 
+  Connections: S→(unnamed), NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (4, -3) 
+  Connections: E→(unnamed), SW→(unnamed), NW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (12, -4) 
+  Connections: N→(unnamed), SE→(unnamed), SW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (12, -2) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, -4) 
+  Connections: E→(unnamed), W→(unnamed), S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (5, -1) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (8, -2) 
+  Connections: SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-5, 4) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-3, 4) 
+  Connections: E→(unnamed), NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (3, -4) 
+  Connections: SE→(unnamed), W→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, 2) 
+  Connections: SW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-5, 3) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (3, 4) 
+  Connections: N→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, 5) 
+  Connections: N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (13, -3) 
+  Connections: NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (7, -4) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, -7) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-4, 5) 
+  Connections: NW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (7, -2) 
+  Connections: E→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (10, -1) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, -6) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (0, 3) 
+  Connections: E→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (3, -5) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (4, 3) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (6, -3) 
+  Connections: E→(unnamed), W→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (9, -3) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (4, 1) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, 4) 
+  Connections: E→(unnamed), NW→(unnamed), S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (5, -3) 
+  Connections: E→(unnamed), W→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (5, -4) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (11, -3) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (4, -1) 
+  Connections: S→(unnamed), NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (9, -1) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, -2) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (4, 2) 
+  Connections: N→(unnamed), SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (11, -4) 
+  Connections: NW→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-3, 0) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (-4, 3) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (3, 3) 
+  Connections: NE→(unnamed), S→(unnamed), E→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (2, -3) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (1, 3) 
+  Connections: SE→(unnamed), W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The King's Pastures / plains] @ (9, -4) 
+  Connections: S→(unnamed), NE→(unnamed), NW→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-7, 1) 
+  Connections: NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-4, -1) 
+  Connections: E→(unnamed), W→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-6, 0) 
+  Connections: NE→(unnamed), SW→(unnamed), NW→(unnamed), S→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-5, -1) 
+  Connections: E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-2, 0) 
+  Connections: E→The Western Arch, NW→(unnamed), W→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-10, 2) 
+  Connections: E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-12, 2) 
+  Connections: NE→(unnamed), W→The Verdant Overlook, N→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-3, -1) 
+  Connections: SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-11, 1) 
+  Connections: SE→(unnamed), SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-9, 2) 
+  Connections: NE→(unnamed), W→(unnamed), S→(unnamed)
+- **(unnamed)** [The road between Hearthvale and Havenport / trail] @ (-8, 1) 
+  Connections: E→(unnamed), SW→(unnamed)
+- **The Verdant Overlook** [The road between Hearthvale and Havenport / trail] @ (-13, 2) 
+  Connections: E→(unnamed), SW→The Glimmering Coast Entrance, S→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (1, -4) 
+  Connections: SW→(unnamed), N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (1, -11) 
+  Connections: SW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (-1, -7) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (1, -5) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (0, -6) 
+  Connections: SE→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (-1, -9) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (0, -3) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (0, -10) 
+  Connections: SW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (-1, -8) 
+  Connections: S→(unnamed), N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (0, -2) 
+  Connections: S→The Northern Gate, N→(unnamed)
+- **(unnamed)** [The Road North / trail] @ (2, -12) 
+  Connections: SW→(unnamed), N→The Rubble Pass, SE→(unnamed)
+- **The Rubble Pass** [The Road North / trail] @ (2, -13) 
+  Connections: S→(unnamed), N→The Frostpeaks Foothills Entrance
+- **(unnamed)** [The Shaded Verges / forest] @ (7, -9) 
+  Connections: E→(unnamed), N→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (5, -6) 
+  Connections: N→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (5, -10) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (0, -8) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (5, -8) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (7, -7) 
+  Connections: W→(unnamed), NE→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (7, -10) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (3, -11) 
+  Connections: NE→(unnamed), NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (4, -10) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (8, -6) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (8, -5) 
+  Connections: N→(unnamed), SW→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (9, -10) 
+  Connections: SW→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (1, -8) 
+  Connections: W→(unnamed), SE→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (4, -8) 
+  Connections: N→(unnamed), SE→(unnamed), E→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (6, -12) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (6, -7) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (8, -9) 
+  Connections: S→(unnamed), W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (1, -9) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (2, -9) 
+  Connections: SW→(unnamed), E→(unnamed), N→(unnamed), W→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (3, -9) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (6, -11) 
+  Connections: SE→(unnamed), NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (5, -12) 
+  Connections: SE→(unnamed), W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (4, -9) 
+  Connections: W→(unnamed), S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (2, -10) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (5, -7) 
+  Connections: NW→(unnamed), E→(unnamed), S→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (8, -8) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Shaded Verges / forest] @ (4, -12) 
+  Connections: E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (0, 6) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (-1, 3) 
+  Connections: NE→(unnamed), S→(unnamed), E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (-2, 10) 
+  Connections: N→(unnamed), S→The Great Cataract
+- **(unnamed)** [The Southern Way / trail] @ (0, 2) 
+  Connections: N→The Southern Gate, SW→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (-2, 9) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (-1, 8) 
+  Connections: NE→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (0, 7) 
+  Connections: N→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (-1, 4) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** [The Southern Way / trail] @ (-1, 5) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **The Great Cataract** [The Southern Way / trail] @ (-2, 11) 
+  Connections: N→(unnamed), SW→The Sun-Scorched Wastes Entrance
+- **(unnamed)** [The Whispering Thicket / forest] @ (-13, 5) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-6, 1) 
+  Connections: N→(unnamed), E→(unnamed), S→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-9, 0) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-6, 2) 
+  Connections: N→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-12, -3) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-9, -3) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-8, 2) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-6, 6) 
+  Connections: NW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-7, 4) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-11, 5) 
+  Connections: E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-11, 6) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-9, 6) 
+  Connections: E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-8, -1) 
+  Connections: NW→(unnamed), E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-9, 3) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-13, -1) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-11, 0) 
+  Connections: W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-12, 1) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-12, 0) 
+  Connections: S→(unnamed), NE→(unnamed), E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-12, 4) 
+  Connections: SE→(unnamed), NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-9, 4) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-11, -1) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-9, -2) 
+  Connections: W→(unnamed), SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-8, 6) 
+  Connections: NE→(unnamed), W→(unnamed), N→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-11, -2) 
+  Connections: S→(unnamed), E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-7, -1) 
+  Connections: W→(unnamed), N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-13, 3) 
+  Connections: SE→(unnamed), N→The Verdant Overlook
+- **(unnamed)** [The Whispering Thicket / forest] @ (-8, 5) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-7, 5) 
+  Connections: N→(unnamed), SW→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-7, 3) 
+  Connections: NE→(unnamed), S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-10, 5) 
+  Connections: SE→(unnamed), W→(unnamed), NE→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-10, -2) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Whispering Thicket / forest] @ (-7, -2) 
+  Connections: S→(unnamed)
 
-### The Sun-Scorched Wastes (Lvl 15-20)
+### The Mourn-Woods
 
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | -3 | 14 | N→Entrance, SE |
-| (unnamed) | -2 | 15 | NW, S |
-| (unnamed) | -2 | 16 | N, SE |
-| (unnamed) | -1 | 17 | NW, S |
-| (unnamed) | -1 | 18 | N, SW |
-| (unnamed) | -2 | 19 | NE, S |
-| (unnamed) | -2 | 20 | N, S |
-| (unnamed) | -2 | 21 | N, SE |
-| (unnamed) | -1 | 22 | NW, S |
-| (unnamed) | -1 | 23 | N, SE |
-| (unnamed) | 0 | 24 | NW, S |
-| (unnamed) | 0 | 25 | N, S |
-| (unnamed) | 0 | 26 | N (dead end) |
+- **The Canopy Lift** [Eldritch Rest / town] @ (19, -5) 
+  Connections: S→(unnamed), N→The Emerald Plaza
+- **The Emerald Plaza** [Eldritch Rest / town] @ (19, -6) 
+  Connections: S→The Canopy Lift, N→The Star-Gazer’s Inn, E→The Fletcher’s Loft, SW→The Warden’s Spire
+- **The Fletcher’s Loft** [Eldritch Rest / town] @ (20, -6) 🛒Vendor
+  Connections: W→The Emerald Plaza
+- **The Star-Gazer’s Inn** [Eldritch Rest / town] @ (19, -7) 🏨Inn
+  Connections: S→The Emerald Plaza
+- **The Warden’s Spire** [Eldritch Rest / town] @ (18, -5) ✨Teleport
+  Connections: NE→The Emerald Plaza
+- **(unnamed)** [The Eastern Road / trail] @ (19, -4) 
+  Connections: S→(unnamed), N→The Canopy Lift
+- **(unnamed)** [The Eastern Road / trail] @ (15, -1) 
+  Connections: W→The Mourn-Woods Entrance, NE→(unnamed), N→(unnamed), S→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (16, -2) 
+  Connections: SW→(unnamed), E→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (19, -3) 
+  Connections: W→(unnamed), N→(unnamed), S→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (18, -3) 
+  Connections: SW→(unnamed), E→(unnamed), W→(unnamed)
+- **(unnamed)** [The Eastern Road / trail] @ (17, -2) 
+  Connections: W→(unnamed), NE→(unnamed), N→(unnamed)
+- **The Mourn-Woods Entrance** [The Eastern Road / trail] @ (14, -1) 
+  Connections: W→Miller’s Crossing, E→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (15, -5) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (14, 3) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (19, -2) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (14, -4) 
+  Connections: N→(unnamed), S→(unnamed), E→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (15, -4) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (18, 2) 
+  Connections: N→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (14, -3) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (16, -3) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (15, -2) 
+  Connections: NW→(unnamed), S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (19, 0) 
+  Connections: SW→(unnamed), N→(unnamed), W→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (14, -5) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (16, -6) 
+  Connections: S→(unnamed), NW→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (17, -4) 
+  Connections: S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (17, -3) 
+  Connections: W→(unnamed), S→(unnamed), E→(unnamed), N→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (14, 1) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (16, -5) 
+  Connections: SE→(unnamed), N→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (17, 1) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (15, -7) 
+  Connections: SE→(unnamed), W→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (14, -7) 
+  Connections: E→(unnamed), SW→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (16, 2) 
+  Connections: SW→(unnamed), NE→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (18, 0) 
+  Connections: E→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (13, -6) 
+  Connections: SW→(unnamed), SE→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (15, 0) 
+  Connections: N→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (14, 2) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (19, -1) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (13, -8) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (15, 3) 
+  Connections: NW→(unnamed), W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (15, 1) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (18, 1) 
+  Connections: W→(unnamed), NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Thorn-Wall / forest] @ (17, -1) 
+  Connections: SE→(unnamed), NW→(unnamed)
 
----
+### The Shivering Skerries
 
-### The Weeping Fens (Lvl 10-15)
+- **Skard-Post Central Yard** [Skard-Post / camp] @ (-18, -13) 🏨Inn ✨Teleport
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-18, -12) 
+  Connections: S→(unnamed), N→Skard-Post Central Yard, SE→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-18, -7) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-18, -8) 
+  Connections: S→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-18, -11) 
+  Connections: SE→(unnamed), N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-18, -6) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-17, -9) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-17, -10) 
+  Connections: S→(unnamed), NW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Coastal Highroad / trail] @ (-19, -5) 
+  Connections: S→The Salt-Frost Capstan, NE→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-3, -21) 
+  Connections: SW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-1, -22) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-8, -19) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-9, -19) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-10, -18) 
+  Connections: W→(unnamed), NE→(unnamed), N→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-13, -16) 
+  Connections: W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-4, -20) 
+  Connections: W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-15, -15) 
+  Connections: W→(unnamed), NE→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-17, -14) 
+  Connections: SW→Skard-Post Central Yard, NE→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-10, -19) 
+  Connections: S→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-14, -16) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-5, -20) 
+  Connections: W→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-7, -19) 
+  Connections: W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-11, -18) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-2, -22) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-6, -20) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-12, -17) 
+  Connections: SW→(unnamed), NE→(unnamed), S→(unnamed)
+- **(unnamed)** [The Frozen Cord / trail] @ (-16, -15) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-13, -13) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-16, -13) 
+  Connections: E→(unnamed), S→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-16, -12) 
+  Connections: N→(unnamed), SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-12, -15) 
+  Connections: W→(unnamed), N→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-12, -13) 
+  Connections: W→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-17, -11) 
+  Connections: NE→(unnamed), NW→(unnamed), W→(unnamed), S→(unnamed), E→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-16, -11) 
+  Connections: W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-15, -12) 
+  Connections: W→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-13, -11) 
+  Connections: W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-15, -10) 
+  Connections: W→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-13, -15) 
+  Connections: SW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-14, -12) 
+  Connections: NW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-16, -10) 
+  Connections: N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-14, -14) 
+  Connections: NW→(unnamed), SW→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-12, -16) 
+  Connections: S→(unnamed), N→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-14, -11) 
+  Connections: NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-15, -13) 
+  Connections: NE→(unnamed), W→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-13, -10) 
+  Connections: N→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Glass-Step Crags / mountain] @ (-14, -9) 
+  Connections: NW→(unnamed), NE→(unnamed)
 
-| Node | x | y | Connections |
-|------|---|---|-------------|
-| (unnamed) | -3 | 12 | NE→(Hearthlands), SW |
-| (unnamed) | -4 | 13 | NE, SW |
-| (unnamed) | -5 | 14 | NE, S |
-| (unnamed) | -27 | 13 | NE, S |
-| (unnamed) | -27 | 14 | N, S |
-| (unnamed) | -27 | 15 | N, S |
-| (unnamed) | -28 | 16 | NE, S |
-| (unnamed) | -28 | 17 | N, S |
-| (unnamed) | -28 | 18 | N, SW |
-| (unnamed) | -29 | 19 | NE (dead end path) |
+### The Sun-Scorched Wastes
 
----
+- **The Brass-Worker’s Pit** [Karkas / town] @ (-3, 21) 🔨Blacksmith
+  Connections: E→The Well-Spring Market
+- **The Dune-Speaker’s Spire** [Karkas / town] @ (-3, 20) ✨Teleport
+  Connections: SE→The Well-Spring Market
+- **The Sand-Sailor’s Rest** [Karkas / town] @ (-1, 21) 🏨Inn
+  Connections: W→The Well-Spring Market
+- **The Shade-Gate** [Karkas / town] @ (-2, 20) 
+  Connections: N→(unnamed), S→The Well-Spring Market
+- **The Well-Spring Market** [Karkas / town] @ (-2, 21) 🛒Vendor
+  Connections: N→The Shade-Gate, E→The Sand-Sailor’s Rest, W→The Brass-Worker’s Pit, NW→The Dune-Speaker’s Spire
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-2, 14) 
+  Connections: N→(unnamed), E→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-2, 13) 
+  Connections: W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-5, 18) 
+  Connections: NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-1, 16) 
+  Connections: E→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-4, 18) 
+  Connections: W→(unnamed), SE→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-3, 19) 
+  Connections: NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-4, 15) 
+  Connections: NW→(unnamed), SW→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-5, 16) 
+  Connections: NE→(unnamed), W→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-4, 13) 
+  Connections: E→(unnamed), SW→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-3, 16) 
+  Connections: S→(unnamed), NW→(unnamed), E→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-1, 15) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-6, 17) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-1, 14) 
+  Connections: W→(unnamed), S→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-1, 19) 
+  Connections: NE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (0, 17) 
+  Connections: N→(unnamed), S→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-6, 16) 
+  Connections: E→(unnamed), S→(unnamed), NW→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-5, 14) 
+  Connections: NE→(unnamed), SE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (0, 16) 
+  Connections: NW→(unnamed), S→(unnamed), W→(unnamed), NE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-3, 17) 
+  Connections: SW→(unnamed), N→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (0, 18) 
+  Connections: N→(unnamed), SW→(unnamed), W→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (-7, 15) 
+  Connections: SE→(unnamed)
+- **(unnamed)** [The Red-Rock Canyons / mountain] @ (1, 15) 
+  Connections: SW→(unnamed)
+- **(unnamed)** @ (-2, 19) 
+  Connections: NE→(unnamed), S→The Shade-Gate, W→(unnamed)
+- **(unnamed)** @ (-1, 18) 
+  Connections: N→(unnamed), SW→(unnamed), E→(unnamed)
+- **(unnamed)** @ (-2, 16) 
+  Connections: N→(unnamed), SE→(unnamed), W→(unnamed)
+- **(unnamed)** @ (-1, 17) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **(unnamed)** @ (-2, 15) 
+  Connections: NW→(unnamed), S→(unnamed)
+- **(unnamed)** @ (-3, 14) 
+  Connections: N→(unnamed), SE→(unnamed)
+- **(unnamed)** @ (-3, 13) 
+  Connections: N→The Sun-Scorched Wastes Entrance, S→(unnamed), W→(unnamed), E→(unnamed)
+- **The Sun-Scorched Wastes Entrance** @ (-3, 12) 
+  Connections: NE→The Great Cataract, S→(unnamed)
 
-## Key Map Facts
-- **Origin**: Hearthvale Square at (0, 0)
-- **Total nodes**: 149
-- **Most nodes lack names** — they are unnamed path/wilderness nodes connecting named locations
-- **Towns** serve as hubs with multiple services (vendor, inn, blacksmith, teleport, trainer)
-- **Each region has one entrance node** connecting it to the Hearthlands road network
-- **Directions**: N=(0,-1), S=(0,+1), E=(+1,0), W=(-1,0), NE=(+1,-1), NW=(-1,-1), SE=(+1,+1), SW=(-1,+1)
+### The Weeping Fens
+
+- **The Barnacle Bazaar** [Aethel-by-the-Sea / town] @ (-29, 20) 🛒Vendor
+  Connections: N→The Pier-End, S→The Salty Tankard
+- **The Pier-End** [Aethel-by-the-Sea / town] @ (-29, 19) 
+  Connections: NE→(unnamed), S→The Barnacle Bazaar
+- **The Salty Tankard** [Aethel-by-the-Sea / town] @ (-29, 21) 🏨Inn
+  Connections: N→The Barnacle Bazaar, W→The Shipwright’s Shed
+- **The Shipwright’s Shed** [Aethel-by-the-Sea / town] @ (-30, 21) 🔨Blacksmith
+  Connections: E→The Salty Tankard
+- **(unnamed)** @ (-28, 16) 
+  Connections: NE→(unnamed), S→(unnamed)
+- **(unnamed)** @ (-28, 18) 
+  Connections: N→(unnamed), SW→The Pier-End
+- **(unnamed)** @ (-27, 15) 
+  Connections: N→(unnamed), SW→(unnamed)
+- **(unnamed)** @ (-27, 14) 
+  Connections: N→The Weeping Fens Entrance, S→(unnamed)
+- **(unnamed)** @ (-28, 17) 
+  Connections: N→(unnamed), S→(unnamed)
+- **The Weeping Fens Entrance** @ (-27, 13) 
+  Connections: NE→The Sluice-Gate, S→(unnamed)
+
+## Creatures
+
+| Name | Level | Rarity | Aggressive | Humanoid | Node |
+|------|-------|--------|------------|----------|------|
+| Balrog | 50 | boss | — | — | (unplaced) |
+
+## NPCs
+
+- **The Soulwright** at The Deep-Core Forge: An ancient artisan wreathed in spectral flame, said to have forged weapons for the gods themselves.
