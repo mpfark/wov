@@ -31,6 +31,8 @@ export interface Character {
   salvage: number;
   bhp: number;
   bhp_trained: Record<string, number>;
+  soulforged_item_created?: boolean;
+  crown_item_created?: boolean;
 }
 
 export function useCharacter(user: User | null) {

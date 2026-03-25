@@ -1,0 +1,1 @@
+ALTER TABLE public.characters ADD COLUMN crown_item_created boolean NOT NULL DEFAULT false;

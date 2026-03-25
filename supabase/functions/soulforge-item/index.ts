@@ -14,17 +14,17 @@ const STAT_COSTS: Record<string, number> = {
   str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2, potion_slots: 1,
 };
 
-function getStatBudget(hands: number): number {
+function getStatBudget(level: number, hands: number): number {
   const mult = 1.5; // uncommon
   const handsMult = hands === 2 ? 1.5 : 1;
-  return Math.floor(1 + 41 * 0.3 * mult * handsMult);
+  return Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
 }
 
-function getStatCap(key: string): number {
+function getStatCap(key: string, level: number): number {
   if (key === "potion_slots") return 4;
-  if (key === "ac" || key === "hp_regen") return 2 + Math.floor(42 / 10);
-  if (key === "hp") return 6 + Math.floor(42 / 5) * 2;
-  return 4 + Math.floor(42 / 4);
+  if (key === "ac" || key === "hp_regen") return 2 + Math.floor(level / 10);
+  if (key === "hp") return 6 + Math.floor(level / 5) * 2;
+  return 4 + Math.floor(level / 4);
 }
 
 function calcCost(stats: Record<string, number>): number {
@@ -59,32 +59,40 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const { character_id, name, slot, hands, stats } = await req.json();
+    const { character_id, name, slot, hands, stats, forge_type } = await req.json();
+
+    // Determine if this is a crown forge or soulforge
+    const isCrown = forge_type === "crown";
+    const effectiveLevel = isCrown ? 40 : 42;
+    const effectiveName = isCrown ? "Crown" : name?.trim();
+    const effectiveSlot = isCrown ? "head" : slot;
 
     // Validate inputs
-    if (!character_id || !name || !slot || !stats) {
+    if (!character_id || !stats) {
       return new Response(JSON.stringify({ error: "Missing fields" }), { status: 400, headers: corsHeaders });
     }
 
-    // Validate name: 1-30 ASCII printable chars
-    if (typeof name !== "string" || name.length < 1 || name.length > 30 || !/^[\x20-\x7E]+$/.test(name)) {
-      return new Response(JSON.stringify({ error: "Invalid name (1-30 ASCII characters)" }), { status: 400, headers: corsHeaders });
+    if (!isCrown) {
+      // Validate name for soulforge only (crown has fixed name)
+      if (!effectiveName || effectiveName.length < 1 || effectiveName.length > 30 || !/^[\x20-\x7E]+$/.test(effectiveName)) {
+        return new Response(JSON.stringify({ error: "Invalid name (1-30 ASCII characters)" }), { status: 400, headers: corsHeaders });
+      }
+      if (!effectiveSlot || !VALID_SLOTS.includes(effectiveSlot)) {
+        return new Response(JSON.stringify({ error: "Invalid slot" }), { status: 400, headers: corsHeaders });
+      }
     }
 
-    if (!VALID_SLOTS.includes(slot)) {
-      return new Response(JSON.stringify({ error: "Invalid slot" }), { status: 400, headers: corsHeaders });
-    }
-
-    const effectiveHands = slot === "main_hand" ? (hands === 2 ? 2 : 1) : (slot === "off_hand" ? 1 : null);
+    const effectiveHands = effectiveSlot === "main_hand" ? (hands === 2 ? 2 : 1) : (effectiveSlot === "off_hand" ? 1 : null);
 
     // Validate stats
     const cleanStats: Record<string, number> = {};
     for (const [k, v] of Object.entries(stats)) {
       if (!STAT_KEYS.includes(k)) continue;
+      if (k === "potion_slots" && effectiveSlot !== "belt") continue;
       const val = Math.floor(Number(v));
       if (val <= 0) continue;
-      if (val > getStatCap(k)) {
-        return new Response(JSON.stringify({ error: `${k} exceeds cap of ${getStatCap(k)}` }), { status: 400, headers: corsHeaders });
+      if (val > getStatCap(k, effectiveLevel)) {
+        return new Response(JSON.stringify({ error: `${k} exceeds cap of ${getStatCap(k, effectiveLevel)}` }), { status: 400, headers: corsHeaders });
       }
       cleanStats[k] = val;
     }
@@ -93,7 +101,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Item must have at least 2 stats" }), { status: 400, headers: corsHeaders });
     }
 
-    const budget = getStatBudget(effectiveHands || 1);
+    const budget = getStatBudget(effectiveLevel, effectiveHands || 1);
     const cost = calcCost(cleanStats);
     if (cost > budget) {
       return new Response(JSON.stringify({ error: `Stats exceed budget (${cost}/${budget})` }), { status: 400, headers: corsHeaders });
@@ -105,7 +113,7 @@ Deno.serve(async (req) => {
     // Verify character ownership & eligibility
     const { data: char, error: charErr } = await admin
       .from("characters")
-      .select("id, user_id, level, soulforged_item_created")
+      .select("id, user_id, level, soulforged_item_created, crown_item_created")
       .eq("id", character_id)
       .single();
 
@@ -115,26 +123,36 @@ Deno.serve(async (req) => {
     if (char.user_id !== user.id) {
       return new Response(JSON.stringify({ error: "Not your character" }), { status: 403, headers: corsHeaders });
     }
-    if (char.level < 42) {
-      return new Response(JSON.stringify({ error: "Must be level 42" }), { status: 403, headers: corsHeaders });
-    }
-    if (char.soulforged_item_created) {
-      return new Response(JSON.stringify({ error: "Already forged" }), { status: 403, headers: corsHeaders });
+
+    if (isCrown) {
+      if (char.level < 40) {
+        return new Response(JSON.stringify({ error: "Must be level 40" }), { status: 403, headers: corsHeaders });
+      }
+      if (char.crown_item_created) {
+        return new Response(JSON.stringify({ error: "Already forged your Crown" }), { status: 403, headers: corsHeaders });
+      }
+    } else {
+      if (char.level < 42) {
+        return new Response(JSON.stringify({ error: "Must be level 42" }), { status: 403, headers: corsHeaders });
+      }
+      if (char.soulforged_item_created) {
+        return new Response(JSON.stringify({ error: "Already forged" }), { status: 403, headers: corsHeaders });
+      }
     }
 
     // Calculate value
-    const value = Math.floor(42 * 2.5 * (1.5 * 1.5));
+    const value = Math.floor(effectiveLevel * 2.5 * (1.5 * 1.5));
 
     // Insert item
     const { data: item, error: itemErr } = await admin
       .from("items")
       .insert({
-        name: name.trim(),
-        description: `Soulforged by ${char.id}`,
+        name: effectiveName,
+        description: isCrown ? `Royal Crown forged by ${char.id}` : `Soulforged by ${char.id}`,
         item_type: "equipment",
-        slot,
+        slot: effectiveSlot,
         rarity: "uncommon",
-        level: 42,
+        level: effectiveLevel,
         hands: effectiveHands,
         stats: cleanStats,
         value,
@@ -164,10 +182,11 @@ Deno.serve(async (req) => {
     }
 
     // Mark character as having forged
-    await admin
-      .from("characters")
-      .update({ soulforged_item_created: true })
-      .eq("id", character_id);
+    if (isCrown) {
+      await admin.from("characters").update({ crown_item_created: true }).eq("id", character_id);
+    } else {
+      await admin.from("characters").update({ soulforged_item_created: true }).eq("id", character_id);
+    }
 
     return new Response(JSON.stringify({ item }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {

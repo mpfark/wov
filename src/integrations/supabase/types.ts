@@ -208,6 +208,7 @@ export type Database = {
           con: number
           cp: number
           created_at: string
+          crown_item_created: boolean
           current_node_id: string | null
           dex: number
           gender: Database["public"]["Enums"]["character_gender"]
@@ -242,6 +243,7 @@ export type Database = {
           con?: number
           cp?: number
           created_at?: string
+          crown_item_created?: boolean
           current_node_id?: string | null
           dex?: number
           gender?: Database["public"]["Enums"]["character_gender"]
@@ -276,6 +278,7 @@ export type Database = {
           con?: number
           cp?: number
           created_at?: string
+          crown_item_created?: boolean
           current_node_id?: string | null
           dex?: number
           gender?: Database["public"]["Enums"]["character_gender"]
