@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { APP_VERSION } from '@/lib/version';
+import logo from '@/assets/logo.png';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -36,6 +37,7 @@ export default function AuthPage() {
     <div className="flex min-h-screen items-center justify-center parchment-bg p-4">
       <Card className="w-full max-w-md ornate-border bg-card/90 backdrop-blur">
         <CardHeader className="text-center">
+          <img src={logo} alt="Wayfarers of Varneth" className="w-24 h-24 mx-auto mb-3 drop-shadow-lg" />
           <h1 className="font-display text-2xl text-primary text-glow mb-2 leading-tight">
             Wayfarers of Varneth <span className="text-sm text-muted-foreground font-body ml-1">{APP_VERSION}</span>
           </h1>
