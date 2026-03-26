@@ -7,6 +7,7 @@ import { Character } from '@/hooks/useCharacter';
 import { getItemStatBudget, getItemStatCap, calculateItemStatCost, ITEM_STAT_COSTS } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Sparkles } from 'lucide-react';
 
 interface Props {
   open: boolean;
