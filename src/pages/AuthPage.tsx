@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { APP_VERSION } from '@/lib/version';
+import logo from '@/assets/logo.png';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
