@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     // Verify character ownership & eligibility
     const { data: char, error: charErr } = await admin
       .from("characters")
-      .select("id, user_id, level, soulforged_item_created, crown_item_created")
+      .select("id, user_id, name, level, soulforged_item_created, crown_item_created")
       .eq("id", character_id)
       .single();
 
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       .from("items")
       .insert({
         name: effectiveName,
-        description: isCrown ? `Royal Crown forged by ${char.id}` : `Soulforged by ${char.id}`,
+        description: isCrown ? `Royal Crown forged by ${char.name}` : `Soulforged by ${char.name}`,
         item_type: "equipment",
         slot: effectiveSlot,
         rarity: "uncommon",
