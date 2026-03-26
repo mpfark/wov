@@ -118,6 +118,8 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
   const [hands, setHands] = useState<1 | 2>(1);
   const [stats, setStats] = useState<Record<string, number>>({});
   const [forging, setForging] = useState(false);
+  const [aiUsesLeft, setAiUsesLeft] = useState(3);
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   const canCrown = character.level >= 40 && !character.crown_item_created;
   const canSoulforge = character.level >= 42 && !character.soulforged_item_created;
