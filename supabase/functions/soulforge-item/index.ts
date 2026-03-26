@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       .from("items")
       .insert({
         name: effectiveName,
-        description: isCrown ? `Royal Crown forged by ${char.id}` : `Soulforged by ${char.id}`,
+        description: isCrown ? `Royal Crown forged by ${char.name}` : `Soulforged by ${char.name}`,
         item_type: "equipment",
         slot: effectiveSlot,
         rarity: "uncommon",
