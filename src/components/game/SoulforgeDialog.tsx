@@ -310,6 +310,19 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
                     {aiGenerating ? '...' : `AI (${aiUsesLeft})`}
                   </Button>
                 </div>
+                {aiSuggestion && (
+                  <button
+                    type="button"
+                    className="mt-1.5 w-full text-left px-2 py-1.5 rounded border border-soulforged/30 bg-soulforged/5 hover:bg-soulforged/15 transition-colors group cursor-pointer"
+                    onClick={() => { setItemName(aiSuggestion); setAiSuggestion(null); }}
+                  >
+                    <span className="text-[10px] text-muted-foreground">The spirits whisper…</span>
+                    <p className="text-sm font-display text-soulforged group-hover:text-soulforged/80">
+                      ✨ {aiSuggestion}
+                    </p>
+                    <span className="text-[9px] text-muted-foreground/60">Click to use this name</span>
+                  </button>
+                )}
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {itemName.length}/30
                   {!slot && aiUsesLeft > 0 && <span className="ml-1 text-soulforged/60">· Pick a slot to use AI naming</span>}
