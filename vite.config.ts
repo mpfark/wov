@@ -31,9 +31,9 @@ export default defineConfig(({ mode }) => ({
           ],
         },
         manifest: {
-          name: "Wayfarers of Edhelard",
-          short_name: "WoE",
-          description: "A journey through the lands of Edhelard",
+          name: "Wayfarers of Varneth",
+          short_name: "WoV",
+          description: "A journey through the lands of Varneth",
           theme_color: "#1a1a2e",
           background_color: "#1a1a2e",
           display: "standalone",

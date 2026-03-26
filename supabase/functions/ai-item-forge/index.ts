@@ -111,7 +111,7 @@ serve(async (req) => {
     else if (item_type === "equipment") typeInstruction = "All items must be equipment (no consumables).";
     else typeInstruction = "All items must be consumables (slot = null, stats can ONLY use hp and hp_regen, budget is 3x normal, no stat caps).";
 
-    const systemPrompt = `You are an item generator for "Wayfarers of Edhelard", a text-based high-fantasy RPG.
+    const systemPrompt = `You are an item generator for const systemPrompt = `You are an item generator for "Wayfarers of Varneth", a text-based high-fantasy RPG., a text-based high-fantasy RPG.
 Generate a batch of ${count} distinct, lore-consistent items for a level ${level_min}–${level_max} world.
 
 GENERATION RULES:

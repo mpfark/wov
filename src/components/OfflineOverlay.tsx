@@ -24,7 +24,7 @@ export function OfflineOverlay() {
           The Realm is Unreachable
         </h2>
         <p className="text-sm text-muted-foreground">
-          Wayfarers of Edhelard requires an internet connection. The overlay will
+          Wayfarers of Varneth requires an internet connection. The overlay will The overlay will
           disappear once you're back online.
         </p>
       </div>
