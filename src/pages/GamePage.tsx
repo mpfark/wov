@@ -764,7 +764,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
         <div className="flex items-center gap-2">
           <h1 className="font-display text-sm text-primary text-glow">
-            {isTablet ? 'WoE' : 'Wayfarers of Edhelard'}
+            {isTablet ? 'WoV' : 'Wayfarers of Varneth'}
             <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span>
           </h1>
           {xpMultiplier > 1 && xpBoostExpiresAt && (

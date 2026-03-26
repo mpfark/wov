@@ -12,7 +12,7 @@ export function PwaUpdatePrompt() {
     if (needRefresh) {
       toast({
         title: "⚔️ Update Available",
-        description: "A new version of Wayfarers of Edhelard is ready.",
+        description: "description: "A new version of Wayfarers of Varneth is ready.",",
         action: (
           <button
             onClick={() => updateServiceWorker(true)}

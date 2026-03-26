@@ -54,7 +54,7 @@ export default function AuthPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="wayfarer@edhelard.com"
+                placeholder="wayfarer@varneth.com"
                 required
                 className="mt-1 bg-input border-border"
               />

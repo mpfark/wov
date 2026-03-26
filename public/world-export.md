@@ -1,4 +1,4 @@
-# Wayfarers of Edhelard — World Export
+# Wayfarers of Varneth — World Export
 
 Generated for AI map rendering assistance.
 
