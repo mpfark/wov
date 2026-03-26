@@ -263,6 +263,23 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
                 : 'Forge a unique soulbound item. It cannot be dropped or sold. Choose wisely — you may only do this once.'}
             </p>
 
+            {/* Slot (soulforge only) — pick slot first so AI naming works */}
+            {mode === 'soulforge' && (
+              <div>
+                <label className="text-xs font-display text-muted-foreground">Equipment Slot</label>
+                <Select value={slot} onValueChange={v => { setSlot(v); setStats({}); }}>
+                  <SelectTrigger className="h-8 text-sm mt-1">
+                    <SelectValue placeholder="Choose slot..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SLOTS.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Item Name (soulforge only) */}
             {mode === 'soulforge' && (
               <div>
@@ -291,23 +308,6 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
                   {itemName.length}/30
                   {!slot && aiUsesLeft > 0 && <span className="ml-1 text-soulforged/60">· Pick a slot to use AI naming</span>}
                 </p>
-              </div>
-            )}
-
-            {/* Slot (soulforge only) */}
-            {mode === 'soulforge' && (
-              <div>
-                <label className="text-xs font-display text-muted-foreground">Equipment Slot</label>
-                <Select value={slot} onValueChange={v => { setSlot(v); setStats({}); }}>
-                  <SelectTrigger className="h-8 text-sm mt-1">
-                    <SelectValue placeholder="Choose slot..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SLOTS.map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             )}
 
