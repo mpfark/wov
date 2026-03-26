@@ -198,6 +198,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
     setStats({});
     setAiUsesLeft(3);
     setAiGenerating(false);
+    setAiSuggestion(null);
   };
 
   return (
