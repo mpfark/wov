@@ -35,7 +35,7 @@ export default function AuthPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center parchment-bg p-4">
-      <img src={logo} alt="Wayfarers of Varneth" className="w-28 h-28 mb-4 rounded-full drop-shadow-[0_0_15px_rgba(218,165,32,0.4)]" />
+      <img src={logo} alt="Wayfarers of Varneth" <img src={logo} alt="Wayfarers of Varneth" className="w-28 h-28 mb-4 drop-shadow-[0_0_15px_rgba(218,165,32,0.4)]" /> />
       <Card className="w-full max-w-md ornate-border bg-card/90 backdrop-blur">
         <CardHeader className="text-center">
           <h1 className="font-display text-2xl text-primary text-glow mb-2 leading-tight">
