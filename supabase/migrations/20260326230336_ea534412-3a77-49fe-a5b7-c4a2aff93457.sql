@@ -1,0 +1,1 @@
+UPDATE items SET description = 'Royal Crown forged by Cithrawiel' WHERE id = '369bfe79-b6ac-400e-bcc0-c2515500b36e';
