@@ -927,6 +927,12 @@ export function useActions(params: UseActionsParams) {
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
+    } else if (ability.type === 'focus_strike') {
+      // Calculate bonus damage from BASE stats only (unaffected by gear)
+      const baseMod = getStatModifier(p.character.str) + getStatModifier(p.character.dex) + getStatModifier(p.character.int);
+      const bonusDmg = Math.max(1, Math.floor(baseMod * 0.5) + Math.floor(p.character.level / 3));
+      p.setFocusStrikeBuff({ bonusDmg });
+      p.addLog(`${ability.emoji} Focus Strike! Your next attack deals +${bonusDmg} bonus damage.`);
     }
 
     // Deduct CP
