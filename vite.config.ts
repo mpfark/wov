@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => ({
           orientation: "portrait",
           start_url: "/",
           icons: [
-            { src: "/favicon.ico", sizes: "any", type: "image/x-icon" },
+            { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
           ],
         },
       }),
