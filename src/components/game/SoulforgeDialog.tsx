@@ -175,8 +175,12 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
         },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (data?.name) setItemName(data.name);
+      // data may be a string if content-type isn't detected properly
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (parsed?.error) throw new Error(parsed.error);
+      const name = parsed?.name;
+      if (!name) throw new Error('No name returned');
+      setItemName(name);
       setAiUsesLeft(prev => prev - 1);
     } catch (e: any) {
       toast({ title: 'AI Failed', description: e.message || 'Could not generate name.', variant: 'destructive' });
