@@ -7,6 +7,7 @@ import { Character } from '@/hooks/useCharacter';
 import { getItemStatBudget, getItemStatCap, calculateItemStatCost, ITEM_STAT_COSTS } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { Sparkles } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -117,6 +118,8 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
   const [hands, setHands] = useState<1 | 2>(1);
   const [stats, setStats] = useState<Record<string, number>>({});
   const [forging, setForging] = useState(false);
+  const [aiUsesLeft, setAiUsesLeft] = useState(3);
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   const canCrown = character.level >= 40 && !character.crown_item_created;
   const canSoulforge = character.level >= 42 && !character.soulforged_item_created;
@@ -159,12 +162,37 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
     }
   };
 
+  const handleAiName = async () => {
+    if (aiUsesLeft <= 0 || !slot || aiGenerating) return;
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('soulforge-name', {
+        body: {
+          slot,
+          character_name: character.name,
+          character_class: character.class,
+          character_race: character.race,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.name) setItemName(data.name);
+      setAiUsesLeft(prev => prev - 1);
+    } catch (e: any) {
+      toast({ title: 'AI Failed', description: e.message || 'Could not generate name.', variant: 'destructive' });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   const reset = () => {
     setMode(null);
     setItemName('');
     setSlot('');
     setHands(1);
     setStats({});
+    setAiUsesLeft(3);
+    setAiGenerating(false);
   };
 
   return (
@@ -239,14 +267,30 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
             {mode === 'soulforge' && (
               <div>
                 <label className="text-xs font-display text-muted-foreground">Item Name</label>
-                <Input
-                  value={itemName}
-                  onChange={e => setItemName(e.target.value)}
-                  placeholder="Name your creation..."
-                  maxLength={30}
-                  className="h-8 text-sm font-display mt-1"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">{itemName.length}/30</p>
+                <div className="flex gap-1.5 mt-1">
+                  <Input
+                    value={itemName}
+                    onChange={e => setItemName(e.target.value)}
+                    placeholder="Name your creation..."
+                    maxLength={30}
+                    className="h-8 text-sm font-display flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-xs gap-1 border-soulforged/30 hover:bg-soulforged/10 text-soulforged disabled:opacity-40"
+                    disabled={!slot || aiUsesLeft <= 0 || aiGenerating}
+                    onClick={handleAiName}
+                    title={!slot ? 'Pick a slot first' : aiUsesLeft <= 0 ? 'No AI tries left' : 'Generate a name with AI'}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {aiGenerating ? '...' : `AI (${aiUsesLeft})`}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {itemName.length}/30
+                  {!slot && aiUsesLeft > 0 && <span className="ml-1 text-soulforged/60">· Pick a slot to use AI naming</span>}
+                </p>
               </div>
             )}
 
