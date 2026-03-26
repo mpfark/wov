@@ -267,14 +267,30 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
             {mode === 'soulforge' && (
               <div>
                 <label className="text-xs font-display text-muted-foreground">Item Name</label>
-                <Input
-                  value={itemName}
-                  onChange={e => setItemName(e.target.value)}
-                  placeholder="Name your creation..."
-                  maxLength={30}
-                  className="h-8 text-sm font-display mt-1"
-                />
-                <p className="text-[10px] text-muted-foreground mt-0.5">{itemName.length}/30</p>
+                <div className="flex gap-1.5 mt-1">
+                  <Input
+                    value={itemName}
+                    onChange={e => setItemName(e.target.value)}
+                    placeholder="Name your creation..."
+                    maxLength={30}
+                    className="h-8 text-sm font-display flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-xs gap-1 border-soulforged/30 hover:bg-soulforged/10 text-soulforged disabled:opacity-40"
+                    disabled={!slot || aiUsesLeft <= 0 || aiGenerating}
+                    onClick={handleAiName}
+                    title={!slot ? 'Pick a slot first' : aiUsesLeft <= 0 ? 'No AI tries left' : 'Generate a name with AI'}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {aiGenerating ? '...' : `AI (${aiUsesLeft})`}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {itemName.length}/30
+                  {!slot && aiUsesLeft > 0 && <span className="ml-1 text-soulforged/60">· Pick a slot to use AI naming</span>}
+                </p>
               </div>
             )}
 
