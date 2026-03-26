@@ -162,12 +162,37 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
     }
   };
 
+  const handleAiName = async () => {
+    if (aiUsesLeft <= 0 || !slot || aiGenerating) return;
+    setAiGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('soulforge-name', {
+        body: {
+          slot,
+          character_name: character.name,
+          character_class: character.class,
+          character_race: character.race,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.name) setItemName(data.name);
+      setAiUsesLeft(prev => prev - 1);
+    } catch (e: any) {
+      toast({ title: 'AI Failed', description: e.message || 'Could not generate name.', variant: 'destructive' });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   const reset = () => {
     setMode(null);
     setItemName('');
     setSlot('');
     setHands(1);
     setStats({});
+    setAiUsesLeft(3);
+    setAiGenerating(false);
   };
 
   return (
