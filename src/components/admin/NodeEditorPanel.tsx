@@ -420,7 +420,7 @@ export default function NodeEditorPanel({
   const [npcs, setNpcs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [vendorItems, setVendorItems] = useState<VendorEntry[]>([]);
-  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; value: number }[]>([]);
+  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; value: number; level: number; slot: string | null }[]>([]);
   const [vendorForm, setVendorForm] = useState({ item_id: '', price: 10, stock: -1 });
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodeId);
   const [allAreas, setAllAreas] = useState<{ id: string; name: string; region_id: string; area_type: string; description: string }[]>([]);
@@ -479,7 +479,7 @@ export default function NodeEditorPanel({
   useEffect(() => {
     setActiveNodeId(nodeId);
     setSelectedRegionId(initialRegionId);
-    supabase.from('items').select('id, name, rarity, value').order('name').then(({ data }) => {
+    supabase.from('items').select('id, name, rarity, value, level, slot').order('name').then(({ data }) => {
       if (data) setAllItems(data);
     });
     // Load all unassigned creatures and NPCs for the picker
