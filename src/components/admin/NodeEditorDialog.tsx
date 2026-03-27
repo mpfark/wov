@@ -184,7 +184,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
 
   useEffect(() => {
     if (!open) return;
-    supabase.from('items').select('id, name, rarity, value').order('name').then(({ data }) => {
+    supabase.from('items').select('id, name, rarity, value, level, slot').order('name').then(({ data }) => {
       if (data) setAllItems(data);
     });
     if (nodeId) {

@@ -479,7 +479,7 @@ export default function NodeEditorPanel({
   useEffect(() => {
     setActiveNodeId(nodeId);
     setSelectedRegionId(initialRegionId);
-    supabase.from('items').select('id, name, rarity, value').order('name').then(({ data }) => {
+    supabase.from('items').select('id, name, rarity, value, level, slot').order('name').then(({ data }) => {
       if (data) setAllItems(data);
     });
     // Load all unassigned creatures and NPCs for the picker
