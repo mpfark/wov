@@ -150,8 +150,9 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
         body.hands = effectiveHands;
       }
       const { data, error } = await supabase.functions.invoke('soulforge-item', { body });
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      if (parsed?.error) throw new Error(parsed.error);
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
       const label = mode === 'crown' ? 'Crown' : itemName.trim();
       toast({ title: '⚒️ Soulforged!', description: `${label} has been forged into existence.` });
       onForged();
