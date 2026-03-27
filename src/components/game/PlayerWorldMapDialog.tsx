@@ -541,14 +541,15 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
                     >
-                      {/* Node circle */}
+                      {/* Node circle — colored by area type */}
                       <circle
                         cx={p.px}
                         cy={p.py}
                         r={NODE_R}
-                        fill={isCurrent ? 'hsl(var(--primary) / 0.25)' : 'hsl(var(--card))'}
-                        stroke={isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.5)' : 'hsl(var(--border))'}
-                        strokeWidth={isCurrent ? 2 : 1}
+                        fill={isCurrent ? 'hsl(var(--primary) / 0.25)' : getAreaFillColor(emoji)}
+                        stroke={isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.6)' : getAreaStrokeColor(emoji)}
+                        strokeWidth={isCurrent ? 2.5 : 1.5}
+                        opacity={isCurrent ? 1 : 0.85}
                         className="transition-colors"
                       />
 
