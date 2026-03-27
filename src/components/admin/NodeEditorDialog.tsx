@@ -179,7 +179,7 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
   const [editingCreatureId, setEditingCreatureId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [vendorItems, setVendorItems] = useState<VendorEntry[]>([]);
-  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; value: number }[]>([]);
+  const [allItems, setAllItems] = useState<{ id: string; name: string; rarity: string; value: number; level: number; slot: string | null }[]>([]);
   const [vendorForm, setVendorForm] = useState({ item_id: '', price: 10, stock: -1 });
 
   useEffect(() => {
