@@ -302,9 +302,10 @@ const HUMANOID_GOLD_RARITY_MULT: Record<string, number> = {
   regular: 1, rare: 1.5, boss: 3,
 };
 
-export function calculateHumanoidGold(level: number, rarity: string): { min: number; max: number; chance: number } {
+export function calculateHumanoidGold(level: number, rarity: string): { type: string; min: number; max: number; chance: number } {
   const mult = HUMANOID_GOLD_RARITY_MULT[rarity] || 1;
   return {
+    type: 'gold',
     min: Math.round(level * 1 * mult),
     max: Math.round(level * 3 * mult),
     chance: 1.0,
