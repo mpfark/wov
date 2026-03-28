@@ -46,7 +46,7 @@ const RARITY_COLORS: Record<string, string> = {
 const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
-  origin_type: null, origin_id: null,
+  origin_type: null, origin_id: null, weapon_tag: null,
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
