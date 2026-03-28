@@ -219,6 +219,19 @@ export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | nu
   return { hitBonus: 0, damageMult: 1 };
 }
 
+// ── Dual wield (off-hand bonus attack) ───────────────────────────
+
+/** Weapon tags that grant an off-hand bonus attack (shields do NOT) */
+export const OFFHAND_WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand'];
+
+/** Off-hand damage multiplier (30% of main-hand base damage) */
+export const OFFHAND_DAMAGE_MULT = 0.30;
+
+/** Check whether the off-hand item is a weapon (not a shield) and thus grants a bonus attack */
+export function isOffhandWeapon(offhandTag?: string | null): boolean {
+  return !!offhandTag && OFFHAND_WEAPON_TAGS.includes(offhandTag);
+}
+
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {

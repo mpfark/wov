@@ -31,8 +31,13 @@ Bard     → sword, wand
 ### Dual Wielding
 - Off-hand slot already exists and accepts equipment items
 - Currently only shields go there — we allow any 1H weapon in off_hand too
-- Off-hand weapons provide their stats passively (identical to how shields work now)
-- No code changes needed for equip/stat logic — it already sums all equipped item stats
+- Off-hand weapons provide their stats AND grant a **bonus attack** each tick:
+  - **30% damage** of main-hand base damage
+  - **Separate hit roll** — can miss independently
+  - **Can crit independently** using the same crit range
+  - No affinity bonus from off-hand weapon tag
+  - No buff multipliers (stealth, surge, etc.) — raw damage only
+  - Shields do NOT trigger the bonus attack
 - The `weapon_tag` on the off-hand weapon does NOT grant affinity bonus (only main hand counts)
 
 ### Code Changes

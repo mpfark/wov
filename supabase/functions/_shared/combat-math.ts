@@ -218,6 +218,15 @@ export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | nu
   return { hitBonus: 0, damageMult: 1 };
 }
 
+// ── Dual wield (off-hand bonus attack) ───────────────────────────
+
+export const OFFHAND_WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand'];
+export const OFFHAND_DAMAGE_MULT = 0.30;
+
+export function isOffhandWeapon(offhandTag?: string | null): boolean {
+  return !!offhandTag && OFFHAND_WEAPON_TAGS.includes(offhandTag);
+}
+
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {
