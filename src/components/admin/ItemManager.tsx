@@ -23,6 +23,7 @@ interface Item {
   level: number;
   origin_type: string | null;
   origin_id: string | null;
+  weapon_tag: string | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique'];
