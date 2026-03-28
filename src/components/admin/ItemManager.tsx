@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Save, X, Package, MapPin, Skull, ShoppingBag, Search, ArrowUpDown } from 'lucide-react';
-import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS } from '@/lib/game-data';
+import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 
 interface Item {
   id: string;
@@ -23,6 +23,7 @@ interface Item {
   level: number;
   origin_type: string | null;
   origin_id: string | null;
+  weapon_tag: string | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique'];
@@ -45,7 +46,7 @@ const RARITY_COLORS: Record<string, string> = {
 const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
-  origin_type: null, origin_id: null,
+  origin_type: null, origin_id: null, weapon_tag: null,
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
@@ -204,6 +205,7 @@ export default function ItemManager() {
       value: item.value, max_durability: item.max_durability, hands: item.hands,
       level: item.level ?? 1,
       origin_type: item.origin_type, origin_id: item.origin_id,
+      weapon_tag: (item as any).weapon_tag || null,
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -237,6 +239,7 @@ export default function ItemManager() {
       level: Math.max(1, Math.min(100, form.level)),
       origin_type: form.rarity === 'unique' ? form.origin_type : null,
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
+      weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
     };
 
     let savedId = selectedId;
@@ -433,6 +436,7 @@ export default function ItemManager() {
                     <span className="text-[10px] text-primary shrink-0">{item.value}g</span>
                     <span className="text-[10px] text-muted-foreground shrink-0">Dur: {item.max_durability}</span>
                     {item.hands && <span className="text-[10px] text-muted-foreground shrink-0">{item.hands}H</span>}
+                    {item.weapon_tag && <span className="text-[10px] text-accent-foreground capitalize px-1 py-0.5 rounded bg-accent/30 border border-accent/30 shrink-0">{item.weapon_tag}</span>}
                     {Object.entries(item.stats || {}).map(([k, v]) => (
                       <span key={k} className={`text-[10px] shrink-0 ${k === 'hp_regen' ? 'text-elvish' : 'text-chart-2'}`}>
                         {k === 'hp_regen' ? `+${v} Regen` : `+${v} ${k.toUpperCase()}`}
@@ -535,6 +539,21 @@ export default function ItemManager() {
                     <SelectContent className="bg-popover border-border z-50">
                       <SelectItem value="1" className="text-xs">One-Handed</SelectItem>
                       <SelectItem value="2" className="text-xs">Two-Handed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand') && (
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Weapon Tag</label>
+                  <Select value={form.weapon_tag || 'none'} onValueChange={v => setForm(f => ({ ...f, weapon_tag: v === 'none' ? null : v }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="No tag" /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50">
+                      <SelectItem value="none" className="text-xs">No tag</SelectItem>
+                      {WEAPON_TAGS.map(t => (
+                        <SelectItem key={t} value={t} className="text-xs capitalize">{WEAPON_TAG_LABELS[t]}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

@@ -134,6 +134,7 @@ GENERATION RULES:
 - Even for budget=1 items, split across 2 stats like {"str":1,"dex":1} (going slightly over budget is fine for variety).
 - Stat value caps (equipment only): str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
 - drop_chance: 0.1–0.5 (uncommon items lower, consumables 0.3–0.5)
+- For main_hand and off_hand items, set weapon_tag to one of: sword, axe, mace, dagger, bow, staff, wand, shield. Choose based on the item's name/concept. For non-weapon slots, omit weapon_tag.
 - max_durability: always 100 (fixed for all items)
 - Gold value: DO NOT set this, it will be auto-calculated.
 - Do NOT generate items with names from this list: ${existingItemNames || "none"}
@@ -184,6 +185,7 @@ Call the generate_items tool with the structured output.`;
                         },
                         level: { type: "integer" },
                         hands: { type: "integer", description: "1 or 2 for main_hand weapons, null otherwise" },
+                        weapon_tag: { type: "string", enum: ["sword", "axe", "mace", "dagger", "bow", "staff", "wand", "shield"], description: "Weapon type tag for main_hand/off_hand items. null for non-weapon slots." },
                         stats: {
                           type: "object",
                           description: "Must not be empty. Stat bonuses using valid keys: str, dex, con, int, wis, cha, ac, hp, hp_regen",
@@ -302,6 +304,23 @@ Call the generate_items tool with the structured output.`;
         if (Object.keys(stats).length === 0) stats = { hp: 3 };
       }
 
+      const isWeaponSlot = item.slot === 'main_hand' || item.slot === 'off_hand';
+      const VALID_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand', 'shield'];
+      let weaponTag = isWeaponSlot && item.weapon_tag && VALID_TAGS.includes(item.weapon_tag) ? item.weapon_tag : null;
+      // Auto-infer weapon_tag from name if AI didn't set it
+      if (isWeaponSlot && !weaponTag) {
+        const ln = cleanName.toLowerCase();
+        if (ln.includes('sword') || ln.includes('blade') || ln.includes('saber') || ln.includes('rapier')) weaponTag = 'sword';
+        else if (ln.includes('axe') || ln.includes('hatchet') || ln.includes('cleaver')) weaponTag = 'axe';
+        else if (ln.includes('mace') || ln.includes('hammer') || ln.includes('flail') || ln.includes('maul')) weaponTag = 'mace';
+        else if (ln.includes('dagger') || ln.includes('knife') || ln.includes('shiv') || ln.includes('stiletto')) weaponTag = 'dagger';
+        else if (ln.includes('bow') || ln.includes('longbow') || ln.includes('shortbow')) weaponTag = 'bow';
+        else if (ln.includes('staff') || ln.includes('stave') || ln.includes('rod')) weaponTag = 'staff';
+        else if (ln.includes('wand') || ln.includes('scepter') || ln.includes('focus')) weaponTag = 'wand';
+        else if (ln.includes('shield') || ln.includes('buckler') || ln.includes('bulwark')) weaponTag = 'shield';
+        else weaponTag = 'sword'; // default for weapons
+      }
+
       return {
         ...item,
         name: cleanName,
@@ -309,6 +328,7 @@ Call the generate_items tool with the structured output.`;
         stats,
         slot: item.item_type === "consumable" ? null : (item.slot || null),
         value: autoGold,
+        weapon_tag: weaponTag,
       };
     });
 

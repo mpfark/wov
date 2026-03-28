@@ -521,6 +521,7 @@ export type Database = {
           slot: Database["public"]["Enums"]["item_slot"] | null
           stats: Json
           value: number
+          weapon_tag: string | null
         }
         Insert: {
           created_at?: string
@@ -538,6 +539,7 @@ export type Database = {
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
           value?: number
+          weapon_tag?: string | null
         }
         Update: {
           created_at?: string
@@ -555,6 +557,7 @@ export type Database = {
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
           value?: number
+          weapon_tag?: string | null
         }
         Relationships: []
       }

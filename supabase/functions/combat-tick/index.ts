@@ -22,6 +22,7 @@ import {
   CLASS_COMBAT_PROFILES,
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
+  getWeaponAffinityBonus as weaponAffinity,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
@@ -124,19 +125,25 @@ Deno.serve(async (req) => {
     const charIds = members.map(m => m.id);
     const { data: allEquip } = await db
       .from('character_inventory')
-      .select('character_id, item:items(stats)')
+      .select('character_id, equipped_slot, item:items(stats, weapon_tag)')
       .in('character_id', charIds)
       .not('equipped_slot', 'is', null);
 
     const eq: Record<string, Record<string, number>> = {};
+    const mainHandTag: Record<string, string | null> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
+      let mhTag: string | null = null;
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
           b[s] = (b[s] || 0) + (v as number);
         }
+        if (e.equipped_slot === 'main_hand' && (e.item as any)?.weapon_tag) {
+          mhTag = (e.item as any).weapon_tag;
+        }
       }
       eq[cid] = b;
+      mainHandTag[cid] = mhTag;
     }
 
     // ── Fetch alive creatures at node ────────────────────────────
@@ -391,6 +398,7 @@ Deno.serve(async (req) => {
       const isDmgBuff = !!mb.damage_buff; // Arcane Surge
       const hasFocusStrike = !!mb.focus_strike;
       const hasDisengage = !!mb.disengage_next_hit;
+      const affinity = weaponAffinity(c.class, mainHandTag[m.id]);
 
       for (let a = 0; a < 1; a++) {
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
@@ -403,8 +411,9 @@ Deno.serve(async (req) => {
         }
 
         const roll = rollD20();
-        const total = roll + sMod + ihb;
+        const total = roll + sMod + ihb + affinity.hitBonus;
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
+        const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
 
         if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
           let raw = rollDmg(atk.min, atk.max) + sMod;
@@ -412,6 +421,7 @@ Deno.serve(async (req) => {
 
           // Apply damage multipliers
           let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+          if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
           if (isStealth) {
             dmg = dmg * 2;
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
@@ -435,7 +445,7 @@ Deno.serve(async (req) => {
 
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
+            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
           });
 
           // Poison proc (40% chance if poison buff active)
@@ -453,7 +463,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel} = ${total} vs AC ${creatureAc}.`,
+            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
           });
         }
       }

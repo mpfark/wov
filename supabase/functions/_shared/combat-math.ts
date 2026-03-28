@@ -200,17 +200,35 @@ export const CLASS_LABELS: Record<string, string> = {
   rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
 };
 
+// ── Weapon affinity ──────────────────────────────────────────────
+
+export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
+  warrior: ['sword', 'axe', 'mace'],
+  ranger:  ['bow', 'dagger'],
+  rogue:   ['dagger', 'sword'],
+  wizard:  ['staff', 'wand'],
+  healer:  ['mace', 'staff'],
+  bard:    ['sword', 'wand'],
+};
+
+export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | null): { hitBonus: number; damageMult: number } {
+  if (!weaponTag) return { hitBonus: 0, damageMult: 1 };
+  const tags = CLASS_WEAPON_AFFINITY[classKey];
+  if (tags && tags.includes(weaponTag)) return { hitBonus: 1, damageMult: 1.10 };
+  return { hitBonus: 0, damageMult: 1 };
+}
+
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {
-  attackerStat: number;     // effective stat value (base + equipment)
-  int: number;              // effective INT (base + equipment)
-  dex: number;              // effective DEX (base + equipment)
-  str: number;              // effective STR (base + equipment)
+  attackerStat: number;
+  int: number;
+  dex: number;
+  str: number;
   level: number;
   classKey: string;
-  /** Extra crit range bonus from buffs (Eagle Eye) */
   critBuffBonus?: number;
+  weaponTag?: string | null;
 }
 
 export interface AttackResult {
@@ -236,9 +254,10 @@ export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunder
   const mileCrit = ctx.level >= 28 ? 1 : 0;
   const effCrit = profile.critRange - dcb - mileCrit - (ctx.critBuffBonus || 0);
   const sdf = getStrDamageFloor(ctx.str);
+  const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
 
   const roll = rollD20();
-  const totalAtk = roll + sMod + ihb;
+  const totalAtk = roll + sMod + ihb + affinity.hitBonus;
   const effectiveAC = Math.max(creatureAC - sunderReduction, 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);
@@ -247,7 +266,8 @@ export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunder
   let baseDamage = 0;
   if (hit) {
     const rawDmg = rollDamage(profile.diceMin, profile.diceMax) + sMod;
-    baseDamage = isCrit ? Math.max(Math.floor(rawDmg * 1.5), 1) : Math.max(rawDmg, 1 + sdf);
+    const preBuff = isCrit ? Math.max(Math.floor(rawDmg * 1.5), 1) : Math.max(rawDmg, 1 + sdf);
+    baseDamage = Math.max(Math.floor(preBuff * affinity.damageMult), 1);
   }
 
   return { hit, isCrit, roll, totalAtk, effectiveCreatureAC: effectiveAC, baseDamage, intHitBonus: ihb, strFloor: sdf };

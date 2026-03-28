@@ -48,6 +48,22 @@ export const CLASS_LABELS: Record<string, string> = {
   rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
 };
 
+export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
+  warrior: ['sword', 'axe', 'mace'],
+  ranger:  ['bow', 'dagger'],
+  rogue:   ['dagger', 'sword'],
+  wizard:  ['staff', 'wand'],
+  healer:  ['mace', 'staff'],
+  bard:    ['sword', 'wand'],
+};
+
+export const WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand', 'shield'] as const;
+
+export const WEAPON_TAG_LABELS: Record<string, string> = {
+  sword: 'Sword', axe: 'Axe', mace: 'Mace', dagger: 'Dagger',
+  bow: 'Bow', staff: 'Staff', wand: 'Wand', shield: 'Shield',
+};
+
 export const RACE_DESCRIPTIONS: Record<string, string> = {
   human: 'Versatile and adaptable, the race of Men brings balanced abilities to any endeavor.',
   elf: 'Graceful and wise, the Elder Folk excel in dexterity and have keen minds.',

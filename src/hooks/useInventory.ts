@@ -20,6 +20,7 @@ export interface InventoryItem {
     max_durability: number;
     hands: number | null;
     is_soulbound?: boolean;
+    weapon_tag?: string | null;
   };
 }
 
