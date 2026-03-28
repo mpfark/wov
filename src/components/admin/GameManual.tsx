@@ -12,6 +12,7 @@ import {
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
   XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
   CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate, getCarryCapacity,
+  CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
