@@ -477,6 +477,55 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Off-hand bonus attack (dual wield) ──────────────────────
+    if (!isDotOnly) for (const m of members) {
+      if (!isOffhandWeapon(offHandTag[m.id])) continue; // shield or empty = no bonus attack
+      const c = m.c;
+      const eb = eq[m.id] || {};
+      const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
+      const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
+      const sMod2 = sm(effStat);
+      const ihb2 = intHitBonus((c.int || 10) + (eb.int || 0));
+      const dcb2 = dexCritBonus((c.dex || 10) + (eb.dex || 0));
+      const mileCrit2 = c.level >= 28 ? 1 : 0;
+      const mb2 = buffs[m.id] || {};
+      const critBuff2 = mb2.crit_buff?.bonus || 0;
+      const effCrit2 = atk.crit - dcb2 - mileCrit2 - critBuff2;
+
+      const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+      if (!target) continue;
+
+      let creatureAc2 = target.ac;
+      if (mb2.sunder_target === target.id && mb2.sunder_reduction) {
+        creatureAc2 = Math.max(creatureAc2 - mb2.sunder_reduction, 0);
+      }
+
+      const roll2 = rollD20();
+      const total2 = roll2 + sMod2 + ihb2;
+
+      if (roll2 >= effCrit2 || (roll2 !== 1 && total2 >= creatureAc2)) {
+        const raw2 = rollDmg(atk.min, atk.max) + sMod2;
+        const isCrit2 = roll2 >= effCrit2;
+        const preBuff2 = isCrit2 ? Math.max(raw2 * 2, 1) : Math.max(raw2, 1);
+        const dmg2 = Math.max(Math.floor(preBuff2 * OFFHAND_DAMAGE_MULT), 1);
+
+        cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
+        events.push({
+          type: 'offhand_hit',
+          message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (30%).`,
+        });
+
+        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+        }
+      } else {
+        events.push({
+          type: 'offhand_miss',
+          message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2}.`,
+        });
+      }
+    }
+
     // ── DoT ticking (Bleed, Poison, Ignite) ──────────────────────
 
     for (const [charId, dotState] of Object.entries(dots)) {
