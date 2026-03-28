@@ -239,6 +239,7 @@ export default function ItemManager() {
       level: Math.max(1, Math.min(100, form.level)),
       origin_type: form.rarity === 'unique' ? form.origin_type : null,
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
+      weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
     };
 
     let savedId = selectedId;
