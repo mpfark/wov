@@ -130,14 +130,20 @@ Deno.serve(async (req) => {
       .not('equipped_slot', 'is', null);
 
     const eq: Record<string, Record<string, number>> = {};
+    const mainHandTag: Record<string, string | null> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
+      let mhTag: string | null = null;
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
           b[s] = (b[s] || 0) + (v as number);
         }
+        if (e.equipped_slot === 'main_hand' && (e.item as any)?.weapon_tag) {
+          mhTag = (e.item as any).weapon_tag;
+        }
       }
       eq[cid] = b;
+      mainHandTag[cid] = mhTag;
     }
 
     // ── Fetch alive creatures at node ────────────────────────────
