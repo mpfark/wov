@@ -25,6 +25,9 @@ import {
   getWeaponAffinityBonus as weaponAffinity,
   isOffhandWeapon,
   OFFHAND_DAMAGE_MULT,
+  SHIELD_AC_BONUS,
+  SHIELD_AWARENESS_BONUS,
+  isShield,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
