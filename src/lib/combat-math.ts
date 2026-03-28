@@ -232,6 +232,15 @@ export function isOffhandWeapon(offhandTag?: string | null): boolean {
   return !!offhandTag && OFFHAND_WEAPON_TAGS.includes(offhandTag);
 }
 
+// ── Shield defensive bonuses ─────────────────────────────────────
+
+export const SHIELD_AC_BONUS = 1;
+export const SHIELD_AWARENESS_BONUS = 0.05;
+
+export function isShield(tag?: string | null): boolean {
+  return tag === 'shield';
+}
+
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {

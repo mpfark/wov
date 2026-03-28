@@ -25,6 +25,9 @@ import {
   getWeaponAffinityBonus as weaponAffinity,
   isOffhandWeapon,
   OFFHAND_DAMAGE_MULT,
+  SHIELD_AC_BONUS,
+  SHIELD_AWARENESS_BONUS,
+  isShield,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
@@ -593,7 +596,8 @@ Deno.serve(async (req) => {
       const acBuffBonus = mb.ac_buff || 0;
       // Recalculate AC from class + effective DEX (base + equipment) to avoid stale DB ac column
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
-      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus;
+      const shieldAcBonus = isShield(offHandTag[targetId]) ? SHIELD_AC_BONUS : 0;
+      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus + shieldAcBonus;
       const d20 = rollD20();
       const roll = d20 + cStr;
 
@@ -628,8 +632,9 @@ Deno.serve(async (req) => {
           events.push({ type: 'ac_overflow', message: `🛡️ ${targetName}'s armor absorbs the blow! AC ${tAC} vs ${roll} — ${pctReduced}% damage reduced (${preDmg} → ${dmg}).` });
         }
 
-        // WIS awareness
-        const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0));
+        // WIS awareness + shield bonus
+        const shieldAwarenessBonus = isShield(offHandTag[targetId]) ? SHIELD_AWARENESS_BONUS : 0;
+        const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0)) + shieldAwarenessBonus;
         if (wis > 0 && Math.random() < wis) {
           dmg = Math.max(Math.floor(dmg * 0.75), 1);
           events.push({ type: 'wis_awareness', message: `🧘 ${targetName}'s awareness softens ${creature.name}'s blow! (${dmg} damage)` });

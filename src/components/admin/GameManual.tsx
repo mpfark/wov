@@ -941,6 +941,14 @@ export default function GameManual() {
                   <li>No stealth/buff multipliers — raw damage only</li>
                   <li>Shields in the off-hand do <em>not</em> trigger a bonus attack</li>
                 </ul>
+
+                <p className="font-display text-primary mt-2">Shield Defensive Bonus</p>
+                <p>To compensate for losing the off-hand bonus attack, equipping a <strong className="text-foreground">shield</strong> in the off-hand grants unique defensive bonuses:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li><strong className="text-primary">+1 AC</strong> — flat bonus stacking with DEX-based AC and equipment AC</li>
+                  <li><strong className="text-primary">+5% Awareness</strong> — additive bonus stacking with WIS-based awareness (chance to reduce incoming damage by 25%)</li>
+                </ul>
+                <p className="text-muted-foreground/70 italic mt-1">Trade-off: dual-wield weapons add ~2–4 DPS via bonus attacks; a shield sacrifices that offense for consistent damage mitigation.</p>
               </div>
             </AccordionContent>
           </AccordionItem>
