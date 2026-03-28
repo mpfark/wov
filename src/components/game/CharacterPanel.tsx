@@ -341,6 +341,8 @@ export default function CharacterPanel({
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
   const mainHandTag = mainHandItem?.item?.weapon_tag as string | undefined;
   const isProficient = !!(mainHandTag && CLASS_WEAPON_AFFINITY[character.class]?.includes(mainHandTag));
+  const offHandItem = getEquippedInSlot('off_hand');
+  const offHandIsShield = offHandItem?.item?.weapon_tag === 'shield';
 
   return (
     <TooltipProvider delayDuration={200}>
