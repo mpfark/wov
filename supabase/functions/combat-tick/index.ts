@@ -421,6 +421,7 @@ Deno.serve(async (req) => {
 
           // Apply damage multipliers
           let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+          if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
           if (isStealth) {
             dmg = dmg * 2;
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
