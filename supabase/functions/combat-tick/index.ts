@@ -22,6 +22,7 @@ import {
   CLASS_COMBAT_PROFILES,
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
+  getWeaponAffinityBonus as weaponAffinity,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
