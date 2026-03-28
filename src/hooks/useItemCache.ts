@@ -27,7 +27,7 @@ async function loadCache() {
   cachePromise = (async () => {
     const { data } = await supabase
       .from('items')
-      .select('id, name, description, item_type, rarity, slot, stats, value, max_durability, hands, level');
+      .select('id, name, description, item_type, rarity, slot, stats, value, max_durability, hands, level, weapon_tag');
     if (data) {
       const newCache = new Map<string, CachedItem>();
       for (const item of data) {
