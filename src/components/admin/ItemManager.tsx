@@ -543,6 +543,21 @@ export default function ItemManager() {
                 </div>
               )}
 
+              {form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand') && (
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Weapon Tag</label>
+                  <Select value={form.weapon_tag || 'none'} onValueChange={v => setForm(f => ({ ...f, weapon_tag: v === 'none' ? null : v }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="No tag" /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50">
+                      <SelectItem value="none" className="text-xs">No tag</SelectItem>
+                      {WEAPON_TAGS.map(t => (
+                        <SelectItem key={t} value={t} className="text-xs capitalize">{WEAPON_TAG_LABELS[t]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-muted-foreground">Gold Value</label>

@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     const charIds = members.map(m => m.id);
     const { data: allEquip } = await db
       .from('character_inventory')
-      .select('character_id, item:items(stats)')
+      .select('character_id, equipped_slot, item:items(stats, weapon_tag)')
       .in('character_id', charIds)
       .not('equipped_slot', 'is', null);
 
