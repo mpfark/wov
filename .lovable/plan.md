@@ -38,7 +38,16 @@ Bard     → sword, wand
   - No affinity bonus from off-hand weapon tag
   - No buff multipliers (stealth, surge, etc.) — raw damage only
   - Shields do NOT trigger the bonus attack
+  - Shields instead grant **+1 AC** and **+5% Awareness** (additive with WIS-based awareness)
 - The `weapon_tag` on the off-hand weapon does NOT grant affinity bonus (only main hand counts)
+
+### Shield Defensive Bonus
+- When a shield (`weapon_tag = 'shield'`) is equipped in the off-hand:
+  - **+1 flat AC** (stacks with DEX-based AC, equipment AC, and buff AC)
+  - **+5% Awareness** (additive with WIS-based awareness, chance to reduce incoming damage by 25%)
+- Trade-off: dual-wield weapons add ~2–4 DPS via the 30% bonus attack; shields sacrifice offense for consistent damage mitigation
+- Constants: `SHIELD_AC_BONUS = 1`, `SHIELD_AWARENESS_BONUS = 0.05`
+- Helper: `isShield(tag)` — returns true when `tag === 'shield'`
 
 ### Code Changes
 
