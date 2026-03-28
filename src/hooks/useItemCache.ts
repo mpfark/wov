@@ -13,6 +13,7 @@ export interface CachedItem {
   max_durability: number;
   hands: number | null;
   level: number;
+  weapon_tag?: string | null;
 }
 
 // Module-level singleton cache shared across all hook instances
