@@ -1,74 +1,75 @@
 
 
-## Pool-Based Blacksmith Forge System
+## Weapon Tags & Class Affinity System
 
 ### Overview
-Replace the per-forge AI call with a pre-generated item pool. Admins use the existing Item Forge to batch-create items tagged with `origin_type = 'forge_pool'`. When a player forges, the edge function randomly picks a level-appropriate item from the pool, clones it into the `items` table as their personal copy, and adds it to inventory.
+Add a `weapon_tag` field to items (e.g. "sword", "dagger", "axe", "staff", "bow", "mace", "wand") and a class-weapon affinity mapping. When a character equips a weapon matching their class affinity, they receive **+1 hit** and **+10% damage**.
+
+Dual wielding works as a **passive stat stick** — off-hand weapons simply contribute their stats like shields do, no extra attack.
 
 ### Database Changes
 
-**New table: `forge_pool`**
-Stores pre-generated template items available for the blacksmith to draw from. Separated from `items` to keep pool management clean.
-
+**Migration: Add `weapon_tag` column to `items` table**
 ```sql
-CREATE TABLE public.forge_pool (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  description text NOT NULL DEFAULT '',
-  slot item_slot NOT NULL,
-  rarity item_rarity NOT NULL DEFAULT 'common',
-  level integer NOT NULL DEFAULT 1,
-  hands smallint,
-  stats jsonb NOT NULL DEFAULT '{}',
-  value integer NOT NULL DEFAULT 0,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+ALTER TABLE public.items ADD COLUMN weapon_tag text DEFAULT NULL;
+```
+No new enum needed — free-text allows easy expansion. Only relevant for `main_hand`/`off_hand` slot items.
 
-ALTER TABLE public.forge_pool ENABLE ROW LEVEL SECURITY;
+### Weapon Tags
+`sword`, `axe`, `mace`, `dagger`, `bow`, `staff`, `wand`, `shield`
 
-CREATE POLICY "Anyone can view forge pool" ON public.forge_pool FOR SELECT USING (true);
-CREATE POLICY "Admins can manage forge pool" ON public.forge_pool FOR ALL USING (is_steward_or_overlord());
+### Class Affinity Mapping (code constant)
+```text
+Warrior  → sword, axe, mace
+Ranger   → bow, dagger
+Rogue    → dagger, sword
+Wizard   → staff, wand
+Healer   → mace, staff
+Bard     → sword, wand
 ```
 
-### Edge Function: `blacksmith-forge` (rewrite)
+### Dual Wielding
+- Off-hand slot already exists and accepts equipment items
+- Currently only shields go there — we allow any 1H weapon in off_hand too
+- Off-hand weapons provide their stats passively (identical to how shields work now)
+- No code changes needed for equip/stat logic — it already sums all equipped item stats
+- The `weapon_tag` on the off-hand weapon does NOT grant affinity bonus (only main hand counts)
 
-Replace AI generation with pool lookup:
-1. Authenticate user, verify ownership, verify at blacksmith node
-2. Deduct salvage & gold costs (same formula: salvage = 5 + level*2, gold = level*5)
-3. Roll rarity (65% common, 35% uncommon)
-4. Query `forge_pool` for matching items: same slot, same rarity, level within ±2 of character level
-5. Pick one at random; if pool is empty for that combo, fall back to ±5 level range, then error if still empty
-6. Clone the pool item into `items` table with `origin_type = 'blacksmith_forge'`
-7. Add to `character_inventory`, return result
+### Code Changes
 
-This eliminates AI latency, API costs, and rate-limit issues entirely.
+1. **`src/lib/combat-math.ts`** + **`supabase/functions/_shared/combat-math.ts`** (mirrored)
+   - Add `CLASS_WEAPON_AFFINITY` constant mapping class → allowed weapon tags
+   - Add `getWeaponAffinityBonus(classKey, weaponTag)` → `{ hitBonus: number, damageMult: number }`
+   - Update `AttackContext` interface to include optional `weaponTag?: string`
+   - In `resolveAttackRoll`: add affinity hit bonus to `totalAtk`, apply damage multiplier to `baseDamage`
 
-### Admin: Item Forge Integration
+2. **`src/lib/game-data.ts`**
+   - Add `CLASS_WEAPON_AFFINITY` and `WEAPON_TAG_LABELS` constants for UI display
 
-Update `ItemForgePanel.tsx` to add a third forge mode: `'forge_pool'` alongside existing `'single'` and `'loot_table'` modes.
+3. **`src/components/admin/ItemManager.tsx`**
+   - Add `weapon_tag` dropdown (only visible when slot is `main_hand` or `off_hand`)
+   - Include `weapon_tag` in save/load queries
 
-When mode is `forge_pool`:
-- The "Apply" action inserts generated items into `forge_pool` table instead of `items`
-- No loot table name needed
-- Show current pool stock counts by level/slot in the right panel
+4. **`supabase/functions/ai-item-forge/index.ts`**
+   - Include `weapon_tag` in AI prompt for weapon generation
+   - Auto-assign tag based on generated item name/description
 
-### Admin: Pool Stock Overview
+5. **`src/hooks/useInventory.ts`** — no changes needed (off-hand equip already works)
 
-Add a small stock summary in the Item Forge panel when `forge_pool` mode is selected, showing counts grouped by level range and slot so admins know where gaps exist.
+6. **`src/components/game/CharacterPanel.tsx`**
+   - Show weapon affinity indicator (small badge) when main-hand weapon matches class
 
-### Client: `BlacksmithPanel.tsx`
+7. **`supabase/functions/combat-tick/index.ts`**
+   - Pass `weaponTag` from equipped main-hand item into attack context
 
-Minimal changes:
-- Same UI, same `supabase.functions.invoke('blacksmith-forge', ...)` call
-- Remove the "forging..." delay expectation text if any (it'll be near-instant now)
-- No other changes needed since the API contract stays the same
+8. **`src/hooks/useActions.ts`** / **`src/pages/GamePage.tsx`**
+   - Pass main-hand `weapon_tag` into attack context for solo combat
 
-### Files to Create/Modify
+### Affinity Bonus Values
+- **+1 hit bonus** (flat, stacks with INT hit bonus)
+- **×1.10 damage multiplier** (10% boost, applied after base damage, before other buffs)
 
-| File | Action |
-|------|--------|
-| Migration SQL | Create `forge_pool` table |
-| `supabase/functions/blacksmith-forge/index.ts` | Rewrite: pool lookup instead of AI |
-| `src/components/admin/ItemForgePanel.tsx` | Add `forge_pool` mode + stock view |
-| `src/integrations/supabase/types.ts` | Auto-updated after migration |
+### Display
+- Character panel shows a small "Proficient" badge next to main-hand weapon when affinity matches
+- Game Manual updated to document the system
 
