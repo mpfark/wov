@@ -596,7 +596,8 @@ Deno.serve(async (req) => {
       const acBuffBonus = mb.ac_buff || 0;
       // Recalculate AC from class + effective DEX (base + equipment) to avoid stale DB ac column
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
-      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus;
+      const shieldAcBonus = isShield(offHandTag[targetId]) ? SHIELD_AC_BONUS : 0;
+      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus + shieldAcBonus;
       const d20 = rollD20();
       const roll = d20 + cStr;
 
