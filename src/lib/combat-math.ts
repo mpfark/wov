@@ -257,9 +257,10 @@ export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunder
   const mileCrit = ctx.level >= 28 ? 1 : 0;
   const effCrit = profile.critRange - dcb - mileCrit - (ctx.critBuffBonus || 0);
   const sdf = getStrDamageFloor(ctx.str);
+  const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
 
   const roll = rollD20();
-  const totalAtk = roll + sMod + ihb;
+  const totalAtk = roll + sMod + ihb + affinity.hitBonus;
   const effectiveAC = Math.max(creatureAC - sunderReduction, 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);
@@ -268,7 +269,8 @@ export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunder
   let baseDamage = 0;
   if (hit) {
     const rawDmg = rollDamage(profile.diceMin, profile.diceMax) + sMod;
-    baseDamage = isCrit ? Math.max(Math.floor(rawDmg * 1.5), 1) : Math.max(rawDmg, 1 + sdf);
+    const preBuff = isCrit ? Math.max(Math.floor(rawDmg * 1.5), 1) : Math.max(rawDmg, 1 + sdf);
+    baseDamage = Math.max(Math.floor(preBuff * affinity.damageMult), 1);
   }
 
   return { hit, isCrit, roll, totalAtk, effectiveCreatureAC: effectiveAC, baseDamage, intHitBonus: ihb, strFloor: sdf };
