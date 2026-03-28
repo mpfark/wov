@@ -230,6 +230,8 @@ export interface AttackContext {
   classKey: string;
   /** Extra crit range bonus from buffs (Eagle Eye) */
   critBuffBonus?: number;
+  /** Weapon tag of main-hand weapon for affinity bonuses */
+  weaponTag?: string | null;
 }
 
 export interface AttackResult {
