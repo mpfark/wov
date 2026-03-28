@@ -932,7 +932,15 @@ export default function GameManual() {
 
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p className="font-display text-primary">Dual Wielding</p>
-                <p>One-handed weapons can be equipped in the <strong className="text-foreground">off-hand</strong> slot alongside shields. Off-hand weapons function as <strong className="text-foreground">passive stat sticks</strong> — they contribute their stats but grant <em>no</em> extra attacks and <em>no</em> affinity bonus. Only the main-hand weapon's tag is checked for proficiency.</p>
+                <p>One-handed weapons can be equipped in the <strong className="text-foreground">off-hand</strong> slot alongside shields. Off-hand weapons contribute their stats <strong className="text-foreground">and</strong> grant a <strong className="text-primary">bonus attack</strong> each combat tick:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li><strong className="text-primary">30% damage</strong> of main-hand base damage</li>
+                  <li><strong className="text-foreground">Separate hit roll</strong> — can miss independently of main-hand</li>
+                  <li><strong className="text-foreground">Can crit independently</strong> using the same crit range</li>
+                  <li>No affinity bonus from the off-hand weapon tag</li>
+                  <li>No stealth/buff multipliers — raw damage only</li>
+                  <li>Shields in the off-hand do <em>not</em> trigger a bonus attack</li>
+                </ul>
               </div>
             </AccordionContent>
           </AccordionItem>
