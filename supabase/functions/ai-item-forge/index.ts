@@ -184,6 +184,7 @@ Call the generate_items tool with the structured output.`;
                         },
                         level: { type: "integer" },
                         hands: { type: "integer", description: "1 or 2 for main_hand weapons, null otherwise" },
+                        weapon_tag: { type: "string", enum: ["sword", "axe", "mace", "dagger", "bow", "staff", "wand", "shield"], description: "Weapon type tag for main_hand/off_hand items. null for non-weapon slots." },
                         stats: {
                           type: "object",
                           description: "Must not be empty. Stat bonuses using valid keys: str, dex, con, int, wis, cha, ac, hp, hp_regen",
