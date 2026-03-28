@@ -23,6 +23,8 @@ import {
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
   getWeaponAffinityBonus as weaponAffinity,
+  isOffhandWeapon,
+  OFFHAND_DAMAGE_MULT,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
