@@ -436,6 +436,7 @@ export default function ItemManager() {
                     <span className="text-[10px] text-primary shrink-0">{item.value}g</span>
                     <span className="text-[10px] text-muted-foreground shrink-0">Dur: {item.max_durability}</span>
                     {item.hands && <span className="text-[10px] text-muted-foreground shrink-0">{item.hands}H</span>}
+                    {item.weapon_tag && <span className="text-[10px] text-accent-foreground capitalize px-1 py-0.5 rounded bg-accent/30 border border-accent/30 shrink-0">{item.weapon_tag}</span>}
                     {Object.entries(item.stats || {}).map(([k, v]) => (
                       <span key={k} className={`text-[10px] shrink-0 ${k === 'hp_regen' ? 'text-elvish' : 'text-chart-2'}`}>
                         {k === 'hp_regen' ? `+${v} Regen` : `+${v} ${k.toUpperCase()}`}
