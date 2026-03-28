@@ -200,6 +200,25 @@ export const CLASS_LABELS: Record<string, string> = {
   rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
 };
 
+// ── Weapon affinity ──────────────────────────────────────────────
+
+export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
+  warrior: ['sword', 'axe', 'mace'],
+  ranger:  ['bow', 'dagger'],
+  rogue:   ['dagger', 'sword'],
+  wizard:  ['staff', 'wand'],
+  healer:  ['mace', 'staff'],
+  bard:    ['sword', 'wand'],
+};
+
+/** Returns hit bonus and damage multiplier when class matches weapon tag */
+export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | null): { hitBonus: number; damageMult: number } {
+  if (!weaponTag) return { hitBonus: 0, damageMult: 1 };
+  const tags = CLASS_WEAPON_AFFINITY[classKey];
+  if (tags && tags.includes(weaponTag)) return { hitBonus: 1, damageMult: 1.10 };
+  return { hitBonus: 0, damageMult: 1 };
+}
+
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {
