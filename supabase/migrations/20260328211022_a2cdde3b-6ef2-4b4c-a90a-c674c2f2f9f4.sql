@@ -1,0 +1,1 @@
+ALTER TABLE public.items ADD COLUMN weapon_tag text DEFAULT NULL;
