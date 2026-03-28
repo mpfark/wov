@@ -134,6 +134,7 @@ GENERATION RULES:
 - Even for budget=1 items, split across 2 stats like {"str":1,"dex":1} (going slightly over budget is fine for variety).
 - Stat value caps (equipment only): str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
 - drop_chance: 0.1–0.5 (uncommon items lower, consumables 0.3–0.5)
+- For main_hand and off_hand items, set weapon_tag to one of: sword, axe, mace, dagger, bow, staff, wand, shield. Choose based on the item's name/concept. For non-weapon slots, omit weapon_tag.
 - max_durability: always 100 (fixed for all items)
 - Gold value: DO NOT set this, it will be auto-calculated.
 - Do NOT generate items with names from this list: ${existingItemNames || "none"}
