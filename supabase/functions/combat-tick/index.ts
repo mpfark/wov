@@ -398,6 +398,7 @@ Deno.serve(async (req) => {
       const isDmgBuff = !!mb.damage_buff; // Arcane Surge
       const hasFocusStrike = !!mb.focus_strike;
       const hasDisengage = !!mb.disengage_next_hit;
+      const affinity = weaponAffinity(c.class, mainHandTag[m.id]);
 
       for (let a = 0; a < 1; a++) {
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
@@ -410,8 +411,9 @@ Deno.serve(async (req) => {
         }
 
         const roll = rollD20();
-        const total = roll + sMod + ihb;
+        const total = roll + sMod + ihb + affinity.hitBonus;
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
+        const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
 
         if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
           let raw = rollDmg(atk.min, atk.max) + sMod;
