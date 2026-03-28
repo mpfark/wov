@@ -200,17 +200,35 @@ export const CLASS_LABELS: Record<string, string> = {
   rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
 };
 
+// ── Weapon affinity ──────────────────────────────────────────────
+
+export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
+  warrior: ['sword', 'axe', 'mace'],
+  ranger:  ['bow', 'dagger'],
+  rogue:   ['dagger', 'sword'],
+  wizard:  ['staff', 'wand'],
+  healer:  ['mace', 'staff'],
+  bard:    ['sword', 'wand'],
+};
+
+export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | null): { hitBonus: number; damageMult: number } {
+  if (!weaponTag) return { hitBonus: 0, damageMult: 1 };
+  const tags = CLASS_WEAPON_AFFINITY[classKey];
+  if (tags && tags.includes(weaponTag)) return { hitBonus: 1, damageMult: 1.10 };
+  return { hitBonus: 0, damageMult: 1 };
+}
+
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {
-  attackerStat: number;     // effective stat value (base + equipment)
-  int: number;              // effective INT (base + equipment)
-  dex: number;              // effective DEX (base + equipment)
-  str: number;              // effective STR (base + equipment)
+  attackerStat: number;
+  int: number;
+  dex: number;
+  str: number;
   level: number;
   classKey: string;
-  /** Extra crit range bonus from buffs (Eagle Eye) */
   critBuffBonus?: number;
+  weaponTag?: string | null;
 }
 
 export interface AttackResult {
