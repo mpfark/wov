@@ -12,6 +12,7 @@ import {
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
   XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
   CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate, getCarryCapacity,
+  CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
 
@@ -889,6 +890,50 @@ export default function GameManual() {
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* ── Weapon Affinity ── */}
+          <AccordionItem value="weapon-affinity" className="border border-border rounded-lg bg-card/50">
+            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+              ⚔️ Weapon Tags & Class Affinity
+            </AccordionTrigger>
+            <AccordionContent className="px-4 space-y-3">
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>Weapons have a <strong className="text-foreground">weapon tag</strong> (sword, axe, mace, dagger, bow, staff, wand, shield). When your <strong className="text-foreground">main-hand</strong> weapon's tag matches your class affinity, you gain:</p>
+                <ul className="list-disc pl-4 space-y-0.5">
+                  <li><strong className="text-primary">+1 hit bonus</strong> (flat, stacks with INT hit bonus)</li>
+                  <li><strong className="text-primary">×1.10 damage multiplier</strong> (10% boost, applied before other buffs)</li>
+                </ul>
+                <p className="mt-2">A <Badge variant="outline" className="text-[10px] py-0 px-1">Proficient</Badge> badge appears on matching main-hand weapons in the Character Panel.</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Class Weapon Proficiencies</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Class</TableHead>
+                      <TableHead className="text-xs">Proficient Weapons</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(CLASS_WEAPON_AFFINITY).map(([cls, tags]) => (
+                      <TableRow key={cls}>
+                        <TableCell className="text-xs font-medium">{CLASS_LABELS[cls] || cls}</TableCell>
+                        <TableCell className="text-xs">
+                          {tags.map(t => WEAPON_TAG_LABELS[t] || t).join(', ')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p className="font-display text-primary">Dual Wielding</p>
+                <p>One-handed weapons can be equipped in the <strong className="text-foreground">off-hand</strong> slot alongside shields. Off-hand weapons function as <strong className="text-foreground">passive stat sticks</strong> — they contribute their stats but grant <em>no</em> extra attacks and <em>no</em> affinity bonus. Only the main-hand weapon's tag is checked for proficiency.</p>
+              </div>
             </AccordionContent>
           </AccordionItem>
 
