@@ -632,8 +632,9 @@ Deno.serve(async (req) => {
           events.push({ type: 'ac_overflow', message: `🛡️ ${targetName}'s armor absorbs the blow! AC ${tAC} vs ${roll} — ${pctReduced}% damage reduced (${preDmg} → ${dmg}).` });
         }
 
-        // WIS awareness
-        const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0));
+        // WIS awareness + shield bonus
+        const shieldAwarenessBonus = isShield(offHandTag[targetId]) ? SHIELD_AWARENESS_BONUS : 0;
+        const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0)) + shieldAwarenessBonus;
         if (wis > 0 && Math.random() < wis) {
           dmg = Math.max(Math.floor(dmg * 0.75), 1);
           events.push({ type: 'wis_awareness', message: `🧘 ${targetName}'s awareness softens ${creature.name}'s blow! (${dmg} damage)` });

@@ -399,7 +399,19 @@ export default function CharacterPanel({
                     )}
                   </div>
                   <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
-                  <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
+                  <div className="relative">
+                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
+                    {offHandIsShield && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-display bg-accent/20 text-accent-foreground border border-accent/30 rounded px-1 whitespace-nowrap cursor-help">
+                            🛡️ Shield
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">+1 AC, +5% Awareness</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                   <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
                   <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
                   <div />
