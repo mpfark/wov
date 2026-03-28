@@ -205,6 +205,7 @@ export default function ItemManager() {
       value: item.value, max_durability: item.max_durability, hands: item.hands,
       level: item.level ?? 1,
       origin_type: item.origin_type, origin_id: item.origin_id,
+      weapon_tag: (item as any).weapon_tag || null,
     });
     loadItemUsage(item.id, item.rarity);
   };
