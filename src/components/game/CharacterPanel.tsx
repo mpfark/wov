@@ -4,6 +4,7 @@ import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
 import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES, calculateStats, calculateAC, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
+import { SHIELD_AC_BONUS, SHIELD_AWARENESS_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon } from '@/lib/combat-math';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -342,7 +343,9 @@ export default function CharacterPanel({
   const mainHandTag = mainHandItem?.item?.weapon_tag as string | undefined;
   const isProficient = !!(mainHandTag && CLASS_WEAPON_AFFINITY[character.class]?.includes(mainHandTag));
   const offHandItem = getEquippedInSlot('off_hand');
-  const offHandIsShield = offHandItem?.item?.weapon_tag === 'shield';
+  const offHandTag = offHandItem?.item?.weapon_tag as string | undefined;
+  const offHandIsShield = isShield(offHandTag);
+  const offHandIsWeapon = isOffhandWeapon(offHandTag);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -393,9 +396,14 @@ export default function CharacterPanel({
                   <div className="relative">
                     <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
                     {isProficient && (
-                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-display bg-primary/20 text-primary border border-primary/30 rounded px-1 whitespace-nowrap">
-                        Proficient
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-display bg-primary/20 text-primary border border-primary/30 rounded px-1 whitespace-nowrap cursor-help">
+                            Proficient
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">+1 Hit, +10% Damage ({WEAPON_TAG_LABELS[mainHandTag!] || mainHandTag})</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                   <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
@@ -832,15 +840,16 @@ export default function CharacterPanel({
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
                   const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
-                  const wisHalveChance = getWisDodgeChance(eWis);
+                  const wisHalveChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_AWARENESS_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
 
-                  const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
+                  const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0) + (offHandIsShield ? SHIELD_AC_BONUS : 0);
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
-                   const totalHitBonus = atkMod + intHit;
+                   const affinityHit = isProficient ? 1 : 0;
+                   const totalHitBonus = atkMod + intHit + affinityHit;
                    const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
                    // Player hit chance vs same-level regular creature
                    const playerCritThreshold = 20 - dexCrit;
@@ -895,12 +904,19 @@ export default function CharacterPanel({
                   ];
 
                   const offenseRows: DerivedRow[] = [
-                    { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
+                    { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
-                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
+                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
                     { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];
+
+                  // Off-hand info row
+                  if (offHandIsWeapon) {
+                    offenseRows.push({ label: 'Off-Hand', value: `${Math.round(OFFHAND_DAMAGE_MULT * 100)}% dmg`, tip: `Bonus attack each tick at ${Math.round(OFFHAND_DAMAGE_MULT * 100)}% of main-hand base damage (separate hit roll, can crit)` });
+                  } else if (offHandIsShield) {
+                    offenseRows.push({ label: 'Off-Hand', value: '🛡️ Shield', tip: `+${SHIELD_AC_BONUS} AC, +${Math.round(SHIELD_AWARENESS_BONUS * 100)}% Awareness (no bonus attack)` });
+                  }
 
                   // Procs line
                   if (poisonActive || igniteActive) {
@@ -916,10 +932,10 @@ export default function CharacterPanel({
                   const acOverflowPct = acOverflow > 0 ? Math.min(Math.round((acOverflow / totalAC) * 100), 50) : 0;
 
                   const defenseRows: DerivedRow[] = [
-                    { label: 'AC', value: `${totalAC}${acBuffActive ? ` (+${acBuff!.bonus})` : ''}`, tip: `Base ${baseAC}${acBuffActive ? ` + ${acBuff!.bonus} Battle Cry` : ''} vs regular creature atk +${creatureAtkMod}`, buffed: !!acBuffActive, buffColor: 'text-dwarvish' },
+                    { label: 'AC', value: `${totalAC}${acBuffActive ? ` (+${acBuff!.bonus})` : ''}`, tip: `Base ${baseAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''}${acBuffActive ? ` + ${acBuff!.bonus} Battle Cry` : ''} vs regular creature atk +${creatureAtkMod}`, buffed: !!acBuffActive, buffColor: 'text-dwarvish' },
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'AC Overflow', value: acOverflowPct > 0 ? `−${acOverflowPct}%` : '–', tip: acOverflowPct > 0 ? `When a same-level creature crits (max roll ${creatureMaxCritRoll}) vs your AC ${totalAC}, excess AC reduces crit damage by ${acOverflowPct}% (cap 50%)` : `AC must exceed creature max crit roll (${creatureMaxCritRoll}) to reduce crit damage` },
-                    { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? 'WIS bonus: chance to reduce incoming creature damage by 25%' : 'WIS 12+ for chance to reduce incoming damage by 25%' },
+                    { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? `WIS bonus: chance to reduce incoming damage by 25%${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for chance to reduce incoming damage by 25%' },
                     { label: 'Vendor Bonus', value: buyDisc > 0 ? `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%` : '–', tip: buyDisc > 0 ? 'CHA bonus: better buy/sell prices' : 'CHA 12+ for better buy/sell prices' },
                   ];
 
