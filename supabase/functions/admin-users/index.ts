@@ -112,9 +112,17 @@ Deno.serve(async (req) => {
     if (action === "reset-password" && req.method === "POST") {
       const { email } = await req.json();
       if (!email) throw new Error("Email required");
-      const { error } = await adminClient.auth.admin.generateLink({ type: "recovery", email });
+
+      // Use a user-scoped client to call resetPasswordForEmail,
+      // which triggers the auth email hook and actually sends the email.
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const resetClient = createClient(supabaseUrl, anonKey);
+      const { error } = await resetClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${req.headers.get("origin") || supabaseUrl}/reset-password`,
+      });
       if (error) throw error;
-      return jsonResponse({ success: true, message: "Password reset link generated" });
+      return jsonResponse({ success: true, message: "Password reset email sent" });
     }
 
     // UPDATE USER ROLE (overlord only)

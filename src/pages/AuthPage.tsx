@@ -67,27 +67,37 @@ export default function AuthPage() {
                 className="mt-1 bg-input border-border"
               />
             </div>
-            <div>
-              <label className="text-sm font-display text-foreground">Password</label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                className="mt-1 bg-input border-border"
-              />
-            </div>
+            {!isForgotPassword && (
+              <div>
+                <label className="text-sm font-display text-foreground">Password</label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  className="mt-1 bg-input border-border"
+                />
+              </div>
+            )}
             <Button type="submit" disabled={loading} className="w-full font-display">
-              {loading ? 'Journeying...' : isLogin ? 'Enter' : 'Create Account'}
+              {loading ? 'Journeying...' : isForgotPassword ? 'Send Reset Link' : isLogin ? 'Enter' : 'Create Account'}
             </Button>
           </form>
+          {isLogin && !isForgotPassword && (
+            <button
+              onClick={() => setIsForgotPassword(true)}
+              className="mt-2 w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Forgot your password?
+            </button>
+          )}
           <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
+            onClick={() => { setIsLogin(!isLogin); setIsForgotPassword(false); }}
+            className="mt-2 w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
           >
-            {isLogin ? "No account? Join the Fellowship" : "Already have an account? Enter"}
+            {isForgotPassword ? 'Back to sign in' : isLogin ? "No account? Join the Fellowship" : "Already have an account? Enter"}
           </button>
         </CardContent>
       </Card>
