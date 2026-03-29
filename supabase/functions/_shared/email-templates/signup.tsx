@@ -9,10 +9,13 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Link,
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+
+const LOGO_URL = 'https://gpclaklkaolyzfnooajt.supabase.co/storage/v1/object/public/email-assets/logo.png'
 
 interface SignupEmailProps {
   siteName: string
@@ -29,29 +32,30 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>Confirm your email to enter the Realm of Varneth</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Img src={LOGO_URL} alt="Wayfarers of Varneth" width="80" height="80" style={logo} />
+        <Heading style={h1}>Welcome, Wayfarer</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
+          You've taken the first step toward joining the{' '}
           <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
+            <strong>Wayfarers of Varneth</strong>
           </Link>
-          !
+          .
         </Text>
         <Text style={text}>
-          Please confirm your email address (
+          Confirm your email address (
           <Link href={`mailto:${recipient}`} style={link}>
             {recipient}
           </Link>
-          ) by clicking the button below:
+          ) to enter the realm:
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Verify Email
+          Enter the Realm
         </Button>
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          If you didn't create an account, you can safely ignore this missive.
         </Text>
       </Container>
     </Body>
@@ -60,27 +64,32 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const main = { backgroundColor: '#ffffff', fontFamily: "'Crimson Text', Georgia, serif" }
+const container = { padding: '20px 25px', textAlign: 'center' as const }
+const logo = { margin: '0 auto 16px', display: 'block' }
 const h1 = {
-  fontSize: '22px',
+  fontSize: '24px',
   fontWeight: 'bold' as const,
-  color: '#000000',
+  fontFamily: "'Cinzel', Georgia, serif",
+  color: '#1a1408',
   margin: '0 0 20px',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
+  fontSize: '15px',
+  color: '#5a5040',
+  lineHeight: '1.6',
   margin: '0 0 25px',
+  textAlign: 'left' as const,
 }
-const link = { color: 'inherit', textDecoration: 'underline' }
+const link = { color: '#b8860b', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#b8860b',
   color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontSize: '15px',
+  fontFamily: "'Cinzel', Georgia, serif",
+  fontWeight: 'bold' as const,
+  borderRadius: '6px',
+  padding: '14px 28px',
   textDecoration: 'none',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0', textAlign: 'left' as const }
