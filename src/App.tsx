@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 
 const GameRoute = lazy(() => import("./pages/GameRoute"));
 const AdminRoute = lazy(() => import("./pages/AdminRoute"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/game" element={<GameRoute />} />
               <Route path="/admin" element={<AdminRoute />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

@@ -9,16 +9,22 @@ import logo from '@/assets/logo.png';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (isLogin) {
+      if (isForgotPassword) {
+        const { error } = await resetPassword(email);
+        if (error) throw error;
+        toast.success('Password reset email sent! Check your inbox.');
+        setIsForgotPassword(false);
+      } else if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) throw error;
       } else {
@@ -42,10 +48,10 @@ export default function AuthPage() {
             Wayfarers of Varneth <span className="text-sm text-muted-foreground font-body ml-1">{APP_VERSION}</span>
           </h1>
           <CardTitle className="font-display text-xl text-foreground">
-            {isLogin ? 'Enter the Realm' : 'Join the Fellowship'}
+            {isForgotPassword ? 'Reset Password' : isLogin ? 'Enter the Realm' : 'Join the Fellowship'}
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            {isLogin ? 'Sign in to continue your journey' : 'Create your account to begin'}
+            {isForgotPassword ? 'Enter your email to receive a reset link' : isLogin ? 'Sign in to continue your journey' : 'Create your account to begin'}
           </p>
         </CardHeader>
         <CardContent>
@@ -61,27 +67,37 @@ export default function AuthPage() {
                 className="mt-1 bg-input border-border"
               />
             </div>
-            <div>
-              <label className="text-sm font-display text-foreground">Password</label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-                className="mt-1 bg-input border-border"
-              />
-            </div>
+            {!isForgotPassword && (
+              <div>
+                <label className="text-sm font-display text-foreground">Password</label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  className="mt-1 bg-input border-border"
+                />
+              </div>
+            )}
             <Button type="submit" disabled={loading} className="w-full font-display">
-              {loading ? 'Journeying...' : isLogin ? 'Enter' : 'Create Account'}
+              {loading ? 'Journeying...' : isForgotPassword ? 'Send Reset Link' : isLogin ? 'Enter' : 'Create Account'}
             </Button>
           </form>
+          {isLogin && !isForgotPassword && (
+            <button
+              onClick={() => setIsForgotPassword(true)}
+              className="mt-2 w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Forgot your password?
+            </button>
+          )}
           <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
+            onClick={() => { setIsLogin(!isLogin); setIsForgotPassword(false); }}
+            className="mt-2 w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
           >
-            {isLogin ? "No account? Join the Fellowship" : "Already have an account? Enter"}
+            {isForgotPassword ? 'Back to sign in' : isLogin ? "No account? Join the Fellowship" : "Already have an account? Enter"}
           </button>
         </CardContent>
       </Card>
