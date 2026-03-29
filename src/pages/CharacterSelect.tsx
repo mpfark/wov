@@ -90,7 +90,12 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
           </Card>
         </div>
 
-        <div className="text-center">
+        <div className="text-center flex items-center justify-center gap-3">
+          {onProfile && (
+            <Button variant="ghost" size="sm" onClick={onProfile} className="text-xs text-muted-foreground">
+              <UserCircle className="h-3.5 w-3.5 mr-1" /> Profile
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={onSignOut} className="text-xs text-muted-foreground">
             Sign Out
           </Button>
