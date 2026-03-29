@@ -848,7 +848,8 @@ export default function CharacterPanel({
                   const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0) + (offHandIsShield ? SHIELD_AC_BONUS : 0);
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
-                   const totalHitBonus = atkMod + intHit;
+                   const affinityHit = isProficient ? 1 : 0;
+                   const totalHitBonus = atkMod + intHit + affinityHit;
                    const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
                    // Player hit chance vs same-level regular creature
                    const playerCritThreshold = 20 - dexCrit;
