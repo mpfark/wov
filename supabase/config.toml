@@ -1,22 +1,19 @@
 project_id = "gpclaklkaolyzfnooajt"
 
-[functions.admin-users]
-verify_jwt = false
-
-[functions.ai-world-builder]
-verify_jwt = false
-
-[functions.ai-item-forge]
-verify_jwt = false
-
-[functions.ai-name-suggest]
-verify_jwt = false
-
-[functions.combat-tick]
-verify_jwt = false
-
-[functions.soulforge-item]
-verify_jwt = false
-
-[functions.blacksmith-forge]
-verify_jwt = false
+[functions]
+  [functions.admin-users]
+    verify_jwt = false
+  [functions.ai-item-forge]
+    verify_jwt = false
+  [functions.ai-name-suggest]
+    verify_jwt = false
+  [functions.ai-world-builder]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.blacksmith-forge]
+    verify_jwt = false
+  [functions.combat-tick]
+    verify_jwt = false
+  [functions.soulforge-item]
+    verify_jwt = false
