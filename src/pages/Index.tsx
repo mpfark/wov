@@ -4,6 +4,7 @@ import { useGameContext } from '@/contexts/GameContext';
 import AuthPage from './AuthPage';
 import CharacterCreation from './CharacterCreation';
 import CharacterSelect from './CharacterSelect';
+import ProfilePage from './ProfilePage';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Index = () => {
   } = useGameContext();
 
   const [showCreateNew, setShowCreateNew] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // When a character is selected, navigate to game
   useEffect(() => {
@@ -66,6 +68,11 @@ const Index = () => {
     );
   }
 
+  // Profile page
+  if (showProfile) {
+    return <ProfilePage onBack={() => setShowProfile(false)} />;
+  }
+
   // Character selection screen
   return (
     <CharacterSelect
@@ -74,6 +81,7 @@ const Index = () => {
       onCreateNew={() => setShowCreateNew(true)}
       onDelete={deleteCharacter}
       onSignOut={signOut}
+      onProfile={() => setShowProfile(true)}
     />
   );
 };

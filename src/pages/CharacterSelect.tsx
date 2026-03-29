@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
-import { Trash2, Plus, Swords } from 'lucide-react';
+import { Trash2, Plus, Swords, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -16,9 +16,10 @@ interface Props {
   onCreateNew: () => void;
   onDelete: (id: string) => Promise<void>;
   onSignOut: () => void;
+  onProfile?: () => void;
 }
 
-export default function CharacterSelect({ characters, onSelect, onCreateNew, onDelete, onSignOut }: Props) {
+export default function CharacterSelect({ characters, onSelect, onCreateNew, onDelete, onSignOut, onProfile }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<Character | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -89,7 +90,12 @@ export default function CharacterSelect({ characters, onSelect, onCreateNew, onD
           </Card>
         </div>
 
-        <div className="text-center">
+        <div className="text-center flex items-center justify-center gap-3">
+          {onProfile && (
+            <Button variant="ghost" size="sm" onClick={onProfile} className="text-xs text-muted-foreground">
+              <UserCircle className="h-3.5 w-3.5 mr-1" /> Profile
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={onSignOut} className="text-xs text-muted-foreground">
             Sign Out
           </Button>
