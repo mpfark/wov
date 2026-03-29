@@ -18,6 +18,7 @@ const Index = () => {
   } = useGameContext();
 
   const [showCreateNew, setShowCreateNew] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // When a character is selected, navigate to game
   useEffect(() => {
