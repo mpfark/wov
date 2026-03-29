@@ -21,12 +21,11 @@ export async function logActivity(
   message: string,
   metadata: Record<string, any> = {},
 ) {
-  await supabase.from('activity_log').insert({
-    user_id: userId,
-    character_id: characterId,
-    event_type: eventType,
-    message,
-    metadata,
+  await supabase.rpc('log_activity', {
+    _character_id: characterId,
+    _event_type: eventType,
+    _message: message,
+    _metadata: metadata,
   } as any);
 }
 
