@@ -840,12 +840,12 @@ export default function CharacterPanel({
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
                   const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
-                  const wisHalveChance = getWisDodgeChance(eWis);
+                  const wisHalveChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_AWARENESS_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
 
-                  const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
+                  const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0) + (offHandIsShield ? SHIELD_AC_BONUS : 0);
                   const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
 
                    const totalHitBonus = atkMod + intHit;
