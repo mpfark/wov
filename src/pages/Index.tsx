@@ -68,6 +68,11 @@ const Index = () => {
     );
   }
 
+  // Profile page
+  if (showProfile) {
+    return <ProfilePage onBack={() => setShowProfile(false)} />;
+  }
+
   // Character selection screen
   return (
     <CharacterSelect
@@ -76,6 +81,7 @@ const Index = () => {
       onCreateNew={() => setShowCreateNew(true)}
       onDelete={deleteCharacter}
       onSignOut={signOut}
+      onProfile={() => setShowProfile(true)}
     />
   );
 };

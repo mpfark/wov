@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { RACE_LABELS, CLASS_LABELS } from '@/lib/game-data';
-import { Trash2, Plus, Swords } from 'lucide-react';
+import { Trash2, Plus, Swords, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
