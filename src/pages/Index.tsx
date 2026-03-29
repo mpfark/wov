@@ -4,6 +4,7 @@ import { useGameContext } from '@/contexts/GameContext';
 import AuthPage from './AuthPage';
 import CharacterCreation from './CharacterCreation';
 import CharacterSelect from './CharacterSelect';
+import ProfilePage from './ProfilePage';
 
 const Index = () => {
   const navigate = useNavigate();
