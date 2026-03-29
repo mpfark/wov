@@ -639,10 +639,28 @@ export default function CharacterPanel({
                             </Button>
                           )}
                           {!isBroken && inv.item.slot && (
-                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                              onClick={() => onEquip(all[0].id, inv.item.slot!)}>
-                              <Shield className="w-3 h-3 text-primary" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onEquip(all[0].id, inv.item.slot!)}>
+                                  <Shield className="w-3 h-3 text-primary" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                {inv.item.slot === 'main_hand' ? 'Equip Main Hand' : `Equip ${SLOT_LABELS[inv.item.slot] || inv.item.slot}`}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {!isBroken && inv.item.slot === 'main_hand' && inv.item.hands === 1 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onEquip(all[0].id, 'off_hand')}>
+                                  <Shield className="w-3 h-3 text-accent-foreground" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">Equip Off Hand</TooltipContent>
+                            </Tooltip>
                           )}
                           {!inv.item.is_soulbound && (
                             <Tooltip>

@@ -932,7 +932,7 @@ export default function GameManual() {
 
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p className="font-display text-primary">Dual Wielding</p>
-                <p>One-handed weapons can be equipped in the <strong className="text-foreground">off-hand</strong> slot alongside shields. Off-hand weapons contribute their stats <strong className="text-foreground">and</strong> grant a <strong className="text-primary">bonus attack</strong> each combat tick:</p>
+                <p>Any <strong className="text-foreground">1H weapon</strong> can be equipped in the off-hand using the second equip button (⚔) in the inventory. Off-hand weapons contribute their stats <strong className="text-foreground">and</strong> grant a <strong className="text-primary">bonus attack</strong> each combat tick:</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li><strong className="text-primary">30% damage</strong> of main-hand base damage</li>
                   <li><strong className="text-foreground">Separate hit roll</strong> — can miss independently of main-hand</li>
