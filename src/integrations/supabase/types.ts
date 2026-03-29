@@ -1305,6 +1305,15 @@ export type Database = {
       is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_steward_or_overlord: { Args: never; Returns: boolean }
+      log_activity: {
+        Args: {
+          _character_id: string
+          _event_type: string
+          _message: string
+          _metadata?: Json
+        }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
