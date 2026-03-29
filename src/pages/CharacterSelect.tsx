@@ -19,7 +19,7 @@ interface Props {
   onProfile?: () => void;
 }
 
-export default function CharacterSelect({ characters, onSelect, onCreateNew, onDelete, onSignOut }: Props) {
+export default function CharacterSelect({ characters, onSelect, onCreateNew, onDelete, onSignOut, onProfile }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<Character | null>(null);
   const [deleting, setDeleting] = useState(false);
 
