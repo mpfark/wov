@@ -182,7 +182,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const gearAwareMaxCp = getMaxCp(level, int + (eqB.int || 0), wis + (eqB.wis || 0), cha + (eqB.cha || 0));
       if (cp < gearAwareMaxCp) {
         const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
-        const primaryVal = (cpStatRef.current as any)[primaryStat] ?? 10;
+        const primaryVal = ((cpStatRef.current as any)[primaryStat] ?? 10) + (eqB[primaryStat] || 0);
         const bRegen = getCpRegenRate(primaryVal);
         const nodeId = regenCharRef.current.current_node_id;
         const node = nodeId ? getNodeRef.current(nodeId) : null;
