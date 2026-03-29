@@ -48,10 +48,10 @@ export default function AuthPage() {
             Wayfarers of Varneth <span className="text-sm text-muted-foreground font-body ml-1">{APP_VERSION}</span>
           </h1>
           <CardTitle className="font-display text-xl text-foreground">
-            {isLogin ? 'Enter the Realm' : 'Join the Fellowship'}
+            {isForgotPassword ? 'Reset Password' : isLogin ? 'Enter the Realm' : 'Join the Fellowship'}
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
-            {isLogin ? 'Sign in to continue your journey' : 'Create your account to begin'}
+            {isForgotPassword ? 'Enter your email to receive a reset link' : isLogin ? 'Sign in to continue your journey' : 'Create your account to begin'}
           </p>
         </CardHeader>
         <CardContent>
