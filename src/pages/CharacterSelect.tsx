@@ -16,6 +16,7 @@ interface Props {
   onCreateNew: () => void;
   onDelete: (id: string) => Promise<void>;
   onSignOut: () => void;
+  onProfile?: () => void;
 }
 
 export default function CharacterSelect({ characters, onSelect, onCreateNew, onDelete, onSignOut }: Props) {
