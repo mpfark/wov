@@ -78,7 +78,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
               <CardTitle className="font-display text-lg">Name Your Character</CardTitle>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value.replace(/\s/g, ''))}
                 placeholder="Theron, Mirael, Dunric..."
                 className="bg-input border-border text-lg"
                 maxLength={24}
