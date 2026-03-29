@@ -925,10 +925,10 @@ export default function CharacterPanel({
                   const acOverflowPct = acOverflow > 0 ? Math.min(Math.round((acOverflow / totalAC) * 100), 50) : 0;
 
                   const defenseRows: DerivedRow[] = [
-                    { label: 'AC', value: `${totalAC}${acBuffActive ? ` (+${acBuff!.bonus})` : ''}`, tip: `Base ${baseAC}${acBuffActive ? ` + ${acBuff!.bonus} Battle Cry` : ''} vs regular creature atk +${creatureAtkMod}`, buffed: !!acBuffActive, buffColor: 'text-dwarvish' },
+                    { label: 'AC', value: `${totalAC}${acBuffActive ? ` (+${acBuff!.bonus})` : ''}`, tip: `Base ${baseAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''}${acBuffActive ? ` + ${acBuff!.bonus} Battle Cry` : ''} vs regular creature atk +${creatureAtkMod}`, buffed: !!acBuffActive, buffColor: 'text-dwarvish' },
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'AC Overflow', value: acOverflowPct > 0 ? `−${acOverflowPct}%` : '–', tip: acOverflowPct > 0 ? `When a same-level creature crits (max roll ${creatureMaxCritRoll}) vs your AC ${totalAC}, excess AC reduces crit damage by ${acOverflowPct}% (cap 50%)` : `AC must exceed creature max crit roll (${creatureMaxCritRoll}) to reduce crit damage` },
-                    { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? 'WIS bonus: chance to reduce incoming creature damage by 25%' : 'WIS 12+ for chance to reduce incoming damage by 25%' },
+                    { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? `WIS bonus: chance to reduce incoming damage by 25%${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for chance to reduce incoming damage by 25%' },
                     { label: 'Vendor Bonus', value: buyDisc > 0 ? `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%` : '–', tip: buyDisc > 0 ? 'CHA bonus: better buy/sell prices' : 'CHA 12+ for better buy/sell prices' },
                   ];
 
