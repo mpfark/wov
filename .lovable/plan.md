@@ -1,89 +1,43 @@
 
 
-## Weapon Tags & Class Affinity System
+## Fix Password Reset & Add Forgot Password Flow
 
-### Overview
-Add a `weapon_tag` field to items (e.g. "sword", "dagger", "axe", "staff", "bow", "mace", "wand") and a class-weapon affinity mapping. When a character equips a weapon matching their class affinity, they receive **+1 hit** and **+10% damage**.
+### Root Cause
+Two issues:
+1. **No user-facing forgot password flow** — The login page has no "Forgot password?" link, so users can't request a reset themselves.
+2. **Admin reset generates link but doesn't send it** — `admin.generateLink()` creates a recovery link but does NOT trigger the auth email hook. It needs to use `resetPasswordForEmail()` or manually send the generated link.
 
-Dual wielding works as a **passive stat stick** — off-hand weapons simply contribute their stats like shields do, no extra attack.
+### Plan
 
-### Database Changes
+#### 1. Add "Forgot Password" UI to AuthPage
+- Add a "Forgot password?" link on the login form
+- Show an email-only form that calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
+- This triggers the auth email hook → queues the recovery email → sends via the custom domain
 
-**Migration: Add `weapon_tag` column to `items` table**
-```sql
-ALTER TABLE public.items ADD COLUMN weapon_tag text DEFAULT NULL;
-```
-No new enum needed — free-text allows easy expansion. Only relevant for `main_hand`/`off_hand` slot items.
+#### 2. Create `/reset-password` page
+- New page at `src/pages/ResetPasswordPage.tsx`
+- Detects `type=recovery` in the URL hash (Supabase redirects back with this)
+- Shows a "Set new password" form
+- Calls `supabase.auth.updateUser({ password })` to apply the new password
+- Redirects to login on success
 
-### Weapon Tags
-`sword`, `axe`, `mace`, `dagger`, `bow`, `staff`, `wand`, `shield`
+#### 3. Add route in App.tsx
+- Add `<Route path="/reset-password" element={<ResetPasswordPage />} />` (public, not behind auth)
 
-### Class Affinity Mapping (code constant)
-```text
-Warrior  → sword, axe, mace
-Ranger   → bow, dagger
-Rogue    → dagger, sword
-Wizard   → staff, wand
-Healer   → mace, staff
-Bard     → sword, wand
-```
+#### 4. Fix admin "Reset PW" button
+- In `admin-users/index.ts`, change from `generateLink({ type: "recovery" })` to `resetPasswordForEmail(email, { redirectTo })` — this actually triggers the email sending flow
+- Alternatively, keep `generateLink` but also send the email by invoking the auth email hook with the generated URL
 
-### Dual Wielding
-- Off-hand slot already exists and accepts equipment items
-- Currently only shields go there — we allow any 1H weapon in off_hand too
-- Off-hand weapons provide their stats AND grant a **bonus attack** each tick:
-  - **30% damage** of main-hand base damage
-  - **Separate hit roll** — can miss independently
-  - **Can crit independently** using the same crit range
-  - No affinity bonus from off-hand weapon tag
-  - No buff multipliers (stealth, surge, etc.) — raw damage only
-  - Shields do NOT trigger the bonus attack
-  - Shields instead grant **+1 AC** and **+5% Awareness** (additive with WIS-based awareness)
-- The `weapon_tag` on the off-hand weapon does NOT grant affinity bonus (only main hand counts)
+#### 5. Add `resetPasswordForEmail` to useAuth hook
+- Export a `resetPassword(email)` function for reuse
 
-### Shield Defensive Bonus
-- When a shield (`weapon_tag = 'shield'`) is equipped in the off-hand:
-  - **+1 flat AC** (stacks with DEX-based AC, equipment AC, and buff AC)
-  - **+5% Awareness** (additive with WIS-based awareness, chance to reduce incoming damage by 25%)
-- Trade-off: dual-wield weapons add ~2–4 DPS via the 30% bonus attack; shields sacrifice offense for consistent damage mitigation
-- Constants: `SHIELD_AC_BONUS = 1`, `SHIELD_AWARENESS_BONUS = 0.05`
-- Helper: `isShield(tag)` — returns true when `tag === 'shield'`
+### Files Changed
+- `src/pages/AuthPage.tsx` — add forgot password state and form
+- `src/pages/ResetPasswordPage.tsx` — new file, password reset form
+- `src/App.tsx` — add `/reset-password` route
+- `src/hooks/useAuth.ts` — add `resetPasswordForEmail` wrapper
+- `supabase/functions/admin-users/index.ts` — fix to actually send email
 
-### Code Changes
-
-1. **`src/lib/combat-math.ts`** + **`supabase/functions/_shared/combat-math.ts`** (mirrored)
-   - Add `CLASS_WEAPON_AFFINITY` constant mapping class → allowed weapon tags
-   - Add `getWeaponAffinityBonus(classKey, weaponTag)` → `{ hitBonus: number, damageMult: number }`
-   - Update `AttackContext` interface to include optional `weaponTag?: string`
-   - In `resolveAttackRoll`: add affinity hit bonus to `totalAtk`, apply damage multiplier to `baseDamage`
-
-2. **`src/lib/game-data.ts`**
-   - Add `CLASS_WEAPON_AFFINITY` and `WEAPON_TAG_LABELS` constants for UI display
-
-3. **`src/components/admin/ItemManager.tsx`**
-   - Add `weapon_tag` dropdown (only visible when slot is `main_hand` or `off_hand`)
-   - Include `weapon_tag` in save/load queries
-
-4. **`supabase/functions/ai-item-forge/index.ts`**
-   - Include `weapon_tag` in AI prompt for weapon generation
-   - Auto-assign tag based on generated item name/description
-
-5. **`src/hooks/useInventory.ts`** — no changes needed (off-hand equip already works)
-
-6. **`src/components/game/CharacterPanel.tsx`**
-   - Show weapon affinity indicator (small badge) when main-hand weapon matches class
-
-7. **`supabase/functions/combat-tick/index.ts`**
-   - Pass `weaponTag` from equipped main-hand item into attack context
-
-8. **`src/hooks/useActions.ts`** / **`src/pages/GamePage.tsx`**
-   - Pass main-hand `weapon_tag` into attack context for solo combat
-
-### Affinity Bonus Values
-- **+1 hit bonus** (flat, stacks with INT hit bonus)
-- **×1.10 damage multiplier** (10% boost, applied after base damage, before other buffs)
-
-### Display
-- Character panel shows a small "Proficient" badge next to main-hand weapon when affinity matches
-- Game Manual updated to document the system
+### Regarding User Profile/Name Page
+A user profile page for updating display name is a separate feature and not needed for password reset to work. We can add it as a follow-up if desired.
 
