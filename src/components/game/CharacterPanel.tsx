@@ -396,9 +396,14 @@ export default function CharacterPanel({
                   <div className="relative">
                     <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
                     {isProficient && (
-                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-display bg-primary/20 text-primary border border-primary/30 rounded px-1 whitespace-nowrap">
-                        Proficient
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-display bg-primary/20 text-primary border border-primary/30 rounded px-1 whitespace-nowrap cursor-help">
+                            Proficient
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">+1 Hit, +10% Damage ({WEAPON_TAG_LABELS[mainHandTag!] || mainHandTag})</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                   <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
