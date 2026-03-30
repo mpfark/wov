@@ -2,6 +2,11 @@
  * combat-catchup: Resolves pending DoT/effect damage when a player enters a node.
  * Uses the shared combat resolver for effect processing, loot, creature writes, and cleanup.
  * `active_effects` table is the sole source of truth for all DoT state.
+ *
+ * TIMELINE OWNERSHIP:
+ * - combat-catchup owns offscreen effect resolution AND updates combat_sessions.last_tick_at
+ * - combat-tick must never see a stale last_tick_at for a session that catchup already resolved
+ * - If effects have null session_id, catchup falls back to updating ALL sessions at the node
  */
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
@@ -76,12 +81,25 @@ Deno.serve(async (req) => {
     const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, { now });
 
     // ── Parallel post-resolution writes ─────────────────────────
-    const sessionIds = [...new Set(effects.map((e: any) => e.session_id).filter(Boolean))] as string[];
+    const effectSessionIds = [...new Set(effects.map((e: any) => e.session_id).filter(Boolean))] as string[];
+    const nullSessionEffects = effects.filter((e: any) => !e.session_id).length;
+
+    // Fallback: if any effects have null session_id, also find all sessions at this node
+    const { data: nodeSessions } = await db.from('combat_sessions')
+      .select('id, last_tick_at')
+      .eq('node_id', node_id);
+    const sessionLastTickBefore: Record<string, number> = {};
+    const allSessionIds = new Set(effectSessionIds);
+    for (const s of (nodeSessions || [])) {
+      sessionLastTickBefore[s.id] = s.last_tick_at;
+      allSessionIds.add(s.id);
+    }
+    const finalSessionIds = [...allSessionIds];
 
     await Promise.all([
       writeCreatureState(db, creatures, cHp, cKilled),
-      sessionIds.length > 0
-        ? db.from('combat_sessions').update({ last_tick_at: now }).in('id', sessionIds)
+      finalSessionIds.length > 0
+        ? db.from('combat_sessions').update({ last_tick_at: now }).in('id', finalSessionIds)
         : Promise.resolve(),
       cleanupEffects(db, result.expiredIds, cKilled),
     ]);
@@ -123,11 +141,14 @@ Deno.serve(async (req) => {
       fn: 'combat-catchup',
       node_id,
       effects_count: effects.length,
+      null_session_effects: nullSessionEffects,
       creatures_alive: finalCreatures.length,
       kills: cKilled.size,
       ticks_resolved: result.advancedEffects.length,
-      sessions_reset: sessionIds.length,
-      session_ids: sessionIds,
+      effect_session_ids: effectSessionIds,
+      fallback_session_ids: finalSessionIds.filter(id => !effectSessionIds.includes(id)),
+      session_last_tick_before: sessionLastTickBefore,
+      session_last_tick_after: now,
       duration_ms: Date.now() - t0,
     }));
 

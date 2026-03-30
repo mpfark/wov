@@ -92,6 +92,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickBusyRef = useRef(false);
   const tickPendingRef = useRef(false);
   const justStoppedRef = useRef(false);
+  const nodeEntryTickRef = useRef(false);
 
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
@@ -156,6 +157,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!inCombatRef.current) return; // Ignore late/stale tick responses
     const now = Date.now();
     const gap = lastTickRef.current ? now - lastTickRef.current : 0;
+    if (nodeEntryTickRef.current) {
+      nodeEntryTickRef.current = false;
+      console.log(`[combat] First tick after node entry: ticks_processed=${data.ticks_processed ?? 0}, gap=${gap}ms`);
+    }
     if (data.ticks_processed && data.ticks_processed > 1) {
       console.warn(`[combat] Processed ${data.ticks_processed} ticks in one response (gap: ${gap}ms)`);
     }
@@ -590,6 +595,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       aggroProcessedRef.current = new Set();
       recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
+      nodeEntryTickRef.current = true;
       // Clear stale creature overrides immediately before stopCombat
       creatureHpOverridesRef.current = {};
       setCreatureHpOverrides({});

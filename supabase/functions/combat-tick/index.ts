@@ -920,6 +920,7 @@ Deno.serve(async (req) => {
       fn: 'combat-tick',
       session_id: session.id,
       node_id: combatNodeId,
+      last_tick_at_read: session.last_tick_at,
       elapsed_ms: elapsedMs,
       ticks_processed: ticks,
       engaged_count: sessionEngaged.size,
