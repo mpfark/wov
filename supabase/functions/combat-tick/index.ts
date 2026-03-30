@@ -945,16 +945,9 @@ Deno.serve(async (req) => {
     const lootEvents = await processLootDrops(db, lootQueue);
     events.push(...lootEvents);
 
-    // ── Write active_effects to DB ─────────────────────────────
-    // Delete effects for killed creatures
-    if (killedCreatureIds.size > 0) {
-      await db.from('active_effects').delete().in('target_id', [...killedCreatureIds]);
-    }
-    // Delete expired effects
+    // ── Write active_effects to DB (shared cleanup + upsert) ──
     const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
-    if (expiredIds.length > 0) {
-      await db.from('active_effects').delete().in('id', expiredIds);
-    }
+    await cleanupEffects(db, expiredIds, killedCreatureIds);
     // Upsert remaining active effects
     const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
     for (const eff of liveEffects) {
