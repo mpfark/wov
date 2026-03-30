@@ -720,79 +720,12 @@ Deno.serve(async (req) => {
         });
         events.push(...dotResult.events);
         clearedDots.push(...dotResult.clearedDots);
-        // Handle kills from DoTs through the unified kill handler for XP/gold/rewards
+        // Handle kills from DoTs — delegate to unified kill handler for XP/gold/rewards.
+        // The resolver already marked these in cKilled; handleCreatureKill re-adds (harmless Set#add).
         for (const killId of dotResult.newKills) {
           const cr = creatures.find(c => c.id === killId);
           if (cr) {
-            // Kill was already registered in cKilled by the resolver;
-            // handleCreatureKill adds XP/gold/salvage/BHP and pushes to lootQueue.
-            // But the resolver already pushed loot — so we only need the reward part.
-            // We must call handleCreatureKill but skip re-adding to cKilled (already done).
-            sessionEngaged.delete(cr.id);
-            const killedEffects = activeEffects.filter(e => e.target_id === cr.id);
-            for (const e of killedEffects) {
-              clearedDots.push({ character_id: e.source_id, creature_id: cr.id, dot_type: e.effect_type });
-            }
-            for (let i = activeEffects.length - 1; i >= 0; i--) {
-              if (activeEffects[i].target_id === cr.id) activeEffects.splice(i, 1);
-            }
-            killedCreatureIds.add(cr.id);
-            // XP/gold/salvage/BHP rewards
-            const baseXp = Math.floor(cr.level * 10 * (XP_RARITY[cr.rarity] || 1));
-            const lt = (cr.loot_table || []) as any[];
-            const goldEntry = lt.find((e: any) => e.type === 'gold');
-            let totalGold = 0;
-            if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-              totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-            }
-            const goldSplit = members.length;
-            const uncapped = members.filter(mm => mm.c.level < 42);
-            const xpSplit = uncapped.length || 1;
-            const goldEach = Math.floor(totalGold / goldSplit);
-            for (const mm of members) {
-              if (mm.c.level < 42) {
-                const penalty = xpPenalty(mm.c.level, cr.level);
-                mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplit);
-              }
-              mGold[mm.id] += goldEach;
-            }
-            const displayMember = uncapped[0] || members[0];
-            const displayPenalty = xpPenalty(displayMember.c.level, cr.level);
-            const displayXp = displayMember.c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * displayPenalty * xpMult) / xpSplit);
-            const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
-            const penaltyNote = displayPenalty < 1 ? ` (${Math.round(displayPenalty * 100)}% XP — level penalty)` : '';
-            const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-            const allCapped = uncapped.length === 0;
-            if (allCapped) {
-              const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
-              events.push({ type: 'creature_kill', message: `☠️ ${cr.name} has been slain!${cappedGoldNote} Your power transcends experience.` });
-            } else if (goldSplit > 1) {
-              events.push({ type: 'creature_kill', message: `☠️ ${cr.name} has been slain! Rewards split ${xpSplit} ways: +${displayXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}` });
-            } else {
-              events.push({ type: 'creature_kill', message: `☠️ ${cr.name} has been slain! +${displayXp} XP${goldNote}.${penaltyNote}${xpBoostNote}` });
-            }
-            if (cr.rarity === 'boss') {
-              const bhpReward = Math.floor(cr.level * 0.5);
-              if (bhpReward > 0) {
-                const bhpEach = Math.floor(bhpReward / members.length);
-                if (bhpEach > 0) {
-                  for (const mm of members) {
-                    if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
-                  }
-                  events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
-                }
-              }
-            }
-            if (!cr.is_humanoid) {
-              const baseSalvage = 1 + Math.floor(cr.level / 5);
-              const rarityMult = cr.rarity === 'boss' ? 4 : cr.rarity === 'rare' ? 2 : 1;
-              const totalSalvage = baseSalvage * rarityMult;
-              const salvageEach = Math.floor(totalSalvage / members.length);
-              if (salvageEach > 0) {
-                for (const mm of members) mSalvage[mm.id] += salvageEach;
-                events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${cr.name}.` });
-              }
-            }
+            handleCreatureKill(cr, 'DoT', 0);
           }
         }
         // Merge loot from DoT kills into main lootQueue

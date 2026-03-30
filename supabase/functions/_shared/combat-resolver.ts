@@ -6,7 +6,24 @@
  * - Loot drops
  *
  * Used by both `combat-tick` and `combat-catchup` edge functions.
- * `active_effects` table is the sole authoritative store for all DoT state.
+ *
+ * ## Architecture
+ *
+ * The `active_effects` table is the **sole authoritative store** for all DoT/
+ * status-effect state. Combat sessions (`combat_sessions`) track only timing
+ * and engagement — never effect data.
+ *
+ * Time advances in **deterministic discrete steps**: `next_tick_at += tick_rate_ms`.
+ * This prevents wall-clock drift regardless of when the server processes a tick.
+ *
+ * Two processing modes exist:
+ * - **Single-tick** (`tickTime` provided): used by `combat-tick` once per 2 s
+ *   heartbeat inside its tick loop. Checks one point in time.
+ * - **Bulk mode** (`now` provided, no `tickTime`): used by `combat-catchup` on
+ *   node entry. Retroactively processes all elapsed ticks up to `tickCap`.
+ *
+ * The server is authoritative — client UI reflects returned state, never
+ * assumes local truth for effect data.
  */
 
 // ── Types ────────────────────────────────────────────────────────
