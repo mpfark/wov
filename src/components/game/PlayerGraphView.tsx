@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { GameNode, Area, getNodeDisplayName } from '@/hooks/useNodes';
+import { GameNode, Area } from '@/hooks/useNodes';
 import { PartyMember } from '@/hooks/useParty';
 import { supabase } from '@/integrations/supabase/client';
 
