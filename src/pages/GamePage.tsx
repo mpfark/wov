@@ -511,30 +511,90 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     }
   }, [gameLoop.setStealthBuff, gameLoop.setFocusStrikeBuff, gameLoop.setDisengageNextHit]);
 
-  const gatherDotStacks = useCallback(() => {
-    const now = Date.now();
-    const result: { bleed: Record<string, { damage_per_tick: number }>; poison: Record<string, { stacks: number; damage_per_tick: number }>; ignite: Record<string, { stacks: number; damage_per_tick: number }> } = {
-      bleed: {},
-      poison: {},
-      ignite: {},
-    };
-    for (const [cid, s] of Object.entries(gameLoop.bleedStacks)) {
-      if (now < s.expiresAt && (!s.startsAt || now >= s.startsAt)) result.bleed[cid] = { damage_per_tick: s.damagePerTick };
-    }
-    for (const [cid, s] of Object.entries(gameLoop.poisonStacks)) {
-      if (now < s.expiresAt) result.poison[cid] = { stacks: s.stacks, damage_per_tick: s.damagePerTick };
-    }
-    for (const [cid, s] of Object.entries(gameLoop.igniteStacks)) {
-      if (now < s.expiresAt) result.ignite[cid] = { stacks: s.stacks, damage_per_tick: s.damagePerTick };
-    }
-    return result;
-  }, [gameLoop.bleedStacks, gameLoop.poisonStacks, gameLoop.igniteStacks]);
-
   const handleClearedDots = useCallback((cleared: { character_id: string; creature_id: string; dot_type: string }[]) => {
     for (const c of cleared) {
       gameLoop.notifyCreatureKilled(c.creature_id);
     }
   }, [gameLoop.notifyCreatureKilled]);
+
+  const handleActiveDots = useCallback((dots: Record<string, any>) => {
+    // Sync server DoT state to local UI state for display
+    const myDots = dots[character.id];
+    if (!myDots) return;
+    // Poison stacks sync
+    if (myDots.poison) {
+      gameLoop.setPoisonStacks(prev => {
+        const next: Record<string, any> = {};
+        for (const [cid, dot] of Object.entries(myDots.poison as Record<string, any>)) {
+          next[cid] = {
+            ...(prev[cid] || {}),
+            stacks: dot.stacks || 1,
+            damagePerTick: dot.damage_per_tick || 0,
+            expiresAt: dot.expires_at || 0,
+            creatureName: prev[cid]?.creatureName || 'Unknown',
+            creatureLevel: prev[cid]?.creatureLevel || 1,
+            creatureRarity: prev[cid]?.creatureRarity || 'regular',
+            creatureLootTable: prev[cid]?.creatureLootTable || [],
+            lootTableId: prev[cid]?.lootTableId ?? null,
+            dropChance: prev[cid]?.dropChance ?? 0.5,
+            creatureNodeId: prev[cid]?.creatureNodeId ?? null,
+            maxHp: prev[cid]?.maxHp || 10,
+            lastKnownHp: prev[cid]?.lastKnownHp ?? 10,
+          };
+        }
+        return next;
+      });
+    }
+    // Ignite stacks sync
+    if (myDots.ignite) {
+      gameLoop.setIgniteStacks(prev => {
+        const next: Record<string, any> = {};
+        for (const [cid, dot] of Object.entries(myDots.ignite as Record<string, any>)) {
+          next[cid] = {
+            ...(prev[cid] || {}),
+            stacks: dot.stacks || 1,
+            damagePerTick: dot.damage_per_tick || 0,
+            expiresAt: dot.expires_at || 0,
+            creatureName: prev[cid]?.creatureName || 'Unknown',
+            creatureLevel: prev[cid]?.creatureLevel || 1,
+            creatureRarity: prev[cid]?.creatureRarity || 'regular',
+            creatureLootTable: prev[cid]?.creatureLootTable || [],
+            lootTableId: prev[cid]?.lootTableId ?? null,
+            dropChance: prev[cid]?.dropChance ?? 0.5,
+            creatureNodeId: prev[cid]?.creatureNodeId ?? null,
+            maxHp: prev[cid]?.maxHp || 10,
+            lastKnownHp: prev[cid]?.lastKnownHp ?? 10,
+          };
+        }
+        return next;
+      });
+    }
+    // Bleed stacks sync
+    if (myDots.bleed) {
+      gameLoop.setBleedStacks(prev => {
+        const next: Record<string, any> = {};
+        for (const [cid, dot] of Object.entries(myDots.bleed as Record<string, any>)) {
+          next[cid] = {
+            ...(prev[cid] || {}),
+            damagePerTick: dot.damage_per_tick || 0,
+            intervalMs: 2000,
+            expiresAt: dot.expires_at || 0,
+            creatureId: cid,
+            creatureName: prev[cid]?.creatureName || 'Unknown',
+            creatureLevel: prev[cid]?.creatureLevel || 1,
+            creatureRarity: prev[cid]?.creatureRarity || 'regular',
+            creatureLootTable: prev[cid]?.creatureLootTable || [],
+            lootTableId: prev[cid]?.lootTableId ?? null,
+            dropChance: prev[cid]?.dropChance ?? 0.5,
+            creatureNodeId: prev[cid]?.creatureNodeId ?? null,
+            maxHp: prev[cid]?.maxHp || 10,
+            lastKnownHp: prev[cid]?.lastKnownHp ?? 10,
+          };
+        }
+        return next;
+      });
+    }
+  }, [character.id, gameLoop.setPoisonStacks, gameLoop.setIgniteStacks, gameLoop.setBleedStacks]);
 
   // Determine if this character should use party combat mode:
   // Party mode when in a party AND on the same node as the leader
@@ -551,7 +611,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     isLeader, isDead,
     addLocalLog, updateCharacter, updateCharacterLocal, fetchGroundLoot,
     gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
-    gatherDotStacks, onClearedDots: handleClearedDots,
+    onClearedDots: handleClearedDots,
+    onActiveDots: handleActiveDots,
     onPoisonProc: gameLoop.handleAddPoisonStack,
     onIgniteProc: gameLoop.handleAddIgniteStack,
     onAbilityExecute: async (index, targetId) => {
