@@ -497,8 +497,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     party: usePartyCombatMode ? party : null,
     isLeader, isDead,
     addLocalLog, updateCharacter, updateCharacterLocal, fetchGroundLoot,
-    gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
-    onClearedDots: handleClearedDots,
+    gatherBuffs: gameLoop.gatherBuffs,
+    onConsumedBuffs: gameLoop.handleConsumedBuffs,
+    onClearedDots: gameLoop.handleClearedDots,
     onActiveDots: handleActiveDots,
     onPoisonProc: gameLoop.handleAddPoisonStack,
     onIgniteProc: gameLoop.handleAddIgniteStack,
@@ -511,8 +512,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
     pendingAbility: _pendingAbility, queueAbility } = combat;
 
-  // Sync combat state ref for DoT ticks in useGameLoop
-  combatStateRef.current = { creatureHpOverrides, updateCreatureHp };
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
   // Sync follower's local character when leader moves them
