@@ -279,12 +279,11 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
                 <Layers className="w-3 h-3" /> Forge Mode
               </Label>
-              <Select value={forgeMode} onValueChange={(v) => { setForgeMode(v as any); setGenerated([]); setSavedTableId(null); setSavedItemIds([]); }}>
+               <Select value={forgeMode} onValueChange={(v) => { setForgeMode(v as any); setGenerated([]); setSavedTableId(null); setSavedItemIds([]); }}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="loot_table">📦 Loot Table (batch)</SelectItem>
                   <SelectItem value="single">🔮 Single Item</SelectItem>
-                  <SelectItem value="forge_pool">🔨 Forge Pool (blacksmith)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
