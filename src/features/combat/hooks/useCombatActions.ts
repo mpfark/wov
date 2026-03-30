@@ -69,7 +69,7 @@ function resolveCreatureTarget(
 function buildLevelUpUpdates(
   character: Character,
   newLevel: number,
-  equipmentBonuses: Record<string, number>,
+  _equipmentBonuses: Record<string, number>,
   addLog: (msg: string) => void,
 ): Partial<Character> {
   const levelUpUpdates: Partial<Character> = {
