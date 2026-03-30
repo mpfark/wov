@@ -437,7 +437,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     poisonBuff, poisonStacks, evasionBuff, disengageNextHit, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
     regenTick, deathCountdown, itemHpRegen, baseRegen,
-    handleAddPoisonStack, handleAddIgniteStack, handleAbsorbDamage,
+    handleAddPoisonStack: _handleAddPoisonStack, handleAddIgniteStack: _handleAddIgniteStack, handleAbsorbDamage: _handleAbsorbDamage,
     inCombatRegenRef, deathGoldRef,
   } = gameLoop;
 
