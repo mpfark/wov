@@ -490,7 +490,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
   const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
 
-  // Ref to break circular dependency: usePartyCombat needs ability executor, useActions needs queueAbility
+  // Ref to break circular dependency: usePartyCombat needs ability executor, useCombatActions needs queueAbility
   const executeAbilityRef = useRef<(index: number, targetId?: string) => Promise<void>>();
 
   const combat = usePartyCombat({
