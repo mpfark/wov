@@ -81,12 +81,25 @@ Deno.serve(async (req) => {
     const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, { now });
 
     // ── Parallel post-resolution writes ─────────────────────────
-    const sessionIds = [...new Set(effects.map((e: any) => e.session_id).filter(Boolean))] as string[];
+    const effectSessionIds = [...new Set(effects.map((e: any) => e.session_id).filter(Boolean))] as string[];
+    const nullSessionEffects = effects.filter((e: any) => !e.session_id).length;
+
+    // Fallback: if any effects have null session_id, also find all sessions at this node
+    const { data: nodeSessions } = await db.from('combat_sessions')
+      .select('id, last_tick_at')
+      .eq('node_id', node_id);
+    const sessionLastTickBefore: Record<string, number> = {};
+    const allSessionIds = new Set(effectSessionIds);
+    for (const s of (nodeSessions || [])) {
+      sessionLastTickBefore[s.id] = s.last_tick_at;
+      allSessionIds.add(s.id);
+    }
+    const finalSessionIds = [...allSessionIds];
 
     await Promise.all([
       writeCreatureState(db, creatures, cHp, cKilled),
-      sessionIds.length > 0
-        ? db.from('combat_sessions').update({ last_tick_at: now }).in('id', sessionIds)
+      finalSessionIds.length > 0
+        ? db.from('combat_sessions').update({ last_tick_at: now }).in('id', finalSessionIds)
         : Promise.resolve(),
       cleanupEffects(db, result.expiredIds, cKilled),
     ]);
