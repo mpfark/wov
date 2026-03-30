@@ -11,7 +11,7 @@ import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/h
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel, DEFAULT_BINDINGS, ACTION_NAMES, ACTION_LABELS } from '@/hooks/useKeyboardMovement';
+import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/hooks/useKeyboardMovement';
 
 export interface ActiveBuffs {
   stealth?: boolean;
