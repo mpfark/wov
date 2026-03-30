@@ -1,4 +1,15 @@
+/**
+ * combat-catchup: Resolves pending DoT/effect damage when a player enters a node.
+ * Uses the shared combat resolver for effect processing, loot, creature writes, and cleanup.
+ * `active_effects` table is the sole source of truth for all DoT state.
+ */
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import {
+  resolveEffectTicks,
+  processLootDrops,
+  writeCreatureState,
+  cleanupEffects,
+} from "../_shared/combat-resolver.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +23,6 @@ function json(data: unknown, status = 200) {
   });
 }
 
-const TICK_RATE = 2000;
 const TICK_CAP = 30;
 
 Deno.serve(async (req) => {
@@ -64,127 +74,28 @@ Deno.serve(async (req) => {
     const cKilled = new Set<string>();
     for (const cr of creatures) cHp[cr.id] = cr.hp;
 
-    const expiredIds: string[] = [];
-    const killedTargetIds = new Set<string>();
-    const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
+    // ── Resolve effects via shared resolver (bulk mode) ─────────
+    const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, { now });
 
-    // Process each effect independently
-    for (const eff of effects) {
-      if (cKilled.has(eff.target_id) || cHp[eff.target_id] === undefined) {
-        expiredIds.push(eff.id);
-        continue;
-      }
+    // ── Write creature HP / kills (shared resolver) ─────────────
+    await writeCreatureState(db, creatures, cHp, cKilled);
 
-      // Calculate ticks for this effect
-      const elapsedMs = now - eff.next_tick_at;
-      if (elapsedMs < 0) continue; // Not due yet
+    // ── Cleanup expired/killed effects (shared resolver) ────────
+    await cleanupEffects(db, result.expiredIds, cKilled);
 
-      const ticksToProcess = Math.floor(elapsedMs / eff.tick_rate_ms) + 1;
-      const maxTicksByExpiry = Math.max(0, Math.floor((eff.expires_at - eff.next_tick_at) / eff.tick_rate_ms) + 1);
-      const ticks = Math.min(ticksToProcess, TICK_CAP, maxTicksByExpiry);
-
-      if (ticks <= 0) {
-        if (now >= eff.expires_at) expiredIds.push(eff.id);
-        continue;
-      }
-
-      // Tick loop for this effect
-      for (let t = 0; t < ticks; t++) {
-        const tickTime = eff.next_tick_at + t * eff.tick_rate_ms;
-        if (tickTime > eff.expires_at) break;
-        if (cKilled.has(eff.target_id) || cHp[eff.target_id] <= 0) break;
-
-        const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
-        cHp[eff.target_id] = Math.max(cHp[eff.target_id] - totalDmg, 0);
-
-        if (cHp[eff.target_id] <= 0 && !cKilled.has(eff.target_id)) {
-          cKilled.add(eff.target_id);
-          killedTargetIds.add(eff.target_id);
-          const creature = creatures.find(cr => cr.id === eff.target_id);
-          if (creature) {
-            if (creature.loot_table_id) {
-              lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
-            } else {
-              const lt = (creature.loot_table || []) as any[];
-              for (const entry of lt) {
-                if (entry.type === 'gold') continue;
-                if (Math.random() <= (entry.chance || 0.1)) {
-                  lootQueue.push({ nodeId: node_id, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1 });
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Update or expire the effect
-      const newNextTickAt = eff.next_tick_at + ticks * eff.tick_rate_ms;
-      if (newNextTickAt >= eff.expires_at || cKilled.has(eff.target_id)) {
-        expiredIds.push(eff.id);
-      } else {
-        await db.from('active_effects').update({ next_tick_at: newNextTickAt }).eq('id', eff.id);
-      }
+    // ── Update advanced effects' next_tick_at ───────────────────
+    for (const eff of result.advancedEffects) {
+      await db.from('active_effects').update({ next_tick_at: eff.next_tick_at }).eq('id', eff.id);
     }
 
-    // Write creature HP / kills
-    const creaturePromises = creatures.map(cr => {
-      if (cKilled.has(cr.id)) {
-        return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: 0, _killed: true });
-      } else if (cHp[cr.id] !== cr.hp) {
-        return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: cHp[cr.id] });
-      }
-      return Promise.resolve();
-    });
-    await Promise.all(creaturePromises);
+    // ── Loot drops (shared resolver) ────────────────────────────
+    await processLootDrops(db, result.lootQueue);
 
-    // Delete expired/killed effects
-    if (expiredIds.length > 0) {
-      await db.from('active_effects').delete().in('id', expiredIds);
-    }
-    // Also delete any effects targeting killed creatures (from other sources)
-    if (killedTargetIds.size > 0) {
-      await db.from('active_effects').delete().in('target_id', [...killedTargetIds]);
-    }
-
-    // Loot drops
-    for (const drop of lootQueue) {
-      try {
-        if (drop.lootTableId) {
-          if (Math.random() > drop.dropChance) continue;
-          const { data: entries } = await db.from('loot_table_entries').select('item_id, weight').eq('loot_table_id', drop.lootTableId);
-          if (!entries || entries.length === 0) continue;
-          const totalW = entries.reduce((s, e) => s + e.weight, 0);
-          let r = Math.random() * totalW;
-          let picked: string | null = null;
-          for (const e of entries) { r -= e.weight; if (r <= 0) { picked = e.item_id; break; } }
-          if (!picked) picked = entries[entries.length - 1].item_id;
-          const { data: item } = await db.from('items').select('name, rarity').eq('id', picked).single();
-          if (!item) continue;
-          if (item.rarity === 'unique') {
-            const { count } = await db.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', picked);
-            if (count && count > 0) continue;
-          }
-          await db.from('node_ground_loot').insert({ node_id: drop.nodeId, item_id: picked, creature_name: drop.creatureName });
-        } else if (drop.itemId) {
-          const { data: item } = await db.from('items').select('name, rarity').eq('id', drop.itemId).single();
-          if (!item) continue;
-          if (item.rarity === 'unique') {
-            const { count } = await db.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', drop.itemId);
-            if (count && count > 0) continue;
-          }
-          await db.from('node_ground_loot').insert({ node_id: drop.nodeId, item_id: drop.itemId, creature_name: drop.creatureName });
-        }
-      } catch (e) {
-        console.error('Catchup loot drop error:', e);
-      }
-    }
-
-    // Clean up orphaned combat sessions at this node if no effects remain
+    // ── Clean up orphaned combat sessions at this node ──────────
     const { count: remainingEffects } = await db.from('active_effects')
       .select('id', { count: 'exact', head: true })
       .eq('node_id', node_id);
     if ((remainingEffects || 0) === 0) {
-      // Check for sessions with no engaged creatures at this node
       const { data: sessions } = await db.from('combat_sessions')
         .select('id, engaged_creature_ids')
         .eq('node_id', node_id);
