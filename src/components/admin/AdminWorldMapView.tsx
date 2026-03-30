@@ -450,8 +450,9 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
     }
   }, [allNodePositions, onPositionsComputed]);
 
-  // Center on a specific node with smooth animation
-  const _centerOnNode = useCallback((nodeId: string) => {
+  // Center on a specific node with smooth animation (reserved for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void useCallback((nodeId: string) => {
     const pos = allNodePositions.get(nodeId);
     if (!pos || !containerRef.current) return;
 
