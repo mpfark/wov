@@ -161,14 +161,11 @@ Deno.serve(async (req) => {
 
     // Update session node if changed
     if (session.node_id !== node_id) {
-      // Node changed — check for active DoTs
-      const sessionDots = session.dots || {};
-      const hasActiveDots = Object.values(sessionDots).some((charDots: any) =>
-        Object.keys(charDots?.bleed || {}).length > 0 ||
-        Object.keys(charDots?.poison || {}).length > 0 ||
-        Object.keys(charDots?.ignite || {}).length > 0
-      );
-      if (hasActiveDots) {
+      // Node changed — check for active DoTs in the active_effects table
+      const { count: dotCount } = await db.from('active_effects')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', session.id);
+      if ((dotCount || 0) > 0) {
         // Keep session alive for DoT processing on old node, but clear engaged creatures
         sessionEngaged.clear();
       } else {
