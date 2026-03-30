@@ -3,9 +3,9 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Locate } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { GameNode, Region, Area, getNodeDisplayName } from '@/hooks/useNodes';
-import { useAreaTypes } from '@/hooks/useAreaTypes';
-import { getAreaFillColor, getAreaStrokeColor, getAreaHeaderColor } from '@/lib/area-colors';
+import { GameNode, Region, Area, getNodeDisplayName } from '@/features/world';
+import { useAreaTypes } from '@/features/world';
+import { getAreaFillColor, getAreaStrokeColor, getAreaHeaderColor } from '@/features/world';
 
 interface Props {
   open: boolean;

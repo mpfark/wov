@@ -6,11 +6,11 @@
  * Client polls every 2s; server catches up all elapsed ticks deterministically.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Character } from '@/hooks/useCharacter';
-import { Creature } from '@/hooks/useCreatures';
+import { Character } from '@/features/character';
+import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
-import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/lib/class-abilities';
+import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/features/combat';
 
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage']);

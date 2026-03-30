@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Character } from '@/hooks/useCharacter';
+import { Character } from '@/features/character';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { getMaxHp, getMaxCp, getMaxMp } from '@/lib/game-data';
 

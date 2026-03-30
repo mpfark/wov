@@ -1,6 +1,6 @@
-import { Party, PartyMember } from '@/hooks/useParty';
-import { PlayerPresence } from '@/hooks/useNodeChannel';
-import { Character } from '@/hooks/useCharacter';
+import { Party, PartyMember } from '@/features/party';
+import { PlayerPresence } from '@/features/world';
+import { Character } from '@/features/character';
 import { Button } from '@/components/ui/button';
 import { getCharacterTitle } from '@/lib/game-data';
 import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair } from 'lucide-react';

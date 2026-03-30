@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
-import { GameNode } from '@/hooks/useNodes';
-import { type Direction } from '@/hooks/useKeyboardMovement';
+import { GameNode } from '@/features/world';
+import { type Direction } from '@/features/world';
 import { GripHorizontal } from 'lucide-react';
 
 interface Props {

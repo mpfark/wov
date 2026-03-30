@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { logBroadcast } from '@/hooks/useBroadcastDebug';
-import type { NodeChannelHandle } from '@/hooks/useNodeChannel';
+import type { NodeChannelHandle } from '@/features/world';
 
 interface CreatureDamageEvent {
   creature_id: string;

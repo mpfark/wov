@@ -9,8 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Save, Trash2, Pencil, X, Sparkles, Loader2, Settings } from 'lucide-react';
-import { type Area } from '@/hooks/useNodes';
-import { useAreaTypes } from '@/hooks/useAreaTypes';
+import { type Area } from '@/features/world';
+import { useAreaTypes } from '@/features/world';
 
 interface Region {
   id: string;

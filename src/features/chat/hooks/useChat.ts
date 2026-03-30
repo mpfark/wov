@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logBroadcast } from '@/hooks/useBroadcastDebug';
 import { OnlinePlayer } from '@/hooks/useGlobalPresence';
-import type { NodeChannelHandle } from '@/hooks/useNodeChannel';
+import type { NodeChannelHandle } from '@/features/world';
 
 export interface ChatMessage {
   type: 'say' | 'whisper-in' | 'whisper-out';

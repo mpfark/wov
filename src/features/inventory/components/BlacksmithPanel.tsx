@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Hammer } from 'lucide-react';
-import { InventoryItem } from '@/hooks/useInventory';
+import { InventoryItem } from '@/features/inventory';
 import { calculateRepairCost } from '@/lib/game-data';
 
 interface Props {

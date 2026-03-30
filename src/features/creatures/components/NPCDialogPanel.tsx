@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { NPC } from '@/hooks/useNPCs';
+import { NPC } from '@/features/creatures';
 
 interface Props {
   npc: NPC | null;

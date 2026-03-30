@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { GameNode, Area } from '@/hooks/useNodes';
-import { PartyMember } from '@/hooks/useParty';
+import { GameNode, Area } from '@/features/world';
+import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
 
 interface NodeCreatureInfo {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveEffectTicks } from '@/lib/combat-resolver';
+import { resolveEffectTicks } from '@/features/combat';
 
 // ── Helpers ──────────────────────────────────────────────────────
 

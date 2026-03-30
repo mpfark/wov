@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Character } from '@/hooks/useCharacter';
+import { Character } from '@/features/character';
 import {
   calculateHP, calculateAC,
   getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
@@ -9,7 +9,7 @@ import {
   getIntHitBonus, getDexCritBonus, getWisDodgeChance,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
 } from '@/lib/game-data';
-import { CLASS_COMBAT } from '@/lib/class-abilities';
+import { CLASS_COMBAT } from '@/features/combat';
 
 import { RotateCcw, ArrowRight, Check, Minus, Plus } from 'lucide-react';
 

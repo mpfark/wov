@@ -3,7 +3,7 @@
  * and DoT tick effects. Mirrors LPMud's heart_beat() pattern.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Character } from '@/hooks/useCharacter';
+import { Character } from '@/features/character';
 import { getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate, getStatModifier } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';

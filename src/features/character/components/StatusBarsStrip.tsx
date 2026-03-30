@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Character } from '@/hooks/useCharacter';
+import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getMaxCp, getMaxMp } from '@/lib/game-data';
 

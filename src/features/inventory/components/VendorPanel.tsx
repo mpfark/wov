@@ -4,7 +4,7 @@ import ScrollPanel from './ScrollPanel';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, ArrowUpFromLine } from 'lucide-react';
-import { InventoryItem } from '@/hooks/useInventory';
+import { InventoryItem } from '@/features/inventory';
 import { getChaSellMultiplier, getChaBuyDiscount, getStatModifier } from '@/lib/game-data';
 
 interface VendorItem {

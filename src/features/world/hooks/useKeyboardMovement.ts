@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { GameNode } from '@/hooks/useNodes';
+import { GameNode } from '@/features/world';
 
 export type Direction = 'N' | 'S' | 'E' | 'W' | 'NE' | 'NW' | 'SE' | 'SW';
 export type KeyBindings = Record<Direction, string[]>;

@@ -1,12 +1,12 @@
-import { GameNode, Region, Area, getNodeDisplayName, getNodeDisplayDescription } from '@/hooks/useNodes';
-import { PlayerPresence } from '@/hooks/useNodeChannel';
-import { Creature } from '@/hooks/useCreatures';
-import { NPC } from '@/hooks/useNPCs';
-import { Character } from '@/hooks/useCharacter';
-import { GroundLootItem } from '@/hooks/useGroundLoot';
+import { GameNode, Region, Area, getNodeDisplayName, getNodeDisplayDescription } from '@/features/world';
+import { PlayerPresence } from '@/features/world';
+import { Creature } from '@/features/creatures';
+import { NPC } from '@/features/creatures';
+import { Character } from '@/features/character';
+import { GroundLootItem } from '@/features/inventory';
 import { getCharacterTitle } from '@/lib/game-data';
-import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
-import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
+import { CLASS_COMBAT, ClassAbility } from '@/features/combat';
+import { getKeyLabel, type ActionBindings } from '@/features/world';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
@@ -15,8 +15,8 @@ import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
-import { useAreaTypes } from '@/hooks/useAreaTypes';
-import { getAreaHeaderColor } from '@/lib/area-colors';
+import { useAreaTypes } from '@/features/world';
+import { getAreaHeaderColor } from '@/features/world';
 
 
 interface Props {

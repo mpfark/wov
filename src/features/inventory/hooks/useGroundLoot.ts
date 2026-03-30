@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logBroadcast } from '@/hooks/useBroadcastDebug';
-import type { NodeChannelHandle } from '@/hooks/useNodeChannel';
+import type { NodeChannelHandle } from '@/features/world';
 
 export interface GroundLootItem {
   id: string;

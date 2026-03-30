@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Save, Pencil, Trash2 } from 'lucide-react';
-import { useAreaTypes } from '@/hooks/useAreaTypes';
+import { useAreaTypes } from '@/features/world';
 
 interface Props {
   open: boolean;

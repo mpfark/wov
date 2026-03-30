@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { NodeChannelHandle } from '@/hooks/useNodeChannel';
-import type { GameNode } from '@/hooks/useNodes';
+import type { NodeChannelHandle } from '@/features/world';
+import type { GameNode } from '@/features/world';
 
 export interface Creature {
   id: string;

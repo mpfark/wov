@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import { Region, GameNode, Area } from '@/hooks/useNodes';
-import { Party, PartyMember } from '@/hooks/useParty';
-import { PlayerPresence } from '@/hooks/useNodeChannel';
-import { Character } from '@/hooks/useCharacter';
+import { Region, GameNode, Area } from '@/features/world';
+import { Party, PartyMember } from '@/features/party';
+import { PlayerPresence } from '@/features/world';
+import { Character } from '@/features/character';
 import PlayerGraphView from './PlayerGraphView';
 import PartyPanel from './PartyPanel';
 import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe } from 'lucide-react';
@@ -11,7 +11,7 @@ import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/h
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/hooks/useKeyboardMovement';
+import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/features/world';
 
 export interface ActiveBuffs {
   stealth?: boolean;

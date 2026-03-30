@@ -4,18 +4,18 @@
  * loot rolling, kill rewards, and equipment degradation.
  */
 import { useState, useCallback } from 'react';
-import { Character } from '@/hooks/useCharacter';
+import { Character } from '@/features/character';
 import { rollD20, getStatModifier, rollDamage, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMaxHp, getMoveCost, getCarryCapacity, getBagWeight, getChaGoldMultiplier, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
-import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
-import { getNodeDisplayName } from '@/hooks/useNodes';
+import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
+import { getNodeDisplayName } from '@/features/world';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
-import { getCachedItemAsync } from '@/hooks/useItemCache';
+import { getCachedItemAsync } from '@/features/inventory';
 import type {
   RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, AcBuff,
   DotDebuff, PoisonBuff, EvasionBuff, DisengageNextHit, IgniteBuff, AbsorbBuff,
   PartyRegenBuff, SunderDebuff, FocusStrikeBuff, PoisonStack, IgniteStack,
-} from '@/hooks/useGameLoop';
+} from '@/features/combat';
 
 // ─── Params ───────────────────────────────────────────────────────
 export interface UseActionsParams {
