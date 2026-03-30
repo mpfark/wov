@@ -116,7 +116,7 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
     if (!nodeId) return;
 
     // Periodic respawn check every 30s (safety net) — only if no channel handle (fallback)
-    const interval = setInterval(fetchCreatures, 30000);
+    const interval = setInterval(() => fetchCreatures(true), 30000);
 
     return () => {
       clearInterval(interval);
