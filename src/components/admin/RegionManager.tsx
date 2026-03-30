@@ -44,7 +44,7 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
-export default function RegionManager({ regions, allNodes, onCreated, isValar, onDelete }: Props) {
+export default function RegionManager({ regions, allNodes, onCreated, isValar: _isValar, onDelete: _onDelete }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10 });
   const [aiLoading, setAiLoading] = useState(false);
