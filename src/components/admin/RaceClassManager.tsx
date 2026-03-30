@@ -14,7 +14,7 @@ import {
   RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
   STAT_LABELS, CLASS_LEVEL_BONUSES,
 } from '@/lib/game-data';
-import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';
+import { CLASS_COMBAT, CLASS_ABILITIES } from '@/features/combat';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 

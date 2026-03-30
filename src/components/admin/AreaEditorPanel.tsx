@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, Sparkles, Loader2, Trash2 } from 'lucide-react';
-import { useAreaTypes } from '@/hooks/useAreaTypes';
+import { useAreaTypes } from '@/features/world';
 
 interface Region {
   id: string;

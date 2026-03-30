@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useAreaTypes } from '@/hooks/useAreaTypes';
-import { getAreaPreviewColor } from '@/lib/area-colors';
+import { useAreaTypes } from '@/features/world';
+import { getAreaPreviewColor } from '@/features/world';
 
 interface GeneratedArea {
   temp_id: string;

@@ -1,8 +1,8 @@
 import { createContext, useContext, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useCharacter, Character } from '@/hooks/useCharacter';
+import { useCharacter, Character } from '@/features/character';
 import { useRole } from '@/hooks/useRole';
-import { useNodes, GameNode, Region } from '@/hooks/useNodes';
+import { useNodes, GameNode, Region } from '@/features/world';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import { logActivity } from '@/hooks/useActivityLog';
 
