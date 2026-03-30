@@ -140,7 +140,6 @@ Deno.serve(async (req) => {
         last_tick_at: now,
         tick_rate_ms: TICK_RATE,
         engaged_creature_ids: engagedIds,
-        dots: {},
         member_buffs: {},
         ...sessionKey,
       };
@@ -162,14 +161,11 @@ Deno.serve(async (req) => {
 
     // Update session node if changed
     if (session.node_id !== node_id) {
-      // Node changed — check for active DoTs
-      const sessionDots = session.dots || {};
-      const hasActiveDots = Object.values(sessionDots).some((charDots: any) =>
-        Object.keys(charDots?.bleed || {}).length > 0 ||
-        Object.keys(charDots?.poison || {}).length > 0 ||
-        Object.keys(charDots?.ignite || {}).length > 0
-      );
-      if (hasActiveDots) {
+      // Node changed — check for active DoTs in the active_effects table
+      const { count: dotCount } = await db.from('active_effects')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', session.id);
+      if ((dotCount || 0) > 0) {
         // Keep session alive for DoT processing on old node, but clear engaged creatures
         sessionEngaged.clear();
       } else {
@@ -188,7 +184,7 @@ Deno.serve(async (req) => {
       // Not enough time has passed for a tick
       const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true);
       const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_dots: session.dots });
+      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: [] });
     }
 
     // ── Fetch equipment bonuses ──────────────────────────────────
@@ -232,14 +228,13 @@ Deno.serve(async (req) => {
 
     const allCreatures = creaturesRaw || [];
 
-    // Collect creature IDs that have active DoTs targeting them
+    // Collect creature IDs that have active effects targeting them
     const dotTargetIds = new Set<string>();
-    const sessionDots: Record<string, any> = session.dots || {};
-    for (const dotState of Object.values(sessionDots)) {
-      for (const creatureId of Object.keys((dotState as any)?.bleed || {})) dotTargetIds.add(creatureId);
-      for (const creatureId of Object.keys((dotState as any)?.poison || {})) dotTargetIds.add(creatureId);
-      for (const creatureId of Object.keys((dotState as any)?.ignite || {})) dotTargetIds.add(creatureId);
-    }
+    const { data: activeEffectsRaw } = await db.from('active_effects')
+      .select('*')
+      .eq('node_id', combatNodeId);
+    const activeEffects: any[] = activeEffectsRaw || [];
+    for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
     for (const pa of pendingAbilities) {
       if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
     }
@@ -277,6 +272,7 @@ Deno.serve(async (req) => {
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
+    const killedCreatureIds = new Set<string>(); // Track creature IDs to delete effects for
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; mCp[m.id] = m.c.cp ?? 0; }
@@ -285,12 +281,16 @@ Deno.serve(async (req) => {
     const handleCreatureKill = (creature: any, killerLabel: string, chaForGold: number = 0) => {
       cKilled.add(creature.id);
       sessionEngaged.delete(creature.id);
-      // Purge all DoTs targeting this creature
-      for (const [charId, charDots] of Object.entries(sessionDots)) {
-        if ((charDots as any)?.bleed?.[creature.id]) { delete (charDots as any).bleed[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'bleed' }); }
-        if ((charDots as any)?.poison?.[creature.id]) { delete (charDots as any).poison[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'poison' }); }
-        if ((charDots as any)?.ignite?.[creature.id]) { delete (charDots as any).ignite[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'ignite' }); }
+      // Purge all active_effects targeting this creature (and track for client)
+      const killedEffects = activeEffects.filter(e => e.target_id === creature.id);
+      for (const e of killedEffects) {
+        clearedDots.push({ character_id: e.source_id, creature_id: creature.id, dot_type: e.effect_type });
       }
+      // Remove from in-memory list (DB delete happens after tick loop)
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        if (activeEffects[i].target_id === creature.id) activeEffects.splice(i, 1);
+      }
+      killedCreatureIds.add(creature.id);
       const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
       const lt = (creature.loot_table || []) as any[];
       const goldEntry = lt.find((e: any) => e.type === 'gold');
@@ -600,31 +600,43 @@ Deno.serve(async (req) => {
           });
 
           if (mb.poison_buff && Math.random() < 0.4) {
-            // Server-side DoT creation: add poison stack
-            if (!sessionDots[m.id]) sessionDots[m.id] = { bleed: {}, poison: {}, ignite: {} };
-            const existing = sessionDots[m.id].poison?.[target.id];
+            // Server-side DoT creation: upsert poison into active_effects
+            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
             const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
             const dexMod = sm((c.dex || 10) + (eb.dex || 0));
             const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
-            sessionDots[m.id].poison[target.id] = {
+            const effData = {
+              node_id: combatNodeId, target_id: target.id, source_id: m.id,
+              session_id: session.id, effect_type: 'poison',
               stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: tickTime + TICK_RATE,
-              expires_at: tickTime + 25000,
+              next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + 25000,
+              tick_rate_ms: TICK_RATE,
             };
+            if (existing) {
+              Object.assign(existing, effData);
+            } else {
+              activeEffects.push({ id: crypto.randomUUID(), ...effData });
+            }
             events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
           }
           if (mb.ignite_buff && Math.random() < 0.4) {
-            if (!sessionDots[m.id]) sessionDots[m.id] = { bleed: {}, poison: {}, ignite: {} };
-            const existing = sessionDots[m.id].ignite?.[target.id];
+            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
             const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
             const intMod = sm((c.int || 10) + (eb.int || 0));
             const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
             const duration = Math.min(45000, 30000 + intMod * 1000);
-            sessionDots[m.id].ignite[target.id] = {
+            const effData = {
+              node_id: combatNodeId, target_id: target.id, source_id: m.id,
+              session_id: session.id, effect_type: 'ignite',
               stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: tickTime + TICK_RATE,
-              expires_at: tickTime + duration,
+              next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
+              tick_rate_ms: TICK_RATE,
             };
+            if (existing) {
+              Object.assign(existing, effData);
+            } else {
+              activeEffects.push({ id: crypto.randomUUID(), ...effData });
+            }
             events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
           }
 
@@ -689,84 +701,36 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Server-side DoT ticking (time-based) ──────────────────
-      for (const [charId, charDots] of Object.entries(sessionDots)) {
-        const member = members.find(m => m.id === charId);
+      // ── Server-side DoT ticking (active_effects rows) ─────────
+      for (const eff of activeEffects) {
+        if (cKilled.has(eff.target_id) || cHp[eff.target_id] === undefined || cHp[eff.target_id] <= 0) continue;
+        const creature = creatures.find(cr => cr.id === eff.target_id);
+        if (!creature) continue;
+        const member = members.find(m => m.id === eff.source_id);
         const charName = member?.c?.name || 'Unknown';
 
-        // Bleed
-        if (charDots.bleed) {
-          for (const [creatureId, bs] of Object.entries(charDots.bleed as Record<string, any>)) {
-            if (cKilled.has(creatureId) || cHp[creatureId] <= 0) continue;
-            const creature = creatures.find(cr => cr.id === creatureId);
-            if (!creature) continue;
-
-            // Check expiry
-            if (bs.expires_at <= tickTime) {
-              delete charDots.bleed[creatureId];
-              clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'bleed' });
-              continue;
-            }
-
-            // Apply tick if due
-            if (bs.next_tick_at <= tickTime) {
-              cHp[creatureId] = Math.max(cHp[creatureId] - bs.damage_per_tick, 0);
-              events.push({ type: 'dot_tick', message: `🩸 ${creature.name} bleeds for ${bs.damage_per_tick} damage! (${charName}'s Rend)` });
-              bs.next_tick_at += TICK_RATE;
-              if (cHp[creatureId] <= 0 && !cKilled.has(creatureId)) {
-                handleCreatureKill(creature, charName);
-              }
-            }
-          }
+        // Check expiry
+        if (eff.expires_at <= tickTime) {
+          eff._expired = true;
+          clearedDots.push({ character_id: eff.source_id, creature_id: eff.target_id, dot_type: eff.effect_type });
+          continue;
         }
 
-        // Poison
-        if (charDots.poison) {
-          for (const [creatureId, ps] of Object.entries(charDots.poison as Record<string, any>)) {
-            if (cKilled.has(creatureId) || cHp[creatureId] <= 0) continue;
-            const creature = creatures.find(cr => cr.id === creatureId);
-            if (!creature) continue;
-
-            if (ps.expires_at <= tickTime) {
-              delete charDots.poison[creatureId];
-              clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'poison' });
-              continue;
-            }
-
-            if (ps.next_tick_at <= tickTime) {
-              const totalDmg = ps.stacks * ps.damage_per_tick;
-              cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
-              events.push({ type: 'dot_tick', message: `🧪 ${creature.name} takes ${totalDmg} poison damage! (${ps.stacks} stack${ps.stacks > 1 ? 's' : ''}, ${charName})` });
-              ps.next_tick_at += TICK_RATE;
-              if (cHp[creatureId] <= 0 && !cKilled.has(creatureId)) {
-                handleCreatureKill(creature, charName);
-              }
-            }
-          }
-        }
-
-        // Ignite
-        if (charDots.ignite) {
-          for (const [creatureId, is] of Object.entries(charDots.ignite as Record<string, any>)) {
-            if (cKilled.has(creatureId) || cHp[creatureId] <= 0) continue;
-            const creature = creatures.find(cr => cr.id === creatureId);
-            if (!creature) continue;
-
-            if (is.expires_at <= tickTime) {
-              delete charDots.ignite[creatureId];
-              clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'ignite' });
-              continue;
-            }
-
-            if (is.next_tick_at <= tickTime) {
-              const totalDmg = is.stacks * is.damage_per_tick;
-              cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
-              events.push({ type: 'dot_tick', message: `🔥 ${creature.name} burns for ${totalDmg} fire damage! (${is.stacks} stack${is.stacks > 1 ? 's' : ''}, ${charName})` });
-              is.next_tick_at += TICK_RATE;
-              if (cHp[creatureId] <= 0 && !cKilled.has(creatureId)) {
-                handleCreatureKill(creature, charName);
-              }
-            }
+        // Apply tick if due
+        if (eff.next_tick_at <= tickTime) {
+          const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
+          cHp[eff.target_id] = Math.max(cHp[eff.target_id] - totalDmg, 0);
+          const emoji = eff.effect_type === 'bleed' ? '🩸' : eff.effect_type === 'poison' ? '🧪' : '🔥';
+          const verb = eff.effect_type === 'bleed' ? 'bleeds' : eff.effect_type === 'poison' ? 'takes' : 'burns';
+          const suffix = eff.effect_type === 'bleed'
+            ? `(${charName}'s Rend)`
+            : `(${eff.stacks} stack${eff.stacks > 1 ? 's' : ''}, ${charName})`;
+          const dmgLabel = eff.effect_type === 'bleed' ? eff.damage_per_tick : totalDmg;
+          const dmgType = eff.effect_type === 'bleed' ? '' : eff.effect_type === 'poison' ? ' poison' : ' fire';
+          events.push({ type: 'dot_tick', message: `${emoji} ${creature.name} ${verb} for ${dmgLabel}${dmgType} damage! ${suffix}` });
+          eff.next_tick_at += TICK_RATE;
+          if (cHp[eff.target_id] <= 0 && !cKilled.has(eff.target_id)) {
+            handleCreatureKill(creature, charName);
           }
         }
       }
@@ -962,23 +926,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Write active_effects to DB ─────────────────────────────
+    // Delete effects for killed creatures
+    if (killedCreatureIds.size > 0) {
+      await db.from('active_effects').delete().in('target_id', [...killedCreatureIds]);
+    }
+    // Delete expired effects
+    const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
+    if (expiredIds.length > 0) {
+      await db.from('active_effects').delete().in('id', expiredIds);
+    }
+    // Upsert remaining active effects
+    const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
+    for (const eff of liveEffects) {
+      const { _expired, ...row } = eff;
+      await db.from('active_effects').upsert(row, { onConflict: 'source_id,target_id,effect_type' });
+    }
+
     // ── Check if session should end ─────────────────────────────
     const anyAlive = creatures.some(cr => !cKilled.has(cr.id) && cHp[cr.id] > 0);
-    const hasActiveDots = Object.values(sessionDots).some((charDots: any) =>
-      Object.keys(charDots?.bleed || {}).length > 0 ||
-      Object.keys(charDots?.poison || {}).length > 0 ||
-      Object.keys(charDots?.ignite || {}).length > 0
-    );
-    const sessionEnded = !anyAlive && !hasActiveDots;
+    const hasActiveEffects = liveEffects.length > 0;
+    const sessionEnded = !anyAlive && !hasActiveEffects;
 
     if (sessionEnded) {
       await db.from('combat_sessions').delete().eq('id', session.id);
     } else {
-      // Update session state
       await db.from('combat_sessions').update({
         last_tick_at: newLastTickAt,
         engaged_creature_ids: [...sessionEngaged],
-        dots: sessionDots,
         member_buffs: buffs,
         node_id: combatNodeId,
       }).eq('id', session.id);
@@ -999,7 +974,7 @@ Deno.serve(async (req) => {
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
       consumed_ability_stacks: consumedAbilityStacks,
-      active_dots: sessionDots,
+      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at })),
       session_ended: sessionEnded,
       ticks_processed: ticks,
     });
