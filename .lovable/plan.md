@@ -1,214 +1,144 @@
 
 
-# State Ownership Refactor — Refined Plan
+# Combat Progression Fixes (1, 3, 4, 5)
 
-## Build Errors
-
-The three reported errors are **stale** — the current source files already have correct imports:
-- `usePartyCombat.ts:193` imports from `@/features/character` (correct)
-- `combat/index.ts:19` exports `EffectTickResult`, not `ActiveEffect` (correct, `ActiveEffect` isn't referenced anywhere)
-- `TeleportDialog.tsx:3` imports from `@/features/inventory/components/ScrollPanel` (correct)
-
-These will resolve on rebuild. No code changes needed for them.
+Implementing fixes for tick stalling, flee race conditions, stale HP display, and diagnostics. Deferring Fix 2 (server-side display tick cap).
 
 ---
 
-## Phase 1: Remove dead client-side DoT code from useGameLoop
+## Fix 1: Eliminate tick-busy stalling
 
-**File: `src/features/combat/hooks/useGameLoop.ts`**
+**File: `src/features/combat/hooks/usePartyCombat.ts`**
 
-Remove:
-- Lines 319-511: three `useEffect` blocks for bleed, poison, and ignite DoT ticking (all guarded by `if (params.inParty) return` — always true)
-- `inParty` from `UseGameLoopParams` and destructuring
-- `combatStateRef`, `broadcastDamage`, `awardKillRewardsRef` from params (only used by dead DoT code)
-- `dotKilledRef` ref (only used by dead DoT code and `notifyCreatureKilled`)
-- `bleedStacksRef`, `poisonStacksRef`, `igniteStacksRef` refs + their sync effects (only used by dead DoT intervals)
+Currently line 355: `if (tickBusyRef.current) return;` silently drops ticks when a previous request is in-flight. With 2s intervals and potential edge function cold starts, this causes 4-6s gaps.
 
-Keep:
-- All 18 buff/debuff `useState` declarations
-- `notifyCreatureKilled` (still needed to purge local stack display state when server reports a kill — but remove `dotKilledRef` usage from it, just keep the setPoisonStacks/setBleedStacks/setIgniteStacks cleanup)
-- `handleAddPoisonStack`, `handleAddIgniteStack` (used for server proc events)
-- Regen intervals, death detection, party regen
+Change: Add a `tickPendingRef` so that when a tick is dropped due to busy, it's retried immediately when the current tick completes.
 
-**File: `src/pages/GamePage.tsx`**
-- Remove `combatStateRef` creation and wiring
-- Remove `awardKillRewardsRef` from useGameLoop params
-- Remove `inParty: true` param
-- Remove `broadcastDamage` from useGameLoop params (keep it for useCreatureBroadcast usage elsewhere)
-
-~200 lines removed from useGameLoop, ~10 lines from GamePage.
-
----
-
-## Phase 2: Create `useBuffState` — narrowly focused on transient combat UI state
-
-**New file: `src/features/combat/hooks/useBuffState.ts`**
-
-Move from useGameLoop:
-- All 18 `useState` calls for buff/debuff state (regenBuff through focusStrikeBuff)
-- Their type exports stay in useGameLoop types (or a new `types.ts`)
-- `notifyCreatureKilled` (purges local DoT stack display — this is UI cleanup, not business logic)
-
-Export two typed objects:
 ```typescript
-export interface BuffState {
-  regenBuff: RegenBuff;
-  foodBuff: FoodBuff;
-  critBuff: CritBuff;
-  stealthBuff: StealthBuff | null;
-  // ... all 18 values
-}
+// Add ref
+const tickPendingRef = useRef(false);
 
-export interface BuffSetters {
-  setRegenBuff: (v: RegenBuff) => void;
-  setFoodBuff: (v: FoodBuff) => void;
-  // ... all 18 setters
+// In doTick:
+if (tickBusyRef.current) {
+  tickPendingRef.current = true;
+  return;
+}
+tickBusyRef.current = true;
+try {
+  // ... existing tick logic unchanged ...
+} finally {
+  tickBusyRef.current = false;
+  if (tickPendingRef.current) {
+    tickPendingRef.current = false;
+    setTimeout(() => doTickRef.current(), 0);
+  }
 }
 ```
 
-Also include:
-- `syncFromServerEffects(effects)` — the pure mapping logic (calls the helper from Phase 5)
-- `clearAllBuffs()` — reset on death/disconnect
-
-Does NOT include: regen intervals, death detection, combat flow, networking.
-
-**File: `src/features/combat/hooks/useGameLoop.ts`**
-- Import and use `useBuffState()` instead of owning the 18 useState calls
-- Pass buff state/setters through to its return value
-- Becomes ~150 lines: regen intervals + death detection + party regen + computed values
+No formula or timing changes — just ensures missed polls are retried instead of silently lost.
 
 ---
 
-## Phase 3: Create `useMergedCreatureState` — dedicated selector hook
+## Fix 3: Synchronous flee — stop combat BEFORE node change
 
-**New file: `src/features/combat/hooks/useMergedCreatureState.ts`**
+**File: `src/features/combat/hooks/usePartyCombat.ts`**
+
+Add a new `fleeStopCombat` function that synchronously kills the tick interval before useActions changes the node. This prevents the race where the 2s interval fires one more tick on the old node after the player has logically fled.
 
 ```typescript
-export function useMergedCreatureState(
-  creatures: Creature[],
-  combatHpOverrides: Record<string, number>,
-  broadcastOverrides: Record<string, number>,
-) {
-  return useMemo(() => creatures.map(c => ({
-    ...c,
-    hp: combatHpOverrides[c.id] ?? broadcastOverrides[c.id] ?? c.hp,
-  })), [creatures, combatHpOverrides, broadcastOverrides]);
-}
+const fleeStopCombat = useCallback(() => {
+  if (intervalRef.current) {
+    clearWorkerInterval(intervalRef.current);
+    intervalRef.current = null;
+  }
+  inCombatRef.current = false;
+  tickBusyRef.current = false;
+  tickPendingRef.current = false;
+}, []);
 ```
 
-Priority: combat-tick > broadcast > fetched.
-
-**File: `src/pages/GamePage.tsx`**
-- Replace manual HP merge patterns with `useMergedCreatureState(creatures, creatureHpOverrides, broadcastOverrides)`
-- Pass `mergedCreatures` to NodeView and useActions instead of separate override objects
-
----
-
-## Phase 4: Reduce useActions parameter surface
+Export `fleeStopCombat` from the hook return object.
 
 **File: `src/hooks/useActions.ts`**
 
-Replace lines 57-75 (18 individual buff props + 18 setters) with:
-```typescript
-buffState: BuffState;
-buffSetters: BuffSetters;
-```
-
-Additionally remove:
-- `creatureHpOverrides` + `updateCreatureHp` — useActions uses these for attack HP tracking, but after Phase 3, it receives `mergedCreatures` with correct HP already baked in. Where it still needs to update HP (after an attack result from combat-tick), it can call through combat's `updateCreatureHp` via a single callback
-- `stopCombat` — useActions never calls it (verified: only `stopCombatFn` is used in GamePage, not passed through useActions in a meaningful way)
-
-Net result: ~40 fewer individual params, replaced by 2 typed objects + removal of unused params.
+- Add `fleeStopCombat` to `UseActionsParams` interface
+- In `moveToNode`, call `p.fleeStopCombat()` synchronously before the node update when `p.inCombat` is true (at line ~393, before the opportunity attack block)
 
 **File: `src/pages/GamePage.tsx`**
-- Pass `buffState` and `buffSetters` from useBuffState instead of 36 individual destructured values
+
+- Pass `fleeStopCombat` from the combat hook to useActions params
 
 ---
 
-## Phase 5: Extract server effect sync into pure helper
+## Fix 4: Prevent stale HP flash on node entry
 
-**New file: `src/features/combat/utils/mapServerEffectsToBuffState.ts`**
+**File: `src/features/creatures/hooks/useCreatures.ts`**
 
-Extract the mapping logic from `handleActiveDots` (GamePage lines 520-597) into a pure, typed, testable function:
+Currently the prefetch cache is applied *before* combat-catchup, so users briefly see stale HP. Reorder so that when catch-up is active, the prefetch cache is skipped and creatures are only set from the catch-up response.
 
 ```typescript
-export interface ServerDotState {
-  poison?: Record<string, { stacks: number; damage_per_tick: number; expires_at: number }>;
-  ignite?: Record<string, { stacks: number; damage_per_tick: number; expires_at: number }>;
-  bleed?: Record<string, { damage_per_tick: number; expires_at: number }>;
-}
+const fetchCreatures = useCallback(async (skipCatchup = false) => {
+  if (!nodeId) { setCreatures([]); return; }
 
-export function mapServerEffectsToStacks(
-  serverDots: ServerDotState,
-  prevPoison: Record<string, PoisonStack>,
-  prevIgnite: Record<string, IgniteStack>,
-  prevBleed: Record<string, DotDebuff>,
-): { poison: Record<string, PoisonStack>; ignite: Record<string, IgniteStack>; bleed: Record<string, DotDebuff> }
+  if (!skipCatchup) {
+    const { data } = await supabase.functions.invoke('combat-catchup', {
+      body: { node_id: nodeId }
+    });
+    if (data?.creatures) {
+      setCreatures(data.creatures as Creature[]);
+      return;
+    }
+  }
+
+  // Only use prefetch cache for skipCatchup (respawn interval) or catchup failure
+  const cached = prefetchCache.get(nodeId);
+  if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
+    setCreatures(cached.data);
+    prefetchCache.delete(nodeId);
+    return;
+  }
+
+  const { data } = await supabase
+    .from('creatures').select('*')
+    .eq('node_id', nodeId).eq('is_alive', true);
+  if (data) setCreatures(data as Creature[]);
+}, [nodeId]);
 ```
 
-This is a pure function — no hooks, no side effects. Easy to unit test.
+---
 
-**File: `src/features/combat/hooks/useBuffState.ts`**
-- `syncFromServerEffects` calls `mapServerEffectsToStacks` and applies the result to state
+## Fix 5: Diagnostics
 
-**File: `src/pages/GamePage.tsx`**
-- Remove the 80-line `handleActiveDots` callback
-- Replace with `buffState.syncFromServerEffects(dots[character.id])` in the combat tick handler
+**Server — `supabase/functions/combat-tick/index.ts`**
+
+Add a `console.log` after tick processing with structured JSON: session_id, node_id, elapsed_ms, ticks_processed, engaged_count, effects_count.
+
+**Server — `supabase/functions/combat-catchup/index.ts`**
+
+Add a `console.log` after processing: node_id, effects_count, creatures_alive, kills.
+
+**Client — `src/features/combat/hooks/usePartyCombat.ts`**
+
+In `processTickResult`, log a warning when `ticks_processed > 1` (indicating catch-up occurred) with the gap since last tick.
 
 ---
 
-## Phase 6: Reduce GamePage responsibility
-
-After Phases 1-5, GamePage loses:
-- ~80 lines of `handleActiveDots`
-- ~10 lines of `combatStateRef` wiring
-- ~36 lines of individual buff prop threading to useActions
-- `gatherBuffs` callback (move to useBuffState since it only reads buff state)
-- `handleConsumedBuffs` callback (move to useBuffState)
-
-GamePage becomes a composition layer that:
-- Instantiates feature hooks
-- Passes typed objects between them
-- Renders the layout
-
-Estimated reduction: ~150 lines from GamePage.
-
----
-
-## Phase 7: STATE_OWNERSHIP.md
-
-**New file: `src/features/STATE_OWNERSHIP.md`**
-
-Document with concrete examples:
-- **Server-authoritative**: HP, XP, gold, creature HP, active_effects, combat sessions, inventory, node position, party membership
-- **Fetched/cached**: character record (realtime sub), creature list, ground loot, nodes/areas
-- **Local UI**: selectedTargetId, panel states, event log, death countdown, buff display state (synced from server but owned locally for rendering)
-- **Derived**: effectiveAC, effectiveMaxHp, inCombat, mergedCreatureHp
-
-Guidelines:
-- If state affects simulation → server owns it
-- If state affects display only → local UI may own it
-- If computable from other state → derive it, don't store it
-
----
-
-## Files Summary
+## Files changed
 
 | File | Change |
 |------|--------|
-| `src/features/combat/hooks/useGameLoop.ts` | Remove ~200 lines dead DoT code, delegate buff state to useBuffState |
-| `src/features/combat/hooks/useBuffState.ts` | **New**: 18 buff states, setters, syncFromServerEffects, gatherBuffs |
-| `src/features/combat/hooks/useMergedCreatureState.ts` | **New**: merged creature HP selector |
-| `src/features/combat/utils/mapServerEffectsToBuffState.ts` | **New**: pure server→UI effect mapping |
-| `src/features/combat/index.ts` | Export new hooks + types |
-| `src/hooks/useActions.ts` | Replace 36 individual buff params with BuffState + BuffSetters |
-| `src/pages/GamePage.tsx` | Remove handleActiveDots, combatStateRef, buff threading (~150 lines) |
-| `src/features/STATE_OWNERSHIP.md` | **New**: ownership documentation |
+| `src/features/combat/hooks/usePartyCombat.ts` | Add `tickPendingRef` retry, `fleeStopCombat`, client tick gap warning |
+| `src/hooks/useActions.ts` | Add `fleeStopCombat` param, call it before node change on flee |
+| `src/pages/GamePage.tsx` | Pass `fleeStopCombat` to useActions |
+| `src/features/creatures/hooks/useCreatures.ts` | Reorder prefetch/catchup to prevent stale HP flash |
+| `supabase/functions/combat-tick/index.ts` | Add structured diagnostic logging |
+| `supabase/functions/combat-catchup/index.ts` | Add structured diagnostic logging |
 
 ## Constraints
 
-- Zero gameplay changes
-- No combat timing/formula changes
-- No networking changes
+- Zero formula changes
+- Zero tick rate changes (still 2s)
+- Server remains sole time authority
+- No client-side simulation added
 - Build + typecheck + tests must pass
 
