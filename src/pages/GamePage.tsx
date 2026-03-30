@@ -436,7 +436,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Destructure buff state for convenient access in render
   const {
     regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, acBuff,
-    poisonBuff, poisonStacks, evasionBuff, disengageNextHit, igniteBuff, igniteStacks,
+    poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff, bleedStacks,
   } = buffState;
 
