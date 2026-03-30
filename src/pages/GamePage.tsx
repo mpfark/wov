@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import CharacterPanel from '@/components/game/CharacterPanel';
-import NodeView from '@/components/game/NodeView';
-import MapPanel from '@/components/game/MapPanel';
-import VendorPanel from '@/components/game/VendorPanel';
-import BlacksmithPanel from '@/components/game/BlacksmithPanel';
-import BossTrainerPanel from '@/components/game/BossTrainerPanel';
-import TeleportDialog from '@/components/game/TeleportDialog';
+import CharacterPanel from '@/features/character/components/CharacterPanel';
+import NodeView from '@/features/world/components/NodeView';
+import MapPanel from '@/features/world/components/MapPanel';
+import VendorPanel from '@/features/inventory/components/VendorPanel';
+import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
+import BossTrainerPanel from '@/features/character/components/BossTrainerPanel';
+import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
 import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
@@ -17,8 +17,8 @@ import { useItemCache } from '@/features/inventory';
 import { useCreatureBroadcast } from '@/features/combat';
 import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
-import NPCDialogPanel from '@/components/game/NPCDialogPanel';
-import SoulforgeDialog from '@/components/game/SoulforgeDialog';
+import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
+import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
 import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
@@ -41,7 +41,7 @@ import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useActions } from '@/hooks/useActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
-import MovementPad from '@/components/game/MovementPad';
+import MovementPad from '@/features/world/components/MovementPad';
 
 // Memoized log color cache to avoid re-running 20+ regex checks per render
 const logColorCache = new Map<string, string>();
