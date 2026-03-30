@@ -29,26 +29,41 @@ const PREFETCH_TTL = 30_000; // 30s
 
 export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
+  const [creaturesLoading, setCreaturesLoading] = useState(false);
+  const [prefetchedCreatureCount, setPrefetchedCreatureCount] = useState(0);
 
   const fetchCreatures = useCallback(async (skipCatchup = false) => {
-    if (!nodeId) { setCreatures([]); return; }
+    if (!nodeId) { setCreatures([]); setCreaturesLoading(false); return; }
+
+    setCreaturesLoading(true);
+
+    // Set prefetched count hint for skeleton rows
+    const cached = prefetchCache.get(nodeId);
+    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
+      setPrefetchedCreatureCount(cached.data.length);
+    }
 
     if (!skipCatchup) {
+      const t0 = performance.now();
       // Always wait for catch-up before displaying — prevents stale HP flash
       const { data } = await supabase.functions.invoke('combat-catchup', {
         body: { node_id: nodeId }
       });
+      const elapsed = performance.now() - t0;
+      console.log(`[creatures] catchup for ${nodeId}: ${elapsed.toFixed(0)}ms, ${data?.creatures?.length ?? 0} creatures`);
       if (data?.creatures) {
         setCreatures(data.creatures as Creature[]);
+        prefetchCache.delete(nodeId);
+        setCreaturesLoading(false);
         return;
       }
     }
 
     // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
-    const cached = prefetchCache.get(nodeId);
     if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
       setCreatures(cached.data);
       prefetchCache.delete(nodeId);
+      setCreaturesLoading(false);
       return;
     }
 
@@ -59,6 +74,7 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
       .eq('node_id', nodeId)
       .eq('is_alive', true);
     if (data) setCreatures(data as Creature[]);
+    setCreaturesLoading(false);
   }, [nodeId]);
 
   // Debounced fetch — prevents rapid-fire DB queries during combat
@@ -112,6 +128,17 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
   useEffect(() => {
     // Clear stale creatures immediately so downstream effects don't act on old-node data
     setCreatures([]);
+    setCreaturesLoading(true);
+    setPrefetchedCreatureCount(0);
+
+    // Set prefetch count hint before async fetch
+    if (nodeId) {
+      const cached = prefetchCache.get(nodeId);
+      if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
+        setPrefetchedCreatureCount(cached.data.length);
+      }
+    }
+
     fetchCreatures();
 
     if (!nodeId) return;
@@ -161,5 +188,5 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
       });
   }, [currentNode?.id]); // re-prefetch when node changes
 
-  return { creatures };
+  return { creatures, creaturesLoading, prefetchedCreatureCount };
 }

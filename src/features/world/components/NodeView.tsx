@@ -17,6 +17,7 @@ import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface Props {
@@ -48,6 +49,8 @@ interface Props {
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
   partyMemberHp?: Map<string, { hp: number; max_hp: number }>;
+  creaturesLoading?: boolean;
+  prefetchedCreatureCount?: number;
   // Status bars props
   statusBarsProps?: Omit<StatusBarsStripProps, 'character'>;
 }
@@ -64,6 +67,8 @@ export default function NodeView({
   onPickUpLoot,
   partyMemberIds,
   partyMemberHp,
+  creaturesLoading,
+  prefetchedCreatureCount = 0,
   statusBarsProps,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
@@ -75,7 +80,7 @@ export default function NodeView({
 
   // No longer need cooldown tracking — CP system handles availability
 
-  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0;
+  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0 || (creaturesLoading && prefetchedCreatureCount > 0);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -126,6 +131,19 @@ export default function NodeView({
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="space-y-1">
+                {/* Skeleton placeholders while loading */}
+                {creaturesLoading && creatures.length === 0 && Array.from({ length: Math.max(prefetchedCreatureCount, 2) }).map((_, i) => (
+                  <div key={`skel-${i}`} className="p-1.5 bg-background/50 rounded border border-border">
+                    <div className="flex items-center gap-1.5">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-2 w-8" />
+                      <div className="ml-auto flex items-center gap-1 shrink-0">
+                        <Skeleton className="w-[120px] h-2 rounded-full" />
+                        <Skeleton className="h-3 w-12" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
                 {creatures.map(c => {
                   const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
                   const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
