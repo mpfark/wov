@@ -90,6 +90,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const inCombatRef = useRef(false);
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
+  const tickPendingRef = useRef(false);
   const justStoppedRef = useRef(false);
 
   const pendingAggroRef = useRef(false);

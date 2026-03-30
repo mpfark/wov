@@ -33,15 +33,8 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
   const fetchCreatures = useCallback(async (skipCatchup = false) => {
     if (!nodeId) { setCreatures([]); return; }
 
-    // Check prefetch cache for instant render
-    const cached = prefetchCache.get(nodeId);
-    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-      setCreatures(cached.data);
-      prefetchCache.delete(nodeId);
-    }
-
     if (!skipCatchup) {
-      // combat-catchup processes DoTs AND returns creatures in one round-trip
+      // Always wait for catch-up before displaying — prevents stale HP flash
       const { data } = await supabase.functions.invoke('combat-catchup', {
         body: { node_id: nodeId }
       });
@@ -49,6 +42,14 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
         setCreatures(data.creatures as Creature[]);
         return;
       }
+    }
+
+    // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
+    const cached = prefetchCache.get(nodeId);
+    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
+      setCreatures(cached.data);
+      prefetchCache.delete(nodeId);
+      return;
     }
 
     // Fallback: direct DB query (used by 30s respawn interval)
