@@ -35,7 +35,13 @@ Deno.serve(async (req) => {
       .eq('node_id', node_id);
 
     if (!effects || effects.length === 0) {
-      return json({ caught_up: false, effects_processed: 0 });
+      // No effects — still return creatures for the client
+      const { data: aliveCreatures } = await db
+        .from('creatures')
+        .select('*')
+        .eq('node_id', node_id)
+        .eq('is_alive', true);
+      return json({ caught_up: false, effects_processed: 0, creatures: aliveCreatures || [] });
     }
 
     const now = Date.now();
