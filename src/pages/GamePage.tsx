@@ -509,7 +509,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
-    pendingAbility: _pendingAbility, queueAbility } = combat;
+    fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
