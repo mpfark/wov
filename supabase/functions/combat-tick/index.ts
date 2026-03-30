@@ -272,6 +272,7 @@ Deno.serve(async (req) => {
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
+    const killedCreatureIds = new Set<string>(); // Track creature IDs to delete effects for
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; mCp[m.id] = m.c.cp ?? 0; }
