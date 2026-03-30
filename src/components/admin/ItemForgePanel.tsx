@@ -178,28 +178,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
     if (generated.length === 0) return;
     setApplying(true);
     try {
-      if (forgeMode === 'forge_pool') {
-        // Insert directly into forge_pool table
-        for (const item of generated) {
-          if (item.item_type !== 'equipment' || !item.slot) continue;
-          const { error } = await supabase.from('forge_pool').insert({
-            name: item.name,
-            description: item.description,
-            slot: item.slot as any,
-            rarity: item.rarity as any,
-            level: item.level,
-            hands: item.hands || null,
-            stats: item.stats || {},
-            value: item.value,
-          });
-          if (error) throw error;
-        }
-        const equipCount = generated.filter(i => i.item_type === 'equipment' && i.slot).length;
-        toast.success(`${equipCount} item(s) added to the forge pool!`);
-        setSavedItemIds(generated.map((_, i) => String(i)));
-        await loadPoolStock();
-        onDataChanged?.();
-      } else {
+      {
         // Insert items into items table
         const insertedIds: Array<{ item_id: string; drop_chance: number }> = [];
         for (const item of generated) {
