@@ -17,6 +17,7 @@ import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface Props {
