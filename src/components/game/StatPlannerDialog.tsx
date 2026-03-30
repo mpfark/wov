@@ -10,7 +10,7 @@ import {
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
 } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 import { RotateCcw, ArrowRight, Check, Minus, Plus } from 'lucide-react';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
