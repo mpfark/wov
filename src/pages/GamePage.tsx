@@ -622,7 +622,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
-    pendingAbility, queueAbility } = combat;
+    pendingAbility: _pendingAbility, queueAbility } = combat;
 
   // Sync combat state ref for DoT ticks in useGameLoop
   combatStateRef.current = { creatureHpOverrides, updateCreatureHp };

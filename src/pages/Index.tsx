@@ -11,10 +11,10 @@ const Index = () => {
   const {
     user, authLoading, signOut,
     characters, character, charLoading,
-    selectCharacter, clearSelectedCharacter, deleteCharacter,
+    selectCharacter, clearSelectedCharacter: _clearSelectedCharacter, deleteCharacter,
     createCharacter, selectCharacterAfterCreate,
-    nodes, nodesLoading, startingNode,
-    isAdmin,
+    nodes: _nodes, nodesLoading, startingNode,
+    isAdmin: _isAdmin,
   } = useGameContext();
 
   const [showCreateNew, setShowCreateNew] = useState(false);

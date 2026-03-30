@@ -137,8 +137,8 @@ export default function LootTableManager() {
 
   const totalWeight = useMemo(() => entries.reduce((s, e) => s + e.weight, 0), [entries]);
 
-  const _getItemName = (id: string) => items.find(i => i.id === id)?.name || 'Unknown';
-  const _getItemRarity = (id: string) => items.find(i => i.id === id)?.rarity || 'common';
+
+
 
   const filtered = tables.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()));
   const panelOpen = isNew || selectedId !== null;

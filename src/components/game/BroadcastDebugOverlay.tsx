@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useBroadcastDebug, BroadcastLogEntry } from '@/hooks/useBroadcastDebug';
 import { supabase } from '@/integrations/supabase/client';
 import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity } from 'lucide-react';
-import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity } from 'lucide-react';
 
 function usePing() {
   const [latency, setLatency] = useState<number | null>(null);

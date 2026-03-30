@@ -120,7 +120,7 @@ export default function AdminChatWidget() {
       if (!msg) return;
 
       // We don't have full online players list, so just send blindly
-      const _targetChannel = supabase.channel(`chat-whisper-search-${targetName}-${Date.now()}`);
+      supabase.channel(`chat-whisper-search-${targetName}-${Date.now()}`);
       // We need to find the character id by name
       (async () => {
         const { data } = await supabase
