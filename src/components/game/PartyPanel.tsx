@@ -1,4 +1,4 @@
-import { Party, PartyMember, useParty } from '@/hooks/useParty';
+import { Party, PartyMember } from '@/hooks/useParty';
 import { PlayerPresence } from '@/hooks/useNodeChannel';
 import { Character } from '@/hooks/useCharacter';
 import { Button } from '@/components/ui/button';
