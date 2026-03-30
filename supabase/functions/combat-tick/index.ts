@@ -600,31 +600,43 @@ Deno.serve(async (req) => {
           });
 
           if (mb.poison_buff && Math.random() < 0.4) {
-            // Server-side DoT creation: add poison stack
-            if (!sessionDots[m.id]) sessionDots[m.id] = { bleed: {}, poison: {}, ignite: {} };
-            const existing = sessionDots[m.id].poison?.[target.id];
+            // Server-side DoT creation: upsert poison into active_effects
+            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
             const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
             const dexMod = sm((c.dex || 10) + (eb.dex || 0));
             const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
-            sessionDots[m.id].poison[target.id] = {
+            const effData = {
+              node_id: combatNodeId, target_id: target.id, source_id: m.id,
+              session_id: session.id, effect_type: 'poison',
               stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: tickTime + TICK_RATE,
-              expires_at: tickTime + 25000,
+              next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + 25000,
+              tick_rate_ms: TICK_RATE,
             };
+            if (existing) {
+              Object.assign(existing, effData);
+            } else {
+              activeEffects.push({ id: crypto.randomUUID(), ...effData });
+            }
             events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
           }
           if (mb.ignite_buff && Math.random() < 0.4) {
-            if (!sessionDots[m.id]) sessionDots[m.id] = { bleed: {}, poison: {}, ignite: {} };
-            const existing = sessionDots[m.id].ignite?.[target.id];
+            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
             const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
             const intMod = sm((c.int || 10) + (eb.int || 0));
             const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
             const duration = Math.min(45000, 30000 + intMod * 1000);
-            sessionDots[m.id].ignite[target.id] = {
+            const effData = {
+              node_id: combatNodeId, target_id: target.id, source_id: m.id,
+              session_id: session.id, effect_type: 'ignite',
               stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: tickTime + TICK_RATE,
-              expires_at: tickTime + duration,
+              next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
+              tick_rate_ms: TICK_RATE,
             };
+            if (existing) {
+              Object.assign(existing, effData);
+            } else {
+              activeEffects.push({ id: crypto.randomUUID(), ...effData });
+            }
             events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
           }
 
