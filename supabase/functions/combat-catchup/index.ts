@@ -80,6 +80,14 @@ Deno.serve(async (req) => {
     // ── Write creature HP / kills (shared resolver) ─────────────
     await writeCreatureState(db, creatures, cHp, cKilled);
 
+    // ── Update session timelines for caught-up sessions ─────────
+    const sessionIds = [...new Set(effects.map((e: any) => e.session_id).filter(Boolean))] as string[];
+    if (sessionIds.length > 0) {
+      await db.from('combat_sessions')
+        .update({ last_tick_at: now })
+        .in('id', sessionIds);
+    }
+
     // ── Cleanup expired/killed effects (shared resolver) ────────
     await cleanupEffects(db, result.expiredIds, cKilled);
 
@@ -119,6 +127,8 @@ Deno.serve(async (req) => {
       creatures_alive: finalCreatures.length,
       kills: cKilled.size,
       ticks_resolved: result.advancedEffects.length,
+      sessions_reset: sessionIds.length,
+      session_ids: sessionIds,
     }));
 
     return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures });
