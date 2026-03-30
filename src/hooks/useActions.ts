@@ -411,7 +411,7 @@ export function useActions(params: UseActionsParams) {
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
       p.addLog(`🏃 You flee${dirText}!`);
       // Don't call stopCombat() here — let the node-change effect in usePartyCombat
-      // handle it so DoT drain mode can activate if there are active DoTs on old node creatures.
+      // handle cleanup. Active DoTs persist in `active_effects` and are resolved by `combat-catchup` on node re-entry.
     }
 
     // Opportunity attacks
