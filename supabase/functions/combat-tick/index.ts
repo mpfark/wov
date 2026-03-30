@@ -228,14 +228,13 @@ Deno.serve(async (req) => {
 
     const allCreatures = creaturesRaw || [];
 
-    // Collect creature IDs that have active DoTs targeting them
+    // Collect creature IDs that have active effects targeting them
     const dotTargetIds = new Set<string>();
-    const sessionDots: Record<string, any> = session.dots || {};
-    for (const dotState of Object.values(sessionDots)) {
-      for (const creatureId of Object.keys((dotState as any)?.bleed || {})) dotTargetIds.add(creatureId);
-      for (const creatureId of Object.keys((dotState as any)?.poison || {})) dotTargetIds.add(creatureId);
-      for (const creatureId of Object.keys((dotState as any)?.ignite || {})) dotTargetIds.add(creatureId);
-    }
+    const { data: activeEffectsRaw } = await db.from('active_effects')
+      .select('*')
+      .eq('node_id', combatNodeId);
+    const activeEffects: any[] = activeEffectsRaw || [];
+    for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
     for (const pa of pendingAbilities) {
       if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
     }
