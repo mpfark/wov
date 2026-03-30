@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { getCharacterTitle } from '@/lib/game-data';
 import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
-import type { ActiveBuffs } from './MapPanel';
+import type { ActiveBuffs } from '@/features/world/components/MapPanel';
 
 interface Props {
   character: Character;
