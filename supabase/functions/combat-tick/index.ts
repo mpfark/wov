@@ -941,46 +941,9 @@ Deno.serve(async (req) => {
     });
     await Promise.all(degradePromises);
 
-    // ── Loot drops ───────────────────────────────────────────────
-    for (const drop of lootQueue) {
-      try {
-        if (drop.lootTableId) {
-          if (Math.random() > drop.dropChance) continue;
-          const { data: entries } = await db.from('loot_table_entries').select('item_id, weight').eq('loot_table_id', drop.lootTableId);
-          if (!entries || entries.length === 0) continue;
-          const totalW = entries.reduce((s, e) => s + e.weight, 0);
-          let r = Math.random() * totalW;
-          let picked: string | null = null;
-          for (const e of entries) { r -= e.weight; if (r <= 0) { picked = e.item_id; break; } }
-          if (!picked) picked = entries[entries.length - 1].item_id;
-          const { data: item } = await db.from('items').select('name, rarity').eq('id', picked).single();
-          if (!item) continue;
-          if (item.rarity === 'unique') {
-            const { count } = await db.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', picked);
-            if (count && count > 0) {
-              events.push({ type: 'loot_drop', message: `✨ The unique power of ${item.name} is already claimed...` });
-              continue;
-            }
-          }
-          await db.from('node_ground_loot').insert({ node_id: drop.nodeId, item_id: picked, creature_name: drop.creatureName });
-          events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${item.name}!` });
-        } else if (drop.itemId) {
-          const { data: item } = await db.from('items').select('name, rarity').eq('id', drop.itemId).single();
-          if (!item) continue;
-          if (item.rarity === 'unique') {
-            const { count } = await db.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', drop.itemId);
-            if (count && count > 0) {
-              events.push({ type: 'loot_drop', message: `✨ The unique power of ${item.name} is already claimed...` });
-              continue;
-            }
-          }
-          await db.from('node_ground_loot').insert({ node_id: drop.nodeId, item_id: drop.itemId, creature_name: drop.creatureName });
-          events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${item.name}!` });
-        }
-      } catch (e) {
-        console.error('Loot drop error:', e);
-      }
-    }
+    // ── Loot drops (shared resolver) ───────────────────────────
+    const lootEvents = await processLootDrops(db, lootQueue);
+    events.push(...lootEvents);
 
     // ── Write active_effects to DB ─────────────────────────────
     // Delete effects for killed creatures
