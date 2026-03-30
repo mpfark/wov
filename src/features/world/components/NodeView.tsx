@@ -80,7 +80,7 @@ export default function NodeView({
 
   // No longer need cooldown tracking — CP system handles availability
 
-  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0;
+  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0 || (creaturesLoading && prefetchedCreatureCount > 0);
 
   return (
     <TooltipProvider delayDuration={300}>
