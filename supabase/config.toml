@@ -17,3 +17,5 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.soulforge-item]
     verify_jwt = false
+  [functions.combat-catchup]
+    verify_jwt = false
