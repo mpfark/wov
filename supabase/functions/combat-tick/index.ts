@@ -280,12 +280,16 @@ Deno.serve(async (req) => {
     const handleCreatureKill = (creature: any, killerLabel: string, chaForGold: number = 0) => {
       cKilled.add(creature.id);
       sessionEngaged.delete(creature.id);
-      // Purge all DoTs targeting this creature
-      for (const [charId, charDots] of Object.entries(sessionDots)) {
-        if ((charDots as any)?.bleed?.[creature.id]) { delete (charDots as any).bleed[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'bleed' }); }
-        if ((charDots as any)?.poison?.[creature.id]) { delete (charDots as any).poison[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'poison' }); }
-        if ((charDots as any)?.ignite?.[creature.id]) { delete (charDots as any).ignite[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'ignite' }); }
+      // Purge all active_effects targeting this creature (and track for client)
+      const killedEffects = activeEffects.filter(e => e.target_id === creature.id);
+      for (const e of killedEffects) {
+        clearedDots.push({ character_id: e.source_id, creature_id: creature.id, dot_type: e.effect_type });
       }
+      // Remove from in-memory list (DB delete happens after tick loop)
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        if (activeEffects[i].target_id === creature.id) activeEffects.splice(i, 1);
+      }
+      killedCreatureIds.add(creature.id);
       const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
       const lt = (creature.loot_table || []) as any[];
       const goldEntry = lt.find((e: any) => e.type === 'gold');
