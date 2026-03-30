@@ -39,7 +39,9 @@ import { Input } from '@/components/ui/input';
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
-import { useActions } from '@/hooks/useActions';
+import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
+import { useMovementActions } from '@/features/world/hooks/useMovementActions';
+import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 import MovementPad from '@/features/world/components/MovementPad';
 
@@ -488,7 +490,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
   const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
 
-  // Ref to break circular dependency: usePartyCombat needs ability executor, useActions needs queueAbility
+  // Ref to break circular dependency: usePartyCombat needs ability executor, useCombatActions needs queueAbility
   const executeAbilityRef = useRef<(index: number, targetId?: string) => Promise<void>>();
 
   const combat = usePartyCombat({
@@ -508,7 +510,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
+    lastTickTime, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
@@ -524,39 +526,54 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const currentNode = character.current_node_id ? getNode(character.current_node_id) : null;
   const currentRegion = currentNode ? getRegion(currentNode.region_id) : null;
 
-  // ── useActions: all player action handlers ─────────────────────
-  const actions = useActions({
+  // ── Feature-specific action hooks ──────────────────────────────
+  const combatActions = useCombatActions({
     character, updateCharacter, updateCharacterLocal, addLog,
+    equipped, equipmentBonuses,
+    creatures, creatureHpOverrides,
+    party, partyMembers,
+    inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
+    queueAbility,
+    isDead, xpMultiplier,
+    fetchInventory, fetchGroundLoot,
+    buffState, buffSetters,
+    notifyCreatureKilled: gameLoop.notifyCreatureKilled,
+  });
+
+  const movementActions = useMovementActions({
+    character, updateCharacter, addLog,
     equipped, unequipped, equipmentBonuses,
     getNode, getRegion, getNodeArea, currentNode,
-    creatures, creatureHpOverrides, updateCreatureHp,
+    creatures,
     party, partyMembers, isLeader, myMembership,
-    inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn, fleeStopCombat,
-    queueAbility,
-    isDead, effectiveAC,
-    fetchInventory, fetchGroundLoot, fetchParty,
-    broadcastMove, broadcastHp, broadcastDamage,
-    useConsumable, xpMultiplier, toggleFollow,
-    // Bundled buff state + setters
-    buffState,
-    buffSetters,
-    notifyCreatureKilled: gameLoop.notifyCreatureKilled,
+    inCombat, activeCombatCreatureId, fleeStopCombat,
+    effectiveAC, isDead,
+    broadcastMove, broadcastHp, toggleFollow,
+    fetchInventory, fetchParty,
+    buffState, buffSetters,
+    degradeEquipment: combatActions.degradeEquipment,
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
   });
 
+  const consumableActions = useConsumableActions({
+    character, updateCharacter, addLog,
+    equipmentBonuses,
+    useConsumable,
+    buffSetters,
+  });
+
   // Wire forward-declared refs
-  useEffect(() => { rollLootRef.current = actions.rollLoot; }, [actions.rollLoot]);
-  useEffect(() => { degradeEquipmentRef.current = actions.degradeEquipment; }, [actions.degradeEquipment]);
-  useEffect(() => { awardKillRewardsRef.current = actions.awardKillRewards; }, [actions.awardKillRewards]);
+  useEffect(() => { rollLootRef.current = combatActions.rollLoot; }, [combatActions.rollLoot]);
+  useEffect(() => { degradeEquipmentRef.current = combatActions.degradeEquipment; }, [combatActions.degradeEquipment]);
+  useEffect(() => { awardKillRewardsRef.current = combatActions.awardKillRewards; }, [combatActions.awardKillRewards]);
 
   // Wire ability executor ref (updated synchronously to avoid stale closures)
-  executeAbilityRef.current = (index: number, targetId?: string) => actions.handleUseAbility(index, targetId, true);
+  executeAbilityRef.current = (index: number, targetId?: string) => combatActions.handleUseAbility(index, targetId, true);
 
-
-  const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch,
-    handleUseConsumable, handleUseAbility, handleAttack,
-    waymarkNodeId, teleportOpen, setTeleportOpen } = actions;
+  const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen } = movementActions;
+  const { handleUseConsumable } = consumableActions;
+  const { handleUseAbility, handleAttack } = combatActions;
 
   // ── Aggro processing is now handled inside usePartyCombat ──
 

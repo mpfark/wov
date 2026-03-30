@@ -11,3 +11,7 @@ export type { AreaTypeEntry } from './hooks/useAreaTypes';
 
 // Area color utilities
 export * from './utils/area-colors';
+
+// Movement action orchestration hook
+export { useMovementActions } from './hooks/useMovementActions';
+export type { UseMovementActionsParams } from './hooks/useMovementActions';
