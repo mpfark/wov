@@ -102,25 +102,6 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
   const [_lootTables, setLootTables] = useState<LootTable[]>([]);
   const [assignCreatureId, setAssignCreatureId] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
-  const [poolStock, setPoolStock] = useState<PoolStock[]>([]);
-
-  const loadPoolStock = useCallback(async () => {
-    const { data } = await supabase.from('forge_pool').select('slot, rarity, level');
-    if (!data) { setPoolStock([]); return; }
-    const map = new Map<string, number>();
-    for (const row of data) {
-      const bucket = Math.floor((row.level - 1) / 5) * 5 + 1;
-      const key = `${row.slot}|${row.rarity}|${bucket}`;
-      map.set(key, (map.get(key) || 0) + 1);
-    }
-    const stocks: PoolStock[] = [];
-    for (const [key, count] of map) {
-      const [slot, rarity, lvl] = key.split('|');
-      stocks.push({ slot, rarity, level: Number(lvl), count });
-    }
-    stocks.sort((a, b) => a.level - b.level || a.slot.localeCompare(b.slot));
-    setPoolStock(stocks);
-  }, []);
 
   const loadSupport = useCallback(async () => {
     const [crRes, ltRes] = await Promise.all([
