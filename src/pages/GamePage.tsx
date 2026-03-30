@@ -39,7 +39,9 @@ import { Input } from '@/components/ui/input';
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
-import { useActions } from '@/hooks/useActions';
+import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
+import { useMovementActions } from '@/features/world/hooks/useMovementActions';
+import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 import MovementPad from '@/features/world/components/MovementPad';
 
