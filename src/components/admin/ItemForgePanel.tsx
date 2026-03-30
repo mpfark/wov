@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Loader2, Wand2, Check, Package, Sword, Sparkles,
-  ChevronRight, Layers, Star, Hash, BarChart2, ArrowRight, Database,
+  } from 'lucide-react';
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
