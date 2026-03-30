@@ -99,7 +99,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
 
   /* For assigning table to creatures */
   const [creatures, setCreatures] = useState<Creature[]>([]);
-  const [lootTables, setLootTables] = useState<LootTable[]>([]);
+  const [_lootTables, setLootTables] = useState<LootTable[]>([]);
   const [assignCreatureId, setAssignCreatureId] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
   const [poolStock, setPoolStock] = useState<PoolStock[]>([]);

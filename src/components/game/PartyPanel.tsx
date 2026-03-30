@@ -31,7 +31,7 @@ interface Props {
 }
 
 export default function PartyPanel({
-  character, party, members, pendingInvites, isLeader, isTank, myMembership,
+  character, party, members, pendingInvites, isLeader, isTank: _isTank, myMembership,
   playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite,
   onLeave, onKick, onSetTank, onToggleFollow, activeBuffs,
   abilityTargetId, onSetAbilityTarget, showTargetSelector,

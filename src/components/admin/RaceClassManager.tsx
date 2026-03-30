@@ -100,7 +100,7 @@ export default function RaceClassManager() {
     setSaving(null);
   };
 
-  const getWeaponName = (itemId: string) => weapons.find(w => w.id === itemId)?.name || 'Unknown';
+  const _getWeaponName = (itemId: string) => weapons.find(w => w.id === itemId)?.name || 'Unknown';
 
   const handleSetUniversalGear = async (slot: string, itemId: string) => {
     setSaving(`u_${slot}`);

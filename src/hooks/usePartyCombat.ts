@@ -108,7 +108,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const doTickRef = useRef<() => void>(() => {});
 
   const isSolo = !params.party;
-  const isDriver = isSolo || params.isLeader;
+  const _isDriver = isSolo || params.isLeader;
 
   // ── Helpers ────────────────────────────────────────────────────
 

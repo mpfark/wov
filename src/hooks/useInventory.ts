@@ -94,7 +94,7 @@ export function useInventory(characterId: string | null) {
     fetchInventory();
   }, [inventory, fetchInventory]);
 
-  const useConsumable = useCallback(async (inventoryId: string, characterId: string, currentHp: number, maxHp: number, updateCharacter: (updates: { hp: number }) => Promise<void>) => {
+  const useConsumable = useCallback(async (inventoryId: string, _characterId: string, currentHp: number, maxHp: number, updateCharacter: (updates: { hp: number }) => Promise<void>) => {
     const inv = inventory.find(i => i.id === inventoryId);
     if (!inv || inv.item.item_type !== 'consumable') return null;
     const hpRestore = (inv.item.stats?.hp as number) || 0;

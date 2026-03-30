@@ -129,7 +129,7 @@ export default function RegionManager({ regions, allNodes, onCreated, isValar: _
     onCreated();
   };
 
-  const getNodeLabel = (node: NodeData) => {
+  const _getNodeLabel = (node: NodeData) => {
     const region = regions.find(r => r.id === node.region_id);
     const nodeName = node.name || 'Unnamed';
     return region ? `${nodeName} (${region.name})` : nodeName;

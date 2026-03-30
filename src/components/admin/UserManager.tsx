@@ -353,7 +353,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
               <div className="w-4" />
             </div>
             <div className="space-y-0.5">
-              {Object.entries(STAT_LABELS).map(([key, label]) => {
+              {Object.entries(STAT_LABELS).map(([key, _label]) => {
                 const base = (c as any)[key] as number;
                 const bonus = equipmentBonuses[key] || 0;
                 return (

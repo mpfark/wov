@@ -91,7 +91,7 @@ export default function MapPanel({
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
   unlockedConnections,
 }: Props) {
-  const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
+  const _currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
   const [rebindingAction, setRebindingAction] = useState<ActionName | null>(null);
   const [worldMapOpen, setWorldMapOpen] = useState(false);

@@ -53,7 +53,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, area, players, creatures, npcs = [], character, eventLog, onAttack, onTalkToNPC,
+  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   actionBindings,
   poisonStacks = {},

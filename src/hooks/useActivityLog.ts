@@ -15,7 +15,7 @@ export interface ActivityLogEntry {
  * Log a player activity event. Fire-and-forget — errors are silently ignored.
  */
 export async function logActivity(
-  userId: string,
+  _userId: string,
   characterId: string | null,
   eventType: string,
   message: string,

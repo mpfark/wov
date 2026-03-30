@@ -873,8 +873,8 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               const from = allNodePositions.get(edge.from);
               const to = allNodePositions.get(edge.to);
               if (!from || !to) return null;
-              const midX = (from.px + to.px) / 2;
-              const midY = (from.py + to.py) / 2;
+              const _midX = (from.px + to.px) / 2;
+              const _midY = (from.py + to.py) / 2;
 
               return (
                 <g key={`${edge.from}-${edge.to}`}>

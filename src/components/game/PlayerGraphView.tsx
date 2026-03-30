@@ -82,7 +82,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return basePositions;
   }, [currentNode, neighbors, visitedSecondDegree]);
 
-  const { nodePositions, svgWidth, svgHeight, SPACING } = useMemo(() => {
+  const { nodePositions, svgWidth, svgHeight, SPACING: _SPACING } = useMemo(() => {
     if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250, SPACING: 120 };
 
     const SPACING = 120;

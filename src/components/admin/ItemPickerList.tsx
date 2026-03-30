@@ -74,7 +74,7 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
     onChange(value.filter((_, i) => i !== index));
   };
 
-  const rarityColor = (id: string) => {
+  const _rarityColor = (id: string) => {
     const r = items.find(i => i.id === id)?.rarity;
     if (r === 'unique') return 'text-primary';
     if (r === 'uncommon') return 'text-elvish';

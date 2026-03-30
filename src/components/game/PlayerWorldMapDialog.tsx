@@ -285,7 +285,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   // Lookups
   const regionById = useMemo(() => new Map(regions.map(r => [r.id, r])), [regions]);
   const areaById = useMemo(() => new Map((areas || []).map(a => [a.id, a])), [areas]);
-  const nodeById = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
+  const _nodeById = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes]);
 
   // Pan/zoom handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {

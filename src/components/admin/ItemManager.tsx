@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, Package, MapPin, Skull, ShoppingBag, Search, ArrowUpDown } from 'lucide-react';
+import { Plus, Trash2, Save, X, Package, Skull, ShoppingBag, Search, ArrowUpDown } from 'lucide-react';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 
 interface Item {

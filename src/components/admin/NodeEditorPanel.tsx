@@ -415,7 +415,7 @@ export default function NodeEditorPanel({
     area_id: '' as string,
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
-  const { areaTypes, emojiMap: areaTypeEmoji, refetch: refetchAreaTypes } = useAreaTypes();
+  const { areaTypes, emojiMap: _areaTypeEmoji, refetch: _refetchAreaTypes } = useAreaTypes();
   const [creatures, setCreatures] = useState<any[]>([]);
   const [npcs, setNpcs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);

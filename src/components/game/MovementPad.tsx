@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { GameNode } from '@/hooks/useNodes';
 import { type Direction } from '@/hooks/useKeyboardMovement';
 import { GripHorizontal } from 'lucide-react';

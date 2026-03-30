@@ -169,7 +169,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setIsNewArea(false);
   };
 
-  const handleAddNodeBetween = (_fromId: string, _toId: string) => {
+  const _handleAddNodeBetween = (_fromId: string, _toId: string) => {
     // No longer used
   };
 

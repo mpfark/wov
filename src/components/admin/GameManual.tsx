@@ -7,11 +7,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC, CLASS_LEVEL_BONUSES,
-  RACE_LABELS, CLASS_LABELS, STAT_LABELS, RACE_DESCRIPTIONS, ITEM_RARITY_MULTIPLIER,
+  RACE_LABELS, CLASS_LABELS, STAT_LABELS, ITEM_RARITY_MULTIPLIER,
   ITEM_STAT_COSTS, calculateStats, calculateHP, calculateAC, getBaseRegen, getItemStatBudget,
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
-  XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate, getStatModifier,
-  CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate, getCarryCapacity,
+  XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate,
+  CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate,
   CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/lib/class-abilities';

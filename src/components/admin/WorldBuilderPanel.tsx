@@ -484,7 +484,7 @@ export default function WorldBuilderPanel({ onDataChanged }: WorldBuilderPanelPr
     return lootTables.find(lt => lt.id === id)?.name || null;
   };
 
-  const getNodeDisplayName = (node: GeneratedNode) => {
+  const _getNodeDisplayName = (node: GeneratedNode) => {
     if (node.name) return node.name;
     const area = generated?.areas.find(a => a.temp_id === node.area_temp_id);
     return area?.name || node.temp_id;
