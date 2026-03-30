@@ -41,6 +41,11 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
       // Don't return — fall through to fresh fetch to catch kills that happened after prefetch
     }
 
+    // Catch up any active combat sessions (DoTs) before reading creature HP
+    await supabase.functions.invoke('combat-catchup', {
+      body: { node_id: nodeId }
+    });
+
     const { data } = await supabase
       .from('creatures')
       .select('*')
