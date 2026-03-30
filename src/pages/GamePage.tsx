@@ -444,7 +444,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Apply incoming party regen buff from another party member
   useEffect(() => {
     if (!incomingPartyRegenBuff) return;
-    gameLoop.setPartyRegenBuff(incomingPartyRegenBuff);
+    buffSetters.setPartyRegenBuff(incomingPartyRegenBuff);
   }, [incomingPartyRegenBuff]);
 
   // ── Instant follower movement: when the leader broadcasts a move, followers
@@ -471,130 +471,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (!party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
     prevPartyRegenBuffRef.current = partyRegenBuff;
     broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
-  }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
+  }, [party, buffState.partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
   const effectiveDex = character.dex + (equipmentBonuses.dex || 0);
   const effectiveAC = calculateAC(character.class, effectiveDex) + (equipmentBonuses.ac || 0) + acBuffBonus;
 
-  // ── Unified server-authoritative combat ──────────────────────────
-  const gatherBuffs = useCallback(() => {
-    const now = Date.now();
-    const buffs: Record<string, any> = {};
-    if (critBuff && now < critBuff.expiresAt) buffs.crit_buff = { bonus: critBuff.bonus };
-    if (stealthBuff && now < stealthBuff.expiresAt) buffs.stealth_buff = true;
-    if (damageBuff && now < damageBuff.expiresAt) buffs.damage_buff = true;
-    if (rootDebuff && now < rootDebuff.expiresAt) {
-      buffs.root_debuff_target = (rootDebuff as any).creatureId;
-      buffs.root_debuff_reduction = rootDebuff.damageReduction;
-    }
-    if (acBuff && now < acBuff.expiresAt) buffs.ac_buff = acBuff.bonus;
-    if (poisonBuff && now < poisonBuff.expiresAt) buffs.poison_buff = true;
-    if (evasionBuff && now < evasionBuff.expiresAt) buffs.evasion_buff = { dodge_chance: evasionBuff.dodgeChance };
-    if (igniteBuff && now < igniteBuff.expiresAt) buffs.ignite_buff = true;
-    if (absorbBuff && now < absorbBuff.expiresAt) buffs.absorb_buff = { shield_hp: absorbBuff.shieldHp };
-    if (sunderDebuff && now < sunderDebuff.expiresAt) {
-      buffs.sunder_target = sunderDebuff.creatureId;
-      buffs.sunder_reduction = sunderDebuff.acReduction;
-    }
-    if (disengageNextHit) buffs.disengage_next_hit = { bonus_mult: disengageNextHit.bonusMult };
-    if (focusStrikeBuff) buffs.focus_strike = { bonus_dmg: focusStrikeBuff.bonusDmg };
-    return buffs;
-  }, [critBuff, stealthBuff, damageBuff, rootDebuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, focusStrikeBuff]);
-
-  const handleConsumedBuffs = useCallback((consumed: { buff: string; character_id: string }[]) => {
-    for (const c of consumed) {
-      if (c.buff === 'stealth') gameLoop.setStealthBuff(null);
-      if (c.buff === 'focus_strike') gameLoop.setFocusStrikeBuff(null);
-      if (c.buff === 'disengage') gameLoop.setDisengageNextHit(null);
-    }
-  }, [gameLoop.setStealthBuff, gameLoop.setFocusStrikeBuff, gameLoop.setDisengageNextHit]);
-
-  const handleClearedDots = useCallback((cleared: { character_id: string; creature_id: string; dot_type: string }[]) => {
-    for (const c of cleared) {
-      gameLoop.notifyCreatureKilled(c.creature_id);
-    }
-  }, [gameLoop.notifyCreatureKilled]);
-
+  // ── Server effect sync — delegated to useBuffState via useGameLoop ──
   const handleActiveDots = useCallback((dots: Record<string, any>) => {
-    // Sync server DoT state to local UI state for display
-    const myDots = dots[character.id];
-    if (!myDots) return;
-    // Poison stacks sync
-    if (myDots.poison) {
-      gameLoop.setPoisonStacks(prev => {
-        const next: Record<string, any> = {};
-        for (const [cid, dot] of Object.entries(myDots.poison as Record<string, any>)) {
-          next[cid] = {
-            ...(prev[cid] || {}),
-            stacks: dot.stacks || 1,
-            damagePerTick: dot.damage_per_tick || 0,
-            expiresAt: dot.expires_at || 0,
-            creatureName: prev[cid]?.creatureName || 'Unknown',
-            creatureLevel: prev[cid]?.creatureLevel || 1,
-            creatureRarity: prev[cid]?.creatureRarity || 'regular',
-            creatureLootTable: prev[cid]?.creatureLootTable || [],
-            lootTableId: prev[cid]?.lootTableId ?? null,
-            dropChance: prev[cid]?.dropChance ?? 0.5,
-            creatureNodeId: prev[cid]?.creatureNodeId ?? null,
-            maxHp: prev[cid]?.maxHp || 10,
-            lastKnownHp: prev[cid]?.lastKnownHp ?? 10,
-          };
-        }
-        return next;
-      });
-    }
-    // Ignite stacks sync
-    if (myDots.ignite) {
-      gameLoop.setIgniteStacks(prev => {
-        const next: Record<string, any> = {};
-        for (const [cid, dot] of Object.entries(myDots.ignite as Record<string, any>)) {
-          next[cid] = {
-            ...(prev[cid] || {}),
-            stacks: dot.stacks || 1,
-            damagePerTick: dot.damage_per_tick || 0,
-            expiresAt: dot.expires_at || 0,
-            creatureName: prev[cid]?.creatureName || 'Unknown',
-            creatureLevel: prev[cid]?.creatureLevel || 1,
-            creatureRarity: prev[cid]?.creatureRarity || 'regular',
-            creatureLootTable: prev[cid]?.creatureLootTable || [],
-            lootTableId: prev[cid]?.lootTableId ?? null,
-            dropChance: prev[cid]?.dropChance ?? 0.5,
-            creatureNodeId: prev[cid]?.creatureNodeId ?? null,
-            maxHp: prev[cid]?.maxHp || 10,
-            lastKnownHp: prev[cid]?.lastKnownHp ?? 10,
-          };
-        }
-        return next;
-      });
-    }
-    // Bleed stacks sync
-    if (myDots.bleed) {
-      gameLoop.setBleedStacks(prev => {
-        const next: Record<string, any> = {};
-        for (const [cid, dot] of Object.entries(myDots.bleed as Record<string, any>)) {
-          next[cid] = {
-            ...(prev[cid] || {}),
-            damagePerTick: dot.damage_per_tick || 0,
-            intervalMs: 2000,
-            expiresAt: dot.expires_at || 0,
-            creatureId: cid,
-            creatureName: prev[cid]?.creatureName || 'Unknown',
-            creatureLevel: prev[cid]?.creatureLevel || 1,
-            creatureRarity: prev[cid]?.creatureRarity || 'regular',
-            creatureLootTable: prev[cid]?.creatureLootTable || [],
-            lootTableId: prev[cid]?.lootTableId ?? null,
-            dropChance: prev[cid]?.dropChance ?? 0.5,
-            creatureNodeId: prev[cid]?.creatureNodeId ?? null,
-            maxHp: prev[cid]?.maxHp || 10,
-            lastKnownHp: prev[cid]?.lastKnownHp ?? 10,
-          };
-        }
-        return next;
-      });
-    }
-  }, [character.id, gameLoop.setPoisonStacks, gameLoop.setIgniteStacks, gameLoop.setBleedStacks]);
+    gameLoop.syncFromServerEffects(dots[character.id]);
+  }, [character.id, gameLoop.syncFromServerEffects]);
 
   // Determine if this character should use party combat mode:
   // Party mode when in a party AND on the same node as the leader
@@ -610,8 +497,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     party: usePartyCombatMode ? party : null,
     isLeader, isDead,
     addLocalLog, updateCharacter, updateCharacterLocal, fetchGroundLoot,
-    gatherBuffs, onConsumedBuffs: handleConsumedBuffs,
-    onClearedDots: handleClearedDots,
+    gatherBuffs: gameLoop.gatherBuffs,
+    onConsumedBuffs: gameLoop.handleConsumedBuffs,
+    onClearedDots: gameLoop.handleClearedDots,
     onActiveDots: handleActiveDots,
     onPoisonProc: gameLoop.handleAddPoisonStack,
     onIgniteProc: gameLoop.handleAddIgniteStack,
@@ -624,8 +512,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
     pendingAbility: _pendingAbility, queueAbility } = combat;
 
-  // Sync combat state ref for DoT ticks in useGameLoop
-  combatStateRef.current = { creatureHpOverrides, updateCreatureHp };
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
   // Sync follower's local character when leader moves them
@@ -1202,7 +1088,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
               sunderDebuff={sunderDebuff}
-              bleedStacks={gameLoop.bleedStacks}
+              bleedStacks={bleedStacks}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const result = await pickUpItem(id);
