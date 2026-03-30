@@ -24,7 +24,7 @@ const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
 };
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId, unlockedConnections }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
   // Client-side cache for visited nodes — grows as the player moves, only fetched once on mount
