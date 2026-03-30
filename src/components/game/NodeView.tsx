@@ -4,7 +4,7 @@ import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
 import { GroundLootItem } from '@/hooks/useGroundLoot';
-import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
+import { getCharacterTitle } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
 import { Button } from '@/components/ui/button';
