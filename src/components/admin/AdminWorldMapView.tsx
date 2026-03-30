@@ -65,12 +65,9 @@ interface Props {
   onMultiSelectToggleNode?: (nodeId: string) => void;
 }
 
-const _CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
-
-const _DIRECTION_OFFSETS: Record<string, [number, number]> = {
-  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
-  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
-};
+// Reserved for future use
+// const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002';
+// const DIRECTION_OFFSETS = { N: [0,-1], S: [0,1], ... };
 
 // ---- Union-of-Circles Region Outline ----
 const NODE_DRAW_RADIUS = 28;
