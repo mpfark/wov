@@ -1,68 +1,94 @@
 
 
-# Adjustment: Deterministic Tick Timing in Server-Authoritative Combat
+# Fix: Server-Side Combat Catch-Up on Creature Fetch
 
 ## Problem
+When a player leaves a node with active DoTs and returns, creature HP is stale because no `combat-tick` was called while away. The DoTs exist in the `combat_sessions` table but were never processed.
 
-The current plan sets `last_tick_at = now` after processing, which causes time drift — fractional milliseconds are lost each cycle, and capped ticks discard unprocessed time entirely.
+## Solution
+Create a new Edge Function `combat-catchup` that the client calls before displaying creatures. It checks for active combat sessions on a node, runs the same deterministic catch-up logic (DoT ticking only — no auto-attacks since no player was present), writes updated creature HP to the DB, and returns. The client then fetches creatures normally with up-to-date HP.
 
-## Changes to the Plan
-
-These adjustments apply to **Step 2** (Server — combat-tick Edge Function) of the existing refactor plan. No other steps change.
-
-### 1. Advance `last_tick_at` by exact tick count, not wall clock
+## Architecture
 
 ```text
-BEFORE:  last_tick_at = now
-AFTER:   last_tick_at = last_tick_at + (ticks * TICK_RATE)
+Player enters node
+  → Client calls combat-catchup(node_id)
+    → Server checks combat_sessions for this node
+    → If session exists with active DoTs:
+      → Compute elapsed ticks since last_tick_at
+      → Process DoT damage (bleed, poison, ignite) per tick
+      → Write creature HP updates to DB
+      → Update or delete combat_sessions row
+    → Returns { caught_up: true/false }
+  → Client fetches creatures (now with correct HP)
 ```
 
-This keeps tick boundaries perfectly aligned regardless of when requests arrive.
+## Step 1: New Edge Function `combat-catchup`
 
-### 2. Use `tickTime` inside the loop, not `now`
+**File: `supabase/functions/combat-catchup/index.ts`**
 
-Each iteration computes its own deterministic timestamp:
+Lightweight function that:
+1. Accepts `{ node_id }` — no auth required beyond valid JWT
+2. Queries `combat_sessions` where `node_id` matches (may be multiple sessions from different characters/parties)
+3. For each session with active DoTs targeting creatures at this node:
+   - Compute `elapsedMs = now - last_tick_at`, derive ticks (capped at 30)
+   - Use deterministic `tickTime` per tick iteration
+   - Process bleed/poison/ignite DoTs identically to `combat-tick`
+   - Kill creatures that reach 0 HP (call `damage_creature` RPC)
+   - Remove expired DoTs
+   - Update `last_tick_at` deterministically
+   - Delete session if no DoTs remain and no engaged creatures
+4. Returns `{ caught_up: true, sessions_processed: N }`
+
+The DoT processing logic will be extracted or duplicated from `combat-tick` (same formulas, same tick alignment).
+
+## Step 2: Client — Call `combat-catchup` Before Fetching Creatures
+
+**File: `src/hooks/useCreatures.ts`**
+
+Modify `fetchCreatures`:
+1. Before querying `creatures` table, invoke `combat-catchup` with the `node_id`
+2. Wait for it to complete
+3. Then fetch creatures as normal (HP is now up-to-date)
 
 ```typescript
-const previousLastTickAt = session.last_tick_at;
-for (let t = 0; t < ticks; t++) {
-  const tickTime = previousLastTickAt + (t + 1) * TICK_RATE;
-  // All DoT expiry/next_tick checks use tickTime
-  // e.g. if (dot.expires_at <= tickTime) → remove
-  // e.g. while (dot.next_tick_at <= tickTime) → apply + advance
-}
+const fetchCreatures = useCallback(async () => {
+  if (!nodeId) { setCreatures([]); return; }
+  
+  // Catch up any active combat sessions for this node
+  await supabase.functions.invoke('combat-catchup', {
+    body: { node_id: nodeId }
+  });
+  
+  // Now fetch with up-to-date HP
+  const { data } = await supabase
+    .from('creatures')
+    .select('*')
+    .eq('node_id', nodeId)
+    .eq('is_alive', true);
+  if (data) setCreatures(data as Creature[]);
+}, [nodeId]);
 ```
 
-This ensures every tick resolves at its mathematically correct point in time, making results identical regardless of request timing or batch size.
+## Step 3: Remove DoT Drain References from Client
 
-### 3. Preserve unprocessed time when tick cap is hit
+**File: `src/hooks/usePartyCombat.ts`**
 
-When `ticksToProcess` exceeds the safety cap (e.g. 30), the excess time must not be discarded:
+Remove any remaining `drainNodeRef` or DoT drain logic if present. The combat hook should simply stop combat on node change — the next visitor to the old node will trigger `combat-catchup` automatically.
 
-```typescript
-const TICK_CAP = 30;
-const ticksToProcess = Math.floor(elapsedMs / TICK_RATE);
-const ticks = Math.min(ticksToProcess, TICK_CAP);
+## Files Modified
 
-// After processing:
-if (ticksToProcess > TICK_CAP) {
-  const processedMs = ticks * TICK_RATE;
-  const remainingMs = elapsedMs - processedMs;
-  session.last_tick_at = now - remainingMs;
-} else {
-  session.last_tick_at = session.last_tick_at + ticks * TICK_RATE;
-}
-```
+| File | Change |
+|------|--------|
+| `supabase/functions/combat-catchup/index.ts` | **New** — lightweight DoT catch-up processor |
+| `src/hooks/useCreatures.ts` | Call `combat-catchup` before fetching creatures |
+| `src/hooks/usePartyCombat.ts` | Remove any drain mode remnants |
 
-The next request will pick up from the correct point, processing the remaining ticks without loss.
+## Security
 
-### Summary of what changes in the plan
-
-| Aspect | Old plan | Updated |
-|--------|----------|---------|
-| `last_tick_at` update | `= now` | `+= ticks * TICK_RATE` |
-| DoT/effect time reference | `now` | `tickTime` per iteration |
-| Tick cap overflow | Time lost | Remainder preserved via `now - remainingMs` |
-
-Everything else in the refactor plan (combat_sessions table, DoT JSONB structure, client simplification, party sync) remains unchanged.
+- `combat-catchup` uses service role to read `combat_sessions` and write creature HP
+- Validates JWT to prevent unauthenticated calls
+- `node_id` is validated against existing nodes
+- Tick cap (30) prevents abuse
+- No client timestamps accepted — server `Date.now()` only
 
