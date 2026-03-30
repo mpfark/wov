@@ -111,6 +111,16 @@ Deno.serve(async (req) => {
       .filter(cr => !cKilled.has(cr.id))
       .map(cr => ({ ...cr, hp: cHp[cr.id] ?? cr.hp }));
 
+    // ── Diagnostics ───────────────────────────────────────────────
+    console.log(JSON.stringify({
+      fn: 'combat-catchup',
+      node_id: node_id,
+      effects_count: effects.length,
+      creatures_alive: finalCreatures.length,
+      kills: cKilled.size,
+      ticks_resolved: result.advancedEffects.length,
+    }));
+
     return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures });
   } catch (err) {
     console.error('Combat catchup error:', err);

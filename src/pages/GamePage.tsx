@@ -531,7 +531,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     getNode, getRegion, getNodeArea, currentNode,
     creatures, creatureHpOverrides, updateCreatureHp,
     party, partyMembers, isLeader, myMembership,
-    inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
+    inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn, fleeStopCombat,
     queueAbility,
     isDead, effectiveAC,
     fetchInventory, fetchGroundLoot, fetchParty,

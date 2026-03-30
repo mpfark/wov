@@ -392,8 +392,8 @@ export function useActions(params: UseActionsParams) {
       const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
       p.addLog(`🏃 You flee${dirText}!`);
-      // Don't call stopCombat() here — let the node-change effect in usePartyCombat
-      // handle cleanup. Active DoTs persist in `active_effects` and are resolved by `combat-catchup` on node re-entry.
+      // Synchronously kill the tick interval BEFORE node change to prevent ghost ticks
+      p.fleeStopCombat();
     }
 
     // Opportunity attacks
