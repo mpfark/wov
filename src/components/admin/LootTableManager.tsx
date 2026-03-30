@@ -28,7 +28,7 @@ interface ItemOption {
   level: number;
 }
 
-const RARITY_COLORS: Record<string, string> = {
+const _RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
   rare: 'text-dwarvish',
