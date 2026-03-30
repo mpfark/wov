@@ -40,7 +40,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [isNewNode, setIsNewNode] = useState(false);
+  const [_isNewNode, setIsNewNode] = useState(false);
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
   const [adjacentDirection, setAdjacentDirection] = useState<string | null>(null);
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
