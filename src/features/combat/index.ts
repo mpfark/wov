@@ -16,7 +16,7 @@ export * from './utils/combat-math';
 
 // Combat resolver (client-side mirror of server logic)
 export { resolveEffectTicks } from './utils/combat-resolver';
-export type { ActiveEffect, EffectTickResult } from './utils/combat-resolver';
+export type { EffectTickResult } from './utils/combat-resolver';
 
 // Class abilities
 export * from './utils/class-abilities';

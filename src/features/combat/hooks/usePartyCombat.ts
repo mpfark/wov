@@ -190,7 +190,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     const myState = data.member_states.find(m => m.character_id === ext.current.character.id);
     if (myState) {
-      const updates: Partial<import('@/hooks/useCharacter').Character> = {
+      const updates: Partial<import('@/features/character').Character> = {
         hp: myState.hp,
         xp: myState.xp,
         gold: myState.gold,

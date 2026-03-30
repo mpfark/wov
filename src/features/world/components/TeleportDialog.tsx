@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
-import ScrollPanel from './ScrollPanel';
+import ScrollPanel from '@/features/inventory/components/ScrollPanel';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/features/world';
