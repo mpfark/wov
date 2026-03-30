@@ -398,20 +398,20 @@ export function useActions(params: UseActionsParams) {
     // Opportunity attacks
     const livingCreatures = p.creatures.filter(c => c.is_alive && c.hp > 0 && (c.is_aggressive || c.id === p.activeCombatCreatureId));
     let currentHp = p.character.hp;
-    const isStealthed = p.stealthBuff && Date.now() < p.stealthBuff.expiresAt;
-    const isDisengaged = p.evasionBuff && Date.now() < p.evasionBuff.expiresAt && p.evasionBuff.source === 'disengage';
+    const isStealthed = p.buffState.stealthBuff && Date.now() < p.buffState.stealthBuff.expiresAt;
+    const isDisengaged = p.buffState.evasionBuff && Date.now() < p.buffState.evasionBuff.expiresAt && p.buffState.evasionBuff.source === 'disengage';
     if (isStealthed) {
       p.addLog('🌑 You slip through the shadows unnoticed...');
-      p.setStealthBuff(null);
+      p.buffSetters.setStealthBuff(null);
     } else if (isDisengaged) {
       p.addLog('🦘 You leap away cleanly — no opportunity attacks!');
-      p.setEvasionBuff(null);
+      p.buffSetters.setEvasionBuff(null);
     } else {
-      let currentAbsorb = p.absorbBuff && Date.now() < p.absorbBuff.expiresAt ? p.absorbBuff.shieldHp : 0;
-      const hasEvasion = p.evasionBuff && Date.now() < p.evasionBuff.expiresAt && p.evasionBuff.dodgeChance > 0;
+      let currentAbsorb = p.buffState.absorbBuff && Date.now() < p.buffState.absorbBuff.expiresAt ? p.buffState.absorbBuff.shieldHp : 0;
+      const hasEvasion = p.buffState.evasionBuff && Date.now() < p.buffState.evasionBuff.expiresAt && p.buffState.evasionBuff.dodgeChance > 0;
       for (const creature of livingCreatures) {
         if (currentHp <= 0) break;
-        if (hasEvasion && Math.random() < p.evasionBuff!.dodgeChance) {
+        if (hasEvasion && Math.random() < p.buffState.evasionBuff!.dodgeChance) {
           p.addLog(`🌫️ ${p.party ? p.character.name : 'You'} dodge${p.party ? 's' : ''} ${creature.name}'s opportunity attack!`);
           continue;
         }
@@ -431,9 +431,9 @@ export function useActions(params: UseActionsParams) {
           p.addLog(`${creature.name} swipes at ${p.party ? p.character.name : 'you'} while fleeing — misses! (Rolled ${atkRoll} vs AC ${p.effectiveAC})`);
         }
       }
-      if (p.absorbBuff && Date.now() < p.absorbBuff.expiresAt) {
-        if (currentAbsorb <= 0) p.setAbsorbBuff(null);
-        else if (currentAbsorb !== p.absorbBuff.shieldHp) p.setAbsorbBuff({ ...p.absorbBuff, shieldHp: currentAbsorb });
+      if (p.buffState.absorbBuff && Date.now() < p.buffState.absorbBuff.expiresAt) {
+        if (currentAbsorb <= 0) p.buffSetters.setAbsorbBuff(null);
+        else if (currentAbsorb !== p.buffState.absorbBuff.shieldHp) p.buffSetters.setAbsorbBuff({ ...p.buffState.absorbBuff, shieldHp: currentAbsorb });
       }
       // Party opportunity attacks
       if (p.party && livingCreatures.length > 0) {
@@ -660,12 +660,12 @@ export function useActions(params: UseActionsParams) {
         if (result.restored > 0) p.addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
         else p.addLog(`🧪 You used ${result.itemName}. You are already at full health.`);
         logActivity(p.character.user_id, p.character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
-        p.setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
+        p.buffSetters.setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
         p.addLog('✨ HP regeneration boosted for 2 minutes!');
       } else if (result.hpRegen > 0) {
         p.addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} HP & CP regen for 5 minutes.`);
         logActivity(p.character.user_id, p.character.id, 'general', `Consumed ${result.itemName} (+${result.hpRegen} regen)`);
-        p.setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 300000 });
+        p.buffSetters.setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 300000 });
       }
     }
   }, [p.useConsumable, p.character.id, p.character.hp, p.character.max_hp, p.equipmentBonuses, p.updateCharacter, p.addLog]);
@@ -781,24 +781,24 @@ export function useActions(params: UseActionsParams) {
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
       else p.addLog(`${ability.emoji} You use Second Wind but you're already at full health.`);
     } else if (ability.type === 'regen_buff') {
-      p.setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
+      p.buffSetters.setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
       const inspireMsg = `${ability.emoji} ${p.character.name} plays an inspiring song! HP & CP regeneration doubled for 90 seconds.`;
       if (p.party) p.addLog(`${inspireMsg}[INSPIRE_BUFF]`);
       else p.addLog(inspireMsg);
     } else if (ability.type === 'crit_buff') {
       const dexMod = getStatModifier(p.character.dex);
       const critBonus = Math.max(1, Math.min(dexMod, 5));
-      p.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + 30000 });
+      p.buffSetters.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + 30000 });
       p.addLog(`${ability.emoji} Eagle Eye! Your crit range is now ${20 - critBonus}-20 for 30s.`);
     } else if (ability.type === 'stealth_buff') {
       const dexMod = getStatModifier(p.character.dex);
       const durationMs = Math.min(15000 + dexMod * 1000, 25000);
-      p.setStealthBuff({ expiresAt: Date.now() + durationMs });
+      p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'damage_buff') {
       const intMod = getStatModifier(p.character.int);
       const durationMs = Math.min(25, 15 + intMod) * 1000;
-      p.setDamageBuff({ expiresAt: Date.now() + durationMs });
+      p.buffSetters.setDamageBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
@@ -810,13 +810,13 @@ export function useActions(params: UseActionsParams) {
       const wisMod = getStatModifier(p.character.wis);
       const durationMs = Math.min(15000, 8000 + wisMod * 1000);
       const reduction = 0.3;
-      p.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs });
+      p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'battle_cry') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const bonus = Math.max(3, dexMod + 2);
       const durationMs = Math.min(25000, 15000 + dexMod * 1000);
-      p.setAcBuff({ bonus, expiresAt: Date.now() + durationMs });
+      p.buffSetters.setAcBuff({ bonus, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Battle Cry! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(targetId);
@@ -827,7 +827,7 @@ export function useActions(params: UseActionsParams) {
       const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
       const durationMs = Math.min(30000, 20000 + strMod * 1000);
       const intervalMs = 2000;
-      p.setBleedStacks((prev: Record<string, DotDebuff>) => ({
+      p.buffSetters.setBleedStacks((prev: Record<string, DotDebuff>) => ({
         ...prev,
         [cTargetId]: {
           damagePerTick: dmgPerTick, intervalMs, expiresAt: Date.now() + durationMs,
@@ -844,26 +844,26 @@ export function useActions(params: UseActionsParams) {
     } else if (ability.type === 'poison_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const durationMs = Math.min(30000, 20000 + dexMod * 1000);
-      p.setPoisonBuff({ expiresAt: Date.now() + durationMs });
+      p.buffSetters.setPoisonBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'execute_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
-      p.setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
+      p.buffSetters.setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
       p.addLog(`${ability.emoji} Cloak of Shadows! 50% dodge chance for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'disengage_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const dodgeDurationMs = Math.min(8000, 5000 + dexMod * 500);
       const nextHitDurationMs = 15000;
-      p.setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs, source: 'disengage' as const });
-      p.setDisengageNextHit({ bonusMult: 1.5, expiresAt: Date.now() + nextHitDurationMs });
+      p.buffSetters.setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs, source: 'disengage' as const });
+      p.buffSetters.setDisengageNextHit({ bonusMult: 1.5, expiresAt: Date.now() + nextHitDurationMs });
       p.addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals 50% bonus damage!`);
     } else if (ability.type === 'ignite_buff') {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
       const durationMs = Math.min(45000, 30000 + intMod * 1000);
-      p.setIgniteBuff({ expiresAt: Date.now() + durationMs });
+      p.buffSetters.setIgniteBuff({ expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
@@ -871,7 +871,7 @@ export function useActions(params: UseActionsParams) {
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
       const shieldHp = intMod + Math.floor(p.character.level * 0.5);
       const durationMs = Math.min(15000, 8000 + intMod * 1000);
-      p.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
+      p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'party_regen') {
       const scaleStat = p.character.class === 'healer'
@@ -879,7 +879,7 @@ export function useActions(params: UseActionsParams) {
         : getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const healPerTick = Math.max(1, scaleStat + 2);
       const durationMs = Math.min(25000, 15000 + scaleStat * 1000);
-      p.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: p.character.class === 'healer' ? 'healer' : 'bard' });
+      p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: p.character.class === 'healer' ? 'healer' : 'bard' });
       const who = p.party ? 'your party' : 'you';
       const abilityName = p.character.class === 'healer' ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
       p.addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
@@ -888,12 +888,12 @@ export function useActions(params: UseActionsParams) {
       const shieldHp = wisMod * 2 + Math.floor(p.character.level * 0.7);
       const durationMs = Math.min(18000, 10000 + wisMod * 1000);
       if (targetId && targetId !== p.character.id) {
-        p.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
+        p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
         const targetMember = p.partyMembers.find(m => m.character_id === targetId);
         const targetName = targetMember?.character.name || 'ally';
         p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
       } else {
-        p.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
+        p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
         p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
       }
     } else if (ability.type === 'sunder_debuff') {
@@ -904,7 +904,7 @@ export function useActions(params: UseActionsParams) {
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const acReduction = Math.max(2, strMod);
       const durationSec = Math.min(20, 12 + strMod);
-      p.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
+      p.buffSetters.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
@@ -912,7 +912,7 @@ export function useActions(params: UseActionsParams) {
       // Calculate bonus damage from BASE stats only (unaffected by gear)
       const baseMod = getStatModifier(p.character.str) + getStatModifier(p.character.dex) + getStatModifier(p.character.int);
       const bonusDmg = Math.max(1, Math.floor(baseMod * 0.5) + Math.floor(p.character.level / 3));
-      p.setFocusStrikeBuff({ bonusDmg });
+      p.buffSetters.setFocusStrikeBuff({ bonusDmg });
       p.addLog(`${ability.emoji} Focus Strike! Your next attack deals +${bonusDmg} bonus damage.`);
     }
 
@@ -921,7 +921,7 @@ export function useActions(params: UseActionsParams) {
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
     setLastUsedAbilityCost(finalCpCost);
-  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.poisonStacks, p.igniteStacks, lastUsedAbilityCost, awardKillRewards]);
+  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, lastUsedAbilityCost, awardKillRewards]);
 
   // ── Attack ─────────────────────────────────────────────────────
   const handleAttack = useCallback((creatureId: string) => {
