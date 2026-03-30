@@ -220,7 +220,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Handle unlock_path broadcasts from other players
   useEffect(() => {
     nodeChannel.onUnlockPath.current = (payload: any) => {
-      const { direction, node_id, expires } = payload.payload || {};
+      const { direction, node_id: _node_id, expires } = payload.payload || {};
       if (!direction || !expires) return;
       const key = `${character.current_node_id}-${direction}`;
       const remaining = expires - Date.now();
