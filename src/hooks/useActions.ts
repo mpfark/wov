@@ -38,6 +38,7 @@ export interface UseActionsParams {
   activeCombatCreatureId: string | null;
   startCombat: (id: string) => void;
   stopCombat: () => void;
+  fleeStopCombat: () => void;
   queueAbility: (index: number, targetId?: string) => void;
   isDead: boolean;
   effectiveAC: number;
