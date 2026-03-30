@@ -6,3 +6,7 @@ export { useItemCache, getCachedItemAsync } from './hooks/useItemCache';
 export type { CachedItem } from './hooks/useItemCache';
 export { useGroundLoot } from './hooks/useGroundLoot';
 export type { GroundLootItem } from './hooks/useGroundLoot';
+
+// Consumable action orchestration hook
+export { useConsumableActions } from './hooks/useConsumableActions';
+export type { UseConsumableActionsParams } from './hooks/useConsumableActions';
