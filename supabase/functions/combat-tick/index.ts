@@ -140,7 +140,6 @@ Deno.serve(async (req) => {
         last_tick_at: now,
         tick_rate_ms: TICK_RATE,
         engaged_creature_ids: engagedIds,
-        dots: {},
         member_buffs: {},
         ...sessionKey,
       };
