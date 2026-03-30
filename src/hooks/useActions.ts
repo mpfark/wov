@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import { Character } from '@/hooks/useCharacter';
 import { rollD20, getStatModifier, rollDamage, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty, getMaxCp, getMaxMp, getMaxHp, getMoveCost, getCarryCapacity, getBagWeight, getChaGoldMultiplier, CLASS_LEVEL_BONUSES, CLASS_LABELS } from '@/lib/game-data';
-import { CLASS_COMBAT, CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
+import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { getNodeDisplayName } from '@/hooks/useNodes';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
@@ -206,7 +206,7 @@ export function useActions(params: UseActionsParams) {
       goldSplitCount = membersHere.length > 1 ? membersHere.length : 1;
       const uncappedHere = membersHere.filter((m: any) => (m.character?.level || 0) < 42);
       xpSplitCount = uncappedHere.length > 0 ? uncappedHere.length : 1;
-      const xpShare = p.character.level >= 42 ? 0 : Math.floor(totalXp / xpSplitCount);
+      const xpShare = p.character.level >= 42 ? 0 : Math.floor(totalXp / xpSplitCount); void xpShare;
       const goldShare = Math.floor(totalGold / goldSplitCount);
       for (const m of membersHere) {
         if (m.character_id === p.character.id || !m.character_id) continue;

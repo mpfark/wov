@@ -113,7 +113,7 @@ interface UseKeyboardMovementOptions {
   onCycleTarget?: () => void;
 }
 
-export function useKeyboardMovement({ currentNode, nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion, onPickUpLoot, onOpenChat, onCycleTarget }: UseKeyboardMovementOptions) {
+export function useKeyboardMovement({ currentNode, nodes: _nodes, onMove, disabled, onAttackFirst, onSearch, onUseAbility, onUseBeltPotion, onPickUpLoot, onOpenChat, onCycleTarget }: UseKeyboardMovementOptions) {
   const [bindings, setBindingsState] = useState<KeyBindings>(loadBindings);
   const [actionBindings, setActionBindingsState] = useState<ActionBindings>(loadActionBindings);
   const [moveCooldown, setMoveCooldown] = useState(false);

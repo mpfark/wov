@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/hooks/useCharacter';
 import { InventoryItem } from '@/hooks/useInventory';
-import { RACE_LABELS, CLASS_LABELS, STAT_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES, calculateStats, calculateAC, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, calculateAC, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
 import { SHIELD_AC_BONUS, SHIELD_AWARENESS_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon } from '@/lib/combat-math';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown } from 'lucide-react';
-import vitruvianMan from '@/assets/vitruvian-man.png';
+import _vitruvianMan from '@/assets/vitruvian-man.png';
 import StatPlannerDialog from '@/components/game/StatPlannerDialog';
 
 interface Props {
@@ -132,7 +132,7 @@ const BUFF_DURATIONS: Record<string, number> = {
   Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
 };
 
-function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; focusStrikeBuff?: { bonusDmg: number } | null }) {
+export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; focusStrikeBuff?: { bonusDmg: number } | null }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
@@ -328,7 +328,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable,
-  isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
+  isAtInn, regenBuff, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
   actionBindings, onAllocateStat, onFullRespec, onBatchAllocateStats,

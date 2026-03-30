@@ -105,8 +105,9 @@ export function useParty(characterId: string | null) {
     if (data) setMembers(data as unknown as PartyMember[]);
   }, []);
 
-  const fetchMemberStats = useCallback(() => {
-    // Debounce: only fire once per 500ms window
+  // Debounced member stats fetch (currently unused but kept for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void useCallback(() => {
     if (fetchMemberStatsTimer.current) return;
     fetchMemberStatsTimer.current = setTimeout(() => {
       fetchMemberStatsTimer.current = null;

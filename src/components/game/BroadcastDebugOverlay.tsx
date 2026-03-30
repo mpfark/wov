@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useBroadcastDebug, BroadcastLogEntry } from '@/hooks/useBroadcastDebug';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 import { Radio, X, Trash2, ChevronDown, ChevronUp, Activity } from 'lucide-react';
 
 function usePing() {

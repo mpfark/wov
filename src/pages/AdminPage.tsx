@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ArrowLeft, Bug, MousePointer2, Plus, Settings } from 'lucide-react';
@@ -40,7 +39,7 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
   const [selectedRegion, setSelectedRegion] = useState<string>('');
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [isNewNode, setIsNewNode] = useState(false);
+  const [, setIsNewNode] = useState(false);
   const [adjacentToNodeId, setAdjacentToNodeId] = useState<string | null>(null);
   const [adjacentDirection, setAdjacentDirection] = useState<string | null>(null);
   const [editingRegionId, setEditingRegionId] = useState<string | null>(null);
@@ -169,9 +168,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     setIsNewArea(false);
   };
 
-  const handleAddNodeBetween = (_fromId: string, _toId: string) => {
-    // No longer used
-  };
+
+
 
   const handleEditorSaved = (newNodeId?: string) => {
     loadData();

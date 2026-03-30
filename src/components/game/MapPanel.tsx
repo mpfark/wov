@@ -11,7 +11,7 @@ import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/h
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel, DEFAULT_BINDINGS, ACTION_NAMES, ACTION_LABELS } from '@/hooks/useKeyboardMovement';
+import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/hooks/useKeyboardMovement';
 
 export interface ActiveBuffs {
   stealth?: boolean;
@@ -91,7 +91,7 @@ export default function MapPanel({
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
   unlockedConnections,
 }: Props) {
-  const currentRegion = currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
+  currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
   const [rebindingAction, setRebindingAction] = useState<ActionName | null>(null);
   const [worldMapOpen, setWorldMapOpen] = useState(false);

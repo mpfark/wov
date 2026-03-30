@@ -149,7 +149,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuf
 }
 
 export default function StatusBarsStrip({
-  character, equipmentBonuses, inventoryCount = 0, isAtInn, regenBuff, regenTick, baseRegen = 1, itemHpRegen = 0,
+  character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenBuff, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
   // Include both direct HP bonuses and CON-derived HP from equipment

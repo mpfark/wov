@@ -20,7 +20,7 @@ interface UseChatOptions {
   onMessage: (formatted: string) => void;
 }
 
-export function useChat({ handle, nodeId, characterId, characterName, onlinePlayers, onMessage }: UseChatOptions) {
+export function useChat({ handle, nodeId: _nodeId, characterId, characterName, onlinePlayers, onMessage }: UseChatOptions) {
   const onMessageRef = useRef(onMessage);
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
 

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Save, X, Skull } from 'lucide-react';
+import { Plus, Trash2, Save, X, Skull } from 'lucide-react';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';

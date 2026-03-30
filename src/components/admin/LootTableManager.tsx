@@ -28,12 +28,8 @@ interface ItemOption {
   level: number;
 }
 
-const RARITY_COLORS: Record<string, string> = {
-  common: 'text-foreground',
-  uncommon: 'text-elvish',
-  rare: 'text-dwarvish',
-  unique: 'text-primary text-glow',
-};
+
+
 
 export default function LootTableManager() {
   const [tables, setTables] = useState<LootTable[]>([]);
@@ -141,8 +137,8 @@ export default function LootTableManager() {
 
   const totalWeight = useMemo(() => entries.reduce((s, e) => s + e.weight, 0), [entries]);
 
-  const getItemName = (id: string) => items.find(i => i.id === id)?.name || 'Unknown';
-  const getItemRarity = (id: string) => items.find(i => i.id === id)?.rarity || 'common';
+
+
 
   const filtered = tables.filter(t => t.name.toLowerCase().includes(filter.toLowerCase()));
   const panelOpen = isNew || selectedId !== null;

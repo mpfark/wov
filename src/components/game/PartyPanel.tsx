@@ -1,8 +1,8 @@
-import { Party, PartyMember, useParty } from '@/hooks/useParty';
+import { Party, PartyMember } from '@/hooks/useParty';
 import { PlayerPresence } from '@/hooks/useNodeChannel';
 import { Character } from '@/hooks/useCharacter';
 import { Button } from '@/components/ui/button';
-import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
+import { getCharacterTitle } from '@/lib/game-data';
 import { Users, Crown, Shield, UserPlus, LogOut, X, Footprints, Crosshair } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import type { ActiveBuffs } from './MapPanel';
@@ -31,7 +31,7 @@ interface Props {
 }
 
 export default function PartyPanel({
-  character, party, members, pendingInvites, isLeader, isTank, myMembership,
+  character, party, members, pendingInvites, isLeader, isTank: _isTank, myMembership,
   playersHere, onCreateParty, onInvite, onAcceptInvite, onDeclineInvite,
   onLeave, onKick, onSetTank, onToggleFollow, activeBuffs,
   abilityTargetId, onSetAbilityTarget, showTargetSelector,

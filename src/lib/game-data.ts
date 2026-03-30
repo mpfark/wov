@@ -225,7 +225,7 @@ const REPAIR_RARITY_MULT: Record<string, number> = {
   common: 1, uncommon: 1.5, unique: 0,
 };
 
-export function calculateRepairCost(maxDurability: number, currentDurability: number, value: number, rarity: string): number {
+export function calculateRepairCost(_maxDurability: number, currentDurability: number, value: number, rarity: string): number {
   const mult = REPAIR_RARITY_MULT[rarity] ?? 1;
   if (mult === 0) return 0; // unique = unrepairable
   // All items have a fixed max durability of 100

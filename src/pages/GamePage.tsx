@@ -8,7 +8,7 @@ import BossTrainerPanel from '@/components/game/BossTrainerPanel';
 import TeleportDialog from '@/components/game/TeleportDialog';
 import { useGroundLoot } from '@/hooks/useGroundLoot';
 import { Character } from '@/hooks/useCharacter';
-import { useNodes, getNodeDisplayName } from '@/hooks/useNodes';
+import { useNodes } from '@/hooks/useNodes';
 import { useNodeChannel } from '@/hooks/useNodeChannel';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
@@ -28,8 +28,8 @@ import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User, Map as MapIconLucide, Zap, Users, LogOut, Bug, RefreshCw, MessageCircle } from 'lucide-react';
-import { logActivity } from '@/hooks/useActivityLog';
+import { User, Map as MapIconLucide, Zap, LogOut, RefreshCw, MessageCircle } from 'lucide-react';
+import { logActivity as _logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 
 import { useChat } from '@/hooks/useChat';
@@ -155,7 +155,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory: _inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
@@ -166,7 +166,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
     incomingPartyRegenBuff,
-    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward, broadcastPartyRegenBuff,
+    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward: _broadcastReward, broadcastPartyRegenBuff,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
@@ -220,7 +220,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Handle unlock_path broadcasts from other players
   useEffect(() => {
     nodeChannel.onUnlockPath.current = (payload: any) => {
-      const { direction, node_id, expires } = payload.payload || {};
+      const { direction, node_id: _node_id, expires } = payload.payload || {};
       if (!direction || !expires) return;
       const key = `${character.current_node_id}-${direction}`;
       const remaining = expires - Date.now();
@@ -437,7 +437,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     poisonBuff, poisonStacks, evasionBuff, disengageNextHit, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
     regenTick, deathCountdown, itemHpRegen, baseRegen,
-    handleAddPoisonStack, handleAddIgniteStack, handleAbsorbDamage,
+    handleAddPoisonStack: _handleAddPoisonStack, handleAddIgniteStack: _handleAddIgniteStack, handleAbsorbDamage: _handleAbsorbDamage,
     inCombatRegenRef, deathGoldRef,
   } = gameLoop;
 
@@ -622,7 +622,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
-    pendingAbility, queueAbility } = combat;
+    pendingAbility: _pendingAbility, queueAbility } = combat;
 
   // Sync combat state ref for DoT ticks in useGameLoop
   combatStateRef.current = { creatureHpOverrides, updateCreatureHp };

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { GameNode, Area, getNodeDisplayName } from '@/hooks/useNodes';
+import { GameNode, Area } from '@/hooks/useNodes';
 import { PartyMember } from '@/hooks/useParty';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -24,7 +24,7 @@ const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
 };
 
-export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas = [], characterId, unlockedConnections }: Props) {
+export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
   // Client-side cache for visited nodes — grows as the player moves, only fetched once on mount
@@ -82,7 +82,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return basePositions;
   }, [currentNode, neighbors, visitedSecondDegree]);
 
-  const { nodePositions, svgWidth, svgHeight, SPACING } = useMemo(() => {
+  const { nodePositions, svgWidth, svgHeight, SPACING: _SPACING } = useMemo(() => {
     if (positions.size === 0) return { nodePositions: new Map<string, { px: number; py: number }>(), svgWidth: 300, svgHeight: 250, SPACING: 120 };
 
     const SPACING = 120;

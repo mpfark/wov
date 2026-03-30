@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
 import ItemPicker from './ItemPicker';
 import NodePicker from './NodePicker';
-import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getStatModifier, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getCharacterTitle } from '@/lib/game-data';
+import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getCharacterTitle } from '@/lib/game-data';
 
 interface AdminInventoryItem {
   id: string;
@@ -167,7 +167,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
   const inventory = c.inventory || [];
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
-  const beltedPotions = inventory.filter(i => (i as any).belt_slot != null && (i as any).belt_slot !== undefined);
+  inventory.filter(i => (i as any).belt_slot != null && (i as any).belt_slot !== undefined);
   const bagItems = unequipped.filter(i => (i as any).belt_slot === null || (i as any).belt_slot === undefined);
 
   const equipmentBonuses = equipped.reduce((acc, item) => {
@@ -353,7 +353,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
               <div className="w-4" />
             </div>
             <div className="space-y-0.5">
-              {Object.entries(STAT_LABELS).map(([key, label]) => {
+              {Object.entries(STAT_LABELS).map(([key, _label]) => {
                 const base = (c as any)[key] as number;
                 const bonus = equipmentBonuses[key] || 0;
                 return (

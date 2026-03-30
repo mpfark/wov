@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  Loader2, Wand2, Check, Package, Sword, Shield, Sparkles,
+  Loader2, Wand2, Check, Package, Sword, Sparkles,
   ChevronRight, Layers, Star, Hash, BarChart2, ArrowRight, Database,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -99,7 +99,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
 
   /* For assigning table to creatures */
   const [creatures, setCreatures] = useState<Creature[]>([]);
-  const [lootTables, setLootTables] = useState<LootTable[]>([]);
+  const [_lootTables, setLootTables] = useState<LootTable[]>([]);
   const [assignCreatureId, setAssignCreatureId] = useState<string>('');
   const [assigning, setAssigning] = useState(false);
   const [poolStock, setPoolStock] = useState<PoolStock[]>([]);

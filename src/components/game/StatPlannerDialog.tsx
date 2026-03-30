@@ -1,17 +1,16 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Character } from '@/hooks/useCharacter';
 import {
-  RACE_STATS, CLASS_STATS, CLASS_LEVEL_BONUSES,
-  STAT_LABELS, calculateHP, calculateAC,
+  calculateHP, calculateAC,
   getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
   getBaseRegen, getCpRegenRate, CLASS_PRIMARY_STAT,
   getIntHitBonus, getDexCritBonus, getWisDodgeChance,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
 } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/lib/class-abilities';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 import { RotateCcw, ArrowRight, Check, Minus, Plus } from 'lucide-react';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;

@@ -4,7 +4,7 @@ import { Creature } from '@/hooks/useCreatures';
 import { NPC } from '@/hooks/useNPCs';
 import { Character } from '@/hooks/useCharacter';
 import { GroundLootItem } from '@/hooks/useGroundLoot';
-import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
+import { getCharacterTitle } from '@/lib/game-data';
 import { CLASS_COMBAT, ClassAbility } from '@/lib/class-abilities';
 import { getKeyLabel, type ActionBindings } from '@/hooks/useKeyboardMovement';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusBarsStrip';
 import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
@@ -53,7 +53,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, area, players, creatures, npcs = [], character, eventLog, onAttack, onTalkToNPC,
+  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   actionBindings,
   poisonStacks = {},

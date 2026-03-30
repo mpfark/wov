@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MapPin, Pencil, Trash2, Layers } from 'lucide-react';
+import { MapPin, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
@@ -65,12 +65,9 @@ interface Props {
   onMultiSelectToggleNode?: (nodeId: string) => void;
 }
 
-const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002'; // Hearthvale Square
-
-const DIRECTION_OFFSETS: Record<string, [number, number]> = {
-  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
-  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
-};
+// Reserved for future use
+// const CENTER_NODE_ID = '00000000-0000-0000-0001-000000000002';
+// const DIRECTION_OFFSETS = { N: [0,-1], S: [0,1], ... };
 
 // ---- Union-of-Circles Region Outline ----
 const NODE_DRAW_RADIUS = 28;
@@ -255,7 +252,7 @@ function computeRegionOutline(circles: Circle[]): { paths: string[]; bbox: Outli
 const CANVAS_W = 2000;
 const CANVAS_H = 1200;
 
-export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, onEditArea, onDeleteArea, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated, panelOpen, multiSelectMode, multiSelectedIds, onMultiSelectToggleNode }: Props) {
+export default function AdminWorldMapView({ regions, nodes, areas = [], creatureCounts, npcCounts, onNodeClick, onAddNodeAdjacent, onEditRegion, onDeleteRegion, onEditArea, onDeleteArea, populateMode, populateSelectedIds, onPopulateToggleNode, onPositionsComputed, onConnectionCreated, panelOpen: _panelOpen, multiSelectMode, multiSelectedIds, onMultiSelectToggleNode }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -453,8 +450,9 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
     }
   }, [allNodePositions, onPositionsComputed]);
 
-  // Center on a specific node with smooth animation
-  const centerOnNode = useCallback((nodeId: string) => {
+  // Center on a specific node with smooth animation (reserved for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void useCallback((nodeId: string) => {
     const pos = allNodePositions.get(nodeId);
     if (!pos || !containerRef.current) return;
 
@@ -873,8 +871,8 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
               const from = allNodePositions.get(edge.from);
               const to = allNodePositions.get(edge.to);
               if (!from || !to) return null;
-              const midX = (from.px + to.px) / 2;
-              const midY = (from.py + to.py) / 2;
+
+
 
               return (
                 <g key={`${edge.from}-${edge.to}`}>

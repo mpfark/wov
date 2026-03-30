@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Swords, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
+import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { type AreaType } from '@/hooks/useNodes';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
@@ -415,7 +415,7 @@ export default function NodeEditorPanel({
     area_id: '' as string,
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
-  const { areaTypes, emojiMap: areaTypeEmoji, refetch: refetchAreaTypes } = useAreaTypes();
+  const { areaTypes, emojiMap: _areaTypeEmoji, refetch: _refetchAreaTypes } = useAreaTypes();
   const [creatures, setCreatures] = useState<any[]>([]);
   const [npcs, setNpcs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
