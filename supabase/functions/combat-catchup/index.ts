@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const t0 = Date.now();
     const url = Deno.env.get('SUPABASE_URL')!;
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const db = createClient(url, srvKey);
@@ -38,35 +39,32 @@ Deno.serve(async (req) => {
     const { node_id } = await req.json();
     if (!node_id) return json({ error: 'Missing node_id' }, 400);
 
-    // Query active effects for this node
-    const { data: effects } = await db
-      .from('active_effects')
-      .select('*')
-      .eq('node_id', node_id);
+    // Parallelize: fetch effects and creatures simultaneously
+    const [{ data: effects }, { data: creaturesRaw }] = await Promise.all([
+      db.from('active_effects').select('*').eq('node_id', node_id),
+      db.from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true),
+    ]);
+
+    const creatures = creaturesRaw || [];
 
     if (!effects || effects.length === 0) {
-      // No effects — still return creatures for the client
-      const { data: aliveCreatures } = await db
-        .from('creatures')
-        .select('*')
-        .eq('node_id', node_id)
-        .eq('is_alive', true);
-      return json({ caught_up: false, effects_processed: 0, creatures: aliveCreatures || [] });
+      // No effects — return already-fetched creatures
+      console.log(JSON.stringify({
+        fn: 'combat-catchup', node_id, effects_count: 0,
+        creatures_alive: creatures.length, duration_ms: Date.now() - t0,
+      }));
+      return json({ caught_up: false, effects_processed: 0, creatures });
     }
 
     const now = Date.now();
 
-    // Load alive creatures at this node
-    const { data: creaturesRaw } = await db
-      .from('creatures')
-      .select('*')
-      .eq('node_id', node_id)
-      .eq('is_alive', true);
-
-    const creatures = creaturesRaw || [];
     if (creatures.length === 0) {
       // No creatures alive — delete all effects for this node
       await db.from('active_effects').delete().eq('node_id', node_id);
+      console.log(JSON.stringify({
+        fn: 'combat-catchup', node_id, effects_count: effects.length,
+        creatures_alive: 0, duration_ms: Date.now() - t0,
+      }));
       return json({ caught_up: true, effects_processed: effects.length });
     }
 
@@ -77,23 +75,24 @@ Deno.serve(async (req) => {
     // ── Resolve effects via shared resolver (bulk mode) ─────────
     const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, { now });
 
-    // ── Write creature HP / kills (shared resolver) ─────────────
-    await writeCreatureState(db, creatures, cHp, cKilled);
-
-    // ── Update session timelines for caught-up sessions ─────────
+    // ── Parallel post-resolution writes ─────────────────────────
     const sessionIds = [...new Set(effects.map((e: any) => e.session_id).filter(Boolean))] as string[];
-    if (sessionIds.length > 0) {
-      await db.from('combat_sessions')
-        .update({ last_tick_at: now })
-        .in('id', sessionIds);
-    }
 
-    // ── Cleanup expired/killed effects (shared resolver) ────────
-    await cleanupEffects(db, result.expiredIds, cKilled);
+    await Promise.all([
+      writeCreatureState(db, creatures, cHp, cKilled),
+      sessionIds.length > 0
+        ? db.from('combat_sessions').update({ last_tick_at: now }).in('id', sessionIds)
+        : Promise.resolve(),
+      cleanupEffects(db, result.expiredIds, cKilled),
+    ]);
 
-    // ── Update advanced effects' next_tick_at ───────────────────
-    for (const eff of result.advancedEffects) {
-      await db.from('active_effects').update({ next_tick_at: eff.next_tick_at }).eq('id', eff.id);
+    // ── Update advanced effects' next_tick_at (parallel) ────────
+    if (result.advancedEffects.length > 0) {
+      await Promise.all(
+        result.advancedEffects.map(eff =>
+          db.from('active_effects').update({ next_tick_at: eff.next_tick_at }).eq('id', eff.id)
+        )
+      );
     }
 
     // ── Loot drops (shared resolver) ────────────────────────────
@@ -122,13 +121,14 @@ Deno.serve(async (req) => {
     // ── Diagnostics ───────────────────────────────────────────────
     console.log(JSON.stringify({
       fn: 'combat-catchup',
-      node_id: node_id,
+      node_id,
       effects_count: effects.length,
       creatures_alive: finalCreatures.length,
       kills: cKilled.size,
       ticks_resolved: result.advancedEffects.length,
       sessions_reset: sessionIds.length,
       session_ids: sessionIds,
+      duration_ms: Date.now() - t0,
     }));
 
     return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures });
