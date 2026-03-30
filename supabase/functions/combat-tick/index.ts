@@ -830,16 +830,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Write state: creature HP / kills ─────────────────────────
-    const creaturePromises = creatures.map(cr => {
-      if (cKilled.has(cr.id)) {
-        return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: 0, _killed: true });
-      } else if (cHp[cr.id] !== cr.hp) {
-        return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: cHp[cr.id] });
-      }
-      return Promise.resolve();
-    });
-    await Promise.all(creaturePromises);
+    // ── Write state: creature HP / kills (shared resolver) ─────
+    await writeCreatureState(db, creatures, cHp, cKilled);
 
     // ── Write state: member HP, XP, gold, CP, level-ups ─────────
     const memberStates: any[] = [];
