@@ -35,7 +35,13 @@ Deno.serve(async (req) => {
       .eq('node_id', node_id);
 
     if (!effects || effects.length === 0) {
-      return json({ caught_up: false, effects_processed: 0 });
+      // No effects — still return creatures for the client
+      const { data: aliveCreatures } = await db
+        .from('creatures')
+        .select('*')
+        .eq('node_id', node_id)
+        .eq('is_alive', true);
+      return json({ caught_up: false, effects_processed: 0, creatures: aliveCreatures || [] });
     }
 
     const now = Date.now();
@@ -189,7 +195,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ caught_up: true, effects_processed: effects.length });
+    // Build final creature list: alive creatures with updated HP
+    const finalCreatures = creatures
+      .filter(cr => !cKilled.has(cr.id))
+      .map(cr => ({ ...cr, hp: cHp[cr.id] ?? cr.hp }));
+
+    return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures });
   } catch (err) {
     console.error('Combat catchup error:', err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
