@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface OnlinePlayer {
@@ -27,12 +27,33 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
     return { id: character.id, name: character.name, race: character.race, class: character.class, level: character.level, gender: character.gender };
   }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender]);
 
+  // Keep a ref to the latest charData for the heartbeat interval
+  const charDataRef = useRef(charData);
+  useEffect(() => { charDataRef.current = charData; }, [charData]);
+
   useEffect(() => {
     if (!charData) { setOnlinePlayers([]); return; }
 
     const channel = supabase.channel('global-presence', {
       config: { presence: { key: charData.id } },
     });
+
+    const trackPresence = async () => {
+      const data = charDataRef.current;
+      if (!data) return;
+      try {
+        await channel.track({
+          id: data.id,
+          name: data.name,
+          race: data.race,
+          class: data.class,
+          level: data.level,
+          gender: data.gender,
+        });
+      } catch (e) {
+        console.warn('[global-presence] track failed, will retry', e);
+      }
+    };
 
     channel
       .on('presence', { event: 'sync' }, () => {
@@ -49,18 +70,17 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await channel.track({
-            id: charData.id,
-            name: charData.name,
-            race: charData.race,
-            class: charData.class,
-            level: charData.level,
-            gender: charData.gender,
-          });
+          await trackPresence();
         }
       });
 
-    return () => { supabase.removeChannel(channel); };
+    // Heartbeat: re-track every 30s to survive brief disconnects
+    const heartbeat = setInterval(trackPresence, 30_000);
+
+    return () => {
+      clearInterval(heartbeat);
+      supabase.removeChannel(channel);
+    };
   }, [charData]);
 
   return { onlinePlayers };
