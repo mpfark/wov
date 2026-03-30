@@ -237,8 +237,18 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       }
     }
 
-    // Sync active dots from server for UI
-    if (data.active_dots && ext.current.onActiveDots) {
+    // Sync active effects from server for UI — map flat array to legacy nested format
+    if (data.active_effects && ext.current.onActiveDots) {
+      const dotsByChar: Record<string, any> = {};
+      for (const eff of data.active_effects) {
+        if (!dotsByChar[eff.source_id]) dotsByChar[eff.source_id] = { bleed: {}, poison: {}, ignite: {} };
+        dotsByChar[eff.source_id][eff.effect_type][eff.target_id] = {
+          stacks: eff.stacks, damage_per_tick: eff.damage_per_tick, expires_at: eff.expires_at,
+        };
+      }
+      ext.current.onActiveDots(dotsByChar);
+    } else if (data.active_dots && ext.current.onActiveDots) {
+      // Backward compat fallback
       ext.current.onActiveDots(data.active_dots);
     }
 
