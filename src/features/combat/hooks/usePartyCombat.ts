@@ -153,6 +153,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Process tick result (shared by driver + non-leader) ────────
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
+    if (!inCombatRef.current) return; // Ignore late/stale tick responses
     const now = Date.now();
     const gap = lastTickRef.current ? now - lastTickRef.current : 0;
     if (data.ticks_processed && data.ticks_processed > 1) {
