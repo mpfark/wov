@@ -28,12 +28,8 @@ interface ItemOption {
   level: number;
 }
 
-const _RARITY_COLORS: Record<string, string> = {
-  common: 'text-foreground',
-  uncommon: 'text-elvish',
-  rare: 'text-dwarvish',
-  unique: 'text-primary text-glow',
-};
+
+
 
 export default function LootTableManager() {
   const [tables, setTables] = useState<LootTable[]>([]);
