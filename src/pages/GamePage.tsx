@@ -8,7 +8,7 @@ import BossTrainerPanel from '@/components/game/BossTrainerPanel';
 import TeleportDialog from '@/components/game/TeleportDialog';
 import { useGroundLoot } from '@/hooks/useGroundLoot';
 import { Character } from '@/hooks/useCharacter';
-import { useNodes, getNodeDisplayName } from '@/hooks/useNodes';
+import { useNodes } from '@/hooks/useNodes';
 import { useNodeChannel } from '@/hooks/useNodeChannel';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
