@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_effects: {
+        Row: {
+          created_at: string
+          damage_per_tick: number
+          effect_type: string
+          expires_at: number
+          id: string
+          next_tick_at: number
+          node_id: string
+          session_id: string | null
+          source_id: string
+          stacks: number
+          target_id: string
+          tick_rate_ms: number
+        }
+        Insert: {
+          created_at?: string
+          damage_per_tick: number
+          effect_type: string
+          expires_at: number
+          id?: string
+          next_tick_at: number
+          node_id: string
+          session_id?: string | null
+          source_id: string
+          stacks?: number
+          target_id: string
+          tick_rate_ms?: number
+        }
+        Update: {
+          created_at?: string
+          damage_per_tick?: number
+          effect_type?: string
+          expires_at?: number
+          id?: string
+          next_tick_at?: number
+          node_id?: string
+          session_id?: string | null
+          source_id?: string
+          stacks?: number
+          target_id?: string
+          tick_rate_ms?: number
+        }
+        Relationships: []
+      }
       activity_log: {
         Row: {
           character_id: string | null
@@ -347,7 +392,6 @@ export type Database = {
         Row: {
           character_id: string | null
           created_at: string
-          dots: Json
           engaged_creature_ids: string[]
           id: string
           last_tick_at: number
@@ -359,7 +403,6 @@ export type Database = {
         Insert: {
           character_id?: string | null
           created_at?: string
-          dots?: Json
           engaged_creature_ids?: string[]
           id?: string
           last_tick_at: number
@@ -371,7 +414,6 @@ export type Database = {
         Update: {
           character_id?: string | null
           created_at?: string
-          dots?: Json
           engaged_creature_ids?: string[]
           id?: string
           last_tick_at?: number
