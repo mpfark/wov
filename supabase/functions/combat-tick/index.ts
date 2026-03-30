@@ -926,23 +926,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Write active_effects to DB ─────────────────────────────
+    // Delete effects for killed creatures
+    if (killedCreatureIds.size > 0) {
+      await db.from('active_effects').delete().in('target_id', [...killedCreatureIds]);
+    }
+    // Delete expired effects
+    const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
+    if (expiredIds.length > 0) {
+      await db.from('active_effects').delete().in('id', expiredIds);
+    }
+    // Upsert remaining active effects
+    const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
+    for (const eff of liveEffects) {
+      const { _expired, ...row } = eff;
+      await db.from('active_effects').upsert(row, { onConflict: 'source_id,target_id,effect_type' });
+    }
+
     // ── Check if session should end ─────────────────────────────
     const anyAlive = creatures.some(cr => !cKilled.has(cr.id) && cHp[cr.id] > 0);
-    const hasActiveDots = Object.values(sessionDots).some((charDots: any) =>
-      Object.keys(charDots?.bleed || {}).length > 0 ||
-      Object.keys(charDots?.poison || {}).length > 0 ||
-      Object.keys(charDots?.ignite || {}).length > 0
-    );
-    const sessionEnded = !anyAlive && !hasActiveDots;
+    const hasActiveEffects = liveEffects.length > 0;
+    const sessionEnded = !anyAlive && !hasActiveEffects;
 
     if (sessionEnded) {
       await db.from('combat_sessions').delete().eq('id', session.id);
     } else {
-      // Update session state
       await db.from('combat_sessions').update({
         last_tick_at: newLastTickAt,
         engaged_creature_ids: [...sessionEngaged],
-        dots: sessionDots,
         member_buffs: buffs,
         node_id: combatNodeId,
       }).eq('id', session.id);
@@ -963,7 +974,7 @@ Deno.serve(async (req) => {
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
       consumed_ability_stacks: consumedAbilityStacks,
-      active_dots: sessionDots,
+      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at })),
       session_ended: sessionEnded,
       ticks_processed: ticks,
     });
