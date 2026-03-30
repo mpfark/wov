@@ -1,42 +1,15 @@
 
 
-# Fix: Fully Deterministic `last_tick_at` Advancement
+# ✅ Completed: Independent `active_effects` Table (LP-Style DoTs)
 
-## Problem
+Replaced the JSONB `dots` column in `combat_sessions` with a dedicated `active_effects` table.
+Each DoT is an independent row with its own lifecycle, decoupled from the session.
 
-Both `combat-tick` and `combat-catchup` contain a branch that sets `last_tick_at = now - remainingMs` when the tick cap is hit. This introduces wall-clock dependency and potential drift.
+## Changes Made
 
-## Change
-
-Remove the `if (ticksToProcess > TICK_CAP)` branch in both files. Always use the same formula:
-
-```typescript
-newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
-```
-
-The next request will compute `elapsedMs = now - last_tick_at`, which naturally includes any unprocessed remainder from the capped ticks.
-
-## Files
-
-| File | Lines | Change |
-|------|-------|--------|
-| `supabase/functions/combat-tick/index.ts` | ~795-802 | Replace if/else with single assignment |
-| `supabase/functions/combat-catchup/index.ts` | ~199-206 | Replace if/else with single assignment |
-
-Both blocks change from:
-```typescript
-let newLastTickAt: number;
-if (ticksToProcess > TICK_CAP) {
-  const processedMs = ticks * TICK_RATE;
-  const remainingMs = elapsedMs - processedMs;
-  newLastTickAt = now - remainingMs;
-} else {
-  newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
-}
-```
-
-To:
-```typescript
-const newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
-```
-
+| File | Change |
+|------|--------|
+| Migration | Created `active_effects` table, unique constraint `(source_id, target_id, effect_type)`, RLS (service_role only), index on `node_id`. Dropped `dots` column from `combat_sessions`. |
+| `supabase/functions/combat-tick/index.ts` | Replaced all `sessionDots` JSONB operations with `active_effects` table queries/upserts. |
+| `supabase/functions/combat-catchup/index.ts` | Rewrote to query `active_effects` by `node_id` directly — no more session JSONB parsing. |
+| `src/hooks/usePartyCombat.ts` | Maps new `active_effects` flat array response to legacy nested format for UI compatibility. |
