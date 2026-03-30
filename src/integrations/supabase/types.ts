@@ -343,6 +343,67 @@ export type Database = {
           },
         ]
       }
+      combat_sessions: {
+        Row: {
+          character_id: string | null
+          created_at: string
+          dots: Json
+          engaged_creature_ids: string[]
+          id: string
+          last_tick_at: number
+          member_buffs: Json
+          node_id: string
+          party_id: string | null
+          tick_rate_ms: number
+        }
+        Insert: {
+          character_id?: string | null
+          created_at?: string
+          dots?: Json
+          engaged_creature_ids?: string[]
+          id?: string
+          last_tick_at: number
+          member_buffs?: Json
+          node_id: string
+          party_id?: string | null
+          tick_rate_ms?: number
+        }
+        Update: {
+          character_id?: string | null
+          created_at?: string
+          dots?: Json
+          engaged_creature_ids?: string[]
+          id?: string
+          last_tick_at?: number
+          member_buffs?: Json
+          node_id?: string
+          party_id?: string | null
+          tick_rate_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combat_sessions_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: true
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_sessions_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combat_sessions_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: true
+            referencedRelation: "parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creatures: {
         Row: {
           ac: number
