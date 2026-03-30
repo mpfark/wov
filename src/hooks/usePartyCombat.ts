@@ -28,6 +28,8 @@ interface CombatTickResponse {
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
   cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
   consumed_ability_stacks?: { character_id: string; creature_id: string; stack_type: string }[];
+  active_effects?: { source_id: string; target_id: string; effect_type: string; stacks: number; damage_per_tick: number; expires_at: number }[];
+  /** @deprecated Use active_effects instead */
   active_dots?: Record<string, any>;
   session_ended?: boolean;
   ticks_processed?: number;
