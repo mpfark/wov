@@ -1088,7 +1088,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
               sunderDebuff={sunderDebuff}
-              bleedStacks={gameLoop.bleedStacks}
+              bleedStacks={bleedStacks}
               groundLoot={groundLoot}
               onPickUpLoot={async (id) => {
                 const result = await pickUpItem(id);

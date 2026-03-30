@@ -4,9 +4,9 @@
  *
  * Mirrors LPMud's heart_beat() pattern for periodic effects.
  */
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
-import { getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate, getStatModifier } from '@/lib/game-data';
+import { getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useBuffState } from './useBuffState';
