@@ -1,5 +1,12 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
+  resolveEffectTicks,
+  processLootDrops,
+  writeCreatureState,
+  cleanupEffects,
+  type LootQueueEntry,
+} from "../_shared/combat-resolver.ts";
+import {
   getStatModifier as sm,
   rollD20,
   rollDamage as rollDmg,
