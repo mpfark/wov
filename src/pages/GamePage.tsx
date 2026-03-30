@@ -444,7 +444,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Apply incoming party regen buff from another party member
   useEffect(() => {
     if (!incomingPartyRegenBuff) return;
-    gameLoop.setPartyRegenBuff(incomingPartyRegenBuff);
+    buffSetters.setPartyRegenBuff(incomingPartyRegenBuff);
   }, [incomingPartyRegenBuff]);
 
   // ── Instant follower movement: when the leader broadcasts a move, followers
