@@ -471,7 +471,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (!party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
     prevPartyRegenBuffRef.current = partyRegenBuff;
     broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
-  }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
+  }, [party, buffState.partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
