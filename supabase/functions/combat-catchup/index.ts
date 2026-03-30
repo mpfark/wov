@@ -141,11 +141,14 @@ Deno.serve(async (req) => {
       fn: 'combat-catchup',
       node_id,
       effects_count: effects.length,
+      null_session_effects: nullSessionEffects,
       creatures_alive: finalCreatures.length,
       kills: cKilled.size,
       ticks_resolved: result.advancedEffects.length,
-      sessions_reset: sessionIds.length,
-      session_ids: sessionIds,
+      effect_session_ids: effectSessionIds,
+      fallback_session_ids: finalSessionIds.filter(id => !effectSessionIds.includes(id)),
+      session_last_tick_before: sessionLastTickBefore,
+      session_last_tick_after: now,
       duration_ms: Date.now() - t0,
     }));
 

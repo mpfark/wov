@@ -595,6 +595,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       aggroProcessedRef.current = new Set();
       recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
+      nodeEntryTickRef.current = true;
       // Clear stale creature overrides immediately before stopCombat
       creatureHpOverridesRef.current = {};
       setCreatureHpOverrides({});
