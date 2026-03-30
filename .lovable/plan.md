@@ -1,104 +1,81 @@
 
 
-# Refactor: Shared Combat/Effect Resolver
+# Combat System Reliability Refactor
 
-## Problem
+## Current State
 
-Effect tick processing, creature HP writes, effect cleanup, and loot drops are implemented independently in both `combat-tick` and `combat-catchup`. This creates divergence risk where the same combat event produces different results depending on which path processes it.
+The shared `combat-resolver.ts` module already exists and is used by both `combat-tick` and `combat-catchup`. The `active_effects` table is the source of truth. The `combat-tick` already returns actual active effects when 0 ticks are processed. No legacy `combat_sessions.dots` references remain in server code.
 
-## Shared Module
+What remains: TypeScript strictness, deterministic tests, one stale comment in client code, and a duplicated kill-reward block in `combat-tick`.
 
-Create `supabase/functions/_shared/combat-resolver.ts` containing three extracted helpers:
+---
 
-### 1. `resolveEffectTicks(effects, creatureHpMap, killedSet, tickCap, now)`
+## Plan
 
-Owns the core loop: for each effect, calculate elapsed ticks, apply damage, detect kills, advance `next_tick_at`, mark expired effects. Returns a result object with updated HP map, newly killed creature IDs, expired effect IDs, effects to upsert, and a loot queue.
+### 1. Enable stricter TypeScript checks
 
-This replaces:
-- `combat-tick` lines 704-736 (DoT ticking inside the per-tick loop)
-- `combat-catchup` lines 71-127 (the entire effect processing loop)
+**File: `tsconfig.app.json`**
+- Set `"noUnusedLocals": true` and `"noUnusedParameters": true`
+- Add `"typecheck": "tsc --noEmit"` script to `package.json`
+- Fix resulting errors (prefix unused params with `_`, remove dead variables) in combat-related files
 
-The key difference: `combat-tick` processes effects one tick at a time inside its outer tick loop (calling this once per tick with `tickTime`), while `combat-catchup` processes all elapsed ticks for each effect in bulk. The resolver supports both modes via a parameter:
-- **Single-tick mode** (`tickTime` provided): process effects due at that tick time
-- **Bulk mode** (`tickTime` omitted): calculate all elapsed ticks per effect and process them all
+### 2. Extract duplicated kill-reward logic in combat-tick
 
-### 2. `processLootDrops(db, lootQueue)`
+**File: `supabase/functions/combat-tick/index.ts`**
 
-Owns loot table resolution, weighted item picking, unique item deduplication, and ground loot insertion. Returns loot event messages.
+Lines 724-796 duplicate the XP/gold/salvage/BHP reward logic already in `handleCreatureKill` (lines 290-371). The DoT-kill handler manually recalculates everything instead of calling `handleCreatureKill`. Refactor the DoT-kill loop (lines 724-796) to call `handleCreatureKill` directly, since the resolver already marks kills in `cKilled` — just need to skip the `cKilled.add()` that `handleCreatureKill` does (it's already there, harmless to re-add to a Set).
 
-This replaces:
-- `combat-tick` lines 888-927
-- `combat-catchup` lines 149-180
+This eliminates ~70 lines of duplicated reward code within the same file.
 
-### 3. `writeCreatureState(db, creatures, hpMap, killedSet)`
+### 3. Clean up stale comment
 
-Calls `damage_creature` RPC for changed/killed creatures.
+**File: `src/hooks/useActions.ts` line 414**
+- Update the comment referencing "DoT drain mode" to reference the actual architecture: effects persist in `active_effects` and are resolved by `combat-catchup` on node re-entry.
 
-This replaces:
-- `combat-tick` lines 770-778
-- `combat-catchup` lines 129-138
+### 4. Add deterministic combat resolver tests
 
-### 4. `cleanupEffects(db, expiredIds, killedCreatureIds)`
+**New file: `src/test/combat/combat-resolver.test.ts`**
 
-Deletes expired effects and effects targeting killed creatures.
+Import `resolveEffectTicks` from the shared resolver (copy the pure function for client-side testing since the Deno import path won't work in Vitest — mirror the function or use a shared export).
 
-This replaces:
-- `combat-tick` lines 929-944
-- `combat-catchup` lines 140-147
+**Approach**: Create a thin copy of `resolveEffectTicks` at `src/lib/combat-resolver.ts` that re-exports the same pure logic for client-side testing. The edge functions continue importing from `_shared/`. Both files share identical logic — this is acceptable because `resolveEffectTicks` is pure (no DB calls).
 
-## Changes to Endpoints
+Tests to write:
+- Single DoT tick applies correct damage
+- Multiple ticks processed in bulk mode
+- Effect expires after `expires_at`
+- Creature dies from DoT damage (HP reaches 0)
+- Tick cap limits maximum ticks processed
+- Bleed uses flat `damage_per_tick`, poison/ignite use `stacks * damage_per_tick`
+- Already-dead creatures are skipped
+- `advancedEffects` correctly advances `next_tick_at`
 
-### `combat-tick/index.ts`
-- Import and call `resolveEffectTicks` in single-tick mode inside the tick loop (replacing lines 704-736)
-- Import and call `processLootDrops` (replacing lines 888-927)
-- Import and call `writeCreatureState` (replacing lines 770-778)
-- Import and call `cleanupEffects` (replacing lines 929-944)
-- When `ticks === 0` and no pending abilities, query active effects and return them in the response instead of `active_effects: []`
-- `handleCreatureKill` stays in combat-tick (it handles XP/gold/salvage/BHP split which is combat-tick-specific), but pushes to the same `lootQueue` format consumed by `processLootDrops`
+All tests use fixed inputs — no randomness.
 
-### `combat-catchup/index.ts`
-- Import and call `resolveEffectTicks` in bulk mode (replacing lines 71-127)
-- Import and call `processLootDrops` (replacing lines 149-180)
-- Import and call `writeCreatureState` (replacing lines 129-138)
-- Import and call `cleanupEffects` (replacing lines 140-147)
-- Session cleanup logic (lines 182-196) stays here as it's catchup-specific
+### 5. Update resolver documentation
 
-### Comment/Documentation Cleanup
-- Remove any remaining references to `combat_sessions.dots` — `active_effects` table is the sole source of truth
-- Update comments in both endpoints to reference the shared resolver
+**File: `supabase/functions/_shared/combat-resolver.ts`**
+- Add a header block explaining the architecture: `active_effects` is sole source of truth, time advances deterministically, server is authoritative
+- Document why both single-tick and bulk modes exist
 
-## Data Flow
-
-```text
-combat-tick (per tick in loop)
-  ├─ member auto-attacks (combat-tick only)
-  ├─ resolveEffectTicks(single-tick mode)  ← shared
-  ├─ creature counterattacks (combat-tick only)
-  └─ after loop:
-      ├─ writeCreatureState()              ← shared
-      ├─ cleanupEffects()                  ← shared
-      └─ processLootDrops()               ← shared
-
-combat-catchup (on node entry)
-  ├─ resolveEffectTicks(bulk mode)         ← shared
-  ├─ writeCreatureState()                  ← shared
-  ├─ cleanupEffects()                      ← shared
-  └─ processLootDrops()                    ← shared
-```
+---
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `supabase/functions/_shared/combat-resolver.ts` | New: shared resolver with 4 exported functions |
-| `supabase/functions/combat-tick/index.ts` | Import shared helpers, remove ~120 lines of duplicated logic |
-| `supabase/functions/combat-catchup/index.ts` | Import shared helpers, remove ~100 lines of duplicated logic |
+| `tsconfig.app.json` | Enable `noUnusedLocals`, `noUnusedParameters` |
+| `package.json` | Add `typecheck` script |
+| `supabase/functions/combat-tick/index.ts` | Deduplicate DoT-kill rewards (~70 lines removed) |
+| `src/hooks/useActions.ts` | Fix stale "DoT drain mode" comment |
+| `src/lib/combat-resolver.ts` | New: client-side copy of pure resolver for testing |
+| `src/test/combat/combat-resolver.test.ts` | New: 8+ deterministic tests |
+| `supabase/functions/_shared/combat-resolver.ts` | Enhanced documentation header |
+| Various `src/` files | Fix unused variable/parameter errors from stricter TS |
 
 ## Constraints
 
-- No formula changes — same damage, same tick rate, same timing
-- Deterministic time advancement preserved (`next_tick_at += ticks * tick_rate_ms`)
-- Tick cap behavior unchanged
-- `active_effects` table remains sole source of truth for DoT state
-- Fix: `combat-tick` returns actual active effects even when 0 ticks processed
+- Zero gameplay changes — same damage, timing, rewards
+- No changes to `combat-catchup` (already clean)
+- Edge function resolver remains the authoritative copy
 
