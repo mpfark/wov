@@ -1,10 +1,9 @@
 /**
  * usePartyCombat — unified server-authoritative combat via the combat-tick edge function.
  *
- * Solo: character runs their own 2s heartbeat calling the edge function directly.
- * Party leader: runs a 2s heartbeat, broadcasts results to party.
- * Party non-leader (same node as leader): listens for tick results via broadcast.
- * Non-leaders broadcast their buff and DoT stacks so the leader can include them in the tick.
+ * Combat sessions are persisted server-side. The server is the sole authority on time.
+ * DoTs are tracked server-side in the combat_sessions table.
+ * Client polls every 2s; server catches up all elapsed ticks deterministically.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/hooks/useCharacter';
@@ -29,6 +28,9 @@ interface CombatTickResponse {
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
   cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
   consumed_ability_stacks?: { character_id: string; creature_id: string; stack_type: string }[];
+  active_dots?: Record<string, any>;
+  session_ended?: boolean;
+  ticks_processed?: number;
 }
 
 export interface MemberBuffState {
@@ -48,12 +50,6 @@ export interface MemberBuffState {
   focus_strike?: { bonus_dmg: number };
 }
 
-export interface DotStackReport {
-  bleed: Record<string, { damage_per_tick: number }>;
-  poison: Record<string, { stacks: number; damage_per_tick: number }>;
-  ignite: Record<string, { stacks: number; damage_per_tick: number }>;
-}
-
 export interface UsePartyCombatParams {
   character: Character;
   creatures: Creature[];
@@ -62,25 +58,17 @@ export interface UsePartyCombatParams {
   isDead: boolean;
   addLocalLog: (msg: string) => void;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
-  /** Local-only state update (no DB write) — used for combat tick results already persisted by server */
   updateCharacterLocal?: (updates: Partial<Character>) => void;
   fetchGroundLoot: () => void;
-  /** Gather current buff state for combat-tick payload */
   gatherBuffs?: () => MemberBuffState;
-  /** Gather current DoT stacks for combat-tick payload */
-  gatherDotStacks?: () => DotStackReport;
-  /** Called when server consumes one-shot buffs (stealth, focus_strike, disengage) */
   onConsumedBuffs?: (consumed: { buff: string; character_id: string }[]) => void;
-  /** Called when server clears DoT stacks (creature died from DoT) */
   onClearedDots?: (cleared: { character_id: string; creature_id: string; dot_type: string }[]) => void;
-  /** Called when server reports a poison proc on a creature */
   onPoisonProc?: (creatureId: string) => void;
-  /** Called when server reports an ignite proc on a creature */
   onIgniteProc?: (creatureId: string) => void;
-  /** Called on tick to execute a queued ability (buff/heal abilities only — damage abilities go to server) */
   onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
-  /** Called when server consumes ability stacks (Eviscerate/Conflagrate) */
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
+  /** Callback with server DoT state for UI sync */
+  onActiveDots?: (dots: Record<string, any>) => void;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
@@ -102,10 +90,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickBusyRef = useRef(false);
   const justStoppedRef = useRef(false);
 
-  // DoT drain mode: after fleeing, keep ticking DoTs on the old node without auto-attacks
-  const dotDrainNodeRef = useRef<string | null>(null);
-  const [isDotDraining, setIsDotDraining] = useState(false);
-  
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
   const recentlyKilledRef = useRef<Set<string>>(new Set());
@@ -115,15 +99,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
   const idleCountRef = useRef(0);
 
-  // Leader aggregates non-leader buff + DoT stacks received via broadcast
+  // Leader aggregates non-leader buff stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
-  const memberDotsRef = useRef<Record<string, DotStackReport>>({});
   // Leader aggregates non-leader pending abilities received via broadcast
   const memberAbilitiesRef = useRef<any[]>([]);
   const doTickRef = useRef<() => void>(() => {});
 
-  // Derived: is this character the "driver" (runs the tick interval)?
-  // Solo players and party leaders drive their own ticks.
   const isSolo = !params.party;
   const isDriver = isSolo || params.isLeader;
 
@@ -141,8 +122,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     inCombatRef.current = false;
     tickBusyRef.current = false;
     justStoppedRef.current = true;
-    dotDrainNodeRef.current = null;
-    setIsDotDraining(false);
     setInCombat(false);
     setActiveCombatCreatureId(null);
     setEngagedCreatureIds([]);
@@ -150,9 +129,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
-    memberDotsRef.current = {};
     memberAbilitiesRef.current = [];
-    // Only clear interval if no pending ability — let it keep running for ability execution
     if (!pendingAbilityRef.current && intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
@@ -165,7 +142,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000 };
     setPendingAbility({ index, targetId });
     idleCountRef.current = 0;
-    // Ensure tick interval is running — ability executes on the NEXT heartbeat, not immediately
     if (!intervalRef.current) {
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
     }
@@ -177,12 +153,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     lastTickRef.current = Date.now();
     setLastTickTime(Date.now());
 
-    // Track killed creatures to prevent stale re-engage
     for (const cs of data.creature_states) {
       if (!cs.alive) recentlyKilledRef.current.add(cs.id);
     }
 
-    // Update creature HP overrides
     for (const cs of data.creature_states) {
       setCreatureHpOverrides(prev => {
         const next = { ...prev, [cs.id]: cs.hp };
@@ -191,14 +165,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       });
     }
 
-    // Add tick separator before events
     if (data.events.length > 0) {
       ext.current.addLocalLog('---tick---');
     }
 
-    // Display events via local log — convert own character name to "You"
     const myName = ext.current.character.name;
     for (const ev of data.events) {
+      if (ev.type === 'tick_separator') {
+        ext.current.addLocalLog('---tick---');
+        continue;
+      }
       let msg = ev.message;
       if (ev.character_id === ext.current.character.id || msg.includes(myName)) {
         msg = msg.replace(new RegExp(`${myName}'s`, 'g'), 'Your');
@@ -210,7 +186,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.addLocalLog(msg);
     }
 
-    // Update own character state from server-authoritative data (local only — server already persisted)
     const myState = data.member_states.find(m => m.character_id === ext.current.character.id);
     if (myState) {
       const updates: Partial<import('@/hooks/useCharacter').Character> = {
@@ -227,7 +202,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (myState.respec_points !== undefined) updates.respec_points = myState.respec_points;
       if (myState.salvage !== undefined) updates.salvage = myState.salvage;
       if (myState.cp !== undefined) updates.cp = myState.cp;
-      // Use local-only update to avoid redundant DB write (server already wrote these)
       if (ext.current.updateCharacterLocal) {
         ext.current.updateCharacterLocal(updates);
       } else {
@@ -235,25 +209,22 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       }
     }
 
-    // Notify client about consumed one-shot buffs
     if (data.consumed_buffs?.length && ext.current.onConsumedBuffs) {
       const myConsumed = data.consumed_buffs.filter(b => b.character_id === ext.current.character.id);
       if (myConsumed.length) ext.current.onConsumedBuffs(myConsumed);
     }
 
-    // Notify client about cleared DoT stacks (creature died from DoT)
     if (data.cleared_dots?.length && ext.current.onClearedDots) {
       const myCleared = data.cleared_dots.filter(d => d.character_id === ext.current.character.id);
       if (myCleared.length) ext.current.onClearedDots(myCleared);
     }
 
-    // Notify client about consumed ability stacks (Eviscerate/Conflagrate)
     if (data.consumed_ability_stacks?.length && ext.current.onConsumedAbilityStacks) {
       const myStacks = data.consumed_ability_stacks.filter(s => s.character_id === ext.current.character.id);
       if (myStacks.length) ext.current.onConsumedAbilityStacks(myStacks);
     }
 
-    // Apply DoT stacks from proc events (poison/ignite)
+    // Sync DoT state from server for UI display
     const myId = ext.current.character.id;
     for (const ev of data.events) {
       if (ev.character_id === myId && ev.type === 'poison_proc' && ev.creature_id && ext.current.onPoisonProc) {
@@ -264,42 +235,37 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       }
     }
 
-    // Refresh ground loot if any drops occurred
+    // Sync active dots from server for UI
+    if (data.active_dots && ext.current.onActiveDots) {
+      ext.current.onActiveDots(data.active_dots);
+    }
+
     if (data.events.some(e => e.type === 'loot_drop')) {
       ext.current.fetchGroundLoot();
     }
 
-    // Update combat state
-    if (dotDrainNodeRef.current) {
-      // In DoT drain mode: check if any creatures still alive with active DoTs
-      const anyAlive = data.creature_states.some(cs => cs.alive);
-      if (!anyAlive || data.events.length === 0) {
-        // All creatures dead or no more DoT events — stop draining
-        dotDrainNodeRef.current = null;
-        setIsDotDraining(false);
-        if (intervalRef.current) {
-          clearWorkerInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      }
+    // Check if session ended server-side
+    if (data.session_ended) {
+      stopCombat();
+      return;
+    }
+
+    // Normal combat state update
+    const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
+    if (engagedAlive.length === 0) {
+      stopCombat();
     } else {
-      // Normal combat: only consider creatures we were actually fighting (engaged)
-      const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
-      if (engagedAlive.length === 0) {
-        stopCombat();
-      } else {
-        if (!inCombatRef.current) {
-          inCombatRef.current = true;
-          setInCombat(true);
-        }
-        setActiveCombatCreatureId(engagedAlive[0].id);
-        setEngagedCreatureIds(prev => {
-          const aliveIds = new Set(engagedAlive.map(cs => cs.id));
-          const result = prev.filter(id => aliveIds.has(id));
-          engagedCreatureIdsRef.current = result;
-          return result;
-        });
+      if (!inCombatRef.current) {
+        inCombatRef.current = true;
+        setInCombat(true);
       }
+      setActiveCombatCreatureId(engagedAlive[0].id);
+      setEngagedCreatureIds(prev => {
+        const aliveIds = new Set(engagedAlive.map(cs => cs.id));
+        const result = prev.filter(id => aliveIds.has(id));
+        engagedCreatureIdsRef.current = result;
+        return result;
+      });
     }
   }, [stopCombat]);
 
@@ -337,11 +303,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
         }
       })
-      .on('broadcast', { event: 'member_dot_state' }, (payload) => {
-        if (!ext.current.isLeader) return;
-        const { character_id, dots } = payload.payload as { character_id: string; dots: DotStackReport };
-        if (character_id && dots) memberDotsRef.current[character_id] = dots;
-      })
       .on('broadcast', { event: 'member_buff_state' }, (payload) => {
         if (!ext.current.isLeader) return;
         const { character_id, buffs } = payload.payload as { character_id: string; buffs: MemberBuffState };
@@ -360,20 +321,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, [params.party?.id, processTickResult]);
 
-  // ── Non-leader: broadcast buff + DoT state periodically (guarded) ─
+  // ── Non-leader: broadcast buff state periodically ──────────────
   useEffect(() => {
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
       if (!channelRef.current) return;
-      // Only broadcast when in combat and there's data to send
       if (!inCombatRef.current) return;
-      if (ext.current.gatherDotStacks) {
-        const dots = ext.current.gatherDotStacks();
-        const hasActiveDots = Object.keys(dots.bleed || {}).length > 0 || Object.keys(dots.poison).length > 0 || Object.keys(dots.ignite).length > 0;
-        if (hasActiveDots) {
-          channelRef.current.send({ type: 'broadcast', event: 'member_dot_state', payload: { character_id: ext.current.character.id, dots } });
-        }
-      }
       if (ext.current.gatherBuffs) {
         const buffs = ext.current.gatherBuffs();
         if (Object.keys(buffs).length > 0) {
@@ -400,47 +353,34 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         pendingAbilityRef.current = null;
         setPendingAbility(null);
 
-        // Resolve ability type
         const allAbilities = [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[p.character.class] || [])];
         const ability = allAbilities[pending.index];
 
         if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
-          // Damage ability → route to server via combat-tick
           const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
 
-          // Gather consume stacks for execute/conflagrate
-          let consumeStacks = 0;
-          if (ability.type === 'execute_attack' && p.gatherDotStacks) {
-            const dots = p.gatherDotStacks();
-            consumeStacks = dots.poison[targetId]?.stacks || 0;
-          } else if (ability.type === 'ignite_consume' && p.gatherDotStacks) {
-            const dots = p.gatherDotStacks();
-            consumeStacks = dots.ignite[targetId]?.stacks || 0;
-          }
-
+          // For execute/conflagrate, consume_stacks comes from server DoT state now
+          // The server will use its own DoT tracking to determine stacks
           const cpCost = p.character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
 
           const abilityPayload = {
             character_id: p.character.id,
             ability_type: ability.type,
             target_creature_id: targetId,
-            consume_stacks: consumeStacks,
+            consume_stacks: 0, // Server will read from its own DoT state
             cp_cost: cpCost,
           };
 
           if (p.party && !p.isLeader) {
-            // Non-leader in party: broadcast to leader
             channelRef.current?.send({
               type: 'broadcast',
               event: 'member_pending_ability',
               payload: { ability: abilityPayload },
             });
           } else {
-            // Solo or leader: include directly
             pendingAbilitiesForServer.push(abilityPayload);
           }
         } else {
-          // Buff/heal ability → execute client-side as before
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
             await p.onAbilityExecute(pending.index, pending.targetId);
           }
@@ -450,59 +390,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       // ── Combat tick (drivers only) ──
       const solo = !p.party;
       const driver = solo || p.isLeader;
-      const drainNode = dotDrainNodeRef.current;
 
-      // Collect member abilities (leader only, from broadcasts)
       if (driver && !solo) {
         pendingAbilitiesForServer = [...pendingAbilitiesForServer, ...memberAbilitiesRef.current];
         memberAbilitiesRef.current = [];
       }
 
-      // DoT drain mode: keep ticking with empty engaged list at old node
-      if (driver && drainNode && !p.isDead && p.character.hp > 0) {
-        const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
-        if (ext.current.gatherDotStacks) {
-          memberDots[p.character.id] = ext.current.gatherDotStacks();
-        }
-        // Check if there are actually active DoTs to send
-        const hasAnyDots = Object.values(memberDots).some(d =>
-          Object.keys(d.bleed || {}).length > 0 || Object.keys(d.poison || {}).length > 0 || Object.keys(d.ignite || {}).length > 0
-        );
-        if (!hasAnyDots) {
-          // No more DoTs — stop drain mode
-          dotDrainNodeRef.current = null;
-          setIsDotDraining(false);
-          if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
-        } else {
-          const body = solo
-            ? { character_id: p.character.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [], pending_abilities: [] }
-            : { party_id: p.party!.id, node_id: drainNode, member_buffs: {}, member_dots: memberDots, engaged_creature_ids: [], pending_abilities: [] };
-
-          const { data, error } = await supabase.functions.invoke('combat-tick', { body });
-          if (error) {
-            console.error('DoT drain tick error:', error);
-          } else if (data) {
-            const result = data as CombatTickResponse;
-            if (!solo) {
-              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
-            }
-            processTickResult(result);
-          } else {
-            dotDrainNodeRef.current = null;
-            setIsDotDraining(false);
-            if (intervalRef.current) { clearWorkerInterval(intervalRef.current); intervalRef.current = null; }
-          }
-        }
-      } else if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || pendingAbilitiesForServer.length > 0)) {
-        // Normal combat tick
+      if (driver && !p.isDead && p.character.hp > 0 && (engagedCreatureIdsRef.current.length > 0 || pendingAbilitiesForServer.length > 0)) {
         const memberBuffs: Record<string, MemberBuffState> = solo ? {} : { ...memberBuffsRef.current };
         if (ext.current.gatherBuffs) {
           memberBuffs[p.character.id] = ext.current.gatherBuffs();
-        }
-
-        const memberDots: Record<string, DotStackReport> = solo ? {} : { ...memberDotsRef.current };
-        if (ext.current.gatherDotStacks) {
-          memberDots[p.character.id] = ext.current.gatherDotStacks();
         }
 
         const body = solo
@@ -510,7 +407,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               character_id: p.character.id,
               node_id: p.character.current_node_id,
               member_buffs: memberBuffs,
-              member_dots: memberDots,
               engaged_creature_ids: engagedCreatureIdsRef.current,
               pending_abilities: pendingAbilitiesForServer,
             }
@@ -518,7 +414,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               party_id: p.party!.id,
               node_id: p.character.current_node_id,
               member_buffs: memberBuffs,
-              member_dots: memberDots,
               engaged_creature_ids: engagedCreatureIdsRef.current,
               pending_abilities: pendingAbilitiesForServer,
             };
@@ -531,8 +426,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           const result = data as CombatTickResponse;
           if (!result) {
             stopCombat();
-          } else if (result.creature_states && result.creature_states.filter(cs => cs.alive).length === 0 && !result.events?.length) {
-            stopCombat();
+          } else if (result.session_ended) {
+            if (!solo) {
+              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
+            }
+            processTickResult(result);
           } else {
             if (!solo) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
@@ -544,8 +442,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         stopCombat();
       }
 
-      // ── Idle detection: stop interval if no combat, no pending ability, and no DoT drain ──
-      if (!inCombatRef.current && !pendingAbilityRef.current && !dotDrainNodeRef.current) {
+      // ── Idle detection ──
+      if (!inCombatRef.current && !pendingAbilityRef.current) {
         idleCountRef.current++;
         if (idleCountRef.current >= 2 && intervalRef.current) {
           clearWorkerInterval(intervalRef.current);
@@ -567,7 +465,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     const p = ext.current;
     if (p.isDead || p.character.hp <= 0) return;
 
-    // Non-leader in party: broadcast an engagement request to the leader
     if (p.party && !p.isLeader) {
       channelRef.current?.send({
         type: 'broadcast',
@@ -576,11 +473,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       });
       return;
     }
-
-    // Driver (solo or party leader): add creature to engaged list
-    // Clear any active DoT drain mode — new combat takes priority
-    dotDrainNodeRef.current = null;
-    setIsDotDraining(false);
 
     setEngagedCreatureIds(prev => {
       if (prev.includes(creatureId)) return prev;
@@ -595,7 +487,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       setInCombat(true);
       idleCountRef.current = 0;
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
-      doTick(); // Immediate first tick
+      doTick();
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
     }
   }, [doTick]);
@@ -611,25 +503,22 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   useEffect(() => {
     const p = ext.current;
     if (inCombat || !justStoppedRef.current || p.isDead || pendingAggroRef.current) return;
-    // Only drivers auto-re-engage (solo or party leader)
     if (p.party && !p.isLeader) return;
-    if (params.creatures.length === 0) return; // Wait for creatures to load
+    if (params.creatures.length === 0) return;
     const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive && !recentlyKilledRef.current.has(c.id));
     if (nextAggro) {
       justStoppedRef.current = false;
       ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
       startCombat(nextAggro.id);
     } else {
-      // Creatures loaded but none aggressive — clear justStopped
       justStoppedRef.current = false;
     }
   }, [params.creatures, inCombat, startCombat]);
 
-  // Auto-aggro: during combat, add new aggressive creatures to engaged list
   useEffect(() => {
     const p = ext.current;
     if (!inCombat) return;
-    if (p.party && !p.isLeader) return; // Only drivers manage engagement
+    if (p.party && !p.isLeader) return;
     for (const c of params.creatures) {
       if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id) && !recentlyKilledRef.current.has(c.id)) {
         setEngagedCreatureIds(prev => {
@@ -643,13 +532,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
   }, [params.creatures, inCombat]);
 
-  // ── Pending aggro: trigger after node change when creatures load ──
   useEffect(() => {
     const p = ext.current;
     if (!pendingAggroRef.current || params.creatures.length === 0 || p.isDead || p.character.hp <= 0) return;
-    if (p.party && !p.isLeader) return; // Only drivers
+    if (p.party && !p.isLeader) return;
     pendingAggroRef.current = false;
-    justStoppedRef.current = false; // Prevent duplicate "attacks!" from re-engage effect
+    justStoppedRef.current = false;
     const aggressiveCreatures = params.creatures.filter(
       c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
     );
@@ -665,62 +553,26 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   // ── Lifecycle effects ──────────────────────────────────────────
 
-  // Stop when party disbands (party mode only — solo keeps fighting)
-  // Note: transitioning from party to solo or vice versa resets combat
   useEffect(() => {
-    // If we were in party mode and party dissolved, stop to reset state
     if (!params.party && channelRef.current) stopCombat();
   }, [params.party, stopCombat]);
 
-  // Handle node changes — enter DoT drain mode if active DoTs, otherwise stop
+  // Handle node changes — server handles DoT continuation via session
   useEffect(() => {
     if (params.character.current_node_id !== prevNodeRef.current) {
-      const oldNode = prevNodeRef.current;
-      const newNode = params.character.current_node_id;
-      prevNodeRef.current = newNode;
-
-      // Reset aggro tracking for new node
+      prevNodeRef.current = params.character.current_node_id;
       aggroProcessedRef.current = new Set();
       recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
-
-      // Check if we have active DoTs — if so, enter DoT drain mode instead of full stop
-      let hasActiveDots = false;
-      if (ext.current.gatherDotStacks && inCombatRef.current) {
-        const dots = ext.current.gatherDotStacks();
-        hasActiveDots = Object.keys(dots.bleed || {}).length > 0
-          || Object.keys(dots.poison || {}).length > 0
-          || Object.keys(dots.ignite || {}).length > 0;
-      }
-
-      if (hasActiveDots && oldNode) {
-        // Enter DoT drain mode: stop auto-attacks but keep heartbeat for DoT ticking
-        inCombatRef.current = false;
-        setInCombat(false);
-        setActiveCombatCreatureId(null);
-        setEngagedCreatureIds([]);
-        engagedCreatureIdsRef.current = [];
-        memberBuffsRef.current = {};
-        dotDrainNodeRef.current = oldNode;
-        setIsDotDraining(true);
-        ext.current.addLocalLog('🩸 You flee, but your damage effects continue...');
-        // Ensure interval keeps running for DoT drain ticks
-        if (!intervalRef.current) {
-          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
-        }
-      } else {
-        // No active DoTs — fully stop combat
-        stopCombat();
-      }
+      // Stop client-side combat — server session persists DoTs automatically
+      stopCombat();
     }
   }, [params.character.current_node_id, stopCombat]);
 
-  // Stop when player dies
   useEffect(() => {
     if (params.isDead) stopCombat();
   }, [params.isDead, stopCombat]);
 
-  // Non-leader: timeout for stale combat (no tick in 6s → assume leader left)
   useEffect(() => {
     if (!inCombat || params.isLeader || !params.party) return;
     const check = setInterval(() => {
@@ -731,7 +583,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     return () => clearInterval(check);
   }, [inCombat, params.isLeader, params.party, stopCombat]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
@@ -740,7 +591,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   return {
     inCombat,
-    isDotDraining,
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,

@@ -35,7 +35,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Map CLASS_COMBAT_PROFILES to the local format used below
 const CLASS_ATK: Record<string, { stat: string; min: number; max: number; crit: number; emoji: string; verb: string }> = {};
 for (const [k, v] of Object.entries(CLASS_COMBAT_PROFILES)) {
   CLASS_ATK[k] = { stat: v.stat, min: v.diceMin, max: v.diceMax, crit: v.critRange, emoji: v.emoji, verb: v.verb };
@@ -46,6 +45,9 @@ function json(data: unknown) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
+const TICK_RATE = 2000;
+const TICK_CAP = 30;
 
 // ── Main handler ─────────────────────────────────────────────────
 
@@ -67,20 +69,28 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authErr } = await userDb.auth.getUser();
     if (authErr || !user) throw new Error('Unauthorized');
 
-    const { party_id, character_id, node_id, member_buffs, member_dots, engaged_creature_ids, pending_abilities: rawPendingAbilities } = await req.json();
+    const {
+      party_id, character_id, node_id, member_buffs,
+      engaged_creature_ids, pending_abilities: rawPendingAbilities,
+      // New: client can request session creation
+      action,
+    } = await req.json();
+
     if (!node_id) throw new Error('Missing node_id');
     if (!party_id && !character_id) throw new Error('Missing party_id or character_id');
     const buffs: Record<string, any> = member_buffs || {};
-    const dots: Record<string, any> = member_dots || {};
     const engagedIds: string[] = engaged_creature_ids || [];
     const pendingAbilities: any[] = rawPendingAbilities || [];
+
+    // Server-authoritative time
+    const now = Date.now();
 
     let members: { id: string; c: any }[];
     let tankId: string | null = null;
     let tankAtNode = false;
+    let sessionKey: { character_id?: string; party_id?: string } = {};
 
     if (party_id) {
-      // ── Party mode ───────────────────────────────────────────────
       const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
       if (!party) throw new Error('Party not found');
       const { data: userChars } = await db.from('characters').select('id').eq('user_id', user.id);
@@ -101,30 +111,85 @@ Deno.serve(async (req) => {
 
       tankId = party.tank_id || null;
       tankAtNode = tankId ? members.some(m => m.id === tankId) : false;
+      sessionKey = { party_id };
     } else {
-      // ── Solo mode ────────────────────────────────────────────────
       const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
       if (!char || char.user_id !== user.id) throw new Error('Not authorized');
       if (char.hp <= 0) {
-        return json({ events: [], creature_states: [], member_states: [] });
-      }
-      // Allow DoT-only ticks from a different node
-      const charAtNode = char.current_node_id === node_id;
-      if (!charAtNode) {
-        const charDots = dots[character_id];
-        const hasDots = charDots && (
-          Object.keys(charDots?.bleed || {}).length > 0 ||
-          Object.keys(charDots?.poison || {}).length > 0 ||
-          Object.keys(charDots?.ignite || {}).length > 0
-        );
-        if (!hasDots) {
-          return json({ events: [], creature_states: [], member_states: [] });
-        }
+        return json({ events: [], creature_states: [], member_states: [], ticks_processed: 0 });
       }
       members = [{ id: character_id, c: char }];
+      sessionKey = { character_id };
     }
 
-    if (members.length === 0) return json({ events: [], creature_states: [], member_states: [] });
+    if (members.length === 0) return json({ events: [], creature_states: [], member_states: [], ticks_processed: 0 });
+
+    // ── Load or create combat session ────────────────────────────
+    let session: any = null;
+    const sessionQuery = party_id
+      ? db.from('combat_sessions').select('*').eq('party_id', party_id).single()
+      : db.from('combat_sessions').select('*').eq('character_id', character_id).single();
+    const { data: existingSession } = await sessionQuery;
+
+    if (existingSession) {
+      session = existingSession;
+    } else if (action === 'start' || engagedIds.length > 0 || pendingAbilities.length > 0) {
+      // Create new session
+      const insertData: any = {
+        node_id,
+        last_tick_at: now,
+        tick_rate_ms: TICK_RATE,
+        engaged_creature_ids: engagedIds,
+        dots: {},
+        member_buffs: {},
+        ...sessionKey,
+      };
+      const { data: newSession } = await db.from('combat_sessions').insert(insertData).select().single();
+      session = newSession;
+    }
+
+    if (!session) {
+      // No session and nothing to start — return idle state
+      const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
+      const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
+      return json({ events: [], creature_states, member_states: [], ticks_processed: 0 });
+    }
+
+    // ── Update session with latest engaged creatures from client ──
+    // Merge client engaged IDs into session (server is authoritative but client can add new targets)
+    const sessionEngaged = new Set<string>(session.engaged_creature_ids || []);
+    for (const id of engagedIds) sessionEngaged.add(id);
+
+    // Update session node if changed
+    if (session.node_id !== node_id) {
+      // Node changed — check for active DoTs
+      const sessionDots = session.dots || {};
+      const hasActiveDots = Object.values(sessionDots).some((charDots: any) =>
+        Object.keys(charDots?.bleed || {}).length > 0 ||
+        Object.keys(charDots?.poison || {}).length > 0 ||
+        Object.keys(charDots?.ignite || {}).length > 0
+      );
+      if (hasActiveDots) {
+        // Keep session alive for DoT processing on old node, but clear engaged creatures
+        sessionEngaged.clear();
+      } else {
+        // No DoTs and node changed — clean up session
+        await db.from('combat_sessions').delete().eq('id', session.id);
+        return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
+      }
+    }
+
+    // ── Calculate ticks to process ──────────────────────────────
+    const elapsedMs = now - session.last_tick_at;
+    const ticksToProcess = Math.floor(elapsedMs / TICK_RATE);
+    const ticks = Math.min(ticksToProcess, TICK_CAP);
+
+    if (ticks === 0 && pendingAbilities.length === 0) {
+      // Not enough time has passed for a tick
+      const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true);
+      const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
+      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_dots: session.dots });
+    }
 
     // ── Fetch equipment bonuses ──────────────────────────────────
     const charIds = members.map(m => m.id);
@@ -157,37 +222,42 @@ Deno.serve(async (req) => {
       offHandTag[cid] = ohTag;
     }
 
-    // ── Fetch alive creatures at node ────────────────────────────
+    // ── Fetch alive creatures at combat node ─────────────────────
+    const combatNodeId = session.node_id; // Use session's node (may differ from client's current node for DoT drain)
     const { data: creaturesRaw } = await db
       .from('creatures')
       .select('*')
-      .eq('node_id', node_id)
+      .eq('node_id', combatNodeId)
       .eq('is_alive', true);
 
     const allCreatures = creaturesRaw || [];
+
     // Collect creature IDs that have active DoTs targeting them
     const dotTargetIds = new Set<string>();
-    for (const dotState of Object.values(dots)) {
+    const sessionDots: Record<string, any> = session.dots || {};
+    for (const dotState of Object.values(sessionDots)) {
       for (const creatureId of Object.keys((dotState as any)?.bleed || {})) dotTargetIds.add(creatureId);
       for (const creatureId of Object.keys((dotState as any)?.poison || {})) dotTargetIds.add(creatureId);
       for (const creatureId of Object.keys((dotState as any)?.ignite || {})) dotTargetIds.add(creatureId);
     }
-    // Also include creatures targeted by pending abilities
     for (const pa of pendingAbilities) {
       if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
     }
-    // Only fight creatures that are explicitly engaged, aggressive, OR have active DoTs/abilities
+
     const creatures = allCreatures.filter(cr =>
-      engagedIds.includes(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
+      sessionEngaged.has(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
     );
+
     if (creatures.length === 0) {
-      // No combat targets, but return all alive creatures so client knows they exist
+      // No combat targets — clean up session
+      await db.from('combat_sessions').delete().eq('id', session.id);
       const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [] });
+      return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
     }
-    // Determine if this is a DoT-only tick (player fled or no engaged targets)
-    const anyMemberAtNode = members.some(m => m.c.current_node_id === node_id);
-    const isDotOnly = !anyMemberAtNode || (engagedIds.length === 0 && dotTargetIds.size > 0 && pendingAbilities.length === 0);
+
+    // Check if any members are at the combat node
+    const anyMemberAtNode = members.some(m => m.c.current_node_id === combatNodeId);
+    const isDotOnly = !anyMemberAtNode || (sessionEngaged.size === 0 && (dotTargetIds.size > 0 || pendingAbilities.length > 0));
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
@@ -214,6 +284,13 @@ Deno.serve(async (req) => {
     // ── Unified creature kill handler ────────────────────────────
     const handleCreatureKill = (creature: any, killerLabel: string, chaForGold: number = 0) => {
       cKilled.add(creature.id);
+      sessionEngaged.delete(creature.id);
+      // Purge all DoTs targeting this creature
+      for (const [charId, charDots] of Object.entries(sessionDots)) {
+        if ((charDots as any)?.bleed?.[creature.id]) { delete (charDots as any).bleed[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'bleed' }); }
+        if ((charDots as any)?.poison?.[creature.id]) { delete (charDots as any).poison[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'poison' }); }
+        if ((charDots as any)?.ignite?.[creature.id]) { delete (charDots as any).ignite[creature.id]; clearedDots.push({ character_id: charId, creature_id: creature.id, dot_type: 'ignite' }); }
+      }
       const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
       const lt = (creature.loot_table || []) as any[];
       const goldEntry = lt.find((e: any) => e.type === 'gold');
@@ -250,7 +327,6 @@ Deno.serve(async (req) => {
       } else {
         events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! +${displayXp} XP${goldNote}.${penaltyNote}${xpBoostNote}` });
       }
-      // BHP for boss kills
       if (creature.rarity === 'boss') {
         const bhpReward = Math.floor(creature.level * 0.5);
         if (bhpReward > 0) {
@@ -263,7 +339,6 @@ Deno.serve(async (req) => {
           }
         }
       }
-      // Salvage for non-humanoid kills
       if (!creature.is_humanoid) {
         const baseSalvage = 1 + Math.floor(creature.level / 5);
         const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
@@ -274,27 +349,27 @@ Deno.serve(async (req) => {
           events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${creature.name}.` });
         }
       }
-      // Queue loot
       if (creature.loot_table_id) {
-        lootQueue.push({ nodeId: node_id, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
+        lootQueue.push({ nodeId: combatNodeId, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5 });
       } else {
         for (const entry of lt) {
           if (entry.type === 'gold') continue;
           if (Math.random() <= (entry.chance || 0.1)) {
-            lootQueue.push({ nodeId: node_id, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1 });
+            lootQueue.push({ nodeId: combatNodeId, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1 });
           }
         }
       }
     };
 
-    // ── Pending abilities (server-side processing) ───────────────
+    // ── Process pending abilities BEFORE the tick loop (immediate) ──
+    const consumedBuffs: Record<string, string[]> = {};
+
     if (!isDotOnly) for (const pa of pendingAbilities) {
       const member = members.find(m => m.id === pa.character_id);
       if (!member) continue;
       const c = member.c;
       const eb = eq[member.id] || {};
 
-      // CP check & deduction
       const cpCost = pa.cp_cost || 0;
       if (mCp[member.id] < cpCost) {
         events.push({ type: 'ability_fail', message: `⚠️ ${c.name} doesn't have enough CP!`, character_id: member.id });
@@ -309,7 +384,6 @@ Deno.serve(async (req) => {
       }
 
       if (pa.ability_type === 'multi_attack') {
-        // Barrage — 2-3 arrows at 70% damage
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
         const arrowCount = dexMod >= 3 ? 3 : 2;
@@ -335,9 +409,7 @@ Deno.serve(async (req) => {
         if (totalDmg > 0) {
           events.push({ type: 'ability_hit', message: `🏹🏹 Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`, character_id: member.id });
         }
-
       } else if (pa.ability_type === 'execute_attack') {
-        // Eviscerate — base damage * (1 + 0.5 * stacks)
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
@@ -354,9 +426,7 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
-
       } else if (pa.ability_type === 'ignite_consume') {
-        // Conflagrate — base damage * (1 + 0.5 * stacks)
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
@@ -373,9 +443,7 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
-
       } else if (pa.ability_type === 'burst_damage') {
-        // Grand Finale — CHA-based burst
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const chaMod = sm(effCha);
         const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
@@ -388,220 +456,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // tankId and tankAtNode already set during party/solo initialization above
-
-    // ── Member attacks (skip in DoT-only mode) ─────────────────
-    const consumedBuffs: Record<string, string[]> = {}; // track one-shot buffs to consume
-    if (!isDotOnly) for (const m of members) {
-      const c = m.c;
-      const eb = eq[m.id] || {};
-      const mb = buffs[m.id] || {};
-      const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
-      const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
-      const sMod = sm(effStat);
-      const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
-      const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
-      const mileCrit = c.level >= 28 ? 1 : 0;
-      const critBonusFromBuff = mb.crit_buff?.bonus || 0;
-      const effCrit = atk.crit - dcb - mileCrit - critBonusFromBuff;
-      const sdf = strDmgFloor((c.str || 10) + (eb.str || 0));
-      const isStealth = !!mb.stealth_buff;
-      const isDmgBuff = !!mb.damage_buff; // Arcane Surge
-      const hasFocusStrike = !!mb.focus_strike;
-      const hasDisengage = !!mb.disengage_next_hit;
-      const affinity = weaponAffinity(c.class, mainHandTag[m.id]);
-
-      for (let a = 0; a < 1; a++) {
-        const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
-        if (!target) break;
-
-        // Apply sunder debuff to creature AC
-        let creatureAc = target.ac;
-        if (mb.sunder_target === target.id && mb.sunder_reduction) {
-          creatureAc = Math.max(creatureAc - mb.sunder_reduction, 0);
-        }
-
-        const roll = rollD20();
-        const total = roll + sMod + ihb + affinity.hitBonus;
-        const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
-        const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
-
-        if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
-          let raw = rollDmg(atk.min, atk.max) + sMod;
-          const isCrit = roll >= effCrit;
-
-          // Apply damage multipliers
-          let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
-          if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
-          if (isStealth) {
-            dmg = dmg * 2;
-            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
-            consumedBuffs[m.id].push('stealth');
-            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
-          }
-          if (isDmgBuff) dmg = Math.floor(dmg * 1.5);
-          if (hasFocusStrike) {
-            dmg += mb.focus_strike.bonus_dmg;
-            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
-            consumedBuffs[m.id].push('focus_strike');
-            events.push({ type: 'buff_consumed', message: `🎯 ${c.name}'s Focus Strike adds ${mb.focus_strike.bonus_dmg} bonus damage!`, character_id: m.id });
-          }
-          if (hasDisengage && a === 0) {
-            dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
-            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
-            consumedBuffs[m.id].push('disengage');
-          }
-
-          cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
-
-          events.push({
-            type: 'attack_hit',
-            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
-          });
-
-          // Poison proc (40% chance if poison buff active)
-          if (mb.poison_buff && Math.random() < 0.4) {
-            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
-          }
-          // Ignite proc (40% chance if ignite buff active)
-          if (mb.ignite_buff && Math.random() < 0.4) {
-            events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
-          }
-
-          if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
-          }
-        } else {
-          events.push({
-            type: 'attack_miss',
-            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
-          });
-        }
-      }
-    }
-
-    // ── Off-hand bonus attack (dual wield) ──────────────────────
-    if (!isDotOnly) for (const m of members) {
-      if (!isOffhandWeapon(offHandTag[m.id])) continue; // shield or empty = no bonus attack
-      const c = m.c;
-      const eb = eq[m.id] || {};
-      const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
-      const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
-      const sMod2 = sm(effStat);
-      const ihb2 = intHitBonus((c.int || 10) + (eb.int || 0));
-      const dcb2 = dexCritBonus((c.dex || 10) + (eb.dex || 0));
-      const mileCrit2 = c.level >= 28 ? 1 : 0;
-      const mb2 = buffs[m.id] || {};
-      const critBuff2 = mb2.crit_buff?.bonus || 0;
-      const effCrit2 = atk.crit - dcb2 - mileCrit2 - critBuff2;
-
-      const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
-      if (!target) continue;
-
-      let creatureAc2 = target.ac;
-      if (mb2.sunder_target === target.id && mb2.sunder_reduction) {
-        creatureAc2 = Math.max(creatureAc2 - mb2.sunder_reduction, 0);
-      }
-
-      const roll2 = rollD20();
-      const total2 = roll2 + sMod2 + ihb2;
-
-      if (roll2 >= effCrit2 || (roll2 !== 1 && total2 >= creatureAc2)) {
-        const raw2 = rollDmg(atk.min, atk.max) + sMod2;
-        const isCrit2 = roll2 >= effCrit2;
-        const preBuff2 = isCrit2 ? Math.max(raw2 * 2, 1) : Math.max(raw2, 1);
-        const dmg2 = Math.max(Math.floor(preBuff2 * OFFHAND_DAMAGE_MULT), 1);
-
-        cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
-        events.push({
-          type: 'offhand_hit',
-          message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (30%).`,
-        });
-
-        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
-        }
-      } else {
-        events.push({
-          type: 'offhand_miss',
-          message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2}.`,
-        });
-      }
-    }
-
-    // ── DoT ticking (Bleed, Poison, Ignite) ──────────────────────
-
-    for (const [charId, dotState] of Object.entries(dots)) {
-      const member = members.find(m => m.id === charId);
-      const charName = member?.c?.name || 'Unknown';
-
-      // Bleed (Rend) — keyed by creature_id
-      if (dotState.bleed) {
-        for (const [creatureId, bs] of Object.entries(dotState.bleed as Record<string, { damage_per_tick: number }>)) {
-          const creature = creatures.find(cr => cr.id === creatureId);
-          if (!creature || cHp[creatureId] <= 0 || cKilled.has(creatureId)) {
-            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'bleed' });
-            continue;
-          }
-          cHp[creatureId] = Math.max(cHp[creatureId] - bs.damage_per_tick, 0);
-          events.push({ type: 'dot_tick', message: `🩸 ${creature.name} bleeds for ${bs.damage_per_tick} damage! (${charName}'s Rend)` });
-          if (cHp[creatureId] <= 0) {
-            handleCreatureKill(creature, charName);
-            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'bleed' });
-          }
-        }
-      }
-
-      // Poison stacks
-      if (dotState.poison) {
-        for (const [creatureId, ps] of Object.entries(dotState.poison as Record<string, { stacks: number; damage_per_tick: number }>)) {
-          const creature = creatures.find(cr => cr.id === creatureId);
-          if (!creature || cHp[creatureId] <= 0 || cKilled.has(creatureId)) {
-            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'poison' });
-            continue;
-          }
-          const totalDmg = ps.stacks * ps.damage_per_tick;
-          cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
-          events.push({ type: 'dot_tick', message: `🧪 ${creature.name} takes ${totalDmg} poison damage! (${ps.stacks} stack${ps.stacks > 1 ? 's' : ''}, ${charName})` });
-          if (cHp[creatureId] <= 0) {
-            handleCreatureKill(creature, charName);
-            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'poison' });
-          }
-        }
-      }
-
-      // Ignite stacks
-      if (dotState.ignite) {
-        for (const [creatureId, is] of Object.entries(dotState.ignite as Record<string, { stacks: number; damage_per_tick: number }>)) {
-          const creature = creatures.find(cr => cr.id === creatureId);
-          if (!creature || cHp[creatureId] <= 0 || cKilled.has(creatureId)) {
-            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'ignite' });
-            continue;
-          }
-          const totalDmg = is.stacks * is.damage_per_tick;
-          cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
-          events.push({ type: 'dot_tick', message: `🔥 ${creature.name} burns for ${totalDmg} fire damage! (${is.stacks} stack${is.stacks > 1 ? 's' : ''}, ${charName})` });
-          if (cHp[creatureId] <= 0) {
-            handleCreatureKill(creature, charName);
-            clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'ignite' });
-          }
-        }
-      }
-    }
-
-
-    // Helper to apply defensive buffs and deal damage to a target
+    // ── Helper to apply creature hit to a member ─────────────────
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
       const acBuffBonus = mb.ac_buff || 0;
-      // Recalculate AC from class + effective DEX (base + equipment) to avoid stale DB ac column
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
       const shieldAcBonus = isShield(offHandTag[targetId]) ? SHIELD_AC_BONUS : 0;
       const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus + shieldAcBonus;
       const d20 = rollD20();
       const roll = d20 + cStr;
 
-      // Creature crit range: based on creature's DEX
       const cs = creature.stats as any;
       const cDex = cs.dex || 10;
       const cCritBonus = dexCritBonus(cDex);
@@ -609,9 +473,7 @@ Deno.serve(async (req) => {
       const isCrit = d20 >= cCritThreshold;
       const isNat1 = d20 === 1;
 
-      // Hit if: crit (always hits), or (not nat 1 and roll >= AC)
       if (!isNat1 && (isCrit || roll >= tAC)) {
-        // Evasion check (Cloak of Shadows / Disengage)
         if (mb.evasion_buff?.dodge_chance && Math.random() < mb.evasion_buff.dodge_chance) {
           events.push({ type: 'evasion_dodge', message: `🦘 ${targetName} dodges ${creature.name}'s attack!`, character_id: targetId });
           return;
@@ -619,11 +481,9 @@ Deno.serve(async (req) => {
 
         let baseDmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
         let dmg = isCrit ? Math.max(Math.floor(baseDmg * 1.5), 1) : baseDmg;
-        // Level-gap bonus: creatures deal more damage when they out-level the target
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
-        // AC overflow reduction: when a crit forces a hit but roll < AC, excess AC reduces damage
         if (isCrit && roll < tAC) {
           const overflowMult = acOverflowMult(roll, tAC);
           const preDmg = dmg;
@@ -632,7 +492,6 @@ Deno.serve(async (req) => {
           events.push({ type: 'ac_overflow', message: `🛡️ ${targetName}'s armor absorbs the blow! AC ${tAC} vs ${roll} — ${pctReduced}% damage reduced (${preDmg} → ${dmg}).` });
         }
 
-        // WIS awareness + shield bonus
         const shieldAwarenessBonus = isShield(offHandTag[targetId]) ? SHIELD_AWARENESS_BONUS : 0;
         const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0)) + shieldAwarenessBonus;
         if (wis > 0 && Math.random() < wis) {
@@ -640,7 +499,6 @@ Deno.serve(async (req) => {
           events.push({ type: 'wis_awareness', message: `🧘 ${targetName}'s awareness softens ${creature.name}'s blow! (${dmg} damage)` });
         }
 
-        // Absorb shield
         if (mb.absorb_buff?.shield_hp && mb.absorb_buff.shield_hp > 0) {
           const absorbed = Math.min(dmg, mb.absorb_buff.shield_hp);
           mb.absorb_buff.shield_hp -= absorbed;
@@ -661,23 +519,286 @@ Deno.serve(async (req) => {
       }
     };
 
-    if (!isDotOnly) for (const creature of creatures) {
-      if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
-      const cs = creature.stats as any;
-      const cStr = sm(cs.str || 10);
-      const dmgDie = creatureDmgDie(creature.level, creature.rarity);
+    // ── Multi-tick loop (deterministic time-based) ────────────────
+    const previousLastTickAt = session.last_tick_at;
 
-      if (tankAtNode) {
-        const tank = members.find(m => m.id === tankId);
-        if (!tank || mHp[tankId] <= 0) continue;
-        applyCreatureHit(tankId, tank.c.name, tank.c, eq[tankId] || {}, creature, cStr, dmgDie, '🛡️ ');
-      } else {
-        // No tank — creature picks a random alive member to attack
-        const alive = members.filter(m => mHp[m.id] > 0);
-        if (alive.length === 0) continue;
-        const target = alive[Math.floor(Math.random() * alive.length)];
-        applyCreatureHit(target.id, target.c.name, target.c, eq[target.id] || {}, creature, cStr, dmgDie, '');
+    for (let t = 0; t < ticks; t++) {
+      const tickTime = previousLastTickAt + (t + 1) * TICK_RATE;
+
+      // Check if all creatures dead or all members dead — stop early
+      const anyCreatureAlive = creatures.some(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+      const anyMemberAlive = members.some(m => mHp[m.id] > 0);
+      if (!anyCreatureAlive || !anyMemberAlive) break;
+
+      // Add tick separator
+      if (t > 0 || pendingAbilities.length > 0) {
+        events.push({ type: 'tick_separator', message: '---tick---' });
       }
+
+      // ── Member auto-attacks (skip in DoT-only mode) ──────────
+      if (!isDotOnly) for (const m of members) {
+        if (mHp[m.id] <= 0) continue;
+        const c = m.c;
+        const eb = eq[m.id] || {};
+        const mb = buffs[m.id] || {};
+        const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
+        const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
+        const sMod = sm(effStat);
+        const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
+        const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
+        const mileCrit = c.level >= 28 ? 1 : 0;
+        const critBonusFromBuff = mb.crit_buff?.bonus || 0;
+        const effCrit = atk.crit - dcb - mileCrit - critBonusFromBuff;
+        const sdf = strDmgFloor((c.str || 10) + (eb.str || 0));
+        const isStealth = !!mb.stealth_buff;
+        const isDmgBuff = !!mb.damage_buff;
+        const hasFocusStrike = !!mb.focus_strike;
+        const hasDisengage = !!mb.disengage_next_hit;
+        const affinity = weaponAffinity(c.class, mainHandTag[m.id]);
+
+        const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+        if (!target) break;
+
+        let creatureAc = target.ac;
+        if (mb.sunder_target === target.id && mb.sunder_reduction) {
+          creatureAc = Math.max(creatureAc - mb.sunder_reduction, 0);
+        }
+
+        const roll = rollD20();
+        const total = roll + sMod + ihb + affinity.hitBonus;
+        const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
+        const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
+
+        if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
+          let raw = rollDmg(atk.min, atk.max) + sMod;
+          const isCrit = roll >= effCrit;
+          let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+          if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
+          if (isStealth) {
+            dmg = dmg * 2;
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('stealth');
+            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
+          }
+          if (isDmgBuff) dmg = Math.floor(dmg * 1.5);
+          if (hasFocusStrike) {
+            dmg += mb.focus_strike.bonus_dmg;
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('focus_strike');
+            events.push({ type: 'buff_consumed', message: `🎯 ${c.name}'s Focus Strike adds ${mb.focus_strike.bonus_dmg} bonus damage!`, character_id: m.id });
+          }
+          if (hasDisengage) {
+            dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
+            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
+            consumedBuffs[m.id].push('disengage');
+          }
+
+          cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
+          events.push({
+            type: 'attack_hit',
+            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
+          });
+
+          if (mb.poison_buff && Math.random() < 0.4) {
+            // Server-side DoT creation: add poison stack
+            if (!sessionDots[m.id]) sessionDots[m.id] = { bleed: {}, poison: {}, ignite: {} };
+            const existing = sessionDots[m.id].poison?.[target.id];
+            const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
+            const dexMod = sm((c.dex || 10) + (eb.dex || 0));
+            const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
+            sessionDots[m.id].poison[target.id] = {
+              stacks: newStacks, damage_per_tick: dmgPerTick,
+              next_tick_at: tickTime + TICK_RATE,
+              expires_at: tickTime + 25000,
+            };
+            events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
+          }
+          if (mb.ignite_buff && Math.random() < 0.4) {
+            if (!sessionDots[m.id]) sessionDots[m.id] = { bleed: {}, poison: {}, ignite: {} };
+            const existing = sessionDots[m.id].ignite?.[target.id];
+            const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
+            const intMod = sm((c.int || 10) + (eb.int || 0));
+            const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
+            const duration = Math.min(45000, 30000 + intMod * 1000);
+            sessionDots[m.id].ignite[target.id] = {
+              stacks: newStacks, damage_per_tick: dmgPerTick,
+              next_tick_at: tickTime + TICK_RATE,
+              expires_at: tickTime + duration,
+            };
+            events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
+          }
+
+          if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          }
+        } else {
+          events.push({
+            type: 'attack_miss',
+            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
+          });
+        }
+      }
+
+      // ── Off-hand bonus attack ────────────────────────────────
+      if (!isDotOnly) for (const m of members) {
+        if (mHp[m.id] <= 0) continue;
+        if (!isOffhandWeapon(offHandTag[m.id])) continue;
+        const c = m.c;
+        const eb = eq[m.id] || {};
+        const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
+        const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
+        const sMod2 = sm(effStat);
+        const ihb2 = intHitBonus((c.int || 10) + (eb.int || 0));
+        const dcb2 = dexCritBonus((c.dex || 10) + (eb.dex || 0));
+        const mileCrit2 = c.level >= 28 ? 1 : 0;
+        const mb2 = buffs[m.id] || {};
+        const critBuff2 = mb2.crit_buff?.bonus || 0;
+        const effCrit2 = atk.crit - dcb2 - mileCrit2 - critBuff2;
+
+        const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+        if (!target) continue;
+
+        let creatureAc2 = target.ac;
+        if (mb2.sunder_target === target.id && mb2.sunder_reduction) {
+          creatureAc2 = Math.max(creatureAc2 - mb2.sunder_reduction, 0);
+        }
+
+        const roll2 = rollD20();
+        const total2 = roll2 + sMod2 + ihb2;
+
+        if (roll2 >= effCrit2 || (roll2 !== 1 && total2 >= creatureAc2)) {
+          const raw2 = rollDmg(atk.min, atk.max) + sMod2;
+          const isCrit2 = roll2 >= effCrit2;
+          const preBuff2 = isCrit2 ? Math.max(raw2 * 2, 1) : Math.max(raw2, 1);
+          const dmg2 = Math.max(Math.floor(preBuff2 * OFFHAND_DAMAGE_MULT), 1);
+
+          cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
+          events.push({
+            type: 'offhand_hit',
+            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (30%).`,
+          });
+
+          if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          }
+        } else {
+          events.push({
+            type: 'offhand_miss',
+            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2}.`,
+          });
+        }
+      }
+
+      // ── Server-side DoT ticking (time-based) ──────────────────
+      for (const [charId, charDots] of Object.entries(sessionDots)) {
+        const member = members.find(m => m.id === charId);
+        const charName = member?.c?.name || 'Unknown';
+
+        // Bleed
+        if (charDots.bleed) {
+          for (const [creatureId, bs] of Object.entries(charDots.bleed as Record<string, any>)) {
+            if (cKilled.has(creatureId) || cHp[creatureId] <= 0) continue;
+            const creature = creatures.find(cr => cr.id === creatureId);
+            if (!creature) continue;
+
+            // Check expiry
+            if (bs.expires_at <= tickTime) {
+              delete charDots.bleed[creatureId];
+              clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'bleed' });
+              continue;
+            }
+
+            // Apply tick if due
+            if (bs.next_tick_at <= tickTime) {
+              cHp[creatureId] = Math.max(cHp[creatureId] - bs.damage_per_tick, 0);
+              events.push({ type: 'dot_tick', message: `🩸 ${creature.name} bleeds for ${bs.damage_per_tick} damage! (${charName}'s Rend)` });
+              bs.next_tick_at += TICK_RATE;
+              if (cHp[creatureId] <= 0 && !cKilled.has(creatureId)) {
+                handleCreatureKill(creature, charName);
+              }
+            }
+          }
+        }
+
+        // Poison
+        if (charDots.poison) {
+          for (const [creatureId, ps] of Object.entries(charDots.poison as Record<string, any>)) {
+            if (cKilled.has(creatureId) || cHp[creatureId] <= 0) continue;
+            const creature = creatures.find(cr => cr.id === creatureId);
+            if (!creature) continue;
+
+            if (ps.expires_at <= tickTime) {
+              delete charDots.poison[creatureId];
+              clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'poison' });
+              continue;
+            }
+
+            if (ps.next_tick_at <= tickTime) {
+              const totalDmg = ps.stacks * ps.damage_per_tick;
+              cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
+              events.push({ type: 'dot_tick', message: `🧪 ${creature.name} takes ${totalDmg} poison damage! (${ps.stacks} stack${ps.stacks > 1 ? 's' : ''}, ${charName})` });
+              ps.next_tick_at += TICK_RATE;
+              if (cHp[creatureId] <= 0 && !cKilled.has(creatureId)) {
+                handleCreatureKill(creature, charName);
+              }
+            }
+          }
+        }
+
+        // Ignite
+        if (charDots.ignite) {
+          for (const [creatureId, is] of Object.entries(charDots.ignite as Record<string, any>)) {
+            if (cKilled.has(creatureId) || cHp[creatureId] <= 0) continue;
+            const creature = creatures.find(cr => cr.id === creatureId);
+            if (!creature) continue;
+
+            if (is.expires_at <= tickTime) {
+              delete charDots.ignite[creatureId];
+              clearedDots.push({ character_id: charId, creature_id: creatureId, dot_type: 'ignite' });
+              continue;
+            }
+
+            if (is.next_tick_at <= tickTime) {
+              const totalDmg = is.stacks * is.damage_per_tick;
+              cHp[creatureId] = Math.max(cHp[creatureId] - totalDmg, 0);
+              events.push({ type: 'dot_tick', message: `🔥 ${creature.name} burns for ${totalDmg} fire damage! (${is.stacks} stack${is.stacks > 1 ? 's' : ''}, ${charName})` });
+              is.next_tick_at += TICK_RATE;
+              if (cHp[creatureId] <= 0 && !cKilled.has(creatureId)) {
+                handleCreatureKill(creature, charName);
+              }
+            }
+          }
+        }
+      }
+
+      // ── Creature counterattacks (skip in DoT-only mode) ───────
+      if (!isDotOnly) for (const creature of creatures) {
+        if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
+        const cs = creature.stats as any;
+        const cStr = sm(cs.str || 10);
+        const dmgDie = creatureDmgDie(creature.level, creature.rarity);
+
+        if (tankAtNode) {
+          const tank = members.find(m => m.id === tankId);
+          if (!tank || mHp[tankId!] <= 0) continue;
+          applyCreatureHit(tankId!, tank.c.name, tank.c, eq[tankId!] || {}, creature, cStr, dmgDie, '🛡️ ');
+        } else {
+          const alive = members.filter(m => mHp[m.id] > 0);
+          if (alive.length === 0) continue;
+          const target = alive[Math.floor(Math.random() * alive.length)];
+          applyCreatureHit(target.id, target.c.name, target.c, eq[target.id] || {}, creature, cStr, dmgDie, '');
+        }
+      }
+    } // end tick loop
+
+    // ── Deterministic last_tick_at update ────────────────────────
+    let newLastTickAt: number;
+    if (ticksToProcess > TICK_CAP) {
+      const processedMs = ticks * TICK_RATE;
+      const remainingMs = elapsedMs - processedMs;
+      newLastTickAt = now - remainingMs;
+    } else {
+      newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
     }
 
     // ── Report consumed one-shot buffs ──────────────────────────
@@ -706,8 +827,6 @@ Deno.serve(async (req) => {
       const updates: Record<string, any> = {};
 
       if (mHp[m.id] !== c.hp) updates.hp = mHp[m.id];
-
-      // CP changes from abilities
       if (mCp[m.id] !== (c.cp ?? 0)) updates.cp = mCp[m.id];
 
       let newXp = c.xp + mXp[m.id];
@@ -747,7 +866,7 @@ Deno.serve(async (req) => {
           const fCon = updates.con ?? c.con;
           newMaxHp = calcMaxHp(c.class, fCon, newLevel);
           updates.max_hp = newMaxHp;
-          updates.hp = newMaxHp; // Full heal on level up
+          updates.hp = newMaxHp;
           updates.max_cp = calcMaxCp(newLevel, fInt, fWis, fCha);
           updates.max_mp = calcMaxMp(newLevel, fDex);
 
@@ -759,12 +878,9 @@ Deno.serve(async (req) => {
         updates.gold = newGold;
       }
 
-      // BHP award
       if (mBhp[m.id] > 0) {
         updates.bhp = (c.bhp || 0) + mBhp[m.id];
       }
-
-      // Salvage award
       if (mSalvage[m.id] > 0) {
         updates.salvage = (c.salvage || 0) + mSalvage[m.id];
       }
@@ -790,7 +906,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Equipment degradation (inline — RPC checks auth.uid) ────
+    // ── Equipment degradation ────────────────────────────────────
     const degradePromises = [...degradeSet].map(async (cid) => {
       const { data: equipped } = await db
         .from('character_inventory')
@@ -853,9 +969,29 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Check if session should end ─────────────────────────────
+    const anyAlive = creatures.some(cr => !cKilled.has(cr.id) && cHp[cr.id] > 0);
+    const hasActiveDots = Object.values(sessionDots).some((charDots: any) =>
+      Object.keys(charDots?.bleed || {}).length > 0 ||
+      Object.keys(charDots?.poison || {}).length > 0 ||
+      Object.keys(charDots?.ignite || {}).length > 0
+    );
+    const sessionEnded = !anyAlive && !hasActiveDots;
+
+    if (sessionEnded) {
+      await db.from('combat_sessions').delete().eq('id', session.id);
+    } else {
+      // Update session state
+      await db.from('combat_sessions').update({
+        last_tick_at: newLastTickAt,
+        engaged_creature_ids: [...sessionEngaged],
+        dots: sessionDots,
+        member_buffs: buffs,
+        node_id: combatNodeId,
+      }).eq('id', session.id);
+    }
+
     // ── Response ─────────────────────────────────────────────────
-    // Include ALL alive creatures at the node (not just combat-filtered) so client can distinguish
-    // "quiet tick with alive creatures" from "no creatures exist"
     const combatCreatureStates = creatures.map(cr => ({
       id: cr.id,
       hp: cHp[cr.id],
@@ -866,7 +1002,14 @@ Deno.serve(async (req) => {
       .map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
     const creature_states = [...combatCreatureStates, ...nonCombatAlive];
 
-    return json({ events, creature_states, member_states: memberStates, consumed_buffs: consumedBuffsList, cleared_dots: clearedDots, consumed_ability_stacks: consumedAbilityStacks });
+    return json({
+      events, creature_states, member_states: memberStates,
+      consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
+      consumed_ability_stacks: consumedAbilityStacks,
+      active_dots: sessionDots,
+      session_ended: sessionEnded,
+      ticks_processed: ticks,
+    });
   } catch (err) {
     console.error('Combat tick error:', err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
