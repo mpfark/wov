@@ -30,22 +30,28 @@ const PREFETCH_TTL = 30_000; // 30s
 export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
 
-  const fetchCreatures = useCallback(async () => {
+  const fetchCreatures = useCallback(async (skipCatchup = false) => {
     if (!nodeId) { setCreatures([]); return; }
 
-    // Check prefetch cache for instant render, but always follow up with a fresh fetch
+    // Check prefetch cache for instant render
     const cached = prefetchCache.get(nodeId);
     if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
       setCreatures(cached.data);
       prefetchCache.delete(nodeId);
-      // Don't return — fall through to fresh fetch to catch kills that happened after prefetch
     }
 
-    // Catch up any active combat sessions (DoTs) before reading creature HP
-    await supabase.functions.invoke('combat-catchup', {
-      body: { node_id: nodeId }
-    });
+    if (!skipCatchup) {
+      // combat-catchup processes DoTs AND returns creatures in one round-trip
+      const { data } = await supabase.functions.invoke('combat-catchup', {
+        body: { node_id: nodeId }
+      });
+      if (data?.creatures) {
+        setCreatures(data.creatures as Creature[]);
+        return;
+      }
+    }
 
+    // Fallback: direct DB query (used by 30s respawn interval)
     const { data } = await supabase
       .from('creatures')
       .select('*')
