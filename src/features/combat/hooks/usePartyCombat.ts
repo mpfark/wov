@@ -353,7 +353,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Driver (solo or party leader): tick function ───────────────
 
   const doTick = useCallback(async () => {
-    if (tickBusyRef.current) return;
+    if (tickBusyRef.current) {
+      tickPendingRef.current = true;
+      return;
+    }
     tickBusyRef.current = true;
     try {
       const p = ext.current;
@@ -467,6 +470,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       }
     } finally {
       tickBusyRef.current = false;
+      if (tickPendingRef.current) {
+        tickPendingRef.current = false;
+        setTimeout(() => doTickRef.current(), 0);
+      }
     }
   }, [processTickResult, stopCombat]);
 
