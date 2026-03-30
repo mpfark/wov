@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
       // Not enough time has passed for a tick
       const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true);
       const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_dots: session.dots });
+      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: [] });
     }
 
     // ── Fetch equipment bonuses ──────────────────────────────────
