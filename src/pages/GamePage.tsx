@@ -509,7 +509,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     lastTickTime, updateCreatureHp, startCombat, stopCombat: stopCombatFn,
-    pendingAbility: _pendingAbility, queueAbility } = combat;
+    fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
@@ -531,7 +531,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     getNode, getRegion, getNodeArea, currentNode,
     creatures, creatureHpOverrides, updateCreatureHp,
     party, partyMembers, isLeader, myMembership,
-    inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
+    inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn, fleeStopCombat,
     queueAbility,
     isDead, effectiveAC,
     fetchInventory, fetchGroundLoot, fetchParty,

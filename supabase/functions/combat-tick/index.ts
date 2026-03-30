@@ -915,6 +915,18 @@ Deno.serve(async (req) => {
       .map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
     const creature_states = [...combatCreatureStates, ...nonCombatAlive];
 
+    // ── Diagnostics ───────────────────────────────────────────────
+    console.log(JSON.stringify({
+      fn: 'combat-tick',
+      session_id: session.id,
+      node_id: combatNodeId,
+      elapsed_ms: elapsedMs,
+      ticks_processed: ticks,
+      engaged_count: sessionEngaged.size,
+      effects_count: liveEffects.length,
+      session_ended: sessionEnded,
+    }));
+
     return json({
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,

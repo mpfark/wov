@@ -90,6 +90,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const inCombatRef = useRef(false);
   const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
+  const tickPendingRef = useRef(false);
   const justStoppedRef = useRef(false);
 
   const pendingAggroRef = useRef(false);
@@ -152,8 +153,13 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Process tick result (shared by driver + non-leader) ────────
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
-    lastTickRef.current = Date.now();
-    setLastTickTime(Date.now());
+    const now = Date.now();
+    const gap = lastTickRef.current ? now - lastTickRef.current : 0;
+    if (data.ticks_processed && data.ticks_processed > 1) {
+      console.warn(`[combat] Processed ${data.ticks_processed} ticks in one response (gap: ${gap}ms)`);
+    }
+    lastTickRef.current = now;
+    setLastTickTime(now);
 
     for (const cs of data.creature_states) {
       if (!cs.alive) recentlyKilledRef.current.add(cs.id);
@@ -352,7 +358,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Driver (solo or party leader): tick function ───────────────
 
   const doTick = useCallback(async () => {
-    if (tickBusyRef.current) return;
+    if (tickBusyRef.current) {
+      tickPendingRef.current = true;
+      return;
+    }
     tickBusyRef.current = true;
     try {
       const p = ext.current;
@@ -466,6 +475,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       }
     } finally {
       tickBusyRef.current = false;
+      if (tickPendingRef.current) {
+        tickPendingRef.current = false;
+        setTimeout(() => doTickRef.current(), 0);
+      }
     }
   }, [processTickResult, stopCombat]);
 
@@ -601,6 +614,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, []);
 
+  // Synchronous flee: kill tick interval immediately before node change
+  const fleeStopCombat = useCallback(() => {
+    if (intervalRef.current) {
+      clearWorkerInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    inCombatRef.current = false;
+    tickBusyRef.current = false;
+    tickPendingRef.current = false;
+  }, []);
+
   return {
     inCombat,
     activeCombatCreatureId,
@@ -610,6 +634,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     updateCreatureHp,
     startCombat,
     stopCombat,
+    fleeStopCombat,
     pendingAbility,
     queueAbility,
   };
