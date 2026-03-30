@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
     const mCp: Record<string, number> = {};
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
-    const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
+    const lootQueue: LootQueueEntry[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
     const killedCreatureIds = new Set<string>(); // Track creature IDs to delete effects for
 
