@@ -11,11 +11,8 @@ import { getNodeDisplayName } from '@/features/world';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { getCachedItemAsync } from '@/features/inventory';
-import type {
-  RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, AcBuff,
-  DotDebuff, PoisonBuff, EvasionBuff, DisengageNextHit, IgniteBuff, AbsorbBuff,
-  PartyRegenBuff, SunderDebuff, FocusStrikeBuff, PoisonStack, IgniteStack,
-} from '@/features/combat';
+import type { DotDebuff } from '@/features/combat';
+import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 
 // ─── Params ───────────────────────────────────────────────────────
 export interface UseActionsParams {
@@ -53,25 +50,9 @@ export interface UseActionsParams {
   useConsumable: (inventoryId: string, characterId: string, currentHp: number, maxHp: number, updateChar: (u: { hp: number }) => Promise<void>) => Promise<any>;
   xpMultiplier: number;
   toggleFollow: (v: boolean) => Promise<void>;
-  // Buff states + setters from useGameLoop
-  regenBuff: RegenBuff; setRegenBuff: (v: RegenBuff) => void;
-  foodBuff: FoodBuff; setFoodBuff: (v: FoodBuff) => void;
-  critBuff: CritBuff; setCritBuff: (v: CritBuff) => void;
-  stealthBuff: StealthBuff | null; setStealthBuff: (v: StealthBuff | null) => void;
-  damageBuff: DamageBuff | null; setDamageBuff: (v: DamageBuff | null) => void;
-  rootDebuff: RootDebuff | null; setRootDebuff: (v: RootDebuff | null) => void;
-  acBuff: AcBuff | null; setAcBuff: (v: AcBuff | null) => void;
-  bleedStacks: Record<string, DotDebuff>; setBleedStacks: (v: any) => void;
-  poisonBuff: PoisonBuff | null; setPoisonBuff: (v: PoisonBuff | null) => void;
-  poisonStacks: Record<string, PoisonStack>; setPoisonStacks: (v: any) => void;
-  evasionBuff: EvasionBuff | null; setEvasionBuff: (v: EvasionBuff | null) => void;
-  disengageNextHit: DisengageNextHit | null; setDisengageNextHit: (v: DisengageNextHit | null) => void;
-  igniteBuff: IgniteBuff | null; setIgniteBuff: (v: IgniteBuff | null) => void;
-  igniteStacks: Record<string, IgniteStack>; setIgniteStacks: (v: any) => void;
-  absorbBuff: AbsorbBuff | null; setAbsorbBuff: (v: AbsorbBuff | null) => void;
-  partyRegenBuff: PartyRegenBuff | null; setPartyRegenBuff: (v: PartyRegenBuff | null) => void;
-  sunderDebuff: SunderDebuff | null; setSunderDebuff: (v: SunderDebuff | null) => void;
-  focusStrikeBuff: FocusStrikeBuff | null; setFocusStrikeBuff: (v: FocusStrikeBuff | null) => void;
+  // Bundled buff state + setters
+  buffState: BuffState;
+  buffSetters: BuffSetters;
   notifyCreatureKilled?: (creatureId: string) => void;
   // Locked connections
   unlockedConnections?: Map<string, number>;
