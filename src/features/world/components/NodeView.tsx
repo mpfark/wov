@@ -49,6 +49,8 @@ interface Props {
   onPickUpLoot?: (groundLootId: string) => void;
   partyMemberIds?: Set<string>;
   partyMemberHp?: Map<string, { hp: number; max_hp: number }>;
+  creaturesLoading?: boolean;
+  prefetchedCreatureCount?: number;
   // Status bars props
   statusBarsProps?: Omit<StatusBarsStripProps, 'character'>;
 }
