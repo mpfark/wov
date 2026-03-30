@@ -127,6 +127,8 @@ Deno.serve(async (req) => {
       creatures_alive: finalCreatures.length,
       kills: cKilled.size,
       ticks_resolved: result.advancedEffects.length,
+      sessions_reset: sessionIds.length,
+      session_ids: sessionIds,
     }));
 
     return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures });

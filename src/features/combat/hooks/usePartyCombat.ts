@@ -590,6 +590,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       aggroProcessedRef.current = new Set();
       recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
+      // Clear stale creature overrides immediately before stopCombat
+      creatureHpOverridesRef.current = {};
+      setCreatureHpOverrides({});
+      console.log('[combat] Node change — cleared creature HP overrides');
       // Stop client-side combat — server session persists DoTs automatically
       stopCombat();
     }
