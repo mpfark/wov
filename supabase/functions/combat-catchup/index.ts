@@ -2,6 +2,11 @@
  * combat-catchup: Resolves pending DoT/effect damage when a player enters a node.
  * Uses the shared combat resolver for effect processing, loot, creature writes, and cleanup.
  * `active_effects` table is the sole source of truth for all DoT state.
+ *
+ * TIMELINE OWNERSHIP:
+ * - combat-catchup owns offscreen effect resolution AND updates combat_sessions.last_tick_at
+ * - combat-tick must never see a stale last_tick_at for a session that catchup already resolved
+ * - If effects have null session_id, catchup falls back to updating ALL sessions at the node
  */
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
