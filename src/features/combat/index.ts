@@ -10,6 +10,9 @@ export type {
   PartyRegenBuff, SunderDebuff, FocusStrikeBuff, PoisonStack, IgniteStack,
 } from './hooks/useGameLoop';
 export { useCreatureBroadcast } from './hooks/useCreatureBroadcast';
+export { useBuffState } from './hooks/useBuffState';
+export type { BuffState, BuffSetters } from './hooks/useBuffState';
+export { useMergedCreatureHpOverrides } from './hooks/useMergedCreatureState';
 
 // Combat math utilities
 export * from './utils/combat-math';

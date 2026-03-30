@@ -415,37 +415,36 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
   const awardKillRewardsRef = useRef<(creature: any, opts?: { stopCombat?: boolean }) => Promise<void>>(async () => {});
 
-  // Combat state ref bridge (useGameLoop reads this for DoT ticks)
-  const combatStateRef = useRef<{ creatureHpOverrides: Record<string, number>; updateCreatureHp: (id: string, hp: number) => void }>({
-    creatureHpOverrides: {},
-    updateCreatureHp: () => {},
-  });
-
-  // ── useGameLoop: regen, death, DoTs, buff state ────────────────
+  // ── useGameLoop: regen, death, buff state ────────────────
   const gameLoop = useGameLoop({
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
-    startingNodeId, creatures, combatStateRef, broadcastDamage,
-    party, partyMembers, awardKillRewardsRef,
-    inParty: true, // All combat (solo + party) uses server-side combat-tick; disable client-side DoT ticking
+    startingNodeId, creatures,
+    party, partyMembers,
   });
 
+  const { buffState, buffSetters } = gameLoop;
+
   // Wire setRegenBuff for incoming log processing
-  useEffect(() => { setRegenBuffFromIncomingRef.current = gameLoop.setRegenBuff; }, [gameLoop.setRegenBuff]);
+  useEffect(() => { setRegenBuffFromIncomingRef.current = buffSetters.setRegenBuff; }, [buffSetters.setRegenBuff]);
 
   const {
-    regenBuff, foodBuff, isDead, critBuff, stealthBuff, damageBuff, rootDebuff, acBuff,
-    poisonBuff, poisonStacks, evasionBuff, disengageNextHit, igniteBuff, igniteStacks,
-    absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
+    isDead,
     regenTick, deathCountdown, itemHpRegen, baseRegen,
-    handleAddPoisonStack: _handleAddPoisonStack, handleAddIgniteStack: _handleAddIgniteStack, handleAbsorbDamage: _handleAbsorbDamage,
     inCombatRegenRef, deathGoldRef,
   } = gameLoop;
+
+  // Destructure buff state for convenient access in render
+  const {
+    regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, acBuff,
+    poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
+    absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff, bleedStacks,
+  } = buffState;
 
   // Apply incoming party regen buff from another party member
   useEffect(() => {
     if (!incomingPartyRegenBuff) return;
     buffSetters.setPartyRegenBuff(incomingPartyRegenBuff);
-  }, [incomingPartyRegenBuff]);
+  }, [incomingPartyRegenBuff, buffSetters]);
 
   // ── Instant follower movement: when the leader broadcasts a move, followers
   //    update their own node immediately instead of waiting for Postgres Realtime.
@@ -471,7 +470,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (!party || !partyRegenBuff || partyRegenBuff === prevPartyRegenBuffRef.current) return;
     prevPartyRegenBuffRef.current = partyRegenBuff;
     broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
-  }, [party, buffState.partyRegenBuff, broadcastPartyRegenBuff, character.id]);
+  }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
   const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
@@ -538,25 +537,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     fetchInventory, fetchGroundLoot, fetchParty,
     broadcastMove, broadcastHp, broadcastDamage,
     useConsumable, xpMultiplier, toggleFollow,
-    // All buff states + setters
-    regenBuff, setRegenBuff: gameLoop.setRegenBuff,
-    foodBuff, setFoodBuff: gameLoop.setFoodBuff,
-    critBuff, setCritBuff: gameLoop.setCritBuff,
-    stealthBuff, setStealthBuff: gameLoop.setStealthBuff,
-    damageBuff, setDamageBuff: gameLoop.setDamageBuff,
-    rootDebuff, setRootDebuff: gameLoop.setRootDebuff,
-    acBuff, setAcBuff: gameLoop.setAcBuff,
-    bleedStacks: gameLoop.bleedStacks, setBleedStacks: gameLoop.setBleedStacks,
-    poisonBuff, setPoisonBuff: gameLoop.setPoisonBuff,
-    poisonStacks, setPoisonStacks: gameLoop.setPoisonStacks,
-    evasionBuff, setEvasionBuff: gameLoop.setEvasionBuff,
-    disengageNextHit, setDisengageNextHit: gameLoop.setDisengageNextHit,
-    igniteBuff, setIgniteBuff: gameLoop.setIgniteBuff,
-    igniteStacks, setIgniteStacks: gameLoop.setIgniteStacks,
-    absorbBuff, setAbsorbBuff: gameLoop.setAbsorbBuff,
-    partyRegenBuff, setPartyRegenBuff: gameLoop.setPartyRegenBuff,
-    sunderDebuff, setSunderDebuff: gameLoop.setSunderDebuff,
-    focusStrikeBuff, setFocusStrikeBuff: gameLoop.setFocusStrikeBuff,
+    // Bundled buff state + setters
+    buffState,
+    buffSetters,
     notifyCreatureKilled: gameLoop.notifyCreatureKilled,
     unlockedConnections,
     onUnlockPath: handleUnlockPath,
