@@ -1,43 +1,68 @@
 
 
-## Fix Password Reset & Add Forgot Password Flow
+# Adjustment: Deterministic Tick Timing in Server-Authoritative Combat
 
-### Root Cause
-Two issues:
-1. **No user-facing forgot password flow** — The login page has no "Forgot password?" link, so users can't request a reset themselves.
-2. **Admin reset generates link but doesn't send it** — `admin.generateLink()` creates a recovery link but does NOT trigger the auth email hook. It needs to use `resetPasswordForEmail()` or manually send the generated link.
+## Problem
 
-### Plan
+The current plan sets `last_tick_at = now` after processing, which causes time drift — fractional milliseconds are lost each cycle, and capped ticks discard unprocessed time entirely.
 
-#### 1. Add "Forgot Password" UI to AuthPage
-- Add a "Forgot password?" link on the login form
-- Show an email-only form that calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
-- This triggers the auth email hook → queues the recovery email → sends via the custom domain
+## Changes to the Plan
 
-#### 2. Create `/reset-password` page
-- New page at `src/pages/ResetPasswordPage.tsx`
-- Detects `type=recovery` in the URL hash (Supabase redirects back with this)
-- Shows a "Set new password" form
-- Calls `supabase.auth.updateUser({ password })` to apply the new password
-- Redirects to login on success
+These adjustments apply to **Step 2** (Server — combat-tick Edge Function) of the existing refactor plan. No other steps change.
 
-#### 3. Add route in App.tsx
-- Add `<Route path="/reset-password" element={<ResetPasswordPage />} />` (public, not behind auth)
+### 1. Advance `last_tick_at` by exact tick count, not wall clock
 
-#### 4. Fix admin "Reset PW" button
-- In `admin-users/index.ts`, change from `generateLink({ type: "recovery" })` to `resetPasswordForEmail(email, { redirectTo })` — this actually triggers the email sending flow
-- Alternatively, keep `generateLink` but also send the email by invoking the auth email hook with the generated URL
+```text
+BEFORE:  last_tick_at = now
+AFTER:   last_tick_at = last_tick_at + (ticks * TICK_RATE)
+```
 
-#### 5. Add `resetPasswordForEmail` to useAuth hook
-- Export a `resetPassword(email)` function for reuse
+This keeps tick boundaries perfectly aligned regardless of when requests arrive.
 
-### Files Changed
-- `src/pages/AuthPage.tsx` — add forgot password state and form
-- `src/pages/ResetPasswordPage.tsx` — new file, password reset form
-- `src/App.tsx` — add `/reset-password` route
-- `src/hooks/useAuth.ts` — add `resetPasswordForEmail` wrapper
-- `supabase/functions/admin-users/index.ts` — fix to actually send email
+### 2. Use `tickTime` inside the loop, not `now`
 
-### Regarding User Profile/Name Page
-A user profile page for updating display name is a separate feature and not needed for password reset to work. We can add it as a follow-up if desired.
+Each iteration computes its own deterministic timestamp:
+
+```typescript
+const previousLastTickAt = session.last_tick_at;
+for (let t = 0; t < ticks; t++) {
+  const tickTime = previousLastTickAt + (t + 1) * TICK_RATE;
+  // All DoT expiry/next_tick checks use tickTime
+  // e.g. if (dot.expires_at <= tickTime) → remove
+  // e.g. while (dot.next_tick_at <= tickTime) → apply + advance
+}
+```
+
+This ensures every tick resolves at its mathematically correct point in time, making results identical regardless of request timing or batch size.
+
+### 3. Preserve unprocessed time when tick cap is hit
+
+When `ticksToProcess` exceeds the safety cap (e.g. 30), the excess time must not be discarded:
+
+```typescript
+const TICK_CAP = 30;
+const ticksToProcess = Math.floor(elapsedMs / TICK_RATE);
+const ticks = Math.min(ticksToProcess, TICK_CAP);
+
+// After processing:
+if (ticksToProcess > TICK_CAP) {
+  const processedMs = ticks * TICK_RATE;
+  const remainingMs = elapsedMs - processedMs;
+  session.last_tick_at = now - remainingMs;
+} else {
+  session.last_tick_at = session.last_tick_at + ticks * TICK_RATE;
+}
+```
+
+The next request will pick up from the correct point, processing the remaining ticks without loss.
+
+### Summary of what changes in the plan
+
+| Aspect | Old plan | Updated |
+|--------|----------|---------|
+| `last_tick_at` update | `= now` | `+= ticks * TICK_RATE` |
+| DoT/effect time reference | `now` | `tickTime` per iteration |
+| Tick cap overflow | Time lost | Remainder preserved via `now - remainingMs` |
+
+Everything else in the refactor plan (combat_sessions table, DoT JSONB structure, client simplification, party sync) remains unchanged.
 
