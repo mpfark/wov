@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown } from 'lucide-react';
-import vitruvianMan from '@/assets/vitruvian-man.png';
+import _vitruvianMan from '@/assets/vitruvian-man.png';
 import StatPlannerDialog from '@/components/game/StatPlannerDialog';
 
 interface Props {
