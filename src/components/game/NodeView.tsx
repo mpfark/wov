@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/components/game/StatusBarsStrip';
 import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/hooks/useAreaTypes';
