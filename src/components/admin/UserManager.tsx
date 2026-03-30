@@ -167,7 +167,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
   const inventory = c.inventory || [];
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
-  const beltedPotions = inventory.filter(i => (i as any).belt_slot != null && (i as any).belt_slot !== undefined);
+  const _beltedPotions = inventory.filter(i => (i as any).belt_slot != null && (i as any).belt_slot !== undefined);
   const bagItems = unequipped.filter(i => (i as any).belt_slot === null || (i as any).belt_slot === undefined);
 
   const equipmentBonuses = equipped.reduce((acc, item) => {
