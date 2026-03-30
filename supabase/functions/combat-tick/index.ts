@@ -1,5 +1,12 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import {
+  resolveEffectTicks,
+  processLootDrops,
+  writeCreatureState,
+  cleanupEffects,
+  type LootQueueEntry,
+} from "../_shared/combat-resolver.ts";
+import {
   getStatModifier as sm,
   rollD20,
   rollDamage as rollDmg,
@@ -184,7 +191,9 @@ Deno.serve(async (req) => {
       // Not enough time has passed for a tick
       const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true);
       const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: [] });
+      // Return actual active effects for UI sync (not empty array)
+      const { data: currentEffects } = await db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at').eq('node_id', session.node_id);
+      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (currentEffects || []) });
     }
 
     // ── Fetch equipment bonuses ──────────────────────────────────
@@ -270,7 +279,7 @@ Deno.serve(async (req) => {
     const mCp: Record<string, number> = {};
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
-    const lootQueue: { nodeId: string; lootTableId: string | null; itemId: string | null; creatureName: string; dropChance: number }[] = [];
+    const lootQueue: LootQueueEntry[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
     const killedCreatureIds = new Set<string>(); // Track creature IDs to delete effects for
 
@@ -701,38 +710,93 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Server-side DoT ticking (active_effects rows) ─────────
-      for (const eff of activeEffects) {
-        if (cKilled.has(eff.target_id) || cHp[eff.target_id] === undefined || cHp[eff.target_id] <= 0) continue;
-        const creature = creatures.find(cr => cr.id === eff.target_id);
-        if (!creature) continue;
-        const member = members.find(m => m.id === eff.source_id);
-        const charName = member?.c?.name || 'Unknown';
-
-        // Check expiry
-        if (eff.expires_at <= tickTime) {
-          eff._expired = true;
-          clearedDots.push({ character_id: eff.source_id, creature_id: eff.target_id, dot_type: eff.effect_type });
-          continue;
-        }
-
-        // Apply tick if due
-        if (eff.next_tick_at <= tickTime) {
-          const totalDmg = (eff.effect_type === 'bleed') ? eff.damage_per_tick : eff.stacks * eff.damage_per_tick;
-          cHp[eff.target_id] = Math.max(cHp[eff.target_id] - totalDmg, 0);
-          const emoji = eff.effect_type === 'bleed' ? '🩸' : eff.effect_type === 'poison' ? '🧪' : '🔥';
-          const verb = eff.effect_type === 'bleed' ? 'bleeds' : eff.effect_type === 'poison' ? 'takes' : 'burns';
-          const suffix = eff.effect_type === 'bleed'
-            ? `(${charName}'s Rend)`
-            : `(${eff.stacks} stack${eff.stacks > 1 ? 's' : ''}, ${charName})`;
-          const dmgLabel = eff.effect_type === 'bleed' ? eff.damage_per_tick : totalDmg;
-          const dmgType = eff.effect_type === 'bleed' ? '' : eff.effect_type === 'poison' ? ' poison' : ' fire';
-          events.push({ type: 'dot_tick', message: `${emoji} ${creature.name} ${verb} for ${dmgLabel}${dmgType} damage! ${suffix}` });
-          eff.next_tick_at += TICK_RATE;
-          if (cHp[eff.target_id] <= 0 && !cKilled.has(eff.target_id)) {
-            handleCreatureKill(creature, charName);
+      // ── Server-side DoT ticking via shared resolver (active_effects rows) ─────
+      {
+        const memberNameMap: Record<string, string> = {};
+        for (const m of members) memberNameMap[m.id] = m.c.name;
+        const dotResult = resolveEffectTicks(activeEffects, cHp, cKilled, creatures, TICK_CAP, {
+          tickTime,
+          memberNameMap,
+        });
+        events.push(...dotResult.events);
+        clearedDots.push(...dotResult.clearedDots);
+        // Handle kills from DoTs through the unified kill handler for XP/gold/rewards
+        for (const killId of dotResult.newKills) {
+          const cr = creatures.find(c => c.id === killId);
+          if (cr) {
+            // Kill was already registered in cKilled by the resolver;
+            // handleCreatureKill adds XP/gold/salvage/BHP and pushes to lootQueue.
+            // But the resolver already pushed loot — so we only need the reward part.
+            // We must call handleCreatureKill but skip re-adding to cKilled (already done).
+            sessionEngaged.delete(cr.id);
+            const killedEffects = activeEffects.filter(e => e.target_id === cr.id);
+            for (const e of killedEffects) {
+              clearedDots.push({ character_id: e.source_id, creature_id: cr.id, dot_type: e.effect_type });
+            }
+            for (let i = activeEffects.length - 1; i >= 0; i--) {
+              if (activeEffects[i].target_id === cr.id) activeEffects.splice(i, 1);
+            }
+            killedCreatureIds.add(cr.id);
+            // XP/gold/salvage/BHP rewards
+            const baseXp = Math.floor(cr.level * 10 * (XP_RARITY[cr.rarity] || 1));
+            const lt = (cr.loot_table || []) as any[];
+            const goldEntry = lt.find((e: any) => e.type === 'gold');
+            let totalGold = 0;
+            if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+              totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+            }
+            const goldSplit = members.length;
+            const uncapped = members.filter(mm => mm.c.level < 42);
+            const xpSplit = uncapped.length || 1;
+            const goldEach = Math.floor(totalGold / goldSplit);
+            for (const mm of members) {
+              if (mm.c.level < 42) {
+                const penalty = xpPenalty(mm.c.level, cr.level);
+                mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplit);
+              }
+              mGold[mm.id] += goldEach;
+            }
+            const displayMember = uncapped[0] || members[0];
+            const displayPenalty = xpPenalty(displayMember.c.level, cr.level);
+            const displayXp = displayMember.c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * displayPenalty * xpMult) / xpSplit);
+            const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
+            const penaltyNote = displayPenalty < 1 ? ` (${Math.round(displayPenalty * 100)}% XP — level penalty)` : '';
+            const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
+            const allCapped = uncapped.length === 0;
+            if (allCapped) {
+              const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
+              events.push({ type: 'creature_kill', message: `☠️ ${cr.name} has been slain!${cappedGoldNote} Your power transcends experience.` });
+            } else if (goldSplit > 1) {
+              events.push({ type: 'creature_kill', message: `☠️ ${cr.name} has been slain! Rewards split ${xpSplit} ways: +${displayXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}` });
+            } else {
+              events.push({ type: 'creature_kill', message: `☠️ ${cr.name} has been slain! +${displayXp} XP${goldNote}.${penaltyNote}${xpBoostNote}` });
+            }
+            if (cr.rarity === 'boss') {
+              const bhpReward = Math.floor(cr.level * 0.5);
+              if (bhpReward > 0) {
+                const bhpEach = Math.floor(bhpReward / members.length);
+                if (bhpEach > 0) {
+                  for (const mm of members) {
+                    if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
+                  }
+                  events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
+                }
+              }
+            }
+            if (!cr.is_humanoid) {
+              const baseSalvage = 1 + Math.floor(cr.level / 5);
+              const rarityMult = cr.rarity === 'boss' ? 4 : cr.rarity === 'rare' ? 2 : 1;
+              const totalSalvage = baseSalvage * rarityMult;
+              const salvageEach = Math.floor(totalSalvage / members.length);
+              if (salvageEach > 0) {
+                for (const mm of members) mSalvage[mm.id] += salvageEach;
+                events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${cr.name}.` });
+              }
+            }
           }
         }
+        // Merge loot from DoT kills into main lootQueue
+        lootQueue.push(...dotResult.lootQueue);
       }
 
       // ── Creature counterattacks (skip in DoT-only mode) ───────
@@ -766,16 +830,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Write state: creature HP / kills ─────────────────────────
-    const creaturePromises = creatures.map(cr => {
-      if (cKilled.has(cr.id)) {
-        return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: 0, _killed: true });
-      } else if (cHp[cr.id] !== cr.hp) {
-        return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: cHp[cr.id] });
-      }
-      return Promise.resolve();
-    });
-    await Promise.all(creaturePromises);
+    // ── Write state: creature HP / kills (shared resolver) ─────
+    await writeCreatureState(db, creatures, cHp, cKilled);
 
     // ── Write state: member HP, XP, gold, CP, level-ups ─────────
     const memberStates: any[] = [];
@@ -885,57 +941,13 @@ Deno.serve(async (req) => {
     });
     await Promise.all(degradePromises);
 
-    // ── Loot drops ───────────────────────────────────────────────
-    for (const drop of lootQueue) {
-      try {
-        if (drop.lootTableId) {
-          if (Math.random() > drop.dropChance) continue;
-          const { data: entries } = await db.from('loot_table_entries').select('item_id, weight').eq('loot_table_id', drop.lootTableId);
-          if (!entries || entries.length === 0) continue;
-          const totalW = entries.reduce((s, e) => s + e.weight, 0);
-          let r = Math.random() * totalW;
-          let picked: string | null = null;
-          for (const e of entries) { r -= e.weight; if (r <= 0) { picked = e.item_id; break; } }
-          if (!picked) picked = entries[entries.length - 1].item_id;
-          const { data: item } = await db.from('items').select('name, rarity').eq('id', picked).single();
-          if (!item) continue;
-          if (item.rarity === 'unique') {
-            const { count } = await db.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', picked);
-            if (count && count > 0) {
-              events.push({ type: 'loot_drop', message: `✨ The unique power of ${item.name} is already claimed...` });
-              continue;
-            }
-          }
-          await db.from('node_ground_loot').insert({ node_id: drop.nodeId, item_id: picked, creature_name: drop.creatureName });
-          events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${item.name}!` });
-        } else if (drop.itemId) {
-          const { data: item } = await db.from('items').select('name, rarity').eq('id', drop.itemId).single();
-          if (!item) continue;
-          if (item.rarity === 'unique') {
-            const { count } = await db.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', drop.itemId);
-            if (count && count > 0) {
-              events.push({ type: 'loot_drop', message: `✨ The unique power of ${item.name} is already claimed...` });
-              continue;
-            }
-          }
-          await db.from('node_ground_loot').insert({ node_id: drop.nodeId, item_id: drop.itemId, creature_name: drop.creatureName });
-          events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${item.name}!` });
-        }
-      } catch (e) {
-        console.error('Loot drop error:', e);
-      }
-    }
+    // ── Loot drops (shared resolver) ───────────────────────────
+    const lootEvents = await processLootDrops(db, lootQueue);
+    events.push(...lootEvents);
 
-    // ── Write active_effects to DB ─────────────────────────────
-    // Delete effects for killed creatures
-    if (killedCreatureIds.size > 0) {
-      await db.from('active_effects').delete().in('target_id', [...killedCreatureIds]);
-    }
-    // Delete expired effects
+    // ── Write active_effects to DB (shared cleanup + upsert) ──
     const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
-    if (expiredIds.length > 0) {
-      await db.from('active_effects').delete().in('id', expiredIds);
-    }
+    await cleanupEffects(db, expiredIds, killedCreatureIds);
     // Upsert remaining active effects
     const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
     for (const eff of liveEffects) {
