@@ -792,14 +792,7 @@ Deno.serve(async (req) => {
     } // end tick loop
 
     // ── Deterministic last_tick_at update ────────────────────────
-    let newLastTickAt: number;
-    if (ticksToProcess > TICK_CAP) {
-      const processedMs = ticks * TICK_RATE;
-      const remainingMs = elapsedMs - processedMs;
-      newLastTickAt = now - remainingMs;
-    } else {
-      newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
-    }
+    const newLastTickAt = previousLastTickAt + ticks * TICK_RATE;
 
     // ── Report consumed one-shot buffs ──────────────────────────
     const consumedBuffsList: any[] = [];
