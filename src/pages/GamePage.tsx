@@ -28,8 +28,8 @@ import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/lib/class-abilities';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User, Map as MapIconLucide, Zap, Users, LogOut, Bug, RefreshCw, MessageCircle } from 'lucide-react';
-import { logActivity } from '@/hooks/useActivityLog';
+import { User, Map as MapIconLucide, Zap, LogOut, RefreshCw, MessageCircle } from 'lucide-react';
+import { logActivity as _logActivity } from '@/hooks/useActivityLog';
 import { useKeyboardMovement } from '@/hooks/useKeyboardMovement';
 
 import { useChat } from '@/hooks/useChat';
