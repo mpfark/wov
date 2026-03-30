@@ -1,12 +1,15 @@
 /**
- * useGameLoop — owns buff/debuff state, regen intervals, death detection,
- * and DoT tick effects. Mirrors LPMud's heart_beat() pattern.
+ * useGameLoop — owns regen intervals, death detection, and party regen.
+ * Delegates buff/debuff state to useBuffState.
+ *
+ * Mirrors LPMud's heart_beat() pattern for periodic effects.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import { getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate, getStatModifier } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
+import { useBuffState } from './useBuffState';
 
 // ─── Buff / debuff types ──────────────────────────────────────────
 export interface RegenBuff { multiplier: number; expiresAt: number }
@@ -18,7 +21,7 @@ export interface RootDebuff { damageReduction: number; expiresAt: number }
 export interface AcBuff { bonus: number; expiresAt: number }
 export interface DotDebuff {
   damagePerTick: number; intervalMs: number; expiresAt: number;
-  startsAt?: number; // first tick won't fire until this timestamp
+  startsAt?: number;
   creatureId: string; creatureName: string; creatureLevel: number; creatureRarity: string;
   creatureLootTable: any[]; lootTableId: string | null; dropChance: number;
   creatureNodeId: string | null;
@@ -47,7 +50,7 @@ export interface PartyRegenBuff { healPerTick: number; expiresAt: number; source
 export interface SunderDebuff { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }
 export interface FocusStrikeBuff { bonusDmg: number }
 
-// ─── Local type aliases (avoid coupling to hook internals) ────────
+// ─── Local type aliases ───────────────────────────────────────────
 interface EquippedItem {
   item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any };
   [k: string]: any;
@@ -62,61 +65,31 @@ export interface UseGameLoopParams {
   getNode: (id: string) => any;
   addLog: (msg: string) => void;
   startingNodeId?: string;
-  creatures: { id: string; name: string; level: number; rarity: string; hp: number; max_hp: number; loot_table: any; loot_table_id: string | null; drop_chance: number; [k: string]: any }[];
-  combatStateRef: React.MutableRefObject<{
-    creatureHpOverrides: Record<string, number>;
-    updateCreatureHp: (id: string, hp: number) => void;
-  }>;
-  broadcastDamage: (creatureId: string, newHp: number, damage: number, attackerName: string, killed: boolean) => void;
+  creatures: { id: string; name: string; level: number; rarity: string; hp: number; max_hp: number; loot_table: any; loot_table_id: string | null; drop_chance: number; node_id?: string | null; [k: string]: any }[];
   party: any;
   partyMembers: any[];
-  /** When true, DoT ticking is handled server-side by combat-tick (always true now for unified heartbeat) */
-  inParty?: boolean;
-  awardKillRewardsRef: React.MutableRefObject<(creature: any, opts?: { stopCombat?: boolean }) => Promise<void>>;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
 export function useGameLoop(params: UseGameLoopParams) {
   const {
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
-    startingNodeId, creatures, combatStateRef, broadcastDamage,
-    party, partyMembers, awardKillRewardsRef,
+    startingNodeId, creatures, party, partyMembers,
   } = params;
 
-  // ── Buff / debuff state ────────────────────────────────────────
-  const [regenBuff, setRegenBuff] = useState<RegenBuff>({ multiplier: 1, expiresAt: 0 });
-  const [foodBuff, setFoodBuff] = useState<FoodBuff>({ flatRegen: 0, expiresAt: 0 });
+  // ── Buff state (delegated to useBuffState) ─────────────────
+  const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
+  const { partyRegenBuff } = buff.buffState;
+  const { setPartyRegenBuff } = buff.buffSetters;
+  const { regenBuff, foodBuff } = buff.buffState;
+
+  // ── Local state ────────────────────────────────────────────
   const [isDead, setIsDead] = useState(false);
-  const [critBuff, setCritBuff] = useState<CritBuff>({ bonus: 0, expiresAt: 0 });
-  const [stealthBuff, setStealthBuff] = useState<StealthBuff | null>(null);
-  const [damageBuff, setDamageBuff] = useState<DamageBuff | null>(null);
-  const [rootDebuff, setRootDebuff] = useState<RootDebuff | null>(null);
-  const [acBuff, setAcBuff] = useState<AcBuff | null>(null);
-  const [bleedStacks, setBleedStacks] = useState<Record<string, DotDebuff>>({});
-  const [poisonBuff, setPoisonBuff] = useState<PoisonBuff | null>(null);
-  const [poisonStacks, setPoisonStacks] = useState<Record<string, PoisonStack>>({});
-  const [evasionBuff, setEvasionBuff] = useState<EvasionBuff | null>(null);
-  const [disengageNextHit, setDisengageNextHit] = useState<DisengageNextHit | null>(null);
-  const [igniteBuff, setIgniteBuff] = useState<IgniteBuff | null>(null);
-  const [igniteStacks, setIgniteStacks] = useState<Record<string, IgniteStack>>({});
-  const [absorbBuff, setAbsorbBuff] = useState<AbsorbBuff | null>(null);
-  const [partyRegenBuff, setPartyRegenBuff] = useState<PartyRegenBuff | null>(null);
-  const [sunderDebuff, setSunderDebuff] = useState<SunderDebuff | null>(null);
-  const [focusStrikeBuff, setFocusStrikeBuff] = useState<FocusStrikeBuff | null>(null);
   const [regenTick, setRegenTick] = useState(false);
   const [deathCountdown, setDeathCountdown] = useState(3);
   const isDeadRef = useRef(false);
-  // Track creatures killed by DoTs to prevent re-damaging after respawn
-  const dotKilledRef = useRef<Set<string>>(new Set());
-  // Refs for DoT stacks — prevents stale closures in intervals
-  const bleedStacksRef = useRef(bleedStacks);
-  useEffect(() => { bleedStacksRef.current = bleedStacks; }, [bleedStacks]);
-  const poisonStacksRef = useRef(poisonStacks);
-  useEffect(() => { poisonStacksRef.current = poisonStacks; }, [poisonStacks]);
-  const igniteStacksRef = useRef(igniteStacks);
-  useEffect(() => { igniteStacksRef.current = igniteStacks; }, [igniteStacks]);
 
-  // ── Regen refs (avoid stale closures in intervals) ─────────────
+  // ── Regen refs (avoid stale closures in intervals) ─────────
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level });
   const regenBuffRef = useRef(regenBuff);
   const foodBuffRef = useRef(foodBuff);
@@ -134,11 +107,11 @@ export function useGameLoop(params: UseGameLoopParams) {
   useEffect(() => { equippedRef.current = equipped; }, [equipped]);
   useEffect(() => { equipmentBonusesRef.current = equipmentBonuses; }, [equipmentBonuses]);
 
-  // ── Computed values ────────────────────────────────────────────
+  // ── Computed values ────────────────────────────────────────
   const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
   const baseRegen = getBaseRegen(character.con + (equipmentBonuses.con || 0));
 
-  // ── HP + CP Regen (every 6s, unified tick) ─────────────────────
+  // ── HP + CP Regen (every 6s, unified tick) ─────────────────
   const cpCharRef = useRef({ cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha });
   const cpStatRef = useRef(character);
   useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.class, character.level, character.int, character.wis, character.cha]);
@@ -154,8 +127,8 @@ export function useGameLoop(params: UseGameLoopParams) {
       const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
       const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
       if (hp < effectiveMaxHp && hp > 0) {
-        const buff = regenBuffRef.current;
-        const potionBonus = Date.now() < buff.expiresAt ? 0.5 : 0;
+        const b = regenBuffRef.current;
+        const potionBonus = Date.now() < b.expiresAt ? 0.5 : 0;
         const node = current_node_id ? getNodeRef.current(current_node_id) : null;
         const innBonus = node?.is_inn ? 1 : 0;
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
@@ -187,8 +160,8 @@ export function useGameLoop(params: UseGameLoopParams) {
         const nodeId = regenCharRef.current.current_node_id;
         const node = nodeId ? getNodeRef.current(nodeId) : null;
         const innBonus = node?.is_inn ? 1 : 0;
-        const buff = regenBuffRef.current;
-        const inspireBonus = Date.now() < buff.expiresAt ? 0.5 : 0;
+        const b = regenBuffRef.current;
+        const inspireBonus = Date.now() < b.expiresAt ? 0.5 : 0;
         const food = foodBuffRef.current;
         const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
         const totalMult = 1 + inspireBonus + innBonus;
@@ -207,7 +180,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     return () => clearInterval(interval);
   }, []);
 
-  // ── MP Regen (every 2s) ────────────────────────────────────────
+  // ── MP Regen (every 2s) ────────────────────────────────────
   const mpCharRef = useRef({ mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level });
   useEffect(() => { mpCharRef.current = { mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, current_node_id: character.current_node_id, dex: character.dex, level: character.level }; }, [character.mp, character.max_mp, character.current_node_id, character.dex, character.level]);
 
@@ -228,7 +201,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     return () => clearInterval(interval);
   }, []);
 
-  // ── Death detection & respawn ──────────────────────────────────
+  // ── Death detection & respawn ──────────────────────────────
   const deathGoldRef = useRef(character.gold);
   const deathNodeRef = useRef(startingNodeId);
   const updateCharRef = useRef(updateCharacter);
@@ -262,255 +235,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     return () => { clearTimeout(respawnTimeout); clearInterval(countdownInterval); isDeadRef.current = false; };
   }, [character.hp]);
 
-  // ── Buff handlers ──────────────────────────────────────────────
-  const handleAddPoisonStack = useCallback((creatureId: string) => {
-    const dexMod = getStatModifier(character.dex);
-    const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
-    const creature = creatures.find(c => c.id === creatureId);
-    setPoisonStacks(prev => {
-      const existing = prev[creatureId];
-      const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-      return { ...prev, [creatureId]: {
-        stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + 25000,
-        creatureName: existing?.creatureName || creature?.name || 'Unknown',
-        creatureLevel: existing?.creatureLevel || creature?.level || 1,
-        creatureRarity: existing?.creatureRarity || creature?.rarity || 'regular',
-        creatureLootTable: existing?.creatureLootTable || (creature?.loot_table as any[]) || [],
-        lootTableId: existing?.lootTableId ?? creature?.loot_table_id ?? null,
-        dropChance: existing?.dropChance ?? creature?.drop_chance ?? 0.5,
-        creatureNodeId: existing?.creatureNodeId ?? creature?.node_id ?? null,
-        maxHp: existing?.maxHp || creature?.max_hp || 10,
-        lastKnownHp: existing?.lastKnownHp ?? creature?.hp ?? 10,
-      }};
-    });
-  }, [character.dex, creatures]);
-
-  const handleAddIgniteStack = useCallback((creatureId: string) => {
-    const intMod = getStatModifier(character.int);
-    const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
-    const creature = creatures.find(c => c.id === creatureId);
-    setIgniteStacks(prev => {
-      const existing = prev[creatureId];
-      const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-      const duration = Math.min(45000, 30000 + intMod * 1000);
-      return { ...prev, [creatureId]: {
-        stacks: newStacks, damagePerTick: dmgPerTick, expiresAt: Date.now() + duration,
-        creatureName: existing?.creatureName || creature?.name || 'Unknown',
-        creatureLevel: existing?.creatureLevel || creature?.level || 1,
-        creatureRarity: existing?.creatureRarity || creature?.rarity || 'regular',
-        creatureLootTable: existing?.creatureLootTable || (creature?.loot_table as any[]) || [],
-        lootTableId: existing?.lootTableId ?? creature?.loot_table_id ?? null,
-        dropChance: existing?.dropChance ?? creature?.drop_chance ?? 0.5,
-        creatureNodeId: existing?.creatureNodeId ?? creature?.node_id ?? null,
-        maxHp: existing?.maxHp || creature?.max_hp || 10,
-        lastKnownHp: existing?.lastKnownHp ?? creature?.hp ?? 10,
-      }};
-    });
-  }, [character.int, creatures]);
-
-  const handleAbsorbDamage = useCallback((remaining: number) => {
-    setAbsorbBuff(prev => {
-      if (!prev) return null;
-      if (remaining <= 0) return null;
-      return { ...prev, shieldHp: remaining };
-    });
-  }, []);
-
-  // ── DoT: Bleed (Rend) — per-creature map ────────────────────────
-  useEffect(() => {
-    const activeEntries = Object.entries(bleedStacks).filter(([, s]) => Date.now() < s.expiresAt);
-    if (activeEntries.length === 0) return;
-    if (params.inParty) return; // Server handles DoT in party mode
-    const interval = setInterval(async () => {
-      const currentStacks = bleedStacksRef.current;
-      const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
-      for (const [creatureId, stack] of Object.entries(currentStacks)) {
-        if (Date.now() >= stack.expiresAt) {
-          setBleedStacks(prev => {
-            const next = { ...prev };
-            delete next[creatureId];
-            return next;
-          });
-          continue;
-        }
-        if (dotKilledRef.current.has(creatureId)) {
-          setBleedStacks(prev => {
-            const next = { ...prev };
-            delete next[creatureId];
-            return next;
-          });
-          continue;
-        }
-        const localCreature = creatures.find(c => c.id === creatureId);
-        const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0) {
-          setBleedStacks(prev => {
-            const next = { ...prev };
-            delete next[creatureId];
-            return next;
-          });
-          continue;
-        }
-        const newHp = Math.max(currentHp - stack.damagePerTick, 0);
-        if (localCreature) {
-          updateCreatureHp(creatureId, newHp);
-          broadcastDamage(creatureId, newHp, stack.damagePerTick, character.name, newHp <= 0);
-        }
-        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
-        setBleedStacks(prev => prev[creatureId] ? { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } } : prev);
-        const cName = localCreature?.name || stack.creatureName;
-        const isRemote = stack.creatureNodeId !== character.current_node_id;
-        addLog(`🩸${isRemote ? '📡 ' : ' '}${cName} bleeds for ${stack.damagePerTick} damage!${isRemote ? ' (remote)' : ''}`);
-        if (newHp <= 0) {
-          dotKilledRef.current.add(creatureId);
-          setBleedStacks(prev => {
-            const next = { ...prev };
-            delete next[creatureId];
-            return next;
-          });
-          const creatureData = localCreature || {
-            name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
-            loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
-            node_id: stack.creatureNodeId,
-          };
-          await awardKillRewardsRef.current(creatureData, { stopCombat: true });
-        }
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [bleedStacks, creatures, addLog]);
-
-  // ── DoT: Poison ────────────────────────────────────────────────
-  useEffect(() => {
-    const activeStacks = Object.entries(poisonStacks).filter(([, s]) => Date.now() < s.expiresAt);
-    if (activeStacks.length === 0) return;
-    if (params.inParty) return; // Server handles DoT in party mode
-    const interval = setInterval(async () => {
-      const currentStacks = poisonStacksRef.current;
-      const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
-      const now = Date.now();
-      let anyExpired = false;
-      for (const [creatureId, stack] of Object.entries(currentStacks)) {
-        if (now >= stack.expiresAt) { anyExpired = true; continue; }
-        const localCreature = creatures.find(c => c.id === creatureId);
-        const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0 || dotKilledRef.current.has(creatureId)) {
-          anyExpired = true;
-          setPoisonStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
-          continue;
-        }
-        const totalDmg = stack.stacks * stack.damagePerTick;
-        const newHp = Math.max(currentHp - totalDmg, 0);
-        if (localCreature) {
-          updateCreatureHp(creatureId, newHp);
-          broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
-        }
-        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
-        setPoisonStacks(prev => {
-          if (!prev[creatureId]) return prev;
-          if (newHp <= 0) {
-            const next = { ...prev };
-            delete next[creatureId];
-            return next;
-          }
-          return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
-        });
-        const cName = localCreature?.name || stack.creatureName;
-        const isRemote = stack.creatureNodeId !== character.current_node_id;
-        addLog(`🧪${isRemote ? '📡 ' : ' '}${cName} takes ${totalDmg} poison damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})${isRemote ? ' (remote)' : ''}`);
-        if (newHp <= 0) {
-          anyExpired = true;
-          dotKilledRef.current.add(creatureId);
-          const creatureData = localCreature || {
-            name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
-            loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
-            node_id: stack.creatureNodeId,
-          };
-          await awardKillRewardsRef.current(creatureData, { stopCombat: true });
-        }
-      }
-      if (anyExpired) {
-        setPoisonStacks(prev => {
-          const next = { ...prev };
-          for (const key of Object.keys(next)) {
-            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) {
-              dotKilledRef.current.delete(key);
-              delete next[key];
-            }
-          }
-          return next;
-        });
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [poisonStacks, creatures, addLog]);
-
-  // ── DoT: Ignite ────────────────────────────────────────────────
-  useEffect(() => {
-    const activeStacks = Object.entries(igniteStacks).filter(([, s]) => Date.now() < s.expiresAt);
-    if (activeStacks.length === 0) return;
-    if (params.inParty) return; // Server handles DoT in party mode
-    const interval = setInterval(async () => {
-      const { creatureHpOverrides, updateCreatureHp } = combatStateRef.current;
-      const now = Date.now();
-      let anyExpired = false;
-      const currentIgniteStacks = igniteStacksRef.current;
-      for (const [creatureId, stack] of Object.entries(currentIgniteStacks)) {
-        if (now >= stack.expiresAt) { anyExpired = true; continue; }
-        const localCreature = creatures.find(c => c.id === creatureId);
-        const currentHp = creatureHpOverrides[creatureId] ?? localCreature?.hp ?? stack.lastKnownHp;
-        if (currentHp <= 0 || dotKilledRef.current.has(creatureId)) {
-          anyExpired = true;
-          setIgniteStacks(prev => { const next = { ...prev }; delete next[creatureId]; return next; });
-          continue;
-        }
-        const totalDmg = stack.stacks * stack.damagePerTick;
-        const newHp = Math.max(currentHp - totalDmg, 0);
-        if (localCreature) {
-          updateCreatureHp(creatureId, newHp);
-          broadcastDamage(creatureId, newHp, totalDmg, character.name, newHp <= 0);
-        }
-        await supabase.rpc('damage_creature', { _creature_id: creatureId, _new_hp: newHp, _killed: newHp <= 0 });
-        setIgniteStacks(prev => {
-          if (!prev[creatureId]) return prev;
-          if (newHp <= 0) {
-            const next = { ...prev };
-            delete next[creatureId];
-            return next;
-          }
-          return { ...prev, [creatureId]: { ...prev[creatureId], lastKnownHp: newHp } };
-        });
-        const cName = localCreature?.name || stack.creatureName;
-        const isRemote = stack.creatureNodeId !== character.current_node_id;
-        addLog(`🔥${isRemote ? '📡 ' : ' '}${cName} burns for ${totalDmg} fire damage! (${stack.stacks} stack${stack.stacks > 1 ? 's' : ''})${isRemote ? ' (remote)' : ''}`);
-        if (newHp <= 0) {
-          anyExpired = true;
-          dotKilledRef.current.add(creatureId);
-          const creatureData = localCreature || {
-            name: stack.creatureName, level: stack.creatureLevel, rarity: stack.creatureRarity,
-            loot_table: stack.creatureLootTable, loot_table_id: stack.lootTableId, drop_chance: stack.dropChance,
-            node_id: stack.creatureNodeId,
-          };
-          await awardKillRewardsRef.current(creatureData, { stopCombat: true });
-        }
-      }
-      if (anyExpired) {
-        setIgniteStacks(prev => {
-          const next = { ...prev };
-          for (const key of Object.keys(next)) {
-            if (Date.now() >= next[key].expiresAt || next[key].lastKnownHp <= 0) {
-              dotKilledRef.current.delete(key);
-              delete next[key];
-            }
-          }
-          return next;
-        });
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [igniteStacks, creatures, addLog]);
-
-  // ── Crescendo / Purifying Light party regen ────────────────────
+  // ── Crescendo / Purifying Light party regen ────────────────
   useEffect(() => {
     if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
     const isHealer = partyRegenBuff.source === 'healer';
@@ -549,46 +274,28 @@ export function useGameLoop(params: UseGameLoopParams) {
     return () => clearInterval(interval);
   }, [partyRegenBuff, party, partyMembers, character, addLog, updateCharacter]);
 
-  // ── Notify that a creature was killed (purge all DoTs targeting it) ──
-  const notifyCreatureKilled = useCallback((creatureId: string) => {
-    dotKilledRef.current.add(creatureId);
-    setBleedStacks(prev => {
-      if (!prev[creatureId]) return prev;
-      const next = { ...prev };
-      delete next[creatureId];
-      return next;
-    });
-    setPoisonStacks(prev => {
-      if (!prev[creatureId]) return prev;
-      const next = { ...prev };
-      delete next[creatureId];
-      return next;
-    });
-    setIgniteStacks(prev => {
-      if (!prev[creatureId]) return prev;
-      const next = { ...prev };
-      delete next[creatureId];
-      return next;
-    });
-  }, []);
-
   return {
-    // Buff states + setters
-    regenBuff, setRegenBuff, foodBuff, setFoodBuff,
-    isDead, critBuff, setCritBuff,
-    stealthBuff, setStealthBuff, damageBuff, setDamageBuff,
-    rootDebuff, setRootDebuff, acBuff, setAcBuff,
-    bleedStacks, setBleedStacks, poisonBuff, setPoisonBuff,
-    poisonStacks, setPoisonStacks,
-    evasionBuff, setEvasionBuff, disengageNextHit, setDisengageNextHit,
-    igniteBuff, setIgniteBuff, igniteStacks, setIgniteStacks,
-    absorbBuff, setAbsorbBuff, partyRegenBuff, setPartyRegenBuff,
-    sunderDebuff, setSunderDebuff, focusStrikeBuff, setFocusStrikeBuff,
+    // Buff state (from useBuffState)
+    buffState: buff.buffState,
+    buffSetters: buff.buffSetters,
+    // Buff handlers (from useBuffState)
+    handleAddPoisonStack: buff.handleAddPoisonStack,
+    handleAddIgniteStack: buff.handleAddIgniteStack,
+    handleAbsorbDamage: buff.handleAbsorbDamage,
+    notifyCreatureKilled: buff.notifyCreatureKilled,
+    gatherBuffs: buff.gatherBuffs,
+    handleConsumedBuffs: buff.handleConsumedBuffs,
+    handleClearedDots: buff.handleClearedDots,
+    syncFromServerEffects: buff.syncFromServerEffects,
+    // Local state
+    isDead,
+    regenTick,
+    deathCountdown,
     // Computed
-    regenTick, deathCountdown, itemHpRegen, baseRegen,
-    // Handlers
-    handleAddPoisonStack, handleAddIgniteStack, handleAbsorbDamage, notifyCreatureKilled,
+    itemHpRegen,
+    baseRegen,
     // Refs
-    inCombatRegenRef, deathGoldRef,
+    inCombatRegenRef,
+    deathGoldRef,
   };
 }
