@@ -614,6 +614,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, []);
 
+  // Synchronous flee: kill tick interval immediately before node change
+  const fleeStopCombat = useCallback(() => {
+    if (intervalRef.current) {
+      clearWorkerInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    inCombatRef.current = false;
+    tickBusyRef.current = false;
+    tickPendingRef.current = false;
+  }, []);
+
   return {
     inCombat,
     activeCombatCreatureId,
@@ -623,6 +634,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     updateCreatureHp,
     startCombat,
     stopCombat,
+    fleeStopCombat,
     pendingAbility,
     queueAbility,
   };
