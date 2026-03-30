@@ -58,40 +58,40 @@ serve(async (req) => {
     // Roll rarity: 65% common, 35% uncommon
     const rarity = Math.random() < 0.65 ? "common" : "uncommon";
 
-    // Query forge_pool: same slot, same rarity, level within ±2
-    let { data: pool } = await db
-      .from("forge_pool")
+    // Base filters: equipment, correct slot, not soulbound, not unique
+    const baseQuery = () => db
+      .from("items")
       .select("*")
+      .eq("item_type", "equipment")
       .eq("slot", slot)
+      .eq("is_soulbound", false)
+      .neq("rarity", "unique");
+
+    // Query items: same slot, same rarity, level within ±2
+    let { data: pool } = await baseQuery()
       .eq("rarity", rarity)
       .gte("level", char.level - 2)
       .lte("level", char.level + 2);
 
     // Fallback: widen to ±5
     if (!pool || pool.length === 0) {
-      const { data: widerPool } = await db
-        .from("forge_pool")
-        .select("*")
-        .eq("slot", slot)
+      const { data: widerPool } = await baseQuery()
         .eq("rarity", rarity)
         .gte("level", char.level - 5)
         .lte("level", char.level + 5);
       pool = widerPool;
     }
 
-    // Fallback: any rarity for that slot within ±5
+    // Fallback: any rarity for that slot within ±5 (still excluding unique/soulbound)
     if (!pool || pool.length === 0) {
-      const { data: anyRarityPool } = await db
-        .from("forge_pool")
-        .select("*")
-        .eq("slot", slot)
+      const { data: anyRarityPool } = await baseQuery()
         .gte("level", char.level - 5)
         .lte("level", char.level + 5);
       pool = anyRarityPool;
     }
 
     if (!pool || pool.length === 0) {
-      throw new Error("The blacksmith has no suitable templates for this slot and level. Ask an admin to stock the forge pool.");
+      throw new Error("The blacksmith has no suitable items for this slot and level. Ask an admin to create items in this range.");
     }
 
     // Pick one at random
@@ -103,32 +103,15 @@ serve(async (req) => {
       gold: char.gold - goldCost,
     }).eq("id", character_id);
 
-    // Clone template into items table
-    const { data: newItem, error: itemErr } = await db.from("items").insert({
-      name: template.name,
-      description: template.description,
-      item_type: "equipment",
-      rarity: template.rarity,
-      slot: template.slot,
-      level: template.level,
-      hands: template.hands || null,
-      stats: template.stats,
-      value: template.value,
-      max_durability: 100,
-      origin_type: "blacksmith_forge",
-    }).select().single();
-
-    if (itemErr) throw new Error("Failed to create item: " + itemErr.message);
-
-    // Add to inventory
+    // Add existing item to inventory (no cloning needed)
     await db.from("character_inventory").insert({
       character_id,
-      item_id: newItem.id,
+      item_id: template.id,
       current_durability: 100,
     });
 
     return new Response(JSON.stringify({
-      item: newItem,
+      item: template,
       salvage_remaining: char.salvage - salvageCost,
       gold_remaining: char.gold - goldCost,
     }), {
