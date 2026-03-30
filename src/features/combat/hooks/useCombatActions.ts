@@ -10,12 +10,11 @@
 import { useState, useCallback } from 'react';
 import { Character } from '@/features/character';
 import {
-  rollD20, getStatModifier, rollDamage, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty,
+  getStatModifier, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty,
   getMaxCp, getMaxMp, getMaxHp, getChaGoldMultiplier, CLASS_LEVEL_BONUSES, CLASS_LABELS,
 } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
-import { logActivity } from '@/hooks/useActivityLog';
 import { getCachedItemAsync } from '@/features/inventory';
 import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
