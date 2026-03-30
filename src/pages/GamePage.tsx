@@ -1096,6 +1096,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 else { addLog('📦 You pick up an item.'); fetchInventory(); }
               }}
               partyMemberIds={party ? new Set(mergedPartyMembers.filter(m => m.status === 'accepted' && m.character_id !== character.id).map(m => m.character_id)) : undefined}
+              creaturesLoading={creaturesLoading}
+              prefetchedCreatureCount={prefetchedCreatureCount}
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
                 equipmentBonuses,
