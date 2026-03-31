@@ -614,7 +614,7 @@ Deno.serve(async (req) => {
             const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: session.id, effect_type: 'poison',
+              session_id: null, effect_type: 'poison',
               stacks: newStacks, damage_per_tick: dmgPerTick,
               next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + 25000,
               tick_rate_ms: TICK_RATE,
