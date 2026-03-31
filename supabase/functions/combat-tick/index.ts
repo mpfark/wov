@@ -256,9 +256,7 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
-    // Check if any members are at the combat node
-    const anyMemberAtNode = members.some(m => m.c.current_node_id === combatNodeId);
-    const isDotOnly = !anyMemberAtNode || (sessionEngaged.size === 0 && (dotTargetIds.size > 0 || pendingAbilities.length > 0));
+    // Sessions only exist while players are present — no isDotOnly mode
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
