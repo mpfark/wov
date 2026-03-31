@@ -540,7 +540,7 @@ Deno.serve(async (req) => {
       }
 
       // ── Member auto-attacks (skip in DoT-only mode) ──────────
-      if (!isDotOnly) for (const m of members) {
+      for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
