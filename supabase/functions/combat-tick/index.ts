@@ -54,7 +54,7 @@ function json(data: unknown) {
 }
 
 const TICK_RATE = 2000;
-const TICK_CAP = 30;
+const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so large backlogs should not occur
 
 // ── Main handler ─────────────────────────────────────────────────
 
@@ -129,14 +129,21 @@ Deno.serve(async (req) => {
       sessionKey = { character_id };
     }
 
-    if (members.length === 0) return json({ events: [], creature_states: [], member_states: [], ticks_processed: 0 });
-
     // ── Load or create combat session ────────────────────────────
     let session: any = null;
     const sessionQuery = party_id
       ? db.from('combat_sessions').select('*').eq('party_id', party_id).single()
       : db.from('combat_sessions').select('*').eq('character_id', character_id).single();
     const { data: existingSession } = await sessionQuery;
+
+    // Session termination rule: no alive members at node → delete session and return
+    if (members.length === 0) {
+      if (existingSession) {
+        await db.from('combat_sessions').delete().eq('id', existingSession.id);
+        console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_members_at_node', session_id: existingSession.id }));
+      }
+      return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
+    }
 
     if (existingSession) {
       session = existingSession;
@@ -161,26 +168,16 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0 });
     }
 
+    // ── Session termination: player left the node ────────────────
+    if (session.node_id !== node_id) {
+      await db.from('combat_sessions').delete().eq('id', session.id);
+      console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'node_changed', session_id: session.id, old_node: session.node_id, new_node: node_id }));
+      return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
+    }
+
     // ── Update session with latest engaged creatures from client ──
-    // Merge client engaged IDs into session (server is authoritative but client can add new targets)
     const sessionEngaged = new Set<string>(session.engaged_creature_ids || []);
     for (const id of engagedIds) sessionEngaged.add(id);
-
-    // Update session node if changed
-    if (session.node_id !== node_id) {
-      // Node changed — check for active DoTs in the active_effects table
-      const { count: dotCount } = await db.from('active_effects')
-        .select('id', { count: 'exact', head: true })
-        .eq('session_id', session.id);
-      if ((dotCount || 0) > 0) {
-        // Keep session alive for DoT processing on old node, but clear engaged creatures
-        sessionEngaged.clear();
-      } else {
-        // No DoTs and node changed — clean up session
-        await db.from('combat_sessions').delete().eq('id', session.id);
-        return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
-      }
-    }
 
     // ── Calculate ticks to process ──────────────────────────────
     const elapsedMs = now - session.last_tick_at;
@@ -259,9 +256,7 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
-    // Check if any members are at the combat node
-    const anyMemberAtNode = members.some(m => m.c.current_node_id === combatNodeId);
-    const isDotOnly = !anyMemberAtNode || (sessionEngaged.size === 0 && (dotTargetIds.size > 0 || pendingAbilities.length > 0));
+    // Sessions only exist while players are present — no isDotOnly mode
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
@@ -373,7 +368,7 @@ Deno.serve(async (req) => {
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
     const consumedBuffs: Record<string, string[]> = {};
 
-    if (!isDotOnly) for (const pa of pendingAbilities) {
+    for (const pa of pendingAbilities) {
       const member = members.find(m => m.id === pa.character_id);
       if (!member) continue;
       const c = member.c;
@@ -545,7 +540,7 @@ Deno.serve(async (req) => {
       }
 
       // ── Member auto-attacks (skip in DoT-only mode) ──────────
-      if (!isDotOnly) for (const m of members) {
+      for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
@@ -661,7 +656,7 @@ Deno.serve(async (req) => {
       }
 
       // ── Off-hand bonus attack ────────────────────────────────
-      if (!isDotOnly) for (const m of members) {
+      for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         if (!isOffhandWeapon(offHandTag[m.id])) continue;
         const c = m.c;
@@ -733,7 +728,7 @@ Deno.serve(async (req) => {
       }
 
       // ── Creature counterattacks (skip in DoT-only mode) ───────
-      if (!isDotOnly) for (const creature of creatures) {
+      for (const creature of creatures) {
         if (cKilled.has(creature.id) || cHp[creature.id] <= 0) continue;
         const cs = creature.stats as any;
         const cStr = sm(cs.str || 10);
@@ -889,12 +884,14 @@ Deno.serve(async (req) => {
     }
 
     // ── Check if session should end ─────────────────────────────
+    // Session ends when no alive engaged creatures remain.
+    // Effects persist independently in active_effects and are reconciled by combat-catchup.
     const anyAlive = creatures.some(cr => !cKilled.has(cr.id) && cHp[cr.id] > 0);
-    const hasActiveEffects = liveEffects.length > 0;
-    const sessionEnded = !anyAlive && !hasActiveEffects;
+    const sessionEnded = !anyAlive;
 
     if (sessionEnded) {
       await db.from('combat_sessions').delete().eq('id', session.id);
+      console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_creatures_alive', session_id: session.id }));
     } else {
       await db.from('combat_sessions').update({
         last_tick_at: newLastTickAt,
@@ -923,6 +920,7 @@ Deno.serve(async (req) => {
       last_tick_at_read: session.last_tick_at,
       elapsed_ms: elapsedMs,
       ticks_processed: ticks,
+      ticks_capped: ticksToProcess > TICK_CAP,
       engaged_count: sessionEngaged.size,
       effects_count: liveEffects.length,
       session_ended: sessionEnded,

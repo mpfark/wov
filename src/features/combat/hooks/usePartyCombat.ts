@@ -1,9 +1,12 @@
 /**
  * usePartyCombat — unified server-authoritative combat via the combat-tick edge function.
  *
- * Combat sessions are persisted server-side. The server is the sole authority on time.
- * DoTs are tracked server-side in the combat_sessions table.
- * Client polls every 2s; server catches up all elapsed ticks deterministically.
+ * HYBRID MODEL:
+ * - Live combat sessions exist only while players are actively present in the node.
+ * - When a player leaves a node, the session ends immediately (no offscreen rounds).
+ * - Persistent effects (DoTs) survive independently in active_effects.
+ * - Offscreen effect reconciliation happens via combat-catchup on node access.
+ * - Client polls every 2s; server processes only active same-node combat.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
@@ -92,7 +95,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickBusyRef = useRef(false);
   const tickPendingRef = useRef(false);
   const justStoppedRef = useRef(false);
-  const nodeEntryTickRef = useRef(false);
+  
 
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
@@ -157,10 +160,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!inCombatRef.current) return; // Ignore late/stale tick responses
     const now = Date.now();
     const gap = lastTickRef.current ? now - lastTickRef.current : 0;
-    if (nodeEntryTickRef.current) {
-      nodeEntryTickRef.current = false;
-      console.log(`[combat] First tick after node entry: ticks_processed=${data.ticks_processed ?? 0}, gap=${gap}ms`);
-    }
     if (data.ticks_processed && data.ticks_processed > 1) {
       console.warn(`[combat] Processed ${data.ticks_processed} ticks in one response (gap: ${gap}ms)`);
     }
@@ -588,19 +587,18 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!params.party && channelRef.current) stopCombat();
   }, [params.party, stopCombat]);
 
-  // Handle node changes — server handles DoT continuation via session
+  // Handle node changes — effects persist as world state, reconciled on next access via combat-catchup
   useEffect(() => {
     if (params.character.current_node_id !== prevNodeRef.current) {
       prevNodeRef.current = params.character.current_node_id;
       aggroProcessedRef.current = new Set();
       recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
-      nodeEntryTickRef.current = true;
       // Clear stale creature overrides immediately before stopCombat
       creatureHpOverridesRef.current = {};
       setCreatureHpOverrides({});
-      console.log('[combat] Node change — cleared creature HP overrides');
-      // Stop client-side combat — server session persists DoTs automatically
+      console.log('[combat] Node change — cleared creature HP overrides, ending live combat');
+      // Stop client-side combat — session ends on server, effects reconciled by catchup
       stopCombat();
     }
   }, [params.character.current_node_id, stopCombat]);
