@@ -368,7 +368,7 @@ Deno.serve(async (req) => {
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
     const consumedBuffs: Record<string, string[]> = {};
 
-    if (!isDotOnly) for (const pa of pendingAbilities) {
+    for (const pa of pendingAbilities) {
       const member = members.find(m => m.id === pa.character_id);
       if (!member) continue;
       const c = member.c;
