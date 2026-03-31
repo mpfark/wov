@@ -920,6 +920,7 @@ Deno.serve(async (req) => {
       last_tick_at_read: session.last_tick_at,
       elapsed_ms: elapsedMs,
       ticks_processed: ticks,
+      ticks_capped: ticksToProcess > TICK_CAP,
       engaged_count: sessionEngaged.size,
       effects_count: liveEffects.length,
       session_ended: sessionEnded,
