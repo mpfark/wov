@@ -95,7 +95,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickBusyRef = useRef(false);
   const tickPendingRef = useRef(false);
   const justStoppedRef = useRef(false);
-  const nodeEntryTickRef = useRef(false);
+  
 
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
