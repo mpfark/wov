@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
-    // Sessions only exist while players are present — no isDotOnly mode
+    // Sessions only exist while players are actively present in the node
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
@@ -614,7 +614,7 @@ Deno.serve(async (req) => {
             const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: session.id, effect_type: 'poison',
+              session_id: null, effect_type: 'poison',
               stacks: newStacks, damage_per_tick: dmgPerTick,
               next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + 25000,
               tick_rate_ms: TICK_RATE,
@@ -634,7 +634,7 @@ Deno.serve(async (req) => {
             const duration = Math.min(45000, 30000 + intMod * 1000);
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: session.id, effect_type: 'ignite',
+              session_id: null, effect_type: 'ignite',
               stacks: newStacks, damage_per_tick: dmgPerTick,
               next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
               tick_rate_ms: TICK_RATE,
