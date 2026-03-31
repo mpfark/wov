@@ -54,7 +54,7 @@ function json(data: unknown) {
 }
 
 const TICK_RATE = 2000;
-const TICK_CAP = 30;
+const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so large backlogs should not occur
 
 // ── Main handler ─────────────────────────────────────────────────
 
