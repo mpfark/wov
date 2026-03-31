@@ -129,7 +129,21 @@ Deno.serve(async (req) => {
       sessionKey = { character_id };
     }
 
-    if (members.length === 0) return json({ events: [], creature_states: [], member_states: [], ticks_processed: 0 });
+    // ── Load or create combat session ────────────────────────────
+    let session: any = null;
+    const sessionQuery = party_id
+      ? db.from('combat_sessions').select('*').eq('party_id', party_id).single()
+      : db.from('combat_sessions').select('*').eq('character_id', character_id).single();
+    const { data: existingSession } = await sessionQuery;
+
+    // Session termination rule: no alive members at node → delete session and return
+    if (members.length === 0) {
+      if (existingSession) {
+        await db.from('combat_sessions').delete().eq('id', existingSession.id);
+        console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_members_at_node', session_id: existingSession.id }));
+      }
+      return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
+    }
 
     // ── Load or create combat session ────────────────────────────
     let session: any = null;
