@@ -145,13 +145,6 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
-    // ── Load or create combat session ────────────────────────────
-    let session: any = null;
-    const sessionQuery = party_id
-      ? db.from('combat_sessions').select('*').eq('party_id', party_id).single()
-      : db.from('combat_sessions').select('*').eq('character_id', character_id).single();
-    const { data: existingSession } = await sessionQuery;
-
     if (existingSession) {
       session = existingSession;
     } else if (action === 'start' || engagedIds.length > 0 || pendingAbilities.length > 0) {
@@ -175,26 +168,16 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0 });
     }
 
+    // ── Session termination: player left the node ────────────────
+    if (session.node_id !== node_id) {
+      await db.from('combat_sessions').delete().eq('id', session.id);
+      console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'node_changed', session_id: session.id, old_node: session.node_id, new_node: node_id }));
+      return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
+    }
+
     // ── Update session with latest engaged creatures from client ──
-    // Merge client engaged IDs into session (server is authoritative but client can add new targets)
     const sessionEngaged = new Set<string>(session.engaged_creature_ids || []);
     for (const id of engagedIds) sessionEngaged.add(id);
-
-    // Update session node if changed
-    if (session.node_id !== node_id) {
-      // Node changed — check for active DoTs in the active_effects table
-      const { count: dotCount } = await db.from('active_effects')
-        .select('id', { count: 'exact', head: true })
-        .eq('session_id', session.id);
-      if ((dotCount || 0) > 0) {
-        // Keep session alive for DoT processing on old node, but clear engaged creatures
-        sessionEngaged.clear();
-      } else {
-        // No DoTs and node changed — clean up session
-        await db.from('combat_sessions').delete().eq('id', session.id);
-        return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
-      }
-    }
 
     // ── Calculate ticks to process ──────────────────────────────
     const elapsedMs = now - session.last_tick_at;
