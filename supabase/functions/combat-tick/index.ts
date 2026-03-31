@@ -634,7 +634,7 @@ Deno.serve(async (req) => {
             const duration = Math.min(45000, 30000 + intMod * 1000);
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: session.id, effect_type: 'ignite',
+              session_id: null, effect_type: 'ignite',
               stacks: newStacks, damage_per_tick: dmgPerTick,
               next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
               tick_rate_ms: TICK_RATE,
