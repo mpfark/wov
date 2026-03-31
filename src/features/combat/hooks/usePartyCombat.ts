@@ -1,9 +1,12 @@
 /**
  * usePartyCombat — unified server-authoritative combat via the combat-tick edge function.
  *
- * Combat sessions are persisted server-side. The server is the sole authority on time.
- * DoTs are tracked server-side in the combat_sessions table.
- * Client polls every 2s; server catches up all elapsed ticks deterministically.
+ * HYBRID MODEL:
+ * - Live combat sessions exist only while players are actively present in the node.
+ * - When a player leaves a node, the session ends immediately (no offscreen rounds).
+ * - Persistent effects (DoTs) survive independently in active_effects.
+ * - Offscreen effect reconciliation happens via combat-catchup on node access.
+ * - Client polls every 2s; server processes only active same-node combat.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
