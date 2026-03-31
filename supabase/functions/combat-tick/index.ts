@@ -145,13 +145,15 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
+    let sessionJustCreated = false;
     if (existingSession) {
       session = existingSession;
     } else if (action === 'start' || engagedIds.length > 0 || pendingAbilities.length > 0) {
-      // Create new session
+      // Create new session — set last_tick_at to one tick ago so the first request
+      // immediately processes one combat round instead of returning ticks_processed=0.
       const insertData: any = {
         node_id,
-        last_tick_at: now,
+        last_tick_at: now - TICK_RATE,
         tick_rate_ms: TICK_RATE,
         engaged_creature_ids: engagedIds,
         member_buffs: {},
@@ -159,6 +161,7 @@ Deno.serve(async (req) => {
       };
       const { data: newSession } = await db.from('combat_sessions').insert(insertData).select().single();
       session = newSession;
+      sessionJustCreated = true;
     }
 
     if (!session) {
@@ -921,6 +924,7 @@ Deno.serve(async (req) => {
       elapsed_ms: elapsedMs,
       ticks_processed: ticks,
       ticks_capped: ticksToProcess > TICK_CAP,
+      session_just_created: sessionJustCreated,
       engaged_count: sessionEngaged.size,
       effects_count: liveEffects.length,
       session_ended: sessionEnded,
