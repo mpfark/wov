@@ -884,12 +884,14 @@ Deno.serve(async (req) => {
     }
 
     // ── Check if session should end ─────────────────────────────
+    // Session ends when no alive engaged creatures remain.
+    // Effects persist independently in active_effects and are reconciled by combat-catchup.
     const anyAlive = creatures.some(cr => !cKilled.has(cr.id) && cHp[cr.id] > 0);
-    const hasActiveEffects = liveEffects.length > 0;
-    const sessionEnded = !anyAlive && !hasActiveEffects;
+    const sessionEnded = !anyAlive;
 
     if (sessionEnded) {
       await db.from('combat_sessions').delete().eq('id', session.id);
+      console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_creatures_alive', session_id: session.id }));
     } else {
       await db.from('combat_sessions').update({
         last_tick_at: newLastTickAt,
