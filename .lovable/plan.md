@@ -1,53 +1,84 @@
 
+# Phase 1: Hybrid Combat Model — Behavior Plan
 
-# Hybrid Combat Model — Implemented
+## Goal
 
-## Summary
+Deliver the first phase of the MUD-inspired combat model:
+- Active same-node combat stays smooth and immediate (protected)
+- No full offscreen combat rounds
+- Persistent effects survive independently as creature-owned world state
+- Clients can selectively trigger server-side effect reconciliation for relevant nodes
+- Creatures can be found already wounded or dead from offscreen DoTs
+- Server persists all final world state
 
-Replaced the offscreen catch-up combat-round model with a hybrid model:
-- **Live combat** only while players are actively present in the node
-- **Offscreen persistent effects** (DoTs) reconciled on node access via `combat-catchup`
-- **No full combat rounds offscreen** — no auto-attacks, no creature counterattacks
+## Architecture Summary
 
-## Session Lifecycle Rules (enforced in combat-tick)
+### Active Same-Node Combat
+- Combat starts immediately: session initialized one tick in the past (`now - TICK_RATE`)
+- Client polls every 2s; server processes only active same-node combat
+- Party combat synchronized via broadcast channel
+- No dead ticks or delayed first rounds
 
-A session is deleted when ANY of these is true:
+### Session Lifecycle
+A combat session is deleted when ANY of these is true:
 1. `session.node_id !== node_id` — player left the node
 2. `members.length === 0` — no alive members at the combat node
 3. No alive engaged creatures remain after tick processing
 
-Effects survive independently in `active_effects` and are reconciled by `combat-catchup` on next access.
+### Offscreen Behavior
+- Full combat rounds DO NOT continue offscreen
+- Persistent effects (DoTs) survive independently in `active_effects`
+- Effects are creature-owned world state (session_id set to null)
+- Effects are reconciled on demand via `combat-catchup`
 
-## Changes Made
+### Client-Assisted Wake-Up Policy
 
-### `supabase/functions/combat-tick/index.ts`
-- Session deleted immediately on node change (no offscreen DoT continuation)
-- Session deleted when no alive members at node (checked after session load)
-- Removed `isDotOnly` mode entirely — auto-attacks and creature counterattacks always run (sessions only exist when players are present)
-- Simplified session-end: ends when no creatures alive (effects persist independently)
-- `TICK_CAP` reduced to 3 as defensive safeguard (not the core fix)
-- Added `ticks_capped` and `session_deleted_reason` diagnostics
+**Eligible nodes** — a client may request reconciliation for:
+- Current node (always, with `force: true` on entry)
+- Adjacent nodes (only if they have active effects in the database)
+- Party leader's node (future enhancement)
 
-### `supabase/functions/combat-catchup/index.ts`
-- Simplified to pure offscreen effect reconciler
-- Removed session timeline synchronization logic
-- Removed orphaned session cleanup
-- Added `effects_resolved` diagnostic
+**Restrictions**:
+- Client sends only `{ node_id }` — no damage, timing, or tick data
+- Server recalculates everything from stored `active_effects` data
+- Server remains sole authority for HP, death, and loot
 
-### `src/features/combat/hooks/usePartyCombat.ts`
-- Removed `nodeEntryTickRef` (double-reconciliation eliminated by design)
-- Updated header comment to document hybrid model
-- Updated node-change comment to reflect new ownership model
+**Throttling**:
+- Client-side: 10s minimum between `reconcileNode` calls per node (via `lastReconcileMap`)
+- Server-side: best-effort per-isolate 10s cooldown (optimization only, not correctness guarantee)
+- Throttle bypassed for `force: true` (node-entry) and partial-resolution retries
 
-## What Did NOT Change
-- Combat formulas, damage math, class abilities, tick rate (2s)
-- `active_effects` table schema — `session_id` remains as optional metadata
-- How effects are created during live combat
-- `resolveEffectTicks` logic in the shared resolver
-- Loot, XP, gold, salvage, BHP award logic
-- Party combat mechanics
-- Equipment degradation
-- Client-side buff/debuff display
-- Creature respawn logic
+### Effect Reconciliation Guarantees
+- All elapsed effect time is resolved (up to 1000-tick defensive cap)
+- 3s wall-clock safety limit as emergency fallback only
+- If partial resolution occurs: returns `partial: true`, client retries up to 3 times
+- Node-entry always converges to fully reconciled state
+- Creatures can be found already dead if DoT damage was lethal
+
+## Key Files
+
+| File | Responsibility |
+|------|---------------|
+| `supabase/functions/combat-tick/index.ts` | Live combat processing, session management, effect creation |
+| `supabase/functions/combat-catchup/index.ts` | Offscreen effect reconciliation, creature HP persistence |
+| `supabase/functions/_shared/combat-resolver.ts` | Shared DoT resolution, loot, creature state writes |
+| `src/features/creatures/hooks/useCreatures.ts` | Client creature state, `reconcileNode` export, selective wake-up |
+| `src/features/combat/hooks/usePartyCombat.ts` | Client combat driver, tick polling, party sync |
+
+## What Does NOT Change
+- Combat formulas, class balance, abilities, tick rate (2s)
+- Loot, XP, gold, salvage, equipment degradation
+- Party mechanics, node-based system
+- `_shared/combat-resolver.ts` logic
+- `useBuffState`, `NodeView`, `GamePage`
 - Skeleton loading on node entry
-- `useCreatures` authoritative-first reconciliation
+
+## Success Criteria
+1. Same-node combat remains smooth and immediate
+2. No full offscreen combat rounds processed
+3. Persistent effects survive independently of sessions
+4. Adjacent-node reconciliation only fires for nodes with active effects
+5. Creatures can be found already wounded or dead from offscreen DoTs
+6. Node-entry always shows fully reconciled state
+7. Server remains final persistence authority
+8. Server-side throttle failure does not break correctness

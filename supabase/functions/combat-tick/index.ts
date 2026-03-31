@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
-    // Sessions only exist while players are present — no isDotOnly mode
+    // Sessions only exist while players are actively present in the node
 
     // ── XP boost ─────────────────────────────────────────────────
     const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
