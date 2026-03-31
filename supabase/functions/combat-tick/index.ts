@@ -656,7 +656,7 @@ Deno.serve(async (req) => {
       }
 
       // ── Off-hand bonus attack ────────────────────────────────
-      if (!isDotOnly) for (const m of members) {
+      for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         if (!isOffhandWeapon(offHandTag[m.id])) continue;
         const c = m.c;
