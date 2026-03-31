@@ -587,19 +587,18 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (!params.party && channelRef.current) stopCombat();
   }, [params.party, stopCombat]);
 
-  // Handle node changes — server handles DoT continuation via session
+  // Handle node changes — effects persist as world state, reconciled on next access via combat-catchup
   useEffect(() => {
     if (params.character.current_node_id !== prevNodeRef.current) {
       prevNodeRef.current = params.character.current_node_id;
       aggroProcessedRef.current = new Set();
       recentlyKilledRef.current = new Set();
       pendingAggroRef.current = true;
-      nodeEntryTickRef.current = true;
       // Clear stale creature overrides immediately before stopCombat
       creatureHpOverridesRef.current = {};
       setCreatureHpOverrides({});
-      console.log('[combat] Node change — cleared creature HP overrides');
-      // Stop client-side combat — server session persists DoTs automatically
+      console.log('[combat] Node change — cleared creature HP overrides, ending live combat');
+      // Stop client-side combat — session ends on server, effects reconciled by catchup
       stopCombat();
     }
   }, [params.character.current_node_id, stopCombat]);
