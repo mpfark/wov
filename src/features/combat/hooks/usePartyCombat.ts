@@ -529,6 +529,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       inCombatRef.current = true;
       setInCombat(true);
       idleCountRef.current = 0;
+      console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTick();
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
