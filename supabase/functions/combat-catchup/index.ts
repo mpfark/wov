@@ -29,6 +29,11 @@ import {
   writeCreatureState,
   cleanupEffects,
 } from "../_shared/combat-resolver.ts";
+import {
+  XP_RARITY_MULTIPLIER as XP_RARITY,
+  getXpPenalty as xpPenalty,
+  getChaGoldMultiplier as chaGoldMult,
+} from "../_shared/combat-math.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
