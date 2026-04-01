@@ -59,6 +59,7 @@ const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so l
 // ── Main handler ─────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const _requestT0 = Date.now();
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -916,6 +917,7 @@ Deno.serve(async (req) => {
     const creature_states = [...combatCreatureStates, ...nonCombatAlive];
 
     // ── Diagnostics ───────────────────────────────────────────────
+    const requestDurationMs = Date.now() - _requestT0;
     console.log(JSON.stringify({
       fn: 'combat-tick',
       session_id: session.id,
@@ -928,6 +930,7 @@ Deno.serve(async (req) => {
       engaged_count: sessionEngaged.size,
       effects_count: liveEffects.length,
       session_ended: sessionEnded,
+      request_duration_ms: requestDurationMs,
     }));
 
     return json({

@@ -95,6 +95,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickBusyRef = useRef(false);
   const tickPendingRef = useRef(false);
   const justStoppedRef = useRef(false);
+  const tickSeqRef = useRef(0);
   
 
   const pendingAggroRef = useRef(false);
@@ -129,6 +130,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     inCombatRef.current = false;
     tickBusyRef.current = false;
     justStoppedRef.current = true;
+    tickSeqRef.current = 0;
     setInCombat(false);
     setActiveCombatCreatureId(null);
     setEngagedCreatureIds([]);
@@ -137,7 +139,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
-    if (!pendingAbilityRef.current && intervalRef.current) {
+    pendingAbilityRef.current = null;
+    setPendingAbility(null);
+    if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
@@ -238,6 +242,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
 
     // Sync DoT state from server for UI display
+    // Proc events provide immediate moment-of-application feedback (log, animation);
+    // active_effects overwrites to authoritative state — no double-counting occurs
+    // because syncFromServerEffects replaces, not merges.
     const myId = ext.current.character.id;
     for (const ev of data.events) {
       if (ev.character_id === myId && ev.type === 'poison_proc' && ev.creature_id && ext.current.onPoisonProc) {
@@ -444,19 +451,25 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               pending_abilities: pendingAbilitiesForServer,
             };
 
+        // Request-scoped stale response guard
+        const seq = ++tickSeqRef.current;
+        const tickT0 = Date.now();
+        const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
+        console.log(`[combat] tick #${seq} start (gap: ${tickGap}ms, engaged: ${engagedCreatureIdsRef.current.length})`);
+
         const { data, error } = await supabase.functions.invoke('combat-tick', { body });
 
-        if (error) {
+        const tickLatency = Date.now() - tickT0;
+
+        if (seq !== tickSeqRef.current) {
+          console.log(`[combat] stale tick response ignored`, { seq, current: tickSeqRef.current, latency: tickLatency });
+        } else if (error) {
           console.error('Combat tick error:', error);
         } else {
           const result = data as CombatTickResponse;
+          console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
           if (!result) {
             stopCombat();
-          } else if (result.session_ended) {
-            if (!solo) {
-              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
-            }
-            processTickResult(result);
           } else {
             if (!solo) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
@@ -516,6 +529,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       inCombatRef.current = true;
       setInCombat(true);
       idleCountRef.current = 0;
+      console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTick();
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
