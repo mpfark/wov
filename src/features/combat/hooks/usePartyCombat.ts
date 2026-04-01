@@ -242,6 +242,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
 
     // Sync DoT state from server for UI display
+    // Proc events provide immediate moment-of-application feedback (log, animation);
+    // active_effects overwrites to authoritative state — no double-counting occurs
+    // because syncFromServerEffects replaces, not merges.
     const myId = ext.current.character.id;
     for (const ev of data.events) {
       if (ev.character_id === myId && ev.type === 'poison_proc' && ev.creature_id && ext.current.onPoisonProc) {
