@@ -97,17 +97,20 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
 
     if (!skipCatchup) {
       const t0 = performance.now();
-      // Use reconcileNode with force=true for node-entry (always reconcile, bypass throttle)
       const reconciled = await reconcileNode(nodeId, { force: true });
       const elapsed = performance.now() - t0;
       console.log(`[creatures] catchup for ${nodeId}: ${elapsed.toFixed(0)}ms, ${reconciled.length} creatures`);
-      if (reconciled.length > 0) {
-        setCreatures(reconciled);
-        prefetchCache.delete(nodeId);
-        setCreaturesLoading(false);
-        return;
-      }
-      // If reconcileNode returned empty, fall through to DB query as safety net
+
+      // Set reconcile lock: only these creature IDs are valid for 500ms
+      const validIds = new Set(reconciled.map(c => c.id));
+      reconcileLockRef.current = validIds;
+      if (reconcileLockTimerRef.current) clearTimeout(reconcileLockTimerRef.current);
+      reconcileLockTimerRef.current = setTimeout(() => { reconcileLockRef.current = null; }, 500);
+
+      setCreatures(reconciled);
+      prefetchCache.delete(nodeId);
+      setCreaturesLoading(false);
+      return;
     }
 
     // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
