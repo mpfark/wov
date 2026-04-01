@@ -461,6 +461,27 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, effCha);
         }
+      } else if (pa.ability_type === 'dot_debuff') {
+        // Server-side Rend/bleed: create persistent active_effects row
+        const effStr = (c.str || 10) + (eb.str || 0);
+        const strMod = sm(effStr);
+        const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+        const durationMs = Math.min(30000, 20000 + strMod * 1000);
+        const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
+        const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
+        const effData = {
+          node_id: combatNodeId, target_id: target.id, source_id: member.id,
+          session_id: null, effect_type: 'bleed',
+          stacks: newStacks, damage_per_tick: dmgPerTick,
+          next_tick_at: now + TICK_RATE, expires_at: now + durationMs,
+          tick_rate_ms: TICK_RATE,
+        };
+        if (existing) {
+          Object.assign(existing, effData);
+        } else {
+          activeEffects.push({ id: crypto.randomUUID(), ...effData });
+        }
+        events.push({ type: 'bleed_applied', message: `🩸 ${c.name} rends ${target.name}! Bleeding for ${dmgPerTick} damage every 2s.`, character_id: member.id });
       }
     }
 
