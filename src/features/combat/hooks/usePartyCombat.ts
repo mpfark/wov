@@ -16,7 +16,7 @@ import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/features/combat';
 
 /** Ability types that are processed server-side in the combat-tick */
-const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage']);
+const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff']);
 
 interface Party {
   id: string;
