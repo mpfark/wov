@@ -124,7 +124,15 @@ Deno.serve(async (req) => {
     const cKilled = new Set<string>();
     for (const cr of creatures) cHp[cr.id] = cr.hp;
 
-    // ── Resolve effects via shared resolver (bulk mode) ─────────
+    // Log post-expiry effects for diagnostics
+    const postExpiryCount = effects.filter(e => now > e.expires_at).length;
+    if (postExpiryCount > 0) {
+      console.log(JSON.stringify({
+        fn: 'combat-catchup', node_id, post_expiry_effects: postExpiryCount,
+        total_effects: effects.length, note: 'processing effects past expires_at',
+      }));
+    }
+
     const result = resolveEffectTicks(effects, cHp, cKilled, creatures, TICK_CAP, { now });
 
     // Check wall-clock safety limit after resolution
