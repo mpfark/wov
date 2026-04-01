@@ -40,6 +40,7 @@ import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
+import { useOffscreenDotWakeup } from '@/features/combat';
 import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
@@ -510,8 +511,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, startCombat, stopCombat: stopCombatFn,
+    lastTickTime, lastActiveEffects, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
+
+  // ── Offscreen DoT wake-up scheduler ──────────────────────────────
+  useOffscreenDotWakeup({
+    currentNodeId: character.current_node_id,
+    lastActiveEffects,
+    creatures,
+    creatureHpOverrides,
+  });
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 

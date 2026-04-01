@@ -87,6 +87,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const [lastTickTime, setLastTickTime] = useState<number | null>(null);
+  const [lastActiveEffects, setLastActiveEffects] = useState<any[] | null>(null);
   const intervalRef = useRef<number | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTickRef = useRef<number>(0);
@@ -253,6 +254,20 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (ev.character_id === myId && ev.type === 'ignite_proc' && ev.creature_id && ext.current.onIgniteProc) {
         ext.current.onIgniteProc(ev.creature_id);
       }
+    }
+
+    // Store raw active_effects for offscreen DoT wake-up prediction
+    if (data.active_effects) {
+      setLastActiveEffects(data.active_effects.map((eff: any) => ({
+        target_id: eff.target_id,
+        effect_type: eff.effect_type,
+        damage_per_tick: eff.damage_per_tick,
+        stacks: eff.stacks ?? 1,
+        next_tick_at: eff.next_tick_at ?? 0,
+        expires_at: eff.expires_at,
+        tick_rate_ms: eff.tick_rate_ms ?? 2000,
+        source_id: eff.source_id,
+      })));
     }
 
     // Sync active effects from server for UI — map flat array to legacy nested format
@@ -654,6 +669,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     engagedCreatureIds,
     creatureHpOverrides,
     lastTickTime,
+    lastActiveEffects,
     updateCreatureHp,
     startCombat,
     stopCombat,

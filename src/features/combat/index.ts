@@ -27,3 +27,7 @@ export * from './utils/class-abilities';
 // Combat action orchestration hook
 export { useCombatActions } from './hooks/useCombatActions';
 export type { UseCombatActionsParams } from './hooks/useCombatActions';
+
+// Offscreen DoT wake-up scheduler
+export { useOffscreenDotWakeup } from './hooks/useOffscreenDotWakeup';
+export type { ActiveEffectSnapshot } from './hooks/useOffscreenDotWakeup';

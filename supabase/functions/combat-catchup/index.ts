@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const db = createClient(url, srvKey);
 
-    const { node_id, force } = await req.json();
+    const { node_id, force, reason } = await req.json();
     if (!node_id) return json({ error: 'Missing node_id' }, 400);
 
     // Best-effort throttle: skip effect reprocessing if recently reconciled.
@@ -166,10 +166,12 @@ Deno.serve(async (req) => {
       effects_count: effects.length,
       effects_resolved: true,
       creatures_alive: finalCreatures.length,
+      creatures_killed: cKilled.size,
       kills: cKilled.size,
       ticks_resolved: result.advancedEffects.length,
       partial: isPartial,
       duration_ms: Date.now() - t0,
+      ...(reason ? { wake_up_source: reason } : {}),
     }));
 
     return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures, partial: isPartial });

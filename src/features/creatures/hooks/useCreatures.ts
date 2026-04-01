@@ -38,9 +38,9 @@ const RECONCILE_THROTTLE_MS = 10_000;
  */
 export async function reconcileNode(
   nodeId: string,
-  opts: { force?: boolean; _retryCount?: number } = {}
+  opts: { force?: boolean; _retryCount?: number; reason?: string } = {}
 ): Promise<Creature[]> {
-  const { force = false, _retryCount = 0 } = opts;
+  const { force = false, _retryCount = 0, reason } = opts;
 
   // Client-side throttle (skip for force calls like node-entry, or partial retries)
   if (!force && _retryCount === 0) {
@@ -54,7 +54,7 @@ export async function reconcileNode(
   lastReconcileMap.set(nodeId, Date.now());
 
   const { data, error } = await supabase.functions.invoke('combat-catchup', {
-    body: { node_id: nodeId, force },
+    body: { node_id: nodeId, force, ...(reason ? { reason } : {}) },
   });
 
   if (error) {
