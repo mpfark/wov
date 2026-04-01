@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       return json({ caught_up: false, effects_processed: 0, creatures, partial: false });
     }
 
-    const now = Date.now();
+    // `now` already declared above (before parallel fetch)
 
     if (creatures.length === 0) {
       // No creatures alive — delete all effects for this node
