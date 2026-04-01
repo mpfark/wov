@@ -451,19 +451,25 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               pending_abilities: pendingAbilitiesForServer,
             };
 
+        // Request-scoped stale response guard
+        const seq = ++tickSeqRef.current;
+        const tickT0 = Date.now();
+        const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
+        console.log(`[combat] tick #${seq} start (gap: ${tickGap}ms, engaged: ${engagedCreatureIdsRef.current.length})`);
+
         const { data, error } = await supabase.functions.invoke('combat-tick', { body });
 
-        if (error) {
+        const tickLatency = Date.now() - tickT0;
+
+        if (seq !== tickSeqRef.current) {
+          console.log(`[combat] stale tick response ignored`, { seq, current: tickSeqRef.current, latency: tickLatency });
+        } else if (error) {
           console.error('Combat tick error:', error);
         } else {
           const result = data as CombatTickResponse;
+          console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
           if (!result) {
             stopCombat();
-          } else if (result.session_ended) {
-            if (!solo) {
-              channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
-            }
-            processTickResult(result);
           } else {
             if (!solo) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });

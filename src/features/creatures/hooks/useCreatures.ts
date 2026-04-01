@@ -97,12 +97,13 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
       const reconciled = await reconcileNode(nodeId, { force: true });
       const elapsed = performance.now() - t0;
       console.log(`[creatures] catchup for ${nodeId}: ${elapsed.toFixed(0)}ms, ${reconciled.length} creatures`);
-      if (reconciled.length > 0 || elapsed > 0) {
+      if (reconciled.length > 0) {
         setCreatures(reconciled);
         prefetchCache.delete(nodeId);
         setCreaturesLoading(false);
         return;
       }
+      // If reconcileNode returned empty, fall through to DB query as safety net
     }
 
     // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure

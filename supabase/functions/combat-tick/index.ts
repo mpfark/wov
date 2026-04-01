@@ -916,6 +916,7 @@ Deno.serve(async (req) => {
     const creature_states = [...combatCreatureStates, ...nonCombatAlive];
 
     // ── Diagnostics ───────────────────────────────────────────────
+    const requestDurationMs = Date.now() - (new Date(session.created_at).getTime() > 0 ? Date.now() : Date.now());
     console.log(JSON.stringify({
       fn: 'combat-tick',
       session_id: session.id,
@@ -928,6 +929,7 @@ Deno.serve(async (req) => {
       engaged_count: sessionEngaged.size,
       effects_count: liveEffects.length,
       session_ended: sessionEnded,
+      request_duration_ms: requestDurationMs,
     }));
 
     return json({
