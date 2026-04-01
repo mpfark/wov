@@ -72,8 +72,17 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const db = createClient(url, srvKey);
 
-    const { node_id, force, reason } = await req.json();
+    const { node_id, force, reason, snapshot_only } = await req.json();
     if (!node_id) return json({ error: 'Missing node_id' }, 400);
+
+    // Snapshot-only mode: return raw effects + creatures without resolving
+    if (snapshot_only) {
+      const [{ data: effects }, { data: creatures }] = await Promise.all([
+        db.from('active_effects').select('target_id, effect_type, damage_per_tick, stacks, next_tick_at, expires_at, tick_rate_ms').eq('node_id', node_id),
+        db.from('creatures').select('id, hp, max_hp').eq('node_id', node_id).eq('is_alive', true),
+      ]);
+      return json({ effects: effects || [], creatures: creatures || [] });
+    }
 
     // Best-effort throttle: skip effect reprocessing if recently reconciled.
     // Always return fresh creature data (never stale cache).
