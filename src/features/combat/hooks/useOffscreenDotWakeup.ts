@@ -124,30 +124,30 @@ export function useOffscreenDotWakeup({
       const departedNodeId = prevNode;
       console.log(`[offscreen-dot] node departure detected: ${departedNodeId} → ${currentNodeId}`);
 
-      // Query DB for fresh effects + creature state (async, fire-and-forget for the effect)
+      // Query via edge function (service role) to bypass RLS on active_effects
       (async () => {
         try {
-          const [{ data: effects }, { data: creatures }] = await Promise.all([
-            supabase
-              .from('active_effects')
-              .select('target_id, effect_type, damage_per_tick, stacks, next_tick_at, expires_at, tick_rate_ms')
-              .eq('node_id', departedNodeId),
-            supabase
-              .from('creatures')
-              .select('id, hp, max_hp')
-              .eq('node_id', departedNodeId)
-              .eq('is_alive', true),
-          ]);
+          const { data, error: snapErr } = await supabase.functions.invoke('combat-catchup', {
+            body: { node_id: departedNodeId, snapshot_only: true },
+          });
 
-          console.log(`[offscreen-dot] DB query for node=${departedNodeId}: effects=${effects?.length ?? 0}, creatures=${creatures?.length ?? 0}`);
+          if (snapErr || !data) {
+            console.error(`[offscreen-dot] snapshot query failed for node=${departedNodeId}:`, snapErr);
+            return;
+          }
 
-          if (!effects || effects.length === 0) {
-            console.log(`[offscreen-dot] no active effects in DB for node=${departedNodeId}, not tracking`);
+          const effects = (data.effects || []) as ActiveEffectSnapshot[];
+          const creatures = (data.creatures || []) as { id: string; hp: number; max_hp: number }[];
+
+          console.log(`[offscreen-dot] snapshot for node=${departedNodeId}: effects=${effects.length}, creatures=${creatures.length}`);
+
+          if (effects.length === 0) {
+            console.log(`[offscreen-dot] no active effects for node=${departedNodeId}, not tracking`);
             return;
           }
 
           const creatureHp: Record<string, number> = {};
-          for (const c of (creatures || [])) {
+          for (const c of creatures) {
             creatureHp[c.id] = c.hp;
           }
 
@@ -155,15 +155,7 @@ export function useOffscreenDotWakeup({
             nodeId: departedNodeId,
             capturedAt: Date.now(),
             creatureHp,
-            effects: effects.map(e => ({
-              target_id: e.target_id,
-              effect_type: e.effect_type,
-              damage_per_tick: e.damage_per_tick,
-              stacks: e.stacks,
-              next_tick_at: e.next_tick_at,
-              expires_at: e.expires_at,
-              tick_rate_ms: e.tick_rate_ms,
-            })),
+            effects,
           };
 
           scheduleWakeup(trackedRef.current, snapshot, 0, eventBus);
