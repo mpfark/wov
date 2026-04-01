@@ -247,8 +247,16 @@ function scheduleWakeup(
             xp: reward.xp_each,
             gold: reward.gold_each,
           });
+
+          const isLevelCapped = reward.primary_level >= 42;
+          const xpPart = isLevelCapped
+            ? 'Your power transcends experience.'
+            : `+${reward.xp_each} XP`;
+          const goldPart = reward.gold_each > 0 ? `, +${reward.gold_each} gold` : '';
+          const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
+
           eventBus.emit('log', {
-            message: `☠️ ${reward.creature_name} has been slain by DoT! +${reward.xp_each} XP${reward.gold_each > 0 ? `, +${reward.gold_each} gold` : ''}.`,
+            message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}.`,
           });
         }
       }

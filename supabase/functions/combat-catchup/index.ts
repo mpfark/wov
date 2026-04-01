@@ -291,14 +291,16 @@ Deno.serve(async (req) => {
             });
           }
 
+          const primaryUncapped = primaryChar.level < 42;
           killRewards.push({
             creature_name: creature.name,
             creature_level: creature.level,
             creature_rarity: creature.rarity,
-            xp_each: Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount),
+            xp_each: primaryUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount) : 0,
             gold_each: goldEach,
             salvage_each: salvageEach,
             split_count: splitCount,
+            primary_level: primaryChar.level,
           });
         }
       }

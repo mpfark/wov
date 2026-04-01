@@ -80,6 +80,10 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
   const [creaturesLoading, setCreaturesLoading] = useState(false);
   const [prefetchedCreatureCount, setPrefetchedCreatureCount] = useState(0);
 
+  // Reconcile lock: after authoritative fetch, suppress re-adding creatures not in the set
+  const reconcileLockRef = useRef<Set<string> | null>(null);
+  const reconcileLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const fetchCreatures = useCallback(async (skipCatchup = false) => {
     if (!nodeId) { setCreatures([]); setCreaturesLoading(false); return; }
 
@@ -93,17 +97,20 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
 
     if (!skipCatchup) {
       const t0 = performance.now();
-      // Use reconcileNode with force=true for node-entry (always reconcile, bypass throttle)
       const reconciled = await reconcileNode(nodeId, { force: true });
       const elapsed = performance.now() - t0;
       console.log(`[creatures] catchup for ${nodeId}: ${elapsed.toFixed(0)}ms, ${reconciled.length} creatures`);
-      if (reconciled.length > 0) {
-        setCreatures(reconciled);
-        prefetchCache.delete(nodeId);
-        setCreaturesLoading(false);
-        return;
-      }
-      // If reconcileNode returned empty, fall through to DB query as safety net
+
+      // Set reconcile lock: only these creature IDs are valid for 500ms
+      const validIds = new Set(reconciled.map(c => c.id));
+      reconcileLockRef.current = validIds;
+      if (reconcileLockTimerRef.current) clearTimeout(reconcileLockTimerRef.current);
+      reconcileLockTimerRef.current = setTimeout(() => { reconcileLockRef.current = null; }, 500);
+
+      setCreatures(reconciled);
+      prefetchCache.delete(nodeId);
+      setCreaturesLoading(false);
+      return;
     }
 
     // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
@@ -148,6 +155,10 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
           const exists = prev.some(c => c.id === updated.id);
           if (exists) {
             return prev.map(c => c.id === updated.id ? updated : c);
+          }
+          // During reconcile lock, don't add creatures not in the valid set
+          if (reconcileLockRef.current && !reconcileLockRef.current.has(updated.id)) {
+            return prev;
           }
           return [...prev, updated];
         });
