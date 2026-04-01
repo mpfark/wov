@@ -511,8 +511,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, startCombat, stopCombat: stopCombatFn,
+    lastTickTime, lastActiveEffects, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
+
+  // ── Offscreen DoT wake-up scheduler ──────────────────────────────
+  useOffscreenDotWakeup({
+    currentNodeId: character.current_node_id,
+    lastActiveEffects,
+    creatures,
+    creatureHpOverrides,
+  });
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);
 
