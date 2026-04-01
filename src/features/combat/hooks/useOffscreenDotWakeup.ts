@@ -145,11 +145,15 @@ export function useOffscreenDotWakeup({
     if (prevNode && prevNode !== currentNodeId) {
       // Player left prevNode — capture snapshot
       const effects = lastEffectsRef.current;
+      const creaturesList = creaturesRef.current;
+      const overrides = hpOverridesRef.current;
+      console.log(`[offscreen-dot] node departure detected: ${prevNode} → ${currentNodeId}, effects=${effects?.length ?? 0}, creatures=${creaturesList.length}, overrides=${Object.keys(overrides).length}`);
+      
       if (effects && effects.length > 0) {
         // Build creature HP map from overrides + base
         const creatureHp: Record<string, number> = {};
-        for (const c of creaturesRef.current) {
-          creatureHp[c.id] = hpOverridesRef.current[c.id] ?? c.hp;
+        for (const c of creaturesList) {
+          creatureHp[c.id] = overrides[c.id] ?? c.hp;
         }
 
         const snapshot: OffscreenSnapshot = {
@@ -160,6 +164,8 @@ export function useOffscreenDotWakeup({
         };
 
         scheduleWakeup(trackedRef.current, snapshot, 0);
+      } else {
+        console.log(`[offscreen-dot] no active effects to track for node=${prevNode}`);
       }
     }
 

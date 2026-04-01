@@ -85,10 +85,15 @@ Deno.serve(async (req) => {
       return json({ caught_up: false, effects_processed: 0, creatures: creatures || [], partial: false });
     }
 
-    // Parallelize: fetch effects and creatures simultaneously
+    // Parallelize: fetch effects, creatures, and reset stale sessions simultaneously
+    const now = Date.now();
     const [{ data: effects }, { data: creaturesRaw }] = await Promise.all([
       db.from('active_effects').select('*').eq('node_id', node_id),
       db.from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true),
+      // Reset last_tick_at on any stale combat sessions for this node.
+      // This prevents combat-tick from processing a backlog of elapsed ticks
+      // when a player re-enters and starts a new combat loop.
+      db.from('combat_sessions').update({ last_tick_at: now }).eq('node_id', node_id),
     ]);
 
     const creatures = creaturesRaw || [];
@@ -102,7 +107,7 @@ Deno.serve(async (req) => {
       return json({ caught_up: false, effects_processed: 0, creatures, partial: false });
     }
 
-    const now = Date.now();
+    // `now` already declared above (before parallel fetch)
 
     if (creatures.length === 0) {
       // No creatures alive — delete all effects for this node
