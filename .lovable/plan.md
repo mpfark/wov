@@ -1,84 +1,63 @@
 
-# Phase 1: Hybrid Combat Model — Behavior Plan
 
-## Goal
+# Combat Stabilization Pass — Refined Plan
 
-Deliver the first phase of the MUD-inspired combat model:
-- Active same-node combat stays smooth and immediate (protected)
-- No full offscreen combat rounds
-- Persistent effects survive independently as creature-owned world state
-- Clients can selectively trigger server-side effect reconciliation for relevant nodes
-- Creatures can be found already wounded or dead from offscreen DoTs
-- Server persists all final world state
+## Summary
 
-## Architecture Summary
+Same stabilization pass as previously approved, with two refinements: request-scoped stale response protection and preserved DoT proc feedback.
 
-### Active Same-Node Combat
-- Combat starts immediately: session initialized one tick in the past (`now - TICK_RATE`)
-- Client polls every 2s; server processes only active same-node combat
-- Party combat synchronized via broadcast channel
-- No dead ticks or delayed first rounds
+## Change 1: Request-Scoped Stale Response Guard
 
-### Session Lifecycle
-A combat session is deleted when ANY of these is true:
-1. `session.node_id !== node_id` — player left the node
-2. `members.length === 0` — no alive members at the combat node
-3. No alive engaged creatures remain after tick processing
+**File**: `src/features/combat/hooks/usePartyCombat.ts`
 
-### Offscreen Behavior
-- Full combat rounds DO NOT continue offscreen
-- Persistent effects (DoTs) survive independently in `active_effects`
-- Effects are creature-owned world state (session_id set to null)
-- Effects are reconciled on demand via `combat-catchup`
+**Approach**: Add an incrementing `tickSeqRef` (number ref, starts at 0). Each `doTick` call increments it and captures the value before the async `combat-tick` invoke. When the response arrives, compare to `tickSeqRef.current` — if the captured value is stale (i.e., a newer tick has already been sent), discard the response.
 
-### Client-Assisted Wake-Up Policy
+- Add `const tickSeqRef = useRef(0)` alongside existing refs
+- In `doTick`, before the `supabase.functions.invoke` call: `const seq = ++tickSeqRef.current`
+- After the response: `if (seq !== tickSeqRef.current) { console.log('[combat] stale tick response ignored', { seq, current: tickSeqRef.current }); return; }`
+- Also add `tickSeqRef.current = 0` in `stopCombat` to reset on combat end
+- This is strictly stronger than node-id guarding — it catches overlapping requests on the same node too
+- The existing `if (!inCombatRef.current) return` guard in `processTickResult` stays as a secondary check
 
-**Eligible nodes** — a client may request reconciliation for:
-- Current node (always, with `force: true` on entry)
-- Adjacent nodes (only if they have active effects in the database)
-- Party leader's node (future enhancement)
+**Diagnostics**: Log on rejection with seq numbers for debugging.
 
-**Restrictions**:
-- Client sends only `{ node_id }` — no damage, timing, or tick data
-- Server recalculates everything from stored `active_effects` data
-- Server remains sole authority for HP, death, and loot
+## Change 2: Preserve DoT Proc Feedback, Deduplicate at State Layer
 
-**Throttling**:
-- Client-side: 10s minimum between `reconcileNode` calls per node (via `lastReconcileMap`)
-- Server-side: best-effort per-isolate 10s cooldown (optimization only, not correctness guarantee)
-- Throttle bypassed for `force: true` (node-entry) and partial-resolution retries
+**File**: `src/features/combat/hooks/usePartyCombat.ts`
 
-### Effect Reconciliation Guarantees
-- All elapsed effect time is resolved (up to 1000-tick defensive cap)
-- 3s wall-clock safety limit as emergency fallback only
-- If partial resolution occurs: returns `partial: true`, client retries up to 3 times
-- Node-entry always converges to fully reconciled state
-- Creatures can be found already dead if DoT damage was lethal
+**No change to lines 242-248** — keep `onPoisonProc` and `onIgniteProc` calls from events. These provide immediate moment-of-application feedback (log messages, animations).
 
-## Key Files
+**File**: `src/features/combat/hooks/useBuffState.ts` (or `mapServerEffectsToBuffState.ts`)
 
-| File | Responsibility |
-|------|---------------|
-| `supabase/functions/combat-tick/index.ts` | Live combat processing, session management, effect creation |
-| `supabase/functions/combat-catchup/index.ts` | Offscreen effect reconciliation, creature HP persistence |
-| `supabase/functions/_shared/combat-resolver.ts` | Shared DoT resolution, loot, creature state writes |
-| `src/features/creatures/hooks/useCreatures.ts` | Client creature state, `reconcileNode` export, selective wake-up |
-| `src/features/combat/hooks/usePartyCombat.ts` | Client combat driver, tick polling, party sync |
+The deduplication fix belongs in the state consumption layer:
+- In `syncFromServerEffects` / `mapServerEffectsToStacks`: when server `active_effects` arrive, they **replace** the local stack state (already the current behavior — it's a full overwrite, not additive)
+- The proc callbacks (`handleAddPoisonStack`, `handleAddIgniteStack`) add stacks optimistically for feel
+- When `active_effects` arrives moments later, it overwrites to authoritative values
+- This is already correct behavior (optimistic → authoritative overwrite), so **no code change needed** for deduplication
+- Add a comment in `processTickResult` explaining the intentional pattern: "proc events provide immediate feedback; active_effects overwrites to authoritative state — no double-counting occurs because syncFromServerEffects replaces, not merges"
+
+## Change 3–6: Unchanged from Previous Plan
+
+| # | Change | File |
+|---|--------|------|
+| 3 | Fix `elapsed > 0` always-true fallback condition | `useCreatures.ts` |
+| 4 | Always clear interval + pending ability in `stopCombat` | `usePartyCombat.ts` |
+| 5 | Add `request_duration_ms` diagnostic | `combat-tick/index.ts` |
+| 6 | Client timing diagnostics (start, gap, latency) | `usePartyCombat.ts` |
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `src/features/combat/hooks/usePartyCombat.ts` | Request-scoped seq guard in `doTick`; always clear interval in `stopCombat`; client timing diagnostics; explanatory comment on proc vs active_effects pattern |
+| `src/features/creatures/hooks/useCreatures.ts` | Fix `elapsed > 0` always-true condition |
+| `supabase/functions/combat-tick/index.ts` | Add `request_duration_ms` diagnostic |
 
 ## What Does NOT Change
-- Combat formulas, class balance, abilities, tick rate (2s)
-- Loot, XP, gold, salvage, equipment degradation
-- Party mechanics, node-based system
-- `_shared/combat-resolver.ts` logic
-- `useBuffState`, `NodeView`, `GamePage`
-- Skeleton loading on node entry
 
-## Success Criteria
-1. Same-node combat remains smooth and immediate
-2. No full offscreen combat rounds processed
-3. Persistent effects survive independently of sessions
-4. Adjacent-node reconciliation only fires for nodes with active effects
-5. Creatures can be found already wounded or dead from offscreen DoTs
-6. Node-entry always shows fully reconciled state
-7. Server remains final persistence authority
-8. Server-side throttle failure does not break correctness
+- Combat formulas, tick rate, abilities, balance
+- Hybrid model architecture, server authority
+- `onPoisonProc` / `onIgniteProc` event callbacks (kept for feel)
+- `active_effects` authoritative sync (already overwrites, no merge)
+- `combat-catchup`, `_shared/combat-resolver.ts`, `useBuffState` core logic
+
