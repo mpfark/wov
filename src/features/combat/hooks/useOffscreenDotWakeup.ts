@@ -7,7 +7,7 @@
  * - Client never sends damage, HP, death state, or tick counts
  *
  * When the player leaves a node with active DoT effects, this hook:
- * 1. Captures an explicit snapshot of creature HP + effects at departure
+ * 1. Queries the DB for active_effects + creature HP at the departed node
  * 2. Simulates the per-effect tick timeline to predict lethal time
  * 3. Schedules a reconcileNode(nodeId) call at the predicted time (+buffer)
  * 4. If the creature survives, reschedules (up to MAX_RESCHEDULES)
@@ -32,7 +32,7 @@ export interface ActiveEffectSnapshot {
 interface OffscreenSnapshot {
   nodeId: string;
   capturedAt: number;
-  creatureHp: Record<string, number>; // creature_id → last known HP
+  creatureHp: Record<string, number>;
   effects: ActiveEffectSnapshot[];
 }
 
@@ -45,23 +45,18 @@ interface TrackedNode {
 
 // ── Constants ────────────────────────────────────────────────────
 
-const BUFFER_MS = 2000;        // Schedule wake-up 2s after predicted death
-const MAX_TRACKED_NODES = 5;   // FIFO eviction
-const MAX_RESCHEDULES = 3;     // Safety cap per node
+const BUFFER_MS = 2000;
+const MAX_TRACKED_NODES = 5;
+const MAX_RESCHEDULES = 3;
 
 // ── Prediction: per-effect tick simulation ───────────────────────
 
-/**
- * Simulate the future tick timeline for a single creature.
- * Returns the timestamp at which HP is predicted to reach 0, or null.
- */
 function predictLethalTime(
   creatureHp: number,
   effects: ActiveEffectSnapshot[],
 ): number | null {
   if (creatureHp <= 0 || effects.length === 0) return null;
 
-  // Build timeline of all future ticks
   const ticks: { time: number; damage: number }[] = [];
   for (const eff of effects) {
     let t = eff.next_tick_at;
@@ -72,8 +67,6 @@ function predictLethalTime(
   }
 
   if (ticks.length === 0) return null;
-
-  // Sort by time ascending
   ticks.sort((a, b) => a.time - b.time);
 
   let hp = creatureHp;
@@ -82,12 +75,9 @@ function predictLethalTime(
     if (hp <= 0) return tick.time;
   }
 
-  return null; // Effects expire before killing
+  return null;
 }
 
-/**
- * For a snapshot, find the earliest predicted death time across all creatures.
- */
 function findEarliestLethalTime(snapshot: OffscreenSnapshot): {
   predictedTime: number | null;
   lethalCreatureIds: string[];
@@ -115,27 +105,13 @@ function findEarliestLethalTime(snapshot: OffscreenSnapshot): {
 
 export interface UseOffscreenDotWakeupParams {
   currentNodeId: string | null;
-  lastActiveEffects: ActiveEffectSnapshot[] | null;
-  creatures: { id: string; hp: number; max_hp: number }[];
-  creatureHpOverrides: Record<string, number>;
 }
 
 export function useOffscreenDotWakeup({
   currentNodeId,
-  lastActiveEffects,
-  creatures,
-  creatureHpOverrides,
 }: UseOffscreenDotWakeupParams) {
   const trackedRef = useRef<Map<string, TrackedNode>>(new Map());
   const prevNodeRef = useRef<string | null>(currentNodeId);
-
-  // Keep latest values in refs for snapshot capture
-  const lastEffectsRef = useRef(lastActiveEffects);
-  lastEffectsRef.current = lastActiveEffects;
-  const creaturesRef = useRef(creatures);
-  creaturesRef.current = creatures;
-  const hpOverridesRef = useRef(creatureHpOverrides);
-  hpOverridesRef.current = creatureHpOverrides;
 
   useEffect(() => {
     const prevNode = prevNodeRef.current;
@@ -143,30 +119,56 @@ export function useOffscreenDotWakeup({
 
     // Detect node departure
     if (prevNode && prevNode !== currentNodeId) {
-      // Player left prevNode — capture snapshot
-      const effects = lastEffectsRef.current;
-      const creaturesList = creaturesRef.current;
-      const overrides = hpOverridesRef.current;
-      console.log(`[offscreen-dot] node departure detected: ${prevNode} → ${currentNodeId}, effects=${effects?.length ?? 0}, creatures=${creaturesList.length}, overrides=${Object.keys(overrides).length}`);
-      
-      if (effects && effects.length > 0) {
-        // Build creature HP map from overrides + base
-        const creatureHp: Record<string, number> = {};
-        for (const c of creaturesList) {
-          creatureHp[c.id] = overrides[c.id] ?? c.hp;
+      const departedNodeId = prevNode;
+      console.log(`[offscreen-dot] node departure detected: ${departedNodeId} → ${currentNodeId}`);
+
+      // Query DB for fresh effects + creature state (async, fire-and-forget for the effect)
+      (async () => {
+        try {
+          const [{ data: effects }, { data: creatures }] = await Promise.all([
+            supabase
+              .from('active_effects')
+              .select('target_id, effect_type, damage_per_tick, stacks, next_tick_at, expires_at, tick_rate_ms')
+              .eq('node_id', departedNodeId),
+            supabase
+              .from('creatures')
+              .select('id, hp, max_hp')
+              .eq('node_id', departedNodeId)
+              .eq('is_alive', true),
+          ]);
+
+          console.log(`[offscreen-dot] DB query for node=${departedNodeId}: effects=${effects?.length ?? 0}, creatures=${creatures?.length ?? 0}`);
+
+          if (!effects || effects.length === 0) {
+            console.log(`[offscreen-dot] no active effects in DB for node=${departedNodeId}, not tracking`);
+            return;
+          }
+
+          const creatureHp: Record<string, number> = {};
+          for (const c of (creatures || [])) {
+            creatureHp[c.id] = c.hp;
+          }
+
+          const snapshot: OffscreenSnapshot = {
+            nodeId: departedNodeId,
+            capturedAt: Date.now(),
+            creatureHp,
+            effects: effects.map(e => ({
+              target_id: e.target_id,
+              effect_type: e.effect_type,
+              damage_per_tick: e.damage_per_tick,
+              stacks: e.stacks,
+              next_tick_at: e.next_tick_at,
+              expires_at: e.expires_at,
+              tick_rate_ms: e.tick_rate_ms,
+            })),
+          };
+
+          scheduleWakeup(trackedRef.current, snapshot, 0);
+        } catch (err) {
+          console.error(`[offscreen-dot] failed to query DB for node=${departedNodeId}:`, err);
         }
-
-        const snapshot: OffscreenSnapshot = {
-          nodeId: prevNode,
-          capturedAt: Date.now(),
-          creatureHp,
-          effects: [...effects],
-        };
-
-        scheduleWakeup(trackedRef.current, snapshot, 0);
-      } else {
-        console.log(`[offscreen-dot] no active effects to track for node=${prevNode}`);
-      }
+      })();
     }
 
     // If we entered a tracked node, clear its timer
@@ -189,7 +191,7 @@ export function useOffscreenDotWakeup({
   }, []);
 }
 
-// ── Scheduling logic (pure functions operating on tracked map) ───
+// ── Scheduling logic ────────────────────────────────────────────
 
 function scheduleWakeup(
   tracked: Map<string, TrackedNode>,
@@ -199,7 +201,6 @@ function scheduleWakeup(
   const { predictedTime, lethalCreatureIds } = findEarliestLethalTime(snapshot);
 
   if (!predictedTime || lethalCreatureIds.length === 0) {
-    // No lethal prediction — don't track
     const existing = tracked.get(snapshot.nodeId);
     if (existing?.timerId) clearTimeout(existing.timerId);
     tracked.delete(snapshot.nodeId);
@@ -216,7 +217,6 @@ function scheduleWakeup(
       const old = tracked.get(oldestKey);
       if (old?.timerId) clearTimeout(old.timerId);
       tracked.delete(oldestKey);
-      console.log(`[offscreen-dot] evicted oldest tracked node=${oldestKey}`);
     }
   }
 
@@ -232,9 +232,8 @@ function scheduleWakeup(
     try {
       const reconciledCreatures = await reconcileNode(snapshot.nodeId, { reason: 'predicted_lethal_effect' });
 
-      // Check if we should reschedule
       const entry = tracked.get(snapshot.nodeId);
-      if (!entry) return; // Node was cleared (player re-entered)
+      if (!entry) return;
 
       if (rescheduleCount >= MAX_RESCHEDULES) {
         tracked.delete(snapshot.nodeId);
@@ -242,7 +241,6 @@ function scheduleWakeup(
         return;
       }
 
-      // Check if any tracked creatures are still alive with effects
       const aliveCreatures = reconciledCreatures.filter(
         c => lethalCreatureIds.includes(c.id) && c.hp > 0
       );
@@ -265,7 +263,6 @@ function scheduleWakeup(
         return;
       }
 
-      // Build updated snapshot and reschedule
       const updatedHp: Record<string, number> = {};
       for (const c of aliveCreatures) updatedHp[c.id] = c.hp;
 
