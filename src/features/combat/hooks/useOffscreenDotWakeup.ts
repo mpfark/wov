@@ -232,7 +232,24 @@ function scheduleWakeup(
     console.log(`[offscreen-dot] wake-up triggered for node=${snapshot.nodeId}`);
 
     try {
-      const reconciledCreatures = await reconcileNode(snapshot.nodeId, { reason: 'predicted_lethal_effect' });
+      const { data, error } = await supabase.functions.invoke('combat-catchup', {
+        body: { node_id: snapshot.nodeId, force: true, reason: 'predicted_lethal_effect' },
+      });
+
+      if (error) {
+        console.error('[offscreen-dot] reconcile error:', error);
+        tracked.delete(snapshot.nodeId);
+        return;
+      }
+
+      const reconciledCreatures = (data?.creatures || []) as { id: string; hp: number }[];
+
+      // Emit kill reward events via event bus
+      if (data?.kill_rewards && Array.isArray(data.kill_rewards) && onKillRewards) {
+        for (const reward of data.kill_rewards) {
+          onKillRewards(reward);
+        }
+      }
 
       const entry = tracked.get(snapshot.nodeId);
       if (!entry) return;
@@ -283,7 +300,7 @@ function scheduleWakeup(
         })),
       };
 
-      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1);
+      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, onKillRewards);
     } catch (err) {
       console.error(`[offscreen-dot] wake-up error for node=${snapshot.nodeId}:`, err);
       tracked.delete(snapshot.nodeId);
