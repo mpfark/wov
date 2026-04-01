@@ -30,4 +30,4 @@ export type { UseCombatActionsParams } from './hooks/useCombatActions';
 
 // Offscreen DoT wake-up scheduler
 export { useOffscreenDotWakeup } from './hooks/useOffscreenDotWakeup';
-export type { ActiveEffectSnapshot } from './hooks/useOffscreenDotWakeup';
+export type { ActiveEffectSnapshot, UseOffscreenDotWakeupParams } from './hooks/useOffscreenDotWakeup';
