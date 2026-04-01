@@ -1,126 +1,79 @@
 
 
-# Client-Assisted Offscreen DoT Kill Completion — Refined Plan
+# Fix Offscreen DoT Kill — Root Cause & Plan
 
-## Summary
+## Problem Identified
 
-Same offscreen DoT wake-up plan as previously approved, with three refinements: tick-accurate lethal prediction, explicit leave-time snapshots, and wake-up rescheduling for surviving creatures.
+Two issues prevent offscreen DoT damage from working:
 
-## Refinement 1: Per-Effect Tick Simulation for Lethal Prediction
+### Issue 1: Effects expire before reconciliation
+Poison lasts **25 seconds**, ignite lasts **30-45 seconds**. If the player leaves and the wake-up timer fires at, say, 27 seconds, but `combat-catchup` runs at 28 seconds, the effect has already expired. The bulk resolver in `resolveEffectTicks` correctly skips expired effects — but the creature HP was never updated because the effect was never "ticked" while the player was away.
 
-**File**: `src/features/combat/hooks/useOffscreenDotWakeup.ts`
+The bulk resolver (line 145-146) calculates `elapsedMs = now - eff.next_tick_at`. If `now > eff.expires_at`, it still processes ticks up to `expires_at` (line 149: `maxTicksByExpiry`). So this path actually works. **The real problem is Issue 2.**
 
-**Previous approach**: Sum `damage_per_tick` across effects, divide HP by total DPS, multiply by tick interval. This is inaccurate when effects have different tick rates or expire at different times.
+### Issue 2: `lastActiveEffects` is empty at departure
+The `useOffscreenDotWakeup` hook captures `lastActiveEffects` from the most recent `combat-tick` response. But when the player moves to another node:
+1. `fleeStopCombat` immediately clears the heartbeat interval
+2. The last tick response may have had `effects_count: 0` (DoT didn't proc yet) or the creature died that tick
+3. Node change triggers `useOffscreenDotWakeup`, which reads `lastEffectsRef.current` — likely `null` or `[]`
+4. Result: "no active effects to track" log, no wake-up scheduled
 
-**Refined approach**: Simulate the future tick sequence using actual effect timing:
+Even if `lastActiveEffects` IS populated, the **state is from the last tick response, not from the DB**. Between the last tick and node departure, the effects still exist in the DB but the client doesn't know about them.
 
-```text
-function predictLethalTime(creatureHp, effects):
-  hp = creatureHp
-  // Build a timeline of all future ticks from all effects
-  ticks = []
-  for each effect:
-    t = effect.next_tick_at
-    while t <= effect.expires_at:
-      ticks.push({ time: t, damage: effect.damage_per_tick })
-      t += effect.tick_rate_ms
-  // Sort by time, walk forward
-  sort ticks by time
-  for each tick in ticks:
-    hp -= tick.damage
-    if hp <= 0:
-      return tick.time  // predicted death time
-  return null  // effects expire before killing
-```
+### Issue 3: No reconciliation on re-entry handles this correctly anyway
+`combat-catchup` IS called on node re-entry. It queries `active_effects` from DB. If effects exist, it processes them. The logs show `effects_count: 0` on every catchup call — meaning effects genuinely don't exist in the DB when the player returns.
 
-- Uses `next_tick_at`, `expires_at`, `tick_rate_ms`, and `damage_per_tick` per effect
-- Stops early when HP hits 0 — returns that tick's timestamp as predicted death time
-- Returns `null` if all effects expire before the creature dies (no wake-up needed for kill)
-- Still prediction-only — server determines real outcome
-- Add +2s buffer to predicted time before scheduling `reconcileNode`
+**Root cause**: Effects expire (25-45s TTL) before the player returns. The creature's HP is never reduced because no one processed the effect ticks during that window.
 
-## Refinement 2: Explicit Leave-Time Snapshot
+## Solution
+
+The wake-up timer is the right approach but needs to be more reliable. Two fixes:
+
+### Fix A: Query DB for effects on node departure (not just use in-memory state)
+When the player leaves a node, instead of relying on `lastActiveEffects` from the combat-tick response, **query the `active_effects` table directly** for that node. This ensures we capture effects even if the last tick response didn't include them.
 
 **File**: `src/features/combat/hooks/useOffscreenDotWakeup.ts`
+- On node departure, call `supabase.from('active_effects').select(...)` for the departed node
+- Also fetch creature HP from `creatures` table for that node
+- Use this fresh data for the snapshot and prediction
+- This replaces the unreliable `lastEffectsRef.current` approach
 
-**Previous approach**: Loosely reference `lastActiveEffects` from `usePartyCombat`.
+### Fix B: Ensure the wake-up timer fires BEFORE effects expire
+The current `BUFFER_MS = 2000` adds 2s after predicted death. But if the predicted death is at `effect.expires_at` (all ticks used up), the timer fires after expiry.
 
-**Refined approach**: Capture an explicit snapshot when the player leaves a node:
+This is actually fine — `combat-catchup`'s bulk resolver processes all ticks up to `expires_at` regardless of when it runs. The key is that the effects must still exist in the DB (not yet deleted). Effects are only deleted by:
+- `cleanupEffects` (called by combat-tick or combat-catchup)
+- No auto-expiry/TTL in the DB
 
-```typescript
-interface OffscreenSnapshot {
-  nodeId: string;
-  capturedAt: number;             // Date.now() at departure
-  creatureHp: Record<string, number>;  // creature_id → last known HP
-  effects: Array<{
-    target_id: string;
-    effect_type: string;
-    damage_per_tick: number;
-    stacks: number;
-    next_tick_at: number;
-    expires_at: number;
-    tick_rate_ms: number;
-  }>;
-}
-```
+So effects persist until explicitly cleaned up. **The wake-up timer should work as-is** once Fix A ensures it actually fires.
 
-- Snapshot is captured when `currentNodeId` changes (detected via `useEffect` on node ID)
-- Uses `creatureHpOverrides` merged with creature base HP for accurate starting HP
-- Uses the last `active_effects` from combat tick responses, enriched with `next_tick_at` and `tick_rate_ms` from the DB or from known defaults (2000ms)
-- Prediction runs on this frozen snapshot, not on live-updating refs
+### Fix C: Handle the case where wake-up fires but effects already expired
+When `combat-catchup` runs, if `now > expires_at` for an effect, the bulk resolver calculates `maxTicksByExpiry` correctly and processes all ticks that should have occurred. This already works. No change needed here.
 
-**File**: `src/features/combat/hooks/usePartyCombat.ts`
+## Implementation
 
-- Store full `active_effects` array (including timing fields) in `lastActiveEffectsRef` on each tick response
-- Return `lastActiveEffects` for the hook to consume
+### `src/features/combat/hooks/useOffscreenDotWakeup.ts`
+- Replace the snapshot capture logic: instead of using `lastEffectsRef.current`, make an async query to the DB on node departure
+- Query `active_effects` for the departed node
+- Query `creatures` for HP at the departed node  
+- Build the snapshot from fresh DB data
+- Rest of the prediction and scheduling logic stays the same
 
-## Refinement 3: Wake-Up Rescheduling
-
-**File**: `src/features/combat/hooks/useOffscreenDotWakeup.ts`
-
-**Previous approach**: One wake-up per node, then done.
-
-**Refined approach**: After each wake-up reconciliation call:
-
-1. `reconcileNode(nodeId)` returns the reconciled creature list
-2. If creature is dead or no relevant effects remain → clear tracked prediction, done
-3. If creature is still alive and effects remain:
-   - Fetch updated creature HP and effect state from the reconciled result
-   - Re-run the tick simulation with updated data
-   - If still predicted lethal → schedule another wake-up timer
-   - If no longer lethal (effects expire first) → clear prediction
-4. Max one active timer per node (clear old before scheduling new)
-5. Safety cap: max 3 rescheduled wake-ups per node to prevent infinite loops
-
-Implementation detail:
-- `reconcileNode` already returns `Creature[]` — use this for updated HP
-- For updated effects, query `active_effects` for the node after reconciliation (lightweight select)
-- Track a `rescheduleCount` per node entry in the tracked map
-
-## Everything Else: Unchanged
-
-All other aspects of the plan remain as previously approved:
-
-| Aspect | Status |
-|--------|--------|
-| New hook `useOffscreenDotWakeup.ts` | Unchanged (with refinements above) |
-| `usePartyCombat.ts` — store + return `lastActiveEffects` | Unchanged |
-| `GamePage.tsx` — wire the hook | Unchanged |
-| `combat-catchup/index.ts` — log `reason` + `creatures_killed` | Unchanged |
-| `combat/index.ts` — export new hook | Unchanged |
-| Max 5 tracked nodes (FIFO) | Unchanged |
-| 10s client throttle per node | Unchanged |
-| Client never sends damage/HP/death state | Unchanged |
-| Server remains sole authority | Unchanged |
-| Diagnostics logging | Unchanged |
+### Verify `combat-catchup` bulk mode handles post-expiry correctly
+- Add a diagnostic log when bulk mode processes effects where `now > expires_at` to confirm ticks are being applied
+- No logic changes needed — the math is correct
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/features/combat/hooks/useOffscreenDotWakeup.ts` | New hook — per-effect tick simulation, explicit snapshot, reschedule logic |
-| `src/features/combat/hooks/usePartyCombat.ts` | Store + return `lastActiveEffects` with timing fields |
-| `src/features/combat/index.ts` | Export new hook |
-| `src/pages/GamePage.tsx` | Wire `useOffscreenDotWakeup` |
-| `supabase/functions/combat-catchup/index.ts` | Log `reason` + `creatures_killed` |
+| `src/features/combat/hooks/useOffscreenDotWakeup.ts` | Query DB for effects on node departure instead of using stale in-memory state |
+| `supabase/functions/combat-catchup/index.ts` | Add diagnostic logging for post-expiry effect processing |
+
+## What Does NOT Change
+
+- Combat formulas, tick rate, architecture
+- `_shared/combat-resolver.ts` bulk mode logic (already correct)
+- `combat-tick` effect creation/persistence
+- Server authority over HP/death
 
