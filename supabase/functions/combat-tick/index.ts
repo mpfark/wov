@@ -937,7 +937,7 @@ Deno.serve(async (req) => {
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
       consumed_ability_stacks: consumedAbilityStacks,
-      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at })),
+      active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at, next_tick_at: e.next_tick_at, tick_rate_ms: e.tick_rate_ms ?? 2000 })),
       session_ended: sessionEnded,
       ticks_processed: ticks,
     });
