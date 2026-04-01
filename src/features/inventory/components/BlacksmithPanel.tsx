@@ -4,6 +4,7 @@ import ScrollPanel from './ScrollPanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Hammer } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
@@ -53,6 +54,8 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
   const [forgeSlot, setForgeSlot] = useState<string>('');
   const [forging, setForging] = useState(false);
   const [forgedItem, setForgedItem] = useState<any>(null);
+  const [sellAmount, setSellAmount] = useState(1);
+  const [selling, setSelling] = useState(false);
 
   const damagedItems = inventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
@@ -120,6 +123,24 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
     setForging(false);
   };
 
+  const handleSellSalvage = async () => {
+    if (sellAmount < 1 || sellAmount > salvage || selling) return;
+    setSelling(true);
+    try {
+      const goldGain = sellAmount; // 1:1 ratio
+      const newGold = gold + goldGain;
+      const newSalvage = salvage - sellAmount;
+      await supabase.from('characters').update({ gold: newGold, salvage: newSalvage }).eq('id', characterId);
+      onGoldChange(newGold);
+      onSalvageChange(newSalvage);
+      addLog(`🔩 Sold ${sellAmount} salvage for ${goldGain} gold.`);
+      setSellAmount(Math.min(sellAmount, newSalvage) || 1);
+    } catch (e: any) {
+      addLog(`❌ Sale failed: ${e.message || 'Unknown error'}`);
+    }
+    setSelling(false);
+  };
+
   const totalRepairCost = damagedItems
     .filter(i => !isUnrepairable(i.item.rarity))
     .reduce((sum, inv) => sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
@@ -142,12 +163,15 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
         </div>
 
         <Tabs defaultValue="repair" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="repair" className="font-display text-xs">
               <Hammer className="w-3 h-3 mr-1" /> Repair
             </TabsTrigger>
             <TabsTrigger value="forge" className="font-display text-xs">
               🔩 Forge
+            </TabsTrigger>
+            <TabsTrigger value="sell" className="font-display text-xs">
+              <Coins className="w-3 h-3 mr-1" /> Sell
             </TabsTrigger>
           </TabsList>
 
@@ -266,6 +290,66 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
                       +{v as number} {k.toUpperCase()}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="sell" className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Sell raw salvage materials to the blacksmith for gold. The blacksmith pays <span className="text-foreground font-display">1 gold per salvage</span>.
+            </p>
+
+            {salvage === 0 ? (
+              <p className="text-xs text-muted-foreground italic">You have no salvage to sell.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Amount to sell:</span>
+                    <span className="font-display text-dwarvish">🔩 {sellAmount}</span>
+                  </div>
+                  <Slider
+                    min={1}
+                    max={salvage}
+                    step={1}
+                    value={[sellAmount]}
+                    onValueChange={([v]) => setSellAmount(v)}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>1</span>
+                    <button
+                      type="button"
+                      className="text-primary hover:underline font-display"
+                      onClick={() => setSellAmount(salvage)}
+                    >
+                      Sell All ({salvage})
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
+                  <div className="text-xs space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">You receive:</span>
+                      <span className="font-display text-primary">
+                        <Coins className="w-3 h-3 inline mr-0.5" />{sellAmount}g
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleSellSalvage}
+                    disabled={selling || sellAmount < 1 || sellAmount > salvage}
+                    className="font-display text-xs h-8"
+                  >
+                    {selling ? (
+                      <span className="animate-pulse">Selling...</span>
+                    ) : (
+                      <><Coins className="w-3 h-3 mr-1" /> Sell</>
+                    )}
+                  </Button>
                 </div>
               </div>
             )}
