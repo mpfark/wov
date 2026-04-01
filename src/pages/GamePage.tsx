@@ -517,6 +517,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Offscreen DoT wake-up scheduler ──────────────────────────────
   useOffscreenDotWakeup({
     currentNodeId: character.current_node_id,
+    eventBus: bus,
   });
 
   useEffect(() => { inCombatRegenRef.current = inCombat; }, [inCombat]);

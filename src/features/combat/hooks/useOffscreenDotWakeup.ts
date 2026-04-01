@@ -14,8 +14,8 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { reconcileNode } from '@/features/creatures/hooks/useCreatures';
 import { supabase } from '@/integrations/supabase/client';
+import type { GameEventBus } from '@/hooks/useGameEvents';
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -105,10 +105,12 @@ function findEarliestLethalTime(snapshot: OffscreenSnapshot): {
 
 export interface UseOffscreenDotWakeupParams {
   currentNodeId: string | null;
+  eventBus: GameEventBus;
 }
 
 export function useOffscreenDotWakeup({
   currentNodeId,
+  eventBus,
 }: UseOffscreenDotWakeupParams) {
   const trackedRef = useRef<Map<string, TrackedNode>>(new Map());
   const prevNodeRef = useRef<string | null>(currentNodeId);
@@ -164,7 +166,7 @@ export function useOffscreenDotWakeup({
             })),
           };
 
-          scheduleWakeup(trackedRef.current, snapshot, 0);
+          scheduleWakeup(trackedRef.current, snapshot, 0, eventBus);
         } catch (err) {
           console.error(`[offscreen-dot] failed to query DB for node=${departedNodeId}:`, err);
         }
@@ -197,6 +199,7 @@ function scheduleWakeup(
   tracked: Map<string, TrackedNode>,
   snapshot: OffscreenSnapshot,
   rescheduleCount: number,
+  eventBus: GameEventBus,
 ) {
   const { predictedTime, lethalCreatureIds } = findEarliestLethalTime(snapshot);
 
@@ -230,7 +233,33 @@ function scheduleWakeup(
     console.log(`[offscreen-dot] wake-up triggered for node=${snapshot.nodeId}`);
 
     try {
-      const reconciledCreatures = await reconcileNode(snapshot.nodeId, { reason: 'predicted_lethal_effect' });
+      const { data, error } = await supabase.functions.invoke('combat-catchup', {
+        body: { node_id: snapshot.nodeId, force: true, reason: 'predicted_lethal_effect' },
+      });
+
+      if (error) {
+        console.error('[offscreen-dot] reconcile error:', error);
+        tracked.delete(snapshot.nodeId);
+        return;
+      }
+
+      const reconciledCreatures = (data?.creatures || []) as { id: string; hp: number }[];
+
+      // Emit kill reward events via event bus
+      if (data?.kill_rewards && Array.isArray(data.kill_rewards)) {
+        for (const reward of data.kill_rewards) {
+          eventBus.emit('combat:kill', {
+            creatureName: reward.creature_name,
+            creatureLevel: reward.creature_level,
+            creatureRarity: reward.creature_rarity,
+            xp: reward.xp_each,
+            gold: reward.gold_each,
+          });
+          eventBus.emit('log', {
+            message: `☠️ ${reward.creature_name} has been slain by DoT! +${reward.xp_each} XP${reward.gold_each > 0 ? `, +${reward.gold_each} gold` : ''}.`,
+          });
+        }
+      }
 
       const entry = tracked.get(snapshot.nodeId);
       if (!entry) return;
@@ -281,7 +310,7 @@ function scheduleWakeup(
         })),
       };
 
-      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1);
+      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, eventBus);
     } catch (err) {
       console.error(`[offscreen-dot] wake-up error for node=${snapshot.nodeId}:`, err);
       tracked.delete(snapshot.nodeId);
