@@ -224,7 +224,7 @@ function scheduleWakeup(
     console.log(`[offscreen-dot] wake-up triggered for node=${snapshot.nodeId}`);
 
     try {
-      const reconciledCreatures = await reconcileNode(snapshot.nodeId);
+      const reconciledCreatures = await reconcileNode(snapshot.nodeId, { reason: 'predicted_lethal_effect' });
 
       // Check if we should reschedule
       const entry = tracked.get(snapshot.nodeId);
