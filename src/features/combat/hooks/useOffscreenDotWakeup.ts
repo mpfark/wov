@@ -199,6 +199,7 @@ function scheduleWakeup(
   tracked: Map<string, TrackedNode>,
   snapshot: OffscreenSnapshot,
   rescheduleCount: number,
+  eventBus: GameEventBus,
 ) {
   const { predictedTime, lethalCreatureIds } = findEarliestLethalTime(snapshot);
 
