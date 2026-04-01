@@ -14,8 +14,8 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { reconcileNode } from '@/features/creatures/hooks/useCreatures';
 import { supabase } from '@/integrations/supabase/client';
+import type { GameEventBus } from '@/hooks/useGameEvents';
 
 // ── Types ────────────────────────────────────────────────────────
 
