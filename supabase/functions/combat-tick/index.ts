@@ -59,6 +59,7 @@ const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so l
 // ── Main handler ─────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  const _requestT0 = Date.now();
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
