@@ -87,6 +87,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const [lastTickTime, setLastTickTime] = useState<number | null>(null);
+  const [lastActiveEffects, setLastActiveEffects] = useState<any[] | null>(null);
   const intervalRef = useRef<number | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTickRef = useRef<number>(0);
