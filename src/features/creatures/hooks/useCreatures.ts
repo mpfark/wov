@@ -80,6 +80,10 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
   const [creaturesLoading, setCreaturesLoading] = useState(false);
   const [prefetchedCreatureCount, setPrefetchedCreatureCount] = useState(0);
 
+  // Reconcile lock: after authoritative fetch, suppress re-adding creatures not in the set
+  const reconcileLockRef = useRef<Set<string> | null>(null);
+  const reconcileLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const fetchCreatures = useCallback(async (skipCatchup = false) => {
     if (!nodeId) { setCreatures([]); setCreaturesLoading(false); return; }
 
