@@ -166,7 +166,7 @@ export function useOffscreenDotWakeup({
             })),
           };
 
-          scheduleWakeup(trackedRef.current, snapshot, 0);
+          scheduleWakeup(trackedRef.current, snapshot, 0, eventBus);
         } catch (err) {
           console.error(`[offscreen-dot] failed to query DB for node=${departedNodeId}:`, err);
         }
