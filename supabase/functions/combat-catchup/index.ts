@@ -168,7 +168,132 @@ Deno.serve(async (req) => {
     }
 
     // ── Loot drops (shared resolver) ────────────────────────────
-    await processLootDrops(db, result.lootQueue);
+    const lootEvents = await processLootDrops(db, result.lootQueue);
+
+    // ── Award rewards for offscreen kills ────────────────────────
+    const killRewards: any[] = [];
+    if (cKilled.size > 0) {
+      // Collect unique source character IDs from effects that targeted killed creatures
+      const sourceCharIds = new Set<string>();
+      for (const eff of effects) {
+        if (cKilled.has(eff.target_id) && eff.source_id) {
+          sourceCharIds.add(eff.source_id);
+        }
+      }
+
+      if (sourceCharIds.size > 0) {
+        // Fetch source characters
+        const { data: sourceChars } = await db
+          .from('characters')
+          .select('id, level, cha, user_id')
+          .in('id', Array.from(sourceCharIds));
+
+        // Check if any source char is in a party — fetch party members
+        const { data: partyMembers } = await db
+          .from('party_members')
+          .select('character_id, party_id, character:characters(id, level, cha)')
+          .in('character_id', Array.from(sourceCharIds))
+          .eq('status', 'accepted');
+
+        // Build party grouping: source_id → list of party member chars
+        const partyGroupMap = new Map<string, { id: string; level: number; cha: number }[]>();
+        if (partyMembers && partyMembers.length > 0) {
+          // For each source in a party, fetch ALL accepted members of that party
+          const partyIds = [...new Set(partyMembers.map(pm => pm.party_id))];
+          const { data: allPartyMembers } = await db
+            .from('party_members')
+            .select('character_id, party_id, character:characters(id, level, cha)')
+            .in('party_id', partyIds)
+            .eq('status', 'accepted');
+
+          for (const pm of (partyMembers || [])) {
+            const partyId = pm.party_id;
+            const groupMembers = (allPartyMembers || [])
+              .filter(apm => apm.party_id === partyId)
+              .map(apm => {
+                const c = apm.character as any;
+                return { id: apm.character_id, level: c?.level ?? 1, cha: c?.cha ?? 10 };
+              });
+            partyGroupMap.set(pm.character_id, groupMembers);
+          }
+        }
+
+        // Fetch XP boost
+        const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
+        const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
+
+        for (const creatureId of cKilled) {
+          const creature = creatures.find(cr => cr.id === creatureId);
+          if (!creature) continue;
+
+          // Find which source character(s) had effects on this creature
+          const crSourceIds = new Set<string>();
+          for (const eff of effects) {
+            if (eff.target_id === creatureId && eff.source_id) {
+              crSourceIds.add(eff.source_id);
+            }
+          }
+
+          // Use the first source character for CHA gold calc
+          const primarySourceId = crSourceIds.values().next().value;
+          if (!primarySourceId) continue;
+
+          // Determine reward recipients (party or solo)
+          const recipients = partyGroupMap.get(primarySourceId)
+            || (sourceChars || []).filter(c => c.id === primarySourceId).map(c => ({ id: c.id, level: c.level, cha: c.cha }));
+
+          if (recipients.length === 0) continue;
+
+          const primaryChar = recipients.find(r => r.id === primarySourceId) || recipients[0];
+
+          // Calculate rewards (same formula as combat-tick)
+          const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
+          const lt = (creature.loot_table || []) as any[];
+          const goldEntry = lt.find((e: any) => e.type === 'gold');
+          let totalGold = 0;
+          if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
+            totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
+            if (creature.is_humanoid) {
+              totalGold = Math.floor(totalGold * chaGoldMult(primaryChar.cha));
+            }
+          }
+          const splitCount = recipients.length;
+          const goldEach = Math.floor(totalGold / splitCount);
+
+          // Salvage for non-humanoid
+          let salvageEach = 0;
+          if (!creature.is_humanoid) {
+            const baseSalvage = 1 + Math.floor(creature.level / 5);
+            const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
+            salvageEach = Math.floor((baseSalvage * rarityMult) / splitCount);
+          }
+
+          // Award each recipient
+          for (const recipient of recipients) {
+            const uncapped = recipient.level < 42;
+            const penalty = xpPenalty(recipient.level, creature.level);
+            const xpEach = uncapped ? Math.floor(Math.floor(baseXp * penalty * xpMult) / splitCount) : 0;
+
+            await db.rpc('award_party_member', {
+              _character_id: recipient.id,
+              _xp: xpEach,
+              _gold: goldEach,
+              _salvage: salvageEach,
+            });
+          }
+
+          killRewards.push({
+            creature_name: creature.name,
+            creature_level: creature.level,
+            creature_rarity: creature.rarity,
+            xp_each: Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount),
+            gold_each: goldEach,
+            salvage_each: salvageEach,
+            split_count: splitCount,
+          });
+        }
+      }
+    }
 
     // Build final creature list: alive creatures with updated HP
     const finalCreatures = creatures
@@ -186,13 +311,14 @@ Deno.serve(async (req) => {
       creatures_alive: finalCreatures.length,
       creatures_killed: cKilled.size,
       kills: cKilled.size,
+      rewards_awarded: killRewards.length,
       ticks_resolved: result.advancedEffects.length,
       partial: isPartial,
       duration_ms: Date.now() - t0,
       ...(reason ? { wake_up_source: reason } : {}),
     }));
 
-    return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures, partial: isPartial });
+    return json({ caught_up: true, effects_processed: effects.length, creatures: finalCreatures, partial: isPartial, kill_rewards: killRewards, loot_events: lootEvents });
   } catch (err) {
     console.error('Combat catchup error:', err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
