@@ -130,6 +130,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     inCombatRef.current = false;
     tickBusyRef.current = false;
     justStoppedRef.current = true;
+    tickSeqRef.current = 0;
     setInCombat(false);
     setActiveCombatCreatureId(null);
     setEngagedCreatureIds([]);
@@ -138,7 +139,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
-    if (!pendingAbilityRef.current && intervalRef.current) {
+    pendingAbilityRef.current = null;
+    setPendingAbility(null);
+    if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
     }
