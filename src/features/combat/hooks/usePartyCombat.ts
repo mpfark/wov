@@ -256,6 +256,20 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       }
     }
 
+    // Store raw active_effects for offscreen DoT wake-up prediction
+    if (data.active_effects) {
+      setLastActiveEffects(data.active_effects.map((eff: any) => ({
+        target_id: eff.target_id,
+        effect_type: eff.effect_type,
+        damage_per_tick: eff.damage_per_tick,
+        stacks: eff.stacks ?? 1,
+        next_tick_at: eff.next_tick_at ?? 0,
+        expires_at: eff.expires_at,
+        tick_rate_ms: eff.tick_rate_ms ?? 2000,
+        source_id: eff.source_id,
+      })));
+    }
+
     // Sync active effects from server for UI — map flat array to legacy nested format
     if (data.active_effects && ext.current.onActiveDots) {
       const dotsByChar: Record<string, any> = {};
