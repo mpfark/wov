@@ -917,7 +917,7 @@ Deno.serve(async (req) => {
     const creature_states = [...combatCreatureStates, ...nonCombatAlive];
 
     // ── Diagnostics ───────────────────────────────────────────────
-    const requestDurationMs = Date.now() - (new Date(session.created_at).getTime() > 0 ? Date.now() : Date.now());
+    const requestDurationMs = Date.now() - _requestT0;
     console.log(JSON.stringify({
       fn: 'combat-tick',
       session_id: session.id,
