@@ -310,7 +310,7 @@ function scheduleWakeup(
         })),
       };
 
-      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, onKillRewards);
+      scheduleWakeup(tracked, updatedSnapshot, rescheduleCount + 1, eventBus);
     } catch (err) {
       console.error(`[offscreen-dot] wake-up error for node=${snapshot.nodeId}:`, err);
       tracked.delete(snapshot.nodeId);
