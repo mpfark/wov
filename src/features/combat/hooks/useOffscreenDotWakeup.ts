@@ -246,9 +246,18 @@ function scheduleWakeup(
       const reconciledCreatures = (data?.creatures || []) as { id: string; hp: number }[];
 
       // Emit kill reward events via event bus
-      if (data?.kill_rewards && Array.isArray(data.kill_rewards) && onKillRewards) {
+      if (data?.kill_rewards && Array.isArray(data.kill_rewards)) {
         for (const reward of data.kill_rewards) {
-          onKillRewards(reward);
+          eventBus.emit('combat:kill', {
+            creatureName: reward.creature_name,
+            creatureLevel: reward.creature_level,
+            creatureRarity: reward.creature_rarity,
+            xp: reward.xp_each,
+            gold: reward.gold_each,
+          });
+          eventBus.emit('log', {
+            message: `☠️ ${reward.creature_name} has been slain by DoT! +${reward.xp_each} XP${reward.gold_each > 0 ? `, +${reward.gold_each} gold` : ''}.`,
+          });
         }
       }
 
