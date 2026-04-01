@@ -156,6 +156,10 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
           if (exists) {
             return prev.map(c => c.id === updated.id ? updated : c);
           }
+          // During reconcile lock, don't add creatures not in the valid set
+          if (reconcileLockRef.current && !reconcileLockRef.current.has(updated.id)) {
+            return prev;
+          }
           return [...prev, updated];
         });
       }
