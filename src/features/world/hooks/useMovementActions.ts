@@ -131,6 +131,7 @@ async function moveFollowers(
   filterFollowingOnly: boolean,
   addLog: (msg: string) => void,
   fetchParty: () => void,
+  broadcastMove?: (charId: string, charName: string, nodeId: string) => void,
 ): Promise<void> {
   if (!isLeader) return;
   const coLocated = partyMembers.filter(m =>
@@ -142,6 +143,11 @@ async function moveFollowers(
     await Promise.all(toMove.map(f =>
       supabase.from('characters').update({ current_node_id: targetNodeId }).eq('id', f.character_id)
     ));
+    if (broadcastMove) {
+      for (const f of toMove) {
+        broadcastMove(f.character_id, f.character.name, targetNodeId);
+      }
+    }
     addLog('Your party follows you.');
     fetchParty();
   }
