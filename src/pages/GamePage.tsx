@@ -945,6 +945,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 }
               }}
               onDestroy={dropItem}
+              onTogglePin={togglePin}
               onUseConsumable={handleUseConsumable}
               isAtInn={currentNode?.is_inn ?? false}
               regenBuff={regenBuff}
