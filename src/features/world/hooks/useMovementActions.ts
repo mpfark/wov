@@ -334,7 +334,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLog(`📍 You leave a hidden waymark at ${currentNodeObj.name}.`);
     }
     const prevNodeId = p.character.current_node_id!;
-    await p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - effectiveCpCost });
+    const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - effectiveCpCost });
     p.broadcastMove(p.character.id, p.character.name, nodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: nodeId },
@@ -344,9 +344,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
     logActivity(p.character.user_id, p.character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
 
-    // Move co-located party members (level 25+ moves all, otherwise only followers)
+    // Move co-located party members in parallel with leader DB write
     const filterFollowingOnly = p.character.level < 25;
-    await moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLog, p.fetchParty);
+    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLog, p.fetchParty, p.broadcastMove);
+    await Promise.all([leaderMove, followerMove]);
   }, [p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Return to Waymark ──────────────────────────────────────────
