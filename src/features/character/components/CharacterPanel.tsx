@@ -544,6 +544,7 @@ export default function CharacterPanel({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
+                              {inv.is_pinned && <span className="text-primary mr-0.5">📌</span>}
                               {isBroken && <span className="text-destructive mr-1">⚒</span>}
                               {inv.item.name}
                               {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
