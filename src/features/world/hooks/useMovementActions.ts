@@ -360,7 +360,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const effectiveWayCost = p.character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
     if ((p.character.cp ?? 0) < effectiveWayCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
     const prevNodeId = p.character.current_node_id!;
-    await p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - effectiveWayCost });
+    const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - effectiveWayCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: waymarkNodeId },
@@ -371,7 +371,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
     setWaymarkNodeId(null);
     setTeleportOpen(false);
 
-    await moveFollowers(p.partyMembers, p.character.id, prevNodeId, waymarkNodeId, p.isLeader, false, p.addLog, p.fetchParty);
+    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, waymarkNodeId, p.isLeader, false, p.addLog, p.fetchParty, p.broadcastMove);
+    await Promise.all([leaderMove, followerMove]);
   }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Search ─────────────────────────────────────────────────────
