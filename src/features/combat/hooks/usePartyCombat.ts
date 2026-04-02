@@ -176,6 +176,26 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
     if (!inCombatRef.current) return; // Ignore late/stale tick responses
+
+    // Clear prediction overrides for all creatures in this server response
+    const serverCreatureIds = new Set(data.creature_states.map(cs => cs.id));
+    setLocalPredictionOverrides(prev => {
+      const keys = Object.keys(prev);
+      const toRemove = keys.filter(k => serverCreatureIds.has(k));
+      if (toRemove.length === 0) return prev;
+      const next = { ...prev };
+      toRemove.forEach(k => delete next[k]);
+      return next;
+    });
+
+    // Resolve predicted log entry — replace with server events
+    const tickId = currentTickIdRef.current;
+    if (tickId !== null) {
+      currentTickIdRef.current = null;
+      setPredictedLogEntry(null);
+    }
+
+    const now = Date.now();
     const now = Date.now();
     const gap = lastTickRef.current ? now - lastTickRef.current : 0;
     if (data.ticks_processed && data.ticks_processed > 1) {
