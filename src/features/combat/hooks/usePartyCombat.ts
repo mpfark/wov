@@ -505,7 +505,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         // Predict damage for the active creature (simple auto-attack only)
         const activeCreature = engagedCreatureIdsRef.current[0];
         if (activeCreature && !p.isDead && p.character.hp > 0) {
-          const profile = (await import('../utils/combat-math')).CLASS_COMBAT_PROFILES[p.character.class];
+          const { CLASS_COMBAT_PROFILES: profiles } = await import('../utils/combat-math');
+          const profile = profiles[p.character.class];
           if (profile) {
             const statKey = profile.stat as keyof typeof p.character;
             const attackerStat = (p.character[statKey] as number) || 10;

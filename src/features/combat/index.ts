@@ -13,6 +13,11 @@ export { useCreatureBroadcast } from './hooks/useCreatureBroadcast';
 export { useBuffState } from './hooks/useBuffState';
 export type { BuffState, BuffSetters } from './hooks/useBuffState';
 export { useMergedCreatureHpOverrides } from './hooks/useMergedCreatureState';
+export type { PredictionOverride } from './hooks/useMergedCreatureState';
+
+// Combat predictor
+export { predictConservativeDamage, applyPredictedDamage } from './utils/combat-predictor';
+export type { PredictionContext, PredictionResult } from './utils/combat-predictor';
 
 // Combat math utilities
 export * from './utils/combat-math';
