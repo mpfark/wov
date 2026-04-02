@@ -196,7 +196,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
 
     const now = Date.now();
-    const now = Date.now();
     const gap = lastTickRef.current ? now - lastTickRef.current : 0;
     if (data.ticks_processed && data.ticks_processed > 1) {
       console.warn(`[combat] Processed ${data.ticks_processed} ticks in one response (gap: ${gap}ms)`);
