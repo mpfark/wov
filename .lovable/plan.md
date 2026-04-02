@@ -1,47 +1,74 @@
 
 
-# Fix: Offscreen DoT Kill Rewards + Creature State on Re-entry
+# Revised Plan: Client-Predicted, Broadcast-Assisted, Server-Computed Combat
 
-## Issue 1: Wrong reward info for level 42 character
+Three refinements applied to the previously approved plan. Everything else remains unchanged.
 
-The `combat-catchup` reward logic correctly sets `xpEach = 0` for level 42 characters (line 282-284). However, the `kill_rewards` response object on line 298 recalculates `xp_each` using a different formula that ignores the level cap check. It uses `primaryChar.level` with `xpPenalty` but doesn't check `uncapped`.
+## Refinement 1: Conservative HP Prediction
 
-Additionally, the client-side log message in `useOffscreenDotWakeup.ts` (line 251) always shows `+${reward.xp_each} XP` even when it should say "Your power transcends experience." and the `salvage_each` reward is never shown in the message.
+The `combat-predictor.ts` helper must produce stable, conservative damage estimates rather than full random rolls.
 
-**Fix in `combat-catchup/index.ts`:**
-- Line 298: Use 0 for `xp_each` when `primaryChar.level >= 42`
-- Add `primary_level` to the kill_rewards object so the client can format correctly
+**Implementation:**
+- Use the **expected average** of the character's damage range (floor of `(min + max) / 2`) instead of a random roll
+- Never predict crits — always assume a normal hit
+- If the character's effective hit chance is below ~70%, do not predict an HP change at all (bias toward stability)
+- Predicted HP should never drop a creature below 1 HP — death is server-only
 
-**Fix in `useOffscreenDotWakeup.ts`:**
-- Check if `xp_each === 0` and adjust the log message accordingly (show transcend message or omit XP)
-- Include salvage in the log message when present
+This ensures HP bars move smoothly and predictably, and server reconciliation produces only tiny corrections (±1-3 HP) rather than large snap-backs.
 
-## Issue 2: Creature appears alive when re-entering the node
+## Refinement 2: Single-Entry Log with In-Place Resolution
 
-The `reconcileNode` call on node entry (force=true) calls `combat-catchup`. If the wake-up timer already killed the creature and cleaned up effects, catchup returns `effects_count: 0, creatures_alive: 0` and `reconcileNode` returns `[]`. Then the fallback DB query also returns `[]`. The creature should not appear.
+Predicted log entries must not create duplicates. The combat log must show one entry per attack, resolved in place.
 
-**But if the player returns BEFORE the wake-up timer fires**, the effects still exist in the DB. The entry `combat-catchup` call should resolve them. Looking at the logs, this works (`effects_count:1, kills:1`). The problem is that the reconcileNode result (empty creature list = dead) is returned, but a **realtime channel update** arrives showing the creature's old alive state, temporarily re-inserting it into the creatures array. Then `damage_creature` RPC fires `is_alive=false`, which triggers another realtime update that removes it — causing the "attacks then disappears" behavior.
+**Implementation in `usePartyCombat.ts`:**
+- Each predicted log entry gets a unique `tickId` and `predicted: true` flag
+- When the server response arrives for that tick, find the matching predicted entry by `tickId` and **replace** it with the authoritative text/data
+- If no predicted entry exists (e.g., prediction was skipped due to low hit chance), insert the server entry normally
+- Never show both predicted and confirmed entries for the same tick
+- The `eventLog` array in GamePage treats `predicted` entries as mutable placeholders
 
-**Fix in `useCreatures.ts`:**
-- When `fetchCreatures` runs and gets reconciled results, set a flag (ref) indicating "authoritative fetch in progress" 
-- During this window, ignore realtime creature inserts/updates that would add creatures not in the reconciled set
-- Simpler approach: after reconcileNode returns, if it processed kills (returned fewer creatures than expected), briefly suppress realtime creature additions for that node
+**Rendering in NodeView / log display:**
+- Predicted entries render identically to confirmed entries (no dimming, no "(predicted)" label) — since predictions are conservative, visual differences are minimal and labels would add clutter
+- If a prediction was wrong (miss predicted as hit, or vice versa), the entry text simply updates in place on server response
 
-Actually, the simplest fix: the `onCreatureUpdate` handler on line 141-155 already handles `!updated.is_alive` by filtering out. The issue is likely that the creature row gets updated twice: first `hp` changes (still alive), then `is_alive=false`. The first update shows the creature with reduced HP, and the second removes it. During the gap, auto-aggro kicks in.
+## Refinement 3: Strict Prediction Lifecycle and Cleanup
 
-**Better fix**: In `fetchCreatures`, after reconcileNode completes successfully, mark the reconciled creature IDs. In `onCreatureUpdate`, if a creature arrives that wasn't in the reconciled set AND it's the current node, skip adding it. This is complex.
+Local prediction state must never linger or stack.
 
-**Simplest fix**: Suppress creature-initiated combat for a short grace period after node entry. The `useCreatures` hook already clears creatures to `[]` on node change (line 177). The reconcileNode call then returns the authoritative list. Any realtime updates that arrive during reconciliation showing stale alive creatures get processed by the handler — but since the creature is about to be killed, it briefly appears. 
+**Rules implemented in `usePartyCombat.ts` and `useMergedCreatureState.ts`:**
 
-The real fix is to ensure `writeCreatureState` in `combat-catchup` sets `is_alive=false` BEFORE returning the response, which it does (it calls `damage_creature` RPC). The realtime update for `is_alive=false` should fire. The race is between the reconcileNode HTTP response arriving (setting creatures=[]) and the realtime postgres_changes event arriving (re-adding the creature).
+1. **Server response clears prediction**: When `processTickResult` runs, all `localPredictionOverrides` for creatures in that tick response are replaced with server values
+2. **Combat end clears all**: When `stopCombat` fires, all prediction overrides are cleared to `{}`
+3. **Node departure clears all**: When node changes (existing creature clear logic), prediction overrides are also cleared
+4. **Safety timeout**: Each prediction override entry stores a timestamp; a 4-second timeout (2x tick interval) automatically clears any prediction that was never confirmed by the server
+5. **Single layer per creature**: Setting a new prediction for a creature ID overwrites the previous one — no stacking
 
-**Proposed fix**: After `fetchCreatures` sets creatures from reconcileNode, add a short "reconcile lock" (500ms ref flag). During this window, `onCreatureUpdate` should not re-add creatures that aren't already in the current list.
+**Cleanup responsibility:**
+- `useMergedCreatureState` receives `localPredictionOverrides` as a `Record<string, { hp: number; ts: number }>`
+- Before merging, it filters out entries older than 4 seconds
+- `usePartyCombat.stopCombat` and the node-change effect both reset the prediction map
 
-## Files Changed
+## Files Changed (full list, unchanged from prior plan except noted)
 
-| File | Change |
-|------|--------|
-| `supabase/functions/combat-catchup/index.ts` | Fix `xp_each` in kill_rewards to respect level 42 cap |
-| `src/features/combat/hooks/useOffscreenDotWakeup.ts` | Fix log message for level 42 (transcend), include salvage |
-| `src/features/creatures/hooks/useCreatures.ts` | Add reconcile lock to prevent realtime re-adding dead creatures |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/features/combat/utils/combat-predictor.ts` | **Create** | Prediction-only helper: average damage, no crits, skip if low hit chance, never predict death |
+| `src/features/combat/hooks/usePartyCombat.ts` | **Modify** | Optimistic prediction with tickId-based log replacement, cleanup on stop/node-change, 4s safety timeout |
+| `src/features/combat/hooks/useMergedCreatureState.ts` | **Modify** | Accept `localPredictionOverrides` with timestamps, filter stale entries, clear on combat end |
+| `src/features/combat/hooks/useCreatureBroadcast.ts` | **Modify** | Add transient hint events |
+| `src/features/party/hooks/usePartyBroadcast.ts` | **Modify** | Add `party_attack_event` transient hint |
+| `src/features/world/hooks/useNodeChannel.ts` | **Modify** | Add callback refs for broadcast combat events |
+| `src/features/combat/hooks/useOffscreenDotWakeup.ts` | **Modify** | Add reconcile hint broadcast |
+| `src/hooks/useBroadcastDebug.ts` | **Modify** | Add predict/reconcile categories |
+| `src/features/combat/index.ts` | **Modify** | Export predictor types |
+| `src/pages/GamePage.tsx` | **Modify** | Wire prediction overrides into merged state |
+
+## What Does NOT Change
+
+- `combat-tick` edge function (server computes all combat)
+- `combat-catchup` edge function (server reconciles offscreen)
+- Combat math formulas, class/ability balance
+- Leader-authoritative party model
+- Database schema / RLS policies
+- Movement, inventory, chat systems
 
