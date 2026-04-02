@@ -125,6 +125,9 @@ export function useNodeChannel(
       .on('broadcast', { event: 'unlock_path' }, (payload) => {
         onUnlockPath.current?.(payload);
       })
+      .on('broadcast', { event: 'creature_attacked' }, (payload) => {
+        onCreatureAttacked.current?.(payload);
+      })
 
       // ── Postgres Changes (ground loot) ──
       .on('postgres_changes', {
