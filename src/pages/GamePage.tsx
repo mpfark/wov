@@ -14,7 +14,7 @@ import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/features/creatures';
 import { useItemCache } from '@/features/inventory';
-import { useCreatureBroadcast } from '@/features/combat';
+import { useCreatureBroadcast, useMergedCreatureHpOverrides } from '@/features/combat';
 import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
@@ -149,7 +149,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { onlinePlayers } = useGlobalPresence(character);
   const currentNodeForPrefetch = getNode(character.current_node_id || '');
   const { creatures, creaturesLoading, prefetchedCreatureCount } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch);
-  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id);
+  const { broadcastOverrides, broadcastDamage, broadcastAttackHint: _broadcastAttackHint, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id);
 
   useEffect(() => {
     cleanupOverrides(creatures.map(c => c.id));
@@ -170,6 +170,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     broadcastLogEntries, rewardEvents: partyRewardEvents,
     incomingPartyRegenBuff,
     broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward: _broadcastReward, broadcastPartyRegenBuff,
+    broadcastAttackEvent: _broadcastAttackEvent,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
@@ -511,8 +512,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, startCombat, stopCombat: stopCombatFn,
+    localPredictionOverrides, lastTickTime, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
+
+  // Merge creature HP from all sources: combat-tick > prediction > broadcast > base
+  const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides, localPredictionOverrides);
 
   // ── Offscreen DoT wake-up scheduler ──────────────────────────────
   useOffscreenDotWakeup({
@@ -1087,7 +1091,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                activeCombatCreatureId={activeCombatCreatureId}
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}
-              creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
+              creatureHpOverrides={mergedCreatureHpOverrides}
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
               onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}

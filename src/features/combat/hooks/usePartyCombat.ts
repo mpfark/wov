@@ -14,9 +14,13 @@ import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/features/combat';
+import { predictConservativeDamage, applyPredictedDamage } from '../utils/combat-predictor';
+import type { PredictionOverride } from './useMergedCreatureState';
 
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff']);
+
+let nextTickId = 1;
 
 interface Party {
   id: string;
@@ -108,6 +112,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
   const idleCountRef = useRef(0);
 
+  // ── Prediction state ──────────────────────────────────────────
+  const [localPredictionOverrides, setLocalPredictionOverrides] = useState<Record<string, PredictionOverride>>({});
+  const currentTickIdRef = useRef<number | null>(null);
+  const [predictedLogEntry, setPredictedLogEntry] = useState<{ tickId: number; message: string } | null>(null);
+
   // Leader aggregates non-leader buff stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   // Leader aggregates non-leader pending abilities received via broadcast
@@ -142,6 +151,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     memberAbilitiesRef.current = [];
     pendingAbilityRef.current = null;
     setPendingAbility(null);
+    // Clear all prediction state
+    setLocalPredictionOverrides({});
+    currentTickIdRef.current = null;
+    setPredictedLogEntry(null);
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
@@ -163,6 +176,25 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
     if (!inCombatRef.current) return; // Ignore late/stale tick responses
+
+    // Clear prediction overrides for all creatures in this server response
+    const serverCreatureIds = new Set(data.creature_states.map(cs => cs.id));
+    setLocalPredictionOverrides(prev => {
+      const keys = Object.keys(prev);
+      const toRemove = keys.filter(k => serverCreatureIds.has(k));
+      if (toRemove.length === 0) return prev;
+      const next = { ...prev };
+      toRemove.forEach(k => delete next[k]);
+      return next;
+    });
+
+    // Resolve predicted log entry — replace with server events
+    const tickId = currentTickIdRef.current;
+    if (tickId !== null) {
+      currentTickIdRef.current = null;
+      setPredictedLogEntry(null);
+    }
+
     const now = Date.now();
     const gap = lastTickRef.current ? now - lastTickRef.current : 0;
     if (data.ticks_processed && data.ticks_processed > 1) {
@@ -466,6 +498,40 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               pending_abilities: pendingAbilitiesForServer,
             };
 
+        // ── Apply conservative prediction before server call ──
+        const tickId = nextTickId++;
+        currentTickIdRef.current = tickId;
+
+        // Predict damage for the active creature (simple auto-attack only)
+        const activeCreature = engagedCreatureIdsRef.current[0];
+        if (activeCreature && !p.isDead && p.character.hp > 0) {
+          const { CLASS_COMBAT_PROFILES: profiles } = await import('../utils/combat-math');
+          const profile = profiles[p.character.class];
+          if (profile) {
+            const statKey = profile.stat as keyof typeof p.character;
+            const attackerStat = (p.character[statKey] as number) || 10;
+            const creature = p.creatures.find(c => c.id === activeCreature);
+            if (creature && creature.is_alive && creature.hp > 0) {
+              const prediction = predictConservativeDamage({
+                classKey: p.character.class,
+                attackerStat,
+                int: p.character.int,
+                str: p.character.str,
+                creatureAC: creature.ac,
+                sunderReduction: 0,
+              });
+              if (prediction.shouldPredict) {
+                const currentHp = creatureHpOverridesRef.current[activeCreature] ?? creature.hp;
+                const predictedHp = applyPredictedDamage(currentHp, prediction.predictedDamage);
+                setLocalPredictionOverrides(prev => ({
+                  ...prev,
+                  [activeCreature]: { hp: predictedHp, ts: Date.now() },
+                }));
+              }
+            }
+          }
+        }
+
         // Request-scoped stale response guard
         const seq = ++tickSeqRef.current;
         const tickT0 = Date.now();
@@ -668,6 +734,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
+    localPredictionOverrides,
+    predictedLogEntry,
     lastTickTime,
     lastActiveEffects,
     updateCreatureHp,

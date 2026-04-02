@@ -29,6 +29,8 @@ export interface NodeChannelHandle {
   onCreatureDelete: React.MutableRefObject<((payload: any) => void) | null>;
   /** Callback ref — set by GamePage for unlock_path broadcasts */
   onUnlockPath: React.MutableRefObject<((payload: any) => void) | null>;
+  /** Callback ref — transient hint when another player attacks a creature */
+  onCreatureAttacked: React.MutableRefObject<((payload: any) => void) | null>;
   /** Presence data */
   playersHere: PlayerPresence[];
 }
@@ -66,7 +68,7 @@ export function useNodeChannel(
   const onCreatureInsert = useRef<(() => void) | null>(null);
   const onCreatureDelete = useRef<((payload: any) => void) | null>(null);
   const onUnlockPath = useRef<((payload: any) => void) | null>(null);
-
+  const onCreatureAttacked = useRef<((payload: any) => void) | null>(null);
   // Memoize character data to avoid unnecessary re-subscriptions
   const charData = useMemo(() => {
     if (!character) return null;
@@ -122,6 +124,9 @@ export function useNodeChannel(
       })
       .on('broadcast', { event: 'unlock_path' }, (payload) => {
         onUnlockPath.current?.(payload);
+      })
+      .on('broadcast', { event: 'creature_attacked' }, (payload) => {
+        onCreatureAttacked.current?.(payload);
       })
 
       // ── Postgres Changes (ground loot) ──
@@ -191,6 +196,7 @@ export function useNodeChannel(
     onCreatureInsert,
     onCreatureDelete,
     onUnlockPath,
+    onCreatureAttacked,
     playersHere,
   };
 }
