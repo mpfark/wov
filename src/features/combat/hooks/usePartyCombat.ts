@@ -151,6 +151,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     memberAbilitiesRef.current = [];
     pendingAbilityRef.current = null;
     setPendingAbility(null);
+    // Clear all prediction state
+    setLocalPredictionOverrides({});
+    currentTickIdRef.current = null;
+    setPredictedLogEntry(null);
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
