@@ -1,74 +1,71 @@
+# Improve Party Following: Parallel Move + Follower Presence Broadcast
 
+## Problem
 
-# Revised Plan: Client-Predicted, Broadcast-Assisted, Server-Computed Combat
+1. **Sequential delay**: `moveFollowers` runs *after* the leader's `updateCharacter` completes, adding latency before followers' DB positions update.
+2. **No follower presence broadcast**: When followers are moved by the leader, only their DB position updates. They don't broadcast `party_move` for themselves, so other followers and the presence system don't get immediate feedback.
 
-Three refinements applied to the previously approved plan. Everything else remains unchanged.
+## Changes
 
-## Refinement 1: Conservative HP Prediction
+### 1. Parallelize moveFollowers with leader's move (`useMovementActions.ts`)
 
-The `combat-predictor.ts` helper must produce stable, conservative damage estimates rather than full random rolls.
+In `handleMove`, `handleTeleport`, and `handleReturnToWaymark`: fire `moveFollowers` concurrently with the leader's own `updateCharacter` call instead of awaiting it sequentially.
 
-**Implementation:**
-- Use the **expected average** of the character's damage range (floor of `(min + max) / 2`) instead of a random roll
-- Never predict crits — always assume a normal hit
-- If the character's effective hit chance is below ~70%, do not predict an HP change at all (bias toward stability)
-- Predicted HP should never drop a creature below 1 HP — death is server-only
+**handleMove** (line ~297-311): Change from:
+```
+await updateCharacter({ current_node_id: nodeId, mp: ... });
+broadcastMove(...);
+// ... log, visited node ...
+await moveFollowers(...);
+```
+To:
+```
+const leaderMove = updateCharacter({ current_node_id: nodeId, mp: ... });
+broadcastMove(...);
+// ... log, visited node ...
+const followerMove = moveFollowers(...);
+await Promise.all([leaderMove, followerMove]);
+```
 
-This ensures HP bars move smoothly and predictably, and server reconciliation produces only tiny corrections (±1-3 HP) rather than large snap-backs.
+Same pattern for `handleTeleport` (line ~331-343) and `handleReturnToWaymark` (line ~356-367).
 
-## Refinement 2: Single-Entry Log with In-Place Resolution
+### 2. Add broadcastMove for each follower (`moveFollowers` function + params)
 
-Predicted log entries must not create duplicates. The combat log must show one entry per attack, resolved in place.
+Update `moveFollowers` to accept a `broadcastMove` callback and call it for each moved follower, so other party members get immediate broadcast feedback.
 
-**Implementation in `usePartyCombat.ts`:**
-- Each predicted log entry gets a unique `tickId` and `predicted: true` flag
-- When the server response arrives for that tick, find the matching predicted entry by `tickId` and **replace** it with the authoritative text/data
-- If no predicted entry exists (e.g., prediction was skipped due to low hit chance), insert the server entry normally
-- Never show both predicted and confirmed entries for the same tick
-- The `eventLog` array in GamePage treats `predicted` entries as mutable placeholders
+**moveFollowers signature**: Add `broadcastMove: (charId: string, charName: string, nodeId: string) => void` parameter.
 
-**Rendering in NodeView / log display:**
-- Predicted entries render identically to confirmed entries (no dimming, no "(predicted)" label) — since predictions are conservative, visual differences are minimal and labels would add clutter
-- If a prediction was wrong (miss predicted as hit, or vice versa), the entry text simply updates in place on server response
+**Inside moveFollowers**: After the `Promise.all` DB updates, broadcast for each moved member:
+```ts
+for (const f of toMove) {
+  broadcastMove(f.character_id, f.character.name, targetNodeId);
+}
+```
 
-## Refinement 3: Strict Prediction Lifecycle and Cleanup
+Update all 3 call sites to pass `p.broadcastMove`.
 
-Local prediction state must never linger or stack.
+### 3. Follower-side: broadcast own presence on follow (`GamePage.tsx`)
 
-**Rules implemented in `usePartyCombat.ts` and `useMergedCreatureState.ts`:**
+In the follower effect (line ~456-469), after the follower optimistically updates their own node via `updateCharacter`, also call `broadcastMove` so other clients see the move immediately:
 
-1. **Server response clears prediction**: When `processTickResult` runs, all `localPredictionOverrides` for creatures in that tick response are replaced with server values
-2. **Combat end clears all**: When `stopCombat` fires, all prediction overrides are cleared to `{}`
-3. **Node departure clears all**: When node changes (existing creature clear logic), prediction overrides are also cleared
-4. **Safety timeout**: Each prediction override entry stores a timestamp; a 4-second timeout (2x tick interval) automatically clears any prediction that was never confirmed by the server
-5. **Single layer per creature**: Setting a new prediction for a creature ID overwrites the previous one — no stacking
+```ts
+updateCharacter({ current_node_id: latestMove.node_id });
+broadcastMove(character.id, character.name, latestMove.node_id);
+addLocalLog(`You follow ${latestMove.character_name}.`);
+```
 
-**Cleanup responsibility:**
-- `useMergedCreatureState` receives `localPredictionOverrides` as a `Record<string, { hp: number; ts: number }>`
-- Before merging, it filters out entries older than 4 seconds
-- `usePartyCombat.stopCombat` and the node-change effect both reset the prediction map
+Add `broadcastMove` to the effect's dependency array.
 
-## Files Changed (full list, unchanged from prior plan except noted)
+## Files Changed
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/features/combat/utils/combat-predictor.ts` | **Create** | Prediction-only helper: average damage, no crits, skip if low hit chance, never predict death |
-| `src/features/combat/hooks/usePartyCombat.ts` | **Modify** | Optimistic prediction with tickId-based log replacement, cleanup on stop/node-change, 4s safety timeout |
-| `src/features/combat/hooks/useMergedCreatureState.ts` | **Modify** | Accept `localPredictionOverrides` with timestamps, filter stale entries, clear on combat end |
-| `src/features/combat/hooks/useCreatureBroadcast.ts` | **Modify** | Add transient hint events |
-| `src/features/party/hooks/usePartyBroadcast.ts` | **Modify** | Add `party_attack_event` transient hint |
-| `src/features/world/hooks/useNodeChannel.ts` | **Modify** | Add callback refs for broadcast combat events |
-| `src/features/combat/hooks/useOffscreenDotWakeup.ts` | **Modify** | Add reconcile hint broadcast |
-| `src/hooks/useBroadcastDebug.ts` | **Modify** | Add predict/reconcile categories |
-| `src/features/combat/index.ts` | **Modify** | Export predictor types |
-| `src/pages/GamePage.tsx` | **Modify** | Wire prediction overrides into merged state |
+| File | Change |
+|------|--------|
+| `src/features/world/hooks/useMovementActions.ts` | Add `broadcastMove` param to `moveFollowers`; parallelize calls in 3 handlers |
+| `src/pages/GamePage.tsx` | Add `broadcastMove` call in follower effect |
 
 ## What Does NOT Change
 
-- `combat-tick` edge function (server computes all combat)
-- `combat-catchup` edge function (server reconciles offscreen)
-- Combat math formulas, class/ability balance
-- Leader-authoritative party model
-- Database schema / RLS policies
-- Movement, inventory, chat systems
-
+- 500ms keyboard cooldown (stays as-is)
+- Party broadcast channel structure
+- DB schema / RLS
+- Leader-authoritative model
