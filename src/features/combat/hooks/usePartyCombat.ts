@@ -112,6 +112,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
   const idleCountRef = useRef(0);
 
+  // ── Prediction state ──────────────────────────────────────────
+  const [localPredictionOverrides, setLocalPredictionOverrides] = useState<Record<string, PredictionOverride>>({});
+  const currentTickIdRef = useRef<number | null>(null);
+  const [predictedLogEntry, setPredictedLogEntry] = useState<{ tickId: number; message: string } | null>(null);
+
   // Leader aggregates non-leader buff stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   // Leader aggregates non-leader pending abilities received via broadcast
