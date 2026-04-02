@@ -511,7 +511,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    lastTickTime, startCombat, stopCombat: stopCombatFn,
+    localPredictionOverrides, lastTickTime, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
 
   // ── Offscreen DoT wake-up scheduler ──────────────────────────────
