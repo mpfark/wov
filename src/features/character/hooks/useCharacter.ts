@@ -90,9 +90,10 @@ export function useCharacter(user: User | null) {
     prevUserIdRef.current = user.id;
     if (isNewUser) {
       setLoading(true);
+      fetchCharactersRef.current();
     }
-
-    fetchCharactersRef.current();
+    // Skip refetch on token refreshes — realtime subscription keeps state in sync
+    // and refetching would revert optimistic regen updates (HP/CP/MP).
 
     const channel = supabase
       .channel('my-characters')
