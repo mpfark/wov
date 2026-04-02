@@ -664,6 +664,17 @@ export default function CharacterPanel({
                               <TooltipContent side="top" className="text-xs">Equip Off Hand</TooltipContent>
                             </Tooltip>
                           )}
+                          {!inv.item.is_soulbound && onTogglePin && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onTogglePin(all[0].id)}>
+                                  {inv.is_pinned ? <PinOff className="w-3 h-3 text-primary" /> : <Pin className="w-3 h-3 text-muted-foreground" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">{inv.is_pinned ? 'Unpin (allow selling)' : 'Pin (prevent selling)'}</TooltipContent>
+                            </Tooltip>
+                          )}
                           {!inv.item.is_soulbound && (
                             <Tooltip>
                               <TooltipTrigger asChild>
