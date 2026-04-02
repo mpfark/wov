@@ -313,8 +313,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLog(`You travel ${dirLabel || moveName}.`);
       logActivity(p.character.user_id, p.character.id, 'move', `Traveled ${dirLabel || 'to ' + moveName}`, { node_id: nodeId });
 
-      // Move followers
-      await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLog, p.fetchParty);
+      // Move followers (parallel with leader move already committed above)
+      await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLog, p.fetchParty, p.broadcastMove);
     } catch {
       p.addLog('Failed to move.');
     }
