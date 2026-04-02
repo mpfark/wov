@@ -8,7 +8,7 @@ import { SHIELD_AC_BONUS, SHIELD_AWARENESS_BONUS, OFFHAND_DAMAGE_MULT, isShield,
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown } from 'lucide-react';
+import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 import StatPlannerDialog from '@/features/character/components/StatPlannerDialog';
 
@@ -22,6 +22,7 @@ interface Props {
   onDrop: (inventoryId: string) => void;
   onDestroy?: (inventoryId: string) => void;
   onUseConsumable?: (inventoryId: string) => void;
+  onTogglePin?: (inventoryId: string) => void;
   
   // Regen info
   isAtInn?: boolean;
@@ -327,7 +328,7 @@ export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, po
 }
 
 export default function CharacterPanel({
-  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable,
+  character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
   isAtInn, regenBuff, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
@@ -543,6 +544,7 @@ export default function CharacterPanel({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
+                              {inv.is_pinned && <span className="text-primary mr-0.5">📌</span>}
                               {isBroken && <span className="text-destructive mr-1">⚒</span>}
                               {inv.item.name}
                               {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
@@ -660,6 +662,17 @@ export default function CharacterPanel({
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">Equip Off Hand</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {!inv.item.is_soulbound && onTogglePin && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onTogglePin(all[0].id)}>
+                                  {inv.is_pinned ? <PinOff className="w-3 h-3 text-primary" /> : <Pin className="w-3 h-3 text-muted-foreground" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">{inv.is_pinned ? 'Unpin (allow selling)' : 'Pin (prevent selling)'}</TooltipContent>
                             </Tooltip>
                           )}
                           {!inv.item.is_soulbound && (

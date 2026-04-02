@@ -1,0 +1,1 @@
+ALTER TABLE public.character_inventory ADD COLUMN is_pinned BOOLEAN NOT NULL DEFAULT false;

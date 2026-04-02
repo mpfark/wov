@@ -158,7 +158,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory: _inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory: _inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id);
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
@@ -799,6 +799,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                   }
                 }}
                 onDestroy={dropItem}
+                onTogglePin={togglePin}
                 onUseConsumable={handleUseConsumable}
                 isAtInn={currentNode?.is_inn ?? false}
                 regenBuff={regenBuff}
@@ -944,6 +945,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 }
               }}
               onDestroy={dropItem}
+              onTogglePin={togglePin}
               onUseConsumable={handleUseConsumable}
               isAtInn={currentNode?.is_inn ?? false}
               regenBuff={regenBuff}

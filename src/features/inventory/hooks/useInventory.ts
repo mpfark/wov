@@ -8,6 +8,7 @@ export interface InventoryItem {
   equipped_slot: string | null;
   current_durability: number;
   belt_slot: number | null;
+  is_pinned: boolean;
   item: {
     id: string;
     name: string;
@@ -148,5 +149,12 @@ export function useInventory(characterId: string | null) {
     fetchInventory();
   }, [fetchInventory]);
 
-  return { inventory, equipped, unequipped, equipmentBonuses, loading, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion };
+  const togglePin = useCallback(async (inventoryId: string) => {
+    const item = inventory.find(i => i.id === inventoryId);
+    if (!item) return;
+    await supabase.from('character_inventory').update({ is_pinned: !item.is_pinned }).eq('id', inventoryId);
+    fetchInventory();
+  }, [inventory, fetchInventory]);
+
+  return { inventory, equipped, unequipped, equipmentBonuses, loading, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin };
 }

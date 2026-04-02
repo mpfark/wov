@@ -105,7 +105,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     addLog(`🪙 Sold ${inv.item.name} for ${actualPrice} gold.${chaNote}`);
   };
 
-  const sellableItems = inventory.filter(i => !i.equipped_slot && !i.item.is_soulbound);
+  const sellableItems = inventory.filter(i => !i.equipped_slot && !i.item.is_soulbound && !i.is_pinned);
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
