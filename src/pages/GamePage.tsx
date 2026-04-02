@@ -14,7 +14,7 @@ import { useGlobalPresence } from '@/hooks/useGlobalPresence';
 import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/features/creatures';
 import { useItemCache } from '@/features/inventory';
-import { useCreatureBroadcast } from '@/features/combat';
+import { useCreatureBroadcast, useMergedCreatureHpOverrides } from '@/features/combat';
 import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
