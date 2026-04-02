@@ -170,6 +170,7 @@ export type Database = {
           current_durability: number
           equipped_slot: Database["public"]["Enums"]["item_slot"] | null
           id: string
+          is_pinned: boolean
           item_id: string
         }
         Insert: {
@@ -179,6 +180,7 @@ export type Database = {
           current_durability?: number
           equipped_slot?: Database["public"]["Enums"]["item_slot"] | null
           id?: string
+          is_pinned?: boolean
           item_id: string
         }
         Update: {
@@ -188,6 +190,7 @@ export type Database = {
           current_durability?: number
           equipped_slot?: Database["public"]["Enums"]["item_slot"] | null
           id?: string
+          is_pinned?: boolean
           item_id?: string
         }
         Relationships: [
