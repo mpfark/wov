@@ -514,6 +514,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     localPredictionOverrides, lastTickTime, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
 
+  // Merge creature HP from all sources: combat-tick > prediction > broadcast > base
+  const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides, localPredictionOverrides);
+
   // ── Offscreen DoT wake-up scheduler ──────────────────────────────
   useOffscreenDotWakeup({
     currentNodeId: character.current_node_id,
