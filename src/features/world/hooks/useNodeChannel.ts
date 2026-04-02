@@ -68,7 +68,7 @@ export function useNodeChannel(
   const onCreatureInsert = useRef<(() => void) | null>(null);
   const onCreatureDelete = useRef<((payload: any) => void) | null>(null);
   const onUnlockPath = useRef<((payload: any) => void) | null>(null);
-
+  const onCreatureAttacked = useRef<((payload: any) => void) | null>(null);
   // Memoize character data to avoid unnecessary re-subscriptions
   const charData = useMemo(() => {
     if (!character) return null;
