@@ -733,6 +733,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     activeCombatCreatureId,
     engagedCreatureIds,
     creatureHpOverrides,
+    localPredictionOverrides,
+    predictedLogEntry,
     lastTickTime,
     lastActiveEffects,
     updateCreatureHp,
