@@ -153,6 +153,17 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
+  /** Transient hint: a party member attacked a creature (for UI feedback only, no authority) */
+  const broadcastAttackEvent = useCallback((charId: string, charName: string, creatureId: string) => {
+    if (!channelRef.current) return;
+    logBroadcast('out', `party`, 'party_attack_event');
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'party_attack_event',
+      payload: { character_id: charId, character_name: charName, creature_id: creatureId },
+    });
+  }, []);
+
   return {
     hpOverrides,
     moveEvents,
@@ -164,5 +175,6 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     broadcastCombatMsg,
     broadcastReward,
     broadcastPartyRegenBuff,
+    broadcastAttackEvent,
   };
 }

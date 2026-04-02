@@ -29,6 +29,8 @@ export interface NodeChannelHandle {
   onCreatureDelete: React.MutableRefObject<((payload: any) => void) | null>;
   /** Callback ref — set by GamePage for unlock_path broadcasts */
   onUnlockPath: React.MutableRefObject<((payload: any) => void) | null>;
+  /** Callback ref — transient hint when another player attacks a creature */
+  onCreatureAttacked: React.MutableRefObject<((payload: any) => void) | null>;
   /** Presence data */
   playersHere: PlayerPresence[];
 }
