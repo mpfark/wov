@@ -1,52 +1,51 @@
+
+
 # Improve Party Following: Parallel Move + Follower Presence Broadcast
 
-## Problem
-
-1. **Sequential delay**: `moveFollowers` runs *after* the leader's `updateCharacter` completes, adding latency before followers' DB positions update.
-2. **No follower presence broadcast**: When followers are moved by the leader, only their DB position updates. They don't broadcast `party_move` for themselves, so other followers and the presence system don't get immediate feedback.
+## Summary
+Two targeted changes to reduce party follow latency and improve presence visibility, in two files only.
 
 ## Changes
 
-### 1. Parallelize moveFollowers with leader's move (`useMovementActions.ts`)
+### File 1: `src/features/world/hooks/useMovementActions.ts`
 
-In `handleMove`, `handleTeleport`, and `handleReturnToWaymark`: fire `moveFollowers` concurrently with the leader's own `updateCharacter` call instead of awaiting it sequentially.
+**A. Add `broadcastMove` param to `moveFollowers`** (line 125)
 
-**handleMove** (line ~297-311): Change from:
-```
-await updateCharacter({ current_node_id: nodeId, mp: ... });
-broadcastMove(...);
-// ... log, visited node ...
-await moveFollowers(...);
-```
-To:
-```
-const leaderMove = updateCharacter({ current_node_id: nodeId, mp: ... });
-broadcastMove(...);
-// ... log, visited node ...
-const followerMove = moveFollowers(...);
-await Promise.all([leaderMove, followerMove]);
-```
+Add an optional `broadcastMove` parameter. After the DB writes complete, loop through moved members and broadcast each one:
 
-Same pattern for `handleTeleport` (line ~331-343) and `handleReturnToWaymark` (line ~356-367).
-
-### 2. Add broadcastMove for each follower (`moveFollowers` function + params)
-
-Update `moveFollowers` to accept a `broadcastMove` callback and call it for each moved follower, so other party members get immediate broadcast feedback.
-
-**moveFollowers signature**: Add `broadcastMove: (charId: string, charName: string, nodeId: string) => void` parameter.
-
-**Inside moveFollowers**: After the `Promise.all` DB updates, broadcast for each moved member:
 ```ts
-for (const f of toMove) {
-  broadcastMove(f.character_id, f.character.name, targetNodeId);
+async function moveFollowers(
+  ...,
+  broadcastMove?: (charId: string, charName: string, nodeId: string) => void,
+): Promise<void> {
+  // ... existing filter + Promise.all DB writes ...
+  if (broadcastMove) {
+    for (const f of toMove) {
+      broadcastMove(f.character_id, f.character.name, targetNodeId);
+    }
+  }
+  addLog('Your party follows you.');
+  fetchParty();
 }
 ```
 
-Update all 3 call sites to pass `p.broadcastMove`.
+**B. Parallelize in `handleMove`** (lines 297-311)
 
-### 3. Follower-side: broadcast own presence on follow (`GamePage.tsx`)
+Change `await updateCharacter(...)` to `const leaderMove = updateCharacter(...)`, fire `moveFollowers` as `const followerMove = moveFollowers(...)`, then `await Promise.all([leaderMove, followerMove])`. Pass `p.broadcastMove` as the new param.
 
-In the follower effect (line ~456-469), after the follower optimistically updates their own node via `updateCharacter`, also call `broadcastMove` so other clients see the move immediately:
+**C. Parallelize in `handleTeleport`** (lines 331-343)
+
+Same pattern: `const leaderMove = updateCharacter(...)`, `const followerMove = moveFollowers(...)`, `await Promise.all([leaderMove, followerMove])`.
+
+**D. Parallelize in `handleReturnToWaymark`** (lines 356-367)
+
+Same pattern.
+
+### File 2: `src/pages/GamePage.tsx`
+
+**Follower self-broadcast** (lines 456-469)
+
+After the follower optimistically updates their node, also call `broadcastMove` so other clients see the move instantly:
 
 ```ts
 updateCharacter({ current_node_id: latestMove.node_id });
@@ -54,18 +53,12 @@ broadcastMove(character.id, character.name, latestMove.node_id);
 addLocalLog(`You follow ${latestMove.character_name}.`);
 ```
 
-Add `broadcastMove` to the effect's dependency array.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `src/features/world/hooks/useMovementActions.ts` | Add `broadcastMove` param to `moveFollowers`; parallelize calls in 3 handlers |
-| `src/pages/GamePage.tsx` | Add `broadcastMove` call in follower effect |
+Add `broadcastMove`, `character.id`, `character.name` to the effect dependency array.
 
 ## What Does NOT Change
 
-- 500ms keyboard cooldown (stays as-is)
+- 500ms keyboard cooldown
 - Party broadcast channel structure
 - DB schema / RLS
 - Leader-authoritative model
+
