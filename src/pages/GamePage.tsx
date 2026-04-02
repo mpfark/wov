@@ -465,8 +465,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     lastLeaderMoveRef.current = leaderMoves.length;
     // Optimistically update our own node to match the leader
     updateCharacter({ current_node_id: latestMove.node_id });
+    broadcastMove(character.id, character.name, latestMove.node_id);
     addLocalLog(`You follow ${latestMove.character_name}.`);
-  }, [party, isLeader, myMembership?.is_following, partyMoveEvents, character.current_node_id, updateCharacter, addLocalLog]);
+  }, [party, isLeader, myMembership?.is_following, partyMoveEvents, character.current_node_id, updateCharacter, addLocalLog, broadcastMove, character.id, character.name]);
 
   // Broadcast party regen buff when caster sets it
   const prevPartyRegenBuffRef = useRef<typeof partyRegenBuff>(null);

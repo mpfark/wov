@@ -131,6 +131,7 @@ async function moveFollowers(
   filterFollowingOnly: boolean,
   addLog: (msg: string) => void,
   fetchParty: () => void,
+  broadcastMove?: (charId: string, charName: string, nodeId: string) => void,
 ): Promise<void> {
   if (!isLeader) return;
   const coLocated = partyMembers.filter(m =>
@@ -142,6 +143,11 @@ async function moveFollowers(
     await Promise.all(toMove.map(f =>
       supabase.from('characters').update({ current_node_id: targetNodeId }).eq('id', f.character_id)
     ));
+    if (broadcastMove) {
+      for (const f of toMove) {
+        broadcastMove(f.character_id, f.character.name, targetNodeId);
+      }
+    }
     addLog('Your party follows you.');
     fetchParty();
   }
@@ -307,8 +313,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLog(`You travel ${dirLabel || moveName}.`);
       logActivity(p.character.user_id, p.character.id, 'move', `Traveled ${dirLabel || 'to ' + moveName}`, { node_id: nodeId });
 
-      // Move followers
-      await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLog, p.fetchParty);
+      // Move followers (parallel with leader move already committed above)
+      await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLog, p.fetchParty, p.broadcastMove);
     } catch {
       p.addLog('Failed to move.');
     }
@@ -328,7 +334,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLog(`📍 You leave a hidden waymark at ${currentNodeObj.name}.`);
     }
     const prevNodeId = p.character.current_node_id!;
-    await p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - effectiveCpCost });
+    const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - effectiveCpCost });
     p.broadcastMove(p.character.id, p.character.name, nodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: nodeId },
@@ -338,9 +344,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
     logActivity(p.character.user_id, p.character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
 
-    // Move co-located party members (level 25+ moves all, otherwise only followers)
+    // Move co-located party members in parallel with leader DB write
     const filterFollowingOnly = p.character.level < 25;
-    await moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLog, p.fetchParty);
+    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLog, p.fetchParty, p.broadcastMove);
+    await Promise.all([leaderMove, followerMove]);
   }, [p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Return to Waymark ──────────────────────────────────────────
@@ -353,7 +360,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const effectiveWayCost = p.character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
     if ((p.character.cp ?? 0) < effectiveWayCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
     const prevNodeId = p.character.current_node_id!;
-    await p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - effectiveWayCost });
+    const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - effectiveWayCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: waymarkNodeId },
@@ -364,7 +371,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
     setWaymarkNodeId(null);
     setTeleportOpen(false);
 
-    await moveFollowers(p.partyMembers, p.character.id, prevNodeId, waymarkNodeId, p.isLeader, false, p.addLog, p.fetchParty);
+    const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, waymarkNodeId, p.isLeader, false, p.addLog, p.fetchParty, p.broadcastMove);
+    await Promise.all([leaderMove, followerMove]);
   }, [waymarkNodeId, p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
 
   // ── Search ─────────────────────────────────────────────────────
