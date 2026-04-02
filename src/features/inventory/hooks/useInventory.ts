@@ -8,6 +8,7 @@ export interface InventoryItem {
   equipped_slot: string | null;
   current_durability: number;
   belt_slot: number | null;
+  is_pinned: boolean;
   item: {
     id: string;
     name: string;
