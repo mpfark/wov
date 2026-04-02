@@ -1090,7 +1090,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                activeCombatCreatureId={activeCombatCreatureId}
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}
-              creatureHpOverrides={{ ...broadcastOverrides, ...creatureHpOverrides }}
+              creatureHpOverrides={mergedCreatureHpOverrides}
               classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
               onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
