@@ -498,6 +498,39 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               pending_abilities: pendingAbilitiesForServer,
             };
 
+        // ── Apply conservative prediction before server call ──
+        const tickId = nextTickId++;
+        currentTickIdRef.current = tickId;
+
+        // Predict damage for the active creature (simple auto-attack only)
+        const activeCreature = engagedCreatureIdsRef.current[0];
+        if (activeCreature && !p.isDead && p.character.hp > 0) {
+          const profile = (await import('../utils/combat-math')).CLASS_COMBAT_PROFILES[p.character.class];
+          if (profile) {
+            const statKey = profile.stat as keyof typeof p.character;
+            const attackerStat = (p.character[statKey] as number) || 10;
+            const creature = p.creatures.find(c => c.id === activeCreature);
+            if (creature && creature.is_alive && creature.hp > 0) {
+              const prediction = predictConservativeDamage({
+                classKey: p.character.class,
+                attackerStat,
+                int: p.character.int,
+                str: p.character.str,
+                creatureAC: creature.ac,
+                sunderReduction: 0,
+              });
+              if (prediction.shouldPredict) {
+                const currentHp = creatureHpOverridesRef.current[activeCreature] ?? creature.hp;
+                const predictedHp = applyPredictedDamage(currentHp, prediction.predictedDamage);
+                setLocalPredictionOverrides(prev => ({
+                  ...prev,
+                  [activeCreature]: { hp: predictedHp, ts: Date.now() },
+                }));
+              }
+            }
+          }
+        }
+
         // Request-scoped stale response guard
         const seq = ++tickSeqRef.current;
         const tickT0 = Date.now();
