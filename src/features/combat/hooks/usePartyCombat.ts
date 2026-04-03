@@ -103,6 +103,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickSeqRef = useRef(0);
   
 
+  // ── Dev-only: combat start timing ──
+  const combatStartTimeRef = useRef<number | null>(null);
+
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
   const recentlyKilledRef = useRef<Set<string>>(new Set());
