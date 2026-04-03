@@ -239,7 +239,7 @@ export default function NodeView({
                         {isBleeding && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dot-bleed font-display animate-pulse">
+                              <span className="text-[10px] text-dot-bleed font-display animate-drip">
                                 🩸
                               </span>
                             </TooltipTrigger>
