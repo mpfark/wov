@@ -683,6 +683,13 @@ Deno.serve(async (req) => {
           events.push({
             type: 'attack_miss',
             message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: mainHandTag[m.id] || null,
+            damage: 0,
+            is_crit: false,
+            character_id: m.id,
           });
         }
       }
