@@ -270,7 +270,7 @@ export default function NodeView({
                           )}
                           <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
                             <div
-                              className="h-full rounded-full transition-all duration-200"
+                              className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
                               style={{
                                 width: `${hpPct}%`,
                                 backgroundColor: isBleeding
