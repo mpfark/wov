@@ -731,6 +731,14 @@ Deno.serve(async (req) => {
           events.push({
             type: 'offhand_hit',
             message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (30%).`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            damage: dmg2,
+            is_crit: isCrit2,
+            character_id: m.id,
+            is_offhand: true,
           });
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
