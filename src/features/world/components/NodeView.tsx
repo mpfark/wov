@@ -66,7 +66,6 @@ export default function NodeView({
   partyMemberIds,
   partyMemberHp,
   creaturesLoading,
-  prefetchedCreatureCount = 0,
   statusBarsProps,
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
