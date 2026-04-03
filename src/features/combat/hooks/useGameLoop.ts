@@ -143,9 +143,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * combatMult * 0.4), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
-          // Write to DB capped at max_hp (DB trigger clamps hp ≤ max_hp);
-          // gear bonuses are display-only and applied client-side.
-          updates.hp = Math.min(newHp, max_hp);
+          updates.hp = newHp;
           setRegenTick(true);
           setTimeout(() => setRegenTick(false), 1200);
         }
