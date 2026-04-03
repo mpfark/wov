@@ -179,11 +179,11 @@ export default function NodeView({
                 {creaturesLoading && creatures.length === 0 && Array.from({ length: Math.max(prefetchedCreatureCount, 2) }).map((_, i) => (
                   <div key={`skel-${i}`} className="p-1.5 bg-background/50 rounded border border-border">
                     <div className="flex items-center gap-1.5">
-                      <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-2 w-8" />
+                      <div className="h-3 w-20 rounded skeleton-shimmer" />
+                      <div className="h-2 w-8 rounded skeleton-shimmer" />
                       <div className="ml-auto flex items-center gap-1 shrink-0">
-                        <Skeleton className="w-[120px] h-2 rounded-full" />
-                        <Skeleton className="h-3 w-12" />
+                        <div className="w-[120px] h-2 rounded-full skeleton-shimmer" />
+                        <div className="h-3 w-12 rounded skeleton-shimmer" />
                       </div>
                     </div>
                   </div>
