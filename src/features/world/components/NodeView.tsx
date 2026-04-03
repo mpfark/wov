@@ -263,7 +263,7 @@ export default function NodeView({
                         {/* Right: combat icon, HP bar, HP numbers, attack button */}
                         <div className="ml-auto flex items-center gap-1 shrink-0">
                           {(isActiveTarget || isEngaged) && (
-                            <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'} animate-pulse`}>⚔️</span>
+                            <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}>⚔️</span>
                           )}
                           {isSelected && !isActiveTarget && !isEngaged && (
                             <span className="text-[10px] text-primary">🎯</span>
