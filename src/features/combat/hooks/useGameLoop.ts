@@ -253,7 +253,8 @@ export function useGameLoop(params: UseGameLoopParams) {
       const effectiveMaxHp = charState.max_hp + gearHpBonus + gearConMod;
       const selfNewHp = Math.min(effectiveMaxHp, charState.hp + partyRegenBuff.healPerTick);
       if (selfNewHp > charState.hp) {
-        await updateCharacter({ hp: selfNewHp });
+        // Cap DB write at max_hp (gear bonuses are display-only)
+        await updateCharacter({ hp: Math.min(selfNewHp, charState.max_hp) });
       }
       if (party) {
         const membersHere = partyMembers.filter(m => m.character_id !== character.id && m.character?.current_node_id === charState.current_node_id);
