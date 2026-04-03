@@ -748,6 +748,14 @@ Deno.serve(async (req) => {
           events.push({
             type: 'offhand_miss',
             message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2}.`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            damage: 0,
+            is_crit: false,
+            character_id: m.id,
+            is_offhand: true,
           });
         }
       }
