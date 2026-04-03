@@ -620,6 +620,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       setInCombat(true);
       idleCountRef.current = 0;
       console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
+      if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTick();
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
