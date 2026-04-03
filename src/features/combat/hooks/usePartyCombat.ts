@@ -7,6 +7,12 @@
  * - Persistent effects (DoTs) survive independently in active_effects.
  * - Offscreen effect reconciliation happens via combat-catchup on node access.
  * - Client polls every 2s; server processes only active same-node combat.
+ *
+ * This file is the orchestration layer composing:
+ *   - interpretCombatTickResult (pure response parsing)
+ *   - useCombatAggroEffects (auto-aggro logic)
+ *   - useCombatLifecycle (cleanup / lifecycle)
+ *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
@@ -14,8 +20,12 @@ import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/features/combat';
-import { predictConservativeDamage, applyPredictedDamage } from '../utils/combat-predictor';
+import { predictConservativeDamage, applyPredictedDamage, clearPredictionForCreatures } from '../utils/combat-predictor';
 import type { PredictionOverride } from './useMergedCreatureState';
+import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
+import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
+import { useCombatAggroEffects } from './useCombatAggroEffects';
+import { useCombatLifecycle } from './useCombatLifecycle';
 
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff']);
@@ -26,20 +36,6 @@ interface Party {
   id: string;
   leader_id: string;
   tank_id: string | null;
-}
-
-interface CombatTickResponse {
-  events: { type: string; message: string; character_id?: string; creature_id?: string }[];
-  creature_states: { id: string; hp: number; alive: boolean }[];
-  member_states: { character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number; bhp?: number; unspent_stat_points?: number; max_cp?: number; max_mp?: number; respec_points?: number; salvage?: number; cp?: number }[];
-  consumed_buffs?: { type: string; character_id: string; buff: string }[];
-  cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
-  consumed_ability_stacks?: { character_id: string; creature_id: string; stack_type: string }[];
-  active_effects?: { source_id: string; target_id: string; effect_type: string; stacks: number; damage_per_tick: number; expires_at: number }[];
-  /** @deprecated Use active_effects instead */
-  active_dots?: Record<string, any>;
-  session_ended?: boolean;
-  ticks_processed?: number;
 }
 
 export interface MemberBuffState {
@@ -96,38 +92,27 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTickRef = useRef<number>(0);
   const inCombatRef = useRef(false);
-  const prevNodeRef = useRef(params.character.current_node_id);
   const tickBusyRef = useRef(false);
   const tickPendingRef = useRef(false);
-  const justStoppedRef = useRef(false);
   const tickSeqRef = useRef(0);
-  
 
-  // ── Dev-only: combat start timing ──
+  // Dev-only: combat start timing
   const combatStartTimeRef = useRef<number | null>(null);
-
-  const pendingAggroRef = useRef(false);
-  const aggroProcessedRef = useRef<Set<string>>(new Set());
-  const recentlyKilledRef = useRef<Set<string>>(new Set());
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
   const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
   const idleCountRef = useRef(0);
 
-  // ── Prediction state ──────────────────────────────────────────
+  // Prediction state
   const [localPredictionOverrides, setLocalPredictionOverrides] = useState<Record<string, PredictionOverride>>({});
   const currentTickIdRef = useRef<number | null>(null);
   const [predictedLogEntry, setPredictedLogEntry] = useState<{ tickId: number; message: string } | null>(null);
 
   // Leader aggregates non-leader buff stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
-  // Leader aggregates non-leader pending abilities received via broadcast
   const memberAbilitiesRef = useRef<any[]>([]);
   const doTickRef = useRef<() => void>(() => {});
-
-  const isSolo = !params.party;
-  void (isSolo || params.isLeader); // isDriver — reserved for future use
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -142,7 +127,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const stopCombat = useCallback(() => {
     inCombatRef.current = false;
     tickBusyRef.current = false;
-    justStoppedRef.current = true;
     tickSeqRef.current = 0;
     setInCombat(false);
     setActiveCombatCreatureId(null);
@@ -154,7 +138,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     memberAbilitiesRef.current = [];
     pendingAbilityRef.current = null;
     setPendingAbility(null);
-    // Clear all prediction state
     setLocalPredictionOverrides({});
     currentTickIdRef.current = null;
     setPredictedLogEntry(null);
@@ -175,185 +158,149 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
   }, []);
 
-  // ── Process tick result (shared by driver + non-leader) ────────
+  // ── Aggro effects ──────────────────────────────────────────────
+
+  const startCombatCore = useCallback((creatureId: string) => {
+    const p = ext.current;
+    if (p.isDead || p.character.hp <= 0) return;
+
+    if (p.party && !p.isLeader) {
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'engage_request',
+        payload: { creature_id: creatureId, character_id: p.character.id },
+      });
+      return;
+    }
+
+    setEngagedCreatureIds(prev => {
+      if (prev.includes(creatureId)) return prev;
+      const next = [...prev, creatureId];
+      engagedCreatureIdsRef.current = next;
+      return next;
+    });
+    setActiveCombatCreatureId(creatureId);
+
+    if (!inCombatRef.current) {
+      inCombatRef.current = true;
+      setInCombat(true);
+      idleCountRef.current = 0;
+      console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
+      if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
+      if (intervalRef.current) clearWorkerInterval(intervalRef.current);
+      doTickRef.current();
+      intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+    }
+  }, []);
+
+  const {
+    pendingAggroRef, aggroProcessedRef, recentlyKilledRef, justStoppedRef,
+  } = useCombatAggroEffects({
+    creatures: params.creatures,
+    inCombat,
+    isLeader: params.isLeader,
+    party: params.party,
+    isDead: params.isDead,
+    character: params.character,
+    engagedCreatureIdsRef,
+    startCombat: startCombatCore,
+    addLocalLog: params.addLocalLog,
+    setEngagedCreatureIds,
+  });
+
+  // ── Process tick result (thin wrapper around pure interpreter) ──
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
-    if (!inCombatRef.current) return; // Ignore late/stale tick responses
+    if (!inCombatRef.current) return;
 
-    // Dev-only: measure aggro→first-tick latency
+    // Dev-only: aggro→first-tick latency
     if (import.meta.env.DEV && combatStartTimeRef.current) {
       console.debug('[polish] aggro→first-tick', (performance.now() - combatStartTimeRef.current).toFixed(0), 'ms');
       combatStartTimeRef.current = null;
     }
 
-    // Clear prediction overrides for all creatures in this server response
+    // Clear prediction for creatures with authoritative data
     const serverCreatureIds = new Set(data.creature_states.map(cs => cs.id));
-    setLocalPredictionOverrides(prev => {
-      const keys = Object.keys(prev);
-      const toRemove = keys.filter(k => serverCreatureIds.has(k));
-      if (toRemove.length === 0) return prev;
-      const next = { ...prev };
-      toRemove.forEach(k => delete next[k]);
-      return next;
-    });
+    setLocalPredictionOverrides(prev => clearPredictionForCreatures(prev, serverCreatureIds));
 
-    // Resolve predicted log entry — replace with server events
-    const tickId = currentTickIdRef.current;
-    if (tickId !== null) {
+    // Resolve predicted log entry
+    if (currentTickIdRef.current !== null) {
       currentTickIdRef.current = null;
       setPredictedLogEntry(null);
     }
 
     const now = Date.now();
     const gap = lastTickRef.current ? now - lastTickRef.current : 0;
-    if (data.ticks_processed && data.ticks_processed > 1) {
-      console.warn(`[combat] Processed ${data.ticks_processed} ticks in one response (gap: ${gap}ms)`);
+    const result = interpretCombatTickResult(
+      data,
+      ext.current.character.id,
+      ext.current.character.name,
+      engagedCreatureIdsRef.current,
+    );
+
+    if (result.ticksProcessed && result.ticksProcessed > 1) {
+      console.warn(`[combat] Processed ${result.ticksProcessed} ticks in one response (gap: ${gap}ms)`);
     }
     lastTickRef.current = now;
     setLastTickTime(now);
 
-    for (const cs of data.creature_states) {
-      if (!cs.alive) recentlyKilledRef.current.add(cs.id);
-    }
+    // Track killed creatures
+    for (const id of result.killedCreatureIds) recentlyKilledRef.current.add(id);
 
-    for (const cs of data.creature_states) {
+    // Apply creature HP overrides
+    for (const [id, hp] of Object.entries(result.creatureHpUpdates)) {
       setCreatureHpOverrides(prev => {
-        const next = { ...prev, [cs.id]: cs.hp };
+        const next = { ...prev, [id]: hp };
         creatureHpOverridesRef.current = next;
         return next;
       });
     }
 
-    if (data.events.length > 0) {
-      ext.current.addLocalLog('---tick---');
-    }
+    // Log messages
+    for (const msg of result.formattedLogMessages) ext.current.addLocalLog(msg);
 
-    const myName = ext.current.character.name;
-    for (const ev of data.events) {
-      if (ev.type === 'tick_separator') {
-        ext.current.addLocalLog('---tick---');
-        continue;
-      }
-      let msg = ev.message;
-      if (ev.character_id === ext.current.character.id || msg.includes(myName)) {
-        msg = msg.replace(new RegExp(`${myName}'s`, 'g'), 'Your');
-        msg = msg.replace(new RegExp(`(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*(?:CRITICAL!\\s*)?))${myName} `, 'u'), '$1You ');
-        msg = msg.replace(new RegExp(` ${myName} `, 'g'), ' you ');
-        msg = msg.replace(new RegExp(` ${myName}\\.`, 'g'), ' you.');
-        msg = msg.replace(new RegExp(` ${myName}!`, 'g'), ' you!');
-      }
-      ext.current.addLocalLog(msg);
-    }
-
-    const myState = data.member_states.find(m => m.character_id === ext.current.character.id);
-    if (myState) {
-      const updates: Partial<import('@/features/character').Character> = {
-        hp: myState.hp,
-        xp: myState.xp,
-        gold: myState.gold,
-        level: myState.level,
-        max_hp: myState.max_hp,
-      };
-      if (myState.bhp !== undefined) updates.bhp = myState.bhp;
-      if (myState.unspent_stat_points !== undefined) updates.unspent_stat_points = myState.unspent_stat_points;
-      if (myState.max_cp !== undefined) updates.max_cp = myState.max_cp;
-      if (myState.max_mp !== undefined) updates.max_mp = myState.max_mp;
-      if (myState.respec_points !== undefined) updates.respec_points = myState.respec_points;
-      if (myState.salvage !== undefined) updates.salvage = myState.salvage;
-      if (myState.cp !== undefined) updates.cp = myState.cp;
+    // Character state
+    if (result.characterUpdates) {
       if (ext.current.updateCharacterLocal) {
-        ext.current.updateCharacterLocal(updates);
+        ext.current.updateCharacterLocal(result.characterUpdates);
       } else {
-        ext.current.updateCharacter(updates);
+        ext.current.updateCharacter(result.characterUpdates);
       }
     }
 
-    if (data.consumed_buffs?.length && ext.current.onConsumedBuffs) {
-      const myConsumed = data.consumed_buffs.filter(b => b.character_id === ext.current.character.id);
-      if (myConsumed.length) ext.current.onConsumedBuffs(myConsumed);
-    }
+    // Callbacks
+    if (result.myConsumedBuffs.length && ext.current.onConsumedBuffs) ext.current.onConsumedBuffs(result.myConsumedBuffs);
+    if (result.myClearedDots.length && ext.current.onClearedDots) ext.current.onClearedDots(result.myClearedDots);
+    if (result.myConsumedAbilityStacks.length && ext.current.onConsumedAbilityStacks) ext.current.onConsumedAbilityStacks(result.myConsumedAbilityStacks);
 
-    if (data.cleared_dots?.length && ext.current.onClearedDots) {
-      const myCleared = data.cleared_dots.filter(d => d.character_id === ext.current.character.id);
-      if (myCleared.length) ext.current.onClearedDots(myCleared);
-    }
+    for (const cid of result.poisonProcs) ext.current.onPoisonProc?.(cid);
+    for (const cid of result.igniteProcs) ext.current.onIgniteProc?.(cid);
 
-    if (data.consumed_ability_stacks?.length && ext.current.onConsumedAbilityStacks) {
-      const myStacks = data.consumed_ability_stacks.filter(s => s.character_id === ext.current.character.id);
-      if (myStacks.length) ext.current.onConsumedAbilityStacks(myStacks);
-    }
+    if (result.activeEffectsSnapshot) setLastActiveEffects(result.activeEffectsSnapshot);
+    if (result.dotsByChar && ext.current.onActiveDots) ext.current.onActiveDots(result.dotsByChar);
+    if (result.hasLootDrop) ext.current.fetchGroundLoot();
 
-    // Sync DoT state from server for UI display
-    // Proc events provide immediate moment-of-application feedback (log, animation);
-    // active_effects overwrites to authoritative state — no double-counting occurs
-    // because syncFromServerEffects replaces, not merges.
-    const myId = ext.current.character.id;
-    for (const ev of data.events) {
-      if (ev.character_id === myId && ev.type === 'poison_proc' && ev.creature_id && ext.current.onPoisonProc) {
-        ext.current.onPoisonProc(ev.creature_id);
-      }
-      if (ev.character_id === myId && ev.type === 'ignite_proc' && ev.creature_id && ext.current.onIgniteProc) {
-        ext.current.onIgniteProc(ev.creature_id);
-      }
-    }
-
-    // Store raw active_effects for offscreen DoT wake-up prediction
-    if (data.active_effects) {
-      setLastActiveEffects(data.active_effects.map((eff: any) => ({
-        target_id: eff.target_id,
-        effect_type: eff.effect_type,
-        damage_per_tick: eff.damage_per_tick,
-        stacks: eff.stacks ?? 1,
-        next_tick_at: eff.next_tick_at ?? 0,
-        expires_at: eff.expires_at,
-        tick_rate_ms: eff.tick_rate_ms ?? 2000,
-        source_id: eff.source_id,
-      })));
-    }
-
-    // Sync active effects from server for UI — map flat array to legacy nested format
-    if (data.active_effects && ext.current.onActiveDots) {
-      const dotsByChar: Record<string, any> = {};
-      for (const eff of data.active_effects) {
-        if (!dotsByChar[eff.source_id]) dotsByChar[eff.source_id] = { bleed: {}, poison: {}, ignite: {} };
-        dotsByChar[eff.source_id][eff.effect_type][eff.target_id] = {
-          stacks: eff.stacks, damage_per_tick: eff.damage_per_tick, expires_at: eff.expires_at,
-        };
-      }
-      ext.current.onActiveDots(dotsByChar);
-    } else if (data.active_dots && ext.current.onActiveDots) {
-      // Backward compat fallback
-      ext.current.onActiveDots(data.active_dots);
-    }
-
-    if (data.events.some(e => e.type === 'loot_drop')) {
-      ext.current.fetchGroundLoot();
-    }
-
-    // Check if session ended server-side
-    if (data.session_ended) {
+    if (result.sessionEnded) {
       stopCombat();
       return;
     }
 
-    // Normal combat state update
-    const engagedAlive = data.creature_states.filter(cs => cs.alive && engagedCreatureIdsRef.current.includes(cs.id));
-    if (engagedAlive.length === 0) {
+    if (result.aliveEngagedIds.length === 0) {
       stopCombat();
     } else {
       if (!inCombatRef.current) {
         inCombatRef.current = true;
         setInCombat(true);
       }
-      setActiveCombatCreatureId(engagedAlive[0].id);
+      setActiveCombatCreatureId(result.aliveEngagedIds[0]);
       setEngagedCreatureIds(prev => {
-        const aliveIds = new Set(engagedAlive.map(cs => cs.id));
-        const result = prev.filter(id => aliveIds.has(id));
-        engagedCreatureIdsRef.current = result;
-        return result;
+        const aliveSet = new Set(result.aliveEngagedIds);
+        const filtered = prev.filter(id => aliveSet.has(id));
+        engagedCreatureIdsRef.current = filtered;
+        return filtered;
       });
     }
-  }, [stopCombat]);
+  }, [stopCombat, recentlyKilledRef]);
 
   // ── Broadcast channel (party only) ─────────────────────────────
 
@@ -407,7 +354,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     };
   }, [params.party?.id, processTickResult]);
 
-  // ── Non-leader: broadcast buff state periodically ──────────────
+  // Non-leader: broadcast buff state periodically
   useEffect(() => {
     if (!params.party || params.isLeader) return;
     const interval = setInterval(() => {
@@ -434,7 +381,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     try {
       const p = ext.current;
 
-      // ── Process pending ability ──
+      // Process pending ability
       const pending = pendingAbilityRef.current;
       let pendingAbilitiesForServer: any[] = [];
 
@@ -447,16 +394,13 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
         if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
           const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
-
-          // For execute/conflagrate, consume_stacks comes from server DoT state now
-          // The server will use its own DoT tracking to determine stacks
           const cpCost = p.character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
 
           const abilityPayload = {
             character_id: p.character.id,
             ability_type: ability.type,
             target_creature_id: targetId,
-            consume_stacks: 0, // Server will read from its own DoT state
+            consume_stacks: 0,
             cp_cost: cpCost,
           };
 
@@ -476,7 +420,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         }
       }
 
-      // ── Combat tick (drivers only) ──
+      // Combat tick (drivers only)
       const solo = !p.party;
       const driver = solo || p.isLeader;
 
@@ -507,11 +451,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               pending_abilities: pendingAbilitiesForServer,
             };
 
-        // ── Apply conservative prediction before server call ──
+        // Apply conservative prediction before server call
         const tickId = nextTickId++;
         currentTickIdRef.current = tickId;
 
-        // Predict damage for the active creature (simple auto-attack only)
         const activeCreature = engagedCreatureIdsRef.current[0];
         if (activeCreature && !p.isDead && p.character.hp > 0) {
           const { CLASS_COMBAT_PROFILES: profiles } = await import('../utils/combat-math');
@@ -571,7 +514,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         stopCombat();
       }
 
-      // ── Idle detection ──
+      // Idle detection
       if (!inCombatRef.current && !pendingAbilityRef.current) {
         idleCountRef.current++;
         if (idleCountRef.current >= 2 && intervalRef.current) {
@@ -592,152 +535,27 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   useEffect(() => { doTickRef.current = doTick; }, [doTick]);
 
-  // ── Start combat ───────────────────────────────────────────────
-
-  const startCombat = useCallback((creatureId: string) => {
-    const p = ext.current;
-    if (p.isDead || p.character.hp <= 0) return;
-
-    if (p.party && !p.isLeader) {
-      channelRef.current?.send({
-        type: 'broadcast',
-        event: 'engage_request',
-        payload: { creature_id: creatureId, character_id: p.character.id },
-      });
-      return;
-    }
-
-    setEngagedCreatureIds(prev => {
-      if (prev.includes(creatureId)) return prev;
-      const next = [...prev, creatureId];
-      engagedCreatureIdsRef.current = next;
-      return next;
-    });
-    setActiveCombatCreatureId(creatureId);
-
-    if (!inCombatRef.current) {
-      inCombatRef.current = true;
-      setInCombat(true);
-      idleCountRef.current = 0;
-      console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
-      if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
-      if (intervalRef.current) clearWorkerInterval(intervalRef.current);
-      doTick();
-      intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
-    }
-  }, [doTick]);
-
-  // ── Auto-aggro: re-engage aggressive creatures after combat stops ──
-
-  useEffect(() => {
-    if (inCombat) {
-      justStoppedRef.current = false;
-    }
-  }, [inCombat]);
-
-  useEffect(() => {
-    const p = ext.current;
-    if (inCombat || !justStoppedRef.current || p.isDead || pendingAggroRef.current) return;
-    if (p.party && !p.isLeader) return;
-    if (params.creatures.length === 0) return;
-    const nextAggro = params.creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive && !recentlyKilledRef.current.has(c.id));
-    if (nextAggro) {
-      justStoppedRef.current = false;
-      ext.current.addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
-      startCombat(nextAggro.id);
-    } else {
-      justStoppedRef.current = false;
-    }
-  }, [params.creatures, inCombat, startCombat]);
-
-  useEffect(() => {
-    const p = ext.current;
-    if (!inCombat) return;
-    if (p.party && !p.isLeader) return;
-    for (const c of params.creatures) {
-      if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id) && !recentlyKilledRef.current.has(c.id)) {
-        setEngagedCreatureIds(prev => {
-          if (prev.includes(c.id)) return prev;
-          const next = [...prev, c.id];
-          engagedCreatureIdsRef.current = next;
-          return next;
-        });
-        ext.current.addLocalLog(`⚠️ ${c.name} joins the fight!`);
-      }
-    }
-  }, [params.creatures, inCombat]);
-
-  useEffect(() => {
-    const p = ext.current;
-    if (!pendingAggroRef.current || params.creatures.length === 0 || p.isDead || p.character.hp <= 0) return;
-    if (p.party && !p.isLeader) return;
-    pendingAggroRef.current = false;
-    justStoppedRef.current = false;
-    const aggressiveCreatures = params.creatures.filter(
-      c => c.is_aggressive && c.is_alive && c.hp > 0 && !aggroProcessedRef.current.has(c.id)
-    );
-    if (aggressiveCreatures.length === 0) return;
-    for (const c of aggressiveCreatures) aggroProcessedRef.current.add(c.id);
-    if (ext.current.character.hp <= 0) return;
-    const firstAggro = aggressiveCreatures[0];
-    if (firstAggro) {
-      ext.current.addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
-      startCombat(firstAggro.id);
-    }
-  }, [params.creatures, startCombat]);
-
   // ── Lifecycle effects ──────────────────────────────────────────
 
-  useEffect(() => {
-    if (!params.party && channelRef.current) stopCombat();
-  }, [params.party, stopCombat]);
-
-  // Handle node changes — effects persist as world state, reconciled on next access via combat-catchup
-  useEffect(() => {
-    if (params.character.current_node_id !== prevNodeRef.current) {
-      prevNodeRef.current = params.character.current_node_id;
-      aggroProcessedRef.current = new Set();
-      recentlyKilledRef.current = new Set();
-      pendingAggroRef.current = true;
-      // Clear stale creature overrides immediately before stopCombat
-      creatureHpOverridesRef.current = {};
-      setCreatureHpOverrides({});
-      console.log('[combat] Node change — cleared creature HP overrides, ending live combat');
-      // Stop client-side combat — session ends on server, effects reconciled by catchup
-      stopCombat();
-    }
-  }, [params.character.current_node_id, stopCombat]);
-
-  useEffect(() => {
-    if (params.isDead) stopCombat();
-  }, [params.isDead, stopCombat]);
-
-  useEffect(() => {
-    if (!inCombat || params.isLeader || !params.party) return;
-    const check = setInterval(() => {
-      if (Date.now() - lastTickRef.current > 6000) {
-        stopCombat();
-      }
-    }, 2000);
-    return () => clearInterval(check);
-  }, [inCombat, params.isLeader, params.party, stopCombat]);
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearWorkerInterval(intervalRef.current);
-    };
-  }, []);
-
-  // Synchronous flee: kill tick interval immediately before node change
-  const fleeStopCombat = useCallback(() => {
-    if (intervalRef.current) {
-      clearWorkerInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    inCombatRef.current = false;
-    tickBusyRef.current = false;
-    tickPendingRef.current = false;
-  }, []);
+  const { fleeStopCombat } = useCombatLifecycle({
+    currentNodeId: params.character.current_node_id,
+    isDead: params.isDead,
+    inCombat,
+    isLeader: params.isLeader,
+    party: params.party,
+    stopCombat,
+    intervalRef,
+    lastTickRef,
+    inCombatRef,
+    tickBusyRef,
+    tickPendingRef,
+    creatureHpOverridesRef,
+    setCreatureHpOverrides,
+    channelRef,
+    aggroProcessedRef,
+    recentlyKilledRef,
+    pendingAggroRef,
+  });
 
   return {
     inCombat,
@@ -749,7 +567,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     lastTickTime,
     lastActiveEffects,
     updateCreatureHp,
-    startCombat,
+    startCombat: startCombatCore,
     stopCombat,
     fleeStopCombat,
     pendingAbility,
