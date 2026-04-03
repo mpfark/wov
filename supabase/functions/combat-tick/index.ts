@@ -539,12 +539,12 @@ Deno.serve(async (req) => {
         mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
-        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC} — ${dmg} damage.` });
+        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId });
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
       } else {
-        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC}.` });
+        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId });
       }
     };
 
@@ -626,6 +626,13 @@ Deno.serve(async (req) => {
           events.push({
             type: 'attack_hit',
             message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: mainHandTag[m.id] || null,
+            damage: dmg,
+            is_crit: isCrit,
+            character_id: m.id,
           });
 
           if (mb.poison_buff && Math.random() < 0.4) {
@@ -676,6 +683,13 @@ Deno.serve(async (req) => {
           events.push({
             type: 'attack_miss',
             message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: mainHandTag[m.id] || null,
+            damage: 0,
+            is_crit: false,
+            character_id: m.id,
           });
         }
       }
@@ -717,6 +731,14 @@ Deno.serve(async (req) => {
           events.push({
             type: 'offhand_hit',
             message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (30%).`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            damage: dmg2,
+            is_crit: isCrit2,
+            character_id: m.id,
+            is_offhand: true,
           });
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -726,6 +748,14 @@ Deno.serve(async (req) => {
           events.push({
             type: 'offhand_miss',
             message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2}=${total2} vs AC ${creatureAc2}.`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            damage: 0,
+            is_crit: false,
+            character_id: m.id,
+            is_offhand: true,
           });
         }
       }

@@ -11,6 +11,7 @@
  */
 
 import type { Character } from '@/features/character';
+import { formatCombatEvent, type CombatLogDisplayMode, type StructuredAttackEvent } from './combat-text';
 
 export interface CombatTickResponse {
   events: { type: string; message: string; character_id?: string; creature_id?: string }[];
@@ -80,6 +81,7 @@ export function interpretCombatTickResult(
   characterId: string,
   characterName: string,
   currentEngagedIds: string[],
+  displayMode: CombatLogDisplayMode = 'both',
 ): TickInterpretation {
   // ── Creature HP updates ──
   const creatureHpUpdates: Record<string, number> = {};
@@ -99,7 +101,16 @@ export function interpretCombatTickResult(
       formattedLogMessages.push('---tick---');
       continue;
     }
-    let msg = ev.message;
+    // Try MUD-style formatting for structured attack events
+    const structured = ev as StructuredAttackEvent;
+    const hasStructuredData = structured.attacker_name && structured.target_name;
+    let msg: string;
+    if (hasStructuredData) {
+      msg = formatCombatEvent(structured, displayMode, characterId);
+    } else {
+      msg = ev.message;
+    }
+    // Name → You substitution for non-structured or 'numbers' mode
     if (ev.character_id === characterId || msg.includes(characterName)) {
       msg = msg.replace(new RegExp(`${characterName}'s`, 'g'), 'Your');
       msg = msg.replace(new RegExp(`(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*(?:CRITICAL!\\s*)?))${characterName} `, 'u'), '$1You ');
