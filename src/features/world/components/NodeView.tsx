@@ -76,9 +76,53 @@ export default function NodeView({
   const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; level: number; race?: string; class?: string; gender?: string } | null>(null);
   const { emojiMap } = useAreaTypes();
 
-  // hasTargetedAbility check no longer needed — targeting is handled in PartyPanel
+  // ── Polish: aggro flash tracking (fire once per creature per node visit) ──
+  const flashedRef = useRef<Set<string>>(new Set());
+  const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
+  const prevNodeIdRef = useRef(node.id);
 
-  // No longer need cooldown tracking — CP system handles availability
+  // Reset flash tracking on node change
+  useEffect(() => {
+    if (node.id !== prevNodeIdRef.current) {
+      flashedRef.current.clear();
+      setFlashingIds(new Set());
+      prevNodeIdRef.current = node.id;
+    }
+  }, [node.id]);
+
+  // Trigger aggro flash for newly engaged creatures
+  useEffect(() => {
+    const newFlash = new Set<string>();
+    for (const cId of engagedCreatureIds) {
+      if (!flashedRef.current.has(cId)) {
+        flashedRef.current.add(cId);
+        newFlash.add(cId);
+      }
+    }
+    if (newFlash.size > 0) {
+      setFlashingIds(prev => new Set([...prev, ...newFlash]));
+      // Auto-clear after animation
+      setTimeout(() => {
+        setFlashingIds(prev => {
+          const next = new Set(prev);
+          newFlash.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 400);
+    }
+  }, [engagedCreatureIds]);
+
+  // ── Dev-only: creature render timing ──
+  const creaturesVisibleRef = useRef(false);
+  useEffect(() => {
+    if (!creaturesLoading && creatures.length > 0 && !creaturesVisibleRef.current) {
+      creaturesVisibleRef.current = true;
+      if (import.meta.env.DEV) {
+        console.debug('[polish] creatures visible', performance.now().toFixed(0));
+      }
+    }
+    if (creaturesLoading) creaturesVisibleRef.current = false;
+  }, [creaturesLoading, creatures.length]);
 
   const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0 || (creaturesLoading && prefetchedCreatureCount > 0);
 
