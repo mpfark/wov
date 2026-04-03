@@ -1,82 +1,98 @@
 
 
-# Combat Text Formatting System (Revised)
+# Refactor Combat Text to Tier + Flavor Sentence Structure (Revised)
 
 ## Revisions Applied
 
-1. **Player attack style priority** reordered: explicit attack style → equipped weapon type → class fallback → generic
-2. **Creature verb mapping** clarified as lightweight fallback only, not an archetype system
-3. **Impact tier words** cleaned to avoid overlap with attack-style verbs
+1. **Flavor text tables** revised to avoid echoing the tier word (e.g. "wound… wound" → "wound… drawing blood")
+2. **Conjugation helper** added for third-person subjects instead of naive `+ "s"`
 
-## Files
+## Changes
 
-| File | Action | Owns |
-|------|--------|------|
-| `supabase/functions/combat-tick/index.ts` | Modify | Add structured fields to attack/creature hit events |
-| `src/features/combat/utils/combat-text.ts` | Create | Attack style resolution, damage tier naming, MUD text generation |
-| `src/features/combat/utils/interpretCombatTickResult.ts` | Modify | Call combat-text formatter for structured events |
-| `src/features/combat/components/EventLogPanel.tsx` | Modify | Add display mode toggle UI |
+### 1. `src/features/combat/utils/combat-text.ts`
 
-## Key Design Details
+**Add** refined flavor text tables:
 
-### Player Attack Style Resolution (revised priority)
+```typescript
+const DAMAGE_FLAVOR: Record<string, string[]> = {
+  graze: ["barely scratching it", "just nicking it"],
+  nick: ["leaving a small mark", "scratching its surface"],
+  hit: ["landing a solid blow", "striking firmly"],
+  wound: ["drawing blood", "opening a clear wound"],
+  maul: ["tearing into it", "ripping through its defenses"],
+  crush: ["hitting with great force", "battering it"],
+  devastate: ["leaving it reeling", "dealing devastating damage"],
+  annihilate: ["leaving it shattered", "nearly destroying it"],
+  obliterate: ["utterly overwhelming it", "almost destroying it"],
+};
 
-1. **Explicit attack/autoattack style** — e.g. wizard autoattack = fireball verbs ("scorch", "hurl a fireball at"). Overrides everything.
-2. **Equipped weapon type** — server includes `weapon_tag` in event. Mapping: bow → "shoot" / "loose an arrow at"; sword → "slash" / "cut"; dagger → "stab" / "pierce"; mace/hammer → "smash" / "crush"; staff → "strike"; unarmed → "punch" / "strike".
-3. **Class fallback** — `CLASS_COMBAT` verb sets used only when no attack style or weapon info available.
-4. **Generic fallback** — "strike", "attack".
+const DAMAGE_FLAVOR_YOU: Record<string, string[]> = {
+  graze: ["barely scratching you", "just nicking you"],
+  nick: ["leaving a small mark on you", "scratching you"],
+  hit: ["landing a solid blow on you", "striking you firmly"],
+  wound: ["drawing blood", "opening a clear wound"],
+  maul: ["tearing into you", "ripping through your defenses"],
+  crush: ["hitting you with great force", "battering you"],
+  devastate: ["leaving you reeling", "dealing devastating damage"],
+  annihilate: ["leaving you shattered", "nearly breaking you"],
+  obliterate: ["utterly overwhelming you", "almost destroying you"],
+};
+```
 
-Server event enrichment adds `weapon_tag` (already available from equipment query) alongside `attacker_class` so the client has both.
+**Add** conjugation helper:
 
-### Creature Verb Mapping (clarified)
+```typescript
+function conjugateTierWord(word: string): string {
+  if (word.endsWith('e')) return word + 's';       // graze→grazes, annihilate→annihilates, obliterate→obliterates
+  if (word.endsWith('sh') || word.endsWith('ch'))   // crush→crushes
+    return word + 'es';
+  return word + 's';                                // hit→hits, maul→mauls, wound→wounds, nick→nicks
+}
+```
 
-Lightweight name-keyword map, NOT a creature archetype system:
-- Name match: wolf → "bites"; troll → "smashes"; spider → "stings"
-- `is_humanoid` fallback: "slashes", "strikes"
-- Generic fallback: "attacks", "strikes"
+Used in `formatCreatureAttack` and other-player paths instead of `tierWord + "s"`.
 
-No expansion into classification taxonomy.
+**Rewrite `formatPlayerAttack`** — new pattern:
 
-### Impact Tier Words (revised — no verb overlap)
+- Miss: `{emoji} You miss {target}.`
+- Hit: `{emoji} You {tierWord} {target}, {flavor} [dmg].`
+- Crit: same but `!` punctuation, pick from stronger flavor variants
 
-| Range | Tier |
-|-------|------|
-| 0 | miss |
-| 1-5 | graze |
-| 6-15 | nick |
-| 16-30 | hit |
-| 31-50 | wound |
-| 51-80 | maul |
-| 81-120 | crush |
-| 121-180 | devastate |
-| 181-250 | annihilate |
-| 251+ | obliterate |
+**Rewrite `formatCreatureAttack`** — same tier + flavor pattern:
 
-These describe **impact strength only** — no overlap with attack-style verbs like slash/stab/shoot.
+- Miss: `{creature} misses you.`
+- Hit: `{creature} {conjugated tierWord} you, {flavor_you} [dmg].`
+- Crit: `!` punctuation
 
-### Display Modes
+**Remove from sentence construction** (keep exports for future use):
+- `resolvePlayerAttackVerb` — no longer called in formatting
+- `resolveCreatureAttackVerb` — no longer called in formatting
+- `CRITICAL!` prefix logic — removed entirely
 
-- **Numbers**: existing `message` string unchanged
-- **Words**: `"⚔️ You slash the wolf."` (no numbers)
-- **Both** (default): `"⚔️ You devastate the wolf [154]."`
+**Keep unchanged**: `getDamageTierWord`, `DAMAGE_TIERS`, display mode logic, `getEventEmoji`, `StructuredAttackEvent` interface.
 
-Toggle in EventLogPanel header, stored in `localStorage`.
+### 2. `src/features/combat/utils/interpretCombatTickResult.ts`
 
-### Server Event Enrichment (`combat-tick/index.ts`)
+Remove the `(?:CRITICAL!\s*)?` portion from the name→"You" regex since that prefix no longer exists.
 
-Add optional structured fields to auto-attack hit/miss/crit events:
-- `attacker_name`, `target_name`, `attacker_class`, `weapon_tag`, `damage`, `is_crit`, `character_id`
-- Creature hits add: `is_humanoid`, `creature_id`
-- Existing `message` kept as fallback. Non-attack events (abilities, DoTs, buffs, kills) unchanged.
+### 3. No other files change
 
-### Client Integration (`interpretCombatTickResult.ts`)
+## Sentence Construction Rules
 
-In log formatting loop: if event has structured combat data, call `formatCombatEvent()` instead of raw `message`. Display mode passed as parameter from `localStorage`. Name→"You" substitution still applies after formatting.
+| Case | Pattern |
+|------|---------|
+| Player hit | `{emoji} You {tierWord} {target}, {flavor_it} [dmg].` |
+| Player crit | `{emoji} You {tierWord} {target}, {flavor_it} [dmg]!` |
+| Player miss | `{emoji} You miss {target}.` |
+| Creature hit | `{creature} {conjugated} you, {flavor_you} [dmg].` |
+| Creature crit | `{creature} {conjugated} you, {flavor_you} [dmg]!` |
+| Creature miss | `{creature} misses you.` |
+| Other player hit | `{name} {conjugated} {target}, {flavor_it} [dmg].` |
 
 ## What Does NOT Change
 
-- Combat formulas, damage values, tick rate, server authority
-- Prediction/reconciliation rules, combat architecture
-- Equipment systems, creature data model
-- Log color mapping, non-attack event messages
+- Combat math, damage values, tick rate, server authority
+- Prediction/reconciliation
+- Non-attack events (abilities, DoTs, buffs, kills, level-ups)
+- Display mode toggle logic, event emoji prefixes, log color mapping
 
