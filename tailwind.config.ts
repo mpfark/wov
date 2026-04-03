@@ -91,10 +91,30 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "flicker": {
+          "0%, 100%": { opacity: "0.85" },
+          "50%": { opacity: "0.6" },
+        },
+        "drip": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(0.5px)" },
+        },
+        "aggro-flash": {
+          "0%, 100%": { boxShadow: "none" },
+          "50%": { boxShadow: "0 0 4px 1px hsl(var(--destructive) / 0.25)" },
+        },
+        "polish-fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "flicker": "flicker 2s ease-in-out infinite",
+        "drip": "drip 2.5s ease-in-out infinite",
+        "aggro-flash": "aggro-flash 0.4s ease-out",
+        "polish-fade-in": "polish-fade-in 0.25s ease-out",
       },
     },
   },

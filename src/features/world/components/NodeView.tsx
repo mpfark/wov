@@ -12,12 +12,11 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import StatusBarsStrip, { StatusBarsStripProps } from '@/features/character/components/StatusBarsStrip';
 import HeartbeatIndicator from '@/components/game/HeartbeatIndicator';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
-import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface Props {
@@ -76,9 +75,53 @@ export default function NodeView({
   const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; level: number; race?: string; class?: string; gender?: string } | null>(null);
   const { emojiMap } = useAreaTypes();
 
-  // hasTargetedAbility check no longer needed — targeting is handled in PartyPanel
+  // ── Polish: aggro flash tracking (fire once per creature per node visit) ──
+  const flashedRef = useRef<Set<string>>(new Set());
+  const [flashingIds, setFlashingIds] = useState<Set<string>>(new Set());
+  const prevNodeIdRef = useRef(node.id);
 
-  // No longer need cooldown tracking — CP system handles availability
+  // Reset flash tracking on node change
+  useEffect(() => {
+    if (node.id !== prevNodeIdRef.current) {
+      flashedRef.current.clear();
+      setFlashingIds(new Set());
+      prevNodeIdRef.current = node.id;
+    }
+  }, [node.id]);
+
+  // Trigger aggro flash for newly engaged creatures
+  useEffect(() => {
+    const newFlash = new Set<string>();
+    for (const cId of engagedCreatureIds) {
+      if (!flashedRef.current.has(cId)) {
+        flashedRef.current.add(cId);
+        newFlash.add(cId);
+      }
+    }
+    if (newFlash.size > 0) {
+      setFlashingIds(prev => new Set([...prev, ...newFlash]));
+      // Auto-clear after animation
+      setTimeout(() => {
+        setFlashingIds(prev => {
+          const next = new Set(prev);
+          newFlash.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 400);
+    }
+  }, [engagedCreatureIds]);
+
+  // ── Dev-only: creature render timing ──
+  const creaturesVisibleRef = useRef(false);
+  useEffect(() => {
+    if (!creaturesLoading && creatures.length > 0 && !creaturesVisibleRef.current) {
+      creaturesVisibleRef.current = true;
+      if (import.meta.env.DEV) {
+        console.debug('[polish] creatures visible', performance.now().toFixed(0));
+      }
+    }
+    if (creaturesLoading) creaturesVisibleRef.current = false;
+  }, [creaturesLoading, creatures.length]);
 
   const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0 || (creaturesLoading && prefetchedCreatureCount > 0);
 
@@ -135,11 +178,11 @@ export default function NodeView({
                 {creaturesLoading && creatures.length === 0 && Array.from({ length: Math.max(prefetchedCreatureCount, 2) }).map((_, i) => (
                   <div key={`skel-${i}`} className="p-1.5 bg-background/50 rounded border border-border">
                     <div className="flex items-center gap-1.5">
-                      <Skeleton className="h-3 w-20" />
-                      <Skeleton className="h-2 w-8" />
+                      <div className="h-3 w-20 rounded skeleton-shimmer" />
+                      <div className="h-2 w-8 rounded skeleton-shimmer" />
                       <div className="ml-auto flex items-center gap-1 shrink-0">
-                        <Skeleton className="w-[120px] h-2 rounded-full" />
-                        <Skeleton className="h-3 w-12" />
+                        <div className="w-[120px] h-2 rounded-full skeleton-shimmer" />
+                        <div className="h-3 w-12 rounded skeleton-shimmer" />
                       </div>
                     </div>
                   </div>
@@ -157,8 +200,9 @@ export default function NodeView({
                   const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
                   const creatureBleed = bleedStacks[c.id];
                   const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
+                  const isFlashing = flashingIds.has(c.id);
                   return (
-                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
+                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
                       <div className="flex items-center gap-1.5">
                         {/* Left: Name, level, debuffs */}
                         <span className={`text-xs font-display truncate ${
@@ -182,7 +226,7 @@ export default function NodeView({
                         {hasIgniteStacks && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dwarvish font-display animate-pulse">
+                              <span className="text-[10px] text-dwarvish font-display animate-flicker">
                                 🔥×{creatureIgniteStacks!.stacks}
                               </span>
                             </TooltipTrigger>
@@ -194,7 +238,7 @@ export default function NodeView({
                         {isBleeding && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dot-bleed font-display animate-pulse">
+                              <span className="text-[10px] text-dot-bleed font-display animate-drip">
                                 🩸
                               </span>
                             </TooltipTrigger>
@@ -206,7 +250,7 @@ export default function NodeView({
                         {isSundered && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dwarvish font-display animate-pulse">
+                              <span className="text-[10px] text-dwarvish font-display">
                                 🔨
                               </span>
                             </TooltipTrigger>
@@ -218,14 +262,14 @@ export default function NodeView({
                         {/* Right: combat icon, HP bar, HP numbers, attack button */}
                         <div className="ml-auto flex items-center gap-1 shrink-0">
                           {(isActiveTarget || isEngaged) && (
-                            <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'} animate-pulse`}>⚔️</span>
+                            <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}>⚔️</span>
                           )}
                           {isSelected && !isActiveTarget && !isEngaged && (
                             <span className="text-[10px] text-primary">🎯</span>
                           )}
                           <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
                             <div
-                              className="h-full rounded-full transition-all duration-200"
+                              className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
                               style={{
                                 width: `${hpPct}%`,
                                 backgroundColor: isBleeding

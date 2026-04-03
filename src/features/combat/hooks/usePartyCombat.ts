@@ -103,6 +103,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const tickSeqRef = useRef(0);
   
 
+  // ── Dev-only: combat start timing ──
+  const combatStartTimeRef = useRef<number | null>(null);
+
   const pendingAggroRef = useRef(false);
   const aggroProcessedRef = useRef<Set<string>>(new Set());
   const recentlyKilledRef = useRef<Set<string>>(new Set());
@@ -176,6 +179,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
     if (!inCombatRef.current) return; // Ignore late/stale tick responses
+
+    // Dev-only: measure aggro→first-tick latency
+    if (import.meta.env.DEV && combatStartTimeRef.current) {
+      console.debug('[polish] aggro→first-tick', (performance.now() - combatStartTimeRef.current).toFixed(0), 'ms');
+      combatStartTimeRef.current = null;
+    }
 
     // Clear prediction overrides for all creatures in this server response
     const serverCreatureIds = new Set(data.creature_states.map(cs => cs.id));
@@ -611,6 +620,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       setInCombat(true);
       idleCountRef.current = 0;
       console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
+      if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTick();
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);

@@ -57,10 +57,11 @@ function getLogColor(log: string): string {
   else if (log.startsWith('🤫 To ')) color = 'text-purple-400/70';
   else if (log.startsWith('🤫')) color = 'text-purple-400';
   else if (log.includes('(remote)') && (log.startsWith('🩸') || log.startsWith('🧪') || log.startsWith('🔥'))) color = 'text-muted-foreground/60 italic text-[10px]';
+  else if (log.includes('(remote)')) color = 'text-foreground/60';
   else if (log.includes('bleeds for') && log.startsWith('🩸')) color = 'text-dot-bleed italic';
   else if (log.includes('poison damage') && log.startsWith('🧪')) color = 'text-dot-poison italic';
   else if (log.includes('burns for') && log.startsWith('🔥')) color = 'text-dot-burn italic';
-  else if (log.includes('CRITICAL!')) color = 'text-primary font-semibold';
+  else if (log.includes('CRITICAL!')) color = 'text-primary font-semibold log-crit';
   else if (log.startsWith('💀') || log.includes('been defeated') || log.includes('struck down')) color = 'text-destructive';
   else if (log.startsWith('☠️')) color = 'text-elvish';
   else if (log.startsWith('🎉') || log.includes('Level Up')) color = 'text-primary font-semibold';
@@ -1428,7 +1429,7 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
 
       {/* Death Overlay */}
       {isDead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md animate-polish-fade-in">
           <div className="text-center space-y-4">
             <p className="font-display text-5xl text-destructive animate-pulse">💀</p>
             <p className="font-display text-2xl text-destructive">You Have Fallen</p>
