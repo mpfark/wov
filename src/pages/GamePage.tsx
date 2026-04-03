@@ -23,7 +23,7 @@ import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import { usePartyCombat } from '@/features/combat';
-import { getBagWeight, getStatModifier, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES, calculateHP, calculateAC } from '@/lib/game-data';
+import { getBagWeight, calculateAC } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,6 @@ import { useKeyboardMovement } from '@/features/world';
 import { useChat } from '@/features/chat';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
-import { Input } from '@/components/ui/input';
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
@@ -45,58 +44,9 @@ import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
 import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 import MovementPad from '@/features/world/components/MovementPad';
-
-// Memoized log color cache to avoid re-running 20+ regex checks per render
-const logColorCache = new Map<string, string>();
-function getLogColor(log: string): string {
-  const cached = logColorCache.get(log);
-  if (cached) return cached;
-  let color = 'text-foreground/80';
-  if (log.startsWith('⏳')) color = 'text-muted-foreground italic';
-  else if (log.startsWith('💬')) color = 'text-foreground';
-  else if (log.startsWith('🤫 To ')) color = 'text-purple-400/70';
-  else if (log.startsWith('🤫')) color = 'text-purple-400';
-  else if (log.includes('(remote)') && (log.startsWith('🩸') || log.startsWith('🧪') || log.startsWith('🔥'))) color = 'text-muted-foreground/60 italic text-[10px]';
-  else if (log.includes('(remote)')) color = 'text-foreground/60';
-  else if (log.includes('bleeds for') && log.startsWith('🩸')) color = 'text-dot-bleed italic';
-  else if (log.includes('poison damage') && log.startsWith('🧪')) color = 'text-dot-poison italic';
-  else if (log.includes('burns for') && log.startsWith('🔥')) color = 'text-dot-burn italic';
-  else if (log.includes('CRITICAL!')) color = 'text-primary font-semibold log-crit';
-  else if (log.startsWith('💀') || log.includes('been defeated') || log.includes('struck down')) color = 'text-destructive';
-  else if (log.startsWith('☠️')) color = 'text-elvish';
-  else if (log.startsWith('🎉') || log.includes('Level Up')) color = 'text-primary font-semibold';
-  else if (log.startsWith('📈')) color = 'text-primary';
-  else if (log.startsWith('⚠️')) color = 'text-dwarvish';
-  else if (log.startsWith('💔')) color = 'text-destructive/80';
-  else if (log.startsWith('💉')) color = 'text-blood font-semibold';
-  else if (log.startsWith('💚') || log.startsWith('💪') || log.includes('restore') || log.includes('recover')) color = 'text-elvish';
-  else if (log.startsWith('🌑')) color = 'text-primary';
-  else if (log.startsWith('🦅')) color = 'text-primary';
-  else if (log.startsWith('🎶') || log.startsWith('✨')) color = 'text-elvish';
-  else if (log.startsWith('🌿')) color = 'text-elvish';
-  else if (log.startsWith('🏹🏹')) color = 'text-primary';
-  else if (log.startsWith('🛡️')) color = 'text-dwarvish';
-  else if (log.startsWith('📯')) color = 'text-dwarvish';
-  else if (log.startsWith('🩸')) color = 'text-blood';
-  else if (log.startsWith('🧪')) color = 'text-elvish';
-  else if (log.startsWith('🔪')) color = 'text-primary font-semibold';
-  else if (log.startsWith('🌫️')) color = 'text-primary';
-  else if (log.startsWith('🔥🔥') || log.startsWith('🔥')) color = 'text-dwarvish';
-  else if (log.startsWith('🦘')) color = 'text-elvish font-semibold';
-  else if (log.startsWith('🎯')) color = 'text-primary font-semibold';
-  else if (log.startsWith('💥')) color = 'text-primary font-semibold';
-  else if (log.startsWith('🛡️✨')) color = 'text-primary';
-  else if (log.startsWith('🎵💢')) color = 'text-dwarvish';
-  else if (log.startsWith('🎶✨')) color = 'text-elvish';
-  else if (log.startsWith('🔄🎭')) color = 'text-primary font-semibold';
-  else if (log.startsWith('🔨')) color = 'text-dwarvish font-semibold';
-  else if (log.includes('miss')) color = 'text-muted-foreground';
-  else if (log.includes('damage')) color = 'text-foreground/90';
-  // Keep cache bounded
-  if (logColorCache.size > 200) logColorCache.clear();
-  logColorCache.set(log, color);
-  return color;
-}
+import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
+import EventLogPanel from '@/features/combat/components/EventLogPanel';
+import ChatPanel from '@/features/chat/components/ChatPanel';
 
 interface Props {
   character: Character;
@@ -165,7 +115,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
-  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null); // entries now always empty — log arrives via broadcast
+  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
@@ -343,8 +293,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       msg = msg.replace(/ you!/gi, ` ${name}!`);
     }
     if (msg.includes('[INSPIRE_BUFF]')) {
-      // The setRegenBuff is in gameLoop — we need a ref-based approach
-      // Since processIncomingLog runs after gameLoop, we can access setRegenBuff via the gameLoop return
       setRegenBuffFromIncoming({ multiplier: 2, expiresAt: Date.now() + 90000 });
       const cleanMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
       setEventLog(prev => [...prev.slice(-49), cleanMsg]);
@@ -375,7 +323,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (seenIdsRef.current.has(entry.id)) continue;
       seenIdsRef.current.add(entry.id);
       if (ownLogIdsRef.current.has(entry.id)) continue;
-      // Fallback: skip own messages that arrived via postgres_changes before ownLogIdsRef was populated
       if (entry.character_name === character.name) continue;
       processIncomingLog(entry.message, entry.character_name, entry.node_id);
     }
@@ -451,20 +398,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     buffSetters.setPartyRegenBuff(incomingPartyRegenBuff);
   }, [incomingPartyRegenBuff, buffSetters]);
 
-  // ── Instant follower movement: when the leader broadcasts a move, followers
-  //    update their own node immediately instead of waiting for Postgres Realtime.
+  // ── Instant follower movement
   const lastLeaderMoveRef = useRef(0);
   useEffect(() => {
     if (!party || isLeader || !myMembership?.is_following) return;
-    // Find the leader's latest move event
     const leaderMoves = partyMoveEvents.filter(e => e.character_id === party.leader_id);
     if (leaderMoves.length === 0) return;
     const latestMove = leaderMoves[leaderMoves.length - 1];
-    // Skip if we already processed this (compare node_id + timestamp guard)
     if (latestMove.node_id === character.current_node_id) return;
     if (leaderMoves.length <= lastLeaderMoveRef.current) return;
     lastLeaderMoveRef.current = leaderMoves.length;
-    // Optimistically update our own node to match the leader
     updateCharacter({ current_node_id: latestMove.node_id });
     broadcastMove(character.id, character.name, latestMove.node_id);
     addLocalLog(`You follow ${latestMove.character_name}.`);
@@ -488,8 +431,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     gameLoop.syncFromServerEffects(dots[character.id]);
   }, [character.id, gameLoop.syncFromServerEffects]);
 
-  // Determine if this character should use party combat mode:
-  // Party mode when in a party AND on the same node as the leader
+  // Determine if this character should use party combat mode
   const leaderMember = mergedPartyMembers.find(m => m.character_id === party?.leader_id);
   const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
   const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
@@ -588,11 +530,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseConsumable } = consumableActions;
   const { handleUseAbility, handleAttack } = combatActions;
 
-  // ── Aggro processing is now handled inside usePartyCombat ──
+  // ── Stat allocation (extracted hook) ───────────────────────────
+  const { handleAllocateStat, handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
+    character, updateCharacter, addLog,
+  });
 
   // ── Keyboard + chat ────────────────────────────────────────────
   const handleAbilityKey = useCallback((index: number) => {
-    // For creature-targeting abilities, prefer selectedTargetId; for ally abilities, prefer abilityTargetId
     handleUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);
   }, [handleUseAbility, abilityTargetId, selectedTargetId]);
 
@@ -611,12 +555,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const handleAttackFirst = useCallback(() => {
     if (isDead) return;
-    // If a target is selected via Tab, engage it (even mid-combat to switch targets)
     if (selectedTargetId) {
       const target = creatures.find(c => c.id === selectedTargetId && c.is_alive);
       if (target) { startCombat(target.id); return; }
     }
-    // If already in combat with no new selection, do nothing
     if (inCombat) return;
     const firstCreature = creatures.find(c => c.is_alive);
     if (firstCreature) startCombat(firstCreature.id);
@@ -626,15 +568,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (isDead) return;
     const aliveCreatures = creatures.filter(c => c.is_alive);
     if (aliveCreatures.length === 0) return;
-
-    // Cycle through ALL alive creatures
     const currentIdx = aliveCreatures.findIndex(c => c.id === (selectedTargetId ?? activeCombatCreatureId));
     const nextIdx = (currentIdx + 1) % aliveCreatures.length;
     const next = aliveCreatures[nextIdx];
-
     setSelectedTargetId(next.id);
-
-    // Only auto-attack if the creature itself is aggressive or already engaged
     const engagedSet = new Set(engagedCreatureIds);
     if (next.is_aggressive || engagedSet.has(next.id)) {
       startCombat(next.id);
@@ -697,6 +634,132 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     (isWideScreen && chatPanelOpen) ? eventLog.filter(log => !log.startsWith('💬') && !log.startsWith('🤫')) : eventLog,
     [eventLog, isWideScreen, chatPanelOpen]
   );
+
+  // ── Shared drop handler ────────────────────────────────────────
+  const handleDropItem = useCallback(async (inventoryId: string) => {
+    const inv = [...equipped, ...unequipped].find(i => i.id === inventoryId);
+    if (inv && character.current_node_id) {
+      await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
+      fetchInventory();
+      addLog(`You dropped ${inv.item.name} on the ground.`);
+    }
+  }, [equipped, unequipped, character.current_node_id, dropItemToGround, fetchInventory, addLog]);
+
+  // ── De-duplicated prop blocks ──────────────────────────────────
+  const charPanelProps = useMemo(() => ({
+    character,
+    equipped,
+    unequipped,
+    equipmentBonuses,
+    onEquip: equipItem,
+    onUnequip: unequipItem,
+    onDrop: handleDropItem,
+    onDestroy: dropItem,
+    onTogglePin: togglePin,
+    onUseConsumable: handleUseConsumable,
+    isAtInn: currentNode?.is_inn ?? false,
+    regenBuff,
+    regenTick,
+    beltedPotions,
+    beltCapacity,
+    onBeltPotion: beltPotion,
+    onUnbeltPotion: unbeltPotion,
+    inCombat,
+    actionBindings: keyboardMovement.actionBindings,
+    baseRegen,
+    itemHpRegen,
+    foodBuff,
+    critBuff,
+    acBuff,
+    poisonBuff,
+    evasionBuff,
+    igniteBuff,
+    absorbBuff,
+    damageBuff,
+    partyRegenBuff,
+    focusStrikeBuff,
+    onAllocateStat: handleAllocateStat,
+    onFullRespec: handleFullRespec,
+    onBatchAllocateStats: handleBatchAllocateStats,
+  }), [
+    character, equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
+    handleDropItem, dropItem, togglePin, handleUseConsumable, currentNode?.is_inn,
+    regenBuff, regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
+    inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
+    foodBuff, critBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
+    damageBuff, partyRegenBuff, focusStrikeBuff,
+    handleAllocateStat, handleFullRespec, handleBatchAllocateStats,
+  ]);
+
+  const activeBuffs = useMemo(() => ({
+    stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
+    damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
+    acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
+    acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
+    poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
+    evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
+    ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
+    absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
+    absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
+    root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
+    sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
+    focusStrike: !!focusStrikeBuff,
+  }), [stealthBuff, damageBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff, focusStrikeBuff]);
+
+  const showTargetSelector = useMemo(() =>
+    [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb'),
+    [character.class]
+  );
+
+  const mapPanelProps = useMemo(() => ({
+    regions,
+    nodes,
+    areas,
+    currentNodeId: character.current_node_id,
+    currentRegionId: currentNode?.region_id ?? '',
+    characterLevel: character.level,
+    onNodeClick: handleMove,
+    partyMembers: mergedPartyMembers,
+    myCharacterId: character.id,
+    character,
+    party,
+    pendingInvites,
+    isLeader,
+    isTank,
+    myMembership,
+    playersHere,
+    onCreateParty: createParty,
+    onInvite: invitePlayer,
+    onAcceptInvite: acceptInvite,
+    onDeclineInvite: declineInvite,
+    onLeaveParty: leaveParty,
+    onKick: kickMember,
+    onSetTank: setTank,
+    onToggleFollow: toggleFollow,
+    keyboardBindings: keyboardMovement,
+    activeBuffs,
+    abilityTargetId,
+    onSetAbilityTarget: setAbilityTargetId,
+    showTargetSelector,
+    onSearch: handleSearch,
+    onOpenVendor: currentNode?.is_vendor ? () => setVendorOpen(true) : undefined,
+    onOpenBlacksmith: currentNode?.is_blacksmith ? () => setBlacksmithOpen(true) : undefined,
+    onOpenTrainer: (currentNode?.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined,
+    onOpenTeleport: (currentNode?.is_teleport || character.level >= 25) ? () => {
+      if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
+      setTeleportOpen(true);
+    } : undefined,
+    searchDisabled: character.cp < 5 || creatures.length > 0,
+    hasDiscoverable: !!(currentNode?.connections?.some((c: any) => c.hidden) || (currentNode?.searchable_items && currentNode.searchable_items.length > 0)),
+    unlockedConnections,
+  }), [
+    regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
+    party, pendingInvites, isLeader, isTank, myMembership, playersHere,
+    createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
+    setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
+    showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
+    creatures.length, unlockedConnections,
+  ]);
 
   // ── Rendering ──────────────────────────────────────────────────
   if (nodesLoading) {
@@ -785,294 +848,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[400px] max-w-[90vw] p-0 overflow-y-auto bg-card/95">
-              <CharacterPanel
-                character={character}
-                equipped={equipped}
-                unequipped={unequipped}
-                equipmentBonuses={equipmentBonuses}
-                onEquip={equipItem}
-                onUnequip={unequipItem}
-                onDrop={async (inventoryId) => {
-                  const inv = [...equipped, ...unequipped].find(i => i.id === inventoryId);
-                  if (inv && character.current_node_id) {
-                    await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
-                    fetchInventory();
-                    addLog(`You dropped ${inv.item.name} on the ground.`);
-                  }
-                }}
-                onDestroy={dropItem}
-                onTogglePin={togglePin}
-                onUseConsumable={handleUseConsumable}
-                isAtInn={currentNode?.is_inn ?? false}
-                regenBuff={regenBuff}
-                regenTick={regenTick}
-                beltedPotions={beltedPotions}
-                beltCapacity={beltCapacity}
-                onBeltPotion={beltPotion}
-                onUnbeltPotion={unbeltPotion}
-                inCombat={inCombat}
-                actionBindings={keyboardMovement.actionBindings}
-                baseRegen={baseRegen}
-                itemHpRegen={itemHpRegen}
-                foodBuff={foodBuff}
-                critBuff={critBuff}
-                acBuff={acBuff}
-                poisonBuff={poisonBuff}
-                evasionBuff={evasionBuff}
-                igniteBuff={igniteBuff}
-                absorbBuff={absorbBuff}
-                damageBuff={damageBuff}
-                partyRegenBuff={partyRegenBuff}
-                focusStrikeBuff={focusStrikeBuff}
-                onAllocateStat={async (stat: string) => {
-                  if (character.unspent_stat_points <= 0) return;
-                  const currentVal = (character as any)[stat] ?? 10;
-                  const updates: Partial<Character> = {
-                    [stat]: currentVal + 1,
-                    unspent_stat_points: character.unspent_stat_points - 1,
-                  };
-                  if (stat === 'con') {
-                    updates.max_hp = character.max_hp + (getStatModifier(currentVal + 1) - getStatModifier(currentVal));
-                    if (updates.max_hp !== character.max_hp) {
-                      updates.hp = character.hp + (updates.max_hp - character.max_hp);
-                    }
-                  }
-                  if (stat === 'int' || stat === 'wis' || stat === 'cha') {
-                    const eInt = stat === 'int' ? currentVal + 1 : character.int;
-                    const eWis = stat === 'wis' ? currentVal + 1 : character.wis;
-                    const eCha = stat === 'cha' ? currentVal + 1 : character.cha;
-                    const newMaxCp = getMaxCp(character.level, eInt, eWis, eCha);
-                    if (newMaxCp !== character.max_cp) {
-                      updates.max_cp = newMaxCp;
-                      updates.cp = Math.min((character.cp ?? 0) + (newMaxCp - character.max_cp), newMaxCp);
-                    }
-                  }
-                  if (stat === 'dex') {
-                    const newMaxMp = getMaxMp(character.level, currentVal + 1);
-                    if (newMaxMp !== (character.max_mp ?? 100)) {
-                      updates.max_mp = newMaxMp;
-                      updates.mp = Math.min((character.mp ?? 100) + (newMaxMp - (character.max_mp ?? 100)), newMaxMp);
-                    }
-                  }
-                  await updateCharacter(updates);
-                  addLog(`📊 +1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`);
-                }}
-                onFullRespec={async () => {
-                  if ((character.respec_points || 0) <= 0) return;
-                  const creationStats = calculateStats(character.race, character.class);
-                  const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
-                  let totalRefunded = 0;
-                  const updates: Partial<Character> = {
-                    respec_points: (character.respec_points || 0) - 1,
-                  };
-                  for (const stat of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const) {
-                    const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
-                    const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
-                    const manualPoints = (character as any)[stat] - nonManualBase;
-                    if (manualPoints > 0) {
-                      (updates as any)[stat] = nonManualBase;
-                      totalRefunded += manualPoints;
-                    }
-                  }
-                  updates.unspent_stat_points = character.unspent_stat_points + totalRefunded;
-                  const newCon = (updates.con ?? character.con) as number;
-                  const newMaxHp = calculateHP(character.class, newCon) + (character.level - 1) * 5;
-                  updates.max_hp = newMaxHp;
-                  updates.hp = Math.min(character.hp, newMaxHp);
-                  const newInt = (updates.int ?? character.int) as number;
-                  const newWis = (updates.wis ?? character.wis) as number;
-                  const newCha = (updates.cha ?? character.cha) as number;
-                  updates.max_cp = getMaxCp(character.level, newInt, newWis, newCha);
-                  updates.cp = Math.min(character.cp ?? 0, updates.max_cp);
-                  const newDex = (updates.dex ?? character.dex) as number;
-                  updates.max_mp = getMaxMp(character.level, newDex);
-                  updates.mp = Math.min(character.mp ?? 100, updates.max_mp);
-                  await updateCharacter(updates);
-                  addLog(`🔄 Full respec! ${totalRefunded} stat point${totalRefunded !== 1 ? 's' : ''} refunded.`);
-                }}
-                onBatchAllocateStats={async (allocations: Record<string, number>) => {
-                  const totalPoints = Object.values(allocations).reduce((s, v) => s + v, 0);
-                  if (totalPoints <= 0 || totalPoints > character.unspent_stat_points) return;
-                  const updates: Partial<Character> = {
-                    unspent_stat_points: character.unspent_stat_points - totalPoints,
-                  };
-                  for (const [stat, amount] of Object.entries(allocations)) {
-                    const currentVal = (character as any)[stat] ?? 10;
-                    (updates as any)[stat] = currentVal + amount;
-                  }
-                  const newCon = (updates.con ?? character.con) as number;
-                  const oldConMod = getStatModifier(character.con);
-                  const newConMod = getStatModifier(newCon);
-                  if (newConMod !== oldConMod) {
-                    const hpDelta = newConMod - oldConMod;
-                    updates.max_hp = character.max_hp + hpDelta;
-                    updates.hp = character.hp + hpDelta;
-                  }
-                  const newInt = (updates.int ?? character.int) as number;
-                  const newWis = (updates.wis ?? character.wis) as number;
-                  const newCha = (updates.cha ?? character.cha) as number;
-                  const newMaxCp = getMaxCp(character.level, newInt, newWis, newCha);
-                  if (newMaxCp !== character.max_cp) {
-                    updates.max_cp = newMaxCp;
-                    updates.cp = Math.min((character.cp ?? 0) + (newMaxCp - character.max_cp), newMaxCp);
-                  }
-                  const newDex = (updates.dex ?? character.dex) as number;
-                  const newMaxMp = getMaxMp(character.level, newDex);
-                  if (newMaxMp !== (character.max_mp ?? 100)) {
-                    updates.max_mp = newMaxMp;
-                    updates.mp = Math.min((character.mp ?? 100) + (newMaxMp - (character.max_mp ?? 100)), newMaxMp);
-                  }
-                  await updateCharacter(updates);
-                  const statList = Object.entries(allocations).map(([s, v]) => `+${v} ${s.toUpperCase()}`).join(', ');
-                  addLog(`📊 Batch allocation: ${statList} (${character.unspent_stat_points - totalPoints} points remaining)`);
-                }}
-              />
+              <CharacterPanel {...charPanelProps} />
             </SheetContent>
           </Sheet>
         ) : (
           <div className="h-full w-[400px] shrink-0 ornate-border bg-card/60 overflow-y-auto">
-            <CharacterPanel
-              character={character}
-              equipped={equipped}
-              unequipped={unequipped}
-              equipmentBonuses={equipmentBonuses}
-              onEquip={equipItem}
-              onUnequip={unequipItem}
-              onDrop={async (inventoryId) => {
-                const inv = [...equipped, ...unequipped].find(i => i.id === inventoryId);
-                if (inv && character.current_node_id) {
-                  await dropItemToGround(inventoryId, inv.item_id, character.current_node_id);
-                  fetchInventory();
-                  addLog(`You dropped ${inv.item.name} on the ground.`);
-                }
-              }}
-              onDestroy={dropItem}
-              onTogglePin={togglePin}
-              onUseConsumable={handleUseConsumable}
-              isAtInn={currentNode?.is_inn ?? false}
-              regenBuff={regenBuff}
-              regenTick={regenTick}
-              beltedPotions={beltedPotions}
-              beltCapacity={beltCapacity}
-              onBeltPotion={beltPotion}
-              onUnbeltPotion={unbeltPotion}
-              inCombat={inCombat}
-              actionBindings={keyboardMovement.actionBindings}
-              baseRegen={baseRegen}
-              itemHpRegen={itemHpRegen}
-              foodBuff={foodBuff}
-              critBuff={critBuff}
-              acBuff={acBuff}
-              poisonBuff={poisonBuff}
-              evasionBuff={evasionBuff}
-              igniteBuff={igniteBuff}
-              absorbBuff={absorbBuff}
-              damageBuff={damageBuff}
-              partyRegenBuff={partyRegenBuff}
-              focusStrikeBuff={focusStrikeBuff}
-              onAllocateStat={async (stat: string) => {
-                if (character.unspent_stat_points <= 0) return;
-                const currentVal = (character as any)[stat] ?? 10;
-                const updates: Partial<Character> = {
-                  [stat]: currentVal + 1,
-                  unspent_stat_points: character.unspent_stat_points - 1,
-                };
-                if (stat === 'con') {
-                  updates.max_hp = character.max_hp + (getStatModifier(currentVal + 1) - getStatModifier(currentVal));
-                  if (updates.max_hp !== character.max_hp) {
-                    updates.hp = character.hp + (updates.max_hp - character.max_hp);
-                  }
-                }
-                if (stat === 'int' || stat === 'wis' || stat === 'cha') {
-                  const eInt = stat === 'int' ? currentVal + 1 : character.int;
-                  const eWis = stat === 'wis' ? currentVal + 1 : character.wis;
-                  const eCha = stat === 'cha' ? currentVal + 1 : character.cha;
-                  const newMaxCp = getMaxCp(character.level, eInt, eWis, eCha);
-                  if (newMaxCp !== character.max_cp) {
-                    updates.max_cp = newMaxCp;
-                    updates.cp = Math.min((character.cp ?? 0) + (newMaxCp - character.max_cp), newMaxCp);
-                  }
-                }
-                if (stat === 'dex') {
-                  const newMaxMp = getMaxMp(character.level, currentVal + 1);
-                  if (newMaxMp !== (character.max_mp ?? 100)) {
-                    updates.max_mp = newMaxMp;
-                    updates.mp = Math.min((character.mp ?? 100) + (newMaxMp - (character.max_mp ?? 100)), newMaxMp);
-                  }
-                }
-                await updateCharacter(updates);
-                addLog(`📊 +1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`);
-              }}
-              onFullRespec={async () => {
-                if ((character.respec_points || 0) <= 0) return;
-                const creationStats = calculateStats(character.race, character.class);
-                const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
-                let totalRefunded = 0;
-                const updates: Partial<Character> = {
-                  respec_points: (character.respec_points || 0) - 1,
-                };
-                for (const stat of ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const) {
-                  const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
-                  const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
-                  const manualPoints = (character as any)[stat] - nonManualBase;
-                  if (manualPoints > 0) {
-                    (updates as any)[stat] = nonManualBase;
-                    totalRefunded += manualPoints;
-                  }
-                }
-                updates.unspent_stat_points = character.unspent_stat_points + totalRefunded;
-                const newCon = (updates.con ?? character.con) as number;
-                const newMaxHp = calculateHP(character.class, newCon) + (character.level - 1) * 5;
-                updates.max_hp = newMaxHp;
-                updates.hp = Math.min(character.hp, newMaxHp);
-                const newInt = (updates.int ?? character.int) as number;
-                const newWis = (updates.wis ?? character.wis) as number;
-                const newCha = (updates.cha ?? character.cha) as number;
-                updates.max_cp = getMaxCp(character.level, newInt, newWis, newCha);
-                updates.cp = Math.min(character.cp ?? 0, updates.max_cp);
-                const newDex = (updates.dex ?? character.dex) as number;
-                updates.max_mp = getMaxMp(character.level, newDex);
-                updates.mp = Math.min(character.mp ?? 100, updates.max_mp);
-                await updateCharacter(updates);
-                addLog(`🔄 Full respec! ${totalRefunded} stat point${totalRefunded !== 1 ? 's' : ''} refunded.`);
-              }}
-              onBatchAllocateStats={async (allocations: Record<string, number>) => {
-                const totalPoints = Object.values(allocations).reduce((s, v) => s + v, 0);
-                if (totalPoints <= 0 || totalPoints > character.unspent_stat_points) return;
-                const updates: Partial<Character> = {
-                  unspent_stat_points: character.unspent_stat_points - totalPoints,
-                };
-                for (const [stat, amount] of Object.entries(allocations)) {
-                  const currentVal = (character as any)[stat] ?? 10;
-                  (updates as any)[stat] = currentVal + amount;
-                }
-                const newCon = (updates.con ?? character.con) as number;
-                const oldConMod = getStatModifier(character.con);
-                const newConMod = getStatModifier(newCon);
-                if (newConMod !== oldConMod) {
-                  const hpDelta = newConMod - oldConMod;
-                  updates.max_hp = character.max_hp + hpDelta;
-                  updates.hp = character.hp + hpDelta;
-                }
-                const newInt = (updates.int ?? character.int) as number;
-                const newWis = (updates.wis ?? character.wis) as number;
-                const newCha = (updates.cha ?? character.cha) as number;
-                const newMaxCp = getMaxCp(character.level, newInt, newWis, newCha);
-                if (newMaxCp !== character.max_cp) {
-                  updates.max_cp = newMaxCp;
-                  updates.cp = Math.min((character.cp ?? 0) + (newMaxCp - character.max_cp), newMaxCp);
-                }
-                const newDex = (updates.dex ?? character.dex) as number;
-                const newMaxMp = getMaxMp(character.level, newDex);
-                if (newMaxMp !== (character.max_mp ?? 100)) {
-                  updates.max_mp = newMaxMp;
-                  updates.mp = Math.min((character.mp ?? 100) + (newMaxMp - (character.max_mp ?? 100)), newMaxMp);
-                }
-                await updateCharacter(updates);
-                const statList = Object.entries(allocations).map(([s, v]) => `+${v} ${s.toUpperCase()}`).join(', ');
-                addLog(`📊 Batch allocation: ${statList} (${character.unspent_stat_points - totalPoints} points remaining)`);
-              }}
-            />
+            <CharacterPanel {...charPanelProps} />
           </div>
         )}
 
@@ -1123,40 +904,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               }}
             />
           </div>
-          {/* Event Log */}
-          <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
-            <h3 className="font-display text-xs text-muted-foreground mb-1 shrink-0">Event Log</h3>
-            <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
-              {filteredEventLog.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
-              ) : (
-                filteredEventLog.map((log, i) =>
-                  log === '---tick---' ? (
-                    <div key={i} className="border-t-2 border-border/60 my-2" />
-                  ) : (
-                    <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
-                  )
-                )
-              )}
-              <div ref={logEndRef} />
-            </div>
-            {(!isWideScreen && chatOpen) && (
-              <div className="shrink-0 mt-1">
-                <Input
-                  ref={chatInputRef}
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') { e.preventDefault(); handleChatSubmit(); }
-                    if (e.key === 'Escape') { setChatOpen(false); setChatInput(''); }
-                  }}
-                  placeholder="Say something... (/w name message to whisper)"
-                  className="h-7 text-xs bg-background/50 border-border"
-                  autoComplete="off"
-                />
-              </div>
-            )}
-          </div>
+          <EventLogPanel
+            filteredEventLog={filteredEventLog}
+            logEndRef={logEndRef}
+            chatOpen={chatOpen}
+            isWideScreen={isWideScreen}
+            chatInput={chatInput}
+            onChatInputChange={setChatInput}
+            onChatSubmit={handleChatSubmit}
+            onChatClose={() => { setChatOpen(false); setChatInput(''); }}
+            chatInputRef={chatInputRef}
+          />
         </div>
 
         {/* Right: Map + Party — desktop/tablet: fixed sidebar, mobile: sheet overlay */}
@@ -1172,124 +930,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[400px] max-w-[90vw] p-0 overflow-y-auto bg-card/95">
-              <MapPanel
-                regions={regions}
-                nodes={nodes}
-                areas={areas}
-                currentNodeId={character.current_node_id}
-                currentRegionId={currentNode.region_id}
-                characterLevel={character.level}
-                onNodeClick={handleMove}
-                partyMembers={mergedPartyMembers}
-                myCharacterId={character.id}
-                character={character}
-                party={party}
-                pendingInvites={pendingInvites}
-                isLeader={isLeader}
-                isTank={isTank}
-                myMembership={myMembership}
-                playersHere={playersHere}
-                onCreateParty={createParty}
-                onInvite={invitePlayer}
-                onAcceptInvite={acceptInvite}
-                onDeclineInvite={declineInvite}
-                onLeaveParty={leaveParty}
-                onKick={kickMember}
-                onSetTank={setTank}
-                onToggleFollow={toggleFollow}
-                keyboardBindings={keyboardMovement}
-                activeBuffs={{
-                  stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
-                  damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
-                  acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
-                  acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
-                  poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
-                  evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
-                  ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
-                  absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
-                  absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
-                  root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
-                  sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
-                  focusStrike: !!focusStrikeBuff,
-                }}
-                abilityTargetId={abilityTargetId}
-                onSetAbilityTarget={setAbilityTargetId}
-                showTargetSelector={
-                  [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb')
-                }
-                onSearch={handleSearch}
-                onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
-                onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
-                onOpenTrainer={(currentNode.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined}
-                onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
-                  if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
-                  setTeleportOpen(true);
-                } : undefined}
-searchDisabled={character.cp < 5 || creatures.length > 0}
-                hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
-                unlockedConnections={unlockedConnections}
-              />
+              <MapPanel {...mapPanelProps} />
             </SheetContent>
           </Sheet>
         ) : (
           <div className="h-full w-[400px] shrink-0 ornate-border bg-card/60 overflow-y-auto">
-            <MapPanel
-              regions={regions}
-              nodes={nodes}
-              areas={areas}
-              currentNodeId={character.current_node_id}
-              currentRegionId={currentNode.region_id}
-              characterLevel={character.level}
-              onNodeClick={handleMove}
-              partyMembers={mergedPartyMembers}
-              myCharacterId={character.id}
-              character={character}
-              party={party}
-              pendingInvites={pendingInvites}
-              isLeader={isLeader}
-              isTank={isTank}
-              myMembership={myMembership}
-              playersHere={playersHere}
-              onCreateParty={createParty}
-              onInvite={invitePlayer}
-              onAcceptInvite={acceptInvite}
-              onDeclineInvite={declineInvite}
-              onLeaveParty={leaveParty}
-              onKick={kickMember}
-              onSetTank={setTank}
-              onToggleFollow={toggleFollow}
-              keyboardBindings={keyboardMovement}
-              activeBuffs={{
-                stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
-                damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
-                acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
-                acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
-                poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
-                evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
-                ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
-                absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
-                absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
-                root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
-                sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
-                focusStrike: !!focusStrikeBuff,
-              }}
-              abilityTargetId={abilityTargetId}
-              onSetAbilityTarget={setAbilityTargetId}
-              showTargetSelector={
-                [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb')
-              }
-              onSearch={handleSearch}
-              onOpenVendor={currentNode.is_vendor ? () => setVendorOpen(true) : undefined}
-              onOpenBlacksmith={currentNode.is_blacksmith ? () => setBlacksmithOpen(true) : undefined}
-              onOpenTrainer={(currentNode.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined}
-              onOpenTeleport={(currentNode.is_teleport || character.level >= 25) ? () => {
-                if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
-                setTeleportOpen(true);
-              } : undefined}
-              searchDisabled={character.cp < 5 || creatures.length > 0}
-              hasDiscoverable={!!(currentNode.connections?.some((c: any) => c.hidden) || (currentNode.searchable_items && currentNode.searchable_items.length > 0))}
-              unlockedConnections={unlockedConnections}
-            />
+            <MapPanel {...mapPanelProps} />
           </div>
         )}
 
@@ -1308,43 +954,14 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
 
         {/* Wide-screen Chat Panel — 4th column */}
         {isWideScreen && !isTablet && chatPanelOpen && (
-          <div className="h-full w-[320px] shrink-0 ornate-border bg-card/60 flex flex-col">
-            <div className="px-3 py-2 border-b border-border shrink-0 flex items-center justify-between">
-              <h3 className="font-display text-xs text-muted-foreground">Chat</h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-6 h-6"
-                onClick={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
-                title="Collapse chat panel"
-              >
-                <MessageCircle className="w-3 h-3" />
-              </Button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
-              {chatMessages.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No messages yet. Press Enter to chat.</p>
-              ) : (
-                chatMessages.map((log, i) => (
-                  <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
-                ))
-              )}
-            </div>
-            <div className="shrink-0 px-2 pb-2">
-              <Input
-                ref={isWideScreen ? chatInputRef : undefined}
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); handleChatSubmit(); }
-                  if (e.key === 'Escape') { setChatInput(''); }
-                }}
-                placeholder="/w name msg to whisper"
-                className="h-7 text-xs bg-background/50 border-border"
-                autoComplete="off"
-              />
-            </div>
-          </div>
+          <ChatPanel
+            messages={chatMessages}
+            chatInput={chatInput}
+            onChatInputChange={setChatInput}
+            onChatSubmit={handleChatSubmit}
+            onClose={() => setChatPanelOpen(false)}
+            chatInputRef={chatInputRef}
+          />
         )}
       </div>
 
