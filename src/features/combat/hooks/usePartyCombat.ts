@@ -194,7 +194,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   }, []);
 
   const {
-    pendingAggroRef, aggroProcessedRef, recentlyKilledRef, justStoppedRef,
+    pendingAggroRef, aggroProcessedRef, recentlyKilledRef,
   } = useCombatAggroEffects({
     creatures: params.creatures,
     inCombat,
