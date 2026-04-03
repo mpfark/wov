@@ -626,6 +626,13 @@ Deno.serve(async (req) => {
           events.push({
             type: 'attack_hit',
             message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
+            attacker_name: c.name,
+            target_name: target.name,
+            attacker_class: c.class,
+            weapon_tag: mainHandTag[m.id] || null,
+            damage: dmg,
+            is_crit: isCrit,
+            character_id: m.id,
           });
 
           if (mb.poison_buff && Math.random() < 0.4) {
