@@ -1,7 +1,7 @@
 /**
  * combat-text.ts — Pure MUD-style combat text formatter.
  *
- * Owns: attack style resolution, damage tier naming, display mode formatting.
+ * Owns: tier + flavor sentence construction, damage tier naming, display mode formatting.
  * Constraints: pure, no React, no side effects.
  */
 
@@ -49,9 +49,43 @@ export function getDamageTierWord(damage: number): string {
   return 'obliterate';
 }
 
-// ── Player attack style verbs ───────────────────────────────────
+// ── Flavor text tables ──────────────────────────────────────────
 
-/** Weapon tag → verb sets (priority 2) */
+const DAMAGE_FLAVOR: Record<string, string[]> = {
+  graze: ['barely scratching it', 'just nicking it'],
+  nick: ['leaving a small mark', 'scratching its surface'],
+  hit: ['landing a solid blow', 'striking firmly'],
+  wound: ['drawing blood', 'opening a clear wound'],
+  maul: ['tearing into it', 'ripping through its defenses'],
+  crush: ['hitting with great force', 'battering it'],
+  devastate: ['leaving it reeling', 'dealing devastating damage'],
+  annihilate: ['leaving it shattered', 'nearly destroying it'],
+  obliterate: ['utterly overwhelming it', 'almost destroying it'],
+};
+
+const DAMAGE_FLAVOR_YOU: Record<string, string[]> = {
+  graze: ['barely scratching you', 'just nicking you'],
+  nick: ['leaving a small mark on you', 'scratching you'],
+  hit: ['landing a solid blow on you', 'striking you firmly'],
+  wound: ['drawing blood', 'opening a clear wound'],
+  maul: ['tearing into you', 'ripping through your defenses'],
+  crush: ['hitting you with great force', 'battering you'],
+  devastate: ['leaving you reeling', 'dealing devastating damage'],
+  annihilate: ['leaving you shattered', 'nearly breaking you'],
+  obliterate: ['utterly overwhelming you', 'almost destroying you'],
+};
+
+// ── Conjugation helper ──────────────────────────────────────────
+
+function conjugateTierWord(word: string): string {
+  if (word.endsWith('e')) return word + 's';
+  if (word.endsWith('sh') || word.endsWith('ch')) return word + 'es';
+  return word + 's';
+}
+
+// ── Player attack style verbs (kept as exports for future use) ──
+
+/** Weapon tag → verb sets */
 const WEAPON_VERBS: Record<string, string[]> = {
   sword:   ['slash', 'cut', 'cleave'],
   axe:     ['chop', 'hew', 'cleave'],
@@ -63,7 +97,6 @@ const WEAPON_VERBS: Record<string, string[]> = {
   wand:    ['zap', 'blast', 'channel energy at'],
 };
 
-/** Class → explicit attack style verbs (priority 1 for spell-like autoattacks, priority 3 for melee) */
 const CLASS_ATTACK_VERBS: Record<string, { verbs: string[]; isSpell: boolean }> = {
   wizard:  { verbs: ['scorch', 'hurl a fireball at', 'blast arcane flame at', 'incinerate'], isSpell: true },
   healer:  { verbs: ['smite', 'channel divine light against', 'strike with holy power'], isSpell: true },
@@ -79,41 +112,27 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-/**
- * Resolve the attack verb for a player attack.
- * Priority: explicit spell class > weapon tag > class fallback > generic
- */
 export function resolvePlayerAttackVerb(
   attackerClass?: string,
   weaponTag?: string | null,
 ): string {
-  // Priority 1: Spell-based class autoattack overrides everything
   if (attackerClass) {
     const classInfo = CLASS_ATTACK_VERBS[attackerClass];
-    if (classInfo?.isSpell) {
-      return pickRandom(classInfo.verbs);
-    }
+    if (classInfo?.isSpell) return pickRandom(classInfo.verbs);
   }
-
-  // Priority 2: Weapon tag
   if (weaponTag) {
     const wVerbs = WEAPON_VERBS[weaponTag];
     if (wVerbs) return pickRandom(wVerbs);
   }
-
-  // Priority 3: Non-spell class fallback
   if (attackerClass) {
     const classInfo = CLASS_ATTACK_VERBS[attackerClass];
     if (classInfo) return pickRandom(classInfo.verbs);
   }
-
-  // Priority 4: Generic
   return pickRandom(GENERIC_VERBS);
 }
 
-// ── Creature attack style verbs ─────────────────────────────────
+// ── Creature attack style verbs (kept as exports for future use) ──
 
-/** Lightweight name-keyword → verb map. NOT a full archetype system. */
 const CREATURE_VERB_MAP: Record<string, string[]> = {
   wolf:      ['bites', 'snaps at', 'lunges at'],
   warg:      ['bites', 'mauls', 'lunges at'],
@@ -152,12 +171,11 @@ export function resolveCreatureAttackVerb(
   return pickRandom(GENERIC_CREATURE_VERBS);
 }
 
-// ── Structured event types (from enriched server data) ──────────
+// ── Structured event types ──────────────────────────────────────
 
 export interface StructuredAttackEvent {
   type: string;
-  message: string;  // Fallback
-  // Structured fields (optional — absent for old/non-attack events)
+  message: string;
   attacker_name?: string;
   target_name?: string;
   attacker_class?: string;
@@ -170,19 +188,18 @@ export interface StructuredAttackEvent {
   is_offhand?: boolean;
 }
 
+// ── Combat event formatting (tier + flavor) ─────────────────────
+
 /**
- * Format a combat event into MUD-style text.
- * Returns the original message if structured data is missing or mode is 'numbers'.
+ * Format a combat event into MUD-style tier + flavor text.
  */
 export function formatCombatEvent(
   event: StructuredAttackEvent,
   displayMode: CombatLogDisplayMode,
   localCharacterId: string,
 ): string {
-  // Numbers mode: always return raw message
   if (displayMode === 'numbers') return event.message;
 
-  // Only format auto-attack events with structured data
   const isPlayerAttack = (event.type === 'attack_hit' || event.type === 'attack_miss') && event.attacker_name && event.target_name;
   const isCreatureAttack = (event.type === 'creature_hit' || event.type === 'creature_crit' || event.type === 'creature_miss') && event.attacker_name && event.target_name;
   const isOffhand = (event.type === 'offhand_hit' || event.type === 'offhand_miss') && event.attacker_name && event.target_name;
@@ -198,7 +215,7 @@ export function formatCombatEvent(
     return formatPlayerAttack(event, displayMode, isLocal, emoji);
   }
   if (isCreatureAttack) {
-    return formatCreatureAttack(event, displayMode, isLocal, emoji);
+    return formatCreatureAttack(event, displayMode, isLocal);
   }
 
   return event.message;
@@ -208,7 +225,7 @@ function getEventEmoji(event: StructuredAttackEvent): string {
   const classCombat = event.attacker_class ? CLASS_COMBAT[event.attacker_class] : null;
 
   if (event.type === 'creature_hit' || event.type === 'creature_crit' || event.type === 'creature_miss') {
-    return '';  // Creature attacks don't get a prefix emoji
+    return '';
   }
   if (event.is_offhand) return '🗡️';
   if (classCombat) return classCombat.emoji;
@@ -221,52 +238,55 @@ function formatPlayerAttack(
   isLocal: boolean,
   emoji: string,
 ): string {
-  const attacker = isLocal ? 'You' : event.attacker_name!;
   const target = event.target_name!;
   const isMiss = event.type === 'attack_miss' || event.type === 'offhand_miss';
   const isCrit = !!event.is_crit;
   const damage = event.damage ?? 0;
 
   if (isMiss) {
-    const verb = resolvePlayerAttackVerb(event.attacker_class, event.weapon_tag);
-    return `${emoji} ${attacker} ${verb} ${target} — miss!`;
+    if (isLocal) {
+      return `${emoji} You miss ${target}.`;
+    }
+    return `${emoji} ${event.attacker_name!} misses ${target}.`;
   }
 
-  const verb = resolvePlayerAttackVerb(event.attacker_class, event.weapon_tag);
   const tierWord = getDamageTierWord(damage);
-  const critPrefix = isCrit ? 'CRITICAL! ' : '';
+  const flavor = pickRandom(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
   const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
-  const punct = isCrit || damage >= 121 ? '!' : '.';
+  const punct = isCrit ? '!' : '.';
 
-  return `${emoji} ${critPrefix}${attacker} ${verb} ${target}. ${capitalize(tierWord)}${dmgSuffix}${punct}`;
+  if (isLocal) {
+    return `${emoji} You ${tierWord} ${target}, ${flavor}${dmgSuffix}${punct}`;
+  }
+  return `${emoji} ${event.attacker_name!} ${conjugateTierWord(tierWord)} ${target}, ${flavor}${dmgSuffix}${punct}`;
 }
 
 function formatCreatureAttack(
   event: StructuredAttackEvent,
   displayMode: CombatLogDisplayMode,
   isLocal: boolean,
-  _emoji: string,
 ): string {
   const attacker = event.attacker_name!;
-  const target = isLocal ? 'you' : event.target_name!;
   const isMiss = event.type === 'creature_miss';
   const isCrit = !!event.is_crit;
   const damage = event.damage ?? 0;
 
-  const verb = resolveCreatureAttackVerb(attacker, event.is_humanoid);
-
   if (isMiss) {
-    return `${attacker} ${verb} ${target} — miss!`;
+    if (isLocal) {
+      return `${attacker} misses you.`;
+    }
+    return `${attacker} misses ${event.target_name!}.`;
   }
 
   const tierWord = getDamageTierWord(damage);
-  const critPrefix = isCrit ? 'CRITICAL! ' : '';
   const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
-  const punct = isCrit || damage >= 121 ? '!' : '.';
+  const punct = isCrit ? '!' : '.';
 
-  return `${critPrefix}${attacker} ${verb} ${target}. ${capitalize(tierWord)}${dmgSuffix}${punct}`;
-}
+  if (isLocal) {
+    const flavor = pickRandom(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
+    return `${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${dmgSuffix}${punct}`;
+  }
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  const flavor = pickRandom(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
+  return `${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${dmgSuffix}${punct}`;
 }

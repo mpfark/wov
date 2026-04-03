@@ -113,7 +113,7 @@ export function interpretCombatTickResult(
     // Name → You substitution for non-structured or 'numbers' mode
     if (ev.character_id === characterId || msg.includes(characterName)) {
       msg = msg.replace(new RegExp(`${characterName}'s`, 'g'), 'Your');
-      msg = msg.replace(new RegExp(`(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*(?:CRITICAL!\\s*)?))${characterName} `, 'u'), '$1You ');
+      msg = msg.replace(new RegExp(`(^|(?:[\\p{Emoji_Presentation}\\p{Extended_Pictographic}\\uFE0F\\u200D]+\\s*))${characterName} `, 'u'), '$1You ');
       msg = msg.replace(new RegExp(` ${characterName} `, 'g'), ' you ');
       msg = msg.replace(new RegExp(` ${characterName}\\.`, 'g'), ' you.');
       msg = msg.replace(new RegExp(` ${characterName}!`, 'g'), ' you!');
