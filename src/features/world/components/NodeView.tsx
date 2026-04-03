@@ -251,7 +251,7 @@ export default function NodeView({
                         {isSundered && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dwarvish font-display animate-pulse">
+                              <span className="text-[10px] text-dwarvish font-display">
                                 🔨
                               </span>
                             </TooltipTrigger>
