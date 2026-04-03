@@ -180,6 +180,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const processTickResult = useCallback((data: CombatTickResponse) => {
     if (!inCombatRef.current) return; // Ignore late/stale tick responses
 
+    // Dev-only: measure aggro→first-tick latency
+    if (import.meta.env.DEV && combatStartTimeRef.current) {
+      console.debug('[polish] aggro→first-tick', (performance.now() - combatStartTimeRef.current).toFixed(0), 'ms');
+      combatStartTimeRef.current = null;
+    }
+
     // Clear prediction overrides for all creatures in this server response
     const serverCreatureIds = new Set(data.creature_states.map(cs => cs.id));
     setLocalPredictionOverrides(prev => {
