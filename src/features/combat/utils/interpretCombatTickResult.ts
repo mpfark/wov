@@ -11,6 +11,7 @@
  */
 
 import type { Character } from '@/features/character';
+import { formatCombatEvent, type CombatLogDisplayMode, type StructuredAttackEvent } from './combat-text';
 
 export interface CombatTickResponse {
   events: { type: string; message: string; character_id?: string; creature_id?: string }[];
