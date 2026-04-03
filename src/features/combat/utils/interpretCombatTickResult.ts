@@ -81,6 +81,7 @@ export function interpretCombatTickResult(
   characterId: string,
   characterName: string,
   currentEngagedIds: string[],
+  displayMode: CombatLogDisplayMode = 'both',
 ): TickInterpretation {
   // ── Creature HP updates ──
   const creatureHpUpdates: Record<string, number> = {};
