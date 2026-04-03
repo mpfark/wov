@@ -500,8 +500,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const effectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + gearConMod;
       const newHp = Math.min(effectiveMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
-      // Cap DB write at max_hp (gear bonuses are display-only)
-      if (restored > 0) { await p.updateCharacter({ hp: Math.min(newHp, p.character.max_hp) }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
+      if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
       else p.addLog(`${ability.emoji} You use Second Wind but you're already at full health.`);
     } else if (ability.type === 'regen_buff') {
       p.buffSetters.setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
