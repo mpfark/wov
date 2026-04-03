@@ -65,3 +65,19 @@ export function predictConservativeDamage(ctx: PredictionContext): PredictionRes
 export function applyPredictedDamage(currentHp: number, predictedDamage: number): number {
   return Math.max(currentHp - predictedDamage, 1);
 }
+
+/**
+ * Remove prediction overrides for creatures that now have authoritative server data.
+ * Pure helper — returns a new object or the same reference if nothing changed.
+ */
+export function clearPredictionForCreatures(
+  prev: Record<string, { hp: number; ts: number }>,
+  serverCreatureIds: Set<string>,
+): Record<string, { hp: number; ts: number }> {
+  const keys = Object.keys(prev);
+  const toRemove = keys.filter(k => serverCreatureIds.has(k));
+  if (toRemove.length === 0) return prev;
+  const next = { ...prev };
+  toRemove.forEach(k => delete next[k]);
+  return next;
+}
