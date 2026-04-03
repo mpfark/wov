@@ -197,10 +197,21 @@ export function useCharacter(user: User | null) {
 
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
 
+    // Build DB payload — clamp hp/cp/mp to their base maximums so the
+    // server-side trigger doesn't silently reduce them. Gear bonuses that
+    // push effective maximums above the base are display-only on the client.
+    const dbUpdates = { ...updates } as any;
+    const charForCaps = characters.find(c => c.id === charId);
+    if (charForCaps) {
+      if (dbUpdates.hp != null) dbUpdates.hp = Math.min(dbUpdates.hp, charForCaps.max_hp);
+      if (dbUpdates.cp != null) dbUpdates.cp = Math.min(dbUpdates.cp, charForCaps.max_cp);
+      if (dbUpdates.mp != null) dbUpdates.mp = Math.min(dbUpdates.mp, charForCaps.max_mp);
+    }
+
     try {
       const { error } = await supabase
         .from('characters')
-        .update(updates as any)
+        .update(dbUpdates)
         .eq('id', charId);
       if (error) throw error;
     } finally {
