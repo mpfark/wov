@@ -172,19 +172,6 @@ export default function NodeView({
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="space-y-1">
-                {/* Skeleton placeholders while loading */}
-                {creaturesLoading && creatures.length === 0 && Array.from({ length: Math.max(prefetchedCreatureCount, 2) }).map((_, i) => (
-                  <div key={`skel-${i}`} className="p-1.5 bg-background/50 rounded border border-border">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-3 w-20 rounded skeleton-shimmer" />
-                      <div className="h-2 w-8 rounded skeleton-shimmer" />
-                      <div className="ml-auto flex items-center gap-1 shrink-0">
-                        <div className="w-[120px] h-2 rounded-full skeleton-shimmer" />
-                        <div className="h-3 w-12 rounded skeleton-shimmer" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
                 {creatures.map(c => {
                   const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
                   const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
