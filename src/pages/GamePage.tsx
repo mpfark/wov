@@ -61,7 +61,7 @@ function getLogColor(log: string): string {
   else if (log.includes('bleeds for') && log.startsWith('🩸')) color = 'text-dot-bleed italic';
   else if (log.includes('poison damage') && log.startsWith('🧪')) color = 'text-dot-poison italic';
   else if (log.includes('burns for') && log.startsWith('🔥')) color = 'text-dot-burn italic';
-  else if (log.includes('CRITICAL!')) color = 'text-primary font-semibold';
+  else if (log.includes('CRITICAL!')) color = 'text-primary font-semibold log-crit';
   else if (log.startsWith('💀') || log.includes('been defeated') || log.includes('struck down')) color = 'text-destructive';
   else if (log.startsWith('☠️')) color = 'text-elvish';
   else if (log.startsWith('🎉') || log.includes('Level Up')) color = 'text-primary font-semibold';
