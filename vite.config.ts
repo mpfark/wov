@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -16,34 +15,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    VitePWA({
-        registerType: "autoUpdate",
-        devOptions: { enabled: false },
-        workbox: {
-          navigateFallbackDenylist: [/^\/~oauth/],
-          // Network-only for everything — game is online-only
-          globPatterns: [],
-          runtimeCaching: [
-            {
-              urlPattern: /.*$/,
-              handler: "NetworkOnly",
-            },
-          ],
-        },
-        manifest: {
-          name: "Wayfarers of Varneth",
-          short_name: "WoV",
-          description: "A journey through the lands of Varneth",
-          theme_color: "#1a1a2e",
-          background_color: "#1a1a2e",
-          display: "standalone",
-          orientation: "portrait",
-          start_url: "/",
-          icons: [
-            { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
-          ],
-        },
-      }),
   ].filter(Boolean),
   resolve: {
     alias: {

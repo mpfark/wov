@@ -1,5 +1,4 @@
 import { lazy, Suspense } from "react";
-import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import { OfflineOverlay } from "@/components/OfflineOverlay";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -27,7 +26,6 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <PwaUpdatePrompt />
       <OfflineOverlay />
       <BrowserRouter>
         <GameProvider>
