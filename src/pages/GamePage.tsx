@@ -1429,7 +1429,7 @@ searchDisabled={character.cp < 5 || creatures.length > 0}
 
       {/* Death Overlay */}
       {isDead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md animate-polish-fade-in">
           <div className="text-center space-y-4">
             <p className="font-display text-5xl text-destructive animate-pulse">💀</p>
             <p className="font-display text-2xl text-destructive">You Have Fallen</p>
