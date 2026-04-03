@@ -237,6 +237,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.character.id,
       ext.current.character.name,
       engagedCreatureIdsRef.current,
+      getStoredDisplayMode(),
     );
 
     if (result.ticksProcessed && result.ticksProcessed > 1) {
