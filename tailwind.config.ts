@@ -101,7 +101,7 @@ export default {
         },
         "aggro-flash": {
           "0%, 100%": { boxShadow: "none" },
-          "50%": { boxShadow: "0 0 4px 1px hsl(var(--destructive) / 0.25)" },
+          "50%": { boxShadow: "0 0 6px 2px hsl(var(--destructive) / 0.35)" },
         },
         "polish-fade-in": {
           from: { opacity: "0" },
@@ -113,7 +113,7 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "flicker": "flicker 2s ease-in-out infinite",
         "drip": "drip 2.5s ease-in-out infinite",
-        "aggro-flash": "aggro-flash 0.4s ease-out",
+        "aggro-flash": "aggro-flash 0.6s ease-out",
         "polish-fade-in": "polish-fade-in 0.25s ease-out",
       },
     },

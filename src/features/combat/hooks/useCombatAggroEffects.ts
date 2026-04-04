@@ -6,10 +6,29 @@
  * - Mid-fight aggressive creature joins
  * - Initial aggro on node entry
  * - Tracking which creatures have already been processed for aggro
+ * - Immediate threat-feedback log lines (presentation only)
  */
 import { useEffect, useRef } from 'react';
 import type { Character } from '@/features/character';
 import type { Creature } from '@/features/creatures';
+
+// ── Immersive aggro phrases ────────────────────────────────────────
+const THREAT_PHRASES_INITIAL = [
+  (n: string) => `⚠️ ${n} lunges at you!`,
+  (n: string) => `⚠️ ${n} turns on you!`,
+  (n: string) => `⚠️ ${n} snarls and charges!`,
+  (n: string) => `⚠️ ${n} locks eyes on you!`,
+];
+
+const THREAT_PHRASES_REENGAGE = [
+  (n: string) => `⚠️ ${n} charges at you!`,
+  (n: string) => `⚠️ ${n} rushes toward you!`,
+  (n: string) => `⚠️ ${n} closes in on you!`,
+];
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 export interface UseCombatAggroEffectsParams {
   creatures: Creature[];
@@ -50,7 +69,11 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
     const nextAggro = creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive && !recentlyKilledRef.current.has(c.id));
     if (nextAggro) {
       justStoppedRef.current = false;
-      addLocalLog(`⚠️ ${nextAggro.name} attacks!`);
+      if (import.meta.env.DEV) {
+        console.debug('[aggro] re-engage detected', { creatureId: nextAggro.id, ts: performance.now().toFixed(0) });
+      }
+      addLocalLog(pickRandom(THREAT_PHRASES_REENGAGE)(nextAggro.name));
+      addLocalLog(`⚔️ Combat begins!`);
       startCombat(nextAggro.id);
     } else {
       justStoppedRef.current = false;
@@ -88,7 +111,11 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
     if (character.hp <= 0) return;
     const firstAggro = aggressiveCreatures[0];
     if (firstAggro) {
-      addLocalLog(`⚠️ ${firstAggro.name} is aggressive and attacks you!`);
+      if (import.meta.env.DEV) {
+        console.debug('[aggro] initial detected', { creatureId: firstAggro.id, ts: performance.now().toFixed(0) });
+      }
+      addLocalLog(pickRandom(THREAT_PHRASES_INITIAL)(firstAggro.name));
+      addLocalLog(`⚔️ Combat begins!`);
       startCombat(firstAggro.id);
     }
   }, [creatures, startCombat, isDead, character.hp, party, isLeader, addLocalLog]);

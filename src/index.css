@@ -201,7 +201,7 @@
 }
 @keyframes aggro-flash {
   0%, 100% { box-shadow: none; }
-  50% { box-shadow: 0 0 4px 1px hsl(var(--destructive) / 0.25); }
+  50% { box-shadow: 0 0 6px 2px hsl(var(--destructive) / 0.35); }
 }
 @keyframes polish-fade-in {
   from { opacity: 0; }

@@ -99,13 +99,16 @@ export default function NodeView({
     if (newFlash.size > 0) {
       setFlashingIds(prev => new Set([...prev, ...newFlash]));
       // Auto-clear after animation
+      if (import.meta.env.DEV) {
+        newFlash.forEach(cId => console.debug('[aggro] flash shown', { creatureId: cId, ts: performance.now().toFixed(0) }));
+      }
       setTimeout(() => {
         setFlashingIds(prev => {
           const next = new Set(prev);
           newFlash.forEach(id => next.delete(id));
           return next;
         });
-      }, 400);
+      }, 600);
     }
   }, [engagedCreatureIds]);
 
