@@ -1,29 +1,64 @@
 
-# Graded Hit Quality System
+
+# Graded Hit Quality System — Revised Plan
 
 ## Summary
 
-Extend the existing hit/miss resolution with five quality bands based on attack roll margin vs AC. Glancing hits land just below AC, while weak/normal/strong hits land above it. Crits remain a separate layer on top.
+Three refinements applied to the approved plan. The core system (five quality bands, margin-based multipliers, progression protection) is unchanged.
 
-## Hit Quality Bands
+## Refinement 1: No hit-quality wording in server messages
 
-The margin is `totalAtk - creatureAC`. Current logic: hit if `roll !== 1 && total >= AC` (or crit). New logic keeps this boundary but adds a "near miss" glancing band below it.
+The server adds a structured `hit_quality` field to all attack events but does **not** modify any `message` strings. Existing message format stays identical. The client can use the `hit_quality` field for presentation if/when desired.
+
+## Refinement 2: Weak hits are not hard-capped
+
+- **Glancing hits**: hard cap at `GLANCING_WEAK_CAP = 3` damage (always).
+- **Weak hits**: cap only applies when the defender significantly outscales the attacker. Specifically, weak hits are capped at `GLANCING_WEAK_CAP` only when `margin < -2` (i.e. the attacker barely reached the glancing→weak threshold via crit or buffs but is still well below AC). In normal equal-level fights where `margin >= 0`, weak hits use the 0.60× multiplier with no flat cap.
+
+This preserves progression protection while keeping weak hits visibly distinct from glancing hits.
+
+## Refinement 3: Explicit canonical damage pipeline
+
+One pipeline, followed identically by all three attack paths:
 
 ```text
-margin < -4        → miss        (0.0x)  — unchanged
-margin -4 to -1    → glancing    (0.25x) — new "near miss" band
-margin 0 to +2     → weak        (0.60x)
-margin +3 to +6    → normal      (1.00x)
-margin +7+         → strong      (1.25x)
+PLAYER MAIN-HAND:
+  1. Roll base damage (dice + stat mod)
+  2. Hit-quality multiplier (0.25× / 0.60× / 1.0× / 1.25×)
+  3. Crit multiplier (2× if crit, replaces the pre-quality raw×2)
+  4. STR damage floor (non-crit only, applied to step 1 before quality mult)
+  5. Weapon affinity multiplier
+  6. Two-handed multiplier (1.25× if 2H)
+  7. Offensive buffs (stealth 2×, damage buff 1.5×, focus strike flat, disengage)
+  8. Clamp minimum 1
+  9. Glancing cap (always 3) / Weak cap (3 only if margin < -2)
+  10. → finalAppliedDamage → HP subtraction, event damage field
+
+OFF-HAND:
+  1. Roll base damage (dice + stat mod)
+  2. Hit-quality multiplier
+  3. Crit multiplier (2× if crit)
+  4. Off-hand reduction (0.30×)
+  5. Clamp minimum 1
+  6. Glancing cap / conditional weak cap
+  7. → finalAppliedDamage
+
+CREATURE:
+  1. Roll base damage (dice + STR mod)
+  2. Hit-quality multiplier
+  3. Crit multiplier (1.5× if crit, matching existing creature crit)
+  4. Level-gap multiplier (existing)
+  5. AC overflow reduction (crit below AC, existing)
+  6. WIS awareness reduction (existing)
+  7. Absorb shield (existing)
+  8. Clamp minimum 1
+  9. Glancing cap / conditional weak cap
+  10. → finalAppliedDamage
 ```
 
-Natural 1 always misses. Crits always hit at "normal" quality minimum (then get the 2x crit multiplier on top).
+Key: the hit-quality multiplier is always step 2, immediately after base damage. Everything else layers on top in the same order as today.
 
-### Progression protection
-
-Glancing/weak hits vs high-AC targets are clamped to max 3 damage (after all multipliers). This prevents weak creatures from threatening strong players.
-
-## New shared function: `combat-math.ts`
+## Shared math additions (`combat-math.ts`, both copies)
 
 ```typescript
 export type HitQuality = 'miss' | 'glancing' | 'weak' | 'normal' | 'strong';
@@ -45,51 +80,45 @@ export const HIT_QUALITY_MULT: Record<HitQuality, number> = {
 export const GLANCING_WEAK_CAP = 3;
 ```
 
-Added to both `supabase/functions/_shared/combat-math.ts` and `src/features/combat/utils/combat-math.ts`.
-
 ## Changes to `combat-tick/index.ts`
 
-### Player main-hand attacks (lines 599-698)
+### Player main-hand (lines 599–698)
 
-Current flow: roll → hit/miss binary → damage calc → buffs → HP subtraction.
+- Compute `margin = total - creatureAc`
+- `quality = getHitQuality(margin, roll === 1, roll >= effCrit)`
+- `quality === 'miss'` → existing miss path (unchanged)
+- Otherwise: apply pipeline steps 1–9 as defined above
+- Add `hit_quality: quality` to the event object (no message string changes)
 
-New flow:
-1. Roll d20, compute `total` and `margin = total - creatureAc`
-2. `quality = getHitQuality(margin, roll === 1, roll >= effCrit)`
-3. If `quality === 'miss'` → miss event (unchanged)
-4. Otherwise: roll base damage → apply `HIT_QUALITY_MULT[quality]` → then crit (if crit, 2x on top) → affinity → 2H mult → stealth/buff multipliers → clamp → cap glancing/weak at 3 → HP subtraction
-5. Event includes `hit_quality` field for combat text
+### Off-hand (lines 701–764)
 
-### Off-hand attacks (lines 701-764)
+- Compute margin, quality
+- Apply pipeline steps 1–6
+- Add `hit_quality` to event (no message changes)
 
-Same pattern: compute margin → quality → apply multiplier before offhand 30% reduction → cap glancing/weak at 3.
+### Creature attacks (`applyCreatureHit`, lines 492–551)
 
-### Creature counterattacks (`applyCreatureHit`, lines 492-551)
+- Compute `margin = roll - tAC`
+- `quality = getHitQuality(margin, isNat1, isCrit)`
+- `quality === 'miss'` → existing miss path
+- Otherwise: apply pipeline steps 1–9
+- Add `hit_quality` to event (no message changes)
 
-Same pattern: compute `margin = roll - tAC` → quality → apply multiplier after base damage roll → then crit/level-gap/overflow logic → cap glancing/weak at 3 → HP subtraction. Event includes `hit_quality`.
-
-### Event format
-
-All attack events gain a `hit_quality` field (`'miss' | 'glancing' | 'weak' | 'normal' | 'strong'`). Message strings updated to include quality label for non-normal hits (e.g., "glancing blow", "weak hit", "strong hit").
-
-## Combat text integration
-
-The existing `DAMAGE_TIERS` in `combat-text.ts` already maps damage amounts to tier words (graze, nick, hit, wound, etc.). Since glancing hits produce 1-3 damage, they'll naturally fall into "graze" tier. No changes needed to `combat-text.ts` — the damage-based tier system handles it automatically.
-
-## Files Modified
+## Files modified
 
 | File | Change |
 |------|--------|
-| `supabase/functions/_shared/combat-math.ts` | Add `HitQuality` type, `getHitQuality()`, `HIT_QUALITY_MULT`, `GLANCING_WEAK_CAP` |
-| `src/features/combat/utils/combat-math.ts` | Mirror the same additions |
-| `supabase/functions/combat-tick/index.ts` | Apply hit quality to player attacks, off-hand attacks, and creature counterattacks |
+| `supabase/functions/_shared/combat-math.ts` | Add `HitQuality`, `getHitQuality()`, `HIT_QUALITY_MULT`, `GLANCING_WEAK_CAP` |
+| `src/features/combat/utils/combat-math.ts` | Mirror same additions |
+| `supabase/functions/combat-tick/index.ts` | Apply hit quality to all three attack paths per canonical pipeline; add `hit_quality` field to events; no message string changes |
 
-## What Does NOT Change
+## What does NOT change
 
 - Combat architecture, tick timing, server authority
 - Crit range calculation, crit mitigation (AC overflow)
 - Ability damage (barrage, execute, etc.)
-- Offscreen DoT system
-- Client-side prediction
-- Database schema
-- Buff/debuff system
+- Offscreen DoT system, client-side prediction
+- Database schema, buff/debuff system
+- Server message string format (backward-compatible)
+- Combat text client formatting (`combat-text.ts`)
+
