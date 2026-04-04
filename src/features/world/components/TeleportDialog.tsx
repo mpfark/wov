@@ -92,7 +92,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
           )}
           Travel instantly to another teleport point. Your CP: <span className="text-primary font-display">{playerCp}/{playerMaxCp}</span>
         </p>
-        <ScrollArea className="max-h-64">
+        <ScrollArea className="max-h-[50vh]">
           <div className="space-y-1.5 pr-2">
             {/* Waymark Return Option */}
             {waymark && onReturnToWaymark && (
