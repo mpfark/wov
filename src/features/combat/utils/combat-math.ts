@@ -227,6 +227,9 @@ export const OFFHAND_WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'st
 /** Off-hand damage multiplier (30% of main-hand base damage) */
 export const OFFHAND_DAMAGE_MULT = 0.30;
 
+// ── Two-handed weapon bonus ──────────────────────────────────────
+export const TWO_HANDED_DAMAGE_MULT = 1.25;
+
 /** Check whether the off-hand item is a weapon (not a shield) and thus grants a bonus attack */
 export function isOffhandWeapon(offhandTag?: string | null): boolean {
   return !!offhandTag && OFFHAND_WEAPON_TAGS.includes(offhandTag);

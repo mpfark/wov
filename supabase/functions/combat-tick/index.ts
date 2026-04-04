@@ -35,6 +35,7 @@ import {
   SHIELD_AC_BONUS,
   SHIELD_AWARENESS_BONUS,
   isShield,
+  TWO_HANDED_DAMAGE_MULT,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
@@ -201,13 +202,14 @@ Deno.serve(async (req) => {
     const charIds = members.map(m => m.id);
     const { data: allEquip } = await db
       .from('character_inventory')
-      .select('character_id, equipped_slot, item:items(stats, weapon_tag)')
+      .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
       .in('character_id', charIds)
       .not('equipped_slot', 'is', null);
 
     const eq: Record<string, Record<string, number>> = {};
     const mainHandTag: Record<string, string | null> = {};
     const offHandTag: Record<string, string | null> = {};
+    const isTwoHanded: Record<string, boolean> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
       let mhTag: string | null = null;
@@ -216,8 +218,9 @@ Deno.serve(async (req) => {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
           b[s] = (b[s] || 0) + (v as number);
         }
-        if (e.equipped_slot === 'main_hand' && (e.item as any)?.weapon_tag) {
-          mhTag = (e.item as any).weapon_tag;
+        if (e.equipped_slot === 'main_hand') {
+          if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
+          if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
         }
         if (e.equipped_slot === 'off_hand' && (e.item as any)?.weapon_tag) {
           ohTag = (e.item as any).weapon_tag;
@@ -603,6 +606,7 @@ Deno.serve(async (req) => {
           const isCrit = roll >= effCrit;
           let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
           if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
+          if (isTwoHanded[m.id]) dmg = Math.floor(dmg * TWO_HANDED_DAMAGE_MULT);
           if (isStealth) {
             dmg = dmg * 2;
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
