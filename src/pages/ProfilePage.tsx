@@ -81,6 +81,18 @@ export default function ProfilePage({ onBack }: Props) {
             ) : (
               <>
                 <div>
+                  <label className="text-sm font-display text-foreground">Full Name</label>
+                  <Input
+                    value={fullName}
+                    readOnly
+                    disabled
+                    className="mt-1 bg-input border-border opacity-70"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set during onboarding. Contact support to change.
+                  </p>
+                </div>
+                <div>
                   <label className="text-sm font-display text-foreground">Display Name</label>
                   <Input
                     value={displayName}
