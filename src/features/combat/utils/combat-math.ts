@@ -425,7 +425,7 @@ export type HitQuality = 'miss' | 'glancing' | 'weak' | 'normal' | 'strong';
 export function getHitQuality(margin: number, isNat1: boolean, isCrit: boolean): HitQuality {
   if (isNat1) return 'miss';
   if (isCrit) return margin >= 7 ? 'strong' : 'normal';
-  if (margin < -4) return 'miss';
+  if (margin < -8) return 'miss';
   if (margin < 0) return 'glancing';
   if (margin <= 2) return 'weak';
   if (margin <= 6) return 'normal';
