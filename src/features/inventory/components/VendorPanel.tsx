@@ -72,7 +72,6 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       addLog('❌ Not enough gold!');
       return;
     }
-    // Atomic purchase via server-side RPC (verifies ownership, location, gold, stock, price)
     const { error } = await supabase.rpc('buy_vendor_item' as any, {
       p_character_id: characterId,
       p_vendor_item_id: vi.id,
@@ -107,9 +106,77 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
 
   const sellableItems = inventory.filter(i => !i.equipped_slot && !i.item.is_soulbound && !i.is_pinned);
 
+  const renderBuyColumn = () => {
+    if (vendorItems.length === 0) {
+      return <p className="text-xs text-muted-foreground italic">This vendor has nothing for sale.</p>;
+    }
+    const stacked = vendorItems.reduce<Record<string, { vi: VendorItem; count: number; totalStock: number }>>((acc, vi) => {
+      if (acc[vi.item_id]) {
+        acc[vi.item_id].count += 1;
+        acc[vi.item_id].totalStock += vi.stock;
+      } else {
+        acc[vi.item_id] = { vi, count: 1, totalStock: vi.stock };
+      }
+      return acc;
+    }, {});
+    return Object.values(stacked).sort((a, b) => a.vi.item.name.localeCompare(b.vi.item.name)).map(({ vi, count, totalStock }) => (
+      <div key={vi.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {count > 1 && (
+            <span className="text-[10px] font-display bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+              {count}
+            </span>
+          )}
+          <div className="min-w-0">
+            <span className={`text-sm font-display ${getItemColor(vi.item)} block truncate`}>{vi.item.name}</span>
+            <span className="text-[10px] text-muted-foreground">{vi.item.slot || vi.item.item_type}</span>
+            {totalStock > 0 && <span className="text-[10px] text-muted-foreground ml-1">(×{totalStock})</span>}
+          </div>
+        </div>
+        <Button size="sm" onClick={() => buyItem(vi)} disabled={gold < getDiscountedPrice(vi.price)}
+          className="font-display text-xs h-7 shrink-0 ml-1">
+          <Coins className="w-3 h-3 mr-1" />
+          {buyDiscount > 0 ? <><span className="line-through text-muted-foreground mr-0.5">{vi.price}</span>{getDiscountedPrice(vi.price)}g</> : <>{vi.price}g</>}
+        </Button>
+      </div>
+    ));
+  };
+
+  const renderSellColumn = () => {
+    if (sellableItems.length === 0) {
+      return <p className="text-xs text-muted-foreground italic">No items to sell.</p>;
+    }
+    const stacked = sellableItems.reduce<Record<string, { inv: InventoryItem; count: number }>>((acc, inv) => {
+      if (acc[inv.item_id]) {
+        acc[inv.item_id].count += 1;
+      } else {
+        acc[inv.item_id] = { inv, count: 1 };
+      }
+      return acc;
+    }, {});
+    return Object.values(stacked).sort((a, b) => a.inv.item.name.localeCompare(b.inv.item.name)).map(({ inv, count }) => (
+      <div key={inv.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {count > 1 && (
+            <span className="text-[10px] font-display bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+              {count}
+            </span>
+          )}
+          <div className="min-w-0">
+            <span className={`text-sm font-display ${getItemColor(inv.item)} block truncate`}>{inv.item.name}</span>
+            <span className="text-[10px] text-muted-foreground">{inv.item.slot || inv.item.item_type}</span>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => sellItem(inv)} className="font-display text-xs h-7 shrink-0 ml-1">
+          <ArrowUpFromLine className="w-3 h-3 mr-1" /> {getSellPrice(inv)}g
+        </Button>
+      </div>
+    ));
+  };
+
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <ScrollPanel icon="🪙" title="Vendor" className="max-w-lg">
+      <ScrollPanel icon="🪙" title="Vendor" wide>
 
         <div className="flex items-center gap-2 text-sm mb-3">
           <Coins className="w-4 h-4 text-primary" />
@@ -117,79 +184,22 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
           {chaMod > 0 && <span className="text-[10px] text-muted-foreground">(CHA: Buy -{Math.round(buyDiscount * 100)}%, Sell {Math.round(sellMultiplier * 100)}%)</span>}
         </div>
 
-        {/* Buy */}
-        <div className="space-y-2">
-          <h3 className="font-display text-xs text-muted-foreground">For Sale</h3>
-        {vendorItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">This vendor has nothing for sale.</p>
-          ) : (() => {
-            // Stack vendor items by item_id
-            const stacked = vendorItems.reduce<Record<string, { vi: VendorItem; count: number; totalStock: number }>>((acc, vi) => {
-              if (acc[vi.item_id]) {
-                acc[vi.item_id].count += 1;
-                acc[vi.item_id].totalStock += vi.stock;
-              } else {
-                acc[vi.item_id] = { vi, count: 1, totalStock: vi.stock };
-              }
-              return acc;
-            }, {});
-            return Object.values(stacked).sort((a, b) => a.vi.item.name.localeCompare(b.vi.item.name)).map(({ vi, count, totalStock }) => (
-              <div key={vi.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
-                <div className="flex items-center gap-1.5">
-                  {count > 1 && (
-                    <span className="text-[10px] font-display bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center">
-                      {count}
-                    </span>
-                  )}
-                  <div>
-                    <span className={`text-sm font-display ${getItemColor(vi.item)}`}>{vi.item.name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{vi.item.slot || vi.item.item_type}</span>
-                    {totalStock > 0 && <span className="text-xs text-muted-foreground ml-1">(×{totalStock})</span>}
-                  </div>
-                </div>
-                <Button size="sm" onClick={() => buyItem(vi)} disabled={gold < getDiscountedPrice(vi.price)}
-                  className="font-display text-xs h-7">
-                  <Coins className="w-3 h-3 mr-1" />
-                  {buyDiscount > 0 ? <><span className="line-through text-muted-foreground mr-0.5">{vi.price}</span>{getDiscountedPrice(vi.price)}g</> : <>{vi.price}g</>}
-                </Button>
-              </div>
-            ));
-          })()}
-        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Buy column */}
+          <div className="space-y-2">
+            <h3 className="font-display text-xs text-muted-foreground">For Sale</h3>
+            <div className="space-y-1.5 max-h-[40vh] overflow-y-auto pr-1">
+              {renderBuyColumn()}
+            </div>
+          </div>
 
-        {/* Sell */}
-        <div className="space-y-2 mt-4 border-t border-border pt-3">
-          <h3 className="font-display text-xs text-muted-foreground">Sell Items</h3>
-          {sellableItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">No items to sell.</p>
-          ) : (() => {
-            const stacked = sellableItems.reduce<Record<string, { inv: InventoryItem; count: number }>>((acc, inv) => {
-              if (acc[inv.item_id]) {
-                acc[inv.item_id].count += 1;
-              } else {
-                acc[inv.item_id] = { inv, count: 1 };
-              }
-              return acc;
-            }, {});
-            return Object.values(stacked).sort((a, b) => a.inv.item.name.localeCompare(b.inv.item.name)).map(({ inv, count }) => (
-              <div key={inv.item_id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40">
-                <div className="flex items-center gap-1.5">
-                  {count > 1 && (
-                    <span className="text-[10px] font-display bg-primary/20 text-primary rounded-full w-5 h-5 flex items-center justify-center">
-                      {count}
-                    </span>
-                  )}
-                  <div>
-                    <span className={`text-sm font-display ${getItemColor(inv.item)}`}>{inv.item.name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">{inv.item.slot || inv.item.item_type}</span>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => sellItem(inv)} className="font-display text-xs h-7">
-                  <ArrowUpFromLine className="w-3 h-3 mr-1" /> {getSellPrice(inv)}g
-                </Button>
-              </div>
-            ));
-          })()}
+          {/* Sell column */}
+          <div className="space-y-2">
+            <h3 className="font-display text-xs text-muted-foreground">Your Inventory</h3>
+            <div className="space-y-1.5 max-h-[40vh] overflow-y-auto pr-1">
+              {renderSellColumn()}
+            </div>
+          </div>
         </div>
       </ScrollPanel>
     </Dialog>
