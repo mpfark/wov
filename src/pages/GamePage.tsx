@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { getMaxCp, getMaxMp } from '@/lib/game-data';
+
 import CharacterPanel from '@/features/character/components/CharacterPanel';
 import NodeView from '@/features/world/components/NodeView';
 import MapPanel from '@/features/world/components/MapPanel';
