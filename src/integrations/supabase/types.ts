@@ -1081,6 +1081,8 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
+          full_name: string | null
+          has_accepted_oath: boolean
           id: string
           updated_at: string
           user_id: string
@@ -1088,6 +1090,8 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name?: string | null
+          full_name?: string | null
+          has_accepted_oath?: boolean
           id?: string
           updated_at?: string
           user_id: string
@@ -1095,6 +1099,8 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string | null
+          full_name?: string | null
+          has_accepted_oath?: boolean
           id?: string
           updated_at?: string
           user_id?: string
