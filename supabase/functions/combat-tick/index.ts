@@ -617,10 +617,17 @@ Deno.serve(async (req) => {
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
         const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
 
-        if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
+        // ── Hit quality (graded system) ──
+        const margin = total - creatureAc;
+        const isCrit = roll >= effCrit;
+        const quality = getHitQuality(margin, roll === 1, isCrit);
+
+        if (quality !== 'miss') {
+          // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. STR floor (pre-quality, embedded in step 1) → 5. affinity → 6. 2H → 7. buffs → 8. clamp → 9. caps
           let raw = rollDmg(atk.min, atk.max) + sMod;
-          const isCrit = roll >= effCrit;
-          let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+          if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
+          let dmg = Math.max(Math.floor(raw * HIT_QUALITY_MULT[quality]), 1);
+          if (isCrit) dmg = Math.max(dmg * 2, 1);
           if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
           if (isTwoHanded[m.id]) dmg = Math.floor(dmg * TWO_HANDED_DAMAGE_MULT);
           if (isStealth) {
@@ -642,6 +649,12 @@ Deno.serve(async (req) => {
             consumedBuffs[m.id].push('disengage');
           }
 
+          // Clamp minimum 1
+          dmg = Math.max(dmg, 1);
+          // Glancing cap (always); weak cap only when margin < -2
+          if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+          if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
@@ -653,6 +666,7 @@ Deno.serve(async (req) => {
             damage: dmg,
             is_crit: isCrit,
             character_id: m.id,
+            hit_quality: quality,
           });
 
           if (mb.poison_buff && Math.random() < 0.4) {
@@ -710,6 +724,7 @@ Deno.serve(async (req) => {
             damage: 0,
             is_crit: false,
             character_id: m.id,
+            hit_quality: 'miss' as HitQuality,
           });
         }
       }
