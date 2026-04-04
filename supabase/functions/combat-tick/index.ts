@@ -36,6 +36,10 @@ import {
   SHIELD_AWARENESS_BONUS,
   isShield,
   TWO_HANDED_DAMAGE_MULT,
+  getHitQuality,
+  HIT_QUALITY_MULT,
+  GLANCING_WEAK_CAP,
+  type HitQuality,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
