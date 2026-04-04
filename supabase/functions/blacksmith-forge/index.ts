@@ -12,7 +12,7 @@ const ALL_SLOTS = ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "
 async function getItemPool(db: any, slot: string, level: number) {
   const baseQuery = () => db
     .from("items")
-    .select("id, name, rarity, level, stats, description, slot, hands")
+    .select("id, name, rarity, level, stats, description, slot, hands, weapon_tag")
     .eq("item_type", "equipment")
     .eq("slot", slot)
     .eq("is_soulbound", false)
