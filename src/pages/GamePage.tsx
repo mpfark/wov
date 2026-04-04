@@ -24,7 +24,7 @@ import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import { usePartyCombat } from '@/features/combat';
-import { getBagWeight, calculateAC } from '@/lib/game-data';
+import { getBagWeight, calculateAC, getMaxCp, getMaxMp } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
