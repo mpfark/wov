@@ -1,67 +1,77 @@
 
 
-# Vendor & Blacksmith Panel Redesign
+# Two-Handed Weapon +25% Damage Multiplier
 
 ## Summary
 
-Redesign both panels to use a fixed-height, two-column layout inside the existing ScrollPanel aesthetic, and replace the random blacksmith forge with a deterministic item-browsing system.
+Add a flat 1.25× damage multiplier to main-hand auto-attacks when the character is wielding a two-handed weapon (`items.hands = 2`). Server-only change — no client modifications needed.
 
-## Layout Changes (Both Panels)
+## Detection
 
-**ScrollPanel** gets a new `wide` prop that sets `max-w-2xl` and a fixed `min-h-[60vh]` so the container stays stable regardless of content length. Each column scrolls independently via `overflow-y-auto`.
+The `items` table already has a `hands` column (1, 2, or null). The equipment query in `combat-tick/index.ts` (line 204) currently selects only `stats, weapon_tag` from items. We need to also fetch `hands` to detect two-handed weapons server-side.
 
-### Vendor Panel — Two Columns
+## Changes
 
-| Left Column: "For Sale" | Right Column: "Your Inventory" |
-|---|---|
-| Vendor stock list with Buy buttons | Sellable items with Sell buttons |
+### `supabase/functions/combat-tick/index.ts`
 
-Gold bar + CHA info stays in the header above both columns. No tabs — everything visible at once.
+**1. Expand equipment query** (line 204)
 
-### Blacksmith Panel — Two Columns, No Tabs
+Add `hands` to the item select:
+```
+.select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
+```
 
-| Left Column: "Services" | Right Column: "Repair" |
-|---|---|
-| **Forge**: Slot selector → shows available items for that slot (queried from `items` table, filtered by level ±2/±5). Player picks the exact item they want, then clicks Forge. | Damaged items list with Repair / Repair All buttons |
-| **Sell Salvage**: Slider + sell button (compact, below forge) | |
+**2. Track two-handed status per character** (lines 208-229)
 
-This removes the 3-tab system entirely — everything is visible in two columns.
+Add a `isTwoHanded` record alongside `mainHandTag` and `offHandTag`:
+```typescript
+const isTwoHanded: Record<string, boolean> = {};
+```
+Set it during the equipment loop:
+```typescript
+if (e.equipped_slot === 'main_hand' && (e.item as any)?.hands === 2) {
+  isTwoHanded[cid] = true;
+}
+```
 
-## Forge Redesign: Deterministic Item Selection
+**3. Apply multiplier to main-hand auto-attack damage** (around line 605, after affinity mult, before stealth/buff multipliers)
 
-### Client-side changes (`BlacksmithPanel.tsx`)
+```typescript
+if (isTwoHanded[m.id]) dmg = Math.floor(dmg * 1.25);
+```
 
-When the player selects a slot, fetch available forgeable items from the edge function (new endpoint or modified existing one):
+This ensures the 1.25× applies to the base+crit+affinity damage, and then stealth (2×), damage buff (1.5×), focus strike, and disengage all stack on top of it correctly. The resulting `dmg` value is the same one used for HP subtraction (line 625) and the event's `damage` field (line 633).
 
-1. Player picks a slot → client calls a new `blacksmith-browse` edge function (or the existing `blacksmith-forge` with a `mode: "browse"` flag)
-2. Returns the pool of items available for that slot at the character's level (same filtering logic as current forge: ±2 then ±5, non-soulbound, non-unique)
-3. Items are displayed in a scrollable list grouped by rarity, showing name, stats, rarity color
-4. Player clicks an item → clicks "Forge" → edge function receives `item_id` instead of random selection
+**4. No change to off-hand section** (line 697+)
 
-### Edge function changes (`blacksmith-forge/index.ts`)
+The off-hand attack block already gates on `isOffhandWeapon(offHandTag[m.id])` — a two-handed weapon user will have no off-hand weapon, so this section is naturally skipped. No guard needed.
 
-Add two modes:
+### `supabase/functions/_shared/combat-math.ts`
 
-**Browse mode** (`mode: "browse"`): Returns the filtered item pool for a given slot without deducting resources. New request body: `{ character_id, slot, mode: "browse" }`.
+Add a constant for the multiplier so it's centrally defined:
+```typescript
+export const TWO_HANDED_DAMAGE_MULT = 1.25;
+```
 
-**Forge mode** (`mode: "forge"` or default): Accepts `{ character_id, slot, item_id }`. Validates the requested `item_id` exists in the valid pool (same filters), then deducts resources and grants the item. No more random selection.
+Import and use this constant in `combat-tick` instead of a magic number.
 
-This keeps server authority — the server validates the chosen item is in the allowed pool.
+Mirror the constant to `src/features/combat/utils/combat-math.ts` for the client copy (used by prediction/tooltips if needed later).
 
 ## Files Modified
 
 | File | Change |
-|---|---|
-| `src/features/inventory/components/ScrollPanel.tsx` | Add optional `wide` prop for two-column panels with fixed min-height |
-| `src/features/inventory/components/VendorPanel.tsx` | Two-column layout, remove stacked sections |
-| `src/features/inventory/components/BlacksmithPanel.tsx` | Two-column layout, remove tabs, add item browser for forge |
-| `supabase/functions/blacksmith-forge/index.ts` | Add browse mode, accept specific `item_id` in forge mode |
+|------|------|
+| `supabase/functions/_shared/combat-math.ts` | Add `TWO_HANDED_DAMAGE_MULT = 1.25` constant |
+| `src/features/combat/utils/combat-math.ts` | Mirror the constant |
+| `supabase/functions/combat-tick/index.ts` | Fetch `hands`, track `isTwoHanded`, apply 1.25× to main-hand auto-attacks |
 
 ## What Does NOT Change
 
-- Economy formulas, costs, rarity distribution of available items
-- Server authority for purchases/forging
-- Vendor RPC functions (`buy_vendor_item`, `sell_item`)
-- The ornate parchment/wax-seal aesthetic of ScrollPanel
-- Item stat budgets or forge pool content
+- Off-hand attack logic, dual-wield behavior
+- Shield setups
+- Ability damage (barrage, execute, ignite consume, burst, rend)
+- Combat architecture, tick rate, server authority
+- Stat formulas, equipment stat budgets
+- Client-side code (no UI changes needed)
+- Database schema (the `hands` column already exists)
 
