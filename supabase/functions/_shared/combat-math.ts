@@ -223,6 +223,9 @@ export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | nu
 export const OFFHAND_WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand'];
 export const OFFHAND_DAMAGE_MULT = 0.30;
 
+// ── Two-handed weapon bonus ──────────────────────────────────────
+export const TWO_HANDED_DAMAGE_MULT = 1.25;
+
 export function isOffhandWeapon(offhandTag?: string | null): boolean {
   return !!offhandTag && OFFHAND_WEAPON_TAGS.includes(offhandTag);
 }

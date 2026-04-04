@@ -35,6 +35,7 @@ import {
   SHIELD_AC_BONUS,
   SHIELD_AWARENESS_BONUS,
   isShield,
+  TWO_HANDED_DAMAGE_MULT,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
