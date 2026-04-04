@@ -1,98 +1,111 @@
 
 
-# Refactor Combat Text to Tier + Flavor Sentence Structure (Revised)
+# Instant Aggro / Immediate First-Beat Polish Pass
 
-## Revisions Applied
+## Analysis
 
-1. **Flavor text tables** revised to avoid echoing the tier word (e.g. "wound… wound" → "wound… drawing blood")
-2. **Conjugation helper** added for third-person subjects instead of naive `+ "s"`
+The current flow already has:
+- Aggro log lines (`⚠️ X is aggressive and attacks you!`) in `useCombatAggroEffects`
+- Aggro flash (400ms red glow) in `NodeView` triggered by `engagedCreatureIds`
+- Immediate first tick call in `startCombatCore` (line 192: `doTickRef.current()`)
+
+The perceived delay comes from:
+1. Generic/flat aggro messages that don't feel threatening
+2. The aggro flash fires on `engagedCreatureIds` change, but this happens inside `startCombatCore` which is called from the aggro effect — timing is correct but the visual cue is subtle
+3. No intermediate feedback between aggro log + flash and the first server-confirmed combat event (~200-500ms network round trip)
 
 ## Changes
 
-### 1. `src/features/combat/utils/combat-text.ts`
+### 1. `src/features/combat/hooks/useCombatAggroEffects.ts` — Immersive aggro messages + diagnostics
 
-**Add** refined flavor text tables:
+Replace flat aggro messages with varied, threatening creature-specific lines:
 
+- Initial aggro: `⚠️ {name} lunges at you!` / `⚠️ {name} turns on you!` (randomized)
+- Re-engage: `⚠️ {name} attacks!` → `⚠️ {name} charges at you!`
+- Mid-fight join: `⚠️ {name} joins the fight!` (keep as-is, already good)
+
+Add a small helper that picks from 3-4 threat phrases randomly.
+
+Add dev-only diagnostic timestamps:
 ```typescript
-const DAMAGE_FLAVOR: Record<string, string[]> = {
-  graze: ["barely scratching it", "just nicking it"],
-  nick: ["leaving a small mark", "scratching its surface"],
-  hit: ["landing a solid blow", "striking firmly"],
-  wound: ["drawing blood", "opening a clear wound"],
-  maul: ["tearing into it", "ripping through its defenses"],
-  crush: ["hitting with great force", "battering it"],
-  devastate: ["leaving it reeling", "dealing devastating damage"],
-  annihilate: ["leaving it shattered", "nearly destroying it"],
-  obliterate: ["utterly overwhelming it", "almost destroying it"],
-};
-
-const DAMAGE_FLAVOR_YOU: Record<string, string[]> = {
-  graze: ["barely scratching you", "just nicking you"],
-  nick: ["leaving a small mark on you", "scratching you"],
-  hit: ["landing a solid blow on you", "striking you firmly"],
-  wound: ["drawing blood", "opening a clear wound"],
-  maul: ["tearing into you", "ripping through your defenses"],
-  crush: ["hitting you with great force", "battering you"],
-  devastate: ["leaving you reeling", "dealing devastating damage"],
-  annihilate: ["leaving you shattered", "nearly breaking you"],
-  obliterate: ["utterly overwhelming you", "almost destroying you"],
-};
-```
-
-**Add** conjugation helper:
-
-```typescript
-function conjugateTierWord(word: string): string {
-  if (word.endsWith('e')) return word + 's';       // graze→grazes, annihilate→annihilates, obliterate→obliterates
-  if (word.endsWith('sh') || word.endsWith('ch'))   // crush→crushes
-    return word + 'es';
-  return word + 's';                                // hit→hits, maul→mauls, wound→wounds, nick→nicks
+if (import.meta.env.DEV) {
+  console.debug('[aggro] detected', { creatureId, ts: performance.now().toFixed(0) });
 }
 ```
 
-Used in `formatCreatureAttack` and other-player paths instead of `tierWord + "s"`.
+### 2. `src/features/combat/hooks/usePartyCombat.ts` — Combat-start event + diagnostics
 
-**Rewrite `formatPlayerAttack`** — new pattern:
+After `setInCombat(true)` in `startCombatCore`, emit a `combat:start` event on the GameEventBus so consuming UI can react instantly:
 
-- Miss: `{emoji} You miss {target}.`
-- Hit: `{emoji} You {tierWord} {target}, {flavor} [dmg].`
-- Crit: same but `!` punctuation, pick from stronger flavor variants
+Currently line 189 logs to console. Add:
+```typescript
+params.eventBus?.emit('combat:start', { creatureId });
+```
 
-**Rewrite `formatCreatureAttack`** — same tier + flavor pattern:
+This requires threading `eventBus` through params (check if already available — if not, add it).
 
-- Miss: `{creature} misses you.`
-- Hit: `{creature} {conjugated tierWord} you, {flavor_you} [dmg].`
-- Crit: `!` punctuation
+Add dev-only timing log for first tick response:
+```typescript
+if (import.meta.env.DEV && combatStartTimeRef.current) {
+  console.debug('[combat] first tick confirmed', {
+    aggroToConfirm: (performance.now() - combatStartTimeRef.current).toFixed(0) + 'ms'
+  });
+  combatStartTimeRef.current = null;
+}
+```
 
-**Remove from sentence construction** (keep exports for future use):
-- `resolvePlayerAttackVerb` — no longer called in formatting
-- `resolveCreatureAttackVerb` — no longer called in formatting
-- `CRITICAL!` prefix logic — removed entirely
+### 3. `src/features/world/components/NodeView.tsx` — Enhanced aggro flash
 
-**Keep unchanged**: `getDamageTierWord`, `DAMAGE_TIERS`, display mode logic, `getEventEmoji`, `StructuredAttackEvent` interface.
+The existing 400ms flash is good but subtle. Extend it slightly:
+- Increase flash duration from 400ms → 600ms
+- Add a brief "shake" or scale pulse to the creature row on aggro (CSS animation, 1 cycle)
 
-### 2. `src/features/combat/utils/interpretCombatTickResult.ts`
+Add dev-only diagnostic:
+```typescript
+if (import.meta.env.DEV) {
+  console.debug('[aggro] flash shown', { creatureId: cId, ts: performance.now().toFixed(0) });
+}
+```
 
-Remove the `(?:CRITICAL!\s*)?` portion from the name→"You" regex since that prefix no longer exists.
+### 4. `src/features/combat/hooks/useCombatAggroEffects.ts` — Immediate predicted log line
 
-### 3. No other files change
+After the aggro log message, before `startCombat()` returns, add a second immediate log line that hints at impending combat without faking damage:
 
-## Sentence Construction Rules
+```typescript
+addLocalLog(`⚔️ Combat begins!`);
+```
 
-| Case | Pattern |
-|------|---------|
-| Player hit | `{emoji} You {tierWord} {target}, {flavor_it} [dmg].` |
-| Player crit | `{emoji} You {tierWord} {target}, {flavor_it} [dmg]!` |
-| Player miss | `{emoji} You miss {target}.` |
-| Creature hit | `{creature} {conjugated} you, {flavor_you} [dmg].` |
-| Creature crit | `{creature} {conjugated} you, {flavor_you} [dmg]!` |
-| Creature miss | `{creature} misses you.` |
-| Other player hit | `{name} {conjugated} {target}, {flavor_it} [dmg].` |
+This fills the "dead air" gap — player sees:
+1. `⚠️ Obsidian Forge Guardian lunges at you!` (instant)
+2. `⚔️ Combat begins!` (instant)
+3. First real server-confirmed hit (200-500ms later)
+
+### 5. Dev diagnostics summary
+
+All diagnostics are `import.meta.env.DEV` gated and log to console.debug:
+
+| Metric | Location |
+|--------|----------|
+| Node entry time | Already exists in NodeView |
+| Creatures visible time | Already exists in NodeView |
+| Aggro detected time | useCombatAggroEffects |
+| Aggro flash shown time | NodeView |
+| Combat start (setInCombat) time | usePartyCombat |
+| First server tick confirmed time | usePartyCombat |
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/features/combat/hooks/useCombatAggroEffects.ts` | Varied threat messages, `Combat begins!` line, dev timing logs |
+| `src/features/combat/hooks/usePartyCombat.ts` | `combat:start` event emit, first-tick timing diagnostic |
+| `src/features/world/components/NodeView.tsx` | Flash duration 400→600ms, dev diagnostic log |
 
 ## What Does NOT Change
 
-- Combat math, damage values, tick rate, server authority
-- Prediction/reconciliation
-- Non-attack events (abilities, DoTs, buffs, kills, level-ups)
-- Display mode toggle logic, event emoji prefixes, log color mapping
+- Combat formulas, tick rate, server authority
+- Damage prediction logic
+- Combat architecture / hook ownership
+- Class balance, loot, death rules
+- Non-aggro log messages
 
