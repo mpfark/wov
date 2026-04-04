@@ -36,6 +36,10 @@ import {
   SHIELD_AWARENESS_BONUS,
   isShield,
   TWO_HANDED_DAMAGE_MULT,
+  getHitQuality,
+  HIT_QUALITY_MULT,
+  GLANCING_WEAK_CAP,
+  type HitQuality,
 } from "../_shared/combat-math.ts";
 
 const corsHeaders = {
@@ -505,14 +509,20 @@ Deno.serve(async (req) => {
       const isCrit = d20 >= cCritThreshold;
       const isNat1 = d20 === 1;
 
-      if (!isNat1 && (isCrit || roll >= tAC)) {
+      // ── Hit quality (graded system) ──
+      const margin = roll - tAC;
+      const quality = getHitQuality(margin, isNat1, isCrit);
+
+      if (quality !== 'miss') {
         if (mb.evasion_buff?.dodge_chance && Math.random() < mb.evasion_buff.dodge_chance) {
           events.push({ type: 'evasion_dodge', message: `🦘 ${targetName} dodges ${creature.name}'s attack!`, character_id: targetId });
           return;
         }
 
+        // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. level-gap → 5. AC overflow → 6. awareness → 7. absorb → 8. clamp → 9. caps
         let baseDmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
-        let dmg = isCrit ? Math.max(Math.floor(baseDmg * 1.5), 1) : baseDmg;
+        let dmg = Math.max(Math.floor(baseDmg * HIT_QUALITY_MULT[quality]), 1);
+        if (isCrit) dmg = Math.max(Math.floor(dmg * 1.5), 1);
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
@@ -539,15 +549,21 @@ Deno.serve(async (req) => {
           if (dmg <= 0) return;
         }
 
+        // Clamp minimum 1
+        dmg = Math.max(dmg, 1);
+        // Glancing cap (always); weak cap only when margin < -2
+        if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+        if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+
         mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
-        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId });
+        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality });
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
       } else {
-        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId });
+        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
       }
     };
 
@@ -601,10 +617,17 @@ Deno.serve(async (req) => {
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
         const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
 
-        if (roll >= effCrit || (roll !== 1 && total >= creatureAc)) {
+        // ── Hit quality (graded system) ──
+        const margin = total - creatureAc;
+        const isCrit = roll >= effCrit;
+        const quality = getHitQuality(margin, roll === 1, isCrit);
+
+        if (quality !== 'miss') {
+          // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. STR floor (pre-quality, embedded in step 1) → 5. affinity → 6. 2H → 7. buffs → 8. clamp → 9. caps
           let raw = rollDmg(atk.min, atk.max) + sMod;
-          const isCrit = roll >= effCrit;
-          let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
+          if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
+          let dmg = Math.max(Math.floor(raw * HIT_QUALITY_MULT[quality]), 1);
+          if (isCrit) dmg = Math.max(dmg * 2, 1);
           if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
           if (isTwoHanded[m.id]) dmg = Math.floor(dmg * TWO_HANDED_DAMAGE_MULT);
           if (isStealth) {
@@ -626,6 +649,12 @@ Deno.serve(async (req) => {
             consumedBuffs[m.id].push('disengage');
           }
 
+          // Clamp minimum 1
+          dmg = Math.max(dmg, 1);
+          // Glancing cap (always); weak cap only when margin < -2
+          if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+          if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
@@ -637,6 +666,7 @@ Deno.serve(async (req) => {
             damage: dmg,
             is_crit: isCrit,
             character_id: m.id,
+            hit_quality: quality,
           });
 
           if (mb.poison_buff && Math.random() < 0.4) {
@@ -694,6 +724,7 @@ Deno.serve(async (req) => {
             damage: 0,
             is_crit: false,
             character_id: m.id,
+            hit_quality: 'miss' as HitQuality,
           });
         }
       }
@@ -725,11 +756,23 @@ Deno.serve(async (req) => {
         const roll2 = rollD20();
         const total2 = roll2 + sMod2 + ihb2;
 
-        if (roll2 >= effCrit2 || (roll2 !== 1 && total2 >= creatureAc2)) {
+        // ── Hit quality (graded system) ──
+        const margin2 = total2 - creatureAc2;
+        const isCrit2 = roll2 >= effCrit2;
+        const quality2 = getHitQuality(margin2, roll2 === 1, isCrit2);
+
+        if (quality2 !== 'miss') {
+          // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. off-hand reduction → 5. clamp → 6. caps
           const raw2 = rollDmg(atk.min, atk.max) + sMod2;
-          const isCrit2 = roll2 >= effCrit2;
-          const preBuff2 = isCrit2 ? Math.max(raw2 * 2, 1) : Math.max(raw2, 1);
-          const dmg2 = Math.max(Math.floor(preBuff2 * OFFHAND_DAMAGE_MULT), 1);
+          let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
+          if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
+          dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
+
+          // Clamp minimum 1
+          dmg2 = Math.max(dmg2, 1);
+          // Glancing cap (always); weak cap only when margin < -2
+          if (quality2 === 'glancing') dmg2 = Math.min(dmg2, GLANCING_WEAK_CAP);
+          if (quality2 === 'weak' && margin2 < -2) dmg2 = Math.min(dmg2, GLANCING_WEAK_CAP);
 
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
@@ -743,6 +786,7 @@ Deno.serve(async (req) => {
             is_crit: isCrit2,
             character_id: m.id,
             is_offhand: true,
+            hit_quality: quality2,
           });
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -760,6 +804,7 @@ Deno.serve(async (req) => {
             is_crit: false,
             character_id: m.id,
             is_offhand: true,
+            hit_quality: 'miss' as HitQuality,
           });
         }
       }
