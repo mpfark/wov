@@ -113,7 +113,7 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "flicker": "flicker 2s ease-in-out infinite",
         "drip": "drip 2.5s ease-in-out infinite",
-        "aggro-flash": "aggro-flash 0.4s ease-out",
+        "aggro-flash": "aggro-flash 0.6s ease-out",
         "polish-fade-in": "polish-fade-in 0.25s ease-out",
       },
     },
