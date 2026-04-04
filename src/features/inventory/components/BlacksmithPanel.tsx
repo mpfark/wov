@@ -62,6 +62,7 @@ interface ForgePoolItem {
   description: string;
   slot: string;
   hands: number | null;
+  weapon_tag: string | null;
 }
 
 export default function BlacksmithPanel({ open, onClose, characterId, gold, salvage, level, inventory, onGoldChange, onSalvageChange, onInventoryChange, addLog }: Props) {
