@@ -1,111 +1,74 @@
 
 
-# Instant Aggro / Immediate First-Beat Polish Pass
+# Email Verification + Onboarding Gate
 
-## Analysis
+## Summary
 
-The current flow already has:
-- Aggro log lines (`⚠️ X is aggressive and attacks you!`) in `useCombatAggroEffects`
-- Aggro flash (400ms red glow) in `NodeView` triggered by `engagedCreatureIds`
-- Immediate first tick call in `startCombatCore` (line 192: `doTickRef.current()`)
+1. Enable email confirmation on signup (currently disabled)
+2. Add a new "Oath & Identity" onboarding screen that requires full name + a fantasy-themed pledge checkbox
+3. Gate all existing and new users through this screen if they haven't completed it yet
+4. Add `full_name` and `has_accepted_oath` columns to the `profiles` table
 
-The perceived delay comes from:
-1. Generic/flat aggro messages that don't feel threatening
-2. The aggro flash fires on `engagedCreatureIds` change, but this happens inside `startCombatCore` which is called from the aggro effect — timing is correct but the visual cue is subtle
-3. No intermediate feedback between aggro log + flash and the first server-confirmed combat event (~200-500ms network round trip)
+## Database Changes
 
-## Changes
+**Migration: Add onboarding fields to `profiles` table**
 
-### 1. `src/features/combat/hooks/useCombatAggroEffects.ts` — Immersive aggro messages + diagnostics
-
-Replace flat aggro messages with varied, threatening creature-specific lines:
-
-- Initial aggro: `⚠️ {name} lunges at you!` / `⚠️ {name} turns on you!` (randomized)
-- Re-engage: `⚠️ {name} attacks!` → `⚠️ {name} charges at you!`
-- Mid-fight join: `⚠️ {name} joins the fight!` (keep as-is, already good)
-
-Add a small helper that picks from 3-4 threat phrases randomly.
-
-Add dev-only diagnostic timestamps:
-```typescript
-if (import.meta.env.DEV) {
-  console.debug('[aggro] detected', { creatureId, ts: performance.now().toFixed(0) });
-}
+```sql
+ALTER TABLE public.profiles
+  ADD COLUMN full_name text,
+  ADD COLUMN has_accepted_oath boolean NOT NULL DEFAULT false;
 ```
 
-### 2. `src/features/combat/hooks/usePartyCombat.ts` — Combat-start event + diagnostics
+Both columns are nullable/defaulted so existing rows remain valid. Existing users will have `full_name = NULL` and `has_accepted_oath = false`, which triggers the onboarding gate.
 
-After `setInCombat(true)` in `startCombatCore`, emit a `combat:start` event on the GameEventBus so consuming UI can react instantly:
+## Auth Configuration
 
-Currently line 189 logs to console. Add:
-```typescript
-params.eventBus?.emit('combat:start', { creatureId });
+Use `cloud--configure_auth` to **disable** auto-confirm for email signups. This means new users must click a verification link in their email before they can sign in.
+
+## New Component: `OnboardingGatePage`
+
+A new page at `src/pages/OnboardingGatePage.tsx`:
+
+- Displayed when user is authenticated but `has_accepted_oath = false` or `full_name` is empty
+- Contains:
+  - A "Full Name" input (first and last name, required, max 60 chars)
+  - A fantasy-themed oath checkbox: *"I swear upon the realm of Varneth to uphold honor, play with integrity, and respect my fellow wayfarers. I shall not exploit, cheat, or disrupt the world we share."*
+  - A "Proceed" button (disabled until both fields are filled and checkbox is checked)
+- On submit: updates `profiles` table with `full_name` and `has_accepted_oath = true`
+- Styled consistently with the existing parchment/fantasy theme
+
+## Flow Changes in `Index.tsx`
+
+After the `!user` check (AuthPage) and before loading checks, add a new gate:
+
+```
+if user is authenticated:
+  fetch profile (full_name, has_accepted_oath)
+  if profile not completed → show OnboardingGatePage
+  else → continue to character select / creation
 ```
 
-This requires threading `eventBus` through params (check if already available — if not, add it).
+This intercepts both new and existing users. Existing users who haven't completed the oath will see this screen on their next login.
 
-Add dev-only timing log for first tick response:
-```typescript
-if (import.meta.env.DEV && combatStartTimeRef.current) {
-  console.debug('[combat] first tick confirmed', {
-    aggroToConfirm: (performance.now() - combatStartTimeRef.current).toFixed(0) + 'ms'
-  });
-  combatStartTimeRef.current = null;
-}
-```
+## Changes to `ProfilePage.tsx`
 
-### 3. `src/features/world/components/NodeView.tsx` — Enhanced aggro flash
-
-The existing 400ms flash is good but subtle. Extend it slightly:
-- Increase flash duration from 400ms → 600ms
-- Add a brief "shake" or scale pulse to the creature row on aggro (CSS animation, 1 cycle)
-
-Add dev-only diagnostic:
-```typescript
-if (import.meta.env.DEV) {
-  console.debug('[aggro] flash shown', { creatureId: cId, ts: performance.now().toFixed(0) });
-}
-```
-
-### 4. `src/features/combat/hooks/useCombatAggroEffects.ts` — Immediate predicted log line
-
-After the aggro log message, before `startCombat()` returns, add a second immediate log line that hints at impending combat without faking damage:
-
-```typescript
-addLocalLog(`⚔️ Combat begins!`);
-```
-
-This fills the "dead air" gap — player sees:
-1. `⚠️ Obsidian Forge Guardian lunges at you!` (instant)
-2. `⚔️ Combat begins!` (instant)
-3. First real server-confirmed hit (200-500ms later)
-
-### 5. Dev diagnostics summary
-
-All diagnostics are `import.meta.env.DEV` gated and log to console.debug:
-
-| Metric | Location |
-|--------|----------|
-| Node entry time | Already exists in NodeView |
-| Creatures visible time | Already exists in NodeView |
-| Aggro detected time | useCombatAggroEffects |
-| Aggro flash shown time | NodeView |
-| Combat start (setInCombat) time | usePartyCombat |
-| First server tick confirmed time | usePartyCombat |
+Add `full_name` as a read-only display field so users can see what they entered. The display name field remains editable as before.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/features/combat/hooks/useCombatAggroEffects.ts` | Varied threat messages, `Combat begins!` line, dev timing logs |
-| `src/features/combat/hooks/usePartyCombat.ts` | `combat:start` event emit, first-tick timing diagnostic |
-| `src/features/world/components/NodeView.tsx` | Flash duration 400→600ms, dev diagnostic log |
+| `src/pages/OnboardingGatePage.tsx` | New component: oath + full name form |
+| `src/pages/Index.tsx` | Add onboarding gate check before character flow |
+| `src/pages/ProfilePage.tsx` | Show full name (read-only) |
+| `src/contexts/GameContext.tsx` | Add profile onboarding state to context |
+| Migration | Add `full_name` and `has_accepted_oath` to `profiles` |
+| Auth config | Disable auto-confirm for email signups |
 
 ## What Does NOT Change
 
-- Combat formulas, tick rate, server authority
-- Damage prediction logic
-- Combat architecture / hook ownership
-- Class balance, loot, death rules
-- Non-aggro log messages
+- Character creation flow (unchanged, just gated behind onboarding)
+- Existing auth flow (login/signup forms stay the same)
+- Game logic, combat, admin tools
+- Email templates (already set up with branded templates)
 
