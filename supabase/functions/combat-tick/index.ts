@@ -509,14 +509,20 @@ Deno.serve(async (req) => {
       const isCrit = d20 >= cCritThreshold;
       const isNat1 = d20 === 1;
 
-      if (!isNat1 && (isCrit || roll >= tAC)) {
+      // ── Hit quality (graded system) ──
+      const margin = roll - tAC;
+      const quality = getHitQuality(margin, isNat1, isCrit);
+
+      if (quality !== 'miss') {
         if (mb.evasion_buff?.dodge_chance && Math.random() < mb.evasion_buff.dodge_chance) {
           events.push({ type: 'evasion_dodge', message: `🦘 ${targetName} dodges ${creature.name}'s attack!`, character_id: targetId });
           return;
         }
 
+        // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. level-gap → 5. AC overflow → 6. awareness → 7. absorb → 8. clamp → 9. caps
         let baseDmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
-        let dmg = isCrit ? Math.max(Math.floor(baseDmg * 1.5), 1) : baseDmg;
+        let dmg = Math.max(Math.floor(baseDmg * HIT_QUALITY_MULT[quality]), 1);
+        if (isCrit) dmg = Math.max(Math.floor(dmg * 1.5), 1);
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
@@ -543,15 +549,21 @@ Deno.serve(async (req) => {
           if (dmg <= 0) return;
         }
 
+        // Clamp minimum 1
+        dmg = Math.max(dmg, 1);
+        // Glancing cap (always); weak cap only when margin < -2
+        if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+        if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+
         mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
-        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId });
+        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality });
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
       } else {
-        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId });
+        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
       }
     };
 
