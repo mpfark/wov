@@ -606,6 +606,7 @@ Deno.serve(async (req) => {
           const isCrit = roll >= effCrit;
           let dmg = isCrit ? Math.max(raw * 2, 1) : Math.max(raw, 1 + sdf);
           if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
+          if (isTwoHanded[m.id]) dmg = Math.floor(dmg * TWO_HANDED_DAMAGE_MULT);
           if (isStealth) {
             dmg = dmg * 2;
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
