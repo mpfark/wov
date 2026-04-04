@@ -249,7 +249,15 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
                   >
                     <div className="flex items-center justify-between">
                       <span className={`text-sm font-display ${RARITY_COLORS[item.rarity] || ''}`}>{item.name}</span>
-                      <span className="text-[10px] text-muted-foreground">Lv{item.level}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.weapon_tag && (
+                          <span className="text-[10px] text-muted-foreground capitalize">{item.weapon_tag}</span>
+                        )}
+                        {item.hands && (
+                          <span className="text-[10px] text-muted-foreground">{item.hands}H</span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground">Lv{item.level}</span>
+                      </div>
                     </div>
                     <div className="flex flex-wrap gap-1 mt-0.5">
                       {Object.entries(item.stats || {}).filter(([,v]) => (v as number) !== 0).map(([k, v]) => (
