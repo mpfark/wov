@@ -209,6 +209,7 @@ Deno.serve(async (req) => {
     const eq: Record<string, Record<string, number>> = {};
     const mainHandTag: Record<string, string | null> = {};
     const offHandTag: Record<string, string | null> = {};
+    const isTwoHanded: Record<string, boolean> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
       let mhTag: string | null = null;
@@ -217,8 +218,9 @@ Deno.serve(async (req) => {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
           b[s] = (b[s] || 0) + (v as number);
         }
-        if (e.equipped_slot === 'main_hand' && (e.item as any)?.weapon_tag) {
-          mhTag = (e.item as any).weapon_tag;
+        if (e.equipped_slot === 'main_hand') {
+          if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
+          if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
         }
         if (e.equipped_slot === 'off_hand' && (e.item as any)?.weapon_tag) {
           ohTag = (e.item as any).weapon_tag;
