@@ -1,74 +1,67 @@
 
 
-# Email Verification + Onboarding Gate
+# Vendor & Blacksmith Panel Redesign
 
 ## Summary
 
-1. Enable email confirmation on signup (currently disabled)
-2. Add a new "Oath & Identity" onboarding screen that requires full name + a fantasy-themed pledge checkbox
-3. Gate all existing and new users through this screen if they haven't completed it yet
-4. Add `full_name` and `has_accepted_oath` columns to the `profiles` table
+Redesign both panels to use a fixed-height, two-column layout inside the existing ScrollPanel aesthetic, and replace the random blacksmith forge with a deterministic item-browsing system.
 
-## Database Changes
+## Layout Changes (Both Panels)
 
-**Migration: Add onboarding fields to `profiles` table**
+**ScrollPanel** gets a new `wide` prop that sets `max-w-2xl` and a fixed `min-h-[60vh]` so the container stays stable regardless of content length. Each column scrolls independently via `overflow-y-auto`.
 
-```sql
-ALTER TABLE public.profiles
-  ADD COLUMN full_name text,
-  ADD COLUMN has_accepted_oath boolean NOT NULL DEFAULT false;
-```
+### Vendor Panel — Two Columns
 
-Both columns are nullable/defaulted so existing rows remain valid. Existing users will have `full_name = NULL` and `has_accepted_oath = false`, which triggers the onboarding gate.
+| Left Column: "For Sale" | Right Column: "Your Inventory" |
+|---|---|
+| Vendor stock list with Buy buttons | Sellable items with Sell buttons |
 
-## Auth Configuration
+Gold bar + CHA info stays in the header above both columns. No tabs — everything visible at once.
 
-Use `cloud--configure_auth` to **disable** auto-confirm for email signups. This means new users must click a verification link in their email before they can sign in.
+### Blacksmith Panel — Two Columns, No Tabs
 
-## New Component: `OnboardingGatePage`
+| Left Column: "Services" | Right Column: "Repair" |
+|---|---|
+| **Forge**: Slot selector → shows available items for that slot (queried from `items` table, filtered by level ±2/±5). Player picks the exact item they want, then clicks Forge. | Damaged items list with Repair / Repair All buttons |
+| **Sell Salvage**: Slider + sell button (compact, below forge) | |
 
-A new page at `src/pages/OnboardingGatePage.tsx`:
+This removes the 3-tab system entirely — everything is visible in two columns.
 
-- Displayed when user is authenticated but `has_accepted_oath = false` or `full_name` is empty
-- Contains:
-  - A "Full Name" input (first and last name, required, max 60 chars)
-  - A fantasy-themed oath checkbox: *"I swear upon the realm of Varneth to uphold honor, play with integrity, and respect my fellow wayfarers. I shall not exploit, cheat, or disrupt the world we share."*
-  - A "Proceed" button (disabled until both fields are filled and checkbox is checked)
-- On submit: updates `profiles` table with `full_name` and `has_accepted_oath = true`
-- Styled consistently with the existing parchment/fantasy theme
+## Forge Redesign: Deterministic Item Selection
 
-## Flow Changes in `Index.tsx`
+### Client-side changes (`BlacksmithPanel.tsx`)
 
-After the `!user` check (AuthPage) and before loading checks, add a new gate:
+When the player selects a slot, fetch available forgeable items from the edge function (new endpoint or modified existing one):
 
-```
-if user is authenticated:
-  fetch profile (full_name, has_accepted_oath)
-  if profile not completed → show OnboardingGatePage
-  else → continue to character select / creation
-```
+1. Player picks a slot → client calls a new `blacksmith-browse` edge function (or the existing `blacksmith-forge` with a `mode: "browse"` flag)
+2. Returns the pool of items available for that slot at the character's level (same filtering logic as current forge: ±2 then ±5, non-soulbound, non-unique)
+3. Items are displayed in a scrollable list grouped by rarity, showing name, stats, rarity color
+4. Player clicks an item → clicks "Forge" → edge function receives `item_id` instead of random selection
 
-This intercepts both new and existing users. Existing users who haven't completed the oath will see this screen on their next login.
+### Edge function changes (`blacksmith-forge/index.ts`)
 
-## Changes to `ProfilePage.tsx`
+Add two modes:
 
-Add `full_name` as a read-only display field so users can see what they entered. The display name field remains editable as before.
+**Browse mode** (`mode: "browse"`): Returns the filtered item pool for a given slot without deducting resources. New request body: `{ character_id, slot, mode: "browse" }`.
+
+**Forge mode** (`mode: "forge"` or default): Accepts `{ character_id, slot, item_id }`. Validates the requested `item_id` exists in the valid pool (same filters), then deducts resources and grants the item. No more random selection.
+
+This keeps server authority — the server validates the chosen item is in the allowed pool.
 
 ## Files Modified
 
 | File | Change |
-|------|--------|
-| `src/pages/OnboardingGatePage.tsx` | New component: oath + full name form |
-| `src/pages/Index.tsx` | Add onboarding gate check before character flow |
-| `src/pages/ProfilePage.tsx` | Show full name (read-only) |
-| `src/contexts/GameContext.tsx` | Add profile onboarding state to context |
-| Migration | Add `full_name` and `has_accepted_oath` to `profiles` |
-| Auth config | Disable auto-confirm for email signups |
+|---|---|
+| `src/features/inventory/components/ScrollPanel.tsx` | Add optional `wide` prop for two-column panels with fixed min-height |
+| `src/features/inventory/components/VendorPanel.tsx` | Two-column layout, remove stacked sections |
+| `src/features/inventory/components/BlacksmithPanel.tsx` | Two-column layout, remove tabs, add item browser for forge |
+| `supabase/functions/blacksmith-forge/index.ts` | Add browse mode, accept specific `item_id` in forge mode |
 
 ## What Does NOT Change
 
-- Character creation flow (unchanged, just gated behind onboarding)
-- Existing auth flow (login/signup forms stay the same)
-- Game logic, combat, admin tools
-- Email templates (already set up with branded templates)
+- Economy formulas, costs, rarity distribution of available items
+- Server authority for purchases/forging
+- Vendor RPC functions (`buy_vendor_item`, `sell_item`)
+- The ornate parchment/wax-seal aesthetic of ScrollPanel
+- Item stat budgets or forge pool content
 
