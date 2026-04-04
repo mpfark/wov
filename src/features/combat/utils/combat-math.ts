@@ -413,3 +413,28 @@ export function applyDefensiveBuffs(
 
   return { finalDamage: Math.max(dmg, 0), absorbed, remainingShield, wisReduced };
 }
+
+// ── Hit quality (graded hit system) ─────────────────────────────
+
+export type HitQuality = 'miss' | 'glancing' | 'weak' | 'normal' | 'strong';
+
+/**
+ * Determine hit quality based on attack margin (totalAtk - defenderAC).
+ * Natural 1 always misses. Crits get at least 'normal' quality.
+ */
+export function getHitQuality(margin: number, isNat1: boolean, isCrit: boolean): HitQuality {
+  if (isNat1) return 'miss';
+  if (isCrit) return margin >= 7 ? 'strong' : 'normal';
+  if (margin < -4) return 'miss';
+  if (margin < 0) return 'glancing';
+  if (margin <= 2) return 'weak';
+  if (margin <= 6) return 'normal';
+  return 'strong';
+}
+
+export const HIT_QUALITY_MULT: Record<HitQuality, number> = {
+  miss: 0, glancing: 0.25, weak: 0.60, normal: 1.0, strong: 1.25,
+};
+
+/** Hard cap for glancing hits; also applies to weak hits when margin < -2 */
+export const GLANCING_WEAK_CAP = 3;
