@@ -5,6 +5,7 @@ import AuthPage from './AuthPage';
 import CharacterCreation from './CharacterCreation';
 import CharacterSelect from './CharacterSelect';
 import ProfilePage from './ProfilePage';
+import OnboardingGatePage from './OnboardingGatePage';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const Index = () => {
     createCharacter, selectCharacterAfterCreate,
     nodes: _nodes, nodesLoading, startingNode,
     isAdmin: _isAdmin,
+    profileLoading, hasCompletedOnboarding, refetchProfile,
   } = useGameContext();
 
   const [showCreateNew, setShowCreateNew] = useState(false);
@@ -36,6 +38,24 @@ const Index = () => {
   }
 
   if (!user) return <AuthPage />;
+
+  // Onboarding gate — wait for profile to load, then check
+  if (profileLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center parchment-bg">
+        <p className="font-display text-primary text-glow animate-pulse">Loading your adventure...</p>
+      </div>
+    );
+  }
+
+  if (!hasCompletedOnboarding) {
+    return (
+      <OnboardingGatePage
+        userId={user.id}
+        onComplete={refetchProfile}
+      />
+    );
+  }
 
   if (charLoading || nodesLoading) {
     return (
