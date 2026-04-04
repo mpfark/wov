@@ -1,77 +1,95 @@
 
-
-# Two-Handed Weapon +25% Damage Multiplier
+# Graded Hit Quality System
 
 ## Summary
 
-Add a flat 1.25× damage multiplier to main-hand auto-attacks when the character is wielding a two-handed weapon (`items.hands = 2`). Server-only change — no client modifications needed.
+Extend the existing hit/miss resolution with five quality bands based on attack roll margin vs AC. Glancing hits land just below AC, while weak/normal/strong hits land above it. Crits remain a separate layer on top.
 
-## Detection
+## Hit Quality Bands
 
-The `items` table already has a `hands` column (1, 2, or null). The equipment query in `combat-tick/index.ts` (line 204) currently selects only `stats, weapon_tag` from items. We need to also fetch `hands` to detect two-handed weapons server-side.
+The margin is `totalAtk - creatureAC`. Current logic: hit if `roll !== 1 && total >= AC` (or crit). New logic keeps this boundary but adds a "near miss" glancing band below it.
 
-## Changes
-
-### `supabase/functions/combat-tick/index.ts`
-
-**1. Expand equipment query** (line 204)
-
-Add `hands` to the item select:
-```
-.select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
+```text
+margin < -4        → miss        (0.0x)  — unchanged
+margin -4 to -1    → glancing    (0.25x) — new "near miss" band
+margin 0 to +2     → weak        (0.60x)
+margin +3 to +6    → normal      (1.00x)
+margin +7+         → strong      (1.25x)
 ```
 
-**2. Track two-handed status per character** (lines 208-229)
+Natural 1 always misses. Crits always hit at "normal" quality minimum (then get the 2x crit multiplier on top).
 
-Add a `isTwoHanded` record alongside `mainHandTag` and `offHandTag`:
+### Progression protection
+
+Glancing/weak hits vs high-AC targets are clamped to max 3 damage (after all multipliers). This prevents weak creatures from threatening strong players.
+
+## New shared function: `combat-math.ts`
+
 ```typescript
-const isTwoHanded: Record<string, boolean> = {};
-```
-Set it during the equipment loop:
-```typescript
-if (e.equipped_slot === 'main_hand' && (e.item as any)?.hands === 2) {
-  isTwoHanded[cid] = true;
+export type HitQuality = 'miss' | 'glancing' | 'weak' | 'normal' | 'strong';
+
+export function getHitQuality(margin: number, isNat1: boolean, isCrit: boolean): HitQuality {
+  if (isNat1) return 'miss';
+  if (isCrit) return margin >= 7 ? 'strong' : 'normal';
+  if (margin < -4) return 'miss';
+  if (margin < 0) return 'glancing';
+  if (margin <= 2) return 'weak';
+  if (margin <= 6) return 'normal';
+  return 'strong';
 }
+
+export const HIT_QUALITY_MULT: Record<HitQuality, number> = {
+  miss: 0, glancing: 0.25, weak: 0.60, normal: 1.0, strong: 1.25,
+};
+
+export const GLANCING_WEAK_CAP = 3;
 ```
 
-**3. Apply multiplier to main-hand auto-attack damage** (around line 605, after affinity mult, before stealth/buff multipliers)
+Added to both `supabase/functions/_shared/combat-math.ts` and `src/features/combat/utils/combat-math.ts`.
 
-```typescript
-if (isTwoHanded[m.id]) dmg = Math.floor(dmg * 1.25);
-```
+## Changes to `combat-tick/index.ts`
 
-This ensures the 1.25× applies to the base+crit+affinity damage, and then stealth (2×), damage buff (1.5×), focus strike, and disengage all stack on top of it correctly. The resulting `dmg` value is the same one used for HP subtraction (line 625) and the event's `damage` field (line 633).
+### Player main-hand attacks (lines 599-698)
 
-**4. No change to off-hand section** (line 697+)
+Current flow: roll → hit/miss binary → damage calc → buffs → HP subtraction.
 
-The off-hand attack block already gates on `isOffhandWeapon(offHandTag[m.id])` — a two-handed weapon user will have no off-hand weapon, so this section is naturally skipped. No guard needed.
+New flow:
+1. Roll d20, compute `total` and `margin = total - creatureAc`
+2. `quality = getHitQuality(margin, roll === 1, roll >= effCrit)`
+3. If `quality === 'miss'` → miss event (unchanged)
+4. Otherwise: roll base damage → apply `HIT_QUALITY_MULT[quality]` → then crit (if crit, 2x on top) → affinity → 2H mult → stealth/buff multipliers → clamp → cap glancing/weak at 3 → HP subtraction
+5. Event includes `hit_quality` field for combat text
 
-### `supabase/functions/_shared/combat-math.ts`
+### Off-hand attacks (lines 701-764)
 
-Add a constant for the multiplier so it's centrally defined:
-```typescript
-export const TWO_HANDED_DAMAGE_MULT = 1.25;
-```
+Same pattern: compute margin → quality → apply multiplier before offhand 30% reduction → cap glancing/weak at 3.
 
-Import and use this constant in `combat-tick` instead of a magic number.
+### Creature counterattacks (`applyCreatureHit`, lines 492-551)
 
-Mirror the constant to `src/features/combat/utils/combat-math.ts` for the client copy (used by prediction/tooltips if needed later).
+Same pattern: compute `margin = roll - tAC` → quality → apply multiplier after base damage roll → then crit/level-gap/overflow logic → cap glancing/weak at 3 → HP subtraction. Event includes `hit_quality`.
+
+### Event format
+
+All attack events gain a `hit_quality` field (`'miss' | 'glancing' | 'weak' | 'normal' | 'strong'`). Message strings updated to include quality label for non-normal hits (e.g., "glancing blow", "weak hit", "strong hit").
+
+## Combat text integration
+
+The existing `DAMAGE_TIERS` in `combat-text.ts` already maps damage amounts to tier words (graze, nick, hit, wound, etc.). Since glancing hits produce 1-3 damage, they'll naturally fall into "graze" tier. No changes needed to `combat-text.ts` — the damage-based tier system handles it automatically.
 
 ## Files Modified
 
 | File | Change |
-|------|------|
-| `supabase/functions/_shared/combat-math.ts` | Add `TWO_HANDED_DAMAGE_MULT = 1.25` constant |
-| `src/features/combat/utils/combat-math.ts` | Mirror the constant |
-| `supabase/functions/combat-tick/index.ts` | Fetch `hands`, track `isTwoHanded`, apply 1.25× to main-hand auto-attacks |
+|------|--------|
+| `supabase/functions/_shared/combat-math.ts` | Add `HitQuality` type, `getHitQuality()`, `HIT_QUALITY_MULT`, `GLANCING_WEAK_CAP` |
+| `src/features/combat/utils/combat-math.ts` | Mirror the same additions |
+| `supabase/functions/combat-tick/index.ts` | Apply hit quality to player attacks, off-hand attacks, and creature counterattacks |
 
 ## What Does NOT Change
 
-- Off-hand attack logic, dual-wield behavior
-- Shield setups
-- Ability damage (barrage, execute, ignite consume, burst, rend)
-- Combat architecture, tick rate, server authority
-- Stat formulas, equipment stat budgets
-- Client-side code (no UI changes needed)
-- Database schema (the `hands` column already exists)
-
+- Combat architecture, tick timing, server authority
+- Crit range calculation, crit mitigation (AC overflow)
+- Ability damage (barrage, execute, etc.)
+- Offscreen DoT system
+- Client-side prediction
+- Database schema
+- Buff/debuff system
