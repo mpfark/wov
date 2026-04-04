@@ -15,6 +15,7 @@ export default function ProfilePage({ onBack }: Props) {
   const { user } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [originalName, setOriginalName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -22,13 +23,14 @@ export default function ProfilePage({ onBack }: Props) {
     if (!user) return;
     supabase
       .from('profiles')
-      .select('display_name')
+      .select('display_name, full_name')
       .eq('user_id', user.id)
       .single()
       .then(({ data }) => {
         const name = data?.display_name ?? '';
         setDisplayName(name);
         setOriginalName(name);
+        setFullName(data?.full_name ?? '');
         setLoading(false);
       });
   }, [user]);
@@ -78,6 +80,18 @@ export default function ProfilePage({ onBack }: Props) {
               <p className="text-sm text-muted-foreground animate-pulse">Loading...</p>
             ) : (
               <>
+                <div>
+                  <label className="text-sm font-display text-foreground">Full Name</label>
+                  <Input
+                    value={fullName}
+                    readOnly
+                    disabled
+                    className="mt-1 bg-input border-border opacity-70"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set during onboarding. Contact support to change.
+                  </p>
+                </div>
                 <div>
                   <label className="text-sm font-display text-foreground">Display Name</label>
                   <Input
