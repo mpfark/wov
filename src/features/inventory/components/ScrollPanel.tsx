@@ -7,13 +7,15 @@ interface ScrollPanelProps {
   title: string;
   children: ReactNode;
   className?: string;
+  wide?: boolean;
 }
 
-export default function ScrollPanel({ icon, title, children, className }: ScrollPanelProps) {
+export default function ScrollPanel({ icon, title, children, className, wide }: ScrollPanelProps) {
   return (
     <DialogContent
       className={cn(
-        'scroll-panel max-w-lg max-h-[80vh] overflow-y-auto p-0 border-none bg-transparent shadow-none',
+        'scroll-panel max-h-[80vh] overflow-y-auto p-0 border-none bg-transparent shadow-none',
+        wide ? 'max-w-2xl min-h-[60vh]' : 'max-w-lg',
         // Hide the default close button from DialogContent
         '[&>button.absolute]:hidden',
         className
