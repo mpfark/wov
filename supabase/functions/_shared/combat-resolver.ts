@@ -34,6 +34,8 @@ export interface LootQueueEntry {
   itemId: string | null;
   creatureName: string;
   dropChance: number;
+  mode: 'legacy' | 'item_pool';
+  creatureLevel?: number;
 }
 
 export interface EffectTickResult {
