@@ -504,7 +504,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       await awardPartySalvage(p.character, creature, goldSplitCount, p.party?.id ?? null, p.updateCharacterLocal, p.addLog);
     }
 
-    await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance, creature.node_id);
+    await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance, creature.node_id, creature.loot_mode, creature.level);
     if (opts?.stopCombat) p.stopCombat();
   }, [p.character, p.party, p.addLog, p.updateCharacter, p.updateCharacterLocal, rollLoot, p.stopCombat, p.xpMultiplier, p.equipmentBonuses, p.notifyCreatureKilled, p.fetchGroundLoot]);
 
