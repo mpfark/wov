@@ -161,6 +161,7 @@ export default function CreatureManager() {
       gold_chance: goldEntry?.chance ?? 0.5,
       loot_table_id: c.loot_table_id || null,
       drop_chance: c.drop_chance ?? 0.5,
+      loot_mode: (c as any).loot_mode || 'legacy_table',
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
