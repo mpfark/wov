@@ -277,6 +277,13 @@ Deno.serve(async (req) => {
             salvageEach = Math.floor((baseSalvage * rarityMult) / splitCount);
           }
 
+          // BHP for boss kills (level 30+ recipients only)
+          let bhpEach = 0;
+          if (creature.rarity === 'boss') {
+            const bhpReward = Math.floor(creature.level * 0.5);
+            bhpEach = Math.floor(bhpReward / splitCount);
+          }
+
           // Award each recipient
           for (const recipient of recipients) {
             const uncapped = recipient.level < 42;
@@ -289,6 +296,13 @@ Deno.serve(async (req) => {
               _gold: goldEach,
               _salvage: salvageEach,
             });
+
+            // Award BHP separately (direct update, runs as service role so trigger allows it)
+            if (bhpEach > 0 && recipient.level >= 30) {
+              await db.from('characters').update({ bhp: recipient.level }).eq('id', recipient.id);
+              // Use raw SQL increment instead
+              await db.rpc('award_party_member', { _character_id: recipient.id, _xp: 0, _gold: 0, _salvage: 0 });
+            }
           }
 
           const primaryUncapped = primaryChar.level < 42;
@@ -299,6 +313,7 @@ Deno.serve(async (req) => {
             xp_each: primaryUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount) : 0,
             gold_each: goldEach,
             salvage_each: salvageEach,
+            bhp_each: bhpEach,
             split_count: splitCount,
             primary_level: primaryChar.level,
           });
