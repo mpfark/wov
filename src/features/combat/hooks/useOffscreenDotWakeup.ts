@@ -254,9 +254,10 @@ function scheduleWakeup(
             : `+${reward.xp_each} XP`;
           const goldPart = reward.gold_each > 0 ? `, +${reward.gold_each} gold` : '';
           const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
+          const bhpPart = reward.bhp_each > 0 && reward.primary_level >= 30 ? `, +${reward.bhp_each} 🏋️ BHP` : '';
 
           eventBus.emit('log', {
-            message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}.`,
+            message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`,
           });
         }
       }
