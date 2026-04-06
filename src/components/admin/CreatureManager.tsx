@@ -486,6 +486,18 @@ export default function CreatureManager() {
                       }} />
                     Humanoid (auto gold)
                   </label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">Loot Mode:</span>
+                    <select
+                      value={form.loot_mode}
+                      onChange={e => setForm(f => ({ ...f, loot_mode: e.target.value }))}
+                      className="h-7 text-xs bg-background border border-border rounded px-1.5"
+                    >
+                      {LOOT_MODES.map(m => (
+                        <option key={m} value={m}>{LOOT_MODE_LABELS[m]}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
