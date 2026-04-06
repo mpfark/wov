@@ -34,6 +34,8 @@ export interface LootQueueEntry {
   itemId: string | null;
   creatureName: string;
   dropChance: number;
+  mode: 'legacy' | 'item_pool';
+  creatureLevel?: number;
 }
 
 export interface EffectTickResult {
@@ -185,6 +187,26 @@ export function resolveEffectTicks(
 // ── Helper: push loot queue entries for a killed creature ─────────
 function pushCreatureLoot(creature: any, _creatureId: string, lootQueue: LootQueueEntry[]) {
   const nodeId = creature.node_id;
+  const lootMode = creature.loot_mode || 'legacy_table';
+
+  // item_pool mode — delegate to processLootDrops for DB-based pool resolution
+  if (lootMode === 'item_pool') {
+    lootQueue.push({
+      nodeId,
+      lootTableId: null,
+      itemId: null,
+      creatureName: creature.name,
+      dropChance: creature.drop_chance ?? 0.5,
+      mode: 'item_pool',
+      creatureLevel: creature.level,
+    });
+    return;
+  }
+
+  // salvage_only — no item loot
+  if (lootMode === 'salvage_only') return;
+
+  // legacy_table mode
   if (creature.loot_table_id) {
     lootQueue.push({
       nodeId,
@@ -192,6 +214,7 @@ function pushCreatureLoot(creature: any, _creatureId: string, lootQueue: LootQue
       itemId: null,
       creatureName: creature.name,
       dropChance: creature.drop_chance ?? 0.5,
+      mode: 'legacy',
     });
   } else {
     const lt = (creature.loot_table || []) as any[];
@@ -204,6 +227,7 @@ function pushCreatureLoot(creature: any, _creatureId: string, lootQueue: LootQue
           itemId: entry.item_id,
           creatureName: creature.name,
           dropChance: 1,
+          mode: 'legacy',
         });
       }
     }
@@ -221,8 +245,93 @@ export async function processLootDrops(
 ): Promise<{ type: string; message: string }[]> {
   const events: { type: string; message: string }[] = [];
 
+  // Cache pool config for item_pool drops
+  let poolConfig: any = null;
+
   for (const drop of lootQueue) {
     try {
+      // ── item_pool mode ──────────────────────────────────────────
+      if (drop.mode === 'item_pool') {
+        if (Math.random() > drop.dropChance) continue;
+
+        // Lazy-load pool config
+        if (!poolConfig) {
+          const { data } = await db.from('loot_pool_config').select('*').eq('id', 1).single();
+          poolConfig = data || { equip_level_min_offset: -3, equip_level_max_offset: 0, common_pct: 80, uncommon_pct: 20, consumable_drop_chance: 0.15, consumable_level_min_offset: -5, consumable_level_max_offset: 0 };
+        }
+
+        const creatureLevel = drop.creatureLevel || 1;
+
+        // Roll equipment
+        const rarityRoll = Math.random() * 100;
+        const rolledRarity = rarityRoll < poolConfig.common_pct ? 'common' : 'uncommon';
+
+        const minLevel = creatureLevel + poolConfig.equip_level_min_offset;
+        const maxLevel = creatureLevel + poolConfig.equip_level_max_offset;
+
+        const { data: eligible } = await db
+          .from('items')
+          .select('id, name, rarity, drop_weight')
+          .eq('world_drop', true)
+          .eq('rarity', rolledRarity)
+          .eq('item_type', 'equipment')
+          .eq('is_soulbound', false)
+          .gte('level', minLevel)
+          .lte('level', maxLevel);
+
+        if (eligible && eligible.length > 0) {
+          // Weighted random
+          const totalW = eligible.reduce((s: number, e: any) => s + (e.drop_weight || 10), 0);
+          let r = Math.random() * totalW;
+          let picked = eligible[eligible.length - 1];
+          for (const e of eligible) {
+            r -= (e.drop_weight || 10);
+            if (r <= 0) { picked = e; break; }
+          }
+
+          await db.from('node_ground_loot').insert({
+            node_id: drop.nodeId,
+            item_id: picked.id,
+            creature_name: drop.creatureName,
+          });
+          events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${picked.name}!` });
+        }
+
+        // Separate consumable roll
+        if (Math.random() < poolConfig.consumable_drop_chance) {
+          const cMinLevel = creatureLevel + poolConfig.consumable_level_min_offset;
+          const cMaxLevel = creatureLevel + poolConfig.consumable_level_max_offset;
+
+          const { data: consumables } = await db
+            .from('items')
+            .select('id, name, drop_weight')
+            .eq('world_drop', true)
+            .eq('item_type', 'consumable')
+            .gte('level', cMinLevel)
+            .lte('level', cMaxLevel);
+
+          if (consumables && consumables.length > 0) {
+            const totalCW = consumables.reduce((s: number, e: any) => s + (e.drop_weight || 10), 0);
+            let cr = Math.random() * totalCW;
+            let pickedC = consumables[consumables.length - 1];
+            for (const e of consumables) {
+              cr -= (e.drop_weight || 10);
+              if (cr <= 0) { pickedC = e; break; }
+            }
+
+            await db.from('node_ground_loot').insert({
+              node_id: drop.nodeId,
+              item_id: pickedC.id,
+              creature_name: drop.creatureName,
+            });
+            events.push({ type: 'loot_drop', message: `🧴 ${drop.creatureName} dropped ${pickedC.name}!` });
+          }
+        }
+
+        continue;
+      }
+
+      // ── legacy mode ─────────────────────────────────────────────
       let pickedItemId: string | null = null;
 
       if (drop.lootTableId) {

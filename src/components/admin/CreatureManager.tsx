@@ -69,6 +69,9 @@ const RARITY_COLORS: Record<string, string> = {
   boss: 'text-primary text-glow',
 };
 
+const LOOT_MODES = ['legacy_table', 'item_pool', 'salvage_only'] as const;
+const LOOT_MODE_LABELS: Record<string, string> = { legacy_table: '📋 Legacy Table', item_pool: '🎲 Item Pool', salvage_only: '🔩 Salvage Only' };
+
 const defaultForm = () => ({
   name: '', description: '', node_id: '' as string | null,
   level: 1, rarity: 'regular',
@@ -77,6 +80,7 @@ const defaultForm = () => ({
   gold_min: 0, gold_max: 0, gold_chance: 0.5,
   loot_table_id: null as string | null,
   drop_chance: 0.5,
+  loot_mode: 'legacy_table' as string,
 });
 
 export default function CreatureManager() {
@@ -157,6 +161,7 @@ export default function CreatureManager() {
       gold_chance: goldEntry?.chance ?? 0.5,
       loot_table_id: c.loot_table_id || null,
       drop_chance: c.drop_chance ?? 0.5,
+      loot_mode: (c as any).loot_mode || 'legacy_table',
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
@@ -213,6 +218,7 @@ export default function CreatureManager() {
       loot_table,
       loot_table_id: form.loot_table_id || null,
       drop_chance: form.drop_chance,
+      loot_mode: form.loot_mode,
     };
 
     let savedId = selectedId;
@@ -480,6 +486,18 @@ export default function CreatureManager() {
                       }} />
                     Humanoid (auto gold)
                   </label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground">Loot Mode:</span>
+                    <select
+                      value={form.loot_mode}
+                      onChange={e => setForm(f => ({ ...f, loot_mode: e.target.value }))}
+                      className="h-7 text-xs bg-background border border-border rounded px-1.5"
+                    >
+                      {LOOT_MODES.map(m => (
+                        <option key={m} value={m}>{LOOT_MODE_LABELS[m]}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
