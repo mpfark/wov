@@ -463,6 +463,7 @@ export type Database = {
           is_alive: boolean
           is_humanoid: boolean
           level: number
+          loot_mode: string
           loot_table: Json
           loot_table_id: string | null
           max_hp: number
@@ -485,6 +486,7 @@ export type Database = {
           is_alive?: boolean
           is_humanoid?: boolean
           level?: number
+          loot_mode?: string
           loot_table?: Json
           loot_table_id?: string | null
           max_hp?: number
@@ -507,6 +509,7 @@ export type Database = {
           is_alive?: boolean
           is_humanoid?: boolean
           level?: number
+          loot_mode?: string
           loot_table?: Json
           loot_table_id?: string | null
           max_hp?: number
@@ -701,6 +704,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string
+          drop_weight: number
           hands: number | null
           id: string
           is_soulbound: boolean
@@ -715,10 +719,12 @@ export type Database = {
           stats: Json
           value: number
           weapon_tag: string | null
+          world_drop: boolean
         }
         Insert: {
           created_at?: string
           description?: string
+          drop_weight?: number
           hands?: number | null
           id?: string
           is_soulbound?: boolean
@@ -733,10 +739,12 @@ export type Database = {
           stats?: Json
           value?: number
           weapon_tag?: string | null
+          world_drop?: boolean
         }
         Update: {
           created_at?: string
           description?: string
+          drop_weight?: number
           hands?: number | null
           id?: string
           is_soulbound?: boolean
@@ -751,6 +759,40 @@ export type Database = {
           stats?: Json
           value?: number
           weapon_tag?: string | null
+          world_drop?: boolean
+        }
+        Relationships: []
+      }
+      loot_pool_config: {
+        Row: {
+          common_pct: number
+          consumable_drop_chance: number
+          consumable_level_max_offset: number
+          consumable_level_min_offset: number
+          equip_level_max_offset: number
+          equip_level_min_offset: number
+          id: number
+          uncommon_pct: number
+        }
+        Insert: {
+          common_pct?: number
+          consumable_drop_chance?: number
+          consumable_level_max_offset?: number
+          consumable_level_min_offset?: number
+          equip_level_max_offset?: number
+          equip_level_min_offset?: number
+          id?: number
+          uncommon_pct?: number
+        }
+        Update: {
+          common_pct?: number
+          consumable_drop_chance?: number
+          consumable_level_max_offset?: number
+          consumable_level_min_offset?: number
+          equip_level_max_offset?: number
+          equip_level_min_offset?: number
+          id?: number
+          uncommon_pct?: number
         }
         Relationships: []
       }
