@@ -187,6 +187,26 @@ export function resolveEffectTicks(
 // ── Helper: push loot queue entries for a killed creature ─────────
 function pushCreatureLoot(creature: any, _creatureId: string, lootQueue: LootQueueEntry[]) {
   const nodeId = creature.node_id;
+  const lootMode = creature.loot_mode || 'legacy_table';
+
+  // item_pool mode — delegate to processLootDrops for DB-based pool resolution
+  if (lootMode === 'item_pool') {
+    lootQueue.push({
+      nodeId,
+      lootTableId: null,
+      itemId: null,
+      creatureName: creature.name,
+      dropChance: creature.drop_chance ?? 0.5,
+      mode: 'item_pool',
+      creatureLevel: creature.level,
+    });
+    return;
+  }
+
+  // salvage_only — no item loot
+  if (lootMode === 'salvage_only') return;
+
+  // legacy_table mode
   if (creature.loot_table_id) {
     lootQueue.push({
       nodeId,
@@ -194,6 +214,7 @@ function pushCreatureLoot(creature: any, _creatureId: string, lootQueue: LootQue
       itemId: null,
       creatureName: creature.name,
       dropChance: creature.drop_chance ?? 0.5,
+      mode: 'legacy',
     });
   } else {
     const lt = (creature.loot_table || []) as any[];
@@ -206,6 +227,7 @@ function pushCreatureLoot(creature: any, _creatureId: string, lootQueue: LootQue
           itemId: entry.item_id,
           creatureName: creature.name,
           dropChance: 1,
+          mode: 'legacy',
         });
       }
     }
