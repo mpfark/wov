@@ -297,11 +297,11 @@ Deno.serve(async (req) => {
               _salvage: salvageEach,
             });
 
-            // Award BHP separately (direct update, runs as service role so trigger allows it)
+            // Award BHP separately (runs as service role so trigger bypass works)
             if (bhpEach > 0 && recipient.level >= 30) {
-              await db.from('characters').update({ bhp: recipient.level }).eq('id', recipient.id);
-              // Use raw SQL increment instead
-              await db.rpc('award_party_member', { _character_id: recipient.id, _xp: 0, _gold: 0, _salvage: 0 });
+              const { data: charRow } = await db.from('characters').select('bhp').eq('id', recipient.id).single();
+              const currentBhp = charRow?.bhp ?? 0;
+              await db.from('characters').update({ bhp: currentBhp + bhpEach }).eq('id', recipient.id);
             }
           }
 
