@@ -218,6 +218,7 @@ export default function CreatureManager() {
       loot_table,
       loot_table_id: form.loot_table_id || null,
       drop_chance: form.drop_chance,
+      loot_mode: form.loot_mode,
     };
 
     let savedId = selectedId;
