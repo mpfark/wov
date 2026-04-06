@@ -69,6 +69,9 @@ const RARITY_COLORS: Record<string, string> = {
   boss: 'text-primary text-glow',
 };
 
+const LOOT_MODES = ['legacy_table', 'item_pool', 'salvage_only'] as const;
+const LOOT_MODE_LABELS: Record<string, string> = { legacy_table: '📋 Legacy Table', item_pool: '🎲 Item Pool', salvage_only: '🔩 Salvage Only' };
+
 const defaultForm = () => ({
   name: '', description: '', node_id: '' as string | null,
   level: 1, rarity: 'regular',
@@ -77,6 +80,7 @@ const defaultForm = () => ({
   gold_min: 0, gold_max: 0, gold_chance: 0.5,
   loot_table_id: null as string | null,
   drop_chance: 0.5,
+  loot_mode: 'legacy_table' as string,
 });
 
 export default function CreatureManager() {
