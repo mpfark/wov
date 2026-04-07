@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { GameNode, Area, getAreaFillColor, getAreaStrokeColor } from '@/features/world';
+import { GameNode, Area, getAreaFillColor, getAreaStrokeColor, useAreaTypes } from '@/features/world';
 import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
+import { getEmojiBaseHsl } from '@/features/world/utils/area-colors';
 
 interface NodeCreatureInfo {
   hasCreatures: boolean;
