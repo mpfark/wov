@@ -794,13 +794,21 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     searchDisabled: character.cp < 5 || creatures.length > 0,
     hasDiscoverable: !!(currentNode?.connections?.some((c: any) => c.hidden) || (currentNode?.searchable_items && currentNode.searchable_items.length > 0)),
     unlockedConnections,
+    onlinePlayers,
+    onSummonCpDeducted: (cost: number) => updateCharacter({ cp: Math.max((character.cp ?? 0) - cost, 0) }),
+    addLog,
+    inCombat,
+    isDead,
+    getRegionForNode: (nodeId: string) => { const n = getNode(nodeId); return n ? getRegion(n.region_id) : undefined; },
+    currentRegionMinLevel: currentRegion?.min_level,
   }), [
     regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
     party, pendingInvites, isLeader, isTank, myMembership, playersHere,
     createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
     showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
-    creatures.length, unlockedConnections,
+    creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter,
+    getNode, getRegion, currentRegion,
   ]);
 
   // ── Rendering ──────────────────────────────────────────────────
