@@ -75,6 +75,8 @@ export interface UsePartyCombatParams {
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
   /** Callback with server DoT state for UI sync */
   onActiveDots?: (dots: Record<string, any>) => void;
+  /** Callback to sync absorb shield HP from server */
+  onAbsorbSync?: (remaining: number) => void;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
