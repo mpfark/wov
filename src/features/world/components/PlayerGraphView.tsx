@@ -309,10 +309,10 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           const dx = (offNode.x - n.x) || 0;
           const dy = (offNode.y - n.y) || 0;
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          for (let step = 1; step <= 3; step++) {
+          for (let step = 1; step <= 4; step++) {
             circles.push({
-              cx: pos.px + (dx / len) * _SPACING * step * 0.5,
-              cy: pos.py + (dy / len) * _SPACING * step * 0.5,
+              cx: pos.px + (dx / len) * _SPACING * step * 0.6,
+              cy: pos.py + (dy / len) * _SPACING * step * 0.6,
               r: AREA_OUTLINE_RADIUS,
             });
           }
@@ -337,6 +337,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         viewBox={`0 0 ${Math.max(svgWidth, 280)} ${Math.max(svgHeight, 200)}`}
         className="block w-full h-auto"
         preserveAspectRatio="xMidYMid meet"
+        overflow="hidden"
       >
         {/* Area outlines — color-coded by area type */}
         {areaHulls.map((hull, i) => (
