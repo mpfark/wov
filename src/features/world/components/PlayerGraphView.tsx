@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { GameNode, Area, useAreaTypes } from '@/features/world';
 import { getEmojiBaseHsl } from '@/features/world/utils/area-colors';
 import { PartyMember } from '@/features/party';
