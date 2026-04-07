@@ -553,6 +553,15 @@ Deno.serve(async (req) => {
           if (dmg <= 0) return;
         }
 
+        // Battle Cry damage reduction (applied after absorb, before clamp)
+        if (mb.battle_cry_dr) {
+          let dr = mb.battle_cry_dr.reduction || 0;
+          if (isCrit) dr += mb.battle_cry_dr.crit_reduction || 0;
+          const preDmg = dmg;
+          dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
+          events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry reduces damage! (${preDmg} → ${dmg})` });
+        }
+
         // Clamp minimum 1
         dmg = Math.max(dmg, 1);
         // Glancing cap (always); weak cap only when margin < -2
