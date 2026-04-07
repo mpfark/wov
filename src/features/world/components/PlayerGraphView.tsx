@@ -21,27 +21,6 @@ interface Props {
   unlockedConnections?: Map<string, number>;
 }
 
-type CardinalEdge = 'N' | 'S' | 'E' | 'W';
-
-interface AreaHull {
-  path: string;
-  fill: string;
-  stroke: string;
-}
-
-interface AreaContinuation {
-  key: string;
-  edge: CardinalEdge;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fill: string;
-  stroke: string;
-  fillGradientId: string;
-  strokeGradientId: string;
-}
-
 const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
   NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
@@ -51,27 +30,10 @@ const PLAYER_NODE_RADIUS = 28;
 const AREA_PAD = 10;
 const AREA_OUTLINE_RADIUS = PLAYER_NODE_RADIUS + AREA_PAD;
 
-function getContinuationEdge(dx: number, dy: number): CardinalEdge | null {
-  if (dx === 0 && dy === 0) return null;
-  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'E' : 'W';
-  return dy >= 0 ? 'S' : 'N';
-}
-
-function getContinuationGradientVector(
-  continuation: AreaContinuation,
-  viewBoxWidth: number,
-  viewBoxHeight: number,
-) {
-  switch (continuation.edge) {
-    case 'E':
-      return { x1: continuation.x, y1: 0, x2: viewBoxWidth, y2: 0 };
-    case 'W':
-      return { x1: continuation.x + continuation.width, y1: 0, x2: 0, y2: 0 };
-    case 'S':
-      return { x1: 0, y1: continuation.y, x2: 0, y2: viewBoxHeight };
-    case 'N':
-      return { x1: 0, y1: continuation.y + continuation.height, x2: 0, y2: 0 };
-  }
+interface AreaHull {
+  path: string;
+  fill: string;
+  stroke: string;
 }
 
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
@@ -309,31 +271,25 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return map;
   })();
 
-  // Compute area outline hulls for displayed nodes
-  const { areaHulls, areaContinuations } = (() => {
-    if (nodePositions.size === 0 || _areas.length === 0) {
-      return { areaHulls: [] as AreaHull[], areaContinuations: [] as AreaContinuation[] };
-    }
+  // Compute area outline hulls for displayed nodes (with bleed circles for off-screen continuations)
+  const areaHulls = (() => {
+    if (nodePositions.size === 0 || _areas.length === 0) return [] as AreaHull[];
 
     const primaryNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
     const nodeById = new Map(nodes.map(node => [node.id, node]));
     const hulls: AreaHull[] = [];
-    const continuations: AreaContinuation[] = [];
-    const continuationPad = AREA_OUTLINE_RADIUS * 0.92;
-    const continuationOverlap = AREA_OUTLINE_RADIUS * 0.45;
-    const continuationOverflow = AREA_OUTLINE_RADIUS * 1.15;
 
     for (const area of _areas) {
       const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && primaryNodeIds.has(n.id));
       if (areaNodes.length === 0) continue;
       const areaNodeIds = new Set(areaNodes.map(n => n.id));
       const circles: Circle[] = [];
-      const edgeSources = new Map<CardinalEdge, Map<string, { px: number; py: number }>>();
 
       for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (pos) circles.push({ cx: pos.px, cy: pos.py, r: AREA_OUTLINE_RADIUS });
 
+        // Add bleed circles for off-screen same-area connections
         for (const conn of n.connections) {
           const target = nodeById.get(conn.node_id);
           if (!target || target.area_id !== area.id || !pos) continue;
@@ -342,20 +298,33 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           const isVisiblePrimaryTarget = displayedIds.has(conn.node_id) && !isGhostTarget;
           if (isVisiblePrimaryTarget) continue;
 
+          // Compute direction toward off-screen node
           let rawDx = target.x - n.x;
           let rawDy = target.y - n.y;
           if (rawDx === 0 && rawDy === 0) {
             [rawDx, rawDy] = DIRECTION_OFFSETS[conn.direction] || [0, 0];
           }
+          const len = Math.sqrt(rawDx * rawDx + rawDy * rawDy) || 1;
+          const ux = rawDx / len;
+          const uy = rawDy / len;
 
-          const edge = getContinuationEdge(rawDx, rawDy);
-          if (!edge) continue;
-
-          if (!edgeSources.has(edge)) edgeSources.set(edge, new Map());
-          edgeSources.get(edge)!.set(n.id, pos);
+          // Project bleed circles toward the viewport edge
+          const maxBleed = Math.max(viewBoxWidth, viewBoxHeight);
+          const stepSize = AREA_OUTLINE_RADIUS * 1.4;
+          const bleedSteps = Math.max(2, Math.ceil(maxBleed / stepSize));
+          for (let step = 1; step <= bleedSteps; step++) {
+            const travel = stepSize * step;
+            const cx = pos.px + ux * travel;
+            const cy = pos.py + uy * travel;
+            // Stop if well past viewport
+            if (cx < -AREA_OUTLINE_RADIUS * 2 || cx > viewBoxWidth + AREA_OUTLINE_RADIUS * 2 ||
+                cy < -AREA_OUTLINE_RADIUS * 2 || cy > viewBoxHeight + AREA_OUTLINE_RADIUS * 2) break;
+            circles.push({ cx, cy, r: AREA_OUTLINE_RADIUS });
+          }
         }
       }
 
+      // Fill circles between connected area nodes
       const edgeSpacing = AREA_OUTLINE_RADIUS * 1.4;
       for (const n of areaNodes) {
         for (const conn of n.connections) {
@@ -381,106 +350,14 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       const stroke = getAreaStrokeColor(emoji);
       const { paths } = computeRegionOutline(circles);
       if (paths.length > 0) {
-        hulls.push({
-          path: paths.join(' '),
-          fill,
-          stroke,
-        });
+        hulls.push({ path: paths.join(' '), fill, stroke });
       }
-
-      edgeSources.forEach((sourceMap, edge) => {
-        const sourcePositions = [...sourceMap.values()];
-        if (sourcePositions.length === 0) return;
-
-        const minPx = Math.min(...sourcePositions.map(pos => pos.px));
-        const maxPx = Math.max(...sourcePositions.map(pos => pos.px));
-        const minPy = Math.min(...sourcePositions.map(pos => pos.py));
-        const maxPy = Math.max(...sourcePositions.map(pos => pos.py));
-
-        if (edge === 'E' || edge === 'W') {
-          const y = minPy - continuationPad;
-          const height = Math.max(AREA_OUTLINE_RADIUS * 2.1, maxPy - minPy + continuationPad * 2);
-
-          if (edge === 'E') {
-            const x = maxPx - continuationOverlap;
-            const width = viewBoxWidth - x + continuationOverflow;
-            if (width <= 0) return;
-
-            continuations.push({
-              key: `${area.id}-E`,
-              edge,
-              x,
-              y,
-              width,
-              height,
-              fill,
-              stroke,
-              fillGradientId: `area-cont-fill-${area.id}-E`,
-              strokeGradientId: `area-cont-stroke-${area.id}-E`,
-            });
-            return;
-          }
-
-          const width = minPx + continuationOverlap + continuationOverflow;
-          if (width <= 0) return;
-
-          continuations.push({
-            key: `${area.id}-W`,
-            edge,
-            x: -continuationOverflow,
-            y,
-            width,
-            height,
-            fill,
-            stroke,
-            fillGradientId: `area-cont-fill-${area.id}-W`,
-            strokeGradientId: `area-cont-stroke-${area.id}-W`,
-          });
-          return;
-        }
-
-        const x = minPx - continuationPad;
-        const width = Math.max(AREA_OUTLINE_RADIUS * 2.1, maxPx - minPx + continuationPad * 2);
-
-        if (edge === 'S') {
-          const y = maxPy - continuationOverlap;
-          const height = viewBoxHeight - y + continuationOverflow;
-          if (height <= 0) return;
-
-          continuations.push({
-            key: `${area.id}-S`,
-            edge,
-            x,
-            y,
-            width,
-            height,
-            fill,
-            stroke,
-            fillGradientId: `area-cont-fill-${area.id}-S`,
-            strokeGradientId: `area-cont-stroke-${area.id}-S`,
-          });
-          return;
-        }
-
-        const height = minPy + continuationOverlap + continuationOverflow;
-        if (height <= 0) return;
-
-        continuations.push({
-          key: `${area.id}-N`,
-          edge,
-          x,
-          y: -continuationOverflow,
-          width,
-          height,
-          fill,
-          stroke,
-          fillGradientId: `area-cont-fill-${area.id}-N`,
-          strokeGradientId: `area-cont-stroke-${area.id}-N`,
-        });
-      });
     }
-    return { areaHulls: hulls, areaContinuations: continuations };
+    return hulls;
   })();
+
+  // Edge fade zone width for the mask
+  const FADE_WIDTH = AREA_OUTLINE_RADIUS * 2.5;
 
   return (
     <div className="w-full">
@@ -490,127 +367,44 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         preserveAspectRatio="xMidYMid meet"
         overflow="hidden"
       >
-        {areaContinuations.length > 0 && (
-          <defs>
-            {areaContinuations.map((continuation) => {
-              const vector = getContinuationGradientVector(continuation, viewBoxWidth, viewBoxHeight);
-              return [
-                <linearGradient
-                  key={`${continuation.key}-fill`}
-                  id={continuation.fillGradientId}
-                  gradientUnits="userSpaceOnUse"
-                  x1={vector.x1}
-                  y1={vector.y1}
-                  x2={vector.x2}
-                  y2={vector.y2}
-                >
-                  <stop offset="0%" stopColor={continuation.fill} stopOpacity={0.48} />
-                  <stop offset="65%" stopColor={continuation.fill} stopOpacity={0.2} />
-                  <stop offset="100%" stopColor={continuation.fill} stopOpacity={0} />
-                </linearGradient>,
-                <linearGradient
-                  key={`${continuation.key}-stroke`}
-                  id={continuation.strokeGradientId}
-                  gradientUnits="userSpaceOnUse"
-                  x1={vector.x1}
-                  y1={vector.y1}
-                  x2={vector.x2}
-                  y2={vector.y2}
-                >
-                  <stop offset="0%" stopColor={continuation.stroke} stopOpacity={0.72} />
-                  <stop offset="70%" stopColor={continuation.stroke} stopOpacity={0.26} />
-                  <stop offset="100%" stopColor={continuation.stroke} stopOpacity={0} />
-                </linearGradient>,
-              ];
-            })}
-          </defs>
-        )}
+        <defs>
+          <linearGradient id="fade-left" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="black" />
+            <stop offset="100%" stopColor="white" />
+          </linearGradient>
+          <linearGradient id="fade-right" x1="1" x2="0" y1="0" y2="0">
+            <stop offset="0%" stopColor="black" />
+            <stop offset="100%" stopColor="white" />
+          </linearGradient>
+          <linearGradient id="fade-top" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="black" />
+            <stop offset="100%" stopColor="white" />
+          </linearGradient>
+          <linearGradient id="fade-bottom" x1="0" x2="0" y1="1" y2="0">
+            <stop offset="0%" stopColor="black" />
+            <stop offset="100%" stopColor="white" />
+          </linearGradient>
+          <mask id="edge-fade">
+            <rect x="0" y="0" width={viewBoxWidth} height={viewBoxHeight} fill="white" />
+            <rect x="0" y="0" width={FADE_WIDTH} height={viewBoxHeight} fill="url(#fade-left)" />
+            <rect x={viewBoxWidth - FADE_WIDTH} y="0" width={FADE_WIDTH} height={viewBoxHeight} fill="url(#fade-right)" />
+            <rect x="0" y="0" width={viewBoxWidth} height={FADE_WIDTH} fill="url(#fade-top)" />
+            <rect x="0" y={viewBoxHeight - FADE_WIDTH} width={viewBoxWidth} height={FADE_WIDTH} fill="url(#fade-bottom)" />
+          </mask>
+        </defs>
 
-        {areaContinuations.map((continuation) => {
-          const radius = Math.min(AREA_OUTLINE_RADIUS, continuation.width / 2, continuation.height / 2);
-
-          if (continuation.edge === 'E' || continuation.edge === 'W') {
-            const x1 = continuation.edge === 'E' ? continuation.x : 0;
-            const x2 = continuation.edge === 'E' ? viewBoxWidth : continuation.x + continuation.width;
-
-            return (
-              <g key={`area-cont-${continuation.key}`} className="pointer-events-none">
-                <rect
-                  x={continuation.x}
-                  y={continuation.y}
-                  width={continuation.width}
-                  height={continuation.height}
-                  rx={radius}
-                  fill={`url(#${continuation.fillGradientId})`}
-                />
-                <line
-                  x1={x1}
-                  y1={continuation.y}
-                  x2={x2}
-                  y2={continuation.y}
-                  stroke={`url(#${continuation.strokeGradientId})`}
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                />
-                <line
-                  x1={x1}
-                  y1={continuation.y + continuation.height}
-                  x2={x2}
-                  y2={continuation.y + continuation.height}
-                  stroke={`url(#${continuation.strokeGradientId})`}
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                />
-              </g>
-            );
-          }
-
-          const y1 = continuation.edge === 'S' ? continuation.y : 0;
-          const y2 = continuation.edge === 'S' ? viewBoxHeight : continuation.y + continuation.height;
-
-          return (
-            <g key={`area-cont-${continuation.key}`} className="pointer-events-none">
-              <rect
-                x={continuation.x}
-                y={continuation.y}
-                width={continuation.width}
-                height={continuation.height}
-                rx={radius}
-                fill={`url(#${continuation.fillGradientId})`}
-              />
-              <line
-                x1={continuation.x}
-                y1={y1}
-                x2={continuation.x}
-                y2={y2}
-                stroke={`url(#${continuation.strokeGradientId})`}
-                strokeWidth={1.5}
-                strokeLinecap="round"
-              />
-              <line
-                x1={continuation.x + continuation.width}
-                y1={y1}
-                x2={continuation.x + continuation.width}
-                y2={y2}
-                stroke={`url(#${continuation.strokeGradientId})`}
-                strokeWidth={1.5}
-                strokeLinecap="round"
-              />
-            </g>
-          );
-        })}
-
-        {/* Area outlines — color-coded by area type */}
-        {areaHulls.map((hull, i) => (
-          <path
-            key={`area-hull-${i}`}
-            d={hull.path}
-            fill={hull.fill}
-            stroke={hull.stroke}
-            strokeWidth={1.5}
-            className="pointer-events-none"
-          />
-        ))}
+        {/* Area outlines — color-coded by area type, faded at edges */}
+        <g mask="url(#edge-fade)" className="pointer-events-none">
+          {areaHulls.map((hull, i) => (
+            <path
+              key={`area-hull-${i}`}
+              d={hull.path}
+              fill={hull.fill}
+              stroke={hull.stroke}
+              strokeWidth={1.5}
+            />
+          ))}
+        </g>
 
         {/* Edges */}
         {edges.map(edge => {
