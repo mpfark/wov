@@ -266,6 +266,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const areaHulls = (() => {
     if (nodePositions.size === 0 || _areas.length === 0) return [];
     const primaryNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
+    const nodeById = new Map(nodes.map(node => [node.id, node]));
     const results: Array<{ path: string; fill: string; stroke: string }> = [];
 
     for (const area of _areas) {
@@ -298,44 +299,72 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         }
       }
 
-      // Bleed circles: extend outline toward the SVG edge when the area continues off-screen
-      // Check ALL displayed nodes in this area (including ghost/2nd-degree) for off-screen same-area connections
-      const allAreaDisplayNodes = allDisplayNodes.filter(n => n.area_id === area.id);
-      for (const n of allAreaDisplayNodes) {
+      // Bleed only from primary area nodes, but allow 2nd-degree ghost nodes to count as continuation targets.
+      // This keeps the hull open toward continuation without creating giant branching blobs from every ghost node.
+      for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (!pos) continue;
-        for (const conn of n.connections) {
-          if (displayedIds.has(conn.node_id)) continue;
-          const offNode = nodes.find(nd => nd.id === conn.node_id);
-          if (!offNode || offNode.area_id !== area.id) continue;
 
-          const dx = (offNode.x - n.x) || 0;
-          const dy = (offNode.y - n.y) || 0;
-          const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          const ux = dx / len;
-          const uy = dy / len;
-          const viewBoxWidth = Math.max(svgWidth, 280);
-          const viewBoxHeight = Math.max(svgHeight, 200);
-          // Find minimum positive distance to a viewport edge in the direction of travel
-          const distancesToEdge = [
-            ux > 0 ? (viewBoxWidth - pos.px) / ux : Infinity,
-            ux < 0 ? -pos.px / ux : Infinity,
-            uy > 0 ? (viewBoxHeight - pos.py) / uy : Infinity,
-            uy < 0 ? -pos.py / uy : Infinity,
-          ].filter(d => Number.isFinite(d) && d > 0);
-          const distanceToEdge = distancesToEdge.length > 0 ? Math.min(...distancesToEdge) : _SPACING * 2;
-          const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 2;
-          const bleedSteps = Math.max(4, Math.ceil(bleedDistance / (_SPACING * 0.5)));
+        const continuationVectors = n.connections
+          .map((conn) => {
+            const isGhostTarget = secondDegIds.has(conn.node_id);
+            const isVisiblePrimaryTarget = displayedIds.has(conn.node_id) && !isGhostTarget;
+            if (isVisiblePrimaryTarget) return null;
 
-          for (let step = 1; step <= bleedSteps; step++) {
-            const travel = (bleedDistance * step) / bleedSteps;
-            circles.push({
-              cx: pos.px + ux * travel,
-              cy: pos.py + uy * travel,
-              r: AREA_OUTLINE_RADIUS,
-            });
-          }
+            const target = nodeById.get(conn.node_id);
+            if (!target || target.area_id !== area.id) return null;
+
+            const rawDx = target.x - n.x;
+            const rawDy = target.y - n.y;
+            if (rawDx !== 0 || rawDy !== 0) {
+              return { dx: rawDx, dy: rawDy };
+            }
+
+            const [fallbackDx, fallbackDy] = DIRECTION_OFFSETS[conn.direction] || [0, 0];
+            if (fallbackDx === 0 && fallbackDy === 0) return null;
+            return { dx: fallbackDx, dy: fallbackDy };
+          })
+          .filter((vector): vector is { dx: number; dy: number } => vector !== null);
+
+        if (continuationVectors.length === 0) continue;
+
+        let dx = 0;
+        let dy = 0;
+        for (const vector of continuationVectors) {
+          dx += vector.dx;
+          dy += vector.dy;
         }
+        if (dx === 0 && dy === 0) {
+          dx = continuationVectors[0].dx;
+          dy = continuationVectors[0].dy;
+        }
+
+        const len = Math.hypot(dx, dy);
+        if (len === 0) continue;
+
+        const ux = dx / len;
+        const uy = dy / len;
+        const viewBoxWidth = Math.max(svgWidth, 280);
+        const viewBoxHeight = Math.max(svgHeight, 200);
+        const distancesToEdge = [
+          ux > 0 ? (viewBoxWidth - pos.px) / ux : Infinity,
+          ux < 0 ? -pos.px / ux : Infinity,
+          uy > 0 ? (viewBoxHeight - pos.py) / uy : Infinity,
+          uy < 0 ? -pos.py / uy : Infinity,
+        ].filter((distance) => Number.isFinite(distance) && distance > 0);
+
+        const distanceToEdge = distancesToEdge.length > 0 ? Math.min(...distancesToEdge) : _SPACING;
+        const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 0.8;
+        const bleedAnchors = [bleedDistance * 0.38, bleedDistance * 0.72, bleedDistance];
+        const bleedRadii = [AREA_OUTLINE_RADIUS * 0.92, AREA_OUTLINE_RADIUS, AREA_OUTLINE_RADIUS * 1.08];
+
+        bleedAnchors.forEach((travel, index) => {
+          circles.push({
+            cx: pos.px + ux * travel,
+            cy: pos.py + uy * travel,
+            r: bleedRadii[index] ?? AREA_OUTLINE_RADIUS,
+          });
+        });
       }
 
       if (circles.length === 0) continue;
