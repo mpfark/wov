@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { GameNode, Area } from '@/features/world';
+import { GameNode, Area, getAreaFillColor, getAreaStrokeColor } from '@/features/world';
 import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
 
