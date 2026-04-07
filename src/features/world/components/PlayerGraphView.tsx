@@ -262,6 +262,55 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return map;
   })();
 
+  // Compute area outline hulls for displayed nodes
+  const areaHulls = useMemo(() => {
+    if (nodePositions.size === 0 || _areas.length === 0) return [];
+    const displayedNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
+    const results: Array<{ path: string; fill: string; stroke: string }> = [];
+
+    for (const area of _areas) {
+      const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && displayedNodeIds.has(n.id));
+      if (areaNodes.length === 0) continue;
+      const areaNodeIds = new Set(areaNodes.map(n => n.id));
+      const circles: Circle[] = [];
+
+      for (const n of areaNodes) {
+        const pos = nodePositions.get(n.id);
+        if (pos) circles.push({ cx: pos.px, cy: pos.py, r: AREA_OUTLINE_RADIUS });
+      }
+
+      // Add circles along intra-area edges for smooth outlines
+      const edgeSpacing = AREA_OUTLINE_RADIUS * 1.4;
+      for (const n of areaNodes) {
+        for (const conn of n.connections) {
+          if (!areaNodeIds.has(conn.node_id)) continue;
+          if (conn.node_id < n.id) continue;
+          const fromPos = nodePositions.get(n.id);
+          const toPos = nodePositions.get(conn.node_id);
+          if (!fromPos || !toPos) continue;
+          const dx = toPos.px - fromPos.px;
+          const dy = toPos.py - fromPos.py;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const steps = Math.ceil(dist / edgeSpacing);
+          for (let s = 1; s < steps; s++) {
+            const t = s / steps;
+            circles.push({ cx: fromPos.px + dx * t, cy: fromPos.py + dy * t, r: AREA_OUTLINE_RADIUS });
+          }
+        }
+      }
+
+      if (circles.length === 0) continue;
+      const emoji = emojiMap[area.area_type] || '📍';
+      const { paths } = computeRegionOutline(circles);
+      results.push({
+        path: paths.join(' '),
+        fill: getAreaFillColor(emoji),
+        stroke: getAreaStrokeColor(emoji),
+      });
+    }
+    return results;
+  }, [allDisplayNodes, nodePositions, _areas, emojiMap, secondDegIds]);
+
   return (
     <div className="w-full">
       <svg
@@ -269,6 +318,18 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         className="block w-full h-auto"
         preserveAspectRatio="xMidYMid meet"
       >
+        {/* Area outlines — color-coded by area type */}
+        {areaHulls.map((hull, i) => (
+          <path
+            key={`area-hull-${i}`}
+            d={hull.path}
+            fill={hull.fill}
+            stroke={hull.stroke}
+            strokeWidth={1.5}
+            className="pointer-events-none"
+          />
+        ))}
+
         {/* Edges */}
         {edges.map(edge => {
           const from = nodePositions.get(edge.from);
