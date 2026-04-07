@@ -39,6 +39,7 @@ import {
   getHitQuality,
   HIT_QUALITY_MULT,
   GLANCING_WEAK_CAP,
+  getCreatureAttackBonus as creatureAtkBonus,
   type HitQuality,
 } from "../_shared/combat-math.ts";
 
@@ -504,7 +505,7 @@ Deno.serve(async (req) => {
       const shieldAcBonus = isShield(offHandTag[targetId]) ? SHIELD_AC_BONUS : 0;
       const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + shieldAcBonus;
       const d20 = rollD20();
-      const roll = d20 + cStr;
+      const roll = d20 + cStr + creatureAtkBonus(creature.level);
 
       const cs = creature.stats as any;
       const cDex = cs.dex || 10;

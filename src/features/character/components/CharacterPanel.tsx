@@ -972,7 +972,7 @@ export default function CharacterPanel({
 
                    // Creature hit chance vs player AC (same-level regular creature)
                    const creatureBaseStat = Math.round(10 + character.level * 0.7);
-                   const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2);
+                   const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2) + getCreatureAttackBonus(character.level);
                    const creatureDexStat = Math.round(10 + character.level * 0.7 - 1);
                    const creatureCritBonus = getDexCritBonus(creatureDexStat);
                    const creatureCritThreshold = 20 - creatureCritBonus;
