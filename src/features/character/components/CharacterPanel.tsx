@@ -365,8 +365,11 @@ export default function CharacterPanel({
         {/* Tabs: Equipment & Attributes */}
         <Tabs defaultValue="equipment" className="space-y-1.5">
           <TabsList className="h-7 w-full bg-muted/50 p-0.5">
-            <TabsTrigger value="equipment" className="font-display text-xs h-6 flex-1">Equipment</TabsTrigger>
-            <TabsTrigger value="attributes" className="font-display text-xs h-6 flex-1 relative">
+            <TabsTrigger value="equipment" className="font-display text-[10px] h-6 flex-1">Equipment</TabsTrigger>
+            <TabsTrigger value="inventory" className="font-display text-[10px] h-6 flex-1">
+              Inventory
+            </TabsTrigger>
+            <TabsTrigger value="attributes" className="font-display text-[10px] h-6 flex-1 relative">
               Attributes
               {character.unspent_stat_points > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
@@ -455,7 +458,7 @@ export default function CharacterPanel({
                                     {potion.item.name}
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-popover border-border z-50">
+                                <TooltipContent className="bg-popover border-border z-50 max-w-xs">
                                   <p className={`font-display ${getItemColor(potion.item)}`}>{potion.item.name}</p>
                                   <p className="text-xs text-muted-foreground">{potion.item.description}</p>
                                   <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
