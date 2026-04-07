@@ -520,7 +520,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
       return;
     }
-    const effectiveCpCost = p.character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
+    const effectiveCpCost = ability.cpCost;
     if ((p.character.cp ?? 0) < effectiveCpCost) {
       p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${p.character.cp ?? 0} available)`);
       return;
@@ -719,7 +719,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     }
 
     // Deduct CP
-    const finalCpCost = p.character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
+    const finalCpCost = ability.cpCost;
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
     setLastUsedAbilityCost(finalCpCost);

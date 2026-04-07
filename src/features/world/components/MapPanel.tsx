@@ -337,7 +337,7 @@ export default function MapPanel({
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      {characterLevel >= 25 ? 'Recall' : 'Teleport'}
+                      {characterLevel >= 22 ? 'Recall' : 'Teleport'}
                     </TooltipContent>
                   </Tooltip>
                 )}

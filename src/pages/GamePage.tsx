@@ -787,7 +787,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onOpenVendor: currentNode?.is_vendor ? () => setVendorOpen(true) : undefined,
     onOpenBlacksmith: currentNode?.is_blacksmith ? () => setBlacksmithOpen(true) : undefined,
     onOpenTrainer: (currentNode?.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined,
-    onOpenTeleport: (currentNode?.is_teleport || character.level >= 25) ? () => {
+    onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
       if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
       setTeleportOpen(true);
     } : undefined,
@@ -1053,7 +1053,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       )}
 
       {/* Teleport Dialog */}
-      {(currentNode.is_teleport || character.level >= 25) && (
+      {(currentNode.is_teleport || character.level >= 22) && (
         <TeleportDialog
           open={teleportOpen}
           onClose={() => setTeleportOpen(false)}

@@ -379,3 +379,32 @@ export function generateCreatureStats(level: number, rarity: string) {
   const ac = Math.round(10 + level * 0.575 + mult.ac);
   return { stats, hp, ac };
 }
+
+// ── Milestone Regen Track (Level 20+) ───────────────────────────
+
+export function getMilestoneHpRegen(level: number): number {
+  if (level >= 40) return 10;
+  if (level >= 35) return 8;
+  if (level >= 30) return 6;
+  if (level >= 25) return 4;
+  if (level >= 20) return 2;
+  return 0;
+}
+
+export function getMilestoneCpRegen(level: number): number {
+  if (level >= 40) return 5;
+  if (level >= 35) return 4;
+  if (level >= 30) return 3;
+  if (level >= 25) return 2;
+  if (level >= 20) return 1;
+  return 0;
+}
+
+// ── Teleport CP cost (shared between teleport & summon) ─────────
+
+export function calculateTeleportCpCost(fromRegionMinLevel: number | undefined, toRegionMinLevel: number, sameRegion: boolean): number {
+  if (fromRegionMinLevel === undefined) return 15;
+  if (sameRegion) return 10;
+  const levelDiff = Math.abs(toRegionMinLevel - fromRegionMinLevel);
+  return Math.min(10 + levelDiff * 2, 30);
+}
