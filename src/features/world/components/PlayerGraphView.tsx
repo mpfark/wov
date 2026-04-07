@@ -271,12 +271,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return map;
   })();
 
-  // Compute area outline hulls for displayed nodes (with bleed circles for off-screen continuations)
+  // Compute area outline hulls using only visible nodes (no off-screen projection)
   const areaHulls = (() => {
     if (nodePositions.size === 0 || _areas.length === 0) return [] as AreaHull[];
 
     const primaryNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
-    const nodeById = new Map(nodes.map(node => [node.id, node]));
     const hulls: AreaHull[] = [];
 
     for (const area of _areas) {
@@ -285,46 +284,13 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       const areaNodeIds = new Set(areaNodes.map(n => n.id));
       const circles: Circle[] = [];
 
+      // Place a circle on each visible area node
       for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (pos) circles.push({ cx: pos.px, cy: pos.py, r: AREA_OUTLINE_RADIUS });
-
-        // Add bleed circles for off-screen same-area connections
-        for (const conn of n.connections) {
-          const target = nodeById.get(conn.node_id);
-          if (!target || target.area_id !== area.id || !pos) continue;
-
-          const isGhostTarget = secondDegIds.has(conn.node_id);
-          const isVisiblePrimaryTarget = displayedIds.has(conn.node_id) && !isGhostTarget;
-          if (isVisiblePrimaryTarget) continue;
-
-          // Compute direction toward off-screen node
-          let rawDx = target.x - n.x;
-          let rawDy = target.y - n.y;
-          if (rawDx === 0 && rawDy === 0) {
-            [rawDx, rawDy] = DIRECTION_OFFSETS[conn.direction] || [0, 0];
-          }
-          const len = Math.sqrt(rawDx * rawDx + rawDy * rawDy) || 1;
-          const ux = rawDx / len;
-          const uy = rawDy / len;
-
-          // Project bleed circles toward the viewport edge
-          const maxBleed = Math.max(viewBoxWidth, viewBoxHeight);
-          const stepSize = AREA_OUTLINE_RADIUS * 1.4;
-          const bleedSteps = Math.max(2, Math.ceil(maxBleed / stepSize));
-          for (let step = 1; step <= bleedSteps; step++) {
-            const travel = stepSize * step;
-            const cx = pos.px + ux * travel;
-            const cy = pos.py + uy * travel;
-            // Stop if well past viewport
-            if (cx < -AREA_OUTLINE_RADIUS * 2 || cx > viewBoxWidth + AREA_OUTLINE_RADIUS * 2 ||
-                cy < -AREA_OUTLINE_RADIUS * 2 || cy > viewBoxHeight + AREA_OUTLINE_RADIUS * 2) break;
-            circles.push({ cx, cy, r: AREA_OUTLINE_RADIUS });
-          }
-        }
       }
 
-      // Fill circles between connected area nodes
+      // Fill circles between connected area nodes for a smooth hull
       const edgeSpacing = AREA_OUTLINE_RADIUS * 1.4;
       for (const n of areaNodes) {
         for (const conn of n.connections) {
@@ -355,9 +321,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     }
     return hulls;
   })();
-
-  // Edge fade zone width for the mask
-  const FADE_WIDTH = AREA_OUTLINE_RADIUS * 2.5;
 
   return (
     <div className="w-full">
