@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Loader2, Wand2, Check, Package, Sword, Sparkles,
-  ChevronRight, Layers, Star, Hash, BarChart2, ArrowRight,
+  Layers, Star, Hash, BarChart2, ArrowRight,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import CreaturePicker from './CreaturePicker';
-
-
 
 /* ─── Types ─────────────────────────────────────────────── */
 
@@ -27,14 +24,12 @@ interface ForgedItem {
   slot: string | null;
   level: number;
   hands: number | null;
+  weapon_tag: string | null;
   stats: Record<string, number>;
   value: number;
   max_durability: number;
   drop_chance: number;
 }
-
-interface LootTable { id: string; name: string; }
-interface Creature { id: string; name: string; level: number; rarity: string; node_id: string | null; loot_table_id: string | null; }
 
 /* ─── Constants ─────────────────────────────────────────── */
 
@@ -69,6 +64,11 @@ const STAT_LABELS: Record<string, string> = {
   ac: 'AC', hp: 'HP', hp_regen: 'HP Regen',
 };
 
+const WEAPON_TAG_LABELS: Record<string, string> = {
+  sword: '⚔ sword', axe: '🪓 axe', mace: '🔨 mace', dagger: '🗡 dagger',
+  bow: '🏹 bow', staff: '🪄 staff', wand: '✨ wand', shield: '🛡 shield',
+};
+
 /* ─── Component ─────────────────────────────────────────── */
 
 interface ItemForgePanelProps {
@@ -77,7 +77,7 @@ interface ItemForgePanelProps {
 
 export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = {}) {
   /* Forge mode */
-  const [forgeMode, setForgeMode] = useState<'loot_table' | 'single'>('loot_table');
+  const [forgeMode, setForgeMode] = useState<'batch' | 'single'>('batch');
 
   /* Generation params */
   const [count, setCount] = useState(6);
@@ -89,40 +89,20 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
   const [statsFocus, setStatsFocus] = useState<string>('random');
   const [prompt, setPrompt] = useState('');
 
-  /* Output / loot table */
-  const [tableName, setTableName] = useState('');
+  /* Output */
   const [generated, setGenerated] = useState<ForgedItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [savedTableId, setSavedTableId] = useState<string | null>(null);
   const [savedItemIds, setSavedItemIds] = useState<string[]>([]);
-
-  /* For assigning table to creatures */
-  const [creatures, setCreatures] = useState<Creature[]>([]);
-  const [_lootTables, setLootTables] = useState<LootTable[]>([]);
-  const [assignCreatureId, setAssignCreatureId] = useState<string>('');
-  const [assigning, setAssigning] = useState(false);
-
-  const loadSupport = useCallback(async () => {
-    const [crRes, ltRes] = await Promise.all([
-      supabase.from('creatures').select('id, name, level, rarity, node_id, loot_table_id').order('name'),
-      supabase.from('loot_tables').select('id, name').order('name'),
-    ]);
-    setCreatures(crRes.data || []);
-    setLootTables(ltRes.data || []);
-  }, []);
-
-  useEffect(() => { loadSupport(); }, [loadSupport]);
 
   /* Validate level range */
   const safeMin = Math.max(1, Math.min(levelMin, levelMax));
   const safeMax = Math.max(safeMin, levelMax);
 
   /* ── Generate ── */
-  const generate = async () => {
+  const generate = useCallback(async () => {
     setLoading(true);
     setGenerated([]);
-    setSavedTableId(null);
     setSavedItemIds([]);
     const actualCount = forgeMode === 'single' ? 1 : count;
     try {
@@ -155,108 +135,74 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
         return;
       }
       setGenerated(items);
-      // Auto-suggest a table name (only for loot table mode)
-      if (forgeMode === 'loot_table' && !tableName) {
-        const slotLabel = slot === 'random' ? 'Mixed' : SLOT_GROUPS.find(s => s.value === slot)?.label?.replace(/[⚔🛡💍─ ]/g, '').trim() || slot;
-        const rarLabel = rarity === 'random' ? '' : ` (${rarity})`;
-        setTableName(`Lv${safeMin}-${safeMax} ${slotLabel}${rarLabel} Drops`);
-      }
       if (forgeMode === 'single') {
         toast.success(`Item generated — review and save below.`);
       } else {
-        toast.success(`${items.length} items generated — name the table and apply below.`);
+        toast.success(`${items.length} items generated — review and save below.`);
       }
     } catch (e: any) {
       toast.error(e.message || 'Generation failed');
     } finally {
       setLoading(false);
     }
-  };
+  }, [forgeMode, count, safeMin, safeMax, itemType, slot, rarity, statsFocus, prompt]);
 
-  /* ── Apply: create loot table + entries ── */
+  /* ── Apply: save items directly to items table ── */
   const applyAll = async () => {
     if (generated.length === 0) return;
     setApplying(true);
     try {
-      {
-        // Insert items into items table
-        const insertedIds: Array<{ item_id: string; drop_chance: number }> = [];
-        for (const item of generated) {
-          const { data: itemData, error: itemErr } = await supabase
-            .from('items')
-            .insert({
-              name: item.name,
-              description: item.description,
-              item_type: item.item_type,
-              rarity: item.rarity as any,
-              slot: item.slot as any || null,
-              level: item.level,
-              hands: item.hands || null,
-              stats: item.stats || {},
-              value: item.value,
-              max_durability: 100,
-            })
-            .select('id')
-            .single();
-          if (itemErr) throw itemErr;
-          insertedIds.push({ item_id: itemData.id, drop_chance: item.drop_chance });
-        }
+      // Check for duplicate names in DB
+      const names = generated.map(i => i.name);
+      const { data: existing } = await supabase
+        .from('items')
+        .select('name')
+        .in('name', names);
+      const existingNames = new Set((existing || []).map((e: any) => e.name));
+      const uniqueItems = generated.filter(i => !existingNames.has(i.name));
+      const skippedCount = generated.length - uniqueItems.length;
 
-        if (forgeMode === 'single') {
-          setSavedItemIds(insertedIds.map(i => i.item_id));
-          toast.success(`Item "${generated[0].name}" saved to the database!`);
-          onDataChanged?.();
-        } else {
-          if (!tableName.trim()) { toast.error('Enter a loot table name first.'); setApplying(false); return; }
-
-          const { data: ltData, error: ltErr } = await supabase
-            .from('loot_tables')
-            .insert({ name: tableName.trim() })
-            .select('id')
-            .single();
-          if (ltErr) throw ltErr;
-
-          for (const { item_id, drop_chance } of insertedIds) {
-            const weight = Math.round(drop_chance * 100);
-            const { error: lteErr } = await supabase
-              .from('loot_table_entries')
-              .insert({ loot_table_id: ltData.id, item_id, weight });
-            if (lteErr) throw lteErr;
-          }
-
-          setSavedTableId(ltData.id);
-          toast.success(`Loot table "${tableName}" created with ${generated.length} items!`);
-          await loadSupport();
-          onDataChanged?.();
-        }
+      if (skippedCount > 0) {
+        toast.warning(`Skipped ${skippedCount} item(s) with duplicate names.`);
       }
+
+      if (uniqueItems.length === 0) {
+        toast.error('All items already exist in the database.');
+        setApplying(false);
+        return;
+      }
+
+      const insertedIds: string[] = [];
+      for (const item of uniqueItems) {
+        const { data: itemData, error: itemErr } = await supabase
+          .from('items')
+          .insert({
+            name: item.name,
+            description: item.description,
+            item_type: item.item_type,
+            rarity: item.rarity as any,
+            slot: item.slot as any || null,
+            level: item.level,
+            hands: item.hands || null,
+            weapon_tag: item.weapon_tag || null,
+            stats: item.stats || {},
+            value: item.value,
+            max_durability: 100,
+            world_drop: true,
+          })
+          .select('id')
+          .single();
+        if (itemErr) throw itemErr;
+        insertedIds.push(itemData.id);
+      }
+
+      setSavedItemIds(insertedIds);
+      toast.success(`${insertedIds.length} item(s) saved to the database!`);
+      onDataChanged?.();
     } catch (e: any) {
       toast.error(e.message || 'Apply failed');
     } finally {
       setApplying(false);
-    }
-  };
-
-  /* ── Assign table to creature ── */
-  const assignToCreature = async () => {
-    if (!assignCreatureId || !savedTableId) return;
-    setAssigning(true);
-    try {
-      const maxDrop = Math.max(...generated.map(i => i.drop_chance), 0.3);
-      const { error } = await supabase
-        .from('creatures')
-        .update({ loot_table_id: savedTableId, drop_chance: maxDrop, loot_table: [] })
-        .eq('id', assignCreatureId);
-      if (error) throw error;
-      const name = creatures.find(c => c.id === assignCreatureId)?.name || 'Creature';
-      toast.success(`Assigned to ${name}`);
-      setAssignCreatureId('');
-      await loadSupport();
-      onDataChanged?.();
-    } catch (e: any) {
-      toast.error(e.message || 'Assignment failed');
-    } finally {
-      setAssigning(false);
     }
   };
 
@@ -279,16 +225,16 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
                 <Layers className="w-3 h-3" /> Forge Mode
               </Label>
-               <Select value={forgeMode} onValueChange={(v) => { setForgeMode(v as any); setGenerated([]); setSavedTableId(null); setSavedItemIds([]); }}>
+               <Select value={forgeMode} onValueChange={(v) => { setForgeMode(v as any); setGenerated([]); setSavedItemIds([]); }}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="loot_table">📦 Loot Table (batch)</SelectItem>
+                  <SelectItem value="batch">📦 Batch (multiple items)</SelectItem>
                   <SelectItem value="single">🔮 Single Item</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Count (only for loot table mode) */}
+            {/* Count (only for batch mode) */}
             {forgeMode !== 'single' && (
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
@@ -430,77 +376,26 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
 
         {/* Apply bar */}
         {generated.length > 0 && !loading && (
-          <div className="px-4 py-2.5 border-b border-border bg-card/50 shrink-0 space-y-2">
-            {forgeMode === 'loot_table' ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <Layers className="w-3.5 h-3.5 text-primary" />
-                  <span className="font-display text-xs text-primary">Save as Loot Table</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="Loot table name…"
-                    value={tableName}
-                    onChange={e => setTableName(e.target.value)}
-                    className="h-7 text-xs flex-1"
-                  />
-                  <Button
-                    onClick={applyAll}
-                    disabled={applying || !tableName.trim()}
-                    size="sm"
-                    className="font-display text-xs shrink-0"
-                  >
-                    {applying
-                      ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Saving…</>
-                      : <><Check className="w-3 h-3 mr-1" />Apply ({generated.length})</>}
-                  </Button>
-                </div>
-
-                {/* Assign to creature (after save) */}
-                {savedTableId && (
-                  <div className="flex items-center gap-2 pt-1 border-t border-border">
-                    <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                    <span className="text-[10px] text-muted-foreground shrink-0">Assign to creature:</span>
-                    <div className="flex-1">
-                      <CreaturePicker
-                        creatures={creatures}
-                        value={assignCreatureId || null}
-                        onChange={v => setAssignCreatureId(v || '')}
-                        placeholder="Pick a creature…"
-                        className="h-6"
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-6 text-[10px] px-2 shrink-0"
-                      disabled={!assignCreatureId || assigning}
-                      onClick={assignToCreature}
-                    >
-                      {assigning ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : 'Assign'}
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Package className="w-3.5 h-3.5 text-primary" />
-                <span className="font-display text-xs text-primary">Save Single Item</span>
-                <div className="flex-1" />
-                <Button
-                  onClick={applyAll}
-                  disabled={applying || savedItemIds.length > 0}
-                  size="sm"
-                  className="font-display text-xs shrink-0"
-                >
-                  {applying
-                    ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Saving…</>
-                    : savedItemIds.length > 0
-                      ? <><Check className="w-3 h-3 mr-1" />Saved</>
-                      : <><Check className="w-3 h-3 mr-1" />Save to Items</>}
-                </Button>
-              </div>
-            )}
+          <div className="px-4 py-2.5 border-b border-border bg-card/50 shrink-0">
+            <div className="flex items-center gap-2">
+              <Package className="w-3.5 h-3.5 text-primary" />
+              <span className="font-display text-xs text-primary">
+                {forgeMode === 'single' ? 'Save Single Item' : `Save ${generated.length} Items`}
+              </span>
+              <div className="flex-1" />
+              <Button
+                onClick={applyAll}
+                disabled={applying || savedItemIds.length > 0}
+                size="sm"
+                className="font-display text-xs shrink-0"
+              >
+                {applying
+                  ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Saving…</>
+                  : savedItemIds.length > 0
+                    ? <><Check className="w-3 h-3 mr-1" />Saved ({savedItemIds.length})</>
+                    : <><Check className="w-3 h-3 mr-1" />Save to Items</>}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -513,7 +408,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
               <p className="text-xs text-muted-foreground/60">
                 {forgeMode === 'single'
                   ? 'Generate a single item to save directly to the database.'
-                  : 'The generated items will form a reusable loot table you can assign to any creature.'}
+                  : 'Generate a batch of items to save directly to the items database.'}
               </p>
             </div>
           )}
@@ -547,6 +442,9 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                       <span className="bg-muted/50 rounded px-1 py-0.5">{item.slot.replace('_', ' ')}</span>
                     )}
                     {item.hands === 2 && <span className="bg-muted/50 rounded px-1 py-0.5">2H</span>}
+                    {item.weapon_tag && (
+                      <span className="bg-muted/50 rounded px-1 py-0.5">{WEAPON_TAG_LABELS[item.weapon_tag] || item.weapon_tag}</span>
+                    )}
                     {item.item_type === 'consumable' && (
                       <span className="bg-muted/50 rounded px-1 py-0.5 text-accent-foreground">consumable</span>
                     )}
