@@ -1,54 +1,43 @@
 
 
-# Add Inventory Tab to Character Panel
+# Blacksmith Panel: Tabbed Layout + Common-Only Forge
 
 ## Summary
 
-Split the CharacterPanel from 2 tabs into 3 tabs: **Equipment**, **Inventory**, **Attributes**. The Equipment tab keeps equipped gear, belt potions, consumables, and quest items. The new Inventory tab gets all other unequipped items (equipment pieces). Also limit tooltip widths globally so long descriptions don't span the screen.
+Restructure the Blacksmith dialog into two tabs using Radix Tabs. Restrict forged items to common rarity only (server + client).
 
-## Changes
+## Tab Layout
 
-### 1. CharacterPanel.tsx — Add 3rd tab and split inventory
+**Tab 1 — Repair**
+- Column 1: Info about repair mechanics (how it works, cost formula hint, unique = unrepairable)
+- Column 2: Damaged items list with repair buttons + "Repair All"
 
-**Tab structure:**
-- **Equipment** — Equipment slots grid, belt potions, consumables (unequipped items where `item_type === 'consumable'`), quest items (if any `item_type === 'quest'`)
-- **Inventory** — All other unequipped bag items (equipment, salvage, etc.) with sort controls, carry weight, equip/drop/pin actions
-- **Attributes** — Unchanged
+**Tab 2 — Forge**
+- Column 1: Slot picker dropdown, sell salvage section, cost display
+- Column 2: Browsable item pool for selected slot, forge button
 
-**Splitting logic:**
-```typescript
-const consumableAndQuestItems = bagItems.filter(i => 
-  i.item.item_type === 'consumable' || i.item.item_type === 'quest'
-);
-const inventoryItems = bagItems.filter(i => 
-  i.item.item_type !== 'consumable' && i.item.item_type !== 'quest'
-);
-```
+Gold/salvage resource bar stays above the tabs (shared).
 
-The Equipment tab will show a compact consumables/quest section below belt potions (reusing existing item row rendering). The Inventory tab gets the current bag list minus consumables/quest, plus the sort button and weight display.
+## Common-Only Forge Change
 
-**TabsList** becomes 3 triggers with slightly smaller text to fit.
+**Server** (`supabase/functions/blacksmith-forge/index.ts`):
+- Add `.eq("rarity", "common")` to the `baseQuery` in `getItemPool` (replace existing `.neq("rarity", "unique")`)
 
-### 2. Tooltip max-width constraint
-
-Add `max-w-xs` (320px) to all `TooltipContent` elements in CharacterPanel that show item info. Several already have it (line 555); apply consistently to:
-- EquipSlot tooltip (line 114)
-- Belt potion tooltips (line 458)
-- All inventory item tooltips
-
-This caps tooltip width at 320px so long descriptions wrap instead of spanning the screen.
+**Client** (`BlacksmithPanel.tsx`):
+- Remove `rarityOrder` grouping (only common items now)
+- Simplify pool rendering to a flat list
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/features/character/components/CharacterPanel.tsx` | Add "Inventory" tab, move equipment bag items there, keep consumables/quest on Equipment tab, ensure all item tooltips have `max-w-xs` |
+| `src/features/inventory/components/BlacksmithPanel.tsx` | Wrap content in `Tabs`/`TabsList`/`TabsContent` with Repair and Forge tabs, each using a 2-column grid |
+| `supabase/functions/blacksmith-forge/index.ts` | Change `.neq("rarity", "unique")` to `.eq("rarity", "common")` in `getItemPool` |
 
 ## What Does NOT Change
 
-- Attributes tab content
-- Equipment slot grid layout
-- Belt potion system
-- Item actions (equip, drop, pin, destroy)
-- Sort functionality (moves to Inventory tab)
+- Repair logic, cost calculation
+- Forge edge function auth/validation flow
+- ScrollPanel wrapper
+- Sell salvage logic
 
