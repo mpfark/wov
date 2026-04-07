@@ -1,58 +1,52 @@
 
 
-# Update AI Rulebook & Populate Panel
+# Extend Envenom & Ignite to 5-Minute Commitment Buffs
 
-## Problem
+## Summary
 
-The AI Rulebook displays **outdated creature stat formulas** that don't match the actual `generateCreatureStats()` in `game-data.ts`. The Populate Panel's apply logic is correct (it calls `generateCreatureStats` directly), but the preview cards show the AI's raw values instead of the recalculated ones. The rulebook also lacks Item Forge documentation reflecting the recent batch/single mode changes.
-
-## Specific Rulebook Formula Errors
-
-| Field | Rulebook (wrong) | Actual (`game-data.ts`) |
-|-------|-------------------|------------------------|
-| Base stat | `round(10 + level × 0.7)` | `8 + floor(level × 0.7)` |
-| Stats | "each" (all same) | str=base, dex=base-1, con=base+1, int=base-2, wis=base-1, cha=base-3 |
-| Stat mult boss | ×2.0 | ×2.5 |
-| HP mult boss | ×4.0 | ×6.0 |
-| AC formula | `10 + level × 0.6 + bonus` | `10 + level × 0.575 + bonus` |
-| Examples | Lv10 boss: stats=34, HP=380 | Lv10 boss: stats=38, HP=570, AC=22 |
-
-The edge function prompt (lines 238-244) already has the **correct** formulas — only the Rulebook UI component is wrong.
+Transform Envenom (rogue T2) and Ignite (wizard T3) from short stat-scaling buffs into 5-minute commitment buffs that drain all current CP, with a minimum of 50 CP required. Add clear player feedback and clear these buffs on death.
 
 ## Changes
 
-### 1. Fix Creature Stats section in `WorldBuilderRulebook.tsx`
+### 1. Update ability definitions — `class-abilities.ts`
 
-- Update base stat formula to `8 + floor(level × 0.7)`
-- Add per-attribute offsets: STR=base, DEX=base-1, CON=base+1, INT=base-2, WIS=base-1, CHA=base-3
-- Fix rarity multipliers: stat mult regular=1.0, rare=1.3, boss=2.5
-- Fix HP multipliers: regular=1.0, rare=1.5, boss=6.0
-- Fix AC formula: `round(10 + level × 0.575 + bonus)`, bonuses: regular=+2, rare=+2, boss=+6
-- Fix examples to match actual formulas:
-  - Lv5 regular: base=11, str=11, HP=55, AC=15
-  - Lv10 boss: base=15, str=38, HP=570, AC=22
-- Add creature damage die info: `base + floor(level × 0.7)`, bases: regular=4, rare=6, boss=10
+- Set `cpCost: 50` for both Envenom and Ignite (represents minimum required)
+- Update descriptions:
+  - Envenom: "Coat your blade in poison for 5 minutes — each hit has a 40% chance to apply a stackable poison DoT (max 5). Costs all your CP (minimum 50)."
+  - Ignite: "Imbue your spells with fire for 5 minutes — each hit has a 40% chance to apply a stackable burn DoT (max 5). Costs all your CP (minimum 50)."
 
-### 2. Add Item Forge section to `WorldBuilderRulebook.tsx`
+### 2. Update action handler — `useCombatActions.ts`
 
-- Document the two modes: **Batch** (multiple items saved as world drops) and **Single** (one item)
-- Note weapon tag support and stat budget formula
-- Note duplicate name filtering on save
-- Note that items are created separately from creature/loot generation
+**Poison buff block (line ~651):**
+- Add "already active" check → log "Envenom is already active." and return
+- Set flat `300_000`ms (5 min) duration instead of stat-scaling
+- Log success: "Envenom! Your weapons drip with poison for 5 minutes. (X CP consumed)"
 
-### 3. Update Loot Table Assignment section
+**Ignite buff block (line ~670):**
+- Add "already active" check → log "Ignite is already active." and return
+- Set flat `300_000`ms duration
+- Log success: "Ignite! Your spells burn with fire for 5 minutes. (X CP consumed)"
 
-- Update to reflect current loot system: dual-mode (`legacy_table` for bosses, `item_pool` for humanoids)
-- Note that humanoid creatures default to `item_pool` loot mode, non-humanoids to `salvage_only`
+**CP deduction block (line ~725):**
+- For `poison_buff` and `ignite_buff` types, override cost to drain all current CP instead of flat `ability.cpCost`
+- The minimum check at line 524 already handles the 50 CP gate since `cpCost` will be 50
 
-### 4. Fix Populate Panel preview to show recalculated stats — `PopulatePanel.tsx`
+### 3. Clear buffs on death — `useCombatLifecycle.ts`
 
-- In the creature preview cards (line ~246), show the `generateCreatureStats()` HP instead of the AI's raw `cr.hp`, so the admin sees the actual values that will be applied
+- In the existing death effect (line 64-67), alongside `stopCombat()`, also call `setPoisonBuff(null)` and `setIgniteBuff(null)` via buffSetters
+- This fits naturally — just two additional setter calls in the existing death cleanup block
+- Requires passing `buffSetters` (or just the two setters) into `useCombatLifecycle` params
+
+### 4. Update Rulebook — `WorldBuilderRulebook.tsx`
+
+- Update any Envenom/Ignite references to reflect the 5-minute duration and all-CP cost
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/admin/WorldBuilderRulebook.tsx` | Fix creature formulas, add Item Forge section, update loot section |
-| `src/components/admin/PopulatePanel.tsx` | Show recalculated HP in preview cards |
+| `src/features/combat/utils/class-abilities.ts` | Update cpCost to 50, update descriptions for Envenom & Ignite |
+| `src/features/combat/hooks/useCombatActions.ts` | Flat 5min duration, drain-all-CP override, prevent recast, clear feedback |
+| `src/features/combat/hooks/useCombatLifecycle.ts` | Clear poison/ignite buffs on death |
+| `src/components/admin/WorldBuilderRulebook.tsx` | Update ability documentation |
 
