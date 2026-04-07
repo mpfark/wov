@@ -324,12 +324,11 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
     if (p.isDead) return;
     if (p.inCombat) { p.addLog('⚠️ You cannot teleport while in combat!'); return; }
-    const effectiveCpCost = p.character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
-    if ((p.character.cp ?? 0) < effectiveCpCost) { p.addLog('⚠️ Not enough CP to teleport.'); return; }
+    if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to teleport.'); return; }
     const targetNode = p.getNode(nodeId);
     if (!targetNode) return;
     const currentNodeObj = p.getNode(p.character.current_node_id!);
-    if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 25) {
+    if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 22) {
       setWaymarkNodeId(p.character.current_node_id!);
       p.addLog(`📍 You leave a hidden waymark at ${currentNodeObj.name}.`);
     }
@@ -357,8 +356,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (!waymarkNode) { p.addLog('⚠️ Your waymark has faded.'); setWaymarkNodeId(null); return; }
     if (p.isDead) return;
     if (p.inCombat) { p.addLog('⚠️ You cannot teleport while in combat!'); return; }
-    const effectiveWayCost = p.character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
-    if ((p.character.cp ?? 0) < effectiveWayCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
+    if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId);

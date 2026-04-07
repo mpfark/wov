@@ -858,18 +858,17 @@ export default function CharacterPanel({
                   let effectiveHpRegen = hpRegen;
                   const potionBonus = regenBuffActive ? 0.5 : 0;
                   const innBonus = isAtInn ? 1 : 0;
-                  const milestoneBonus = character.level >= 35 ? 0.5 : 0;
-                  const regenMultiplier = 1 + potionBonus + milestoneBonus + innBonus;
-                  effectiveHpRegen = Math.max(Math.floor((hpRegen + (foodBuffActive ? foodBuff!.flatRegen : 0)) * regenMultiplier + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
-                  const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive;
+                  const milestoneHpFlat = (() => { if (character.level >= 40) return 10; if (character.level >= 35) return 8; if (character.level >= 30) return 6; if (character.level >= 25) return 4; if (character.level >= 20) return 2; return 0; })();
+                  const regenMultiplier = 1 + potionBonus + innBonus;
+                  effectiveHpRegen = Math.max(Math.floor((hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0)) * regenMultiplier + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
+                  const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive || milestoneHpFlat > 0;
 
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
                   const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
                   const intHit = getIntHitBonus(eInt);
-                  const milestoneCrit = character.level >= 28 ? 1 : 0;
                   const dexCrit = getDexCritBonus(eDex);
-                  const baseCritRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
+                  const baseCritRange = (combat?.critRange || 20) - dexCrit;
                   const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
                   const wisHalveChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_AWARENESS_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));

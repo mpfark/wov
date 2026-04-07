@@ -68,7 +68,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
 
   destinations.sort((a, b) => a.region.min_level - b.region.min_level || getNodeDisplayName(a.node, areas.find(ar => ar.id === a.node.area_id)).localeCompare(getNodeDisplayName(b.node, areas.find(ar => ar.id === b.node.area_id))));
 
-  const waymarkCpCost = waymark?.region ? calculateTeleportCpCostLocal(currentRegion, waymark.region) : 15;
+  const waymarkCpCost = waymark?.region ? calculateTeleportCpCost(currentRegion, waymark.region) : 15;
   const canAffordWaymark = playerCp >= waymarkCpCost;
 
   // Party member destinations — members at different nodes
@@ -79,7 +79,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
       if (!node) return null;
       const region = regions.find(r => r.id === node.region_id);
       if (!region) return null;
-      return { member: m, node, region, cpCost: calculateTeleportCpCostLocal(currentRegion, region) };
+      return { member: m, node, region, cpCost: calculateTeleportCpCost(currentRegion, region) };
     })
     .filter(Boolean) as PartyMemberDestination[];
 
@@ -87,7 +87,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <ScrollPanel icon="🌀" title="Teleport" className="max-w-sm">
         <p className="text-xs text-muted-foreground">
-          {characterLevel >= 25 && !currentNode.is_teleport && (
+          {characterLevel >= 22 && !currentNode.is_teleport && (
             <span className="text-primary font-display">⚡ Arcane Recall active — </span>
           )}
           Travel instantly to another teleport point. Your CP: <span className="text-primary font-display">{playerCp}/{playerMaxCp}</span>

@@ -136,11 +136,11 @@ export function useGameLoop(params: UseGameLoopParams) {
         const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
-        const milestoneBonus = regenCharRef.current.level >= 35 ? 0.5 : 0;
-        const totalMult = 1 + potionBonus + milestoneBonus + innBonus;
+        const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
+        const totalMult = 1 + potionBonus + innBonus;
         const combatMult = inCombatRegenRef.current ? 0.1 : 1;
         // Scaled by 0.4 to compensate for 6s tick (was 15s, 2.5x more ticks)
-        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen) * totalMult * combatMult * 0.4), 1);
+        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen + milestoneHpFlat) * totalMult * combatMult * 0.4), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
           updates.hp = newHp;
@@ -157,6 +157,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
         const primaryVal = ((cpStatRef.current as any)[primaryStat] ?? 10) + (eqB[primaryStat] || 0);
         const bRegen = getCpRegenRate(primaryVal);
+        const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
         const nodeId = regenCharRef.current.current_node_id;
         const node = nodeId ? getNodeRef.current(nodeId) : null;
         const innBonus = node?.is_inn ? 1 : 0;
@@ -166,7 +167,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
         const totalMult = 1 + inspireBonus + innBonus;
         const combatMult = inCombatRegenRef.current ? 0.1 : 1;
-        const regenAmount = (bRegen + foodCpRegen) * totalMult * combatMult;
+        const regenAmount = (bRegen + foodCpRegen + milestoneCpFlat) * totalMult * combatMult;
         const newCp = Math.min(Math.floor(cp + regenAmount), gearAwareMaxCp);
         if (newCp > cp) {
           updates.cp = newCp;
