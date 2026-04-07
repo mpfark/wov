@@ -590,6 +590,7 @@ export default function UserManager({ isValar }: Props) {
   const [teleportNodeId, setTeleportNodeId] = useState<string>('');
   const [grantXpAmount, setGrantXpAmount] = useState<number>(100);
   const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
+  const [grantSalvageAmount, setGrantSalvageAmount] = useState<number>(100);
   const [removeItemId, setRemoveItemId] = useState<string>('');
 
   const callAdmin = useCallback(async (action: string, method: string, body?: any) => {
@@ -780,6 +781,15 @@ export default function UserManager({ isValar }: Props) {
     try {
       const data = await callAdmin('grant-respec', 'POST', { character_id: characterId, amount: grantRespecAmount });
       toast.success(`Granted ${grantRespecAmount} respec point${grantRespecAmount > 1 ? 's' : ''} (total: ${data.new_total})`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleGrantSalvage = async (characterId: string) => {
+    if (!grantSalvageAmount || grantSalvageAmount <= 0) return;
+    try {
+      const data = await callAdmin('grant-salvage', 'POST', { character_id: characterId, amount: grantSalvageAmount });
+      toast.success(`Granted ${grantSalvageAmount} salvage (total: ${data.new_total})`);
       loadUsers();
     } catch (err: any) { toast.error(err.message); }
   };
@@ -981,7 +991,7 @@ export default function UserManager({ isValar }: Props) {
         </div>
 
         {/* COL 3 — Actions */}
-        <div className="w-[280px] shrink-0 border-r border-border flex flex-col overflow-y-auto">
+        <div className="w-[420px] shrink-0 border-r border-border flex flex-col overflow-y-auto">
           {!selectedChar ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-[10px] text-muted-foreground italic">
@@ -1054,6 +1064,17 @@ export default function UserManager({ isValar }: Props) {
                   <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
                     disabled={grantRespecAmount <= 0} onClick={() => handleGrantRespec(selectedChar.id)}>
                     <RotateCcw className="w-3 h-3" /> Grant Respec
+                  </Button>
+                </div>
+
+                {/* Grant Salvage */}
+                <div className="flex gap-1">
+                  <Input type="number" min={1} value={grantSalvageAmount}
+                    onChange={e => setGrantSalvageAmount(parseInt(e.target.value) || 0)}
+                    className="h-7 text-[10px] w-20" placeholder="🔩" />
+                  <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
+                    disabled={grantSalvageAmount <= 0} onClick={() => handleGrantSalvage(selectedChar.id)}>
+                    🔩 Grant Salvage
                   </Button>
                 </div>
 
