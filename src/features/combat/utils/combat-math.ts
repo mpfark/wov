@@ -144,7 +144,7 @@ export function getAcOverflowMultiplier(totalAtk: number, targetAC: number): num
 // ── AC formula ───────────────────────────────────────────────────
 
 const CLASS_BASE_AC: Record<string, number> = {
-  warrior: 14, wizard: 11, ranger: 12, rogue: 12, healer: 11, bard: 11,
+  warrior: 12, wizard: 9, ranger: 10, rogue: 10, healer: 9, bard: 9,
 };
 
 /** AC = base class AC + DEX modifier */
@@ -425,7 +425,7 @@ export type HitQuality = 'miss' | 'glancing' | 'weak' | 'normal' | 'strong';
 export function getHitQuality(margin: number, isNat1: boolean, isCrit: boolean): HitQuality {
   if (isNat1) return 'miss';
   if (isCrit) return margin >= 7 ? 'strong' : 'normal';
-  if (margin < -8) return 'miss';
+  if (margin < -5) return 'miss';
   if (margin < 0) return 'glancing';
   if (margin <= 2) return 'weak';
   if (margin <= 6) return 'normal';
@@ -438,3 +438,10 @@ export const HIT_QUALITY_MULT: Record<HitQuality, number> = {
 
 /** Hard cap for glancing hits; also applies to weak hits when margin < -2 */
 export const GLANCING_WEAK_CAP = 3;
+
+// ── Creature attack bonus ────────────────────────────────────────
+
+/** Level-based creature attack bonus to scale hit rates */
+export function getCreatureAttackBonus(level: number): number {
+  return Math.floor(level * 0.4);
+}
