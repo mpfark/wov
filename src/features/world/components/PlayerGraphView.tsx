@@ -299,8 +299,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       }
 
       // Bleed circles: extend outline toward the SVG edge when the area continues off-screen
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      let bleedCount = 0;
+      let _bleedCount = 0;
       for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (!pos) continue;
