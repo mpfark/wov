@@ -1044,6 +1044,15 @@ Deno.serve(async (req) => {
       request_duration_ms: requestDurationMs,
     }));
 
+    // ── Build buff sync (remaining absorb shield HP) ────────────
+    const buffSync: Record<string, { absorb_remaining: number }> = {};
+    for (const cid of charIds) {
+      const mb = buffs[cid];
+      if (mb?.absorb_buff && mb.absorb_buff.shield_hp !== undefined) {
+        buffSync[cid] = { absorb_remaining: mb.absorb_buff.shield_hp };
+      }
+    }
+
     return json({
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
@@ -1051,6 +1060,7 @@ Deno.serve(async (req) => {
       active_effects: liveEffects.map(e => ({ source_id: e.source_id, target_id: e.target_id, effect_type: e.effect_type, stacks: e.stacks, damage_per_tick: e.damage_per_tick, expires_at: e.expires_at, next_tick_at: e.next_tick_at, tick_rate_ms: e.tick_rate_ms ?? 2000 })),
       session_ended: sessionEnded,
       ticks_processed: ticks,
+      buff_sync: Object.keys(buffSync).length > 0 ? buffSync : undefined,
     });
   } catch (err) {
     console.error('Combat tick error:', err);
