@@ -299,13 +299,24 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       }
 
       // Bleed circles: extend outline toward the SVG edge when the area continues off-screen
+      let bleedCount = 0;
       for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (!pos) continue;
         for (const conn of n.connections) {
-          if (displayedIds.has(conn.node_id)) continue;
+          if (displayedIds.has(conn.node_id)) {
+            continue;
+          }
           const offNode = nodes.find(nd => nd.id === conn.node_id);
-          if (!offNode || offNode.area_id !== area.id) continue;
+          if (!offNode) {
+            console.log('[BLEED] offNode not found for conn', conn.node_id, 'from node', n.id, n.name);
+            continue;
+          }
+          if (offNode.area_id !== area.id) {
+            console.log('[BLEED] area mismatch', offNode.area_id, '!==', area.id, 'for', offNode.id, offNode.name);
+            continue;
+          }
+          console.log('[BLEED] Adding bleed from', n.name, 'toward', offNode.name, 'area:', area.name);
 
           const dx = (offNode.x - n.x) || 0;
           const dy = (offNode.y - n.y) || 0;
