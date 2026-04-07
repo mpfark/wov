@@ -263,13 +263,13 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   })();
 
   // Compute area outline hulls for displayed nodes
-  const areaHulls = useMemo(() => {
+  const areaHulls = (() => {
     if (nodePositions.size === 0 || _areas.length === 0) return [];
-    const displayedNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
+    const primaryNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
     const results: Array<{ path: string; fill: string; stroke: string }> = [];
 
     for (const area of _areas) {
-      const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && displayedNodeIds.has(n.id));
+      const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && primaryNodeIds.has(n.id));
       if (areaNodes.length === 0) continue;
       const areaNodeIds = new Set(areaNodes.map(n => n.id));
       const circles: Circle[] = [];
@@ -279,7 +279,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         if (pos) circles.push({ cx: pos.px, cy: pos.py, r: AREA_OUTLINE_RADIUS });
       }
 
-      // Add circles along intra-area edges for smooth outlines
       const edgeSpacing = AREA_OUTLINE_RADIUS * 1.4;
       for (const n of areaNodes) {
         for (const conn of n.connections) {
@@ -309,7 +308,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       });
     }
     return results;
-  }, [allDisplayNodes, nodePositions, _areas, emojiMap, secondDegIds]);
+  })();
 
   return (
     <div className="w-full">
