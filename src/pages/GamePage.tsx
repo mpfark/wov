@@ -494,6 +494,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onAbilityExecute: async (index, targetId) => {
       await executeAbilityRef.current?.(index, targetId);
     },
+    onAbsorbSync: gameLoop.handleAbsorbDamage,
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
