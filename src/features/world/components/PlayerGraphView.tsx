@@ -298,7 +298,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         }
       }
 
-      // Bleed circles: extend outline toward off-screen nodes in the same area
+      // Bleed circles: extend outline toward the SVG edge when the area continues off-screen
       for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (!pos) continue;
@@ -306,13 +306,29 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           if (displayedIds.has(conn.node_id)) continue;
           const offNode = nodes.find(nd => nd.id === conn.node_id);
           if (!offNode || offNode.area_id !== area.id) continue;
+
           const dx = (offNode.x - n.x) || 0;
           const dy = (offNode.y - n.y) || 0;
           const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          for (let step = 1; step <= 4; step++) {
+          const ux = dx / len;
+          const uy = dy / len;
+          const viewBoxWidth = Math.max(svgWidth, 280);
+          const viewBoxHeight = Math.max(svgHeight, 200);
+          const distancesToEdge = [
+            ux > 0 ? (viewBoxWidth - pos.px) / ux : Infinity,
+            ux < 0 ? (0 - pos.px) / ux : Infinity,
+            uy > 0 ? (viewBoxHeight - pos.py) / uy : Infinity,
+            uy < 0 ? (0 - pos.py) / uy : Infinity,
+          ].filter(distance => Number.isFinite(distance) && distance > 0);
+          const distanceToEdge = distancesToEdge.length > 0 ? Math.max(...distancesToEdge) : _SPACING * 2;
+          const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 2.5;
+          const bleedSteps = Math.max(5, Math.ceil(bleedDistance / (_SPACING * 0.55)));
+
+          for (let step = 1; step <= bleedSteps; step++) {
+            const travel = (bleedDistance * step) / bleedSteps;
             circles.push({
-              cx: pos.px + (dx / len) * _SPACING * step * 0.6,
-              cy: pos.py + (dy / len) * _SPACING * step * 0.6,
+              cx: pos.px + ux * travel,
+              cy: pos.py + uy * travel,
               r: AREA_OUTLINE_RADIUS,
             });
           }
