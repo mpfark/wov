@@ -30,6 +30,9 @@ export interface UseCombatLifecycleParams {
   aggroProcessedRef: React.MutableRefObject<Set<string>>;
   recentlyKilledRef: React.MutableRefObject<Set<string>>;
   pendingAggroRef: React.MutableRefObject<boolean>;
+  // Buff setters for death cleanup
+  setPoisonBuff?: React.Dispatch<React.SetStateAction<any>>;
+  setIgniteBuff?: React.Dispatch<React.SetStateAction<any>>;
 }
 
 export function useCombatLifecycle(params: UseCombatLifecycleParams) {
@@ -38,6 +41,7 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
     stopCombat, intervalRef, lastTickRef, inCombatRef, tickBusyRef, tickPendingRef,
     creatureHpOverridesRef, setCreatureHpOverrides, channelRef,
     aggroProcessedRef, recentlyKilledRef, pendingAggroRef,
+    setPoisonBuff, setIgniteBuff,
   } = params;
 
   const prevNodeRef = useRef(currentNodeId);
@@ -61,10 +65,14 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
     }
   }, [currentNodeId, stopCombat, aggroProcessedRef, recentlyKilledRef, pendingAggroRef, creatureHpOverridesRef, setCreatureHpOverrides]);
 
-  // Death
+  // Death — also clear commitment buffs (Envenom / Ignite)
   useEffect(() => {
-    if (isDead) stopCombat();
-  }, [isDead, stopCombat]);
+    if (isDead) {
+      stopCombat();
+      setPoisonBuff?.(null);
+      setIgniteBuff?.(null);
+    }
+  }, [isDead, stopCombat, setPoisonBuff, setIgniteBuff]);
 
   // Non-leader timeout
   useEffect(() => {
