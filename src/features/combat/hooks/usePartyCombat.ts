@@ -45,7 +45,7 @@ export interface MemberBuffState {
   damage_buff?: boolean;
   root_debuff_target?: string;
   root_debuff_reduction?: number;
-  ac_buff?: number;
+  battle_cry_dr?: { reduction: number; crit_reduction: number };
   poison_buff?: boolean;
   evasion_buff?: { dodge_chance: number };
   ignite_buff?: boolean;

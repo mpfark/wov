@@ -11,7 +11,7 @@ import { useState, useCallback } from 'react';
 import { getStatModifier } from '@/lib/game-data';
 import { mapServerEffectsToStacks, type ServerDotState } from '../utils/mapServerEffectsToBuffState';
 import type {
-  RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, AcBuff,
+  RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, PoisonStack, EvasionBuff, DisengageNextHit, IgniteBuff,
   IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, FocusStrikeBuff,
 } from './useGameLoop';
@@ -24,7 +24,7 @@ export interface BuffState {
   stealthBuff: StealthBuff | null;
   damageBuff: DamageBuff | null;
   rootDebuff: RootDebuff | null;
-  acBuff: AcBuff | null;
+  battleCryBuff: BattleCryBuff | null;
   bleedStacks: Record<string, DotDebuff>;
   poisonBuff: PoisonBuff | null;
   poisonStacks: Record<string, PoisonStack>;
@@ -45,7 +45,7 @@ export interface BuffSetters {
   setStealthBuff: React.Dispatch<React.SetStateAction<StealthBuff | null>>;
   setDamageBuff: React.Dispatch<React.SetStateAction<DamageBuff | null>>;
   setRootDebuff: React.Dispatch<React.SetStateAction<RootDebuff | null>>;
-  setAcBuff: React.Dispatch<React.SetStateAction<AcBuff | null>>;
+  setBattleCryBuff: React.Dispatch<React.SetStateAction<BattleCryBuff | null>>;
   setBleedStacks: React.Dispatch<React.SetStateAction<Record<string, DotDebuff>>>;
   setPoisonBuff: React.Dispatch<React.SetStateAction<PoisonBuff | null>>;
   setPoisonStacks: React.Dispatch<React.SetStateAction<Record<string, PoisonStack>>>;
@@ -77,7 +77,7 @@ export function useBuffState(params: UseBuffStateParams) {
   const [stealthBuff, setStealthBuff] = useState<StealthBuff | null>(null);
   const [damageBuff, setDamageBuff] = useState<DamageBuff | null>(null);
   const [rootDebuff, setRootDebuff] = useState<RootDebuff | null>(null);
-  const [acBuff, setAcBuff] = useState<AcBuff | null>(null);
+  const [battleCryBuff, setBattleCryBuff] = useState<BattleCryBuff | null>(null);
   const [bleedStacks, setBleedStacks] = useState<Record<string, DotDebuff>>({});
   const [poisonBuff, setPoisonBuff] = useState<PoisonBuff | null>(null);
   const [poisonStacks, setPoisonStacks] = useState<Record<string, PoisonStack>>({});
@@ -179,7 +179,7 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.root_debuff_target = (rootDebuff as any).creatureId;
       buffs.root_debuff_reduction = rootDebuff.damageReduction;
     }
-    if (acBuff && now < acBuff.expiresAt) buffs.ac_buff = acBuff.bonus;
+    if (battleCryBuff && now < battleCryBuff.expiresAt) buffs.battle_cry_dr = { reduction: battleCryBuff.damageReduction, crit_reduction: battleCryBuff.critReduction };
     if (poisonBuff && now < poisonBuff.expiresAt) buffs.poison_buff = true;
     if (evasionBuff && now < evasionBuff.expiresAt) buffs.evasion_buff = { dodge_chance: evasionBuff.dodgeChance };
     if (igniteBuff && now < igniteBuff.expiresAt) buffs.ignite_buff = true;
@@ -191,7 +191,7 @@ export function useBuffState(params: UseBuffStateParams) {
     if (disengageNextHit) buffs.disengage_next_hit = { bonus_mult: disengageNextHit.bonusMult };
     if (focusStrikeBuff) buffs.focus_strike = { bonus_dmg: focusStrikeBuff.bonusDmg };
     return buffs;
-  }, [critBuff, stealthBuff, damageBuff, rootDebuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, focusStrikeBuff]);
+  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, focusStrikeBuff]);
 
   // ── Handle consumed one-shot buffs after server tick ──
   const handleConsumedBuffs = useCallback((consumed: { buff: string; character_id: string }[]) => {
@@ -220,14 +220,14 @@ export function useBuffState(params: UseBuffStateParams) {
 
   // ── Bundled state objects ──────────────────────────────────
   const buffState: BuffState = {
-    regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, acBuff,
+    regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     bleedStacks, poisonBuff, poisonStacks, evasionBuff, disengageNextHit,
     igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
   };
 
   const buffSetters: BuffSetters = {
     setRegenBuff, setFoodBuff, setCritBuff, setStealthBuff, setDamageBuff,
-    setRootDebuff, setAcBuff, setBleedStacks, setPoisonBuff, setPoisonStacks,
+    setRootDebuff, setBattleCryBuff, setBleedStacks, setPoisonBuff, setPoisonStacks,
     setEvasionBuff, setDisengageNextHit, setIgniteBuff, setIgniteStacks,
     setAbsorbBuff, setPartyRegenBuff, setSunderDebuff, setFocusStrikeBuff,
   };

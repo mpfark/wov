@@ -429,7 +429,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // Destructure buff state for convenient access in render
   const {
-    regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, acBuff,
+    regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff, bleedStacks,
   } = buffState;
@@ -464,9 +464,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
-  const acBuffBonus = acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0;
   const effectiveDex = character.dex + (equipmentBonuses.dex || 0);
-  const effectiveAC = calculateAC(character.class, effectiveDex) + (equipmentBonuses.ac || 0) + acBuffBonus;
+  const effectiveAC = calculateAC(character.class, effectiveDex) + (equipmentBonuses.ac || 0);
 
   // ── Server effect sync — delegated to useBuffState via useGameLoop ──
   const handleActiveDots = useCallback((dots: Record<string, any>) => {
@@ -712,7 +711,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     itemHpRegen,
     foodBuff,
     critBuff,
-    acBuff,
+    battleCryBuff,
     poisonBuff,
     evasionBuff,
     igniteBuff,
@@ -728,7 +727,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     handleDropItem, dropItem, togglePin, handleUseConsumable, currentNode?.is_inn,
     regenBuff, regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
-    foodBuff, critBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
+    foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
     damageBuff, partyRegenBuff, focusStrikeBuff,
     handleAllocateStat, handleFullRespec, handleBatchAllocateStats,
   ]);
@@ -736,8 +735,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const activeBuffs = useMemo(() => ({
     stealth: !!(stealthBuff && Date.now() < stealthBuff.expiresAt),
     damageBuff: !!(damageBuff && Date.now() < damageBuff.expiresAt),
-    acBuff: !!(acBuff && Date.now() < acBuff.expiresAt),
-    acBuffBonus: acBuff && Date.now() < acBuff.expiresAt ? acBuff.bonus : 0,
+    battleCry: !!(battleCryBuff && Date.now() < battleCryBuff.expiresAt),
+    battleCryDr: battleCryBuff && Date.now() < battleCryBuff.expiresAt ? Math.round(battleCryBuff.damageReduction * 100) : 0,
     poison: !!(poisonBuff && Date.now() < poisonBuff.expiresAt),
     evasion: !!(evasionBuff && Date.now() < evasionBuff.expiresAt),
     ignite: !!(igniteBuff && Date.now() < igniteBuff.expiresAt),
@@ -746,7 +745,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
     sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
     focusStrike: !!focusStrikeBuff,
-  }), [stealthBuff, damageBuff, acBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff, focusStrikeBuff]);
+  }), [stealthBuff, damageBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff, focusStrikeBuff]);
 
   const showTargetSelector = useMemo(() =>
     [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb'),
@@ -949,7 +948,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 equipmentBonuses,
                 inventoryCount: getBagWeight(unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined)),
                 isAtInn: currentNode?.is_inn ?? false,
-                regenBuff, regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, acBuff,
+                regenBuff, regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
               }}
             />

@@ -45,7 +45,7 @@ export default function PartyPanel({
     { key: 'focusStrike', emoji: '🎯', label: 'Focus Strike', color: 'text-primary' },
     { key: 'stealth', emoji: '🌑', label: 'Shadowstep', color: 'text-primary' },
     { key: 'damageBuff', emoji: '✨', label: 'Arcane Surge', color: 'text-elvish' },
-    { key: 'acBuff', emoji: '📯', label: 'Battle Cry', color: 'text-dwarvish' },
+    { key: 'battleCry', emoji: '📯', label: 'Battle Cry', color: 'text-dwarvish' },
     { key: 'poison', emoji: '🧪', label: 'Envenom', color: 'text-elvish' },
     { key: 'evasion', emoji: '🌫️', label: 'Evasion', color: 'text-primary' },
     { key: 'ignite', emoji: '🔥', label: 'Ignite', color: 'text-dwarvish' },
@@ -135,7 +135,7 @@ export default function PartyPanel({
                           </TooltipTrigger>
                           <TooltipContent side="top" className="text-xs">
                             {b.label}
-                            {b.key === 'acBuff' && activeBuffs.acBuffBonus ? ` (AC+${activeBuffs.acBuffBonus})` : ''}
+                            {b.key === 'battleCry' && activeBuffs.battleCryDr ? ` (DR ${activeBuffs.battleCryDr}%)` : ''}
                             {b.key === 'absorb' && activeBuffs.absorbHp ? ` (${activeBuffs.absorbHp} HP)` : ''}
                           </TooltipContent>
                         </Tooltip>

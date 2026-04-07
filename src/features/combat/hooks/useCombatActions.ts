@@ -617,10 +617,14 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'battle_cry') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const bonus = Math.max(3, dexMod + 2);
+      const hasShield = p.equipped.some((e: any) => e.item?.weapon_tag === 'shield');
+      const baseDR = 0.15;
+      const shieldBonus = hasShield ? 0.05 : 0;
+      const totalDR = baseDR + shieldBonus;
+      const critReduction = 0.15;
       const durationMs = Math.min(25000, 15000 + dexMod * 1000);
-      p.buffSetters.setAcBuff({ bonus, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Battle Cry! AC increased by ${bonus} for ${Math.round(durationMs / 1000)}s.`);
+      p.buffSetters.setBattleCryBuff({ damageReduction: totalDR, critReduction, expiresAt: Date.now() + durationMs });
+      p.addLog(`${ability.emoji} Battle Cry! ${Math.round(totalDR * 100)}% damage reduction${hasShield ? ' (shield bonus!)' : ''} for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }

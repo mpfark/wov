@@ -17,8 +17,8 @@ import { type Direction, type KeyBindings, type ActionBindings, type ActionName,
 export interface ActiveBuffs {
   stealth?: boolean;
   damageBuff?: boolean;
-  acBuff?: boolean;
-  acBuffBonus?: number;
+  battleCry?: boolean;
+  battleCryDr?: number;
   poison?: boolean;
   evasion?: boolean;
   ignite?: boolean;

@@ -5,7 +5,7 @@ export { usePartyCombatLog } from './hooks/usePartyCombatLog';
 export type { CombatLogEntry } from './hooks/usePartyCombatLog';
 export { useGameLoop } from './hooks/useGameLoop';
 export type {
-  RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, AcBuff,
+  RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, EvasionBuff, DisengageNextHit, IgniteBuff, AbsorbBuff,
   PartyRegenBuff, SunderDebuff, FocusStrikeBuff, PoisonStack, IgniteStack,
 } from './hooks/useGameLoop';

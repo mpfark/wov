@@ -18,7 +18,7 @@ export interface CritBuff { bonus: number; expiresAt: number }
 export interface StealthBuff { expiresAt: number }
 export interface DamageBuff { expiresAt: number }
 export interface RootDebuff { damageReduction: number; expiresAt: number }
-export interface AcBuff { bonus: number; expiresAt: number }
+export interface BattleCryBuff { damageReduction: number; critReduction: number; expiresAt: number }
 export interface DotDebuff {
   damagePerTick: number; intervalMs: number; expiresAt: number;
   startsAt?: number;

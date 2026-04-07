@@ -32,7 +32,7 @@ interface Props {
   itemHpRegen?: number;
   foodBuff?: { flatRegen: number; expiresAt: number };
   critBuff?: { bonus: number; expiresAt: number };
-  acBuff?: { bonus: number; expiresAt: number } | null;
+  battleCryBuff?: { damageReduction: number; critReduction: number; expiresAt: number } | null;
   poisonBuff?: { expiresAt: number } | null;
   damageBuff?: { expiresAt: number } | null;
   evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null;
@@ -133,12 +133,12 @@ const BUFF_DURATIONS: Record<string, number> = {
   Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
 };
 
-export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; acBuff?: { bonus: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; focusStrikeBuff?: { bonusDmg: number } | null }) {
+export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; battleCryBuff?: { damageReduction: number; critReduction: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; focusStrikeBuff?: { bonusDmg: number } | null }) {
   const [now, setNow] = useState(Date.now());
   const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
-  const acActive = acBuff && now < acBuff.expiresAt;
+  const acActive = battleCryBuff && now < battleCryBuff.expiresAt;
   const poisonActive = poisonBuff && now < poisonBuff.expiresAt;
   const dmgBuffActive = damageBuff && now < damageBuff.expiresAt;
   const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
@@ -201,11 +201,11 @@ export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, po
 
   if (acActive) {
     const dur = BUFF_DURATIONS['Battle Cry'] || 30_000;
-    const pct = Math.max(0, Math.min(100, ((acBuff!.expiresAt - now) / dur) * 100));
+    const pct = Math.max(0, Math.min(100, ((battleCryBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
       emoji: '📯',
       label: 'Battle Cry',
-      detail: `AC +${acBuff!.bonus}`,
+      detail: `DR ${Math.round(battleCryBuff!.damageReduction * 100)}%`,
       color: 'text-dwarvish',
       bgColor: 'bg-dwarvish/15',
       pct,
@@ -329,7 +329,7 @@ export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, acBuff, po
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
-  isAtInn, regenBuff, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, acBuff,
+  isAtInn, regenBuff, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
   actionBindings, onAllocateStat, onFullRespec, onBatchAllocateStats,
@@ -907,7 +907,7 @@ export default function CharacterPanel({
                 {/* Derived Stats */}
                 {(() => {
                   const now = Date.now();
-                  const acBuffActive = acBuff && now < acBuff.expiresAt;
+                  const battleCryActive = battleCryBuff && now < battleCryBuff.expiresAt;
                   const critBuffActive = critBuff && now < critBuff.expiresAt;
                   const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
                   const dmgBuffActive = damageBuff && now < damageBuff.expiresAt;
@@ -953,7 +953,7 @@ export default function CharacterPanel({
                   const buyDisc = getChaBuyDiscount(eCha);
 
                   const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0) + (offHandIsShield ? SHIELD_AC_BONUS : 0);
-                  const totalAC = acBuffActive ? baseAC + acBuff!.bonus : baseAC;
+                  const totalAC = baseAC;
 
                    const affinityHit = isProficient ? 1 : 0;
                    const totalHitBonus = atkMod + intHit + affinityHit;
@@ -1039,7 +1039,8 @@ export default function CharacterPanel({
                   const acOverflowPct = acOverflow > 0 ? Math.min(Math.round((acOverflow / totalAC) * 100), 50) : 0;
 
                   const defenseRows: DerivedRow[] = [
-                    { label: 'AC', value: `${totalAC}${acBuffActive ? ` (+${acBuff!.bonus})` : ''}`, tip: `Base ${baseAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''}${acBuffActive ? ` + ${acBuff!.bonus} Battle Cry` : ''} vs regular creature atk +${creatureAtkMod}`, buffed: !!acBuffActive, buffColor: 'text-dwarvish' },
+                    { label: 'AC', value: `${totalAC}`, tip: `Base ${baseAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''} vs regular creature atk +${creatureAtkMod}` },
+                    ...(battleCryActive ? [{ label: 'Dmg Reduction', value: `${Math.round(battleCryBuff!.damageReduction * 100)}%`, tip: `Battle Cry reduces incoming damage by ${Math.round(battleCryBuff!.damageReduction * 100)}%. Crits reduced by additional ${Math.round(battleCryBuff!.critReduction * 100)}%.`, buffed: true, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'AC Overflow', value: acOverflowPct > 0 ? `−${acOverflowPct}%` : '–', tip: acOverflowPct > 0 ? `When a same-level creature crits (max roll ${creatureMaxCritRoll}) vs your AC ${totalAC}, excess AC reduces crit damage by ${acOverflowPct}% (cap 50%)` : `AC must exceed creature max crit roll (${creatureMaxCritRoll}) to reduce crit damage` },
                     { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? `WIS bonus: chance to reduce incoming damage by 25%${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for chance to reduce incoming damage by 25%' },

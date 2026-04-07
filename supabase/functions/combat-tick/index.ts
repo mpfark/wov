@@ -500,10 +500,9 @@ Deno.serve(async (req) => {
     // ── Helper to apply creature hit to a member ─────────────────
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
-      const acBuffBonus = mb.ac_buff || 0;
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
       const shieldAcBonus = isShield(offHandTag[targetId]) ? SHIELD_AC_BONUS : 0;
-      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus + shieldAcBonus;
+      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + shieldAcBonus;
       const d20 = rollD20();
       const roll = d20 + cStr;
 
@@ -552,6 +551,15 @@ Deno.serve(async (req) => {
           dmg -= absorbed;
           events.push({ type: 'absorb', message: `🛡️✨ ${creature.name} hits ${targetName} — shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
           if (dmg <= 0) return;
+        }
+
+        // Battle Cry damage reduction (applied after absorb, before clamp)
+        if (mb.battle_cry_dr) {
+          let dr = mb.battle_cry_dr.reduction || 0;
+          if (isCrit) dr += mb.battle_cry_dr.crit_reduction || 0;
+          const preDmg = dmg;
+          dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
+          events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry reduces damage! (${preDmg} → ${dmg})` });
         }
 
         // Clamp minimum 1
