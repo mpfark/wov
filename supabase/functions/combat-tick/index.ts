@@ -599,9 +599,8 @@ Deno.serve(async (req) => {
         const sMod = sm(effStat);
         const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
         const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
-        const mileCrit = c.level >= 28 ? 1 : 0;
         const critBonusFromBuff = mb.crit_buff?.bonus || 0;
-        const effCrit = atk.crit - dcb - mileCrit - critBonusFromBuff;
+        const effCrit = atk.crit - dcb - critBonusFromBuff;
         const sdf = strDmgFloor((c.str || 10) + (eb.str || 0));
         const isStealth = !!mb.stealth_buff;
         const isDmgBuff = !!mb.damage_buff;
@@ -745,10 +744,9 @@ Deno.serve(async (req) => {
         const sMod2 = sm(effStat);
         const ihb2 = intHitBonus((c.int || 10) + (eb.int || 0));
         const dcb2 = dexCritBonus((c.dex || 10) + (eb.dex || 0));
-        const mileCrit2 = c.level >= 28 ? 1 : 0;
         const mb2 = buffs[m.id] || {};
         const critBuff2 = mb2.crit_buff?.bonus || 0;
-        const effCrit2 = atk.crit - dcb2 - mileCrit2 - critBuff2;
+        const effCrit2 = atk.crit - dcb2 - critBuff2;
 
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;

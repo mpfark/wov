@@ -90,9 +90,8 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const atkMod = getStatModifier(stats[atkStat] + (equipmentBonuses[atkStat] || 0));
       const intHit = getIntHitBonus(eInt);
       const totalHit = atkMod + intHit;
-      const milestoneCrit = character.level >= 28 ? 1 : 0;
       const dexCrit = getDexCritBonus(eDex);
-      const critRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
+      const critRange = (combat?.critRange || 20) - dexCrit;
       const wisAwareness = getWisDodgeChance(eWis);
       const strFloor = getStrDamageFloor(eStr);
       const buyDisc = getChaBuyDiscount(eCha);

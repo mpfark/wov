@@ -272,8 +272,7 @@ export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunder
   const sMod = getStatModifier(ctx.attackerStat);
   const ihb = getIntHitBonus(ctx.int);
   const dcb = getDexCritBonus(ctx.dex);
-  const mileCrit = ctx.level >= 28 ? 1 : 0;
-  const effCrit = profile.critRange - dcb - mileCrit - (ctx.critBuffBonus || 0);
+  const effCrit = profile.critRange - dcb - (ctx.critBuffBonus || 0);
   const sdf = getStrDamageFloor(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
 

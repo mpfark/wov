@@ -87,7 +87,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <ScrollPanel icon="🌀" title="Teleport" className="max-w-sm">
         <p className="text-xs text-muted-foreground">
-          {characterLevel >= 25 && !currentNode.is_teleport && (
+          {characterLevel >= 22 && !currentNode.is_teleport && (
             <span className="text-primary font-display">⚡ Arcane Recall active — </span>
           )}
           Travel instantly to another teleport point. Your CP: <span className="text-primary font-display">{playerCp}/{playerMaxCp}</span>

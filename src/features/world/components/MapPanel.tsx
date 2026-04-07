@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import SummonPlayerPanel from '@/features/world/components/SummonPlayerPanel';
 import { Region, GameNode, Area } from '@/features/world';
 import { Party, PartyMember } from '@/features/party';
 import { PlayerPresence } from '@/features/world';
@@ -79,6 +80,14 @@ interface Props {
   searchDisabled?: boolean;
   hasDiscoverable?: boolean;
   unlockedConnections?: Map<string, number>;
+  // Summon props
+  onlinePlayers?: { id: string; name: string; race: string; class: string; level: number; gender: 'male' | 'female' }[];
+  onSummonCpDeducted?: (cost: number) => void;
+  addLog?: (msg: string) => void;
+  inCombat?: boolean;
+  isDead?: boolean;
+  getRegionForNode?: (nodeId: string) => { id: string; min_level: number } | undefined;
+  currentRegionMinLevel?: number;
 }
 
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
@@ -90,6 +99,8 @@ export default function MapPanel({
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
   unlockedConnections,
+  onlinePlayers: summonOnlinePlayers, onSummonCpDeducted, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
+  getRegionForNode, currentRegionMinLevel,
 }: Props) {
   currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -337,7 +348,7 @@ export default function MapPanel({
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">
-                      {characterLevel >= 25 ? 'Recall' : 'Teleport'}
+                      {characterLevel >= 22 ? 'Recall' : 'Teleport'}
                     </TooltipContent>
                   </Tooltip>
                 )}
@@ -437,6 +448,24 @@ export default function MapPanel({
         regions={regions}
         areas={areas}
       />
+
+      {/* Summon Player — Level 26+ */}
+      {characterLevel >= 26 && summonAddLog && onSummonCpDeducted && getRegionForNode && currentNodeId && (
+        <div className="border-t border-border pt-2">
+          <SummonPlayerPanel
+            characterId={character.id}
+            currentNodeId={currentNodeId}
+            currentRegionMinLevel={currentRegionMinLevel}
+            playerCp={character.cp ?? 0}
+            getRegionForNode={getRegionForNode}
+            onlinePlayers={summonOnlinePlayers || []}
+            onCpDeducted={onSummonCpDeducted}
+            addLog={summonAddLog}
+            inCombat={summonInCombat ?? false}
+            isDead={summonIsDead ?? false}
+          />
+        </div>
+      )}
 
       {/* Party Section */}
       <div className="border-t border-border pt-2">

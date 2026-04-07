@@ -324,28 +324,27 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const handleTeleport = useCallback(async (nodeId: string, cpCost: number) => {
     if (p.isDead) return;
     if (p.inCombat) { p.addLog('⚠️ You cannot teleport while in combat!'); return; }
-    const effectiveCpCost = p.character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
-    if ((p.character.cp ?? 0) < effectiveCpCost) { p.addLog('⚠️ Not enough CP to teleport.'); return; }
+    if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to teleport.'); return; }
     const targetNode = p.getNode(nodeId);
     if (!targetNode) return;
     const currentNodeObj = p.getNode(p.character.current_node_id!);
-    if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 25) {
+    if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 22) {
       setWaymarkNodeId(p.character.current_node_id!);
       p.addLog(`📍 You leave a hidden waymark at ${currentNodeObj.name}.`);
     }
     const prevNodeId = p.character.current_node_id!;
-    const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - effectiveCpCost });
+    const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, nodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: nodeId },
       { onConflict: 'character_id,node_id' }
     ).then();
-    p.addLog(`🌀 You teleport to ${targetNode.name} for ${effectiveCpCost} CP.`);
+    p.addLog(`🌀 You teleport to ${targetNode.name} for ${cpCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
 
     // Move co-located party members in parallel with leader DB write
-    const filterFollowingOnly = p.character.level < 25;
+    const filterFollowingOnly = p.character.level < 22;
     const followerMove = moveFollowers(p.partyMembers, p.character.id, prevNodeId, nodeId, p.isLeader, filterFollowingOnly, p.addLog, p.fetchParty, p.broadcastMove);
     await Promise.all([leaderMove, followerMove]);
   }, [p.character, p.getNode, p.updateCharacter, p.addLog, p.broadcastMove, p.party, p.isLeader, p.partyMembers, p.fetchParty, p.isDead, p.inCombat]);
@@ -357,16 +356,15 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (!waymarkNode) { p.addLog('⚠️ Your waymark has faded.'); setWaymarkNodeId(null); return; }
     if (p.isDead) return;
     if (p.inCombat) { p.addLog('⚠️ You cannot teleport while in combat!'); return; }
-    const effectiveWayCost = p.character.level >= 39 ? Math.ceil(cpCost * 0.9) : cpCost;
-    if ((p.character.cp ?? 0) < effectiveWayCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
+    if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
     const prevNodeId = p.character.current_node_id!;
-    const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - effectiveWayCost });
+    const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: waymarkNodeId },
       { onConflict: 'character_id,node_id' }
     ).then();
-    p.addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${effectiveWayCost} CP.`);
+    p.addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${cpCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Returned to waymark at ${waymarkNode.name}`, { node_id: waymarkNodeId, cpCost });
     setWaymarkNodeId(null);
     setTeleportOpen(false);

@@ -858,18 +858,17 @@ export default function CharacterPanel({
                   let effectiveHpRegen = hpRegen;
                   const potionBonus = regenBuffActive ? 0.5 : 0;
                   const innBonus = isAtInn ? 1 : 0;
-                  const milestoneBonus = character.level >= 35 ? 0.5 : 0;
-                  const regenMultiplier = 1 + potionBonus + milestoneBonus + innBonus;
-                  effectiveHpRegen = Math.max(Math.floor((hpRegen + (foodBuffActive ? foodBuff!.flatRegen : 0)) * regenMultiplier + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
-                  const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive;
+                  const milestoneHpFlat = (() => { if (character.level >= 40) return 10; if (character.level >= 35) return 8; if (character.level >= 30) return 6; if (character.level >= 25) return 4; if (character.level >= 20) return 2; return 0; })();
+                  const regenMultiplier = 1 + potionBonus + innBonus;
+                  effectiveHpRegen = Math.max(Math.floor((hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0)) * regenMultiplier + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
+                  const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive || milestoneHpFlat > 0;
 
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
                   const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
                   const intHit = getIntHitBonus(eInt);
-                  const milestoneCrit = character.level >= 28 ? 1 : 0;
                   const dexCrit = getDexCritBonus(eDex);
-                  const baseCritRange = (combat?.critRange || 20) - milestoneCrit - dexCrit;
+                  const baseCritRange = (combat?.critRange || 20) - dexCrit;
                   const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
                   const wisHalveChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_AWARENESS_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
@@ -938,7 +937,7 @@ export default function CharacterPanel({
                     { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
                     { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
-                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${milestoneCrit ? '+1 milestone, ' : ''}${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
+                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
                     { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];
 

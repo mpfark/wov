@@ -396,7 +396,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
         if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
           const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
-          const cpCost = p.character.level >= 39 ? Math.ceil(ability.cpCost * 0.9) : ability.cpCost;
+          const cpCost = ability.cpCost;
 
           const abilityPayload = {
             character_id: p.character.id,

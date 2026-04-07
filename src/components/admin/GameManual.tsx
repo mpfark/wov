@@ -1015,11 +1015,44 @@ export default function GameManual() {
           {/* 9. Milestone Rewards */}
           <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏆 Milestone Rewards (Levels 28-42)
+              🏆 Milestone Rewards
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-3 text-xs text-muted-foreground">
-                <p>Endgame milestones reward continued progression with permanent bonuses and prestigious titles.</p>
+                <p>Character progression includes sustain, utility, and prestige milestones that reduce downtime and improve quality of life.</p>
+
+                <Card className="bg-card/30">
+                  <CardContent className="p-3 space-y-2">
+                    <p className="text-xs font-display text-primary">💚 HP & CP Regeneration (Level 20+)</p>
+                    <p>Starting at level 20, characters gain flat bonus regeneration per tick that scales every 5 levels. This stacks additively with CON regen, equipment regen, food, and inn bonuses.</p>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Level</TableHead>
+                          <TableHead className="text-xs">HP Regen</TableHead>
+                          <TableHead className="text-xs">CP Regen</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow><TableCell className="text-xs">20</TableCell><TableCell className="text-xs">+2</TableCell><TableCell className="text-xs">+1</TableCell></TableRow>
+                        <TableRow><TableCell className="text-xs">25</TableCell><TableCell className="text-xs">+4</TableCell><TableCell className="text-xs">+2</TableCell></TableRow>
+                        <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs">+6</TableCell><TableCell className="text-xs">+3</TableCell></TableRow>
+                        <TableRow><TableCell className="text-xs">35</TableCell><TableCell className="text-xs">+8</TableCell><TableCell className="text-xs">+4</TableCell></TableRow>
+                        <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">+10</TableCell><TableCell className="text-xs">+5</TableCell></TableRow>
+                      </TableBody>
+                    </Table>
+                    <p className="text-[10px] text-muted-foreground/70">This reduces downtime between fights and makes high-level characters more self-sufficient without replacing consumables.</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card/30">
+                  <CardContent className="p-3 space-y-2">
+                    <p className="text-xs font-display text-primary">🌀 Utility Unlocks</p>
+                    <p><strong className="text-foreground">Level 22 — Teleport / Arcane Recall:</strong> Travel instantly between visited teleport nodes. When used from a non-teleport node, a temporary waymark is left for a return trip.</p>
+                    <p><strong className="text-foreground">Level 26 — Summon Player:</strong> Summon any online player to your location by typing their name. Uses the same distance-based CP cost as teleportation. Does not require party membership — useful for meeting up with friends anywhere in the world.</p>
+                  </CardContent>
+                </Card>
+
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1029,18 +1062,19 @@ export default function GameManual() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs">⚔️ Expanded Crit Range</TableCell><TableCell className="text-xs">Permanent +1 to crit range (stacks with Eagle Eye)</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs">🏅 Title: Lord / Lady</TableCell><TableCell className="text-xs">First nobility title, displayed to all players</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs">🏅 Title: Baron / Baroness</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">20</TableCell><TableCell className="text-xs">💚 Regen Milestone</TableCell><TableCell className="text-xs">+2 HP / +1 CP regen per tick</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">22</TableCell><TableCell className="text-xs">🌀 Teleport</TableCell><TableCell className="text-xs">Arcane Recall from any non-combat node</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">25</TableCell><TableCell className="text-xs">💚 Regen Milestone</TableCell><TableCell className="text-xs">+4 HP / +2 CP regen per tick</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">26</TableCell><TableCell className="text-xs">🌀 Summon Player</TableCell><TableCell className="text-xs">Summon any online player to your location (CP cost based on distance)</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">28</TableCell><TableCell className="text-xs">🏅 Title: Lord / Lady</TableCell><TableCell className="text-xs">First nobility title</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">30</TableCell><TableCell className="text-xs">🏅 Title: Baron / Baroness</TableCell><TableCell className="text-xs">+6 HP / +3 CP regen</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">32</TableCell><TableCell className="text-xs">🏅 Title: Count / Countess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">34</TableCell><TableCell className="text-xs">🏅 Title: Marquis / Marquise</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">35</TableCell><TableCell className="text-xs">💚 HP Regen Boost</TableCell><TableCell className="text-xs">Base HP regen doubled (stacks with inn/potion buffs)</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">35</TableCell><TableCell className="text-xs">💚 Regen Milestone</TableCell><TableCell className="text-xs">+8 HP / +4 CP regen per tick</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">36</TableCell><TableCell className="text-xs">🏅 Title: Duke / Duchess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
                     <TableRow><TableCell className="text-xs">38</TableCell><TableCell className="text-xs">🏅 Title: Prince / Princess</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">39</TableCell><TableCell className="text-xs">🔮 CP Discount</TableCell><TableCell className="text-xs">All ability CP costs reduced by 10%</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: King / Queen</TableCell><TableCell className="text-xs">Replaces previous title</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">42</TableCell><TableCell className="text-xs">🏅 Title: Emperor / Empress</TableCell><TableCell className="text-xs">Maximum title — pinnacle of mortal power</TableCell></TableRow>
-                    <TableRow><TableCell className="text-xs">42</TableCell><TableCell className="text-xs">⚒️ Soulforge</TableCell><TableCell className="text-xs">One-time crafting of a custom soulbound uncommon item via "The Soulwright" NPC in The Echoing Vein (Dwarven Kingdom). Choose slot, allocate stats within budget (1H: 19pts, 2H: 28pts). Item cannot be dropped or sold.</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">40</TableCell><TableCell className="text-xs">🏅 Title: King / Queen</TableCell><TableCell className="text-xs">+10 HP / +5 CP regen. Crown crafting milestone.</TableCell></TableRow>
+                    <TableRow><TableCell className="text-xs">42</TableCell><TableCell className="text-xs">🏅 Title: Emperor / Empress</TableCell><TableCell className="text-xs">Maximum title — Soulforge crafting milestone</TableCell></TableRow>
                   </TableBody>
                 </Table>
               </div>
