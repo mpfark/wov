@@ -32,7 +32,7 @@ interface Props {
   itemHpRegen?: number;
   foodBuff?: { flatRegen: number; expiresAt: number };
   critBuff?: { bonus: number; expiresAt: number };
-  acBuff?: { bonus: number; expiresAt: number } | null;
+  battleCryBuff?: { damageReduction: number; critReduction: number; expiresAt: number } | null;
   poisonBuff?: { expiresAt: number } | null;
   damageBuff?: { expiresAt: number } | null;
   evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null;
