@@ -72,7 +72,7 @@ serve(async (req) => {
     const count = Math.min(Math.max(1, parseInt(rawCount) || 5), 20);
 
     // Fetch existing item names to avoid duplicates
-    const { data: existingItems } = await supabase.from("items").select("name").limit(500);
+    const { data: existingItems } = await supabase.from("items").select("name").limit(5000);
     const existingItemNames = (existingItems || []).map((i: any) => i.name).join(", ");
 
     // Build slot constraint
