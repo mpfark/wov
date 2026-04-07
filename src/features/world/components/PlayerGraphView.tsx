@@ -299,7 +299,9 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       }
 
       // Bleed circles: extend outline toward the SVG edge when the area continues off-screen
-      for (const n of areaNodes) {
+      // Check ALL displayed nodes in this area (including ghost/2nd-degree) for off-screen same-area connections
+      const allAreaDisplayNodes = allDisplayNodes.filter(n => n.area_id === area.id);
+      for (const n of allAreaDisplayNodes) {
         const pos = nodePositions.get(n.id);
         if (!pos) continue;
         for (const conn of n.connections) {
@@ -314,15 +316,16 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           const uy = dy / len;
           const viewBoxWidth = Math.max(svgWidth, 280);
           const viewBoxHeight = Math.max(svgHeight, 200);
+          // Find minimum positive distance to a viewport edge in the direction of travel
           const distancesToEdge = [
             ux > 0 ? (viewBoxWidth - pos.px) / ux : Infinity,
-            ux < 0 ? (0 - pos.px) / ux : Infinity,
+            ux < 0 ? -pos.px / ux : Infinity,
             uy > 0 ? (viewBoxHeight - pos.py) / uy : Infinity,
-            uy < 0 ? (0 - pos.py) / uy : Infinity,
-          ].filter(distance => Number.isFinite(distance) && distance > 0);
-          const distanceToEdge = distancesToEdge.length > 0 ? Math.max(...distancesToEdge) : _SPACING * 2;
-          const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 2.5;
-          const bleedSteps = Math.max(5, Math.ceil(bleedDistance / (_SPACING * 0.55)));
+            uy < 0 ? -pos.py / uy : Infinity,
+          ].filter(d => Number.isFinite(d) && d > 0);
+          const distanceToEdge = distancesToEdge.length > 0 ? Math.min(...distancesToEdge) : _SPACING * 2;
+          const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 2;
+          const bleedSteps = Math.max(4, Math.ceil(bleedDistance / (_SPACING * 0.5)));
 
           for (let step = 1; step <= bleedSteps; step++) {
             const travel = (bleedDistance * step) / bleedSteps;
