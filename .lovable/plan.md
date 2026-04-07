@@ -1,52 +1,55 @@
 
 
-# Extend Envenom & Ignite to 5-Minute Commitment Buffs
+# Open-Ended Area Outlines on the Player Map
 
-## Summary
+## Problem
+Area outlines currently close around only the visible nodes, making areas that continue beyond the map edge look like dead-ends. Players can't tell an area extends further.
 
-Transform Envenom (rogue T2) and Ignite (wizard T3) from short stat-scaling buffs into 5-minute commitment buffs that drain all current CP, with a minimum of 50 CP required. Add clear player feedback and clear these buffs on death.
+## Approach
+For each area, detect border nodes that have connections to off-screen nodes in the **same area**. At those border nodes, extend the outline by adding "bleed" circles projected outward toward the SVG edge. This makes the outline fade off the visible area rather than closing into a bubble.
 
 ## Changes
 
-### 1. Update ability definitions — `class-abilities.ts`
+### `PlayerGraphView.tsx` — area hull computation (~line 270-309)
 
-- Set `cpCost: 50` for both Envenom and Ignite (represents minimum required)
-- Update descriptions:
-  - Envenom: "Coat your blade in poison for 5 minutes — each hit has a 40% chance to apply a stackable poison DoT (max 5). Costs all your CP (minimum 50)."
-  - Ignite: "Imbue your spells with fire for 5 minutes — each hit has a 40% chance to apply a stackable burn DoT (max 5). Costs all your CP (minimum 50)."
+In the loop that builds circles for `computeRegionOutline`:
 
-### 2. Update action handler — `useCombatActions.ts`
+1. For each area node that has a connection to a **non-displayed node in the same area**, compute the direction toward that off-screen node (using stored x/y coords).
+2. Add 2-3 extra circles along that direction, extending past the last visible node by `SPACING * 0.5`, `SPACING * 1.0`, and `SPACING * 1.5`. These circles extend the outline toward the SVG edge.
+3. The outline algorithm will naturally produce an open-looking shape that bleeds off the viewable area instead of closing off.
 
-**Poison buff block (line ~651):**
-- Add "already active" check → log "Envenom is already active." and return
-- Set flat `300_000`ms (5 min) duration instead of stat-scaling
-- Log success: "Envenom! Your weapons drip with poison for 5 minutes. (X CP consumed)"
+This requires knowing whether the off-screen connected node shares the same area. We already have `_areas` and all `nodes` — for each neighbor's connection to a non-displayed node, look up the full node from the `nodes` array and check `area_id`.
 
-**Ignite buff block (line ~670):**
-- Add "already active" check → log "Ignite is already active." and return
-- Set flat `300_000`ms duration
-- Log success: "Ignite! Your spells burn with fire for 5 minutes. (X CP consumed)"
+**Key logic sketch:**
+```typescript
+// After building circles from visible area nodes...
+for (const n of areaNodes) {
+  const pos = nodePositions.get(n.id);
+  if (!pos) continue;
+  for (const conn of n.connections) {
+    if (displayedIds.has(conn.node_id)) continue; // skip visible nodes
+    const offNode = nodes.find(nd => nd.id === conn.node_id);
+    if (!offNode || offNode.area_id !== area.id) continue; // only same-area
+    // Project outward
+    const dx = (offNode.x - n.x) || 0;
+    const dy = (offNode.y - n.y) || 0;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    for (let step = 1; step <= 3; step++) {
+      circles.push({
+        cx: pos.px + (dx/len) * SPACING * step * 0.5,
+        cy: pos.py + (dy/len) * SPACING * step * 0.5,
+        r: AREA_OUTLINE_RADIUS,
+      });
+    }
+  }
+}
+```
 
-**CP deduction block (line ~725):**
-- For `poison_buff` and `ignite_buff` types, override cost to drain all current CP instead of flat `ability.cpCost`
-- The minimum check at line 524 already handles the 50 CP gate since `cpCost` will be 50
-
-### 3. Clear buffs on death — `useCombatLifecycle.ts`
-
-- In the existing death effect (line 64-67), alongside `stopCombat()`, also call `setPoisonBuff(null)` and `setIgniteBuff(null)` via buffSetters
-- This fits naturally — just two additional setter calls in the existing death cleanup block
-- Requires passing `buffSetters` (or just the two setters) into `useCombatLifecycle` params
-
-### 4. Update Rulebook — `WorldBuilderRulebook.tsx`
-
-- Update any Envenom/Ignite references to reflect the 5-minute duration and all-CP cost
+No other files need changes. The outline geometry utility stays the same — it just receives more circles and produces a shape that extends past the SVG viewport, which SVG clips naturally.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/features/combat/utils/class-abilities.ts` | Update cpCost to 50, update descriptions for Envenom & Ignite |
-| `src/features/combat/hooks/useCombatActions.ts` | Flat 5min duration, drain-all-CP override, prevent recast, clear feedback |
-| `src/features/combat/hooks/useCombatLifecycle.ts` | Clear poison/ignite buffs on death |
-| `src/components/admin/WorldBuilderRulebook.tsx` | Update ability documentation |
+| `src/features/world/components/PlayerGraphView.tsx` | Add bleed circles for border nodes with same-area off-screen connections |
 
