@@ -275,11 +275,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const areaHulls = (() => {
     if (nodePositions.size === 0 || _areas.length === 0) return [] as AreaHull[];
 
-    const primaryNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
+    const allNodeIds = new Set(allDisplayNodes.map(n => n.id));
     const hulls: AreaHull[] = [];
 
     for (const area of _areas) {
-      const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && primaryNodeIds.has(n.id));
+      const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && allNodeIds.has(n.id));
       if (areaNodes.length === 0) continue;
       const areaNodeIds = new Set(areaNodes.map(n => n.id));
       const circles: Circle[] = [];
