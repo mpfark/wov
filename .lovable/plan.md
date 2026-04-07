@@ -1,40 +1,37 @@
 
 
-# Update Admin Items Page
+# Update Item Forge: Batch + Single Mode, Deduplicate Names
 
 ## Summary
 
-Add soulforged color styling to item lists, add weapon tag filtering, remove "material" from item types, and delete the duplicate "Warg Pelt Shoulders" item (reassigning inventory references first).
+Replace the "Loot Table" forge mode with a "Batch" mode that saves items directly to the `items` table (no loot table creation). Keep single mode. Add server-side duplicate name rejection and show weapon tags in the preview cards.
 
 ## Changes
 
-### 1. Soulforged Color & Weapon Tag Filter — `src/components/admin/ItemManager.tsx`
+### 1. Update `src/components/admin/ItemForgePanel.tsx`
 
-**Soulforged color**: Add `is_soulbound` to the `Item` interface and query. In the item list (line ~427), if `item.is_soulbound` is true, use `text-soulforged text-glow-soulforged` class instead of the rarity color.
+**Replace forge modes**: Change `'loot_table' | 'single'` to `'batch' | 'single'`. Remove all loot table creation logic (table name input, `savedTableId`, creature assignment UI).
 
-**Weapon tag filter**: Add a `weaponTagTab` state (default `'all'`). Show a new filter row when `typeTab === 'equipment'` with buttons for `all` plus each value from `WEAPON_TAGS`. Filter the list by `weapon_tag` when not `'all'`.
+**Batch mode apply**: Insert all generated items directly into `items` table with `world_drop: true`. No loot table or loot_table_entries created.
 
-**Remove material**: Change `ITEM_TYPES` from `['equipment', 'consumable', 'material', 'quest']` to `['equipment', 'consumable', 'quest']`.
+**Include `weapon_tag`** in the `ForgedItem` interface and pass it through on insert. Show weapon tag in each item's preview card meta row (e.g. `⚔ sword`).
 
-### 2. Soulforged Color — `src/components/admin/loot/ItemPoolTab.tsx`
+**Duplicate name check on save**: Before inserting, query `items` table for any matching names. Filter out items whose names already exist, toast a warning for skipped duplicates, and only insert the unique ones.
 
-Add `is_soulbound` to the `PoolItem` interface and query. Use soulforged color class when `is_soulbound` is true, overriding rarity color.
+**Remove loot table UI**: Remove table name input, creature picker assignment section, `savedTableId` state, `assignToCreature` function, and related loot table imports.
 
-### 3. Delete Duplicate "Warg Pelt Shoulders" — Database Data Operation
+### 2. Update `supabase/functions/ai-item-forge/index.ts`
 
-One duplicate pair:
-- Keep: `98bc579b-3e56-47fe-a998-092e9b1d4153`
-- Delete: `94380c92-c46e-43b5-ac0a-df6a938b4cba`
+**Increase existing name fetch limit**: Change `.limit(500)` to `.limit(5000)` (or remove limit) to ensure the AI prompt has visibility into all existing item names for deduplication during generation.
 
-The duplicate has one inventory reference (character `4bd2d63f...`). Steps:
-1. `UPDATE character_inventory SET item_id = '98bc579b-3e56-47fe-a998-092e9b1d4153' WHERE item_id = '94380c92-c46e-43b5-ac0a-df6a938b4cba'`
-2. `DELETE FROM items WHERE id = '94380c92-c46e-43b5-ac0a-df6a938b4cba'`
+### 3. Deploy edge function
+
+Deploy updated `ai-item-forge`.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/admin/ItemManager.tsx` | Soulforged color, weapon tag filter, remove "material" |
-| `src/components/admin/loot/ItemPoolTab.tsx` | Soulforged color for soulbound items |
-| Database (data operation) | Reassign inventory + delete 1 duplicate item |
+| `src/components/admin/ItemForgePanel.tsx` | Replace loot_table mode with batch, add weapon_tag display, add duplicate name filtering on save |
+| `supabase/functions/ai-item-forge/index.ts` | Increase existing item name query limit |
 
