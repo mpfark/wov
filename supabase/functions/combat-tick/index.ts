@@ -500,10 +500,9 @@ Deno.serve(async (req) => {
     // ── Helper to apply creature hit to a member ─────────────────
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
-      const acBuffBonus = mb.ac_buff || 0;
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
       const shieldAcBonus = isShield(offHandTag[targetId]) ? SHIELD_AC_BONUS : 0;
-      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + acBuffBonus + shieldAcBonus;
+      const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + shieldAcBonus;
       const d20 = rollD20();
       const roll = d20 + cStr;
 
