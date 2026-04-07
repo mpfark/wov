@@ -33,6 +33,7 @@ export interface CombatTickResponse {
   active_dots?: Record<string, any>;
   session_ended?: boolean;
   ticks_processed?: number;
+  buff_sync?: Record<string, { absorb_remaining: number }>;
 }
 
 export interface TickInterpretation {
@@ -70,6 +71,8 @@ export interface TickInterpretation {
   aliveEngagedIds: string[];
   /** Whether there were multiple ticks processed (for logging) */
   ticksProcessed: number | undefined;
+  /** Remaining absorb shield HP from server (null if no absorb active) */
+  absorbRemaining: number | null;
 }
 
 /**
@@ -198,6 +201,9 @@ export function interpretCombatTickResult(
     .filter(cs => cs.alive && currentEngagedIds.includes(cs.id))
     .map(cs => cs.id);
 
+  // ── Absorb shield sync ──
+  const absorbRemaining = data.buff_sync?.[characterId]?.absorb_remaining ?? null;
+
   return {
     creatureHpUpdates,
     killedCreatureIds,
@@ -214,5 +220,6 @@ export function interpretCombatTickResult(
     sessionEnded,
     aliveEngagedIds,
     ticksProcessed: data.ticks_processed,
+    absorbRemaining,
   };
 }

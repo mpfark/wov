@@ -75,6 +75,8 @@ export interface UsePartyCombatParams {
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
   /** Callback with server DoT state for UI sync */
   onActiveDots?: (dots: Record<string, any>) => void;
+  /** Callback to sync absorb shield HP from server */
+  onAbsorbSync?: (remaining: number) => void;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
@@ -281,6 +283,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (result.activeEffectsSnapshot) setLastActiveEffects(result.activeEffectsSnapshot);
     if (result.dotsByChar && ext.current.onActiveDots) ext.current.onActiveDots(result.dotsByChar);
     if (result.hasLootDrop) ext.current.fetchGroundLoot();
+
+    // Sync absorb shield HP from server
+    if (result.absorbRemaining !== null && ext.current.onAbsorbSync) {
+      ext.current.onAbsorbSync(result.absorbRemaining);
+    }
 
     if (result.sessionEnded) {
       stopCombat();
