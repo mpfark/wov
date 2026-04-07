@@ -77,6 +77,9 @@ export interface UsePartyCombatParams {
   onActiveDots?: (dots: Record<string, any>) => void;
   /** Callback to sync absorb shield HP from server */
   onAbsorbSync?: (remaining: number) => void;
+  /** Buff setters for death cleanup (Envenom/Ignite) */
+  setPoisonBuff?: React.Dispatch<React.SetStateAction<any>>;
+  setIgniteBuff?: React.Dispatch<React.SetStateAction<any>>;
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
@@ -564,6 +567,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     aggroProcessedRef,
     recentlyKilledRef,
     pendingAggroRef,
+    setPoisonBuff: params.setPoisonBuff,
+    setIgniteBuff: params.setIgniteBuff,
   });
 
   return {
