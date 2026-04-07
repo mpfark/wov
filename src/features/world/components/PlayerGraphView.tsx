@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { GameNode, Area } from '@/features/world';
+import { GameNode, Area, useAreaTypes } from '@/features/world';
+import { getEmojiBaseHsl } from '@/features/world/utils/area-colors';
 import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -30,6 +31,25 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   // Client-side cache for visited nodes — grows as the player moves, only fetched once on mount
   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
   const initialFetchDone = useRef(false);
+  const { emojiMap } = useAreaTypes();
+
+  // Build a lookup: nodeId → area fill/stroke colors based on area_type emoji
+  const areaColorMap = useMemo(() => {
+    const map = new Map<string, { fill: string; stroke: string }>();
+    for (const node of nodes) {
+      if (!node.area_id) continue;
+      const area = _areas.find(a => a.id === node.area_id);
+      if (!area) continue;
+      const emoji = emojiMap[area.area_type];
+      if (!emoji) continue;
+      const [h, s, l] = getEmojiBaseHsl(emoji);
+      map.set(node.id, {
+        fill: `hsl(${h} ${Math.max(s - 5, 10)}% ${Math.max(l - 10, 25)}% / 0.25)`,
+        stroke: `hsl(${h} ${s}% ${l}% / 0.7)`,
+      });
+    }
+    return map;
+  }, [nodes, _areas, emojiMap]);
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
   // Filter out hidden connections for player view (locked connections ARE visible)
@@ -303,6 +323,12 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           const isCurrent = node.id === currentNodeId;
           const isHovered = hoveredNode === node.id;
           const isVisitedGhost = secondDegIds.has(node.id);
+          const areaColors = areaColorMap.get(node.id);
+
+          // Determine fill & stroke — area color takes priority for non-ghost nodes
+          const hasAreaColor = !!areaColors && !isVisitedGhost;
+          const circleFill = hasAreaColor ? areaColors.fill : undefined;
+          const circleStroke = hasAreaColor ? areaColors.stroke : undefined;
 
           return (
             <g key={node.id}
@@ -320,14 +346,18 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               {/* Node circle */}
               <circle
                 cx={pos.px} cy={pos.py} r={isVisitedGhost ? 22 : 28}
+                fill={circleFill}
+                stroke={circleStroke}
                 className={`transition-all duration-200 ${
-                  isCurrent
-                    ? 'fill-primary/20 stroke-primary'
-                    : isVisitedGhost
+                  isVisitedGhost
                     ? 'fill-muted/30 stroke-muted-foreground/30'
-                    : isHovered
-                    ? 'fill-primary/10 stroke-primary/70 cursor-pointer'
-                    : 'fill-card stroke-border cursor-pointer'
+                    : !hasAreaColor
+                    ? (isCurrent
+                        ? 'fill-primary/20 stroke-primary'
+                        : isHovered
+                        ? 'fill-primary/10 stroke-primary/70 cursor-pointer'
+                        : 'fill-card stroke-border cursor-pointer')
+                    : (isCurrent || isHovered ? 'cursor-default' : 'cursor-pointer')
                 }`}
                 strokeWidth={isCurrent ? 2.5 : isVisitedGhost ? 1 : isHovered ? 2 : 1.5}
                 strokeDasharray={isVisitedGhost ? "3 2" : undefined}
