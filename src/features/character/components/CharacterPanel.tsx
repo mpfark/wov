@@ -111,7 +111,7 @@ function EquipSlot({ slot, item, blocked, onUnequip }: {
         </div>
       </TooltipTrigger>
       {item && !blocked && (
-        <TooltipContent className="bg-popover border-border z-50">
+        <TooltipContent className="bg-popover border-border z-50 max-w-xs">
           <p className={`font-display ${getItemColor(item.item)}`}>{item.item.name}</p>
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
           {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
