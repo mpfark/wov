@@ -1,55 +1,60 @@
 
 
-# Open-Ended Area Outlines on the Player Map
+# Simplify Area Continuations: Fade the Hull Itself at the Edge
 
 ## Problem
-Area outlines currently close around only the visible nodes, making areas that continue beyond the map edge look like dead-ends. Players can't tell an area extends further.
+The current approach uses separate rectangular "continuation bands" with gradients, which look disconnected and weird — they don't match the organic hull shape. The user wants a simpler approach: keep the hull outlines around nodes as-is, but where the area continues off-screen, let the hull and its fill naturally fade out at the map edge — matching how ghost nodes and lines already fade.
 
 ## Approach
-For each area, detect border nodes that have connections to off-screen nodes in the **same area**. At those border nodes, extend the outline by adding "bleed" circles projected outward toward the SVG edge. This makes the outline fade off the visible area rather than closing into a bubble.
+Replace the entire `AreaContinuation` system (rectangles + gradients) with an SVG mask-based fade. Apply a single edge-fade mask to all area hulls so that any hull geometry near the viewport edge gradually fades to transparent. This way:
+
+- The hull shape stays organic (union-of-circles)
+- Where an area stops at a visible boundary node, the outline fades at the edge instead of closing sharply
+- No extra rectangles, no extra gradients per area — just one mask
 
 ## Changes
 
-### `PlayerGraphView.tsx` — area hull computation (~line 270-309)
+### `PlayerGraphView.tsx`
 
-In the loop that builds circles for `computeRegionOutline`:
+1. **Remove** all `AreaContinuation` related code:
+   - Remove the `AreaContinuation` interface, `getContinuationEdge`, `getContinuationGradientVector`, `CardinalEdge` type
+   - Remove `areaContinuations` from the hull computation (the `edgeSources` logic, continuation building)
+   - Remove all continuation gradient `<defs>` and continuation `<rect>`/`<line>` rendering
 
-1. For each area node that has a connection to a **non-displayed node in the same area**, compute the direction toward that off-screen node (using stored x/y coords).
-2. Add 2-3 extra circles along that direction, extending past the last visible node by `SPACING * 0.5`, `SPACING * 1.0`, and `SPACING * 1.5`. These circles extend the outline toward the SVG edge.
-3. The outline algorithm will naturally produce an open-looking shape that bleeds off the viewable area instead of closing off.
+2. **Add an SVG edge-fade mask** in `<defs>`:
+   - A `<mask>` with a white rectangle (fully visible) in the center and a `<radialGradient>` or four `<linearGradient>` rectangles around the edges that fade from white to black (transparent)
+   - Simpler approach: a single rect with a radial gradient centered on the viewbox, white in the middle, fading to transparent near edges
 
-This requires knowing whether the off-screen connected node shares the same area. We already have `_areas` and all `nodes` — for each neighbor's connection to a non-displayed node, look up the full node from the `nodes` array and check `area_id`.
+3. **Apply the mask** to the area hulls group:
+   - Wrap the area hull `<path>` elements in a `<g mask="url(#edge-fade)">` so they naturally fade at the viewport boundary
 
-**Key logic sketch:**
-```typescript
-// After building circles from visible area nodes...
-for (const n of areaNodes) {
-  const pos = nodePositions.get(n.id);
-  if (!pos) continue;
-  for (const conn of n.connections) {
-    if (displayedIds.has(conn.node_id)) continue; // skip visible nodes
-    const offNode = nodes.find(nd => nd.id === conn.node_id);
-    if (!offNode || offNode.area_id !== area.id) continue; // only same-area
-    // Project outward
-    const dx = (offNode.x - n.x) || 0;
-    const dy = (offNode.y - n.y) || 0;
-    const len = Math.sqrt(dx*dx + dy*dy) || 1;
-    for (let step = 1; step <= 3; step++) {
-      circles.push({
-        cx: pos.px + (dx/len) * SPACING * step * 0.5,
-        cy: pos.py + (dy/len) * SPACING * step * 0.5,
-        r: AREA_OUTLINE_RADIUS,
-      });
-    }
-  }
-}
+4. **Restore bleed circles** (from the original plan) so hulls extend past the edge:
+   - For each primary area node with a same-area off-screen connection, add densely spaced circles projecting outward (step size = `AREA_OUTLINE_RADIUS * 1.4`, enough steps to reach the viewport edge)
+   - The mask handles the fade, so the hull just needs to extend far enough to reach the masked zone
+
+### Technical Detail: Edge Fade Mask
+```xml
+<defs>
+  <linearGradient id="fade-left" x1="0" x2="1" y1="0" y2="0">
+    <stop offset="0%" stop-color="black"/>
+    <stop offset="100%" stop-color="white"/>
+  </linearGradient>
+  <!-- similar for right, top, bottom -->
+  <mask id="edge-fade">
+    <rect width="100%" height="100%" fill="white"/>
+    <rect x="0" y="0" width="fadeWidth" height="100%" fill="url(#fade-left)"/>
+    <rect x="viewBoxWidth-fadeWidth" ... fill="url(#fade-right)"/>
+    <rect ... fill="url(#fade-top)"/>
+    <rect ... fill="url(#fade-bottom)"/>
+  </mask>
+</defs>
 ```
 
-No other files need changes. The outline geometry utility stays the same — it just receives more circles and produces a shape that extends past the SVG viewport, which SVG clips naturally.
+The fade width would be roughly `AREA_OUTLINE_RADIUS * 2` — enough to create a subtle transition at the edges.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/features/world/components/PlayerGraphView.tsx` | Add bleed circles for border nodes with same-area off-screen connections |
+| `src/features/world/components/PlayerGraphView.tsx` | Remove continuation system, add edge-fade mask + bleed circles |
 
