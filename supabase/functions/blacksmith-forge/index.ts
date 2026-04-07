@@ -16,7 +16,7 @@ async function getItemPool(db: any, slot: string, level: number) {
     .eq("item_type", "equipment")
     .eq("slot", slot)
     .eq("is_soulbound", false)
-    .neq("rarity", "unique");
+    .eq("rarity", "common");
 
   // ±2
   let { data: pool } = await baseQuery()
