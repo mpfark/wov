@@ -59,9 +59,13 @@ function predictLethalTime(
 
   const ticks: { time: number; damage: number }[] = [];
   for (const eff of effects) {
+    // Match server logic: bleed uses raw damage_per_tick, poison/ignite multiply by stacks
+    const dmg = eff.effect_type === 'bleed'
+      ? eff.damage_per_tick
+      : eff.stacks * eff.damage_per_tick;
     let t = eff.next_tick_at;
     while (t <= eff.expires_at) {
-      ticks.push({ time: t, damage: eff.damage_per_tick });
+      ticks.push({ time: t, damage: dmg });
       t += eff.tick_rate_ms;
     }
   }
