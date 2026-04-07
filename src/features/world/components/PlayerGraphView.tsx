@@ -320,9 +320,9 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
             uy > 0 ? (viewBoxHeight - pos.py) / uy : Infinity,
             uy < 0 ? (0 - pos.py) / uy : Infinity,
           ].filter(distance => Number.isFinite(distance) && distance > 0);
-          const distanceToEdge = distancesToEdge.length > 0 ? Math.min(...distancesToEdge) : _SPACING * 2;
-          const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 2;
-          const bleedSteps = Math.max(4, Math.ceil(bleedDistance / (_SPACING * 0.55)));
+          const distanceToEdge = distancesToEdge.length > 0 ? Math.max(...distancesToEdge) : _SPACING * 2;
+          const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 2.5;
+          const bleedSteps = Math.max(5, Math.ceil(bleedDistance / (_SPACING * 0.55)));
 
           for (let step = 1; step <= bleedSteps; step++) {
             const travel = (bleedDistance * step) / bleedSteps;
