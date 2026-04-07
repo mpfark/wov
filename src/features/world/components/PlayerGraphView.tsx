@@ -298,6 +298,27 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         }
       }
 
+      // Bleed circles: extend outline toward off-screen nodes in the same area
+      for (const n of areaNodes) {
+        const pos = nodePositions.get(n.id);
+        if (!pos) continue;
+        for (const conn of n.connections) {
+          if (displayedIds.has(conn.node_id)) continue;
+          const offNode = nodes.find(nd => nd.id === conn.node_id);
+          if (!offNode || offNode.area_id !== area.id) continue;
+          const dx = (offNode.x - n.x) || 0;
+          const dy = (offNode.y - n.y) || 0;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          for (let step = 1; step <= 3; step++) {
+            circles.push({
+              cx: pos.px + (dx / len) * _SPACING * step * 0.5,
+              cy: pos.py + (dy / len) * _SPACING * step * 0.5,
+              r: AREA_OUTLINE_RADIUS,
+            });
+          }
+        }
+      }
+
       if (circles.length === 0) continue;
       const emoji = emojiMap[area.area_type] || '📍';
       const { paths } = computeRegionOutline(circles);
