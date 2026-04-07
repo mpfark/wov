@@ -82,18 +82,20 @@ const SLOT_LABELS: Record<string, string> = {
   boots: 'Boots',
 };
 
-function EquipSlot({ slot, item, blocked, onUnequip }: {
-  slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void;
+function EquipSlot({ slot, item, blocked, onUnequip, locked }: {
+  slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void; locked?: boolean;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center cursor-pointer transition-colors ${
+          className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center transition-colors ${
+            locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          } ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
             item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
           }`}
-          onClick={() => item && !blocked && onUnequip(item.id)}
+          onClick={() => item && !blocked && !locked && onUnequip(item.id)}
         >
           <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>
           {blocked ? (
@@ -388,17 +390,17 @@ export default function CharacterPanel({
             <TabsContent value="equipment" className="mt-0">
               <div className="relative flex flex-col items-center gap-1">
                 <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
-                  <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} />
-                  <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} />
+                  <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                   <div />
                   <div />
-                  <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} />
+                  <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                   <div />
-                  <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} />
-                  <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} />
-                  <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} />
+                  <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                   <div className="relative">
-                    <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} />
+                    <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                     {isProficient && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -410,9 +412,9 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} />
+                  <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                   <div className="relative">
-                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} />
+                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} locked={inCombat} />
                     {offHandIsShield && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -424,11 +426,11 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} />
-                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} />
+                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                   <div />
                   <div />
-                  <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} />
+                  <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                   <div />
                 </div>
               </div>
@@ -717,7 +719,7 @@ export default function CharacterPanel({
                           </TooltipContent>
                         </Tooltip>
                         <div className="flex gap-0.5 shrink-0 ml-1">
-                          {!isBroken && inv.item.slot && (
+                          {!isBroken && !inCombat && inv.item.slot && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
@@ -730,7 +732,7 @@ export default function CharacterPanel({
                               </TooltipContent>
                             </Tooltip>
                           )}
-                          {!isBroken && inv.item.slot === 'main_hand' && inv.item.hands === 1 && (
+                          {!isBroken && !inCombat && inv.item.slot === 'main_hand' && inv.item.hands === 1 && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
@@ -752,7 +754,7 @@ export default function CharacterPanel({
                               <TooltipContent side="top" className="text-xs">{inv.is_pinned ? 'Unpin (allow selling)' : 'Pin (prevent selling)'}</TooltipContent>
                             </Tooltip>
                           )}
-                          {!inv.item.is_soulbound && (
+                          {!inv.item.is_soulbound && !inCombat && (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
