@@ -649,10 +649,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }));
       p.addLog(`${ability.emoji} Rend! ${creature.name} bleeds for ${dmgPerTick} damage every ${intervalMs / 1000}s for ${durationMs / 1000}s.`);
     } else if (ability.type === 'poison_buff') {
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const durationMs = Math.min(30000, 20000 + dexMod * 1000);
+      if (p.buffState.poisonBuff && p.buffState.poisonBuff.expiresAt > Date.now()) {
+        p.addLog(`⚠️ ${ability.emoji} Envenom is already active.`);
+        return;
+      }
+      const durationMs = 300_000; // 5 minutes
       p.buffSetters.setPoisonBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} Envenom! Your weapons drip with poison for 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
     } else if (ability.type === 'execute_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'evasion_buff') {
@@ -668,10 +671,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setDisengageNextHit({ bonusMult: 1.5, expiresAt: Date.now() + nextHitDurationMs });
       p.addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals 50% bonus damage!`);
     } else if (ability.type === 'ignite_buff') {
-      const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
-      const durationMs = Math.min(45000, 30000 + intMod * 1000);
+      if (p.buffState.igniteBuff && p.buffState.igniteBuff.expiresAt > Date.now()) {
+        p.addLog(`⚠️ ${ability.emoji} Ignite is already active.`);
+        return;
+      }
+      const durationMs = 300_000; // 5 minutes
       p.buffSetters.setIgniteBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'absorb_buff') {
@@ -722,12 +728,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLog(`${ability.emoji} Focus Strike! Your next attack deals +${bonusDmg} bonus damage.`);
     }
 
-    // Deduct CP
-    const finalCpCost = ability.cpCost;
+    // Deduct CP — Envenom/Ignite drain all current CP
+    const isAllCpAbility = ability.type === 'poison_buff' || ability.type === 'ignite_buff';
+    const finalCpCost = isAllCpAbility ? (p.character.cp ?? 0) : ability.cpCost;
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
     setLastUsedAbilityCost(finalCpCost);
-  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, lastUsedAbilityCost, awardKillRewards]);
+  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost, awardKillRewards]);
 
   // ── Attack ─────────────────────────────────────────────────────
   const handleAttack = useCallback((creatureId: string) => {

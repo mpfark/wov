@@ -59,14 +59,14 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   ],
   rogue: [
     { label: 'Shadowstep', emoji: '🌑', description: 'Vanish into shadow — avoid attacks when fleeing and deal bonus damage on your next strike', cpCost: 15, type: 'stealth_buff', tier: 1, levelRequired: 5 },
-    { label: 'Envenom', emoji: '🧪', description: 'Coat your blade in poison — each hit has a 40% chance to apply a stackable poison DoT (max 5)', cpCost: 25, type: 'poison_buff', tier: 2, levelRequired: 10 },
+    { label: 'Envenom', emoji: '🧪', description: 'Coat your blade in poison for 5 minutes — each hit has a 40% chance to apply a stackable poison DoT (max 5). Costs all your CP (minimum 50).', cpCost: 50, type: 'poison_buff', tier: 2, levelRequired: 10 },
     { label: 'Eviscerate', emoji: '🔪', description: 'A vicious strike that consumes all poison stacks for +50% bonus damage per stack', cpCost: 40, type: 'execute_attack', tier: 3, levelRequired: 15 },
     { label: 'Cloak of Shadows', emoji: '🌫️', description: 'Wrap yourself in shadow, gaining a 50% chance to dodge incoming attacks', cpCost: 60, type: 'evasion_buff', tier: 4, levelRequired: 20 },
   ],
   wizard: [
     { label: 'Force Shield', emoji: '🛡️✨', description: 'Create an arcane shield that absorbs incoming damage based on INT', cpCost: 15, type: 'absorb_buff', tier: 1, levelRequired: 5 },
     { label: 'Arcane Surge', emoji: '✨', description: 'Channel raw arcane energy to amplify your spell damage', cpCost: 25, type: 'damage_buff', tier: 2, levelRequired: 10 },
-    { label: 'Ignite', emoji: '🔥🔥', description: 'Imbue your spells with fire — each hit has a 40% chance to apply a stackable burn DoT (max 5)', cpCost: 40, type: 'ignite_buff', tier: 3, levelRequired: 15 },
+    { label: 'Ignite', emoji: '🔥🔥', description: 'Imbue your spells with fire for 5 minutes — each hit has a 40% chance to apply a stackable burn DoT (max 5). Costs all your CP (minimum 50).', cpCost: 50, type: 'ignite_buff', tier: 3, levelRequired: 15 },
     { label: 'Conflagrate', emoji: '💥', description: 'Consume all burn stacks on your target for +50% bonus damage per stack', cpCost: 60, type: 'ignite_consume', tier: 4, levelRequired: 20 },
   ],
 };
