@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { Coins, Hammer } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
@@ -340,38 +341,56 @@ export default function BlacksmithPanel({ open, onClose, characterId, gold, salv
                   {!browsing && !forgeSlot && (
                     <p className="text-xs text-muted-foreground italic">Select a slot to browse items.</p>
                   )}
+                  <TooltipProvider delayDuration={200}>
                   {forgePool.map(item => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setSelectedForgeItem(item.id === selectedForgeItem ? null : item.id)}
-                      className={`w-full text-left p-2 rounded border transition-colors ${
-                        item.id === selectedForgeItem
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border bg-background/40 hover:bg-background/60'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-display text-foreground">{item.name}</span>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {item.weapon_tag && (
-                            <span className="text-[10px] text-muted-foreground capitalize">{item.weapon_tag}</span>
-                          )}
-                          {item.hands && (
-                            <span className="text-[10px] text-muted-foreground">{item.hands}H</span>
-                          )}
-                          <span className="text-[10px] text-muted-foreground">Lv{item.level}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-0.5">
+                    <Tooltip key={item.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedForgeItem(item.id === selectedForgeItem ? null : item.id)}
+                          className={`w-full text-left p-2 rounded border transition-colors ${
+                            item.id === selectedForgeItem
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border bg-background/40 hover:bg-background/60'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-display text-foreground">{item.name}</span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {item.weapon_tag && (
+                                <span className="text-[10px] text-muted-foreground capitalize">{item.weapon_tag}</span>
+                              )}
+                              {item.hands && (
+                                <span className="text-[10px] text-muted-foreground">{item.hands}H</span>
+                              )}
+                              <span className="text-[10px] text-muted-foreground">Lv{item.level}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {Object.entries(item.stats || {}).filter(([,v]) => (v as number) !== 0).map(([k, v]) => (
+                              <span key={k} className="text-[10px] font-display text-elvish bg-elvish/10 px-1 rounded">
+                                +{v as number} {STAT_LABELS[k] || k.toUpperCase()}
+                              </span>
+                            ))}
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="bg-popover border-border z-50 max-w-xs">
+                        <p className="font-display text-foreground">{item.name}</p>
+                        {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
+                        <p className="text-[10px] text-muted-foreground capitalize">{item.slot?.replace('_', ' ')} · Lv{item.level}</p>
+                        {item.hands && <p className="text-xs text-muted-foreground">{item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
+                        {item.weapon_tag && <p className="text-xs text-muted-foreground capitalize">{item.weapon_tag}</p>}
                         {Object.entries(item.stats || {}).filter(([,v]) => (v as number) !== 0).map(([k, v]) => (
-                          <span key={k} className="text-[10px] font-display text-elvish bg-elvish/10 px-1 rounded">
-                            +{v as number} {STAT_LABELS[k] || k.toUpperCase()}
-                          </span>
+                          <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
+                            {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
+                          </p>
                         ))}
-                      </div>
-                    </button>
+                        <p className="text-[10px] text-muted-foreground mt-1">Click to select for forging</p>
+                      </TooltipContent>
+                    </Tooltip>
                   ))}
+                  </TooltipProvider>
                 </div>
 
                 {selectedForgeItem && (
