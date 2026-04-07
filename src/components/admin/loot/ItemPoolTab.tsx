@@ -17,6 +17,7 @@ interface PoolItem {
   world_drop: boolean;
   drop_weight: number;
   weapon_tag: string | null;
+  is_soulbound: boolean;
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -36,7 +37,7 @@ export default function ItemPoolTab() {
   const loadItems = async () => {
     const { data } = await supabase
       .from('items')
-      .select('id, name, level, rarity, item_type, slot, world_drop, drop_weight, weapon_tag')
+      .select('id, name, level, rarity, item_type, slot, world_drop, drop_weight, weapon_tag, is_soulbound')
       .in('item_type', ['equipment', 'consumable'])
       .order('level')
       .order('name');
@@ -148,9 +149,9 @@ export default function ItemPoolTab() {
           <tbody>
             {filtered.map(item => (
               <tr key={item.id} className={`border-b border-border/50 hover:bg-card/50 ${pendingChanges.has(item.id) ? 'bg-primary/5' : ''}`}>
-                <td className={`px-3 py-1 ${RARITY_COLORS[item.rarity] || ''}`}>{item.name}</td>
+                <td className={`px-3 py-1 ${item.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[item.rarity] || '')}`}>{item.name}</td>
                 <td className="text-center px-2 py-1">{item.level}</td>
-                <td className={`text-center px-2 py-1 ${RARITY_COLORS[item.rarity] || ''}`}>{item.rarity}</td>
+                <td className={`text-center px-2 py-1 ${item.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[item.rarity] || '')}`}>{item.rarity}</td>
                 <td className="text-center px-2 py-1 text-muted-foreground">{item.item_type}</td>
                 <td className="text-center px-2 py-1 text-muted-foreground">{item.weapon_tag || item.slot || '—'}</td>
                 <td className="text-center px-2 py-1">
