@@ -47,7 +47,7 @@ const RARITY_COLORS: Record<string, string> = {
 const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
-  origin_type: null, origin_id: null, weapon_tag: null,
+  origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
@@ -208,6 +208,7 @@ export default function ItemManager() {
       level: item.level ?? 1,
       origin_type: item.origin_type, origin_id: item.origin_id,
       weapon_tag: (item as any).weapon_tag || null,
+      is_soulbound: item.is_soulbound ?? false,
     });
     loadItemUsage(item.id, item.rarity);
   };
