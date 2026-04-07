@@ -330,34 +330,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         preserveAspectRatio="xMidYMid meet"
         overflow="hidden"
       >
-        <defs>
-          <linearGradient id="fade-left" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="black" />
-            <stop offset="100%" stopColor="white" />
-          </linearGradient>
-          <linearGradient id="fade-right" x1="1" x2="0" y1="0" y2="0">
-            <stop offset="0%" stopColor="black" />
-            <stop offset="100%" stopColor="white" />
-          </linearGradient>
-          <linearGradient id="fade-top" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="black" />
-            <stop offset="100%" stopColor="white" />
-          </linearGradient>
-          <linearGradient id="fade-bottom" x1="0" x2="0" y1="1" y2="0">
-            <stop offset="0%" stopColor="black" />
-            <stop offset="100%" stopColor="white" />
-          </linearGradient>
-          <mask id="edge-fade">
-            <rect x="0" y="0" width={viewBoxWidth} height={viewBoxHeight} fill="white" />
-            <rect x="0" y="0" width={FADE_WIDTH} height={viewBoxHeight} fill="url(#fade-left)" />
-            <rect x={viewBoxWidth - FADE_WIDTH} y="0" width={FADE_WIDTH} height={viewBoxHeight} fill="url(#fade-right)" />
-            <rect x="0" y="0" width={viewBoxWidth} height={FADE_WIDTH} fill="url(#fade-top)" />
-            <rect x="0" y={viewBoxHeight - FADE_WIDTH} width={viewBoxWidth} height={FADE_WIDTH} fill="url(#fade-bottom)" />
-          </mask>
-        </defs>
-
-        {/* Area outlines — color-coded by area type, faded at edges */}
-        <g mask="url(#edge-fade)" className="pointer-events-none">
+        {/* Area outlines — color-coded by area type */}
+        <g className="pointer-events-none">
           {areaHulls.map((hull, i) => (
             <path
               key={`area-hull-${i}`}
