@@ -299,7 +299,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       }
 
       // Bleed circles: extend outline toward the SVG edge when the area continues off-screen
-      void 0; // bleed debug
+      console.log('[BLEED] area', area.name, 'areaNodes:', areaNodes.length, 'displayedIds:', displayedIds.size, 'totalNodes:', nodes.length);
       for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (!pos) continue;
