@@ -21,57 +21,10 @@ interface Props {
   unlockedConnections?: Map<string, number>;
 }
 
-type CardinalEdge = 'N' | 'S' | 'E' | 'W';
-
 interface AreaHull {
   path: string;
   fill: string;
   stroke: string;
-}
-
-interface AreaContinuation {
-  key: string;
-  edge: CardinalEdge;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fill: string;
-  stroke: string;
-  fillGradientId: string;
-  strokeGradientId: string;
-}
-
-const DIRECTION_OFFSETS: Record<string, [number, number]> = {
-  N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0],
-  NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
-};
-
-const PLAYER_NODE_RADIUS = 28;
-const AREA_PAD = 10;
-const AREA_OUTLINE_RADIUS = PLAYER_NODE_RADIUS + AREA_PAD;
-
-function getContinuationEdge(dx: number, dy: number): CardinalEdge | null {
-  if (dx === 0 && dy === 0) return null;
-  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'E' : 'W';
-  return dy >= 0 ? 'S' : 'N';
-}
-
-function getContinuationGradientVector(
-  continuation: AreaContinuation,
-  viewBoxWidth: number,
-  viewBoxHeight: number,
-) {
-  switch (continuation.edge) {
-    case 'E':
-      return { x1: continuation.x, y1: 0, x2: viewBoxWidth, y2: 0 };
-    case 'W':
-      return { x1: continuation.x + continuation.width, y1: 0, x2: 0, y2: 0 };
-    case 'S':
-      return { x1: 0, y1: continuation.y, x2: 0, y2: viewBoxHeight };
-    case 'N':
-      return { x1: 0, y1: continuation.y + continuation.height, x2: 0, y2: 0 };
-  }
 }
 
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
