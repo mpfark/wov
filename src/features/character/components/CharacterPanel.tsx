@@ -495,18 +495,108 @@ export default function CharacterPanel({
                 </div>
               )}
 
-              {/* Inventory */}
-              <div className="mt-3 flex flex-col">
+              {/* Consumables & Quest Items */}
+              {(() => {
+                const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                const consumableAndQuestItems = bagItems.filter(i => i.item.item_type === 'consumable' || i.item.item_type === 'quest');
+                if (consumableAndQuestItems.length === 0) return null;
+                const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];
+                const map = new Map<string, InventoryItem[]>();
+                for (const inv of consumableAndQuestItems) {
+                  const key = inv.item_id;
+                  if (!map.has(key)) { map.set(key, []); grouped.push({ representative: inv, all: map.get(key)! }); }
+                  map.get(key)!.push(inv);
+                }
+                return (
+                  <div className="mt-3 flex flex-col">
+                    <h3 className="font-display text-xs text-muted-foreground mb-1.5">
+                      Consumables ({consumableAndQuestItems.length})
+                    </h3>
+                    <div className="space-y-1">
+                      {grouped.map(({ representative: inv, all }) => {
+                        const isBroken = inv.current_durability <= 0;
+                        return (
+                          <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
+                                  {inv.is_pinned && <span className="text-primary mr-0.5">📌</span>}
+                                  {inv.item.name}
+                                  {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                                <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
+                                <p className="text-xs text-muted-foreground">{inv.item.description}</p>
+                                <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>
+                                {Object.entries(inv.item.stats || {}).map(([k, v]) => (
+                                  <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
+                                    {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
+                                  </p>
+                                ))}
+                                <p className="text-[10px] text-muted-foreground mt-1">Value: {inv.item.value}g</p>
+                                {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
+                              </TooltipContent>
+                            </Tooltip>
+                            <div className="flex gap-0.5 shrink-0 ml-1">
+                              {!isBroken && inv.item.item_type === 'consumable' && ((inv.item.stats?.hp as number) > 0 || (inv.item.stats?.hp_regen as number) > 0) && onUseConsumable && !inCombat && (
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onUseConsumable(all[0].id)}>
+                                  <Heart className="w-3 h-3 text-blood" />
+                                </Button>
+                              )}
+                              {!isBroken && inv.item.item_type === 'consumable' && !inCombat && onBeltPotion && beltCapacity > 0 && beltedPotions.length < beltCapacity && (
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onBeltPotion(all[0].id)}>
+                                  <ArrowUpFromLine className="w-3 h-3 text-primary" />
+                                </Button>
+                              )}
+                              {!inv.item.is_soulbound && onTogglePin && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                      onClick={() => onTogglePin(all[0].id)}>
+                                      {inv.is_pinned ? <PinOff className="w-3 h-3 text-primary" /> : <Pin className="w-3 h-3 text-muted-foreground" />}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">{inv.is_pinned ? 'Unpin (allow selling)' : 'Pin (prevent selling)'}</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {!inv.item.is_soulbound && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                      onClick={() => onDrop(all[0].id)}>
+                                      <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="text-xs">Drop on ground</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+
+            {/* Inventory Tab */}
+            <TabsContent value="inventory" className="mt-0">
+              <div className="flex flex-col">
                 <div className="flex items-center justify-between mb-1.5">
                   {(() => {
                     const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                    const inventoryItems = bagItems.filter(i => i.item.item_type !== 'consumable' && i.item.item_type !== 'quest');
                     const bagWeight = getBagWeight(bagItems);
                     const effectiveStr = character.str + (equipmentBonuses.str || 0);
                     const capacity = getCarryCapacity(effectiveStr);
                     const isOver = bagWeight > capacity;
                     return (
                       <h3 className="font-display text-xs text-muted-foreground">
-                        Inventory ({bagItems.length}) — <span className={isOver ? 'text-destructive' : ''}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
+                        Items ({inventoryItems.length}) — <span className={isOver ? 'text-destructive' : ''}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
                       </h3>
                     );
                   })()}
@@ -520,14 +610,13 @@ export default function CharacterPanel({
                   </button>
                 </div>
                 <div className="space-y-1">
-                  {unequipped.length === 0 ? (
-                    <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>
-                  ) : (() => {
+                  {(() => {
                     const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
-                    if (bagItems.length === 0) return <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>;
+                    const inventoryItems = bagItems.filter(i => i.item.item_type !== 'consumable' && i.item.item_type !== 'quest');
+                    if (inventoryItems.length === 0) return <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>;
                     const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];
                     const map = new Map<string, InventoryItem[]>();
-                    for (const inv of bagItems) {
+                    for (const inv of inventoryItems) {
                       const key = inv.item_id;
                       if (!map.has(key)) { map.set(key, []); grouped.push({ representative: inv, all: map.get(key)! }); }
                       map.get(key)!.push(inv);
@@ -570,14 +659,12 @@ export default function CharacterPanel({
                             {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
                             {/* Gear comparison */}
                             {inv.item.slot && (() => {
-                              // For 2H weapons, compare against both main_hand and off_hand combined
                               const isTwoHandedItem = inv.item.hands === 2;
                               const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
                               const newStats = inv.item.stats || {};
                               const oldStats: Record<string, number> = {};
                               
                               if (isTwoHandedItem) {
-                                // Combine stats from both main_hand and off_hand
                                 const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
                                 const offHand = equipped.find(e => e.equipped_slot === 'off_hand');
                                 for (const item of [mainHand, offHand]) {
@@ -588,7 +675,6 @@ export default function CharacterPanel({
                                   }
                                 }
                               } else {
-                                // Check if currently equipped main_hand is 2H — compare against full 2H stats
                                 const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
                                 const mainIs2H = mainHand && mainHand.item.hands === 2;
                                 if (mainIs2H && (inv.item.slot === 'main_hand' || inv.item.slot === 'off_hand')) {
@@ -631,18 +717,6 @@ export default function CharacterPanel({
                           </TooltipContent>
                         </Tooltip>
                         <div className="flex gap-0.5 shrink-0 ml-1">
-                          {!isBroken && inv.item.item_type === 'consumable' && ((inv.item.stats?.hp as number) > 0 || (inv.item.stats?.hp_regen as number) > 0) && onUseConsumable && !inCombat && (
-                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                              onClick={() => onUseConsumable(all[0].id)}>
-                              <Heart className="w-3 h-3 text-blood" />
-                            </Button>
-                          )}
-                          {!isBroken && inv.item.item_type === 'consumable' && !inCombat && onBeltPotion && beltCapacity > 0 && beltedPotions.length < beltCapacity && (
-                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                              onClick={() => onBeltPotion(all[0].id)}>
-                              <ArrowUpFromLine className="w-3 h-3 text-primary" />
-                            </Button>
-                          )}
                           {!isBroken && inv.item.slot && (
                             <Tooltip>
                               <TooltipTrigger asChild>
