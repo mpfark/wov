@@ -354,17 +354,19 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         ].filter((distance) => Number.isFinite(distance) && distance > 0);
 
         const distanceToEdge = distancesToEdge.length > 0 ? Math.min(...distancesToEdge) : _SPACING;
-        const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS * 0.8;
-        const bleedAnchors = [bleedDistance * 0.38, bleedDistance * 0.72, bleedDistance];
-        const bleedRadii = [AREA_OUTLINE_RADIUS * 0.92, AREA_OUTLINE_RADIUS, AREA_OUTLINE_RADIUS * 1.08];
+        const bleedDistance = distanceToEdge + AREA_OUTLINE_RADIUS;
+        // Space bleed circles densely enough to overlap (max gap = 1.4 * radius)
+        const stepSize = AREA_OUTLINE_RADIUS * 1.4;
+        const bleedSteps = Math.max(2, Math.ceil(bleedDistance / stepSize));
 
-        bleedAnchors.forEach((travel, index) => {
+        for (let step = 1; step <= bleedSteps; step++) {
+          const travel = (bleedDistance * step) / bleedSteps;
           circles.push({
             cx: pos.px + ux * travel,
             cy: pos.py + uy * travel,
-            r: bleedRadii[index] ?? AREA_OUTLINE_RADIUS,
+            r: AREA_OUTLINE_RADIUS,
           });
-        });
+        }
       }
 
       if (circles.length === 0) continue;
