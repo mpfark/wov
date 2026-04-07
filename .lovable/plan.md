@@ -1,121 +1,88 @@
 
 
-# Refactor Battle Cry: AC Bonus → Damage Reduction
+# Rebalance AC & Creature Attack Scaling
 
 ## Summary
 
-Replace Battle Cry's AC bonus with a damage reduction (DR) buff. Add shield synergy (+5% DR with shield equipped) and crit damage reduction (+15% extra reduction on crits). This fixes the "crit-only" hit pattern against warriors with high AC.
+Lower all player base AC by 2, add a level-based creature attack bonus (`+floor(level * 0.4)`), and narrow the miss threshold from `margin < -8` to `margin < -5` (widening glancing band). Update CharacterPanel's defense stats to reflect the new creature attack formula. Target: 45–55% creature hit rate.
 
 ## Changes
 
-### 1. New Buff Type — Replace `AcBuff` with `BattleCryBuff`
+### 1. Lower Base AC — Three Mirrors
 
-**`src/features/combat/hooks/useGameLoop.ts`**
-- Replace `AcBuff` interface with: `BattleCryBuff { damageReduction: number; critReduction: number; expiresAt: number }`
-- `damageReduction` = 0.15 base (or 0.20 with shield)
-- `critReduction` = 0.15 extra on crits
+**`src/features/combat/utils/combat-math.ts`**, **`supabase/functions/_shared/combat-math.ts`**, **`src/lib/game-data.ts`**
 
-**`src/features/combat/hooks/useBuffState.ts`**
-- Rename `acBuff`/`setAcBuff` → `battleCryBuff`/`setBattleCryBuff` with the new type
-- Update `gatherBuffs()`: send `battle_cry_dr: { reduction, crit_reduction }` instead of `ac_buff`
-- Remove `ac_buff` from gathered buffs
+All three files store `CLASS_BASE_AC`. Update identically:
+- warrior: 14 → 12
+- ranger: 12 → 10
+- rogue: 12 → 10
+- wizard: 11 → 9
+- healer: 11 → 9
+- bard: 11 → 9
 
-### 2. Client Ability Activation
+### 2. Add Creature Attack Bonus
 
-**`src/features/combat/hooks/useCombatActions.ts`** (lines 618-623)
-- Detect shield: `const hasShield = p.equipped.some(e => e.item?.weapon_tag === 'shield')`
-- Base DR = 0.15, shield bonus = 0.05, total = hasShield ? 0.20 : 0.15
-- Crit reduction = 0.15
-- Set `battleCryBuff` with `{ damageReduction, critReduction, expiresAt }`
-- Update log: `"📯 Battle Cry! 15% damage reduction (20% with shield) for Xs."`
-- Duration formula stays the same (DEX-based)
-
-### 3. Server-Side Damage Pipeline
-
-**`supabase/functions/combat-tick/index.ts`** (applyCreatureHit, ~line 501-566)
-- Remove `acBuffBonus` from AC calculation (line 503, 506)
-- After AC overflow / awareness / absorb steps, before final clamp, insert:
-```
-if (mb.battle_cry_dr) {
-  let dr = mb.battle_cry_dr.reduction || 0;
-  if (isCrit) dr += mb.battle_cry_dr.crit_reduction || 0;
-  const preDmg = dmg;
-  dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
-  events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry reduces damage! (${preDmg} → ${dmg})` });
+New function in both combat-math mirrors (`src/features/combat/utils/combat-math.ts` and `supabase/functions/_shared/combat-math.ts`):
+```ts
+export function getCreatureAttackBonus(level: number): number {
+  return Math.floor(level * 0.4);
 }
 ```
-- Pipeline becomes: base → quality → crit → level-gap → AC overflow → awareness → absorb → **Battle Cry DR** → clamp → caps
 
-### 4. UI Updates
+**`supabase/functions/combat-tick/index.ts`** — apply bonus in creature attack roll:
+```ts
+const roll = d20 + cStr + getCreatureAttackBonus(creature.level);
+```
 
-**`src/features/character/components/CharacterPanel.tsx`**
-- Rename `acBuff` prop → `battleCryBuff`
-- ActiveBuffs display: change from "AC +X" to "DR 15%" (or "DR 20% 🛡️")
-- Defense stats section: remove AC buff line from totalAC calculation; add "Dmg Reduction" row showing active DR %
+### 3. Widen Glancing Band (Narrow Miss Threshold)
 
-**`src/features/world/components/MapPanel.tsx`**
-- Rename `acBuff`/`acBuffBonus` → `battleCry`/`battleCryDr` in ActiveBuffs interface
+In `getHitQuality` (both combat-math mirrors), change:
+```ts
+// Before: if (margin < -8) return 'miss';
+if (margin < -5) return 'miss';
+```
 
-**`src/pages/GamePage.tsx`**
-- Replace all `acBuff` references with `battleCryBuff`
-- Remove `acBuffBonus` from effectiveAC calculation (line 467)
+Rolls between margin -8 and -5 become glancing hits (0.25x, capped at 3) instead of total misses.
 
-### 5. Party Combat
+### 4. Update CharacterPanel Defense Stats
 
-**`src/features/combat/hooks/usePartyCombat.ts`**
-- Replace `ac_buff` in buff broadcast type with `battle_cry_dr`
+**`src/features/character/components/CharacterPanel.tsx`** (~lines 973-981)
 
-### 6. Ability Description + Manual
+The panel currently calculates creature attack mod manually. Update to include the new level-based bonus:
+```ts
+const creatureAtkMod = Math.floor((creatureBaseStat - 10) / 2) + getCreatureAttackBonus(character.level);
+```
+Import `getCreatureAttackBonus` from combat-math. This ensures the Dodge %, AC Overflow, and AC tooltip all reflect the actual server-side hit rates.
 
-**`src/features/combat/utils/class-abilities.ts`**
-- Update Battle Cry description: `"Let out a war cry that reduces incoming damage by 15% (20% with shield). Crits reduced further."`
+Also update the AC tooltip to show the new base values and creature attack bonus breakdown.
+
+### 5. Update Game Manual
 
 **`src/components/admin/GameManual.tsx`**
-- Update Battle Cry entry to document DR mechanics, shield synergy, and crit reduction
+- Update base AC table with new values
+- Document miss threshold change (< -5)
+- Document creature attack bonus formula
 
-### 7. Export Updates
+### 6. Deploy Edge Function
 
-**`src/features/combat/index.ts`**
-- Export `BattleCryBuff` instead of `AcBuff`
-
-## Damage Pipeline (Updated)
-
-```text
-base damage
-→ hit quality multiplier
-→ crit multiplier (1.5x)
-→ level-gap multiplier
-→ AC overflow (crit-only, when roll < AC)
-→ WIS awareness (25% reduction chance)
-→ absorb shield (flat HP soak)
-→ Battle Cry DR (15% / 20% with shield, +15% on crits)
-→ clamp (min 1)
-→ glancing/weak caps
-→ final HP subtraction
-```
+Deploy `combat-tick` after updating server-side combat-math and the tick function.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/features/combat/hooks/useGameLoop.ts` | Replace `AcBuff` with `BattleCryBuff` |
-| `src/features/combat/hooks/useBuffState.ts` | Rename state + update gatherBuffs |
-| `src/features/combat/hooks/useCombatActions.ts` | Shield detection, DR activation logic |
-| `src/features/combat/hooks/usePartyCombat.ts` | Replace `ac_buff` in type |
-| `src/features/combat/index.ts` | Export rename |
-| `src/features/combat/utils/class-abilities.ts` | Update description |
-| `supabase/functions/combat-tick/index.ts` | Remove AC buff, add DR step in pipeline |
-| `src/pages/GamePage.tsx` | Replace acBuff with battleCryBuff |
-| `src/features/character/components/CharacterPanel.tsx` | Update props, display, defense stats |
-| `src/features/world/components/MapPanel.tsx` | Update ActiveBuffs interface |
-| `src/components/admin/GameManual.tsx` | Document new mechanics |
+| `src/features/combat/utils/combat-math.ts` | Lower AC, add `getCreatureAttackBonus`, narrow miss to < -5 |
+| `supabase/functions/_shared/combat-math.ts` | Same (server mirror) |
+| `src/lib/game-data.ts` | Lower `CLASS_BASE_AC` |
+| `supabase/functions/combat-tick/index.ts` | Use creature attack bonus in roll |
+| `src/features/character/components/CharacterPanel.tsx` | Import and use `getCreatureAttackBonus` in defense stat calculations |
+| `src/components/admin/GameManual.tsx` | Document new values and formulas |
 
 ## What Does NOT Change
 
-- Hit resolution, AC calculation (base AC unaffected)
+- Player attack formulas (player → creature)
 - Crit system, DEX crit bonuses
-- Other abilities
-- CP costs, duration formula
+- Hit quality multipliers (glancing 0.25x, weak 0.60x, normal 1.0x, strong 1.25x)
+- Battle Cry DR, abilities, CP system
 - Tick rate, server authority
-- Party system
 
