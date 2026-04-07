@@ -237,13 +237,15 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
                 <CollapsibleContent className="space-y-1 mt-1">
                   {generated.creatures.map((cr, i) => {
                     const ltName = getLootTableName(cr.loot_table_id);
+                    const computed = generateCreatureStats(cr.level, cr.rarity);
                     return (
                       <Card key={i} className="p-2">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className="text-xs font-medium">{cr.name}</span>
                           <Badge variant={rarityColor(cr.rarity)} className="text-[9px]">{cr.rarity}</Badge>
                           <span className="text-[9px] text-muted-foreground">Lvl {cr.level}</span>
-                          <span className="text-[9px] text-muted-foreground">HP {cr.hp}</span>
+                          <span className="text-[9px] text-muted-foreground">HP {computed.hp}</span>
+                          <span className="text-[9px] text-muted-foreground">AC {computed.ac}</span>
                           {cr.is_aggressive && <Badge variant="destructive" className="text-[9px]">⚔ Aggressive</Badge>}
                           {cr.is_humanoid && <Badge variant="outline" className="text-[9px]">🧑 Humanoid</Badge>}
                         </div>

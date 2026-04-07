@@ -92,16 +92,28 @@ export default function WorldBuilderRulebook() {
             <li><strong>Humanoid creatures</strong> automatically receive <strong>gold loot</strong> calculated from level and rarity at creation time (handled in apply logic, not by AI).</li>
           </ul>
           <div className="text-[11px] text-muted-foreground mt-1">
-            <p className="font-medium text-foreground text-[11px] mb-0.5">Base Stats (str, dex, con, int, wis, cha):</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round(10 + level × 0.7) · Bosses: ×2.0</code>
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Base Stat Formula:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">base = 8 + floor(level × 0.7)</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Per-Attribute Offsets:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">STR = base · DEX = base−1 · CON = base+1 · INT = base−2 · WIS = base−1 · CHA = base−3</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Rarity Multiplier (applied to each attribute):</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">regular = ×1.0 · rare = ×1.3 · boss = ×2.5</code>
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
             <p className="font-medium text-foreground text-[11px] mb-0.5">HP Formula:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round((15 + level × 8) × multiplier) · regular=1.0 · rare=1.5 · boss=4.0</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round((15 + level × 8) × multiplier) · regular=1.0 · rare=1.5 · boss=6.0</code>
           </div>
           <div className="text-[11px] text-muted-foreground">
             <p className="font-medium text-foreground text-[11px] mb-0.5">AC Formula:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round(10 + level × 0.6 + bonus) · regular=+2 · rare=+2 · boss=+6</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round(10 + level × 0.575 + bonus) · regular=+2 · rare=+2 · boss=+6</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Damage Die (base + floor(level × 0.7)):</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">regular base=4 · rare base=6 · boss base=10</code>
           </div>
           <div className="text-[11px] text-muted-foreground">
             <p className="font-medium text-foreground text-[11px] mb-0.5">Respawn:</p>
@@ -109,8 +121,8 @@ export default function WorldBuilderRulebook() {
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
             <p className="font-medium text-foreground text-[11px] mb-0.5">Examples:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">Lv5 regular: stats=14 each, HP=55, AC=15</code>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv10 boss: stats=34 each, HP=380, AC=22</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">Lv5 regular: base=11, STR=11, HP=55, AC=15</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv10 boss: base=15, STR=38, HP=570, AC=22</code>
           </div>
         </Card>
 
@@ -125,20 +137,39 @@ export default function WorldBuilderRulebook() {
           </ul>
         </Card>
 
-        {/* Loot Table Assignment Rules */}
+        {/* Loot System */}
         <Card className="p-3 space-y-1.5">
-          <h3 className="font-display text-sm text-primary">Loot Table Assignment</h3>
+          <h3 className="font-display text-sm text-primary">Loot System (Dual-Mode)</h3>
           <p className="text-[11px] text-muted-foreground">
-            The AI does <strong>not</strong> generate items. Items are created separately via the <strong>Item Forge</strong>. Instead, the AI assigns existing loot tables to creatures.
+            Creatures use one of two loot modes, set via <code className="text-[10px] bg-muted px-1 rounded">loot_mode</code>:
           </p>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
-            <li>Only <strong>humanoid creatures</strong> (<code className="text-[10px] bg-muted px-1 rounded">is_humanoid: true</code>) should be assigned loot tables.</li>
-            <li>Non-humanoid creatures (beasts, monsters) get <code className="text-[10px] bg-muted px-1 rounded">loot_table_id: null</code>.</li>
-            <li>The AI picks a loot table whose <strong>item levels are within ±3 levels</strong> of the creature's level.</li>
-            <li>Item rarities in the table should match the creature: <Badge variant="outline" className="text-[9px] px-1 py-0">common</Badge> / <Badge variant="outline" className="text-[9px] px-1 py-0">uncommon</Badge> for regular creatures, up to <Badge variant="secondary" className="text-[9px] px-1 py-0">rare</Badge> for rare/boss.</li>
+            <li><Badge variant="outline" className="text-[9px] px-1 py-0">legacy_table</Badge> — Manual loot table assignment. Used for <strong>bosses</strong> and special creatures. The AI picks a matching <code className="text-[10px] bg-muted px-1 rounded">loot_table_id</code> from existing tables.</li>
+            <li><Badge variant="outline" className="text-[9px] px-1 py-0">item_pool</Badge> — Rule-based drops. Default for <strong>humanoid creatures</strong>. Automatically filters world-drop items by level (creature_level ± offsets) and rarity (80% Common / 20% Uncommon).</li>
+            <li><Badge variant="outline" className="text-[9px] px-1 py-0">salvage_only</Badge> — Default for <strong>non-humanoid</strong> creatures (beasts, monsters). No item drops.</li>
+          </ul>
+          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4 mt-1">
+            <li>Only <strong>boss creatures</strong> should be assigned <code className="text-[10px] bg-muted px-1 rounded">loot_table_id</code> — humanoids use the automatic item pool.</li>
             <li>If no suitable loot table exists, the creature gets <code className="text-[10px] bg-muted px-1 rounded">loot_table_id: null</code> — the AI never invents IDs.</li>
             <li>Loot table IDs are <strong>validated server-side</strong> — any non-existent ID is silently set to null.</li>
             <li>Drop chance: <strong>0.1 – 0.5</strong> — stored as the creature's <code className="text-[10px] bg-muted px-1 rounded">drop_chance</code> field.</li>
+            <li>Pool rules (level offsets, rarity weights, consumable chances) are managed via the global <code className="text-[10px] bg-muted px-1 rounded">loot_pool_config</code> table in the Admin Loot Manager.</li>
+          </ul>
+        </Card>
+
+        {/* Item Forge */}
+        <Card className="p-3 space-y-1.5">
+          <h3 className="font-display text-sm text-primary">Item Forge</h3>
+          <p className="text-[11px] text-muted-foreground">
+            Items are created separately from creature/loot generation via the <strong>Item Forge</strong> tab.
+          </p>
+          <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
+            <li><Badge variant="outline" className="text-[9px] px-1 py-0">Batch</Badge> — Generate multiple items at once. All items are saved directly to the <code className="text-[10px] bg-muted px-1 rounded">items</code> table with <code className="text-[10px] bg-muted px-1 rounded">world_drop: true</code>.</li>
+            <li><Badge variant="outline" className="text-[9px] px-1 py-0">Single</Badge> — Generate one item with full control over slot, level, rarity, and description.</li>
+            <li><strong>Weapon tags</strong> are supported: <code className="text-[10px] bg-muted px-1 rounded">sword</code>, <code className="text-[10px] bg-muted px-1 rounded">axe</code>, <code className="text-[10px] bg-muted px-1 rounded">mace</code>, <code className="text-[10px] bg-muted px-1 rounded">dagger</code>, <code className="text-[10px] bg-muted px-1 rounded">staff</code>, <code className="text-[10px] bg-muted px-1 rounded">bow</code>, <code className="text-[10px] bg-muted px-1 rounded">crossbow</code>, <code className="text-[10px] bg-muted px-1 rounded">wand</code>, <code className="text-[10px] bg-muted px-1 rounded">spear</code>, <code className="text-[10px] bg-muted px-1 rounded">hammer</code>, <code className="text-[10px] bg-muted px-1 rounded">shield</code>.</li>
+            <li><strong>Duplicate name check</strong>: On save, items with names already in the database are filtered out and a warning is shown.</li>
+            <li>Item types: <Badge variant="outline" className="text-[9px] px-1 py-0">equipment</Badge>, <Badge variant="outline" className="text-[9px] px-1 py-0">consumable</Badge>, <Badge variant="outline" className="text-[9px] px-1 py-0">quest</Badge>. No "material" type.</li>
+            <li>Stats follow a budget formula based on level and rarity. The AI receives existing item names to avoid collisions.</li>
           </ul>
         </Card>
 
@@ -154,6 +185,7 @@ export default function WorldBuilderRulebook() {
             <li>Uses real node UUIDs as <code className="text-[10px] bg-muted px-1 rounded">node_temp_id</code>.</li>
             <li>Creature levels must match each node's region level range.</li>
             <li>Does not duplicate existing creature names on the same node.</li>
+            <li>Stats shown in the preview are <strong>recalculated</strong> using <code className="text-[10px] bg-muted px-1 rounded">generateCreatureStats()</code> — the actual values that will be persisted.</li>
           </ul>
         </Card>
 
@@ -182,6 +214,7 @@ export default function WorldBuilderRulebook() {
             <li><strong>Name sanitization:</strong> Non-ASCII characters stripped. Temp IDs and flag keywords removed from names.</li>
             <li><strong>Loot table validation:</strong> Any <code className="text-[10px] bg-muted px-1 rounded">loot_table_id</code> not matching a real table is set to null.</li>
             <li><strong>Humanoid gold:</strong> On apply, humanoid creatures receive auto-calculated gold loot based on level and rarity.</li>
+            <li><strong>Stat recalculation:</strong> On apply, creature stats (HP, AC, attributes) are recalculated using <code className="text-[10px] bg-muted px-1 rounded">generateCreatureStats()</code> to ensure formula accuracy.</li>
             <li><strong>Reverse connections:</strong> On apply, bidirectional connections are built automatically from node connection data.</li>
           </ul>
         </Card>
@@ -197,7 +230,7 @@ export default function WorldBuilderRulebook() {
             <li><strong>Searchable items</strong> — configure <code className="text-[10px] bg-muted px-1 rounded">searchable_items</code> per node manually.</li>
             <li><strong>Vendor inventory</strong> — stock is managed via the Vendor Inventory system, not AI generation.</li>
             <li><strong>Items</strong> — created via the Item Forge or Item Manager.</li>
-            <li><strong>Loot tables</strong> — created via the Loot Table Manager. AI only assigns existing tables.</li>
+            <li><strong>Loot tables</strong> — created via the Loot Table Manager. AI only assigns existing tables to bosses.</li>
           </ul>
         </Card>
       </div>
