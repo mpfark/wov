@@ -494,6 +494,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, refunded_points: Math.max(totalSpentPoints, 0) });
     }
 
+    // GRANT SALVAGE
+    if (action === "grant-salvage" && req.method === "POST") {
+      const { character_id, amount } = await req.json();
+      if (!character_id || !amount || amount < 1) throw { message: "character_id and positive amount required", status: 400 };
+      const { data: char, error: fetchErr } = await adminClient.from("characters").select("salvage").eq("id", character_id).single();
+      if (fetchErr || !char) throw { message: "Character not found", status: 404 };
+      const { error } = await adminClient.from("characters").update({ salvage: (char.salvage || 0) + amount }).eq("id", character_id);
+      if (error) throw error;
+      return jsonResponse({ success: true, new_total: (char.salvage || 0) + amount });
+    }
+
     if (action === "grant-respec") {
       const body = await req.json();
       const { character_id, amount } = body;
