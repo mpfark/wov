@@ -835,14 +835,14 @@ Deno.serve(async (req) => {
         clearedDots.push(...dotResult.clearedDots);
         // Handle kills from DoTs — delegate to unified kill handler for XP/gold/rewards.
         // The resolver already marked these in cKilled; handleCreatureKill re-adds (harmless Set#add).
+        // NOTE: handleCreatureKill pushes loot to lootQueue, so we intentionally
+        // do NOT merge dotResult.lootQueue here — that would cause duplicate drops.
         for (const killId of dotResult.newKills) {
           const cr = creatures.find(c => c.id === killId);
           if (cr) {
             handleCreatureKill(cr, 'DoT', 0);
           }
         }
-        // Merge loot from DoT kills into main lootQueue
-        lootQueue.push(...dotResult.lootQueue);
       }
 
       // ── Creature counterattacks (skip in DoT-only mode) ───────

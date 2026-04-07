@@ -358,11 +358,12 @@ export async function processLootDrops(
       if (!item) continue;
 
       if (item.rarity === 'unique') {
-        const { count } = await db
-          .from('character_inventory')
-          .select('id', { count: 'exact', head: true })
-          .eq('item_id', pickedItemId);
-        if (count && count > 0) {
+        // Check both inventory AND ground loot to prevent duplicate unique drops
+        const [{ count: invCount }, { count: groundCount }] = await Promise.all([
+          db.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', pickedItemId),
+          db.from('node_ground_loot').select('id', { count: 'exact', head: true }).eq('item_id', pickedItemId),
+        ]);
+        if ((invCount && invCount > 0) || (groundCount && groundCount > 0)) {
           events.push({ type: 'loot_drop', message: `✨ The unique power of ${item.name} is already claimed...` });
           continue;
         }
