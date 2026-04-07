@@ -24,11 +24,12 @@ interface Item {
   origin_type: string | null;
   origin_id: string | null;
   weapon_tag: string | null;
+  is_soulbound: boolean;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique'];
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
-const ITEM_TYPES = ['equipment', 'consumable', 'material', 'quest'];
+const ITEM_TYPES = ['equipment', 'consumable', 'quest'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];
 
 const STAT_KEY_LABELS: Record<string, string> = {
@@ -82,6 +83,7 @@ export default function ItemManager() {
   const [filter, setFilter] = useState('');
   const [typeTab, setTypeTab] = useState<string>('all');
   const [slotTab, setSlotTab] = useState<string>('all');
+  const [weaponTagTab, setWeaponTagTab] = useState<string>('all');
   const [rarityTab, setRarityTab] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'value' | 'rarity'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -294,6 +296,7 @@ export default function ItemManager() {
     if (typeTab === 'equipment' && slotTab !== 'all') {
       if (i.slot !== slotTab) return false;
     }
+    if (weaponTagTab !== 'all' && i.weapon_tag !== weaponTagTab) return false;
     if (rarityTab !== 'all' && i.rarity !== rarityTab) return false;
     if (!filter) return true;
     return i.name.toLowerCase().includes(filter.toLowerCase()) ||
@@ -335,7 +338,7 @@ export default function ItemManager() {
           {['all', ...ITEM_TYPES].map(t => (
             <button
               key={t}
-              onClick={() => { setTypeTab(t); setSlotTab('all'); setRarityTab('all'); }}
+              onClick={() => { setTypeTab(t); setSlotTab('all'); setWeaponTagTab('all'); setRarityTab('all'); }}
               className={`px-2 py-0.5 rounded text-[10px] font-display capitalize transition-colors ${
                 typeTab === t
                   ? 'bg-primary text-primary-foreground'
@@ -347,24 +350,47 @@ export default function ItemManager() {
           ))}
         </div>
         {typeTab === 'equipment' && (
-          <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
-            {['all', ...SLOTS].map(s => {
-              const count = items.filter(i => i.item_type === typeTab && (s === 'all' || i.slot === s)).length;
-              return (
-                <button
-                  key={s}
-                  onClick={() => setSlotTab(s)}
-                  className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
-                    slotTab === s
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  {s === 'all' ? 'All' : s.replace('_', ' ')} ({count})
-                </button>
-              );
-            })}
-          </div>
+          <>
+            <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
+              {['all', ...SLOTS].map(s => {
+                const count = items.filter(i => i.item_type === typeTab && (s === 'all' || i.slot === s)).length;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => { setSlotTab(s); setWeaponTagTab('all'); }}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                      slotTab === s
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    {s === 'all' ? 'All' : s.replace('_', ' ')} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            {(slotTab === 'all' || slotTab === 'main_hand' || slotTab === 'off_hand') && (
+              <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/10 shrink-0 flex-wrap">
+                <span className="text-[9px] text-muted-foreground mr-1">Tag:</span>
+                {['all', ...WEAPON_TAGS].map(wt => {
+                  const count = items.filter(i => i.item_type === 'equipment' && (wt === 'all' || i.weapon_tag === wt) && (slotTab === 'all' || i.slot === slotTab)).length;
+                  return (
+                    <button
+                      key={wt}
+                      onClick={() => setWeaponTagTab(wt)}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                        weaponTagTab === wt
+                          ? 'bg-accent text-accent-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      {wt === 'all' ? 'All' : (WEAPON_TAG_LABELS[wt] || wt)} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
         {/* Rarity filter + Sort controls */}
         <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
@@ -424,7 +450,7 @@ export default function ItemManager() {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className={`font-display text-sm ${RARITY_COLORS[item.rarity]}`}>{item.name}</span>
+                    <span className={`font-display text-sm ${item.is_soulbound ? 'text-soulforged text-glow-soulforged' : RARITY_COLORS[item.rarity]}`}>{item.name}</span>
                     <span className="text-[10px] text-muted-foreground capitalize px-1 py-0.5 rounded bg-background/50 border border-border">{item.rarity}</span>
                     <span className="text-[10px] text-muted-foreground px-1 py-0.5 rounded bg-background/50 border border-border">Lv{item.level ?? 1}</span>
                     {item.slot && (
