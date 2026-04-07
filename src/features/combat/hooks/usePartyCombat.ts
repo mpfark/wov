@@ -282,6 +282,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     if (result.dotsByChar && ext.current.onActiveDots) ext.current.onActiveDots(result.dotsByChar);
     if (result.hasLootDrop) ext.current.fetchGroundLoot();
 
+    // Sync absorb shield HP from server
+    if (result.absorbRemaining !== null && ext.current.onAbsorbSync) {
+      ext.current.onAbsorbSync(result.absorbRemaining);
+    }
+
     if (result.sessionEnded) {
       stopCombat();
       return;
