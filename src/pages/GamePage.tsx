@@ -495,6 +495,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       await executeAbilityRef.current?.(index, targetId);
     },
     onAbsorbSync: gameLoop.handleAbsorbDamage,
+    setPoisonBuff: buffSetters.setPoisonBuff,
+    setIgniteBuff: buffSetters.setIgniteBuff,
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
