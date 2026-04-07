@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { GameNode, Area, useAreaTypes } from '@/features/world';
-import { getEmojiBaseHsl } from '@/features/world/utils/area-colors';
+import { getAreaFillColor, getAreaStrokeColor } from '@/features/world/utils/area-colors';
+import { computeRegionOutline, type Circle } from '@/features/world/utils/outline-geometry';
 import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,31 +26,16 @@ const DIRECTION_OFFSETS: Record<string, [number, number]> = {
   NE: [1, -1], NW: [-1, -1], SE: [1, 1], SW: [-1, 1],
 };
 
+const PLAYER_NODE_RADIUS = 28;
+const AREA_PAD = 10;
+const AREA_OUTLINE_RADIUS = PLAYER_NODE_RADIUS + AREA_PAD;
+
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
-  // Client-side cache for visited nodes — grows as the player moves, only fetched once on mount
   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
   const initialFetchDone = useRef(false);
   const { emojiMap } = useAreaTypes();
-
-  // Build a lookup: nodeId → area fill/stroke colors based on area_type emoji
-  const areaColorMap = useMemo(() => {
-    const map = new Map<string, { fill: string; stroke: string }>();
-    for (const node of nodes) {
-      if (!node.area_id) continue;
-      const area = _areas.find(a => a.id === node.area_id);
-      if (!area) continue;
-      const emoji = emojiMap[area.area_type];
-      if (!emoji) continue;
-      const [h, s, l] = getEmojiBaseHsl(emoji);
-      map.set(node.id, {
-        fill: `hsl(${h} ${Math.max(s - 5, 10)}% ${Math.max(l - 10, 25)}% / 0.25)`,
-        stroke: `hsl(${h} ${s}% ${l}% / 0.7)`,
-      });
-    }
-    return map;
-  }, [nodes, _areas, emojiMap]);
 
   const currentNode = nodes.find(n => n.id === currentNodeId);
   // Filter out hidden connections for player view (locked connections ARE visible)
@@ -276,6 +262,54 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return map;
   })();
 
+  // Compute area outline hulls for displayed nodes
+  const areaHulls = (() => {
+    if (nodePositions.size === 0 || _areas.length === 0) return [];
+    const primaryNodeIds = new Set(allDisplayNodes.filter(n => !secondDegIds.has(n.id)).map(n => n.id));
+    const results: Array<{ path: string; fill: string; stroke: string }> = [];
+
+    for (const area of _areas) {
+      const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && primaryNodeIds.has(n.id));
+      if (areaNodes.length === 0) continue;
+      const areaNodeIds = new Set(areaNodes.map(n => n.id));
+      const circles: Circle[] = [];
+
+      for (const n of areaNodes) {
+        const pos = nodePositions.get(n.id);
+        if (pos) circles.push({ cx: pos.px, cy: pos.py, r: AREA_OUTLINE_RADIUS });
+      }
+
+      const edgeSpacing = AREA_OUTLINE_RADIUS * 1.4;
+      for (const n of areaNodes) {
+        for (const conn of n.connections) {
+          if (!areaNodeIds.has(conn.node_id)) continue;
+          if (conn.node_id < n.id) continue;
+          const fromPos = nodePositions.get(n.id);
+          const toPos = nodePositions.get(conn.node_id);
+          if (!fromPos || !toPos) continue;
+          const dx = toPos.px - fromPos.px;
+          const dy = toPos.py - fromPos.py;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const steps = Math.ceil(dist / edgeSpacing);
+          for (let s = 1; s < steps; s++) {
+            const t = s / steps;
+            circles.push({ cx: fromPos.px + dx * t, cy: fromPos.py + dy * t, r: AREA_OUTLINE_RADIUS });
+          }
+        }
+      }
+
+      if (circles.length === 0) continue;
+      const emoji = emojiMap[area.area_type] || '📍';
+      const { paths } = computeRegionOutline(circles);
+      results.push({
+        path: paths.join(' '),
+        fill: getAreaFillColor(emoji),
+        stroke: getAreaStrokeColor(emoji),
+      });
+    }
+    return results;
+  })();
+
   return (
     <div className="w-full">
       <svg
@@ -283,6 +317,18 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         className="block w-full h-auto"
         preserveAspectRatio="xMidYMid meet"
       >
+        {/* Area outlines — color-coded by area type */}
+        {areaHulls.map((hull, i) => (
+          <path
+            key={`area-hull-${i}`}
+            d={hull.path}
+            fill={hull.fill}
+            stroke={hull.stroke}
+            strokeWidth={1.5}
+            className="pointer-events-none"
+          />
+        ))}
+
         {/* Edges */}
         {edges.map(edge => {
           const from = nodePositions.get(edge.from);
@@ -323,12 +369,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           const isCurrent = node.id === currentNodeId;
           const isHovered = hoveredNode === node.id;
           const isVisitedGhost = secondDegIds.has(node.id);
-          const areaColors = areaColorMap.get(node.id);
-
-          // Determine fill & stroke — area color takes priority for non-ghost nodes
-          const hasAreaColor = !!areaColors && !isVisitedGhost;
-          const circleFill = hasAreaColor ? areaColors.fill : undefined;
-          const circleStroke = hasAreaColor ? areaColors.stroke : undefined;
 
           return (
             <g key={node.id}
@@ -346,18 +386,14 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               {/* Node circle */}
               <circle
                 cx={pos.px} cy={pos.py} r={isVisitedGhost ? 22 : 28}
-                fill={circleFill}
-                stroke={circleStroke}
                 className={`transition-all duration-200 ${
-                  isVisitedGhost
+                  isCurrent
+                    ? 'fill-primary/20 stroke-primary'
+                    : isVisitedGhost
                     ? 'fill-muted/30 stroke-muted-foreground/30'
-                    : !hasAreaColor
-                    ? (isCurrent
-                        ? 'fill-primary/20 stroke-primary'
-                        : isHovered
-                        ? 'fill-primary/10 stroke-primary/70 cursor-pointer'
-                        : 'fill-card stroke-border cursor-pointer')
-                    : (isCurrent || isHovered ? 'cursor-default' : 'cursor-pointer')
+                    : isHovered
+                    ? 'fill-primary/10 stroke-primary/70 cursor-pointer'
+                    : 'fill-card stroke-border cursor-pointer'
                 }`}
                 strokeWidth={isCurrent ? 2.5 : isVisitedGhost ? 1 : isHovered ? 2 : 1.5}
                 strokeDasharray={isVisitedGhost ? "3 2" : undefined}
