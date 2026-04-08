@@ -717,7 +717,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }), [
     character, equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
     handleDropItem, dropItem, togglePin, handleUseConsumable, currentNode?.is_inn,
-    regenBuff, regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
+    regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
     damageBuff, partyRegenBuff, focusStrikeBuff,
@@ -940,7 +940,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 equipmentBonuses,
                 inventoryCount: getBagWeight(unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined)),
                 isAtInn: currentNode?.is_inn ?? false,
-                regenBuff, regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
+                regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
               }}
             />
