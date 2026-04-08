@@ -19,7 +19,7 @@ export interface UseConsumableActionsParams {
   addLog: (msg: string) => void;
   equipmentBonuses: Record<string, number>;
   useConsumable: (inventoryId: string, characterId: string, currentHp: number, maxHp: number, updateChar: (u: { hp: number }) => Promise<void>) => Promise<any>;
-  buffSetters: Pick<BuffSetters, 'setRegenBuff' | 'setFoodBuff'>;
+  buffSetters: Pick<BuffSetters, 'setFoodBuff'>;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -38,8 +38,6 @@ export function useConsumableActions(params: UseConsumableActionsParams) {
         if (result.restored > 0) p.addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
         else p.addLog(`🧪 You used ${result.itemName}. You are already at full health.`);
         logActivity(p.character.user_id, p.character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
-        p.buffSetters.setRegenBuff({ multiplier: 3, expiresAt: Date.now() + 120000 });
-        p.addLog('✨ HP regeneration boosted for 2 minutes!');
       } else if (result.hpRegen > 0) {
         p.addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} HP & CP regen for 5 minutes.`);
         logActivity(p.character.user_id, p.character.id, 'general', `Consumed ${result.itemName} (+${result.hpRegen} regen)`);

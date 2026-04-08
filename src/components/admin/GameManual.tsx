@@ -313,9 +313,10 @@ export default function GameManual() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
                 <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
-                <p><strong className="text-foreground">Passive HP Regen</strong> (every 6s) = (1 + floor((CON − 10) / 4) + gear bonuses) × 0.4</p>
+                <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = (CON regen + gear + food + milestone + inn flat) × 0.27</p>
                 <p className="text-amber-400 mt-1">⚔️ <strong>In Combat:</strong> Regen is reduced to 10% of its normal value.</p>
-                <p className="mt-1">Example: CON 14 → base regen = {getBaseRegen(14)}, per tick = <code className="text-primary">{Math.max(1, Math.floor(getBaseRegen(14) * 0.4))}</code></p>
+                <p className="mt-1">🏨 <strong>Inn Rest:</strong> +10 flat regen to HP, CP, and Stamina per tick.</p>
+                <p className="mt-1">Example: CON 14 → base regen = {getBaseRegen(14)}, per tick = <code className="text-primary">{Math.max(1, Math.floor(getBaseRegen(14) * 0.27))}</code></p>
               </div>
               <Table>
                 <TableHeader>
@@ -394,12 +395,10 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Max CP</strong> = <code className="text-primary">30 + (level − 1) × 3 + (INT_mod + WIS_mod) × 3</code></p>
                 <p className="ml-4 text-[10px]"><code>INT_mod = max(floor((INT − 10) / 2), 0)</code>, <code>WIS_mod = max(floor((WIS − 10) / 2), 0)</code></p>
                 <p className="mt-1"><strong className="text-foreground">Race Impact:</strong> Caster races like <strong>Elf</strong> (+3 WIS, +2 INT) and <strong>Half-Elf</strong> (+3 CHA, +2 WIS) start with higher CP pools than tank races like <strong>Dwarf</strong> (+4 CON but low mental stats). Investing in both INT and WIS rewards split investment over stacking a single mental stat.</p>
-                <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 6 seconds</code> + bonus from primary stat</p>
-                <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/6s for every 2 points of primary stat modifier</p>
-                <p><strong className="text-foreground">🏨 Inn Rest</strong> = Doubles CP regen rate (+1.0× multiplier) while resting</p>
-                <p><strong className="text-foreground">🎶 Inspire</strong> = +0.5× CP regen multiplier for 90 seconds</p>
+                <p><strong className="text-foreground">CP Regen</strong> = <code className="text-primary">1 CP per 4 seconds</code> + bonus from primary stat</p>
+                <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/4s for every 2 points of primary stat modifier</p>
+                <p><strong className="text-foreground">🏨 Inn Rest</strong> = +10 flat CP regen per tick</p>
                 <p><strong className="text-foreground">🍞 Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 5 minutes</p>
-                <p><strong className="text-foreground">💊 Regen Potion</strong> = +0.5× CP regen multiplier</p>
               </div>
 
               <div>
@@ -542,7 +541,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">min(5, floor(√INT_mod))</code> bonus to attack rolls — diminishing returns</p>
                 <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> — max crit on 16-20</p>
                 <p><strong className="text-foreground">Crit Resistance (WIS):</strong> <code className="text-primary">min(15%, √WIS_mod × 3%)</code> chance to downgrade an incoming crit to a normal hit. Shield adds +5%.</p>
-                <p><strong className="text-foreground">Shield Block:</strong> When a shield is equipped, <code className="text-primary">5% + √DEX_mod × 4%</code> chance to block (uncapped), reducing damage by <code className="text-primary">round(11 + 2.5 × √STR_mod)</code> flat.</p>
+                <p><strong className="text-foreground">Shield Block:</strong> When a shield is equipped, <code className="text-primary">5% + √DEX_mod × 4.5%</code> chance to block (uncapped), reducing damage by <code className="text-primary">round(11 + 2.5 × √STR_mod)</code> flat.</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod + <code className="text-primary">floor(level × 0.4)</code> attack bonus vs player AC</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>

@@ -156,7 +156,7 @@ export function getMaxMp(level: number, dex: number = 10): number {
  */
 export function getShieldBlockChance(dex: number): number {
   const mod = Math.max(getStatModifier(dex), 0);
-  return 0.05 + Math.sqrt(mod) * 0.04;
+  return 0.05 + Math.sqrt(mod) * 0.045;
 }
 
 /**

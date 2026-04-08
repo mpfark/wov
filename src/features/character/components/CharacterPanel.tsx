@@ -26,7 +26,6 @@ interface Props {
   
   // Regen info
   isAtInn?: boolean;
-  regenBuff?: { multiplier: number; expiresAt: number };
   regenTick?: boolean;
   baseRegen?: number;
   itemHpRegen?: number;
@@ -135,9 +134,8 @@ const BUFF_DURATIONS: Record<string, number> = {
   Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
 };
 
-export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff }: { isAtInn?: boolean; regenBuff?: { multiplier: number; expiresAt: number }; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; battleCryBuff?: { damageReduction: number; critReduction: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; focusStrikeBuff?: { bonusDmg: number } | null }) {
+export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff }: { isAtInn?: boolean; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; battleCryBuff?: { damageReduction: number; critReduction: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; focusStrikeBuff?: { bonusDmg: number } | null }) {
   const [now, setNow] = useState(Date.now());
-  const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
   const acActive = battleCryBuff && now < battleCryBuff.expiresAt;
@@ -149,30 +147,15 @@ export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryB
   const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
 
   useEffect(() => {
-    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive) return;
+    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [buffActive, foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive]);
+  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
   if (isAtInn) {
-    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '3× regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
-  }
-
-  if (buffActive) {
-    const isInspire = regenBuff!.multiplier === 2;
-    const lbl = isInspire ? 'Inspire' : 'Potion';
-    const dur = BUFF_DURATIONS[lbl] || 120_000;
-    const pct = Math.max(0, Math.min(100, ((regenBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({
-      emoji: isInspire ? '🎶' : '🧪',
-      label: lbl,
-      detail: `${regenBuff!.multiplier}× regen`,
-      color: isInspire ? 'text-elvish' : 'text-primary',
-      bgColor: isInspire ? 'bg-elvish/15' : 'bg-primary/15',
-      pct,
-    });
+    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '+10 regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
   }
 
   if (foodActive) {
@@ -331,7 +314,7 @@ export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryB
 
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
-  isAtInn, regenBuff, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
+  isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
   actionBindings, onAllocateStat, onFullRespec, onBatchAllocateStats,
@@ -930,17 +913,13 @@ export default function CharacterPanel({
                   const baseCpRegen = getCpRegenRate((character as any)[primaryStat] + (equipmentBonuses[primaryStat] || 0));
                   const mpRegen = getMpRegenRate(eDex);
 
-                  // Regen multiplier from buffs
-                  const regenBuffActive = regenBuff && now < regenBuff.expiresAt;
+                  // Regen — additive only, no multipliers
                   const foodBuffActive = foodBuff && now < foodBuff.expiresAt;
                   const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
-                  let effectiveHpRegen = hpRegen;
-                  const potionBonus = regenBuffActive ? 0.5 : 0;
-                  const innBonus = isAtInn ? 1 : 0;
+                  const innFlat = isAtInn ? 10 : 0;
                   const milestoneHpFlat = (() => { if (character.level >= 40) return 10; if (character.level >= 35) return 8; if (character.level >= 30) return 6; if (character.level >= 25) return 4; if (character.level >= 20) return 2; return 0; })();
-                  const regenMultiplier = 1 + potionBonus + innBonus;
-                  effectiveHpRegen = Math.max(Math.floor((hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0)) * regenMultiplier + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
-                  const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive || milestoneHpFlat > 0;
+                  const effectiveHpRegen = Math.max(Math.floor((hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat) * 0.27 + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
+                  const hpRegenBuffed = foodBuffActive || partyRegenActive || milestoneHpFlat > 0 || isAtInn;
 
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
@@ -999,14 +978,13 @@ export default function CharacterPanel({
 
                   const poolRows: DerivedRow[] = [
                     { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2)}${absorbActive ? ` (+${absorbBuff!.shieldHp})` : ''}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} HP gear + ${Math.floor((equipmentBonuses.con || 0) / 2)} from CON gear${absorbActive ? ` + ${absorbBuff!.shieldHp} Force Shield` : ''}`, buffed: !!absorbActive, buffColor: 'text-primary' },
-                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen} × ${regenMultiplier}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 6s, ×0.4 scaling)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
+                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneHpFlat > 0 ? ` + ${milestoneHpFlat} milestone` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 4s, ×0.27 scaling)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
                      { label: 'Max CP', value: `${maxCp}`, tip: `30 + (level-1)×3 + (INT_mod + WIS_mod)×3` },
                      (() => {
-                       const cpMultiplier = 1 + (regenBuffActive ? 0.5 : 0) + (character.level >= 35 ? 0.5 : 0) + (isAtInn ? 1 : 0);
                        const foodCpBonus = foodBuffActive ? foodBuff!.flatRegen * 0.5 : 0;
-                       const effectiveCpRegen = Math.max(+(baseCpRegen * cpMultiplier + foodCpBonus).toFixed(1), 0.1);
-                       const cpRegenBuffed = cpMultiplier > 1 || foodBuffActive;
-                       return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen} × ${cpMultiplier}${foodBuffActive ? ` + ${foodCpBonus} food` : ''} (every 6s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
+                       const effectiveCpRegen = Math.max(+(baseCpRegen + foodCpBonus + innFlat + (character.level >= 35 ? baseCpRegen * 0.5 : 0)).toFixed(1), 0.1);
+                       const cpRegenBuffed = foodBuffActive || isAtInn;
+                       return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen}${foodBuffActive ? ` + ${foodCpBonus} food` : ''}${isAtInn ? ' + 10 inn' : ''} (every 4s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
                      })(),
                     { label: 'Max Stamina', value: `${maxMp}`, tip: `100 + DEX mod×10 + (level-1)×2` },
                     { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 6s)` },
