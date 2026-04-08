@@ -1,65 +1,48 @@
 
 
-# Stale Combat Session Fix — Safety Refinements
+# Fix: Status Bars Resetting After Login
 
-Two targeted changes, no other modifications.
+## Root Cause
 
-## Change 1: Server — Reuse existing session creation path
+When regen ticks fire, `updateCharacter` is called which:
+1. Marks HP/CP/MP as "pending" to protect against realtime reverts
+2. Updates local state optimistically (bars go up)
+3. Writes clamped values to DB (HP clamped to `max_hp`, which excludes gear bonuses)
+4. **Immediately clears the pending flag** in the `finally` block
 
-**File:** `supabase/functions/combat-tick/index.ts` (lines 182-187)
+The problem: the Supabase realtime echo from that DB write arrives *after* pending is cleared. Since pending is empty, the realtime handler accepts the stale/clamped DB value and overwrites the local optimistic state — bars snap back down.
 
-Currently when `session.node_id !== node_id`, the server deletes the stale session and returns `session_ended: true`. Instead, delete the stale session and set `session = null`, allowing the existing creation logic at lines 159-173 to handle it.
+Switching tabs triggers a re-render or new realtime event that happens to arrive in sync, which is why it "fixes itself."
 
-Replace lines 182-187:
+## Fix
+
+**One change in `src/features/character/hooks/useCharacter.ts`:**
+
+In `updateCharacter` (line 217-224), replace the immediate pending-clear in `finally` with a delayed timeout (same pattern as `updateCharacterLocal` already uses):
+
 ```typescript
-if (session.node_id !== node_id) {
-  await db.from('combat_sessions').delete().eq('id', session.id);
-  console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'node_changed', session_id: session.id, old_node: session.node_id, new_node: node_id }));
-  session = null;
-}
-```
-
-Then wrap the existing session creation block (lines 159-179) so it also runs when `session` was just nulled. The simplest approach: move the node-mismatch check **before** the create-if-needed block, and adjust the condition so `session === null` after mismatch deletion triggers the normal creation path.
-
-Restructured flow:
-1. Load existing session (line 145)
-2. **New:** If existing session has wrong node → delete it, treat as no session
-3. Create session if needed (existing logic, unchanged)
-4. If still no session → return idle
-
-## Change 2: Client — Safer `session_ended` guard
-
-**File:** `src/features/combat/hooks/usePartyCombat.ts` (lines 295-298)
-
-Replace:
-```typescript
-if (result.sessionEnded) {
-  stopCombat();
-  return;
-}
-```
-
-With:
-```typescript
-if (result.sessionEnded) {
-  const stillEngaged =
-    (result.aliveEngagedIds?.length ?? 0) > 0 ||
-    engagedCreatureIdsRef.current.length > 0;
-  if (!stillEngaged) {
-    stopCombat();
-    return;
+// Before (clears immediately — realtime echo arrives later and reverts)
+finally {
+  const current = pendingWritesRef.current.get(charId);
+  if (current) {
+    fields.forEach(f => current.delete(f));
+    if (current.size === 0) pendingWritesRef.current.delete(charId);
   }
-  // Ignore session_ended — next tick will create a fresh session
+}
+
+// After (delay clearing so the realtime echo is ignored)
+finally {
+  setTimeout(() => {
+    const current = pendingWritesRef.current.get(charId);
+    if (current) {
+      fields.forEach(f => current.delete(f));
+      if (current.size === 0) pendingWritesRef.current.delete(charId);
+    }
+  }, 3000);
 }
 ```
 
-## Deployment
+This gives the realtime subscription time to deliver its echo while the fields are still marked as pending, so the echo is ignored and local optimistic values are preserved.
 
-Redeploy the `combat-tick` edge function after the server-side change.
-
-## Files Changed
-| File | Change |
-|------|--------|
-| `supabase/functions/combat-tick/index.ts` | Move node-mismatch check before session creation; null out session instead of returning |
-| `src/features/combat/hooks/usePartyCombat.ts` | Guard `session_ended` with alive-creature check |
+No other files need changes.
 
