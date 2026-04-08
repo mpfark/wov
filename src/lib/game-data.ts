@@ -129,9 +129,22 @@ export const ITEM_STAT_CAPS: Record<string, number> = {
   str: 5, dex: 5, con: 5, int: 5, wis: 5, cha: 5, ac: 3, hp: 10, hp_regen: 3,
 };
 
-export function getBaseRegen(con: number): number {
-  return 1 + Math.floor((con - 10) / 4);
+/** Unified regen base: same formula for HP (CON) and CP (INT). */
+export function getStatRegen(stat: number): number {
+  return 1 + Math.floor((stat - 10) / 3);
 }
+
+/** @deprecated Use getStatRegen instead */
+export const getBaseRegen = getStatRegen;
+/** @deprecated Use getStatRegen instead */
+export function getCpRegenRate(primaryStatValue: number): number {
+  return getStatRegen(primaryStatValue);
+}
+/** @deprecated No longer used — CP regen now scales with INT */
+export const CLASS_PRIMARY_STAT: Record<string, string> = {
+  warrior: 'con', wizard: 'int', ranger: 'dex',
+  rogue: 'dex', healer: 'wis', bard: 'cha',
+};
 
 // CP (Concentration Points) system — scales with INT + WIS
 export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
@@ -148,7 +161,6 @@ export function getMaxMp(level: number, dex: number = 10): number {
 
 export function getMpRegenRate(dex: number = 10): number {
   const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
-  // Scaled by 0.67 to compensate for 2s tick (was 3s)
   return Math.round((5 + dexMod) * 0.67);
 }
 
@@ -171,17 +183,6 @@ export function getMoveCost(bagWeight: number, str: number): number {
   const capacity = getCarryCapacity(str);
   const itemsOver = Math.max(0, bagWeight - capacity);
   return 10 + itemsOver * 5;
-}
-
-// Primary stat mapping per class for CP regen bonus
-export const CLASS_PRIMARY_STAT: Record<string, string> = {
-  warrior: 'con', wizard: 'int', ranger: 'dex',
-  rogue: 'dex', healer: 'wis', bard: 'cha',
-};
-
-export function getCpRegenRate(primaryStatValue: number): number {
-  const mod = getStatModifier(primaryStatValue);
-  return 1 + Math.floor(mod / 2) * 0.5;
 }
 
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {

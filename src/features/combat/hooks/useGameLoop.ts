@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
-import { getBaseRegen, CLASS_PRIMARY_STAT, getCpRegenRate, getMaxCp, getMaxMp, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen } from '@/lib/game-data';
+import { getStatRegen, getMaxCp, getMaxMp, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useBuffState } from './useBuffState';
@@ -107,13 +107,11 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   // ── Computed values ────────────────────────────────────────
   const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
-  const baseRegen = getBaseRegen(character.con + (equipmentBonuses.con || 0));
+  const baseRegen = getStatRegen(character.con + (equipmentBonuses.con || 0));
 
   // ── Unified HP + CP + MP Regen (every 4s) ───────────────────
-  const cpCharRef = useRef({ cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha });
-  const cpStatRef = useRef(character);
-  useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.class, character.level, character.int, character.wis, character.cha]);
-  useEffect(() => { cpStatRef.current = character; }, [character]);
+  const cpCharRef = useRef({ cp: character.cp ?? 100, level: character.level, int: character.int, wis: character.wis, cha: character.cha });
+  useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.level, character.int, character.wis, character.cha]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -130,13 +128,12 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       if (hp < effectiveMaxHp && hp > 0) {
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
-        const conRegen = getBaseRegen(conWithGear);
+        const conRegen = getStatRegen(conWithGear);
         const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
         const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
-        // Scaled by 0.27 to compensate for 4s tick (preserves per-minute rate from old 15s baseline)
-        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat) * combatMult * 0.27), 1);
+        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat) * combatMult), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
           updates.hp = newHp;
@@ -146,18 +143,17 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
 
       // ── CP Regen ──
-      const { cp, class: charClass, level, int, wis, cha } = cpCharRef.current;
+      const { cp, level, int, wis, cha } = cpCharRef.current;
       const eqB = equipmentBonusesRef.current;
       const gearAwareMaxCp = getMaxCp(level, int + (eqB.int || 0), wis + (eqB.wis || 0), cha + (eqB.cha || 0));
       if (cp < gearAwareMaxCp) {
-        const primaryStat = CLASS_PRIMARY_STAT[charClass] || 'con';
-        const primaryVal = ((cpStatRef.current as any)[primaryStat] ?? 10) + (eqB[primaryStat] || 0);
-        const bRegen = getCpRegenRate(primaryVal);
+        const intWithGear = int + (eqB.int || 0);
+        const intRegen = getStatRegen(intWithGear);
         const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
         const food = foodBuffRef.current;
         const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-        const regenAmount = (bRegen + foodCpRegen + milestoneCpFlat + innFlat) * combatMult;
-        const newCp = Math.min(Math.floor(cp + regenAmount), gearAwareMaxCp);
+        const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat) * combatMult), 1);
+        const newCp = Math.min(cp + regenAmount, gearAwareMaxCp);
         if (newCp > cp) {
           updates.cp = newCp;
         }

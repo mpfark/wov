@@ -8,10 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC, CLASS_LEVEL_BONUSES,
   RACE_LABELS, CLASS_LABELS, STAT_LABELS, ITEM_RARITY_MULTIPLIER,
-  ITEM_STAT_COSTS, calculateStats, calculateHP, calculateAC, getBaseRegen, getItemStatBudget,
+  ITEM_STAT_COSTS, calculateStats, calculateHP, calculateAC, getStatRegen, getItemStatBudget,
   generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
-  XP_RARITY_MULTIPLIER, getMaxCp, getCpRegenRate,
-  CLASS_PRIMARY_STAT, getMaxMp, getMpRegenRate,
+  XP_RARITY_MULTIPLIER, getMaxCp,
+  getMaxMp, getMpRegenRate,
   CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS,
 } from '@/lib/game-data';
 import { CLASS_COMBAT, CLASS_ABILITIES } from '@/features/combat';
@@ -313,10 +313,10 @@ export default function GameManual() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
                 <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
-                <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = (CON regen + gear + food + milestone + inn flat) × 0.27</p>
+                <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = 1 + floor((CON − 10) / 3) + gear + food + milestone + inn</p>
                 <p className="text-amber-400 mt-1">⚔️ <strong>In Combat:</strong> Regen is reduced to 10% of its normal value.</p>
                 <p className="mt-1">🏨 <strong>Inn Rest:</strong> +10 flat regen to HP, CP, and Stamina per tick.</p>
-                <p className="mt-1">Example: CON 14 → base regen = {getBaseRegen(14)}, per tick = <code className="text-primary">{Math.max(1, Math.floor(getBaseRegen(14) * 0.27))}</code></p>
+                <p className="mt-1">Example: CON 14 → base regen = <code className="text-primary">{getStatRegen(14)}</code> HP/tick, CON 20 → <code className="text-primary">{getStatRegen(20)}</code> HP/tick</p>
               </div>
               <Table>
                 <TableHeader>
@@ -487,25 +487,20 @@ export default function GameManual() {
               </div>
 
               <div>
-                <p className="text-xs font-display text-primary mb-1">CP Regen by Class (Primary Stat)</p>
+                <p className="text-xs font-display text-primary mb-1">CP Regen (scales with INT)</p>
+                <p className="text-xs text-muted-foreground mb-1">Uses the same formula as HP regen: 1 + floor((INT − 10) / 3)</p>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-xs">Class</TableHead>
-                      <TableHead className="text-xs">Primary</TableHead>
-                      <TableHead className="text-xs">Regen @ 10</TableHead>
-                      <TableHead className="text-xs">Regen @ 14</TableHead>
-                      <TableHead className="text-xs">Regen @ 18</TableHead>
+                      <TableHead className="text-xs">INT</TableHead>
+                      <TableHead className="text-xs">Base CP/tick</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.entries(CLASS_PRIMARY_STAT).map(([cls, stat]) => (
-                      <TableRow key={cls}>
-                        <TableCell className="text-xs font-display">{CLASS_LABELS[cls]}</TableCell>
-                        <TableCell className="text-xs">{STAT_LABELS[stat]}</TableCell>
-                        <TableCell className="text-xs">{getCpRegenRate(10)} CP/6s</TableCell>
-                        <TableCell className="text-xs">{getCpRegenRate(14)} CP/6s</TableCell>
-                        <TableCell className="text-xs">{getCpRegenRate(18)} CP/6s</TableCell>
+                    {[10, 13, 16, 20, 25, 30].map(v => (
+                      <TableRow key={v}>
+                        <TableCell className="text-xs">{v}</TableCell>
+                        <TableCell className="text-xs">{getStatRegen(v)} CP/4s</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

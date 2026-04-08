@@ -5,7 +5,7 @@ import { Character } from '@/features/character';
 import {
   calculateHP, calculateAC,
   getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
-  getBaseRegen, getCpRegenRate, CLASS_PRIMARY_STAT,
+  getStatRegen,
   getIntHitBonus, getDexCritBonus, getWisAntiCrit,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
 } from '@/lib/game-data';
@@ -80,9 +80,8 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const ac = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
       const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
       const maxMp = getMaxMp(character.level, eDex);
-      const hpRegen = getBaseRegen(eCon) + (equipmentBonuses.hp_regen || 0);
-      const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
-      const cpRegen = getCpRegenRate(stats[primaryStat] + (equipmentBonuses[primaryStat] || 0));
+      const hpRegen = getStatRegen(eCon) + (equipmentBonuses.hp_regen || 0);
+      const cpRegen = getStatRegen(eInt);
       const mpRegen = getMpRegenRate(eDex);
 
       const combat = CLASS_COMBAT[character.class];
