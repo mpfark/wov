@@ -18,7 +18,6 @@ import type {
 
 // ─── Typed interfaces for bundled state ────────────────────────
 export interface BuffState {
-  regenBuff: RegenBuff;
   foodBuff: FoodBuff;
   critBuff: CritBuff;
   stealthBuff: StealthBuff | null;
@@ -39,7 +38,6 @@ export interface BuffState {
 }
 
 export interface BuffSetters {
-  setRegenBuff: React.Dispatch<React.SetStateAction<RegenBuff>>;
   setFoodBuff: React.Dispatch<React.SetStateAction<FoodBuff>>;
   setCritBuff: React.Dispatch<React.SetStateAction<CritBuff>>;
   setStealthBuff: React.Dispatch<React.SetStateAction<StealthBuff | null>>;
@@ -70,8 +68,7 @@ export interface UseBuffStateParams {
 export function useBuffState(params: UseBuffStateParams) {
   const { characterDex, characterInt, creatures } = params;
 
-  // ── All 18 buff/debuff state declarations ──────────────────
-  const [regenBuff, setRegenBuff] = useState<RegenBuff>({ multiplier: 1, expiresAt: 0 });
+  // ── All buff/debuff state declarations ──────────────────
   const [foodBuff, setFoodBuff] = useState<FoodBuff>({ flatRegen: 0, expiresAt: 0 });
   const [critBuff, setCritBuff] = useState<CritBuff>({ bonus: 0, expiresAt: 0 });
   const [stealthBuff, setStealthBuff] = useState<StealthBuff | null>(null);
@@ -220,7 +217,6 @@ export function useBuffState(params: UseBuffStateParams) {
 
   // ── Bundled state objects ──────────────────────────────────
   const buffState: BuffState = {
-    regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     bleedStacks, poisonBuff, poisonStacks, evasionBuff, disengageNextHit,
     igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
   };
