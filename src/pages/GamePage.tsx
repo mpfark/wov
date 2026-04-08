@@ -692,7 +692,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onTogglePin: togglePin,
     onUseConsumable: handleUseConsumable,
     isAtInn: currentNode?.is_inn ?? false,
-    regenBuff,
     regenTick,
     beltedPotions,
     beltCapacity,
