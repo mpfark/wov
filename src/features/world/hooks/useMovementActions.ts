@@ -204,12 +204,16 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (p.isDead) return;
 
     // ── Locked connection check ──
-    if (direction && p.currentNode) {
+    if (p.currentNode) {
+      // Find the connection — by direction if provided, otherwise by target node_id
       const conn = (p.currentNode.connections as any[])?.find(
-        (c: any) => c.node_id === nodeId && c.direction === direction
+        (c: any) => direction
+          ? c.node_id === nodeId && c.direction === direction
+          : c.node_id === nodeId
       );
       if (conn?.locked) {
-        const unlockKey = `${p.currentNode.id}-${direction}`;
+        const connDir = direction || conn.direction;
+        const unlockKey = `${p.currentNode.id}-${connDir}`;
         const unlockExpiry = p.unlockedConnections?.get(unlockKey);
         if (!unlockExpiry || Date.now() > unlockExpiry) {
           const allItems = [...p.equipped, ...p.unequipped];
@@ -221,7 +225,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
             return;
           }
           const expires = Date.now() + 30_000;
-          p.onUnlockPath?.(direction, nodeId, expires);
+          p.onUnlockPath?.(connDir, nodeId, expires);
           p.addLog(`🔓 You use your ${conn.lock_key} to unlock the path...`);
         }
       }
