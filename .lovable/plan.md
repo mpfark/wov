@@ -1,56 +1,47 @@
 
 
-# Simplify HP & CP Regen: Same Base, Different Stat Scaling
+# Fix Regen: Add Base Floor + Sqrt Scaling
 
-## Problem
-HP regen uses a `× 0.27` scaling factor (legacy compensation) making the numbers look weird and inconsistent with CP regen. The two formulas are completely different, which is confusing.
+## Problems
+1. A warrior with low INT gets absurdly low CP regen (0.1/tick) because `getStatRegen(10) = 1` and the display formula can produce tiny values.
+2. High-stat characters (e.g. wizard with 45 INT) get enormous regen with linear scaling.
+3. The CharacterPanel tooltip still says "×0.27 scaling" — leftover from the old system.
 
-## Current Formulas (per 4s tick)
-- **HP**: `(1 + floor((CON-10)/4) + gear + food + milestone + inn) × 0.27` — at CON 20 with no extras: ~1/tick
-- **CP**: `(1 + floor(mod/2)×0.5 + food + milestone + inn)` — at primary 20: ~2/tick, plus food can push to ~19
+## New Formula
 
-## Proposed: One Unified Formula
-Use the **same base regen function** for both, just driven by different stats:
+Replace the linear `getStatRegen`:
 
 ```
-statRegen(stat) = 1 + floor((stat - 10) / 3)
+// Old: 1 + floor((stat - 10) / 3)  → stat 10 = 1, stat 40 = 11
+
+// New: base floor of 2 + sqrt of stat modifier
+getStatRegen(stat) = 2 + floor(sqrt(max(0, stat - 10)))
 ```
 
-- **HP regen** uses **CON** → at CON 20: `1 + 3 = 4` per tick
-- **CP regen** uses **INT** → at INT 20: `1 + 3 = 4` per tick (no more class primary stat lookup)
+Reference values:
+| Stat | Regen/tick |
+|------|-----------|
+| 10   | 2         |
+| 13   | 3         |
+| 16   | 4         |
+| 20   | 5         |
+| 25   | 5         |
+| 30   | 6         |
+| 40   | 7         |
+| 50   | 8         |
 
-**No 0.27 multiplier. No class primary stat for CP.** Both use the same clean function.
-
-Full tick formula (same for both):
-```
-regenAmount = max(floor((statRegen + gearRegen + foodRegen + milestoneFlat + innFlat) × combatMult), 1)
-```
-
-### Reference values (base only, no gear/food):
-| Stat value | Regen/tick |
-|-----------|-----------|
-| 10 | 1 |
-| 13 | 2 |
-| 16 | 3 |
-| 20 | 4 |
-| 25 | 6 |
-| 30 | 7 |
-| 40 | 11 |
+Everyone gets at least 2/tick base. High stats still help but won't snowball.
 
 ## Files Changed
 
 ### 1. `src/lib/game-data.ts`
-- Replace `getBaseRegen()` with a generic `getStatRegen(stat)` using `1 + floor((stat-10)/3)`
-- Remove `getCpRegenRate()` and `CLASS_PRIMARY_STAT` (no longer needed)
+- Update `getStatRegen`: `return 2 + Math.floor(Math.sqrt(Math.max(0, stat - 10)));`
 
-### 2. `src/features/combat/hooks/useGameLoop.ts`
-- **HP regen**: Use `getStatRegen(conWithGear)` directly — remove the `× 0.27` multiplier
-- **CP regen**: Use `getStatRegen(intWithGear)` instead of `getCpRegenRate(primaryVal)` — remove `CLASS_PRIMARY_STAT` lookup
-- Simplify refs (no need for `cpStatRef` to look up arbitrary primary stat)
+### 2. `src/features/character/components/CharacterPanel.tsx`
+- **Line 980**: Remove "×0.27 scaling" from HP Regen tooltip — replace with just "(every 4s)"
+- **Line 984**: The CP regen display formula has a leftover `0.1` minimum and `toFixed(1)` that makes it look fractional — simplify to use integers like HP regen does
+- **Line 989**: Stamina tooltip still says "every 6s" — fix to "every 4s"
 
 ### 3. `src/components/admin/GameManual.tsx`
-- Update regen documentation to show the unified formula
-
-### 4. Other references
-- Search for any imports of `getBaseRegen`, `getCpRegenRate`, `CLASS_PRIMARY_STAT` and update them
+- Update the regen formula documentation to show the new `2 + √(stat - 10)` formula and reference table
 
