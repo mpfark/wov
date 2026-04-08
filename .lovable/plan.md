@@ -1,31 +1,88 @@
 
 
-# Update Shield Block Amount Formula
+# Combined Regen & Shield Overhaul
 
-## Change
-Replace `10 + mod * 2` with `Math.round(11 + 2.5 * Math.sqrt(Math.max(strMod, 0)))` in all three mirrors of `getShieldBlockAmount`, and update the Game Manual formula text.
+All the pending changes from our conversation, consolidated into one implementation.
 
-## Files
+---
 
-### 1. `src/features/combat/utils/combat-math.ts` (line ~167-168)
-```typescript
-return Math.round(11 + 2.5 * Math.sqrt(Math.max(mod, 0)));
-```
+## 1. Shield Block Chance — Increase & Uncap
+**Current**: `0.05 + √mod × 0.04` → DEX mod 28 = ~17%
+**New**: `0.05 + √mod × 0.05` → DEX mod 28 = ~31% (a bit high), or `0.05 + √mod × 0.045` → DEX mod 28 = ~24%
 
-### 2. `supabase/functions/_shared/combat-math.ts` (line ~167-168)
-Same change.
+Using `0.045` gives: mod 0 → 5%, mod 4 → 14%, mod 10 → 19%, mod 28 → 24%, mod 50 → 37%
 
-### 3. `src/lib/game-data.ts` (line ~308-309)
-Same change.
+**Files**: `src/features/combat/utils/combat-math.ts`, `supabase/functions/_shared/combat-math.ts`, `src/lib/game-data.ts` (all three mirrors)
 
-### 4. `src/components/admin/GameManual.tsx` (line ~545)
-Update the block formula display from `min(8, 2 + floor(√STR_mod × 1.5))` to `round(11 + 2.5 × √STR_mod)`.
+---
 
-### 5. Redeploy `combat-tick` edge function
+## 2. Potions — Instant HP Only, No Regen Buff
+Remove the regen buff grant when using potions. Potions keep instant HP restore only.
 
-## Reference values
-- STR mod 0 → 11
-- STR mod 4 → 16
-- STR mod 7 → 18
-- STR mod 30 → 25
+**File**: `src/features/inventory/hooks/useConsumableActions.ts`
+- Remove `setRegenBuff()` call and "regen boosted" log on line 41-42
+
+---
+
+## 3. Remove Regen Multipliers (Potion + Inn)
+Remove `potionBonus`, `innBonus`, and `totalMult` from HP and CP regen. Also remove `inspireBonus` from CP regen.
+
+**File**: `src/features/combat/hooks/useGameLoop.ts`
+
+---
+
+## 4. Inn → Flat +10 Regen to HP, CP, MP
+Replace the removed inn multiplier with a flat `+10` added to the base regen sum for all three resources.
+
+**File**: `src/features/combat/hooks/useGameLoop.ts`
+
+---
+
+## 5. Unify All Regen to Single 4s Tick
+Merge the HP+CP (6s) and MP (2s) intervals into one 4s tick. Adjust the HP scaling factor from `0.4` to `0.27` (4/15) and MP regen by `×2` to preserve per-minute rates.
+
+**File**: `src/features/combat/hooks/useGameLoop.ts`
+- Delete separate MP `useEffect`/`setInterval` block
+- Move MP regen into the unified interval
+- Remove `mpCharRef` (add mp/dex fields to `regenCharRef`)
+
+---
+
+## 6. Cleanup regenBuff State
+Since nothing sets `regenBuff` anymore, remove it from:
+- `src/features/combat/hooks/useBuffState.ts` — remove state + setter
+- `src/features/combat/hooks/useGameLoop.ts` — remove `regenBuffRef`
+- `src/features/character/components/CharacterPanel.tsx` — remove from active buffs display
+- `src/features/character/components/StatusBarsStrip.tsx` — remove from active buffs display
+- `src/features/inventory/hooks/useConsumableActions.ts` — remove `setRegenBuff` from Pick type
+
+---
+
+## 7. Update Game Manual
+- Shield block chance: new formula
+- Regen: document unified 4s tick, additive-only system, inn +10 flat, no potion regen buff
+- Block amount formula (already in plan)
+
+**File**: `src/components/admin/GameManual.tsx`
+
+---
+
+## 8. Redeploy Edge Function
+Redeploy `combat-tick` to pick up shield block chance changes.
+
+---
+
+## Summary of files touched
+
+| File | Changes |
+|------|---------|
+| `src/features/combat/utils/combat-math.ts` | Block chance formula |
+| `supabase/functions/_shared/combat-math.ts` | Block chance formula |
+| `src/lib/game-data.ts` | Block chance formula |
+| `src/features/combat/hooks/useGameLoop.ts` | Unify 4s tick, remove multipliers, add inn +10 flat, merge MP |
+| `src/features/inventory/hooks/useConsumableActions.ts` | Remove potion regen buff |
+| `src/features/combat/hooks/useBuffState.ts` | Remove regenBuff state |
+| `src/features/character/components/CharacterPanel.tsx` | Remove regen buff display |
+| `src/features/character/components/StatusBarsStrip.tsx` | Remove regen buff display |
+| `src/components/admin/GameManual.tsx` | Update all regen + block docs |
 
