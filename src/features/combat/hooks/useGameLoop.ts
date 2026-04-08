@@ -120,7 +120,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const updates: Partial<Character> = {};
 
       // ── HP Regen ──
-      const { hp, max_hp, current_node_id, con, mp, max_mp, dex } = regenCharRef.current;
+      const { hp, max_hp, current_node_id, con, mp, dex } = regenCharRef.current;
       const gearHpBonus = equipmentBonusesRef.current.hp || 0;
       const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
       const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
