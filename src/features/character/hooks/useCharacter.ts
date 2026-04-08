@@ -215,12 +215,14 @@ export function useCharacter(user: User | null) {
         .eq('id', charId);
       if (error) throw error;
     } finally {
-      // Clear pending fields after write completes
-      const current = pendingWritesRef.current.get(charId);
-      if (current) {
-        fields.forEach(f => current.delete(f));
-        if (current.size === 0) pendingWritesRef.current.delete(charId);
-      }
+      // Delay clearing pending flags so late-arriving realtime echoes are ignored
+      setTimeout(() => {
+        const current = pendingWritesRef.current.get(charId);
+        if (current) {
+          fields.forEach(f => current.delete(f));
+          if (current.size === 0) pendingWritesRef.current.delete(charId);
+        }
+      }, 3000);
     }
   };
 
