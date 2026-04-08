@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
 import ItemPicker from './ItemPicker';
 import NodePicker from './NodePicker';
-import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getCharacterTitle } from '@/lib/game-data';
+import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, getStatRegen, getCharacterTitle } from '@/lib/game-data';
 
 interface AdminInventoryItem {
   id: string;
@@ -272,9 +272,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
         const cp = c.cp ?? 30;
         const maxCp = c.max_cp ?? 30;
         const cpPercent = Math.round((cp / maxCp) * 100);
-        const primaryStat = CLASS_PRIMARY_STAT[c.class] || 'con';
-        const primaryVal = (c as any)[primaryStat] ?? 10;
-        const cpRegen = getCpRegenRate(primaryVal);
+        const cpRegen = getStatRegen(c.int ?? 10);
         const intMod = Math.max(Math.floor((c.int - 10) / 2), 0);
         const wisMod = Math.max(Math.floor((c.wis - 10) / 2), 0);
         const levelPart = (c.level - 1) * 3;
@@ -301,8 +299,8 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
             <TooltipContent className="bg-popover border-border z-50 space-y-1">
               <p className="font-display text-sm">Concentration Points</p>
               <p className="text-xs text-muted-foreground">Max: <span className="text-primary">30</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> (INT+WIS)</p>
-              <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">6s</span></p>
-              <p className="text-xs text-muted-foreground">Primary stat: {STAT_LABELS[primaryStat]}</p>
+              <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">4s</span></p>
+              <p className="text-xs text-muted-foreground">Regen stat: INT</p>
             </TooltipContent>
           </Tooltip>
         );
