@@ -7,6 +7,20 @@
  *
  * A mirrored copy lives at src/lib/combat-math.ts for client-side imports.
  * If you change formulas here, update the mirror too (or vice versa).
+ *
+ * ── CANONICAL DAMAGE PIPELINE (creature → player) ──────────────
+ *
+ *   base damage
+ *   → hit quality multiplier
+ *   → crit multiplier  (with WIS anti-crit check beforehand)
+ *   → level gap adjustments
+ *   → shield block (flat reduction, if triggered)
+ *   → absorb effects (if any)
+ *   → Battle Cry damage reduction
+ *   → caps / clamps
+ *   → finalAppliedDamage
+ *
+ * This order must be used consistently in all combat paths.
  */
 
 // ── Core stat helpers ────────────────────────────────────────────
@@ -50,9 +64,17 @@ export function getDexCritBonus(dex: number): number {
   return diminishing(getStatModifier(dex), 4);
 }
 
-/** WIS → Awareness (chance to reduce incoming damage by 25%): sqrt curve, capped at 15% */
-export function getWisDodgeChance(wis: number): number {
+/**
+ * WIS → Anti-Crit: chance to downgrade an incoming crit to a normal hit.
+ * sqrt curve, capped at 15%. Shield adds +5% separately.
+ */
+export function getWisAntiCrit(wis: number): number {
   return diminishingFloat(getStatModifier(wis), 0.03, 0.15);
+}
+
+/** @deprecated Use getWisAntiCrit instead */
+export function getWisDodgeChance(wis: number): number {
+  return getWisAntiCrit(wis);
 }
 
 /** STR → Minimum damage floor: sqrt curve, capped at +3 */
@@ -126,19 +148,31 @@ export function getMaxMp(level: number, dex: number = 10): number {
   return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
 }
 
-// ── AC overflow damage reduction ─────────────────────────────────
+// ── Shield block system ──────────────────────────────────────────
 
 /**
- * When a creature crits (forcing a hit) but its total attack roll is below
- * the target's AC, the excess AC reduces damage proportionally.
- * Reduction = (AC - totalAtk) / AC, capped at 50%.
- * Returns the multiplier to apply to damage (e.g. 0.59 means 41% reduction).
+ * Shield block chance: base 5% + sqrt(DEX mod) × 2%, capped at 20%.
+ * Only applies when a shield is equipped.
  */
-export function getAcOverflowMultiplier(totalAtk: number, targetAC: number): number {
-  if (totalAtk >= targetAC || targetAC <= 0) return 1;
-  const overflow = targetAC - totalAtk;
-  const reduction = Math.min(overflow / targetAC, 0.50);
-  return 1 - reduction;
+export function getShieldBlockChance(dex: number): number {
+  const mod = Math.max(getStatModifier(dex), 0);
+  return Math.min(0.05 + Math.sqrt(mod) * 0.02, 0.20);
+}
+
+/**
+ * Shield block amount: flat 2 + sqrt(STR mod) × 1.5, capped at 8.
+ * Flat damage reduction when block triggers.
+ */
+export function getShieldBlockAmount(str: number): number {
+  const mod = Math.max(getStatModifier(str), 0);
+  return Math.min(2 + Math.floor(Math.sqrt(mod) * 1.5), 8);
+}
+
+/** Convenience: roll a shield block check and return result */
+export function rollBlock(dex: number, str: number): { blocked: boolean; amount: number } {
+  const chance = getShieldBlockChance(dex);
+  const blocked = Math.random() < chance;
+  return { blocked, amount: blocked ? getShieldBlockAmount(str) : 0 };
 }
 
 // ── AC formula ───────────────────────────────────────────────────
@@ -233,7 +267,8 @@ export function isOffhandWeapon(offhandTag?: string | null): boolean {
 // ── Shield defensive bonuses ─────────────────────────────────────
 
 export const SHIELD_AC_BONUS = 1;
-export const SHIELD_AWARENESS_BONUS = 0.05;
+/** Shield grants +5% anti-crit on top of WIS-based anti-crit */
+export const SHIELD_ANTI_CRIT_BONUS = 0.05;
 
 export function isShield(tag?: string | null): boolean {
   return tag === 'shield';
@@ -374,27 +409,36 @@ export function rollCreatureDamage(creatureLevel: number, creatureRarity: string
 
 /**
  * Apply defensive modifiers to incoming damage.
+ *
+ * ── Pipeline (defensive portion only): ──
+ *   → shield block (flat, pre-applied by caller via blockAmount)
+ *   → absorb shield
+ *   → Battle Cry DR (applied by caller after this function)
+ *   → clamp
  */
 export function applyDefensiveBuffs(
   damage: number,
   opts: {
     isRooted?: boolean;
-    wisAwarenessChance?: number;
+    blockAmount?: number;
     absorbShieldHp?: number;
   }
-): { finalDamage: number; absorbed: number; remainingShield: number; wisReduced: boolean } {
+): { finalDamage: number; absorbed: number; remainingShield: number; blocked: number } {
   let dmg = damage;
-  let wisReduced = false;
 
+  // Rooted damage reduction (Entangling Roots)
   if (opts.isRooted) {
     dmg = Math.max(Math.floor(dmg * 0.7), 1);
   }
 
-  if (opts.wisAwarenessChance && opts.wisAwarenessChance > 0 && Math.random() < opts.wisAwarenessChance) {
-    dmg = Math.max(Math.floor(dmg * 0.75), 1);
-    wisReduced = true;
+  // Shield block flat reduction
+  let blocked = 0;
+  if (opts.blockAmount && opts.blockAmount > 0) {
+    blocked = Math.min(dmg, opts.blockAmount);
+    dmg -= blocked;
   }
 
+  // Absorb shield
   let absorbed = 0;
   let remainingShield = opts.absorbShieldHp ?? 0;
   if (remainingShield > 0) {
@@ -403,7 +447,7 @@ export function applyDefensiveBuffs(
     dmg -= absorbed;
   }
 
-  return { finalDamage: Math.max(dmg, 0), absorbed, remainingShield, wisReduced };
+  return { finalDamage: Math.max(dmg, 0), absorbed, remainingShield, blocked };
 }
 
 // ── Hit quality (graded hit system) ─────────────────────────────

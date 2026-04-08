@@ -12,7 +12,7 @@ import {
   rollDamage as rollDmg,
   getIntHitBonus as intHitBonus,
   getDexCritBonus as dexCritBonus,
-  getWisDodgeChance as wisAwareness,
+  getWisAntiCrit as wisAntiCrit,
   getStrDamageFloor as strDmgFloor,
   getChaGoldMultiplier as chaGoldMult,
   getDexMultiAttack as dexMultiAttack,
@@ -23,7 +23,6 @@ import {
   getMaxCp as calcMaxCp,
   getMaxMp as calcMaxMp,
   getMaxHp as calcMaxHp,
-  getAcOverflowMultiplier as acOverflowMult,
   calculateAC as calcAC,
   XP_RARITY_MULTIPLIER as XP_RARITY,
   CLASS_COMBAT_PROFILES,
@@ -33,13 +32,15 @@ import {
   isOffhandWeapon,
   OFFHAND_DAMAGE_MULT,
   SHIELD_AC_BONUS,
-  SHIELD_AWARENESS_BONUS,
+  SHIELD_ANTI_CRIT_BONUS,
   isShield,
   TWO_HANDED_DAMAGE_MULT,
   getHitQuality,
   HIT_QUALITY_MULT,
   GLANCING_WEAK_CAP,
   getCreatureAttackBonus as creatureAtkBonus,
+  getShieldBlockChance,
+  getShieldBlockAmount,
   type HitQuality,
 } from "../_shared/combat-math.ts";
 
@@ -499,10 +500,16 @@ Deno.serve(async (req) => {
     }
 
     // ── Helper to apply creature hit to a member ─────────────────
+    // CANONICAL DAMAGE PIPELINE (creature → player):
+    //   base damage → hit quality mult → crit mult (with anti-crit) → level gap
+    //   → shield block (flat) → absorb → Battle Cry DR → caps/clamps → finalAppliedDamage
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
-      const shieldAcBonus = isShield(offHandTag[targetId]) ? SHIELD_AC_BONUS : 0;
+      const effectiveStr = (targetC.str || 10) + (targetEq.str || 0);
+      const effectiveWis = (targetC.wis || 10) + (targetEq.wis || 0);
+      const hasShield = isShield(offHandTag[targetId]);
+      const shieldAcBonus = hasShield ? SHIELD_AC_BONUS : 0;
       const tAC = calcAC(targetC.class || 'warrior', effectiveDex) + (targetEq.ac || 0) + shieldAcBonus;
       const d20 = rollD20();
       const roll = d20 + cStr + creatureAtkBonus(creature.level);
@@ -511,8 +518,17 @@ Deno.serve(async (req) => {
       const cDex = cs.dex || 10;
       const cCritBonus = dexCritBonus(cDex);
       const cCritThreshold = 20 - cCritBonus;
-      const isCrit = d20 >= cCritThreshold;
+      let isCrit = d20 >= cCritThreshold;
       const isNat1 = d20 === 1;
+
+      // ── Anti-crit check (WIS + shield bonus) — applied before crit resolution ──
+      if (isCrit) {
+        const antiCrit = wisAntiCrit(effectiveWis) + (hasShield ? SHIELD_ANTI_CRIT_BONUS : 0);
+        if (antiCrit > 0 && Math.random() < antiCrit) {
+          isCrit = false;
+          events.push({ type: 'awareness_resist', message: `🧘 ${targetName}'s awareness deflects ${creature.name}'s critical strike!`, character_id: targetId });
+        }
+      }
 
       // ── Hit quality (graded system) ──
       const margin = roll - tAC;
@@ -524,28 +540,27 @@ Deno.serve(async (req) => {
           return;
         }
 
-        // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. level-gap → 5. AC overflow → 6. awareness → 7. absorb → 8. clamp → 9. caps
+        // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. level-gap
+        //           → 5. shield block → 6. absorb → 7. Battle Cry DR → 8. caps/clamps
         let baseDmg = Math.max(rollDmg(1, dmgDie) + cStr, 1);
         let dmg = Math.max(Math.floor(baseDmg * HIT_QUALITY_MULT[quality]), 1);
         if (isCrit) dmg = Math.max(Math.floor(dmg * 1.5), 1);
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
-        if (isCrit && roll < tAC) {
-          const overflowMult = acOverflowMult(roll, tAC);
-          const preDmg = dmg;
-          dmg = Math.max(Math.floor(dmg * overflowMult), 1);
-          const pctReduced = Math.round((1 - overflowMult) * 100);
-          events.push({ type: 'ac_overflow', message: `🛡️ ${targetName}'s armor absorbs the blow! AC ${tAC} vs ${roll} — ${pctReduced}% damage reduced (${preDmg} → ${dmg}).` });
+        // 5. Shield block (flat reduction, shield only)
+        if (hasShield) {
+          const blockChance = getShieldBlockChance(effectiveDex);
+          if (Math.random() < blockChance) {
+            const blockAmt = Math.min(getShieldBlockAmount(effectiveStr), dmg);
+            const preDmg = dmg;
+            dmg = Math.max(dmg - blockAmt, 0);
+            events.push({ type: 'shield_block', message: `🛡️ ${targetName} blocks with shield! (−${blockAmt} damage, ${preDmg} → ${dmg})`, character_id: targetId });
+            if (dmg <= 0) return;
+          }
         }
 
-        const shieldAwarenessBonus = isShield(offHandTag[targetId]) ? SHIELD_AWARENESS_BONUS : 0;
-        const wis = wisAwareness((targetC.wis || 10) + (targetEq.wis || 0)) + shieldAwarenessBonus;
-        if (wis > 0 && Math.random() < wis) {
-          dmg = Math.max(Math.floor(dmg * 0.75), 1);
-          events.push({ type: 'wis_awareness', message: `🧘 ${targetName}'s awareness softens ${creature.name}'s blow! (${dmg} damage)` });
-        }
-
+        // 6. Absorb shield
         if (mb.absorb_buff?.shield_hp && mb.absorb_buff.shield_hp > 0) {
           const absorbed = Math.min(dmg, mb.absorb_buff.shield_hp);
           mb.absorb_buff.shield_hp -= absorbed;
@@ -554,7 +569,7 @@ Deno.serve(async (req) => {
           if (dmg <= 0) return;
         }
 
-        // Battle Cry damage reduction (applied after absorb, before clamp)
+        // 7. Battle Cry damage reduction
         if (mb.battle_cry_dr) {
           let dr = mb.battle_cry_dr.reduction || 0;
           if (isCrit) dr += mb.battle_cry_dr.crit_reduction || 0;
@@ -563,9 +578,8 @@ Deno.serve(async (req) => {
           events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry reduces damage! (${preDmg} → ${dmg})` });
         }
 
-        // Clamp minimum 1
+        // 8. Caps and clamps
         dmg = Math.max(dmg, 1);
-        // Glancing cap (always); weak cap only when margin < -2
         if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
         if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
 

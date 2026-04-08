@@ -6,7 +6,7 @@ import {
   calculateHP, calculateAC,
   getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
   getBaseRegen, getCpRegenRate, CLASS_PRIMARY_STAT,
-  getIntHitBonus, getDexCritBonus, getWisDodgeChance,
+  getIntHitBonus, getDexCritBonus, getWisAntiCrit,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
 } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/features/combat';
@@ -92,7 +92,7 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const totalHit = atkMod + intHit;
       const dexCrit = getDexCritBonus(eDex);
       const critRange = (combat?.critRange || 20) - dexCrit;
-      const wisAwareness = getWisDodgeChance(eWis);
+      const wisAntiCrit = getWisAntiCrit(eWis);
       const strFloor = getStrDamageFloor(eStr);
       const buyDisc = getChaBuyDiscount(eCha);
       const sellMult = getChaSellMultiplier(eCha);
@@ -101,7 +101,7 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
 
       return {
         maxHp, ac, maxCp, maxMp, hpRegen, cpRegen, mpRegen,
-        totalHit, critRange, wisAwareness, strFloor, buyDisc, sellMult, atkSpeed,
+        totalHit, critRange, wisAntiCrit, strFloor, buyDisc, sellMult, atkSpeed,
       };
     };
 
@@ -224,7 +224,7 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
                 <CompRow label="Crit Range" currentVal={derived.current.critRange} plannedVal={derived.planned.critRange} format={v => v === 20 ? '20' : `${v}–20`} lowerIsBetter />
                 <CompRow label="Atk Speed" currentVal={derived.current.atkSpeed} plannedVal={derived.planned.atkSpeed} format={v => `${v.toFixed(1)}s`} lowerIsBetter />
                 <CompRow label="Min Damage" currentVal={derived.current.strFloor} plannedVal={derived.planned.strFloor} format={v => v > 0 ? `+${v}` : '–'} />
-                <CompRow label="Awareness" currentVal={derived.current.wisAwareness} plannedVal={derived.planned.wisAwareness} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
+                <CompRow label="Crit Resistance" currentVal={derived.current.wisAntiCrit} plannedVal={derived.planned.wisAntiCrit} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
                 <CompRow label="Vendor Discount" currentVal={derived.current.buyDisc} plannedVal={derived.planned.buyDisc} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
               </div>
             </div>

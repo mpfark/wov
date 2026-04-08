@@ -541,9 +541,9 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">min(3, floor(√STR_mod))</code> damage (even spells)</p>
                 <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">min(5, floor(√INT_mod))</code> bonus to attack rolls — diminishing returns</p>
                 <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> — max crit on 16-20</p>
-                <p><strong className="text-foreground">Awareness (WIS):</strong> <code className="text-primary">min(15%, √WIS_mod × 3%)</code> chance to reduce incoming creature damage by 25% per hit</p>
+                <p><strong className="text-foreground">Crit Resistance (WIS):</strong> <code className="text-primary">min(15%, √WIS_mod × 3%)</code> chance to downgrade an incoming crit to a normal hit. Shield adds +5%.</p>
+                <p><strong className="text-foreground">Shield Block:</strong> When a shield is equipped, <code className="text-primary">min(20%, 5% + √DEX_mod × 2%)</code> chance to block, reducing damage by <code className="text-primary">min(8, 2 + floor(√STR_mod × 1.5))</code> flat.</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod + <code className="text-primary">floor(level × 0.4)</code> attack bonus vs player AC</p>
-                <p><strong className="text-foreground">AC Overflow:</strong> When a creature crits but its total roll {'<'} your AC, excess AC reduces damage: <code className="text-primary">reduction = (AC − roll) / AC</code>, capped at <strong>50%</strong>. High AC pays off even against crits!</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
@@ -946,9 +946,10 @@ export default function GameManual() {
                 <p>To compensate for losing the off-hand bonus attack, equipping a <strong className="text-foreground">shield</strong> in the off-hand grants unique defensive bonuses:</p>
                 <ul className="list-disc pl-4 space-y-0.5">
                   <li><strong className="text-primary">+1 AC</strong> — flat bonus stacking with DEX-based AC and equipment AC</li>
-                  <li><strong className="text-primary">+5% Awareness</strong> — additive bonus stacking with WIS-based awareness (chance to reduce incoming damage by 25%)</li>
+                  <li><strong className="text-primary">+5% Crit Resistance</strong> — additive bonus stacking with WIS-based anti-crit (chance to downgrade incoming crits)</li>
+                  <li><strong className="text-primary">Block</strong> — chance to reduce incoming damage by a flat amount (DEX → chance, STR → amount)</li>
                 </ul>
-                <p className="text-muted-foreground/70 italic mt-1">Trade-off: dual-wield weapons add ~2–4 DPS via bonus attacks; a shield sacrifices that offense for consistent damage mitigation.</p>
+                <p className="text-muted-foreground/70 italic mt-1">Trade-off: dual-wield weapons add ~2–4 DPS via bonus attacks; a shield sacrifices that offense for consistent damage mitigation and block.</p>
               </div>
             </AccordionContent>
           </AccordionItem>

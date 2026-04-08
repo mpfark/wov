@@ -288,9 +288,25 @@ export function getDexCritBonus(dex: number): number {
   return diminishing(getStatModifier(dex), 4);
 }
 
-// WIS → Chance to reduce incoming damage by 25%: sqrt curve, capped at 15%
-export function getWisDodgeChance(wis: number): number {
+// WIS → Anti-Crit: chance to downgrade incoming crit to normal hit, capped at 15%
+export function getWisAntiCrit(wis: number): number {
   return diminishingFloat(getStatModifier(wis), 0.03, 0.15);
+}
+
+/** @deprecated Use getWisAntiCrit instead */
+export function getWisDodgeChance(wis: number): number {
+  return getWisAntiCrit(wis);
+}
+
+// Shield block system
+export function getShieldBlockChance(dex: number): number {
+  const mod = Math.max(getStatModifier(dex), 0);
+  return Math.min(0.05 + Math.sqrt(mod) * 0.02, 0.20);
+}
+
+export function getShieldBlockAmount(str: number): number {
+  const mod = Math.max(getStatModifier(str), 0);
+  return Math.min(2 + Math.floor(Math.sqrt(mod) * 1.5), 8);
 }
 
 // CHA → Vendor Price Modifiers
