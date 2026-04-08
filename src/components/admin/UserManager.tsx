@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
 import ItemPicker from './ItemPicker';
 import NodePicker from './NodePicker';
-import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, CLASS_PRIMARY_STAT, getCpRegenRate, getCharacterTitle } from '@/lib/game-data';
+import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, getStatRegen, getCharacterTitle } from '@/lib/game-data';
 
 interface AdminInventoryItem {
   id: string;

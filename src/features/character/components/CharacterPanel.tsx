@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
-import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, calculateAC, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getMaxCp, getMaxMp, getMpRegenRate, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, calculateAC, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/features/combat';
 import { SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount } from '@/features/combat';
 import { Button } from '@/components/ui/button';
@@ -906,11 +906,10 @@ export default function CharacterPanel({
                   const eInt = character.int + (equipmentBonuses.int || 0);
                   const eWis = character.wis + (equipmentBonuses.wis || 0);
                   const eCha = character.cha + (equipmentBonuses.cha || 0);
-                  const hpRegen = getBaseRegen(eCon) + (itemHpRegen || 0);
+                  const hpRegen = getStatRegen(eCon) + (itemHpRegen || 0);
                   const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
                   const maxMp = getMaxMp(character.level, eDex);
-                  const primaryStat = CLASS_PRIMARY_STAT[character.class] || 'con';
-                  const baseCpRegen = getCpRegenRate((character as any)[primaryStat] + (equipmentBonuses[primaryStat] || 0));
+                  const baseCpRegen = getStatRegen(eInt);
                   const mpRegen = getMpRegenRate(eDex);
 
                   // Regen — additive only, no multipliers
@@ -918,7 +917,7 @@ export default function CharacterPanel({
                   const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
                   const innFlat = isAtInn ? 10 : 0;
                   const milestoneHpFlat = (() => { if (character.level >= 40) return 10; if (character.level >= 35) return 8; if (character.level >= 30) return 6; if (character.level >= 25) return 4; if (character.level >= 20) return 2; return 0; })();
-                  const effectiveHpRegen = Math.max(Math.floor((hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat) * 0.27 + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
+                  const effectiveHpRegen = Math.max(Math.floor(hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
                   const hpRegenBuffed = foodBuffActive || partyRegenActive || milestoneHpFlat > 0 || isAtInn;
 
                   const combat = CLASS_COMBAT[character.class];
