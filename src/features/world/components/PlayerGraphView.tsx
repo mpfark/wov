@@ -315,23 +315,24 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       const emoji = emojiMap[area.area_type] || '📍';
       const fill = getAreaFillColor(emoji);
       const stroke = getAreaStrokeColor(emoji);
+      const hasGhostNodes = allAreaNodes.some(n => secondDegIds.has(n.id));
 
-      // Primary hull (current + direct neighbors only)
-      const primaryAreaNodes = allAreaNodes.filter(n => primaryIds.has(n.id));
-      const primaryAreaNodeIds = new Set(primaryAreaNodes.map(n => n.id));
-      const primaryPath = buildHull(primaryAreaNodes, primaryAreaNodeIds);
-      if (primaryPath) {
-        hulls.push({ path: primaryPath, fill, stroke });
+      if (hasGhostNodes) {
+        // Render unified hull at ghost opacity (faded layer underneath)
+        const allAreaNodeIds = new Set(allAreaNodes.map(n => n.id));
+        const fullPath = buildHull(allAreaNodes, allAreaNodeIds);
+        if (fullPath) {
+          hulls.push({ path: fullPath, fill, stroke, faded: true });
+        }
       }
 
-      // Ghost hull (ghost nodes only — rendered faded)
-      const ghostAreaNodes = allAreaNodes.filter(n => secondDegIds.has(n.id));
-      if (ghostAreaNodes.length > 0) {
-        // Include connections between ghost nodes and primary nodes for smooth bridging
-        const allAreaNodeIds = new Set(allAreaNodes.map(n => n.id));
-        const ghostPath = buildHull(ghostAreaNodes, allAreaNodeIds);
-        if (ghostPath) {
-          hulls.push({ path: ghostPath, fill, stroke, faded: true });
+      // Render primary hull at full opacity on top
+      const primaryAreaNodes = allAreaNodes.filter(n => primaryIds.has(n.id));
+      if (primaryAreaNodes.length > 0) {
+        const primaryAreaNodeIds = new Set(primaryAreaNodes.map(n => n.id));
+        const primaryPath = buildHull(primaryAreaNodes, primaryAreaNodeIds);
+        if (primaryPath) {
+          hulls.push({ path: primaryPath, fill, stroke });
         }
       }
     }
