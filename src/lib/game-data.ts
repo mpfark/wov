@@ -301,7 +301,7 @@ export function getWisDodgeChance(wis: number): number {
 // Shield block system
 export function getShieldBlockChance(dex: number): number {
   const mod = Math.max(getStatModifier(dex), 0);
-  return 0.05 + Math.sqrt(mod) * 0.04;
+  return 0.05 + Math.sqrt(mod) * 0.045;
 }
 
 export function getShieldBlockAmount(str: number): number {
