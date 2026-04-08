@@ -218,7 +218,7 @@ export function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryB
     const dur = BUFF_DURATIONS['Envenom'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((poisonBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🧪',
+      emoji: '🐍',
       label: 'Envenom',
       detail: '40% poison proc',
       color: 'text-elvish',

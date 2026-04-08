@@ -46,7 +46,7 @@ export default function PartyPanel({
     { key: 'stealth', emoji: '🌑', label: 'Shadowstep', color: 'text-primary' },
     { key: 'damageBuff', emoji: '✨', label: 'Arcane Surge', color: 'text-elvish' },
     { key: 'battleCry', emoji: '📯', label: 'Battle Cry', color: 'text-dwarvish' },
-    { key: 'poison', emoji: '🧪', label: 'Envenom', color: 'text-elvish' },
+    { key: 'poison', emoji: '🐍', label: 'Envenom', color: 'text-elvish' },
     { key: 'evasion', emoji: '🌫️', label: 'Evasion', color: 'text-primary' },
     { key: 'ignite', emoji: '🔥', label: 'Ignite', color: 'text-dwarvish' },
     { key: 'absorb', emoji: '🛡️✨', label: 'Force Shield', color: 'text-primary' },
