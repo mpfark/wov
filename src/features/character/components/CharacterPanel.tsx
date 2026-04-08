@@ -913,17 +913,13 @@ export default function CharacterPanel({
                   const baseCpRegen = getCpRegenRate((character as any)[primaryStat] + (equipmentBonuses[primaryStat] || 0));
                   const mpRegen = getMpRegenRate(eDex);
 
-                  // Regen multiplier from buffs
-                  const regenBuffActive = regenBuff && now < regenBuff.expiresAt;
+                  // Regen — additive only, no multipliers
                   const foodBuffActive = foodBuff && now < foodBuff.expiresAt;
                   const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
-                  let effectiveHpRegen = hpRegen;
-                  const potionBonus = regenBuffActive ? 0.5 : 0;
-                  const innBonus = isAtInn ? 1 : 0;
+                  const innFlat = isAtInn ? 10 : 0;
                   const milestoneHpFlat = (() => { if (character.level >= 40) return 10; if (character.level >= 35) return 8; if (character.level >= 30) return 6; if (character.level >= 25) return 4; if (character.level >= 20) return 2; return 0; })();
-                  const regenMultiplier = 1 + potionBonus + innBonus;
-                  effectiveHpRegen = Math.max(Math.floor((hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0)) * regenMultiplier + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
-                  const hpRegenBuffed = regenMultiplier > 1 || foodBuffActive || partyRegenActive || milestoneHpFlat > 0;
+                  const effectiveHpRegen = Math.max(Math.floor((hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat) * 0.27 + (partyRegenActive ? partyRegenBuff!.healPerTick : 0)), 1);
+                  const hpRegenBuffed = foodBuffActive || partyRegenActive || milestoneHpFlat > 0 || isAtInn;
 
                   const combat = CLASS_COMBAT[character.class];
                   const atkStat = combat?.stat || 'str';
