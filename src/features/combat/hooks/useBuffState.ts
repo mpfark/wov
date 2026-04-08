@@ -11,7 +11,6 @@ import { useState, useCallback } from 'react';
 import { getStatModifier } from '@/lib/game-data';
 import { mapServerEffectsToStacks, type ServerDotState } from '../utils/mapServerEffectsToBuffState';
 import type {
-  RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, PoisonStack, EvasionBuff, DisengageNextHit, IgniteBuff,
   IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, FocusStrikeBuff,
 } from './useGameLoop';
@@ -217,12 +216,13 @@ export function useBuffState(params: UseBuffStateParams) {
 
   // ── Bundled state objects ──────────────────────────────────
   const buffState: BuffState = {
+    foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     bleedStacks, poisonBuff, poisonStacks, evasionBuff, disengageNextHit,
     igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
   };
 
   const buffSetters: BuffSetters = {
-    setRegenBuff, setFoodBuff, setCritBuff, setStealthBuff, setDamageBuff,
+    setFoodBuff, setCritBuff, setStealthBuff, setDamageBuff,
     setRootDebuff, setBattleCryBuff, setBleedStacks, setPoisonBuff, setPoisonStacks,
     setEvasionBuff, setDisengageNextHit, setIgniteBuff, setIgniteStacks,
     setAbsorbBuff, setPartyRegenBuff, setSunderDebuff, setFocusStrikeBuff,
