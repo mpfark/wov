@@ -151,12 +151,12 @@ export function getMaxMp(level: number, dex: number = 10): number {
 // ── Shield block system ──────────────────────────────────────────
 
 /**
- * Shield block chance: base 5% + sqrt(DEX mod) × 2%, capped at 20%.
+ * Shield block chance: base 5% + sqrt(DEX mod) × 4%, uncapped.
  * Only applies when a shield is equipped.
  */
 export function getShieldBlockChance(dex: number): number {
   const mod = Math.max(getStatModifier(dex), 0);
-  return Math.min(0.05 + Math.sqrt(mod) * 0.02, 0.20);
+  return 0.05 + Math.sqrt(mod) * 0.04;
 }
 
 /**
