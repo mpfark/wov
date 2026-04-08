@@ -155,22 +155,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
   if (isAtInn) {
-    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '3× regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
-  }
-
-  if (buffActive) {
-    const isInspire = regenBuff!.multiplier === 2;
-    const lbl = isInspire ? 'Inspire' : 'Potion';
-    const dur = BUFF_DURATIONS[lbl] || 120_000;
-    const pct = Math.max(0, Math.min(100, ((regenBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({
-      emoji: isInspire ? '🎶' : '🧪',
-      label: lbl,
-      detail: `${regenBuff!.multiplier}× regen`,
-      color: isInspire ? 'text-elvish' : 'text-primary',
-      bgColor: isInspire ? 'bg-elvish/15' : 'bg-primary/15',
-      pct,
-    });
+    buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '+10 regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
   }
 
   if (foodActive) {
