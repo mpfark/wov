@@ -181,7 +181,6 @@ export function useGameLoop(params: UseGameLoopParams) {
     }, 4000);
     return () => clearInterval(interval);
   }, []);
-  }, []);
 
   // ── Death detection & respawn ──────────────────────────────
   const deathGoldRef = useRef(character.gold);
