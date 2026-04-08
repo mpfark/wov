@@ -5,7 +5,7 @@ import { getXpForLevel, getMaxCp, getMaxMp } from '@/lib/game-data';
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
-  Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000, 'Purifying Light': 25_000,
+  Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000, 'Purifying Light': 25_000,
 };
 
 export interface StatusBarsStripProps {
@@ -13,7 +13,7 @@ export interface StatusBarsStripProps {
   equipmentBonuses: Record<string, number>;
   inventoryCount?: number;
   isAtInn?: boolean;
-  regenBuff?: { multiplier: number; expiresAt: number };
+  
   regenTick?: boolean;
   baseRegen?: number;
   itemHpRegen?: number;
@@ -30,9 +30,8 @@ export interface StatusBarsStripProps {
   stealthBuff?: { expiresAt: number } | null;
 }
 
-function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
+function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
   const [now, setNow] = useState(Date.now());
-  const buffActive = regenBuff && now < regenBuff.expiresAt;
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
   const acActive = battleCryBuff && now < battleCryBuff.expiresAt;
@@ -45,22 +44,14 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryBuff, po
   const stealthActive = stealthBuff && now < stealthBuff.expiresAt;
 
   useEffect(() => {
-    if (!buffActive && !foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive) return;
+    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [buffActive, foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive]);
+  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
-  if (isAtInn) buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '3× regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
-
-  if (buffActive) {
-    const isInspire = regenBuff!.multiplier === 2;
-    const lbl = isInspire ? 'Inspire' : 'Potion';
-    const dur = BUFF_DURATIONS[lbl] || 120_000;
-    const pct = Math.max(0, Math.min(100, ((regenBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: isInspire ? '🎶' : '🧪', label: lbl, detail: `${regenBuff!.multiplier}× regen`, color: isInspire ? 'text-elvish' : 'text-primary', bgColor: isInspire ? 'bg-elvish/15' : 'bg-primary/15', pct });
-  }
+  if (isAtInn) buffs.push({ emoji: '🏨', label: 'Inn Rest', detail: '+10 regen', color: 'text-elvish', bgColor: 'bg-elvish/15', pct: 100 });
 
   if (foodActive) {
     const dur = BUFF_DURATIONS['Food'] || 120_000;
@@ -149,7 +140,7 @@ function ActiveBuffs({ isAtInn, regenBuff, foodBuff, critBuff, battleCryBuff, po
 }
 
 export default function StatusBarsStrip({
-  character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenBuff, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
+  character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
   // Include both direct HP bonuses and CON-derived HP from equipment
@@ -241,7 +232,7 @@ export default function StatusBarsStrip({
 
       {/* Buffs */}
       <ActiveBuffs
-        isAtInn={isAtInn} regenBuff={regenBuff} foodBuff={foodBuff} critBuff={critBuff}
+        isAtInn={isAtInn} foodBuff={foodBuff} critBuff={critBuff}
         battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
         igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff} focusStrikeBuff={focusStrikeBuff}
         stealthBuff={stealthBuff}
