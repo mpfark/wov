@@ -1,88 +1,56 @@
 
 
-# Combined Regen & Shield Overhaul
+# Simplify HP & CP Regen: Same Base, Different Stat Scaling
 
-All the pending changes from our conversation, consolidated into one implementation.
+## Problem
+HP regen uses a `× 0.27` scaling factor (legacy compensation) making the numbers look weird and inconsistent with CP regen. The two formulas are completely different, which is confusing.
 
----
+## Current Formulas (per 4s tick)
+- **HP**: `(1 + floor((CON-10)/4) + gear + food + milestone + inn) × 0.27` — at CON 20 with no extras: ~1/tick
+- **CP**: `(1 + floor(mod/2)×0.5 + food + milestone + inn)` — at primary 20: ~2/tick, plus food can push to ~19
 
-## 1. Shield Block Chance — Increase & Uncap
-**Current**: `0.05 + √mod × 0.04` → DEX mod 28 = ~17%
-**New**: `0.05 + √mod × 0.05` → DEX mod 28 = ~31% (a bit high), or `0.05 + √mod × 0.045` → DEX mod 28 = ~24%
+## Proposed: One Unified Formula
+Use the **same base regen function** for both, just driven by different stats:
 
-Using `0.045` gives: mod 0 → 5%, mod 4 → 14%, mod 10 → 19%, mod 28 → 24%, mod 50 → 37%
+```
+statRegen(stat) = 1 + floor((stat - 10) / 3)
+```
 
-**Files**: `src/features/combat/utils/combat-math.ts`, `supabase/functions/_shared/combat-math.ts`, `src/lib/game-data.ts` (all three mirrors)
+- **HP regen** uses **CON** → at CON 20: `1 + 3 = 4` per tick
+- **CP regen** uses **INT** → at INT 20: `1 + 3 = 4` per tick (no more class primary stat lookup)
 
----
+**No 0.27 multiplier. No class primary stat for CP.** Both use the same clean function.
 
-## 2. Potions — Instant HP Only, No Regen Buff
-Remove the regen buff grant when using potions. Potions keep instant HP restore only.
+Full tick formula (same for both):
+```
+regenAmount = max(floor((statRegen + gearRegen + foodRegen + milestoneFlat + innFlat) × combatMult), 1)
+```
 
-**File**: `src/features/inventory/hooks/useConsumableActions.ts`
-- Remove `setRegenBuff()` call and "regen boosted" log on line 41-42
+### Reference values (base only, no gear/food):
+| Stat value | Regen/tick |
+|-----------|-----------|
+| 10 | 1 |
+| 13 | 2 |
+| 16 | 3 |
+| 20 | 4 |
+| 25 | 6 |
+| 30 | 7 |
+| 40 | 11 |
 
----
+## Files Changed
 
-## 3. Remove Regen Multipliers (Potion + Inn)
-Remove `potionBonus`, `innBonus`, and `totalMult` from HP and CP regen. Also remove `inspireBonus` from CP regen.
+### 1. `src/lib/game-data.ts`
+- Replace `getBaseRegen()` with a generic `getStatRegen(stat)` using `1 + floor((stat-10)/3)`
+- Remove `getCpRegenRate()` and `CLASS_PRIMARY_STAT` (no longer needed)
 
-**File**: `src/features/combat/hooks/useGameLoop.ts`
+### 2. `src/features/combat/hooks/useGameLoop.ts`
+- **HP regen**: Use `getStatRegen(conWithGear)` directly — remove the `× 0.27` multiplier
+- **CP regen**: Use `getStatRegen(intWithGear)` instead of `getCpRegenRate(primaryVal)` — remove `CLASS_PRIMARY_STAT` lookup
+- Simplify refs (no need for `cpStatRef` to look up arbitrary primary stat)
 
----
+### 3. `src/components/admin/GameManual.tsx`
+- Update regen documentation to show the unified formula
 
-## 4. Inn → Flat +10 Regen to HP, CP, MP
-Replace the removed inn multiplier with a flat `+10` added to the base regen sum for all three resources.
-
-**File**: `src/features/combat/hooks/useGameLoop.ts`
-
----
-
-## 5. Unify All Regen to Single 4s Tick
-Merge the HP+CP (6s) and MP (2s) intervals into one 4s tick. Adjust the HP scaling factor from `0.4` to `0.27` (4/15) and MP regen by `×2` to preserve per-minute rates.
-
-**File**: `src/features/combat/hooks/useGameLoop.ts`
-- Delete separate MP `useEffect`/`setInterval` block
-- Move MP regen into the unified interval
-- Remove `mpCharRef` (add mp/dex fields to `regenCharRef`)
-
----
-
-## 6. Cleanup regenBuff State
-Since nothing sets `regenBuff` anymore, remove it from:
-- `src/features/combat/hooks/useBuffState.ts` — remove state + setter
-- `src/features/combat/hooks/useGameLoop.ts` — remove `regenBuffRef`
-- `src/features/character/components/CharacterPanel.tsx` — remove from active buffs display
-- `src/features/character/components/StatusBarsStrip.tsx` — remove from active buffs display
-- `src/features/inventory/hooks/useConsumableActions.ts` — remove `setRegenBuff` from Pick type
-
----
-
-## 7. Update Game Manual
-- Shield block chance: new formula
-- Regen: document unified 4s tick, additive-only system, inn +10 flat, no potion regen buff
-- Block amount formula (already in plan)
-
-**File**: `src/components/admin/GameManual.tsx`
-
----
-
-## 8. Redeploy Edge Function
-Redeploy `combat-tick` to pick up shield block chance changes.
-
----
-
-## Summary of files touched
-
-| File | Changes |
-|------|---------|
-| `src/features/combat/utils/combat-math.ts` | Block chance formula |
-| `supabase/functions/_shared/combat-math.ts` | Block chance formula |
-| `src/lib/game-data.ts` | Block chance formula |
-| `src/features/combat/hooks/useGameLoop.ts` | Unify 4s tick, remove multipliers, add inn +10 flat, merge MP |
-| `src/features/inventory/hooks/useConsumableActions.ts` | Remove potion regen buff |
-| `src/features/combat/hooks/useBuffState.ts` | Remove regenBuff state |
-| `src/features/character/components/CharacterPanel.tsx` | Remove regen buff display |
-| `src/features/character/components/StatusBarsStrip.tsx` | Remove regen buff display |
-| `src/components/admin/GameManual.tsx` | Update all regen + block docs |
+### 4. Other references
+- Search for any imports of `getBaseRegen`, `getCpRegenRate`, `CLASS_PRIMARY_STAT` and update them
 
