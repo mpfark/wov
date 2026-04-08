@@ -11,6 +11,7 @@ import { useState, useCallback } from 'react';
 import { getStatModifier } from '@/lib/game-data';
 import { mapServerEffectsToStacks, type ServerDotState } from '../utils/mapServerEffectsToBuffState';
 import type {
+  FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, PoisonStack, EvasionBuff, DisengageNextHit, IgniteBuff,
   IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, FocusStrikeBuff,
 } from './useGameLoop';
