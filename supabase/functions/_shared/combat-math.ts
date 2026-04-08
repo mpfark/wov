@@ -165,7 +165,7 @@ export function getShieldBlockChance(dex: number): number {
  */
 export function getShieldBlockAmount(str: number): number {
   const mod = Math.max(getStatModifier(str), 0);
-  return 10 + mod * 2;
+  return Math.round(11 + 2.5 * Math.sqrt(mod));
 }
 
 /** Convenience: roll a shield block check and return result */
