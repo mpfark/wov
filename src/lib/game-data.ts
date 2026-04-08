@@ -146,6 +146,45 @@ export const CLASS_PRIMARY_STAT: Record<string, string> = {
   rogue: 'dex', healer: 'wis', bard: 'cha',
 };
 
+// CP (Concentration Points) system — scales with INT + WIS
+export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
+  const intMod = Math.max(Math.floor((int - 10) / 2), 0);
+  const wisMod = Math.max(Math.floor((wis - 10) / 2), 0);
+  return 30 + (level - 1) * 3 + (intMod + wisMod) * 3;
+}
+
+// MP (Stamina) system — DEX-based
+export function getMaxMp(level: number, dex: number = 10): number {
+  const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
+  return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
+}
+
+export function getMpRegenRate(dex: number = 10): number {
+  const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
+  return Math.round((5 + dexMod) * 0.67);
+}
+
+// Encumbrance system
+export function getCarryCapacity(str: number): number {
+  const strMod = getStatModifier(str);
+  return Math.max(12 + strMod, 10);
+}
+
+// Calculate weighted bag size: equipment = 1 slot, consumables = 1/3 slot
+export function getBagWeight(bagItems: { item: { item_type: string } }[]): number {
+  let weight = 0;
+  for (const i of bagItems) {
+    weight += i.item.item_type === 'consumable' ? 1 / 3 : 1;
+  }
+  return Math.ceil(weight);
+}
+
+export function getMoveCost(bagWeight: number, str: number): number {
+  const capacity = getCarryCapacity(str);
+  const itemsOver = Math.max(0, bagWeight - capacity);
+  return 10 + itemsOver * 5;
+}
+
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   const handsMult = hands === 2 ? 1.5 : 1;
