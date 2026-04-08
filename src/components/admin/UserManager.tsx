@@ -299,8 +299,8 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
             <TooltipContent className="bg-popover border-border z-50 space-y-1">
               <p className="font-display text-sm">Concentration Points</p>
               <p className="text-xs text-muted-foreground">Max: <span className="text-primary">30</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> (INT+WIS)</p>
-              <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">6s</span></p>
-              <p className="text-xs text-muted-foreground">Primary stat: {STAT_LABELS[primaryStat]}</p>
+              <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">4s</span></p>
+              <p className="text-xs text-muted-foreground">Regen stat: INT</p>
             </TooltipContent>
           </Tooltip>
         );
