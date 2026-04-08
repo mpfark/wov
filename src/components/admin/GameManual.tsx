@@ -313,7 +313,7 @@ export default function GameManual() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
                 <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
-                <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = 1 + floor((CON − 10) / 3) + gear + food + milestone + inn</p>
+                <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = 2 + floor(√(CON − 10)) + gear + food + milestone + inn</p>
                 <p className="text-amber-400 mt-1">⚔️ <strong>In Combat:</strong> Regen is reduced to 10% of its normal value.</p>
                 <p className="mt-1">🏨 <strong>Inn Rest:</strong> +10 flat regen to HP, CP, and Stamina per tick.</p>
                 <p className="mt-1">Example: CON 14 → base regen = <code className="text-primary">{getStatRegen(14)}</code> HP/tick, CON 20 → <code className="text-primary">{getStatRegen(20)}</code> HP/tick</p>
@@ -488,7 +488,7 @@ export default function GameManual() {
 
               <div>
                 <p className="text-xs font-display text-primary mb-1">CP Regen (scales with INT)</p>
-                <p className="text-xs text-muted-foreground mb-1">Uses the same formula as HP regen: 1 + floor((INT − 10) / 3)</p>
+                <p className="text-xs text-muted-foreground mb-1">Uses the same formula as HP regen: 2 + floor(√(INT − 10))</p>
                 <Table>
                   <TableHeader>
                     <TableRow>

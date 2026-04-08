@@ -131,7 +131,7 @@ export const ITEM_STAT_CAPS: Record<string, number> = {
 
 /** Unified regen base: same formula for HP (CON) and CP (INT). */
 export function getStatRegen(stat: number): number {
-  return 1 + Math.floor((stat - 10) / 3);
+  return 2 + Math.floor(Math.sqrt(Math.max(0, stat - 10)));
 }
 
 /** @deprecated Use getStatRegen instead */

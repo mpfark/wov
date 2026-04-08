@@ -977,16 +977,17 @@ export default function CharacterPanel({
 
                   const poolRows: DerivedRow[] = [
                     { label: 'Max HP', value: `${character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2)}${absorbActive ? ` (+${absorbBuff!.shieldHp})` : ''}`, tip: `Base ${character.max_hp} + ${equipmentBonuses.hp || 0} HP gear + ${Math.floor((equipmentBonuses.con || 0) / 2)} from CON gear${absorbActive ? ` + ${absorbBuff!.shieldHp} Force Shield` : ''}`, buffed: !!absorbActive, buffColor: 'text-primary' },
-                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneHpFlat > 0 ? ` + ${milestoneHpFlat} milestone` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 4s, ×0.27 scaling)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
+                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneHpFlat > 0 ? ` + ${milestoneHpFlat} milestone` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 4s)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
                      { label: 'Max CP', value: `${maxCp}`, tip: `30 + (level-1)×3 + (INT_mod + WIS_mod)×3` },
                      (() => {
-                       const foodCpBonus = foodBuffActive ? foodBuff!.flatRegen * 0.5 : 0;
-                       const effectiveCpRegen = Math.max(+(baseCpRegen + foodCpBonus + innFlat + (character.level >= 35 ? baseCpRegen * 0.5 : 0)).toFixed(1), 0.1);
+                       const foodCpBonus = foodBuffActive ? foodBuff!.flatRegen : 0;
+                       const milestoneCpFlat = (() => { const l = character.level; if (l >= 40) return 5; if (l >= 35) return 4; if (l >= 30) return 3; if (l >= 25) return 2; if (l >= 20) return 1; return 0; })();
+                       const effectiveCpRegen = Math.max(Math.floor(baseCpRegen + foodCpBonus + innFlat + milestoneCpFlat), 1);
                        const cpRegenBuffed = foodBuffActive || isAtInn;
-                       return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen}${foodBuffActive ? ` + ${foodCpBonus} food` : ''}${isAtInn ? ' + 10 inn' : ''} (every 4s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
+                       return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen}${foodBuffActive ? ` + ${foodCpBonus} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneCpFlat > 0 ? ` + ${milestoneCpFlat} milestone` : ''} (every 4s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
                      })(),
                     { label: 'Max Stamina', value: `${maxMp}`, tip: `100 + DEX mod×10 + (level-1)×2` },
-                    { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 6s)` },
+                    { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 4s)` },
                   ];
 
                   const offenseRows: DerivedRow[] = [
