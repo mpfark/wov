@@ -293,8 +293,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
 
     if (result.sessionEnded) {
-      stopCombat();
-      return;
+      const stillEngaged =
+        (result.aliveEngagedIds?.length ?? 0) > 0 ||
+        engagedCreatureIdsRef.current.length > 0;
+      if (!stillEngaged) {
+        stopCombat();
+        return;
+      }
+      // Ignore session_ended — next tick will create a fresh session
     }
 
     if (result.aliveEngagedIds.length === 0) {

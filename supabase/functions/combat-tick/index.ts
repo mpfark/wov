@@ -156,7 +156,16 @@ Deno.serve(async (req) => {
     let sessionJustCreated = false;
     if (existingSession) {
       session = existingSession;
-    } else if (action === 'start' || engagedIds.length > 0 || pendingAbilities.length > 0) {
+    }
+
+    // ── Stale session: player moved to a different node ──────────
+    if (session && session.node_id !== node_id) {
+      await db.from('combat_sessions').delete().eq('id', session.id);
+      console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'node_changed', session_id: session.id, old_node: session.node_id, new_node: node_id }));
+      session = null; // fall through to creation below
+    }
+
+    if (!session && (action === 'start' || engagedIds.length > 0 || pendingAbilities.length > 0)) {
       // Create new session — set last_tick_at to one tick ago so the first request
       // immediately processes one combat round instead of returning ticks_processed=0.
       const insertData: any = {
@@ -177,13 +186,6 @@ Deno.serve(async (req) => {
       const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', node_id).eq('is_alive', true);
       const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0 });
-    }
-
-    // ── Session termination: player left the node ────────────────
-    if (session.node_id !== node_id) {
-      await db.from('combat_sessions').delete().eq('id', session.id);
-      console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'node_changed', session_id: session.id, old_node: session.node_id, new_node: node_id }));
-      return json({ events: [], creature_states: [], member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
     // ── Update session with latest engaged creatures from client ──
