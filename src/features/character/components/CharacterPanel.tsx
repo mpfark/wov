@@ -1024,7 +1024,7 @@ export default function CharacterPanel({
                   if (offHandIsWeapon) {
                     offenseRows.push({ label: 'Off-Hand', value: `${Math.round(OFFHAND_DAMAGE_MULT * 100)}% dmg`, tip: `Bonus attack each tick at ${Math.round(OFFHAND_DAMAGE_MULT * 100)}% of main-hand base damage (separate hit roll, can crit)` });
                   } else if (offHandIsShield) {
-                    offenseRows.push({ label: 'Off-Hand', value: '🛡️ Shield', tip: `+${SHIELD_AC_BONUS} AC, +${Math.round(SHIELD_AWARENESS_BONUS * 100)}% Awareness (no bonus attack)` });
+                    offenseRows.push({ label: 'Off-Hand', value: '🛡️ Shield', tip: `+${SHIELD_AC_BONUS} AC, +${Math.round(SHIELD_ANTI_CRIT_BONUS * 100)}% Crit Resistance, Block chance (no bonus attack)` });
                   }
 
                   // Procs line
@@ -1035,17 +1035,16 @@ export default function CharacterPanel({
                     offenseRows.push({ label: 'Procs', value: procs.join(' / '), tip: procs.join(', ') + ' on hit', buffed: true, buffColor: 'text-elvish' });
                   }
 
-                  // AC overflow: damage reduction when creature crits but roll < AC
-                  const creatureMaxCritRoll = 20 + creatureAtkMod;
-                  const acOverflow = totalAC > creatureMaxCritRoll ? totalAC - creatureMaxCritRoll : 0;
-                  const acOverflowPct = acOverflow > 0 ? Math.min(Math.round((acOverflow / totalAC) * 100), 50) : 0;
+                  // Shield block stats
+                  const blockChance = offHandIsShield ? getShieldBlockChance(eDex) : 0;
+                  const blockAmount = offHandIsShield ? getShieldBlockAmount(character.str + (equipmentBonuses.str || 0)) : 0;
 
                   const defenseRows: DerivedRow[] = [
                     { label: 'AC', value: `${totalAC}`, tip: `Base ${baseAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''} vs regular creature atk +${creatureAtkMod}` },
                     ...(battleCryActive ? [{ label: 'Dmg Reduction', value: `${Math.round(battleCryBuff!.damageReduction * 100)}%`, tip: `Battle Cry reduces incoming damage by ${Math.round(battleCryBuff!.damageReduction * 100)}%. Crits reduced by additional ${Math.round(battleCryBuff!.critReduction * 100)}%.`, buffed: true, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
-                    { label: 'AC Overflow', value: acOverflowPct > 0 ? `−${acOverflowPct}%` : '–', tip: acOverflowPct > 0 ? `When a same-level creature crits (max roll ${creatureMaxCritRoll}) vs your AC ${totalAC}, excess AC reduces crit damage by ${acOverflowPct}% (cap 50%)` : `AC must exceed creature max crit roll (${creatureMaxCritRoll}) to reduce crit damage` },
-                    { label: 'Awareness', value: wisHalveChance > 0 ? `${Math.round(wisHalveChance * 100)}%` : '–', tip: wisHalveChance > 0 ? `WIS bonus: chance to reduce incoming damage by 25%${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for chance to reduce incoming damage by 25%' },
+                    { label: 'Crit Resistance', value: wisAntiCritChance > 0 ? `${Math.round(wisAntiCritChance * 100)}%` : '–', tip: wisAntiCritChance > 0 ? `WIS bonus: chance to downgrade incoming crits${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for crit resistance' },
+                    ...(offHandIsShield ? [{ label: 'Block', value: `${Math.round(blockChance * 100)}% / ${blockAmount}`, tip: `${Math.round(blockChance * 100)}% chance to block, reducing damage by ${blockAmount} (DEX → chance, STR → amount)` }] : []),
                     { label: 'Vendor Bonus', value: buyDisc > 0 ? `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%` : '–', tip: buyDisc > 0 ? 'CHA bonus: better buy/sell prices' : 'CHA 12+ for better buy/sell prices' },
                   ];
 
