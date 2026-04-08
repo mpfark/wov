@@ -354,7 +354,9 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               d={hull.path}
               fill={hull.fill}
               stroke={hull.stroke}
-              strokeWidth={1.5}
+              strokeWidth={hull.faded ? 1 : 1.5}
+              opacity={hull.faded ? 0.35 : 1}
+              strokeDasharray={hull.faded ? "3 2" : undefined}
             />
           ))}
         </g>
