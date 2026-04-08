@@ -335,7 +335,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       msg = msg.replace(/ you!/gi, ` ${name}!`);
     }
     if (msg.includes('[INSPIRE_BUFF]')) {
-      setRegenBuffFromIncoming({ multiplier: 2, expiresAt: Date.now() + 90000 });
       const cleanMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
       setEventLog(prev => [...prev.slice(-49), cleanMsg]);
       return;
@@ -343,11 +342,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     setEventLog(prev => [...prev.slice(-49), msg]);
   }, [character.current_node_id]);
 
-  // Placeholder for setRegenBuff from incoming logs — will be updated after gameLoop
-  const setRegenBuffFromIncomingRef = useRef<(v: { multiplier: number; expiresAt: number }) => void>(() => {});
-  const setRegenBuffFromIncoming = useCallback((v: { multiplier: number; expiresAt: number }) => {
-    setRegenBuffFromIncomingRef.current(v);
-  }, []);
 
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -418,18 +412,14 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { buffState, buffSetters } = gameLoop;
 
-  // Wire setRegenBuff for incoming log processing
-  useEffect(() => { setRegenBuffFromIncomingRef.current = buffSetters.setRegenBuff; }, [buffSetters.setRegenBuff]);
-
   const {
     isDead,
     regenTick, deathCountdown, itemHpRegen, baseRegen,
     inCombatRegenRef, deathGoldRef,
   } = gameLoop;
 
-  // Destructure buff state for convenient access in render
   const {
-    regenBuff, foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
+    foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff, bleedStacks,
   } = buffState;

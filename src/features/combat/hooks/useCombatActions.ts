@@ -584,10 +584,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
       else p.addLog(`${ability.emoji} You use Second Wind but you're already at full health.`);
     } else if (ability.type === 'regen_buff') {
-      p.buffSetters.setRegenBuff({ multiplier: 2, expiresAt: Date.now() + 90000 });
-      const inspireMsg = `${ability.emoji} ${p.character.name} plays an inspiring song! HP & CP regeneration doubled for 90 seconds.`;
-      if (p.party) p.addLog(`${inspireMsg}[INSPIRE_BUFF]`);
-      else p.addLog(inspireMsg);
+      // Inspire no longer grants a regen multiplier (removed in regen overhaul)
+      const inspireMsg = `${ability.emoji} ${p.character.name} plays an inspiring song!`;
+      p.addLog(inspireMsg);
     } else if (ability.type === 'crit_buff') {
       const dexMod = getStatModifier(p.character.dex);
       const critBonus = Math.max(1, Math.min(dexMod, 5));
