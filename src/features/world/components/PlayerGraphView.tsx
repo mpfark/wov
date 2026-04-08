@@ -34,6 +34,7 @@ interface AreaHull {
   path: string;
   fill: string;
   stroke: string;
+  faded?: boolean;
 }
 
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
@@ -271,26 +272,19 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     return map;
   })();
 
-  // Compute area outline hulls using only visible nodes (no off-screen projection)
+  // Compute area outline hulls — primary nodes at full opacity, ghost-only portions faded
   const areaHulls = (() => {
     if (nodePositions.size === 0 || _areas.length === 0) return [] as AreaHull[];
 
-    const allNodeIds = new Set(allDisplayNodes.map(n => n.id));
+    const primaryIds = new Set([currentNodeId, ...neighbors.map(n => n.id)]);
     const hulls: AreaHull[] = [];
 
-    for (const area of _areas) {
-      const areaNodes = allDisplayNodes.filter(n => n.area_id === area.id && allNodeIds.has(n.id));
-      if (areaNodes.length === 0) continue;
-      const areaNodeIds = new Set(areaNodes.map(n => n.id));
+    const buildHull = (areaNodes: typeof allDisplayNodes, areaNodeIds: Set<string>): string | null => {
       const circles: Circle[] = [];
-
-      // Place a circle on each visible area node
       for (const n of areaNodes) {
         const pos = nodePositions.get(n.id);
         if (pos) circles.push({ cx: pos.px, cy: pos.py, r: AREA_OUTLINE_RADIUS });
       }
-
-      // Fill circles between connected area nodes for a smooth hull
       const edgeSpacing = AREA_OUTLINE_RADIUS * 1.4;
       for (const n of areaNodes) {
         for (const conn of n.connections) {
@@ -309,14 +303,36 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           }
         }
       }
+      if (circles.length === 0) return null;
+      const { paths } = computeRegionOutline(circles);
+      return paths.length > 0 ? paths.join(' ') : null;
+    };
 
-      if (circles.length === 0) continue;
+    for (const area of _areas) {
+      const allAreaNodes = allDisplayNodes.filter(n => n.area_id === area.id);
+      if (allAreaNodes.length === 0) continue;
+
       const emoji = emojiMap[area.area_type] || '📍';
       const fill = getAreaFillColor(emoji);
       const stroke = getAreaStrokeColor(emoji);
-      const { paths } = computeRegionOutline(circles);
-      if (paths.length > 0) {
-        hulls.push({ path: paths.join(' '), fill, stroke });
+
+      // Primary hull (current + direct neighbors only)
+      const primaryAreaNodes = allAreaNodes.filter(n => primaryIds.has(n.id));
+      const primaryAreaNodeIds = new Set(primaryAreaNodes.map(n => n.id));
+      const primaryPath = buildHull(primaryAreaNodes, primaryAreaNodeIds);
+      if (primaryPath) {
+        hulls.push({ path: primaryPath, fill, stroke });
+      }
+
+      // Ghost hull (ghost nodes only — rendered faded)
+      const ghostAreaNodes = allAreaNodes.filter(n => secondDegIds.has(n.id));
+      if (ghostAreaNodes.length > 0) {
+        // Include connections between ghost nodes and primary nodes for smooth bridging
+        const allAreaNodeIds = new Set(allAreaNodes.map(n => n.id));
+        const ghostPath = buildHull(ghostAreaNodes, allAreaNodeIds);
+        if (ghostPath) {
+          hulls.push({ path: ghostPath, fill, stroke, faded: true });
+        }
       }
     }
     return hulls;
@@ -338,7 +354,9 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               d={hull.path}
               fill={hull.fill}
               stroke={hull.stroke}
-              strokeWidth={1.5}
+              strokeWidth={hull.faded ? 1 : 1.5}
+              opacity={hull.faded ? 0.35 : 1}
+              strokeDasharray={hull.faded ? "3 2" : undefined}
             />
           ))}
         </g>
