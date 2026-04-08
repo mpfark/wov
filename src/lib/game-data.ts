@@ -306,7 +306,7 @@ export function getShieldBlockChance(dex: number): number {
 
 export function getShieldBlockAmount(str: number): number {
   const mod = Math.max(getStatModifier(str), 0);
-  return Math.min(2 + Math.floor(Math.sqrt(mod) * 1.5), 8);
+  return 10 + mod * 2;
 }
 
 // CHA → Vendor Price Modifiers
