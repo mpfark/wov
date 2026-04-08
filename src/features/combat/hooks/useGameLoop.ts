@@ -12,7 +12,7 @@ import { logActivity } from '@/hooks/useActivityLog';
 import { useBuffState } from './useBuffState';
 
 // ─── Buff / debuff types ──────────────────────────────────────────
-export interface RegenBuff { multiplier: number; expiresAt: number }
+export interface RegenBuff { multiplier: number; expiresAt: number } // kept for type compat but unused
 export interface FoodBuff { flatRegen: number; expiresAt: number }
 export interface CritBuff { bonus: number; expiresAt: number }
 export interface StealthBuff { expiresAt: number }
@@ -81,7 +81,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
   const { partyRegenBuff } = buff.buffState;
   const { setPartyRegenBuff } = buff.buffSetters;
-  const { regenBuff, foodBuff } = buff.buffState;
+  const { foodBuff } = buff.buffState;
 
   // ── Local state ────────────────────────────────────────────
   const [isDead, setIsDead] = useState(false);
@@ -90,8 +90,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const isDeadRef = useRef(false);
 
   // ── Regen refs (avoid stale closures in intervals) ─────────
-  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level });
-  const regenBuffRef = useRef(regenBuff);
+  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex });
   const foodBuffRef = useRef(foodBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
@@ -99,8 +98,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const inCombatRegenRef = useRef(false);
   const equipmentBonusesRef = useRef(equipmentBonuses);
 
-  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level]);
-  useEffect(() => { regenBuffRef.current = regenBuff; }, [regenBuff]);
+  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex]);
   useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
@@ -111,7 +109,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
   const baseRegen = getBaseRegen(character.con + (equipmentBonuses.con || 0));
 
-  // ── HP + CP Regen (every 6s, unified tick) ─────────────────
+  // ── Unified HP + CP + MP Regen (every 4s) ───────────────────
   const cpCharRef = useRef({ cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha });
   const cpStatRef = useRef(character);
   useEffect(() => { cpCharRef.current = { cp: character.cp ?? 100, class: character.class, level: character.level, int: character.int, wis: character.wis, cha: character.cha }; }, [character.cp, character.class, character.level, character.int, character.wis, character.cha]);
