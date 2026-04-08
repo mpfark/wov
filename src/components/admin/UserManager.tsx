@@ -272,9 +272,7 @@ function AdminCharacterSheet({ c, isEditing, charEdits, setCharEdits, onEdit, on
         const cp = c.cp ?? 30;
         const maxCp = c.max_cp ?? 30;
         const cpPercent = Math.round((cp / maxCp) * 100);
-        const primaryStat = CLASS_PRIMARY_STAT[c.class] || 'con';
-        const primaryVal = (c as any)[primaryStat] ?? 10;
-        const cpRegen = getCpRegenRate(primaryVal);
+        const cpRegen = getStatRegen(c.int ?? 10);
         const intMod = Math.max(Math.floor((c.int - 10) / 2), 0);
         const wisMod = Math.max(Math.floor((c.wis - 10) / 2), 0);
         const levelPart = (c.level - 1) * 3;
