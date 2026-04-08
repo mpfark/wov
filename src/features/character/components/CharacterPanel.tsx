@@ -4,7 +4,7 @@ import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
 import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getBaseRegen, getMaxCp, getMaxMp, getMpRegenRate, getCpRegenRate, CLASS_PRIMARY_STAT, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, calculateAC, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/features/combat';
-import { SHIELD_AC_BONUS, SHIELD_AWARENESS_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus } from '@/features/combat';
+import { SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount } from '@/features/combat';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -71,7 +71,7 @@ const STAT_DESCRIPTIONS: Record<string, string> = {
   dex: 'Ranged attack, AC bonus, max Stamina, crit chance',
   con: 'Hit points and physical resilience',
   int: 'Arcane power, CP pool, improves hit chance',
-  wis: 'Perception, healing, chance to reduce incoming damage by 25%',
+  wis: 'Perception, healing, reduces incoming crit chance',
   cha: 'Persuasion, bardic abilities, better vendor prices & humanoid gold',
 };
 
@@ -422,7 +422,7 @@ export default function CharacterPanel({
                             🛡️ Shield
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">+1 AC, +5% Awareness</TooltipContent>
+                        <TooltipContent side="bottom" className="text-xs">+1 AC, +5% Crit Resistance, Block chance</TooltipContent>
                       </Tooltip>
                     )}
                   </div>
@@ -843,10 +843,10 @@ export default function CharacterPanel({
                         ? `+${hitBonus} Hit Chance (cap: +5)` 
                         : 'Hit Chance at 12+ (cap: +5)';
                     } else if (stat === 'wis') {
-                      const dodgeChance = getWisDodgeChance(effective);
-                      derivedBonus = dodgeChance > 0 
-                        ? `${Math.round(dodgeChance * 100)}% Awareness (cap: 20%)` 
-                        : 'Awareness at 12+ (cap: 20%)';
+                      const antiCrit = getWisDodgeChance(effective);
+                      derivedBonus = antiCrit > 0 
+                        ? `${Math.round(antiCrit * 100)}% Crit Resistance (cap: 20%)` 
+                        : 'Crit Resistance at 12+ (cap: 20%)';
                     } else if (stat === 'cha') {
                       const buyDiscount = getChaBuyDiscount(effective);
                       const sellMult = getChaSellMultiplier(effective);
@@ -949,7 +949,7 @@ export default function CharacterPanel({
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = (combat?.critRange || 20) - dexCrit;
                   const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
-                  const wisHalveChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_AWARENESS_BONUS : 0);
+                  const wisAntiCritChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
