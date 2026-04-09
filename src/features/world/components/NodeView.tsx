@@ -71,6 +71,18 @@ export default function NodeView({
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [areaOpen, setAreaOpen] = useState(true);
   const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; level: number; race?: string; class?: string; gender?: string } | null>(null);
+
+  // ── Combat start flash ──
+  const prevInCombatRef = useRef(false);
+  const [combatFlash, setCombatFlash] = useState(false);
+  useEffect(() => {
+    if (inCombat && !prevInCombatRef.current) {
+      setCombatFlash(true);
+      const t = setTimeout(() => setCombatFlash(false), 400);
+      return () => clearTimeout(t);
+    }
+    prevInCombatRef.current = !!inCombat;
+  }, [inCombat]);
   const { emojiMap } = useAreaTypes();
 
   // ── Polish: aggro flash tracking (fire once per creature per node visit) ──
@@ -128,7 +140,7 @@ export default function NodeView({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="h-full flex flex-col p-3 relative">
+      <div className={`h-full flex flex-col p-3 relative${combatFlash ? ' combat-start-flash' : ''}`}>
         {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
           {/* Location Header */}

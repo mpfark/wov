@@ -15,6 +15,7 @@
  *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { CLASS_COMBAT_PROFILES } from '../utils/combat-math';
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
@@ -193,6 +194,27 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       idleCountRef.current = 0;
       console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
       if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
+
+      // Instant prediction: move creature HP bar before first server tick
+      const creature = ext.current.creatures.find(c => c.id === creatureId);
+      if (creature && creature.is_alive && creature.hp > 0) {
+        const profile = CLASS_COMBAT_PROFILES[ext.current.character.class];
+        if (profile) {
+          const attackerStat = (ext.current.character[profile.stat as keyof typeof ext.current.character] as number) || 10;
+          const prediction = predictConservativeDamage({
+            classKey: ext.current.character.class,
+            attackerStat,
+            int: ext.current.character.int,
+            str: ext.current.character.str,
+            creatureAC: creature.ac,
+          });
+          if (prediction.shouldPredict) {
+            const predictedHp = applyPredictedDamage(creature.hp, prediction.predictedDamage);
+            setLocalPredictionOverrides({ [creatureId]: { hp: predictedHp, ts: Date.now() } });
+          }
+        }
+      }
+
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTickRef.current();
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
@@ -304,7 +326,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
 
     if (result.aliveEngagedIds.length === 0) {
-      stopCombat();
+      setTimeout(() => stopCombat(), 250);
     } else {
       if (!inCombatRef.current) {
         inCombatRef.current = true;
