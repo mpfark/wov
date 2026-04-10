@@ -47,8 +47,6 @@ interface Props {
 }
 
 function InspectSlot({ slot, item }: { slot: string; item: EquippedItem | undefined }) {
-  const blocked = slot === 'off_hand' && !item; // simplified — we don't know 2H from inspect
-
   return (
     <Tooltip>
       <TooltipTrigger asChild>
