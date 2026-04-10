@@ -1409,6 +1409,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_party_invite: {
+        Args: { _membership_id: string }
+        Returns: undefined
+      }
       accept_summon: { Args: { _request_id: string }; Returns: undefined }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
