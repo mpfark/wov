@@ -456,21 +456,23 @@ export default function MapPanel({
         areas={areas}
       />
 
-      {/* Summon Section — Level 26+ */}
+      {/* Incoming summon requests — any level can be summoned */}
+      {summonAddLog && pendingSummons && pendingSummons.length > 0 && onAcceptSummon && onDeclineSummon && (
+        <div className="border-t border-border pt-2">
+          <SummonRequestNotification
+            pendingSummons={pendingSummons}
+            onAccept={onAcceptSummon}
+            onDecline={onDeclineSummon}
+            addLog={summonAddLog}
+            inCombat={summonInCombat ?? false}
+            onRefetch={onSummonRefetch}
+          />
+        </div>
+      )}
+
+      {/* Outgoing summon panel — Level 26+ */}
       {characterLevel >= 26 && summonAddLog && getRegionForNode && currentNodeId && (
-        <div className="border-t border-border pt-2 space-y-1">
-          {/* Incoming summon requests */}
-          {pendingSummons && pendingSummons.length > 0 && onAcceptSummon && onDeclineSummon && (
-            <SummonRequestNotification
-              pendingSummons={pendingSummons}
-              onAccept={onAcceptSummon}
-              onDecline={onDeclineSummon}
-              addLog={summonAddLog}
-              inCombat={summonInCombat ?? false}
-              onRefetch={onSummonRefetch}
-            />
-          )}
-          {/* Outgoing summon panel */}
+        <div className="border-t border-border pt-2">
           <SummonPlayerPanel
             characterId={character.id}
             currentNodeId={currentNodeId}
