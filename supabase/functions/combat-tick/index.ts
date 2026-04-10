@@ -124,8 +124,8 @@ Deno.serve(async (req) => {
         })
         .map(m => ({ id: m.character_id, c: m.character as any }));
 
-      tankId = party.tank_id || null;
-      tankAtNode = tankId ? members.some(m => m.id === tankId) : false;
+      tankId = party.tank_id || party.leader_id;
+      tankAtNode = members.some(m => m.id === tankId);
       sessionKey = { party_id };
     } else {
       const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
