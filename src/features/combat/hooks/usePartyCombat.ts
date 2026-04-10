@@ -239,6 +239,19 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Process tick result (thin wrapper around pure interpreter) ──
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
+    // Non-leader: enter combat state when receiving broadcast tick results
+    if (!inCombatRef.current && ext.current.party && !ext.current.isLeader) {
+      inCombatRef.current = true;
+      setInCombat(true);
+      idleCountRef.current = 0;
+      // Populate engaged creatures from server data
+      const serverCreatureIds = data.creature_states.map(cs => cs.id);
+      if (serverCreatureIds.length > 0) {
+        setEngagedCreatureIds(serverCreatureIds);
+        engagedCreatureIdsRef.current = serverCreatureIds;
+        setActiveCombatCreatureId(serverCreatureIds[0]);
+      }
+    }
     if (!inCombatRef.current) return;
 
     // Dev-only: aggro→first-tick latency
