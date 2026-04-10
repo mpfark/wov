@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +23,46 @@ export default function SummonPlayerPanel({
 }: Props) {
   const [targetName, setTargetName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Subscribe to realtime status changes on outgoing summon requests
+  useEffect(() => {
+    // Clean up any previous channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    const channel = supabase
+      .channel(`summon-outgoing-${characterId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'summon_requests',
+        filter: `summoner_id=eq.${characterId}`,
+      }, async (payload) => {
+        const row = payload.new as { status: string; target_id: string };
+        if (row.status === 'accepted') {
+          const { data: name } = await supabase.rpc('get_character_name', { _character_id: row.target_id });
+          const who = (name as string) || 'Player';
+          setFeedback({ type: 'success', msg: `${who} accepted your summon!` });
+          addLog(`🌀 ${who} accepted your summon and has arrived!`);
+        } else if (row.status === 'declined') {
+          const { data: name } = await supabase.rpc('get_character_name', { _character_id: row.target_id });
+          const who = (name as string) || 'Player';
+          setFeedback({ type: 'error', msg: `${who} declined your summon.` });
+          addLog(`🌀 ${who} declined your summon request.`);
+        }
+      })
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [characterId, addLog]);
 
   const handleSummon = useCallback(async () => {
     if (!targetName.trim()) { setFeedback({ type: 'error', msg: 'Enter a character name.' }); return; }
@@ -89,7 +128,7 @@ export default function SummonPlayerPanel({
         setFeedback({ type: 'error', msg: error.message });
       } else {
         addLog(`🌀 Summon request sent to ${targetName.trim()} (${cpCost} CP). Awaiting response...`);
-        setFeedback({ type: 'success', msg: `Request sent to ${targetName.trim()}!` });
+        setFeedback({ type: 'info', msg: `Request sent to ${targetName.trim()}! Waiting...` });
         setTargetName('');
       }
     } catch (e: any) {
@@ -115,7 +154,7 @@ export default function SummonPlayerPanel({
         </Button>
       </div>
       {feedback && (
-        <p className={`text-[10px] ${feedback.type === 'error' ? 'text-destructive' : 'text-chart-2'}`}>
+        <p className={`text-[10px] ${feedback.type === 'error' ? 'text-destructive' : feedback.type === 'success' ? 'text-chart-2' : 'text-muted-foreground'}`}>
           {feedback.msg}
         </p>
       )}
