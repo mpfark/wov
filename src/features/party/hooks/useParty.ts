@@ -16,6 +16,7 @@ export interface PartyMember {
     hp: number;
     max_hp: number;
     current_node_id: string | null;
+    dex: number;
   };
 }
 
@@ -57,7 +58,7 @@ export function useParty(characterId: string | null) {
         // Fetch all accepted members with character info
         const { data: membersData } = await supabase
           .from('party_members')
-          .select('id, character_id, status, is_following, character:characters(id, name, gender, race, class, level, hp, max_hp, current_node_id)')
+           .select('id, character_id, status, is_following, character:characters(id, name, gender, race, class, level, hp, max_hp, current_node_id, dex)')
           .eq('party_id', partyId)
           .eq('status', 'accepted');
         if (membersData) setMembers(membersData as unknown as PartyMember[]);
@@ -99,7 +100,7 @@ export function useParty(characterId: string | null) {
     if (!currentParty) return;
     const { data } = await supabase
       .from('party_members')
-      .select('id, character_id, status, is_following, character:characters(id, name, gender, race, class, level, hp, max_hp, current_node_id)')
+      .select('id, character_id, status, is_following, character:characters(id, name, gender, race, class, level, hp, max_hp, current_node_id, dex)')
       .eq('party_id', currentParty.id)
       .eq('status', 'accepted');
     if (data) setMembers(data as unknown as PartyMember[]);

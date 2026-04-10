@@ -76,6 +76,8 @@ export interface UsePartyCombatParams {
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
   /** Callback with server DoT state for UI sync */
   onActiveDots?: (dots: Record<string, any>) => void;
+  /** Callback with merged creature-centric debuffs for shared party display */
+  onCreatureDebuffs?: (debuffs: Record<string, any>) => void;
   /** Callback to sync absorb shield HP from server */
   onAbsorbSync?: (remaining: number) => void;
   /** Buff setters for death cleanup (Envenom/Ignite) */
@@ -320,6 +322,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     if (result.activeEffectsSnapshot) setLastActiveEffects(result.activeEffectsSnapshot);
     if (result.dotsByChar && ext.current.onActiveDots) ext.current.onActiveDots(result.dotsByChar);
+    if (result.creatureDebuffs && ext.current.onCreatureDebuffs) ext.current.onCreatureDebuffs(result.creatureDebuffs);
     if (result.hasLootDrop) ext.current.fetchGroundLoot();
 
     // Sync absorb shield HP from server

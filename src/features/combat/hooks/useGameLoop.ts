@@ -264,6 +264,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     handleConsumedBuffs: buff.handleConsumedBuffs,
     handleClearedDots: buff.handleClearedDots,
     syncFromServerEffects: buff.syncFromServerEffects,
+    syncCreatureDebuffs: buff.syncCreatureDebuffs,
     // Local state
     isDead,
     regenTick,
