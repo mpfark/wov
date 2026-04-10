@@ -28,8 +28,10 @@ export default function OnboardingGatePage({ userId, onComplete }: Props) {
     setSaving(true);
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: trimmed, has_accepted_oath: true })
-      .eq('user_id', userId);
+      .upsert(
+        { user_id: userId, full_name: trimmed, has_accepted_oath: true },
+        { onConflict: 'user_id' }
+      );
     setSaving(false);
     if (error) {
       toast.error('Something went wrong. Please try again.');
