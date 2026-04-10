@@ -876,6 +876,19 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         </div>
       </div>
 
+      {/* Summon Request Notifications */}
+      {pendingSummons.length > 0 && (
+        <div className="px-4 py-1 border-b border-border bg-card/50">
+          <SummonRequestNotification
+            pendingSummons={pendingSummons}
+            onAccept={acceptSummon}
+            onDecline={declineSummon}
+            addLog={addLog}
+            inCombat={inCombat}
+          />
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex">
         {/* Left: Character Panel — desktop: fixed sidebar, tablet: sheet overlay */}
