@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
-
-const SLOT_ORDER: string[] = [
-  'head', 'amulet', 'shoulders', 'chest', 'gloves',
-  'belt', 'pants', 'boots', 'ring', 'trinket',
-  'main_hand', 'off_hand',
-];
 
 const SLOT_LABELS: Record<string, string> = {
   head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
@@ -17,11 +11,13 @@ const SLOT_LABELS: Record<string, string> = {
   ring: 'Ring', trinket: 'Trinket', main_hand: 'Main Hand', off_hand: 'Off Hand',
 };
 
-const RARITY_CLASS: Record<string, string> = {
-  unique: 'text-primary text-glow',
-  uncommon: 'text-elvish',
+const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
+  uncommon: 'text-elvish',
+  unique: 'text-primary text-glow',
 };
+
+const getInspectItemColor = (rarity: string) => RARITY_COLORS[rarity] || 'text-foreground';
 
 interface EquippedItem {
   slot: string;
@@ -50,6 +46,52 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+function InspectSlot({ slot, item }: { slot: string; item: EquippedItem | undefined }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center transition-colors ${
+            item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
+          }`}
+        >
+          <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>
+          {item ? (
+            <>
+              <div className={`text-[10px] font-display truncate ${getInspectItemColor(item.rarity)}`}>
+                {item.item_name}
+                {item.hands === 2 && <span className="text-[9px] text-muted-foreground ml-1">(2H)</span>}
+              </div>
+              <div className="text-[9px] text-muted-foreground">{item.durability_pct}%</div>
+            </>
+          ) : (
+            <div className="text-[10px] text-muted-foreground/50">Empty</div>
+          )}
+        </div>
+      </TooltipTrigger>
+      {item && (
+        <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+          <p className={`font-display ${getInspectItemColor(item.rarity)}`}>{item.item_name}</p>
+          <p className="text-xs text-muted-foreground">{item.description}</p>
+          <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.slot] || item.slot} · {item.item_type}</p>
+          {item.hands && <p className="text-xs text-muted-foreground">{item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
+          <p className="text-[10px] text-muted-foreground">L{item.item_level}</p>
+          {Object.entries(item.stats || {}).filter(([, v]) => v !== 0).map(([k, v]) => (
+            <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
+              {k === 'hp_regen' ? `+${v} Regen` : `+${v} ${k.toUpperCase()}`}
+            </p>
+          ))}
+          {item.durability_pct < 100 && (
+            <p className={`text-[10px] ${item.durability_pct < 25 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              Durability: {item.durability_pct}%
+            </p>
+          )}
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+}
+
 export default function InspectPlayerDialog({ player, open, onOpenChange }: Props) {
   const [items, setItems] = useState<EquippedItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,7 +108,8 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
 
   if (!player) return null;
 
-  const sorted = [...items].sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+  const getItem = (slot: string) => items.find(i => i.slot === slot);
+  const isTwoHanded = getItem('main_hand')?.hands === 2;
   const title = getCharacterTitle(player.level, player.gender as 'male' | 'female' | undefined);
 
   return (
@@ -81,47 +124,42 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
             </Badge>
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh]">
+        <TooltipProvider delayDuration={200}>
           {loading ? (
             <p className="text-sm text-muted-foreground italic text-center py-6">Loading gear…</p>
-          ) : sorted.length === 0 ? (
+          ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground italic text-center py-6">No equipment visible.</p>
           ) : (
-            <div className="space-y-1">
-              {sorted.map((item) => {
-                const statEntries = Object.entries(item.stats || {}).filter(([, v]) => v !== 0);
-                return (
-                  <div key={item.slot} className="p-2 bg-background/50 rounded border border-border">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide w-16 shrink-0">
-                        {SLOT_LABELS[item.slot] ?? item.slot}
-                      </span>
-                      <span className={`text-xs font-display truncate flex-1 ${RARITY_CLASS[item.rarity] ?? 'text-foreground'}`}>
-                        {item.item_name}
-                        {item.hands === 2 && <span className="text-[9px] text-muted-foreground ml-1">(2H)</span>}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground shrink-0">L{item.item_level}</span>
-                    </div>
-                    {statEntries.length > 0 && (
-                      <div className="mt-0.5 flex flex-wrap gap-x-2">
-                        {statEntries.map(([k, v]) => (
-                          <span key={k} className="text-[10px] text-elvish">
-                            {k.toUpperCase()} {v > 0 ? '+' : ''}{v}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {item.durability_pct < 100 && (
-                      <span className={`text-[9px] ${item.durability_pct < 25 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                        Durability: {item.durability_pct}%
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+            <div className="flex flex-col items-center gap-1">
+              <div className="grid grid-cols-3 gap-1 w-full justify-items-center">
+                {/* Row 1: Trinket - Head - empty */}
+                <InspectSlot slot="trinket" item={getItem('trinket')} />
+                <InspectSlot slot="head" item={getItem('head')} />
+                <div />
+                {/* Row 2: empty - Amulet - empty */}
+                <div />
+                <InspectSlot slot="amulet" item={getItem('amulet')} />
+                <div />
+                {/* Row 3: Shoulders - Chest - Gloves */}
+                <InspectSlot slot="shoulders" item={getItem('shoulders')} />
+                <InspectSlot slot="chest" item={getItem('chest')} />
+                <InspectSlot slot="gloves" item={getItem('gloves')} />
+                {/* Row 4: Main Hand - Belt - Off Hand */}
+                <InspectSlot slot="main_hand" item={getItem('main_hand')} />
+                <InspectSlot slot="belt" item={getItem('belt')} />
+                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} />
+                {/* Row 5: Ring - Pants - empty */}
+                <InspectSlot slot="ring" item={getItem('ring')} />
+                <InspectSlot slot="pants" item={getItem('pants')} />
+                <div />
+                {/* Row 6: empty - Boots - empty */}
+                <div />
+                <InspectSlot slot="boots" item={getItem('boots')} />
+                <div />
+              </div>
             </div>
           )}
-        </ScrollArea>
+        </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
