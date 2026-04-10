@@ -433,20 +433,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     buffSetters.setPartyRegenBuff(incomingPartyRegenBuff);
   }, [incomingPartyRegenBuff, buffSetters]);
 
-  // ── Instant follower movement
-  const lastLeaderMoveRef = useRef(0);
-  useEffect(() => {
-    if (!party || isLeader || !myMembership?.is_following) return;
-    const leaderMoves = partyMoveEvents.filter(e => e.character_id === party.leader_id);
-    if (leaderMoves.length === 0) return;
-    const latestMove = leaderMoves[leaderMoves.length - 1];
-    if (latestMove.node_id === character.current_node_id) return;
-    if (leaderMoves.length <= lastLeaderMoveRef.current) return;
-    lastLeaderMoveRef.current = leaderMoves.length;
-    updateCharacter({ current_node_id: latestMove.node_id });
-    broadcastMove(character.id, character.name, latestMove.node_id);
-    addLocalLog(`You follow ${latestMove.character_name}.`);
-  }, [party, isLeader, myMembership?.is_following, partyMoveEvents, character.current_node_id, updateCharacter, addLocalLog, broadcastMove, character.id, character.name]);
+  // Follower movement is handled server-side by leader's moveFollowers() —
+  // no duplicate broadcast-based movement needed here.
 
   // Broadcast party regen buff when caster sets it
   const prevPartyRegenBuffRef = useRef<typeof partyRegenBuff>(null);

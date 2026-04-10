@@ -176,9 +176,11 @@ export function useParty(characterId: string | null) {
     if (error) return;
   }, [party]);
 
-  const acceptInvite = useCallback(async (membershipId: string) => {
-    await supabase.rpc('accept_party_invite', { _membership_id: membershipId });
+  const acceptInvite = useCallback(async (membershipId: string): Promise<string | null> => {
+    const { error } = await supabase.rpc('accept_party_invite', { _membership_id: membershipId });
+    if (error) return error.message;
     fetchParty();
+    return null;
   }, [fetchParty]);
 
   const declineInvite = useCallback(async (membershipId: string) => {
