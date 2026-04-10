@@ -49,7 +49,7 @@ import { useStatAllocation } from '@/features/character/hooks/useStatAllocation'
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
-import SummonRequestNotification from '@/features/world/components/SummonRequestNotification';
+
 
 interface Props {
   character: Character;
@@ -796,13 +796,22 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     isDead,
     getRegionForNode: (nodeId: string) => { const n = getNode(nodeId); return n ? getRegion(n.region_id) : undefined; },
     currentRegionMinLevel: currentRegion?.min_level,
+    pendingSummons,
+    onAcceptSummon: acceptSummon,
+    onDeclineSummon: declineSummon,
+    onSummonRefetch: async () => {
+      const { data } = await supabase.from('characters').select('current_node_id').eq('id', character.id).single();
+      if (data?.current_node_id && updateCharacterLocal) {
+        updateCharacterLocal({ current_node_id: data.current_node_id });
+      }
+    },
   }), [
     regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
     party, pendingInvites, isLeader, isTank, myMembership, playersHere,
     createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
     showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
-    creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter,
+    creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon,
     getNode, getRegion, currentRegion,
   ]);
 
@@ -878,24 +887,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         </div>
       </div>
 
-      {/* Summon Request Notifications */}
-      {pendingSummons.length > 0 && (
-        <div className="px-4 py-1 border-b border-border bg-card/50">
-          <SummonRequestNotification
-            pendingSummons={pendingSummons}
-            onAccept={acceptSummon}
-            onDecline={declineSummon}
-            addLog={addLog}
-            inCombat={inCombat}
-            onRefetch={async () => {
-              const { data } = await supabase.from('characters').select('current_node_id').eq('id', character.id).single();
-              if (data?.current_node_id && updateCharacterLocal) {
-                updateCharacterLocal({ current_node_id: data.current_node_id });
-              }
-            }}
-          />
-        </div>
-      )}
 
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex">
