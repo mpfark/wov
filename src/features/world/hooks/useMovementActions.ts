@@ -10,6 +10,7 @@ import { useState, useCallback } from 'react';
 import { Character } from '@/features/character';
 import {
   rollD20, getStatModifier, rollDamage, getMoveCost, getCarryCapacity, getBagWeight,
+  calculateAC,
 } from '@/lib/game-data';
 import { getNodeDisplayName } from '@/features/world';
 import { supabase } from '@/integrations/supabase/client';
@@ -99,7 +100,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
     for (const member of membersHere) {
       for (const creature of livingCreatures) {
         const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
-        const memberAC = 10;
+        const memberAC = calculateAC(member.character.class, member.character.dex ?? 10);
         if (atkRoll >= memberAC) {
           const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
           logs.push(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing! (Rolled ${atkRoll}) — ${dmg} damage!`);
