@@ -1212,6 +1212,61 @@ export type Database = {
         }
         Relationships: []
       }
+      summon_requests: {
+        Row: {
+          cp_cost: number
+          created_at: string
+          expires_at: string
+          id: string
+          status: string
+          summoner_id: string
+          summoner_node_id: string
+          target_id: string
+        }
+        Insert: {
+          cp_cost?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          summoner_id: string
+          summoner_node_id: string
+          target_id: string
+        }
+        Update: {
+          cp_cost?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          summoner_id?: string
+          summoner_node_id?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "summon_requests_summoner_id_fkey"
+            columns: ["summoner_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "summon_requests_summoner_node_id_fkey"
+            columns: ["summoner_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "summon_requests_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1354,6 +1409,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_summon: { Args: { _request_id: string }; Returns: undefined }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
@@ -1394,6 +1450,7 @@ export type Database = {
         Args: { _character_id: string; _damage: number }
         Returns: number
       }
+      decline_summon: { Args: { _request_id: string }; Returns: undefined }
       degrade_party_member_equipment: {
         Args: { _character_id: string }
         Returns: undefined
