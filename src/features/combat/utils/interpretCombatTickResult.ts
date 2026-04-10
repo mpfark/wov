@@ -36,6 +36,14 @@ export interface CombatTickResponse {
   buff_sync?: Record<string, { absorb_remaining: number }>;
 }
 
+/** Aggregated creature-centric debuff view for shared party display */
+export interface CreatureDebuffEntry {
+  poison?: { stacks: number; damage_per_tick: number };
+  ignite?: { stacks: number; damage_per_tick: number };
+  bleed?: { stacks: number; damage_per_tick: number };
+  sunder?: { stacks: number };
+}
+
 export interface TickInterpretation {
   /** Creature HP updates from server (authoritative) */
   creatureHpUpdates: Record<string, number>;
@@ -63,6 +71,8 @@ export interface TickInterpretation {
   }[] | null;
   /** DoTs grouped by character for UI sync, or null */
   dotsByChar: Record<string, any> | null;
+  /** Derived creature-centric debuff aggregation for shared party display (display-only) */
+  creatureDebuffs: Record<string, CreatureDebuffEntry> | null;
   /** Whether a loot_drop event was present */
   hasLootDrop: boolean;
   /** Whether the server says combat ended */

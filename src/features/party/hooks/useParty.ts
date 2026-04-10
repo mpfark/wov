@@ -16,6 +16,7 @@ export interface PartyMember {
     hp: number;
     max_hp: number;
     current_node_id: string | null;
+    dex: number;
   };
 }
 
