@@ -211,6 +211,27 @@ export function interpretCombatTickResult(
     .filter(cs => cs.alive && currentEngagedIds.includes(cs.id))
     .map(cs => cs.id);
 
+  // ── Derived creature-centric debuff aggregation (display-only) ──
+  let creatureDebuffs: Record<string, CreatureDebuffEntry> | null = null;
+  if (data.active_effects) {
+    creatureDebuffs = {};
+    for (const eff of data.active_effects) {
+      if (!creatureDebuffs[eff.target_id]) creatureDebuffs[eff.target_id] = {};
+      const entry = creatureDebuffs[eff.target_id];
+      const et = eff.effect_type as keyof CreatureDebuffEntry;
+      if (et === 'sunder') {
+        const prev = entry.sunder;
+        entry.sunder = { stacks: (prev?.stacks ?? 0) + (eff.stacks ?? 1) };
+      } else if (et === 'poison' || et === 'ignite' || et === 'bleed') {
+        const prev = entry[et];
+        entry[et] = {
+          stacks: (prev?.stacks ?? 0) + (eff.stacks ?? 1),
+          damage_per_tick: (prev?.damage_per_tick ?? 0) + (eff.damage_per_tick ?? 0),
+        };
+      }
+    }
+  }
+
   // ── Absorb shield sync ──
   const absorbRemaining = data.buff_sync?.[characterId]?.absorb_remaining ?? null;
 
@@ -226,6 +247,7 @@ export function interpretCombatTickResult(
     igniteProcs,
     activeEffectsSnapshot,
     dotsByChar,
+    creatureDebuffs,
     hasLootDrop,
     sessionEnded,
     aliveEngagedIds,
