@@ -227,7 +227,7 @@ export function useBuffState(params: UseBuffStateParams) {
         // Sync sunder from server effects
         setSunderDebuff(prev => {
           if (prev && prev.creatureId === creatureId) return prev;
-          return { creatureId, acReduction: entry.sunder!.stacks * 2, expiresAt: Date.now() + 30000 };
+          return { creatureId, acReduction: entry.sunder!.stacks * 2, expiresAt: Date.now() + 30000, creatureName: '' };
         });
       }
     }
@@ -262,5 +262,6 @@ export function useBuffState(params: UseBuffStateParams) {
     handleConsumedBuffs,
     handleClearedDots,
     syncFromServerEffects,
+    syncCreatureDebuffs,
   };
 }
