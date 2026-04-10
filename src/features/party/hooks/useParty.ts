@@ -177,11 +177,9 @@ export function useParty(characterId: string | null) {
   }, [party]);
 
   const acceptInvite = useCallback(async (membershipId: string) => {
-    // If already in a party, leave it first
-    if (party) await leaveParty();
-    await supabase.from('party_members').update({ status: 'accepted' }).eq('id', membershipId);
+    await supabase.rpc('accept_party_invite', { _membership_id: membershipId });
     fetchParty();
-  }, [party, fetchParty]);
+  }, [fetchParty]);
 
   const declineInvite = useCallback(async (membershipId: string) => {
     await supabase.from('party_members').delete().eq('id', membershipId);
