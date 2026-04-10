@@ -1,76 +1,39 @@
 
 
-# Revised Plan: Shared Creature Debuffs + Party Opportunity Attack AC Fix
+# Fix: Summon Request Placement + Summoner Feedback
 
-## Summary
+## Confirmed Code Locations
 
-Two refinements applied to the original plan per your feedback: (1) merged debuffs are additive display-only data, raw effects stay untouched; (2) party member AC uses the real `calculateAC` formula with actual DEX from the database.
+- **SummonRequestNotification** (incoming): Currently in `GamePage.tsx` line 881, renders below header — **wrong place**, breaks UI
+- **SummonPlayerPanel** (outgoing): In `MapPanel.tsx` line 452 — **correct place**
+- Both should live together in the MapPanel summon section
 
----
+## Changes
 
-## Change 1: Shared Creature Debuff Display (derived view only)
+### 1. Move notification into MapPanel (`GamePage.tsx` + `MapPanel.tsx`)
 
-### `src/features/combat/utils/interpretCombatTickResult.ts`
+**`src/pages/GamePage.tsx`**:
+- Remove the `SummonRequestNotification` block (lines 881-898)
+- Pass `pendingSummons`, `acceptSummon`, `declineSummon` as new props to `MapPanel`
 
-Add a new field `creatureDebuffs` to `TickInterpretation` — a creature-centric aggregation of all active effects, keyed by creature ID. This is a **derived display view only**:
+**`src/features/world/components/MapPanel.tsx`**:
+- Add props: `pendingSummons`, `onAcceptSummon`, `onDeclineSummon`, `onSummonRefetch`
+- Render `SummonRequestNotification` just above `SummonPlayerPanel` (around line 452), inside the same `border-t` section
+- The notification inherits the existing `addLog` and `inCombat` props already available in MapPanel
 
-- `dotsByChar` remains unchanged (per-source grouping, backward compat)
-- `activeEffectsSnapshot` remains unchanged (raw effect array)
-- New `creatureDebuffs` field aggregates stacks/damage by `target_id` + `effect_type` across all sources
+### 2. Summoner feedback (`SummonPlayerPanel.tsx`)
 
-```typescript
-// New field in TickInterpretation:
-creatureDebuffs: Record<string, {
-  poison?: { stacks: number; damage_per_tick: number };
-  ignite?: { stacks: number; damage_per_tick: number };
-  bleed?: { stacks: number; damage_per_tick: number };
-  sunder?: { stacks: number };
-}> | null;
-```
-
-Built by iterating `data.active_effects` and summing stacks per creature per effect type. No existing fields are modified or replaced.
-
-### `src/pages/GamePage.tsx`
-
-Update the active-dots sync handler to use `creatureDebuffs` (merged) for the UI buff state display, so all party members' debuffs show on creatures. The existing `dotsByChar` flow continues to work for any code that needs per-source data.
-
-### `src/features/combat/hooks/useBuffState.ts`
-
-Update `syncFromServerEffects` to accept the creature-centric merged data for display purposes. The function already maps server data to local stacks — it just needs to read from the merged view instead of filtering by character ID.
-
----
-
-## Change 2: Real AC for Party Opportunity Attacks
-
-### Problem
-
-Line 102 in `resolveOpportunityAttacks` uses `const memberAC = 10`. The fleeing player's own AC is correctly computed as `calculateAC(class, effectiveDex) + equipmentBonuses.ac`. Party members should use the same formula.
-
-### Investigation
-
-`PartyMember.character` currently lacks `dex`. The `calculateAC(class, dex)` function needs class (already available) and dex. Equipment AC bonuses are not available without querying each member's inventory — impractical for a synchronous flee calculation.
-
-### Solution
-
-1. **`src/features/party/hooks/useParty.ts`** — Add `dex` to the character select query and the `PartyMember` interface:
-   - Select: `character:characters(id, name, gender, race, class, level, hp, max_hp, current_node_id, dex)`
-   - Interface: add `dex: number` to the character sub-type
-
-2. **`src/features/world/hooks/useMovementActions.ts`** — Replace hardcoded `10` with:
-   ```typescript
-   const memberAC = calculateAC(member.character.class, member.character.dex);
-   ```
-   This gives the correct base AC for each member's class and DEX. It won't include gear AC bonuses (not available without inventory queries), but matches the core defensive formula used everywhere else. This is significantly more accurate than `10`.
-
----
+**`src/features/world/components/SummonPlayerPanel.tsx`**:
+- After inserting a summon request, subscribe to realtime changes on `summon_requests` filtered by `summoner_id = characterId`
+- When status changes to `accepted` → show success feedback + log message
+- When status changes to `declined` → show declined feedback + log message
+- Clean up channel on unmount
 
 ## Files touched
 
 | File | Change |
 |------|--------|
-| `src/features/combat/utils/interpretCombatTickResult.ts` | Add `creatureDebuffs` derived display field (additive, no replacement) |
-| `src/pages/GamePage.tsx` | Use `creatureDebuffs` for UI debuff sync |
-| `src/features/combat/hooks/useBuffState.ts` | Accept creature-centric merged data for display |
-| `src/features/party/hooks/useParty.ts` | Add `dex` to PartyMember character select + interface |
-| `src/features/world/hooks/useMovementActions.ts` | Use `calculateAC(class, dex)` for member opportunity attack AC |
+| `src/pages/GamePage.tsx` | Remove notification from header, pass summon props to MapPanel |
+| `src/features/world/components/MapPanel.tsx` | Accept summon notification props, render in summon section |
+| `src/features/world/components/SummonPlayerPanel.tsx` | Subscribe to outgoing request status changes for summoner feedback |
 
