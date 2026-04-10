@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import SummonPlayerPanel from '@/features/world/components/SummonPlayerPanel';
+import SummonRequestNotification from '@/features/world/components/SummonRequestNotification';
+import type { SummonRequest } from '@/features/world/hooks/useSummonRequests';
 import { Region, GameNode, Area } from '@/features/world';
 import { Party, PartyMember } from '@/features/party';
 import { PlayerPresence } from '@/features/world';
@@ -87,6 +89,11 @@ interface Props {
   isDead?: boolean;
   getRegionForNode?: (nodeId: string) => { id: string; min_level: number } | undefined;
   currentRegionMinLevel?: number;
+  // Summon request notification props
+  pendingSummons?: SummonRequest[];
+  onAcceptSummon?: (requestId: string) => Promise<string | null>;
+  onDeclineSummon?: (requestId: string) => Promise<string | null>;
+  onSummonRefetch?: () => void;
 }
 
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
@@ -100,6 +107,7 @@ export default function MapPanel({
   unlockedConnections,
   onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
+  pendingSummons, onAcceptSummon, onDeclineSummon, onSummonRefetch,
 }: Props) {
   currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -448,9 +456,21 @@ export default function MapPanel({
         areas={areas}
       />
 
-      {/* Summon Player — Level 26+ */}
+      {/* Summon Section — Level 26+ */}
       {characterLevel >= 26 && summonAddLog && getRegionForNode && currentNodeId && (
-        <div className="border-t border-border pt-2">
+        <div className="border-t border-border pt-2 space-y-1">
+          {/* Incoming summon requests */}
+          {pendingSummons && pendingSummons.length > 0 && onAcceptSummon && onDeclineSummon && (
+            <SummonRequestNotification
+              pendingSummons={pendingSummons}
+              onAccept={onAcceptSummon}
+              onDecline={onDeclineSummon}
+              addLog={summonAddLog}
+              inCombat={summonInCombat ?? false}
+              onRefetch={onSummonRefetch}
+            />
+          )}
+          {/* Outgoing summon panel */}
           <SummonPlayerPanel
             characterId={character.id}
             currentNodeId={currentNodeId}
