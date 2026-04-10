@@ -199,6 +199,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     });
   }, [partyMembers, partyHpOverrides, partyMoveEvents]);
 
+  // ── Follower: instant local node sync via broadcast ──
+  useEffect(() => {
+    if (!character || !partyMoveEvents.length) return;
+    const myMove = partyMoveEvents.find(e => e.character_id === character.id);
+    if (myMove && myMove.node_id !== character.current_node_id) {
+      updateCharacterLocal?.({ current_node_id: myMove.node_id });
+    }
+  }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal]);
+
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
