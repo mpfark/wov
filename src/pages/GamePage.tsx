@@ -462,6 +462,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     gameLoop.syncFromServerEffects(dots[character.id]);
   }, [character.id, gameLoop.syncFromServerEffects]);
 
+  const handleCreatureDebuffs = useCallback((debuffs: Record<string, any>) => {
+    gameLoop.syncCreatureDebuffs(debuffs);
+  }, [gameLoop.syncCreatureDebuffs]);
+
   // Determine if this character should use party combat mode
   const leaderMember = mergedPartyMembers.find(m => m.character_id === party?.leader_id);
   const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
@@ -479,6 +483,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onConsumedBuffs: gameLoop.handleConsumedBuffs,
     onClearedDots: gameLoop.handleClearedDots,
     onActiveDots: handleActiveDots,
+    onCreatureDebuffs: handleCreatureDebuffs,
     onPoisonProc: gameLoop.handleAddPoisonStack,
     onIgniteProc: gameLoop.handleAddIgniteStack,
     onAbilityExecute: async (index, targetId) => {
