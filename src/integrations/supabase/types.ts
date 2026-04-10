@@ -1558,14 +1558,6 @@ export type Database = {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
       }
-      summon_player: {
-        Args: {
-          _summoner_id: string
-          _summoner_node_id: string
-          _target_name: string
-        }
-        Returns: string
-      }
       try_acquire_unique_item: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean

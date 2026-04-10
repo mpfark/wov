@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.summon_player(uuid, text, uuid);

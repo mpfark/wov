@@ -873,6 +873,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
             onDecline={declineSummon}
             addLog={addLog}
             inCombat={inCombat}
+            onRefetch={async () => {
+              const { data } = await supabase.from('characters').select('current_node_id').eq('id', character.id).single();
+              if (data?.current_node_id && updateCharacterLocal) {
+                updateCharacterLocal({ current_node_id: data.current_node_id });
+              }
+            }}
           />
         </div>
       )}
