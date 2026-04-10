@@ -48,6 +48,8 @@ import MovementPad from '@/features/world/components/MovementPad';
 import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import ChatPanel from '@/features/chat/components/ChatPanel';
+import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
+import SummonRequestNotification from '@/features/world/components/SummonRequestNotification';
 
 interface Props {
   character: Character;
