@@ -143,6 +143,13 @@ async function moveFollowers(
     await Promise.all(toMove.map(f =>
       supabase.from('characters').update({ current_node_id: targetNodeId }).eq('id', f.character_id)
     ));
+    // Record node discovery for followers so their world maps update
+    await Promise.all(toMove.map(f =>
+      supabase.from('character_visited_nodes').upsert(
+        { character_id: f.character_id, node_id: targetNodeId },
+        { onConflict: 'character_id,node_id' }
+      )
+    ));
     if (broadcastMove) {
       for (const f of toMove) {
         broadcastMove(f.character_id, f.character.name, targetNodeId);

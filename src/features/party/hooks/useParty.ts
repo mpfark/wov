@@ -119,9 +119,14 @@ export function useParty(characterId: string | null) {
     fetchParty();
     if (!characterId) return;
 
+    // Subscribe to party_members changes filtered to our character (for invites)
+    // and to parties table for structure changes. When we know the party_id, filter on that too.
     const channel = supabase
       .channel(`party-${characterId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'party_members' }, () => fetchParty())
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'party_members',
+        filter: `character_id=eq.${characterId}`,
+      }, () => fetchParty())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'parties' }, () => fetchParty())
       .subscribe();
 
@@ -176,9 +181,11 @@ export function useParty(characterId: string | null) {
     if (error) return;
   }, [party]);
 
-  const acceptInvite = useCallback(async (membershipId: string) => {
-    await supabase.rpc('accept_party_invite', { _membership_id: membershipId });
+  const acceptInvite = useCallback(async (membershipId: string): Promise<string | null> => {
+    const { error } = await supabase.rpc('accept_party_invite', { _membership_id: membershipId });
+    if (error) return error.message;
     fetchParty();
+    return null;
   }, [fetchParty]);
 
   const declineInvite = useCallback(async (membershipId: string) => {

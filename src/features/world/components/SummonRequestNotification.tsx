@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import type { SummonRequest } from '@/features/world/hooks/useSummonRequests';
 
@@ -8,10 +8,19 @@ interface Props {
   onDecline: (requestId: string) => Promise<string | null>;
   addLog: (msg: string) => void;
   inCombat: boolean;
+  onRefetch?: () => void;
 }
 
-export default function SummonRequestNotification({ pendingSummons, onAccept, onDecline, addLog, inCombat }: Props) {
+export default function SummonRequestNotification({ pendingSummons, onAccept, onDecline, addLog, inCombat, onRefetch }: Props) {
   const [loading, setLoading] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  // Live countdown — re-render every second
+  useEffect(() => {
+    if (pendingSummons.length === 0) return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [pendingSummons.length]);
 
   if (pendingSummons.length === 0) return null;
 
@@ -21,7 +30,10 @@ export default function SummonRequestNotification({ pendingSummons, onAccept, on
     const err = await onAccept(req.id);
     setLoading(null);
     if (err) addLog(`⚠️ Summon failed: ${err}`);
-    else addLog(`🌀 You were summoned by ${req.summoner_name}!`);
+    else {
+      addLog(`🌀 You were summoned by ${req.summoner_name}!`);
+      onRefetch?.();
+    }
   };
 
   const handleDecline = async (req: SummonRequest) => {
@@ -30,6 +42,9 @@ export default function SummonRequestNotification({ pendingSummons, onAccept, on
     setLoading(null);
     addLog(`🌀 You declined the summon from ${req.summoner_name}.`);
   };
+
+  // Use tick in remaining calculation to suppress lint warning
+  void tick;
 
   return (
     <div className="space-y-1">
