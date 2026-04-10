@@ -20,12 +20,9 @@ export function OfflineOverlay() {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/95 backdrop-blur-sm">
       <div className="text-center space-y-4 px-6 max-w-sm">
         <p className="text-4xl">🌑</p>
-        <h2 className="font-display text-xl text-primary text-glow">
-          The Realm is Unreachable
-        </h2>
+        <h2 className="font-display text-xl text-primary text-glow">The Realm is Unreachable</h2>
         <p className="text-sm text-muted-foreground">
-          Wayfarers of Varneth requires an internet connection. The overlay will The overlay will
-          disappear once you're back online.
+          Wayfarers of Varneth requires an internet connection. The overlay will disappear once you're back online.
         </p>
       </div>
     </div>
