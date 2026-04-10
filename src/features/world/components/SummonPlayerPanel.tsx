@@ -12,7 +12,6 @@ interface Props {
   playerCp: number;
   getRegionForNode: (nodeId: string) => { id: string; min_level: number } | undefined;
   onlinePlayers: OnlinePlayer[];
-  onCpDeducted: (cost: number) => void;
   addLog: (msg: string) => void;
   inCombat: boolean;
   isDead: boolean;
@@ -20,7 +19,7 @@ interface Props {
 
 export default function SummonPlayerPanel({
   characterId, currentNodeId, currentRegionMinLevel, playerCp,
-  getRegionForNode, onlinePlayers, onCpDeducted, addLog, inCombat, isDead,
+  getRegionForNode, onlinePlayers, addLog, inCombat, isDead,
 }: Props) {
   const [targetName, setTargetName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +38,7 @@ export default function SummonPlayerPanel({
     // Look up target's node for cost calculation
     const { data: targetChar } = await supabase
       .from('characters')
-      .select('current_node_id')
+      .select('id, current_node_id')
       .ilike('name', targetName.trim())
       .single();
 
@@ -60,19 +59,37 @@ export default function SummonPlayerPanel({
       return;
     }
 
+    // Check for existing pending request to same target
+    const { data: existing } = await supabase
+      .from('summon_requests')
+      .select('id')
+      .eq('summoner_id', characterId)
+      .eq('target_id', targetChar.id)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      setFeedback({ type: 'error', msg: 'Summon request already pending.' });
+      return;
+    }
+
     setLoading(true);
     try {
-      const { error } = await supabase.rpc('summon_player', {
-        _summoner_id: characterId,
-        _target_name: targetName.trim(),
-        _summoner_node_id: currentNodeId,
-      });
+      const { error } = await supabase
+        .from('summon_requests')
+        .insert({
+          summoner_id: characterId,
+          target_id: targetChar.id,
+          summoner_node_id: currentNodeId,
+          cp_cost: cpCost,
+        });
+
       if (error) {
         setFeedback({ type: 'error', msg: error.message });
       } else {
-        onCpDeducted(cpCost);
-        addLog(`🌀 You summoned ${targetName.trim()} to your location for ${cpCost} CP.`);
-        setFeedback({ type: 'success', msg: `Summoned ${targetName.trim()}!` });
+        addLog(`🌀 Summon request sent to ${targetName.trim()} (${cpCost} CP). Awaiting response...`);
+        setFeedback({ type: 'success', msg: `Request sent to ${targetName.trim()}!` });
         setTargetName('');
       }
     } catch (e: any) {
@@ -80,7 +97,7 @@ export default function SummonPlayerPanel({
     } finally {
       setLoading(false);
     }
-  }, [targetName, characterId, currentNodeId, currentRegionMinLevel, playerCp, getRegionForNode, onlinePlayers, onCpDeducted, addLog, inCombat, isDead]);
+  }, [targetName, characterId, currentNodeId, currentRegionMinLevel, playerCp, getRegionForNode, onlinePlayers, addLog, inCombat, isDead]);
 
   return (
     <div className="space-y-1">

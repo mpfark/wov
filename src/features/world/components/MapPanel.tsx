@@ -82,7 +82,6 @@ interface Props {
   unlockedConnections?: Map<string, number>;
   // Summon props
   onlinePlayers?: { id: string; name: string; race: string; class: string; level: number; gender: 'male' | 'female' }[];
-  onSummonCpDeducted?: (cost: number) => void;
   addLog?: (msg: string) => void;
   inCombat?: boolean;
   isDead?: boolean;
@@ -99,7 +98,7 @@ export default function MapPanel({
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
   unlockedConnections,
-  onlinePlayers: summonOnlinePlayers, onSummonCpDeducted, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
+  onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
 }: Props) {
   currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
@@ -450,7 +449,7 @@ export default function MapPanel({
       />
 
       {/* Summon Player — Level 26+ */}
-      {characterLevel >= 26 && summonAddLog && onSummonCpDeducted && getRegionForNode && currentNodeId && (
+      {characterLevel >= 26 && summonAddLog && getRegionForNode && currentNodeId && (
         <div className="border-t border-border pt-2">
           <SummonPlayerPanel
             characterId={character.id}
@@ -459,7 +458,6 @@ export default function MapPanel({
             playerCp={character.cp ?? 0}
             getRegionForNode={getRegionForNode}
             onlinePlayers={summonOnlinePlayers || []}
-            onCpDeducted={onSummonCpDeducted}
             addLog={summonAddLog}
             inCombat={summonInCombat ?? false}
             isDead={summonIsDead ?? false}

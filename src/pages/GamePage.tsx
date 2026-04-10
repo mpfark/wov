@@ -48,6 +48,8 @@ import MovementPad from '@/features/world/components/MovementPad';
 import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import ChatPanel from '@/features/chat/components/ChatPanel';
+import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
+import SummonRequestNotification from '@/features/world/components/SummonRequestNotification';
 
 interface Props {
   character: Character;
@@ -116,6 +118,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
+  const { pendingSummons, acceptSummon, declineSummon } = useSummonRequests(character.id);
   const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
@@ -786,7 +789,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     hasDiscoverable: !!(currentNode?.connections?.some((c: any) => c.hidden) || (currentNode?.searchable_items && currentNode.searchable_items.length > 0)),
     unlockedConnections,
     onlinePlayers,
-    onSummonCpDeducted: (cost: number) => updateCharacter({ cp: Math.max((character.cp ?? 0) - cost, 0) }),
     addLog,
     inCombat,
     isDead,
@@ -873,6 +875,19 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           )}
         </div>
       </div>
+
+      {/* Summon Request Notifications */}
+      {pendingSummons.length > 0 && (
+        <div className="px-4 py-1 border-b border-border bg-card/50">
+          <SummonRequestNotification
+            pendingSummons={pendingSummons}
+            onAccept={acceptSummon}
+            onDecline={declineSummon}
+            addLog={addLog}
+            inCombat={inCombat}
+          />
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex">
