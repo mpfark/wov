@@ -215,6 +215,28 @@ export function useBuffState(params: UseBuffStateParams) {
     setBleedStacks(result.bleed);
   }, [poisonStacks, igniteStacks, bleedStacks]);
 
+  // ── Sync merged creature-centric debuffs for shared party display ──
+  const syncCreatureDebuffs = useCallback((debuffs: Record<string, { poison?: { stacks: number; damage_per_tick: number }; ignite?: { stacks: number; damage_per_tick: number }; bleed?: { stacks: number; damage_per_tick: number }; sunder?: { stacks: number } }>) => {
+    // Build merged ServerDotState from creature-centric data
+    const merged: ServerDotState = { poison: {}, ignite: {}, bleed: {} };
+    for (const [creatureId, entry] of Object.entries(debuffs)) {
+      if (entry.poison) merged.poison![creatureId] = { stacks: entry.poison.stacks, damage_per_tick: entry.poison.damage_per_tick };
+      if (entry.ignite) merged.ignite![creatureId] = { stacks: entry.ignite.stacks, damage_per_tick: entry.ignite.damage_per_tick };
+      if (entry.bleed) merged.bleed![creatureId] = { damage_per_tick: entry.bleed.damage_per_tick };
+      if (entry.sunder) {
+        // Sync sunder from server effects
+        setSunderDebuff(prev => {
+          if (prev && prev.creatureId === creatureId) return prev;
+          return { creatureId, acReduction: entry.sunder!.stacks * 2, expiresAt: Date.now() + 30000 };
+        });
+      }
+    }
+    const result = mapServerEffectsToStacks(merged, poisonStacks, igniteStacks, bleedStacks);
+    setPoisonStacks(result.poison);
+    setIgniteStacks(result.ignite);
+    setBleedStacks(result.bleed);
+  }, [poisonStacks, igniteStacks, bleedStacks]);
+
   // ── Bundled state objects ──────────────────────────────────
   const buffState: BuffState = {
     foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
