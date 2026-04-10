@@ -1,58 +1,45 @@
 
 
-# Party Play Audit Fixes
+# Fix: Follow Leader Button Blocked by RLS
 
-Seven targeted fixes across 4 files, plus one migration to clean up the old RPC. Locked path bypass for followers is confirmed intentional (Option A).
+## Root Cause
 
-## Changes
+The `party_members` UPDATE RLS policy has a `WITH CHECK` clause that only allows the **party leader** to update rows where `status = 'accepted'`. When a non-leader member clicks "Follow Leader", they're updating their own `is_following` field on an accepted membership row — the `USING` clause passes (they own the character), but the `WITH CHECK` silently rejects the write.
 
-### 1. Add `character_visited_nodes` upsert for followers
-**File:** `src/features/world/hooks/useMovementActions.ts` — `moveFollowers()`
+## Fix
 
-After the `Promise.all` that updates follower `current_node_id`, add a parallel batch of `character_visited_nodes` upserts so followers discover nodes on the world map.
+**Migration**: Update the `WITH CHECK` expression on the `party_members` UPDATE policy to also allow character owners to update their own rows (not just leaders):
 
-### 2. Remove duplicate broadcast-based follower movement
-**File:** `src/pages/GamePage.tsx` — lines 436-449
+```sql
+DROP POLICY "Can update party members" ON public.party_members;
 
-Remove the `useEffect` block that listens to `partyMoveEvents` and calls `updateCharacter({ current_node_id })`. The leader's `moveFollowers()` already handles DB updates + broadcasts. This eliminates the redundant second DB write per follower per move.
+CREATE POLICY "Can update party members"
+ON public.party_members
+FOR UPDATE
+TO public
+USING (
+  owns_character(character_id)
+  OR EXISTS (
+    SELECT 1 FROM parties
+    WHERE parties.id = party_members.party_id
+      AND owns_character(parties.leader_id)
+  )
+)
+WITH CHECK (
+  CASE
+    WHEN status = 'accepted' THEN
+      owns_character(character_id)
+      OR EXISTS (
+        SELECT 1 FROM parties
+        WHERE parties.id = party_members.party_id
+          AND owns_character(parties.leader_id)
+      )
+    ELSE true
+  END
+);
+```
 
-### 3. Summon: refetch character after accept
-**File:** `src/features/world/components/SummonRequestNotification.tsx`
+This allows members to update their own accepted rows (for `is_following` toggle) while still preventing arbitrary status changes by non-leaders — the `accept_party_invite` RPC already uses `SECURITY DEFINER` to bypass RLS for status changes.
 
-Add an `onRefetch` callback prop. After successful `onAccept`, call `onRefetch()` to re-read the character's new `current_node_id` from the DB. Pass `updateCharacter` or a dedicated refetch from `GamePage.tsx`.
-
-### 4. Summon: live countdown timer
-**File:** `src/features/world/components/SummonRequestNotification.tsx`
-
-Add a `useEffect` with a 1-second `setInterval` that increments a `tick` state counter, causing re-renders so `remaining` recalculates each second.
-
-### 5. Party accept: surface errors via toast
-**File:** `src/features/party/hooks/useParty.ts` — `acceptInvite`
-
-Check the RPC response for errors and return the error message so the caller can display feedback (or use toast directly).
-
-### 6. Drop old `summon_player` RPC
-**Migration:** Drop the `summon_player` function that directly teleports without consent — it's no longer called.
-
-### 7. Filter party realtime subscriptions
-**File:** `src/features/party/hooks/useParty.ts` — realtime channel setup
-
-Add a `filter` to the `party_members` postgres_changes subscription scoped to the current `party_id` (when known), reducing unnecessary `fetchParty()` calls from other parties' changes.
-
----
-
-## Files touched
-
-| File | What |
-|------|------|
-| `src/features/world/hooks/useMovementActions.ts` | Follower node discovery upserts |
-| `src/pages/GamePage.tsx` | Remove duplicate follower move effect; pass refetch to SummonRequestNotification |
-| `src/features/world/components/SummonRequestNotification.tsx` | Live countdown + character refetch after accept |
-| `src/features/party/hooks/useParty.ts` | Accept error handling + filtered realtime |
-| New migration | Drop `summon_player` RPC |
-
-## Not changed
-- Locked path bypass for followers (intentional — leader opens for party)
-- Server tick rate, polling intervals, combat math
-- MP-free travel for followers (by design)
+**One migration, no code changes needed.**
 
