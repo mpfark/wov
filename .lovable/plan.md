@@ -1,41 +1,76 @@
 
 
-# Fix: Tank Assignment Not Working in Party Combat
+# Revised Plan: Shared Creature Debuffs + Party Opportunity Attack AC Fix
 
-## Root Cause
+## Summary
 
-There's a mismatch between client and server tank logic:
+Two refinements applied to the original plan per your feedback: (1) merged debuffs are additive display-only data, raw effects stay untouched; (2) party member AC uses the real `calculateAC` formula with actual DEX from the database.
 
-- **Client** (`useParty.ts` line 248): `effectiveTankId = party.tank_id ?? party.leader_id` — defaults to the leader when no tank is explicitly set
-- **Server** (`combat-tick` line 127-128): `tankId = party.tank_id || null` — when `tank_id` is null, `tankAtNode` becomes false, so creatures randomly target ANY alive member instead of focusing the leader
+---
 
-This means the UI shows the leader as the "tank" (green shield icon), but the server ignores this and hits random members. With 2 party members, Dwarlin gets hit ~50% of the time, making it appear like Dwarlin is always tanking.
+## Change 1: Shared Creature Debuff Display (derived view only)
 
-When Dwarlin is leader instead, the same client-side fallback makes Dwarlin the "effective tank" — and since Dwarlin is getting randomly targeted anyway, it looks correct by coincidence.
+### `src/features/combat/utils/interpretCombatTickResult.ts`
 
-Additionally, there may be a secondary issue: when the user explicitly clicks "Set as Tank" on a member, the `setTank` call may silently fail if the party state has gone stale, though the primary issue is the server fallback logic.
+Add a new field `creatureDebuffs` to `TickInterpretation` — a creature-centric aggregation of all active effects, keyed by creature ID. This is a **derived display view only**:
 
-## Fix
-
-**One-line change in `supabase/functions/combat-tick/index.ts`** (line 127-128):
-
-Apply the same fallback the client uses — when `tank_id` is null, default to the party leader:
+- `dotsByChar` remains unchanged (per-source grouping, backward compat)
+- `activeEffectsSnapshot` remains unchanged (raw effect array)
+- New `creatureDebuffs` field aggregates stacks/damage by `target_id` + `effect_type` across all sources
 
 ```typescript
-// Before:
-tankId = party.tank_id || null;
-tankAtNode = tankId ? members.some(m => m.id === tankId) : false;
-
-// After:
-tankId = party.tank_id || party.leader_id;
-tankAtNode = members.some(m => m.id === tankId);
+// New field in TickInterpretation:
+creatureDebuffs: Record<string, {
+  poison?: { stacks: number; damage_per_tick: number };
+  ignite?: { stacks: number; damage_per_tick: number };
+  bleed?: { stacks: number; damage_per_tick: number };
+  sunder?: { stacks: number };
+}> | null;
 ```
 
-This ensures that when no explicit tank is set, the leader absorbs all creature attacks (matching the UI's display), and when a tank IS explicitly set, that member takes the hits.
+Built by iterating `data.active_effects` and summing stacks per creature per effect type. No existing fields are modified or replaced.
+
+### `src/pages/GamePage.tsx`
+
+Update the active-dots sync handler to use `creatureDebuffs` (merged) for the UI buff state display, so all party members' debuffs show on creatures. The existing `dotsByChar` flow continues to work for any code that needs per-source data.
+
+### `src/features/combat/hooks/useBuffState.ts`
+
+Update `syncFromServerEffects` to accept the creature-centric merged data for display purposes. The function already maps server data to local stacks — it just needs to read from the merged view instead of filtering by character ID.
+
+---
+
+## Change 2: Real AC for Party Opportunity Attacks
+
+### Problem
+
+Line 102 in `resolveOpportunityAttacks` uses `const memberAC = 10`. The fleeing player's own AC is correctly computed as `calculateAC(class, effectiveDex) + equipmentBonuses.ac`. Party members should use the same formula.
+
+### Investigation
+
+`PartyMember.character` currently lacks `dex`. The `calculateAC(class, dex)` function needs class (already available) and dex. Equipment AC bonuses are not available without querying each member's inventory — impractical for a synchronous flee calculation.
+
+### Solution
+
+1. **`src/features/party/hooks/useParty.ts`** — Add `dex` to the character select query and the `PartyMember` interface:
+   - Select: `character:characters(id, name, gender, race, class, level, hp, max_hp, current_node_id, dex)`
+   - Interface: add `dex: number` to the character sub-type
+
+2. **`src/features/world/hooks/useMovementActions.ts`** — Replace hardcoded `10` with:
+   ```typescript
+   const memberAC = calculateAC(member.character.class, member.character.dex);
+   ```
+   This gives the correct base AC for each member's class and DEX. It won't include gear AC bonuses (not available without inventory queries), but matches the core defensive formula used everywhere else. This is significantly more accurate than `10`.
+
+---
 
 ## Files touched
 
 | File | Change |
 |------|--------|
-| `supabase/functions/combat-tick/index.ts` | Default `tankId` to `party.leader_id` when `tank_id` is null |
+| `src/features/combat/utils/interpretCombatTickResult.ts` | Add `creatureDebuffs` derived display field (additive, no replacement) |
+| `src/pages/GamePage.tsx` | Use `creatureDebuffs` for UI debuff sync |
+| `src/features/combat/hooks/useBuffState.ts` | Accept creature-centric merged data for display |
+| `src/features/party/hooks/useParty.ts` | Add `dex` to PartyMember character select + interface |
+| `src/features/world/hooks/useMovementActions.ts` | Use `calculateAC(class, dex)` for member opportunity attack AC |
 
