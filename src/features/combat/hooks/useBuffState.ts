@@ -218,16 +218,19 @@ export function useBuffState(params: UseBuffStateParams) {
   // ── Sync merged creature-centric debuffs for shared party display ──
   const syncCreatureDebuffs = useCallback((debuffs: Record<string, { poison?: { stacks: number; damage_per_tick: number }; ignite?: { stacks: number; damage_per_tick: number }; bleed?: { stacks: number; damage_per_tick: number }; sunder?: { stacks: number } }>) => {
     // Build merged ServerDotState from creature-centric data
+    // Since these come from live active_effects, set a reasonable expires_at so the UI considers them active
+    const now = Date.now();
+    const defaultExpiry = now + 30000;
     const merged: ServerDotState = { poison: {}, ignite: {}, bleed: {} };
     for (const [creatureId, entry] of Object.entries(debuffs)) {
-      if (entry.poison) merged.poison![creatureId] = { stacks: entry.poison.stacks, damage_per_tick: entry.poison.damage_per_tick };
-      if (entry.ignite) merged.ignite![creatureId] = { stacks: entry.ignite.stacks, damage_per_tick: entry.ignite.damage_per_tick };
-      if (entry.bleed) merged.bleed![creatureId] = { damage_per_tick: entry.bleed.damage_per_tick };
+      if (entry.poison) merged.poison![creatureId] = { stacks: entry.poison.stacks, damage_per_tick: entry.poison.damage_per_tick, expires_at: defaultExpiry };
+      if (entry.ignite) merged.ignite![creatureId] = { stacks: entry.ignite.stacks, damage_per_tick: entry.ignite.damage_per_tick, expires_at: defaultExpiry };
+      if (entry.bleed) merged.bleed![creatureId] = { damage_per_tick: entry.bleed.damage_per_tick, expires_at: defaultExpiry };
       if (entry.sunder) {
         // Sync sunder from server effects
         setSunderDebuff(prev => {
           if (prev && prev.creatureId === creatureId) return prev;
-          return { creatureId, acReduction: entry.sunder!.stacks * 2, expiresAt: Date.now() + 30000, creatureName: '' };
+          return { creatureId, acReduction: entry.sunder!.stacks * 2, expiresAt: defaultExpiry, creatureName: '' };
         });
       }
     }
