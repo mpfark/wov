@@ -132,7 +132,7 @@ async function moveFollowers(
   filterFollowingOnly: boolean,
   addLog: (msg: string) => void,
   fetchParty: () => void,
-  broadcastMove?: (charId: string, charName: string, nodeId: string) => void,
+  broadcastMove?: (charId: string, charName: string, nodeId: string, fromNodeId: string) => void,
 ): Promise<void> {
   if (!isLeader) return;
   const coLocated = partyMembers.filter(m =>
@@ -153,7 +153,7 @@ async function moveFollowers(
     ));
     if (broadcastMove) {
       for (const f of toMove) {
-        broadcastMove(f.character_id, f.character.name, targetNodeId);
+        broadcastMove(f.character_id, f.character.name, targetNodeId, currentNodeId);
       }
     }
     addLog('Your party follows you.');
@@ -186,7 +186,7 @@ export interface UseMovementActionsParams {
   fleeStopCombat: () => void;
   effectiveAC: number;
   isDead: boolean;
-  broadcastMove: (charId: string, charName: string, nodeId: string) => void;
+  broadcastMove: (charId: string, charName: string, nodeId: string, fromNodeId: string) => void;
   broadcastHp: (charId: string, hp: number, maxHp: number, source: string) => void;
   toggleFollow: (v: boolean) => Promise<void>;
   fetchInventory: () => void;
@@ -313,7 +313,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
         p.addLog('You break away from the party leader.');
       }
       await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
-      p.broadcastMove(p.character.id, p.character.name, nodeId);
+      p.broadcastMove(p.character.id, p.character.name, nodeId, p.character.current_node_id!);
       supabase.from('character_visited_nodes').upsert(
         { character_id: p.character.id, node_id: nodeId },
         { onConflict: 'character_id,node_id' }
@@ -346,7 +346,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     }
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - cpCost });
-    p.broadcastMove(p.character.id, p.character.name, nodeId);
+    p.broadcastMove(p.character.id, p.character.name, nodeId, prevNodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: nodeId },
       { onConflict: 'character_id,node_id' }
@@ -371,7 +371,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - cpCost });
-    p.broadcastMove(p.character.id, p.character.name, waymarkNodeId);
+    p.broadcastMove(p.character.id, p.character.name, waymarkNodeId, prevNodeId);
     supabase.from('character_visited_nodes').upsert(
       { character_id: p.character.id, node_id: waymarkNodeId },
       { onConflict: 'character_id,node_id' }

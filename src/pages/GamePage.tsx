@@ -199,14 +199,55 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     });
   }, [partyMembers, partyHpOverrides, partyMoveEvents]);
 
-  // ── Follower: instant local node sync via broadcast ──
+  // ── Follower: grace-window based local node sync via broadcast ──
+  const FOLLOW_GRACE_MS = 1000;
+  const missedFollowCountRef = useRef(0);
+  const lastFollowMoveTimestampRef = useRef(0);
+
   useEffect(() => {
     if (!character || !partyMoveEvents.length) return;
     const myMove = partyMoveEvents.find(e => e.character_id === character.id);
-    if (myMove && myMove.node_id !== character.current_node_id) {
-      updateCharacterLocal?.({ current_node_id: myMove.node_id });
+    if (!myMove) return;
+
+    // Only process follow-moves for followers that are actually following
+    const isFollowing = myMembership?.is_following && !isLeader;
+    if (!isFollowing) {
+      // Non-following members still get the instant node snap (server already moved them)
+      if (myMove.node_id !== character.current_node_id) {
+        updateCharacterLocal?.({ current_node_id: myMove.node_id });
+      }
+      return;
     }
-  }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal]);
+
+    // Discard stale events (only process the newest)
+    if (myMove.timestamp <= lastFollowMoveTimestampRef.current) return;
+
+    const age = Date.now() - myMove.timestamp;
+    const atOrigin = character.current_node_id === myMove.from_node_id;
+
+    if (atOrigin && age <= FOLLOW_GRACE_MS) {
+      // Successful follow within grace window
+      lastFollowMoveTimestampRef.current = myMove.timestamp;
+      missedFollowCountRef.current = 0;
+      updateCharacterLocal?.({ current_node_id: myMove.node_id });
+
+      // Resolve leader name for feedback
+      const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
+      if (leaderName) {
+        bus.emit('log', { message: `You hurry after ${leaderName}.` });
+      }
+    } else {
+      // Mismatch or grace expired — tolerate one miss before breaking
+      lastFollowMoveTimestampRef.current = myMove.timestamp;
+      missedFollowCountRef.current += 1;
+      if (missedFollowCountRef.current >= 2) {
+        missedFollowCountRef.current = 0;
+        toggleFollow(false);
+        const leaderName = partyMembers.find(m => m.character_id === party?.leader_id)?.character?.name;
+        bus.emit('log', { message: `You lose track of ${leaderName ?? 'your leader'} and stop following.` });
+      }
+    }
+  }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow, bus]);
 
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
