@@ -487,7 +487,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     }
 
     // BHP for boss kills
-    if (creature.rarity === 'boss' && p.character.level >= 30) {
+    if (creature.rarity === 'boss') {
       const bhpReward = Math.floor(creature.level * 0.5);
       if (bhpReward > 0) {
         const bhpShare = Math.floor(bhpReward / goldSplitCount);

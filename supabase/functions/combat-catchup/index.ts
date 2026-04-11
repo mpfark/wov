@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
             salvageEach = Math.floor((baseSalvage * rarityMult) / splitCount);
           }
 
-          // BHP for boss kills (level 30+ recipients only)
+          // BHP for boss kills
           let bhpEach = 0;
           if (creature.rarity === 'boss') {
             const bhpReward = Math.floor(creature.level * 0.5);
@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
             });
 
             // Award BHP separately (runs as service role so trigger bypass works)
-            if (bhpEach > 0 && recipient.level >= 30) {
+            if (bhpEach > 0) {
               const { data: charRow } = await db.from('characters').select('bhp').eq('id', recipient.id).single();
               const currentBhp = charRow?.bhp ?? 0;
               await db.from('characters').update({ bhp: currentBhp + bhpEach }).eq('id', recipient.id);
