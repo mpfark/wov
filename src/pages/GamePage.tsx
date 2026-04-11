@@ -247,7 +247,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         bus.emit('log', { message: `You lose track of ${leaderName ?? 'your leader'} and stop following.` });
       }
     }
-  }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow]);
+  }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow, bus]);
 
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
