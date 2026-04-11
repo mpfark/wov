@@ -1,39 +1,60 @@
 
 
-# Fix: Summon Request Placement + Summoner Feedback
+# Improved Party Follow Grace Window — Refined Plan
 
-## Confirmed Code Locations
+## Summary
 
-- **SummonRequestNotification** (incoming): Currently in `GamePage.tsx` line 881, renders below header — **wrong place**, breaks UI
-- **SummonPlayerPanel** (outgoing): In `MapPanel.tsx` line 452 — **correct place**
-- Both should live together in the MapPanel summon section
+Same architecture as the approved plan (enrich broadcast, grace window on follower side, bounded catch-up). Four refinements to reduce false follow-breaks from normal network jitter.
 
-## Changes
+## Refinements Applied
 
-### 1. Move notification into MapPanel (`GamePage.tsx` + `MapPanel.tsx`)
+### 1. Grace window: 1000ms (was 700ms)
 
-**`src/pages/GamePage.tsx`**:
-- Remove the `SummonRequestNotification` block (lines 881-898)
-- Pass `pendingSummons`, `acceptSummon`, `declineSummon` as new props to `MapPanel`
+```typescript
+const FOLLOW_GRACE_MS = 1000;
+```
 
-**`src/features/world/components/MapPanel.tsx`**:
-- Add props: `pendingSummons`, `onAcceptSummon`, `onDeclineSummon`, `onSummonRefetch`
-- Render `SummonRequestNotification` just above `SummonPlayerPanel` (around line 452), inside the same `border-t` section
-- The notification inherits the existing `addLog` and `inCombat` props already available in MapPanel
+Named constant, easy to tune later.
 
-### 2. Summoner feedback (`SummonPlayerPanel.tsx`)
+### 2. One-miss tolerance before breaking follow
 
-**`src/features/world/components/SummonPlayerPanel.tsx`**:
-- After inserting a summon request, subscribe to realtime changes on `summon_requests` filtered by `summoner_id = characterId`
-- When status changes to `accepted` → show success feedback + log message
-- When status changes to `declined` → show declined feedback + log message
-- Clean up channel on unmount
+Add a `missedFollowCountRef` (number) alongside `lastFollowMoveRef`.
 
-## Files touched
+```text
+On receiving party_move where character_id === myId:
+  - If not following → ignore
+  - If my node === from_node_id AND within grace window:
+    → move, log "You hurry after <leader>."
+    → reset missedFollowCount to 0
+  - Else (node mismatch OR grace expired):
+    → increment missedFollowCount
+    → if missedFollowCount >= 2:
+        → break follow, log "You lose track of <leader>."
+    → else:
+        → log nothing (silently tolerate one miss)
+```
+
+This means a single delayed/out-of-order event won't break follow. Two consecutive mismatches will.
+
+### 3. `lastFollowMoveRef` for staleness only
+
+Used exclusively to discard older events when a newer one has already been processed. **Not** used as a movement cooldown or throttle. Fresh valid events always execute immediately.
+
+### 4. Bounded catch-up preserved
+
+- Only auto-follow when follower is at `from_node_id` (one node behind at most)
+- No multi-node teleport
+- No unlimited rubberbanding
+
+## Files Touched
 
 | File | Change |
 |------|--------|
-| `src/pages/GamePage.tsx` | Remove notification from header, pass summon props to MapPanel |
-| `src/features/world/components/MapPanel.tsx` | Accept summon notification props, render in summon section |
-| `src/features/world/components/SummonPlayerPanel.tsx` | Subscribe to outgoing request status changes for summoner feedback |
+| `src/features/party/hooks/usePartyBroadcast.ts` | Add `from_node_id` + `timestamp` to `PartyMoveEvent` and `broadcastMove` |
+| `src/features/world/hooks/useMovementActions.ts` | Pass origin node + timestamp to `broadcastMove`; update `moveFollowers` signature |
+| `src/pages/GamePage.tsx` | Replace simple node-snap effect with grace window + one-miss tolerance logic |
+
+## Not Changed
+
+- Server authority, DB schema, combat/aggro logic, movement cooldowns, party leadership mechanics
 
