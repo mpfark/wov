@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
             salvageEach = Math.floor((baseSalvage * rarityMult) / splitCount);
           }
 
-          // BHP for boss kills (level 30+ recipients only)
+          // BHP for boss kills
           let bhpEach = 0;
           if (creature.rarity === 'boss') {
             const bhpReward = Math.floor(creature.level * 0.5);

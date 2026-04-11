@@ -352,7 +352,7 @@ Deno.serve(async (req) => {
           const bhpEach = Math.floor(bhpReward / members.length);
           if (bhpEach > 0) {
             for (const mm of members) {
-              if (mm.c.level >= 30) mBhp[mm.id] += bhpEach;
+              mBhp[mm.id] += bhpEach;
             }
             events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
           }
