@@ -13,6 +13,8 @@ interface PartyMoveEvent {
   character_id: string;
   character_name: string;
   node_id: string;
+  from_node_id: string;
+  timestamp: number;
 }
 
 interface PartyCombatMsgEvent {
@@ -113,13 +115,13 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
-  const broadcastMove = useCallback((charId: string, charName: string, nodeId: string) => {
+  const broadcastMove = useCallback((charId: string, charName: string, nodeId: string, fromNodeId: string) => {
     if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_move');
     channelRef.current.send({
       type: 'broadcast',
       event: 'party_move',
-      payload: { character_id: charId, character_name: charName, node_id: nodeId } satisfies PartyMoveEvent,
+      payload: { character_id: charId, character_name: charName, node_id: nodeId, from_node_id: fromNodeId, timestamp: Date.now() } satisfies PartyMoveEvent,
     });
   }, []);
 
