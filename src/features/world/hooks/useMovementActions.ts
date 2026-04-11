@@ -132,7 +132,7 @@ async function moveFollowers(
   filterFollowingOnly: boolean,
   addLog: (msg: string) => void,
   fetchParty: () => void,
-  broadcastMove?: (charId: string, charName: string, nodeId: string) => void,
+  broadcastMove?: (charId: string, charName: string, nodeId: string, fromNodeId: string) => void,
 ): Promise<void> {
   if (!isLeader) return;
   const coLocated = partyMembers.filter(m =>
@@ -153,7 +153,7 @@ async function moveFollowers(
     ));
     if (broadcastMove) {
       for (const f of toMove) {
-        broadcastMove(f.character_id, f.character.name, targetNodeId);
+        broadcastMove(f.character_id, f.character.name, targetNodeId, currentNodeId);
       }
     }
     addLog('Your party follows you.');
@@ -186,7 +186,7 @@ export interface UseMovementActionsParams {
   fleeStopCombat: () => void;
   effectiveAC: number;
   isDead: boolean;
-  broadcastMove: (charId: string, charName: string, nodeId: string) => void;
+  broadcastMove: (charId: string, charName: string, nodeId: string, fromNodeId: string) => void;
   broadcastHp: (charId: string, hp: number, maxHp: number, source: string) => void;
   toggleFollow: (v: boolean) => Promise<void>;
   fetchInventory: () => void;
