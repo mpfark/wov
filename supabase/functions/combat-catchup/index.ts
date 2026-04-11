@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
             });
 
             // Award BHP separately (runs as service role so trigger bypass works)
-            if (bhpEach > 0 && recipient.level >= 30) {
+            if (bhpEach > 0) {
               const { data: charRow } = await db.from('characters').select('bhp').eq('id', recipient.id).single();
               const currentBhp = charRow?.bhp ?? 0;
               await db.from('characters').update({ bhp: currentBhp + bhpEach }).eq('id', recipient.id);
