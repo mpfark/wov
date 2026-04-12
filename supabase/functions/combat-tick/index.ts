@@ -225,6 +225,55 @@ Deno.serve(async (req) => {
     const activeEffectsRaw = effectsRes.data;
     const xpB = xpRes.data;
 
+    // ── Process equipment bonuses ────────────────────────────────
+    const eq: Record<string, Record<string, number>> = {};
+    const mainHandTag: Record<string, string | null> = {};
+    const offHandTag: Record<string, string | null> = {};
+    const isTwoHanded: Record<string, boolean> = {};
+    for (const cid of charIds) {
+      const b: Record<string, number> = {};
+      let mhTag: string | null = null;
+      let ohTag: string | null = null;
+      for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
+        for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
+          b[s] = (b[s] || 0) + (v as number);
+        }
+        if (e.equipped_slot === 'main_hand') {
+          if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
+          if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
+        }
+        if (e.equipped_slot === 'off_hand' && (e.item as any)?.weapon_tag) {
+          ohTag = (e.item as any).weapon_tag;
+        }
+      }
+      eq[cid] = b;
+      mainHandTag[cid] = mhTag;
+      offHandTag[cid] = ohTag;
+    }
+
+    // ── Alive creatures at combat node ───────────────────────────
+    const allCreatures = creaturesRaw || [];
+
+    const dotTargetIds = new Set<string>();
+    const activeEffects: any[] = activeEffectsRaw || [];
+    for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
+    for (const pa of pendingAbilities) {
+      if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
+    }
+
+    const creatures = allCreatures.filter(cr =>
+      sessionEngaged.has(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
+    );
+
+    if (creatures.length === 0) {
+      await db.from('combat_sessions').delete().eq('id', session.id);
+      const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
+      return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
+    }
+
+    // ── XP boost ─────────────────────────────────────────────────
+    const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
+
     // ── State tracking ───────────────────────────────────────────
     const events: any[] = [];
     const cHp: Record<string, number> = {};
@@ -239,7 +288,7 @@ Deno.serve(async (req) => {
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: LootQueueEntry[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
-    const killedCreatureIds = new Set<string>(); // Track creature IDs to delete effects for
+    const killedCreatureIds = new Set<string>();
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; mCp[m.id] = m.c.cp ?? 0; }
