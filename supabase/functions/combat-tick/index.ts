@@ -198,22 +198,34 @@ Deno.serve(async (req) => {
     const ticks = Math.min(ticksToProcess, TICK_CAP);
 
     if (ticks === 0 && pendingAbilities.length === 0) {
-      // Not enough time has passed for a tick
-      const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true);
-      const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      // Return actual active effects for UI sync (not empty array)
-      const { data: currentEffects } = await db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, tick_rate_ms').eq('node_id', session.node_id);
-      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (currentEffects || []) });
+      // Not enough time has passed for a tick — parallelize the two idle-path reads
+      const [creaturesIdleRes, effectsIdleRes] = await Promise.all([
+        db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true),
+        db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, tick_rate_ms').eq('node_id', session.node_id),
+      ]);
+      const creature_states = (creaturesIdleRes.data || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
+      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
     }
 
-    // ── Fetch equipment bonuses ──────────────────────────────────
+    // ── Parallel fetch: equipment, creatures, effects, xp_boost ──
     const charIds = members.map(m => m.id);
-    const { data: allEquip } = await db
-      .from('character_inventory')
-      .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
-      .in('character_id', charIds)
-      .not('equipped_slot', 'is', null);
+    const combatNodeId = session.node_id;
+    const [equipRes, creaturesRes, effectsRes, xpRes] = await Promise.all([
+      db.from('character_inventory')
+        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
+        .in('character_id', charIds)
+        .not('equipped_slot', 'is', null),
+      db.from('creatures').select('*').eq('node_id', combatNodeId).eq('is_alive', true),
+      db.from('active_effects').select('*').eq('node_id', combatNodeId),
+      db.from('xp_boost').select('multiplier, expires_at').limit(1).single(),
+    ]);
 
+    const allEquip = equipRes.data;
+    const creaturesRaw = creaturesRes.data;
+    const activeEffectsRaw = effectsRes.data;
+    const xpB = xpRes.data;
+
+    // ── Process equipment bonuses ────────────────────────────────
     const eq: Record<string, Record<string, number>> = {};
     const mainHandTag: Record<string, string | null> = {};
     const offHandTag: Record<string, string | null> = {};
@@ -239,21 +251,10 @@ Deno.serve(async (req) => {
       offHandTag[cid] = ohTag;
     }
 
-    // ── Fetch alive creatures at combat node ─────────────────────
-    const combatNodeId = session.node_id; // Use session's node (may differ from client's current node for DoT drain)
-    const { data: creaturesRaw } = await db
-      .from('creatures')
-      .select('*')
-      .eq('node_id', combatNodeId)
-      .eq('is_alive', true);
-
+    // ── Alive creatures at combat node ───────────────────────────
     const allCreatures = creaturesRaw || [];
 
-    // Collect creature IDs that have active effects targeting them
     const dotTargetIds = new Set<string>();
-    const { data: activeEffectsRaw } = await db.from('active_effects')
-      .select('*')
-      .eq('node_id', combatNodeId);
     const activeEffects: any[] = activeEffectsRaw || [];
     for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
     for (const pa of pendingAbilities) {
@@ -265,16 +266,12 @@ Deno.serve(async (req) => {
     );
 
     if (creatures.length === 0) {
-      // No combat targets — clean up session
       await db.from('combat_sessions').delete().eq('id', session.id);
       const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
       return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
     }
 
-    // Sessions only exist while players are actively present in the node
-
     // ── XP boost ─────────────────────────────────────────────────
-    const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
     const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
 
     // ── State tracking ───────────────────────────────────────────
@@ -291,7 +288,7 @@ Deno.serve(async (req) => {
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: LootQueueEntry[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
-    const killedCreatureIds = new Set<string>(); // Track creature IDs to delete effects for
+    const killedCreatureIds = new Set<string>();
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
     for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; mCp[m.id] = m.c.cp ?? 0; }
@@ -892,11 +889,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Write state: creature HP / kills (shared resolver) ─────
-    await writeCreatureState(db, creatures, cHp, cKilled);
-
-    // ── Write state: member HP, XP, gold, CP, level-ups ─────────
+    // ── Prepare member state updates ──────────────────────────────
     const memberStates: any[] = [];
+    const memberUpdatePromises: Promise<any>[] = [];
     for (const m of members) {
       const c = m.c;
       const updates: Record<string, any> = {};
@@ -961,7 +956,7 @@ Deno.serve(async (req) => {
       }
 
       if (Object.keys(updates).length > 0) {
-        await db.from('characters').update(updates).eq('id', m.id);
+        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
       }
 
       memberStates.push({
@@ -981,7 +976,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Equipment degradation ────────────────────────────────────
+    // ── Equipment degradation promises ──────────────────────────
     const degradePromises = [...degradeSet].map(async (cid) => {
       const { data: equipped } = await db
         .from('character_inventory')
@@ -1001,20 +996,28 @@ Deno.serve(async (req) => {
         await db.from('character_inventory').update({ current_durability: pick.current_durability - 1 }).eq('id', pick.id);
       }
     });
-    await Promise.all(degradePromises);
 
-    // ── Loot drops (shared resolver) ───────────────────────────
+    // ── Prepare effect data ─────────────────────────────────────
+    const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
+    const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
+
+    // ── PHASE A: Independent writes (parallel) ──────────────────
+    await Promise.all([
+      writeCreatureState(db, creatures, cHp, cKilled),
+      cleanupEffects(db, expiredIds, killedCreatureIds),
+      ...memberUpdatePromises,
+      ...degradePromises,
+    ]);
+
+    // ── PHASE B: Order-dependent writes (sequential) ────────────
+    // Loot depends on killed creatures being persisted
     const lootEvents = await processLootDrops(db, lootQueue);
     events.push(...lootEvents);
 
-    // ── Write active_effects to DB (shared cleanup + upsert) ──
-    const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
-    await cleanupEffects(db, expiredIds, killedCreatureIds);
-    // Upsert remaining active effects
-    const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
-    for (const eff of liveEffects) {
-      const { _expired, ...row } = eff;
-      await db.from('active_effects').upsert(row, { onConflict: 'source_id,target_id,effect_type' });
+    // Batch effect upsert after cleanup to avoid conflicts
+    if (liveEffects.length > 0) {
+      const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
+      await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
     }
 
     // ── Check if session should end ─────────────────────────────
