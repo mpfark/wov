@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { logBroadcast } from '@/hooks/useBroadcastDebug';
 import type { NodeChannelHandle } from '@/features/world';
 
@@ -15,9 +15,18 @@ interface CreatureDamageEvent {
  * Hybrid Broadcast channel for instant creature HP sync at a node.
  * Uses the shared NodeChannel instead of creating its own channel.
  */
-export function useCreatureBroadcast(handle: NodeChannelHandle, nodeId: string | null, characterId: string | null) {
+export function useCreatureBroadcast(
+  handle: NodeChannelHandle,
+  nodeId: string | null,
+  characterId: string | null,
+  onOtherPlayerDamage?: (message: string) => void,
+  creatureNameResolver?: (creatureId: string) => string | undefined,
+) {
   const [broadcastOverrides, setBroadcastOverrides] = useState<Record<string, number>>({});
-
+  const onOtherRef = useRef(onOtherPlayerDamage);
+  onOtherRef.current = onOtherPlayerDamage;
+  const resolverRef = useRef(creatureNameResolver);
+  resolverRef.current = creatureNameResolver;
   // Reset overrides when node changes
   useEffect(() => {
     setBroadcastOverrides({});
@@ -35,6 +44,14 @@ export function useCreatureBroadcast(handle: NodeChannelHandle, nodeId: string |
         ...prev,
         [data.creature_id]: data.killed ? 0 : data.new_hp,
       }));
+      // Emit a log message for same-node cooperation
+      if (onOtherRef.current) {
+        const creatureName = resolverRef.current?.(data.creature_id) ?? 'a creature';
+        const msg = data.killed
+          ? `⚔️ ${data.attacker_name} slays ${creatureName}! (remote)`
+          : `⚔️ ${data.attacker_name} hits ${creatureName} for ${data.damage} damage. (remote)`;
+        onOtherRef.current(msg);
+      }
     };
     return () => { handle.onCreatureDamage.current = null; };
   }, [handle, nodeId, characterId]);

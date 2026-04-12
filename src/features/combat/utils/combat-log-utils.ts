@@ -13,6 +13,7 @@ export function getLogColor(log: string): string {
   else if (log.startsWith('🤫 To ')) color = 'text-purple-400/70';
   else if (log.startsWith('🤫')) color = 'text-purple-400';
   else if (log.includes('(remote)') && (log.startsWith('🩸') || log.startsWith('🧪') || log.startsWith('🔥'))) color = 'text-muted-foreground/60 italic text-[10px]';
+  else if (log.includes('(remote)') && log.startsWith('⚔️')) color = 'text-blue-400/70 italic text-[11px]';
   else if (log.includes('(remote)')) color = 'text-foreground/60';
   else if (log.includes('bleeds for') && log.startsWith('🩸')) color = 'text-dot-bleed italic';
   else if (log.includes('poison damage') && log.startsWith('🧪')) color = 'text-dot-poison italic';
