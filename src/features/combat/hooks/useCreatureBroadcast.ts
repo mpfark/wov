@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { logBroadcast } from '@/hooks/useBroadcastDebug';
 import type { NodeChannelHandle } from '@/features/world';
 
@@ -44,6 +44,14 @@ export function useCreatureBroadcast(
         ...prev,
         [data.creature_id]: data.killed ? 0 : data.new_hp,
       }));
+      // Emit a log message for same-node cooperation
+      if (onOtherRef.current) {
+        const creatureName = resolverRef.current?.(data.creature_id) ?? 'a creature';
+        const msg = data.killed
+          ? `⚔️ ${data.attacker_name} slays ${creatureName}! (remote)`
+          : `⚔️ ${data.attacker_name} hits ${creatureName} for ${data.damage} damage. (remote)`;
+        onOtherRef.current(msg);
+      }
     };
     return () => { handle.onCreatureDamage.current = null; };
   }, [handle, nodeId, characterId]);
