@@ -191,23 +191,18 @@ Deno.serve(async (req) => {
       }
 
       if (sourceCharIds.size > 0) {
-        // Fetch source characters
-        const { data: sourceChars } = await db
-          .from('characters')
-          .select('id, level, cha, user_id')
-          .in('id', Array.from(sourceCharIds));
+        // Fetch source characters, party memberships, and XP boost in parallel
+        const [{ data: sourceChars }, { data: partyMembers }, { data: xpB }] = await Promise.all([
+          db.from('characters').select('id, level, cha, user_id').in('id', Array.from(sourceCharIds)),
+          db.from('party_members').select('character_id, party_id, character:characters(id, level, cha)').in('character_id', Array.from(sourceCharIds)).eq('status', 'accepted'),
+          db.from('xp_boost').select('multiplier, expires_at').limit(1).single(),
+        ]);
 
-        // Check if any source char is in a party — fetch party members
-        const { data: partyMembers } = await db
-          .from('party_members')
-          .select('character_id, party_id, character:characters(id, level, cha)')
-          .in('character_id', Array.from(sourceCharIds))
-          .eq('status', 'accepted');
+        const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
 
         // Build party grouping: source_id → list of party member chars
         const partyGroupMap = new Map<string, { id: string; level: number; cha: number }[]>();
         if (partyMembers && partyMembers.length > 0) {
-          // For each source in a party, fetch ALL accepted members of that party
           const partyIds = [...new Set(partyMembers.map(pm => pm.party_id))];
           const { data: allPartyMembers } = await db
             .from('party_members')
@@ -226,10 +221,6 @@ Deno.serve(async (req) => {
             partyGroupMap.set(pm.character_id, groupMembers);
           }
         }
-
-        // Fetch XP boost
-        const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
-        const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
 
         for (const creatureId of cKilled) {
           const creature = creatures.find(cr => cr.id === creatureId);
