@@ -198,12 +198,13 @@ Deno.serve(async (req) => {
     const ticks = Math.min(ticksToProcess, TICK_CAP);
 
     if (ticks === 0 && pendingAbilities.length === 0) {
-      // Not enough time has passed for a tick
-      const { data: creaturesRaw } = await db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true);
-      const creature_states = (creaturesRaw || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      // Return actual active effects for UI sync (not empty array)
-      const { data: currentEffects } = await db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, tick_rate_ms').eq('node_id', session.node_id);
-      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (currentEffects || []) });
+      // Not enough time has passed for a tick — parallelize the two idle-path reads
+      const [creaturesIdleRes, effectsIdleRes] = await Promise.all([
+        db.from('creatures').select('*').eq('node_id', session.node_id).eq('is_alive', true),
+        db.from('active_effects').select('source_id, target_id, effect_type, stacks, damage_per_tick, expires_at, next_tick_at, tick_rate_ms').eq('node_id', session.node_id),
+      ]);
+      const creature_states = (creaturesIdleRes.data || []).map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
+      return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
     }
 
     // ── Fetch equipment bonuses ──────────────────────────────────
