@@ -889,11 +889,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Write state: creature HP / kills (shared resolver) ─────
-    await writeCreatureState(db, creatures, cHp, cKilled);
-
-    // ── Write state: member HP, XP, gold, CP, level-ups ─────────
+    // ── Prepare member state updates ──────────────────────────────
     const memberStates: any[] = [];
+    const memberUpdatePromises: Promise<any>[] = [];
     for (const m of members) {
       const c = m.c;
       const updates: Record<string, any> = {};
@@ -958,7 +956,7 @@ Deno.serve(async (req) => {
       }
 
       if (Object.keys(updates).length > 0) {
-        await db.from('characters').update(updates).eq('id', m.id);
+        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
       }
 
       memberStates.push({
@@ -978,7 +976,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Equipment degradation ────────────────────────────────────
+    // ── Equipment degradation promises ──────────────────────────
     const degradePromises = [...degradeSet].map(async (cid) => {
       const { data: equipped } = await db
         .from('character_inventory')
@@ -998,20 +996,28 @@ Deno.serve(async (req) => {
         await db.from('character_inventory').update({ current_durability: pick.current_durability - 1 }).eq('id', pick.id);
       }
     });
-    await Promise.all(degradePromises);
 
-    // ── Loot drops (shared resolver) ───────────────────────────
+    // ── Prepare effect data ─────────────────────────────────────
+    const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
+    const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
+
+    // ── PHASE A: Independent writes (parallel) ──────────────────
+    await Promise.all([
+      writeCreatureState(db, creatures, cHp, cKilled),
+      cleanupEffects(db, expiredIds, killedCreatureIds),
+      ...memberUpdatePromises,
+      ...degradePromises,
+    ]);
+
+    // ── PHASE B: Order-dependent writes (sequential) ────────────
+    // Loot depends on killed creatures being persisted
     const lootEvents = await processLootDrops(db, lootQueue);
     events.push(...lootEvents);
 
-    // ── Write active_effects to DB (shared cleanup + upsert) ──
-    const expiredIds = activeEffects.filter(e => e._expired).map(e => e.id);
-    await cleanupEffects(db, expiredIds, killedCreatureIds);
-    // Upsert remaining active effects
-    const liveEffects = activeEffects.filter(e => !e._expired && !killedCreatureIds.has(e.target_id));
-    for (const eff of liveEffects) {
-      const { _expired, ...row } = eff;
-      await db.from('active_effects').upsert(row, { onConflict: 'source_id,target_id,effect_type' });
+    // Batch effect upsert after cleanup to avoid conflicts
+    if (liveEffects.length > 0) {
+      const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
+      await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
     }
 
     // ── Check if session should end ─────────────────────────────
