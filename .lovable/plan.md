@@ -1,60 +1,57 @@
 
 
-# Improved Party Follow Grace Window — Refined Plan
+# Same-Node Combat Log Cooperation
 
-## Summary
+## What This Does
 
-Same architecture as the approved plan (enrich broadcast, grace window on follower side, bounded catch-up). Four refinements to reduce false follow-breaks from normal network jitter.
+When solo players fight on the same node, each player will see the other players' damage in their combat log (e.g. "Thorin hits Goblin for 12 damage."). No session merging, no new broadcasts — we piggyback on the existing `creature_damage` broadcast that already fires on every hit.
 
-## Refinements Applied
+## Current State
 
-### 1. Grace window: 1000ms (was 700ms)
+- `useCreatureBroadcast` already receives `creature_damage` broadcasts from other players on the same node
+- These events carry: `attacker_name`, `damage`, `creature_id`, `new_hp`, `killed`
+- Currently, only the HP override is applied — no log message is generated
+- Creature names are available from the `creatures` array passed to GamePage
 
-```typescript
-const FOLLOW_GRACE_MS = 1000;
-```
+## Changes
 
-Named constant, easy to tune later.
+### 1. Extend `useCreatureBroadcast` to emit log messages
 
-### 2. One-miss tolerance before breaking follow
+**File: `src/features/combat/hooks/useCreatureBroadcast.ts`**
 
-Add a `missedFollowCountRef` (number) alongside `lastFollowMoveRef`.
+- Add an `onOtherPlayerDamage` callback parameter (or ref) that gets called when a non-self creature_damage broadcast arrives
+- Pass creature name resolution by accepting a `creatures` array or a name-lookup function
+- When a broadcast arrives, in addition to setting HP overrides, call the callback with a formatted message like:
+  - `"Thorin hits Goblin for 12 damage."` (normal hit)
+  - `"Thorin slays Goblin!"` (kill)
 
-```text
-On receiving party_move where character_id === myId:
-  - If not following → ignore
-  - If my node === from_node_id AND within grace window:
-    → move, log "You hurry after <leader>."
-    → reset missedFollowCount to 0
-  - Else (node mismatch OR grace expired):
-    → increment missedFollowCount
-    → if missedFollowCount >= 2:
-        → break follow, log "You lose track of <leader>."
-    → else:
-        → log nothing (silently tolerate one miss)
-```
+### 2. Wire up the log callback in GamePage
 
-This means a single delayed/out-of-order event won't break follow. Two consecutive mismatches will.
+**File: `src/pages/GamePage.tsx`**
 
-### 3. `lastFollowMoveRef` for staleness only
+- Pass a creature name resolver and the event bus (or `addLocalLog`) into `useCreatureBroadcast`
+- When the callback fires, emit a log entry so it appears in the EventLogPanel
+- Use a muted color style so other players' damage is visually distinct from your own
 
-Used exclusively to discard older events when a newer one has already been processed. **Not** used as a movement cooldown or throttle. Fresh valid events always execute immediately.
+### 3. Add log color for other-player messages
 
-### 4. Bounded catch-up preserved
+**File: `src/features/combat/utils/combat-log-utils.ts`**
 
-- Only auto-follow when follower is at `from_node_id` (one node behind at most)
-- No multi-node teleport
-- No unlimited rubberbanding
+- Add a prefix/pattern match for other-player damage messages (e.g. lines not starting with "You") to apply a dimmer color like `text-blue-400/70`
+
+## What Won't Change
+
+- No new broadcast events — reuses existing `creature_damage`
+- No session merging
+- No server changes
+- No DB changes
+- No changes to combat tick logic
 
 ## Files Touched
 
 | File | Change |
 |------|--------|
-| `src/features/party/hooks/usePartyBroadcast.ts` | Add `from_node_id` + `timestamp` to `PartyMoveEvent` and `broadcastMove` |
-| `src/features/world/hooks/useMovementActions.ts` | Pass origin node + timestamp to `broadcastMove`; update `moveFollowers` signature |
-| `src/pages/GamePage.tsx` | Replace simple node-snap effect with grace window + one-miss tolerance logic |
-
-## Not Changed
-
-- Server authority, DB schema, combat/aggro logic, movement cooldowns, party leadership mechanics
+| `src/features/combat/hooks/useCreatureBroadcast.ts` | Add log callback when receiving other players' damage |
+| `src/pages/GamePage.tsx` | Wire callback to event log |
+| `src/features/combat/utils/combat-log-utils.ts` | Style for other-player damage lines |
 
