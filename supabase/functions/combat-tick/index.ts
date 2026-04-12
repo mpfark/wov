@@ -207,76 +207,23 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
     }
 
-    // ── Fetch equipment bonuses ──────────────────────────────────
+    // ── Parallel fetch: equipment, creatures, effects, xp_boost ──
     const charIds = members.map(m => m.id);
-    const { data: allEquip } = await db
-      .from('character_inventory')
-      .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
-      .in('character_id', charIds)
-      .not('equipped_slot', 'is', null);
+    const combatNodeId = session.node_id;
+    const [equipRes, creaturesRes, effectsRes, xpRes] = await Promise.all([
+      db.from('character_inventory')
+        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
+        .in('character_id', charIds)
+        .not('equipped_slot', 'is', null),
+      db.from('creatures').select('*').eq('node_id', combatNodeId).eq('is_alive', true),
+      db.from('active_effects').select('*').eq('node_id', combatNodeId),
+      db.from('xp_boost').select('multiplier, expires_at').limit(1).single(),
+    ]);
 
-    const eq: Record<string, Record<string, number>> = {};
-    const mainHandTag: Record<string, string | null> = {};
-    const offHandTag: Record<string, string | null> = {};
-    const isTwoHanded: Record<string, boolean> = {};
-    for (const cid of charIds) {
-      const b: Record<string, number> = {};
-      let mhTag: string | null = null;
-      let ohTag: string | null = null;
-      for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
-        for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
-          b[s] = (b[s] || 0) + (v as number);
-        }
-        if (e.equipped_slot === 'main_hand') {
-          if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
-          if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
-        }
-        if (e.equipped_slot === 'off_hand' && (e.item as any)?.weapon_tag) {
-          ohTag = (e.item as any).weapon_tag;
-        }
-      }
-      eq[cid] = b;
-      mainHandTag[cid] = mhTag;
-      offHandTag[cid] = ohTag;
-    }
-
-    // ── Fetch alive creatures at combat node ─────────────────────
-    const combatNodeId = session.node_id; // Use session's node (may differ from client's current node for DoT drain)
-    const { data: creaturesRaw } = await db
-      .from('creatures')
-      .select('*')
-      .eq('node_id', combatNodeId)
-      .eq('is_alive', true);
-
-    const allCreatures = creaturesRaw || [];
-
-    // Collect creature IDs that have active effects targeting them
-    const dotTargetIds = new Set<string>();
-    const { data: activeEffectsRaw } = await db.from('active_effects')
-      .select('*')
-      .eq('node_id', combatNodeId);
-    const activeEffects: any[] = activeEffectsRaw || [];
-    for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
-    for (const pa of pendingAbilities) {
-      if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
-    }
-
-    const creatures = allCreatures.filter(cr =>
-      sessionEngaged.has(cr.id) || cr.is_aggressive || dotTargetIds.has(cr.id)
-    );
-
-    if (creatures.length === 0) {
-      // No combat targets — clean up session
-      await db.from('combat_sessions').delete().eq('id', session.id);
-      const creature_states = allCreatures.map(cr => ({ id: cr.id, hp: cr.hp, alive: true }));
-      return json({ events: [], creature_states, member_states: [], session_ended: true, ticks_processed: 0 });
-    }
-
-    // Sessions only exist while players are actively present in the node
-
-    // ── XP boost ─────────────────────────────────────────────────
-    const { data: xpB } = await db.from('xp_boost').select('multiplier, expires_at').limit(1).single();
-    const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
+    const allEquip = equipRes.data;
+    const creaturesRaw = creaturesRes.data;
+    const activeEffectsRaw = effectsRes.data;
+    const xpB = xpRes.data;
 
     // ── State tracking ───────────────────────────────────────────
     const events: any[] = [];
