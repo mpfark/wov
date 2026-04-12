@@ -15,9 +15,18 @@ interface CreatureDamageEvent {
  * Hybrid Broadcast channel for instant creature HP sync at a node.
  * Uses the shared NodeChannel instead of creating its own channel.
  */
-export function useCreatureBroadcast(handle: NodeChannelHandle, nodeId: string | null, characterId: string | null) {
+export function useCreatureBroadcast(
+  handle: NodeChannelHandle,
+  nodeId: string | null,
+  characterId: string | null,
+  onOtherPlayerDamage?: (message: string) => void,
+  creatureNameResolver?: (creatureId: string) => string | undefined,
+) {
   const [broadcastOverrides, setBroadcastOverrides] = useState<Record<string, number>>({});
-
+  const onOtherRef = useRef(onOtherPlayerDamage);
+  onOtherRef.current = onOtherPlayerDamage;
+  const resolverRef = useRef(creatureNameResolver);
+  resolverRef.current = creatureNameResolver;
   // Reset overrides when node changes
   useEffect(() => {
     setBroadcastOverrides({});
