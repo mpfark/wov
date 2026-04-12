@@ -106,7 +106,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const creatureNameResolver = useCallback((creatureId: string) => {
     return creatures.find(c => c.id === creatureId)?.name;
   }, [creatures]);
-  const { broadcastOverrides, broadcastDamage, broadcastAttackHint: _broadcastAttackHint, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, addLocalLog, creatureNameResolver);
+  const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
+  const { broadcastOverrides, broadcastDamage, broadcastAttackHint: _broadcastAttackHint, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
 
   useEffect(() => {
     cleanupOverrides(creatures.map(c => c.id));
