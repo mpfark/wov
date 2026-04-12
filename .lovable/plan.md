@@ -1,57 +1,61 @@
 
 
-# Same-Node Combat Log Cooperation
+# Optimized combat-tick DB Queries — Refined Plan
 
-## What This Does
+## Summary
 
-When solo players fight on the same node, each player will see the other players' damage in their combat log (e.g. "Thorin hits Goblin for 12 damage."). No session merging, no new broadcasts — we piggyback on the existing `creature_damage` broadcast that already fires on every hit.
+Same optimization approach (parallelize reads, batch effect upserts, parallelize writes). Two safety refinements applied.
 
-## Current State
+## Refinement 1: Order-dependent writes stay sequential
 
-- `useCreatureBroadcast` already receives `creature_damage` broadcasts from other players on the same node
-- These events carry: `attacker_name`, `damage`, `creature_id`, `new_hp`, `killed`
-- Currently, only the HP override is applied — no log message is generated
-- Creature names are available from the `creatures` array passed to GamePage
+Post-tick writes split into two phases:
 
-## Changes
+**Phase A — parallel (independent writes):**
+```typescript
+await Promise.all([
+  writeCreatureState(db, creatures, cHp, cKilled),
+  cleanupEffects(db, expiredIds, killedCreatureIds),
+  ...memberUpdatePromises,
+  ...degradePromises,
+]);
+```
 
-### 1. Extend `useCreatureBroadcast` to emit log messages
+**Phase B — sequential (order-dependent):**
+```typescript
+// Loot depends on killed creatures being persisted
+const lootEvents = await processLootDrops(db, lootQueue);
 
-**File: `src/features/combat/hooks/useCreatureBroadcast.ts`**
+// Effect upsert after cleanup to avoid conflicts
+if (liveEffects.length > 0) {
+  const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
+  await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
+}
 
-- Add an `onOtherPlayerDamage` callback parameter (or ref) that gets called when a non-self creature_damage broadcast arrives
-- Pass creature name resolution by accepting a `creatures` array or a name-lookup function
-- When a broadcast arrives, in addition to setting HP overrides, call the callback with a formatted message like:
-  - `"Thorin hits Goblin for 12 damage."` (normal hit)
-  - `"Thorin slays Goblin!"` (kill)
+// Session update last (reflects final state)
+await db.from('combat_sessions').upsert(sessionRow);
+```
 
-### 2. Wire up the log callback in GamePage
+This preserves the performance win from Phase A while preventing ordering bugs in Phase B.
 
-**File: `src/pages/GamePage.tsx`**
+## Refinement 2: Batch upsert conflict key is verified safe
 
-- Pass a creature name resolver and the event bus (or `addLocalLog`) into `useCreatureBroadcast`
-- When the callback fires, emit a log entry so it appears in the EventLogPanel
-- Use a muted color style so other players' damage is visually distinct from your own
+Confirmed: `active_effects` has a `UNIQUE` constraint on `(source_id, target_id, effect_type)`:
 
-### 3. Add log color for other-player messages
+```
+active_effects_source_id_target_id_effect_type_key UNIQUE (source_id, target_id, effect_type)
+```
 
-**File: `src/features/combat/utils/combat-log-utils.ts`**
+The in-memory effect model enforces this too — poison/ignite/bleed find-and-update existing rows rather than creating duplicates (lines 705, 724 of combat-tick). Batch upsert with `onConflict: 'source_id,target_id,effect_type'` is correct.
 
-- Add a prefix/pattern match for other-player damage messages (e.g. lines not starting with "You") to apply a dimmer color like `text-blue-400/70`
+## Everything else unchanged from original plan
 
-## What Won't Change
+- Parallelize reads (equipment, creatures, effects, xp_boost) via `Promise.all`
+- Early-exit idle path: parallelize the two queries
+- No DB schema changes, no client changes, no combat logic changes
 
-- No new broadcast events — reuses existing `creature_damage`
-- No session merging
-- No server changes
-- No DB changes
-- No changes to combat tick logic
-
-## Files Touched
+## File touched
 
 | File | Change |
 |------|--------|
-| `src/features/combat/hooks/useCreatureBroadcast.ts` | Add log callback when receiving other players' damage |
-| `src/pages/GamePage.tsx` | Wire callback to event log |
-| `src/features/combat/utils/combat-log-utils.ts` | Style for other-player damage lines |
+| `supabase/functions/combat-tick/index.ts` | Parallelize reads, split writes into independent-parallel + ordered-sequential phases, batch effect upserts |
 
