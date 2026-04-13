@@ -485,6 +485,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                       >
                         {node.name || area?.name || 'Unknown'}
                       </text>
+                      )}
                     </g>
                   );
                 })}
