@@ -447,7 +447,6 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const strokeColor = isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.6)' : getAreaStrokeColor(emoji);
                   const isTeleportNode = node.is_teleport && visitedIds.has(node.id) && !isCurrent;
                   const canTeleportHere = isTeleportNode && onTeleport && !inCombat;
-                  const nodeRegion = regionById.get(node.region_id);
                   
                   const isSelected = selectedTeleportNode === node.id;
 
