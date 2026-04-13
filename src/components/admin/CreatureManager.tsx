@@ -72,6 +72,14 @@ const RARITY_COLORS: Record<string, string> = {
 const LOOT_MODES = ['legacy_table', 'item_pool', 'salvage_only'] as const;
 const LOOT_MODE_LABELS: Record<string, string> = { legacy_table: '📋 Legacy Table', item_pool: '🎲 Item Pool', salvage_only: '🔩 Salvage Only' };
 
+interface BossCritFlavor {
+  name: string;
+  text: string;
+  emoji: string;
+  weight: number;
+  damage_type: string;
+}
+
 const defaultForm = () => ({
   name: '', description: '', node_id: '' as string | null,
   level: 1, rarity: 'regular',
@@ -81,6 +89,7 @@ const defaultForm = () => ({
   loot_table_id: null as string | null,
   drop_chance: 0.5,
   loot_mode: 'legacy_table' as string,
+  boss_crit_flavors: [] as BossCritFlavor[],
 });
 
 export default function CreatureManager() {
