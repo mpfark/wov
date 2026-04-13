@@ -31,7 +31,7 @@ const NODE_R = 22;
 const OUTLINE_RADIUS = NODE_R + 20;
 const AREA_OUTLINE_RADIUS = NODE_R + 10;
 
-export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, playerMaxCp, currentRegion, onTeleport, characterLevel, inCombat }: Props) {
+export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, currentRegion, onTeleport, inCombat }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
