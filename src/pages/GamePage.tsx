@@ -30,7 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { User, Map as MapIconLucide, Zap, LogOut, RefreshCw, MessageCircle } from 'lucide-react';
-import { logActivity as _logActivity } from '@/hooks/useActivityLog';
+
 import { useKeyboardMovement } from '@/features/world';
 
 import { useChat } from '@/features/chat';
@@ -107,7 +107,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     return creatures.find(c => c.id === creatureId)?.name;
   }, [creatures]);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
-  const { broadcastOverrides, broadcastDamage, broadcastAttackHint: _broadcastAttackHint, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
+  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
 
   useEffect(() => {
     cleanupOverrides(creatures.map(c => c.id));
@@ -123,13 +123,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
   const { pendingSummons, acceptSummon, declineSummon } = useSummonRequests(character.id);
-  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
+  const { addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
     incomingPartyRegenBuff,
-    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward: _broadcastReward, broadcastPartyRegenBuff,
-    broadcastAttackEvent: _broadcastAttackEvent,
+    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastPartyRegenBuff,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)

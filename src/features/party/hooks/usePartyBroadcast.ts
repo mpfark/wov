@@ -135,6 +135,16 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
+  const broadcastPartyRegenBuff = useCallback((healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string) => {
+    if (!channelRef.current) return;
+    logBroadcast('out', `party`, 'party_regen_buff');
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'party_regen_buff',
+      payload: { healPerTick, expiresAt, source, caster_id: casterId } satisfies PartyRegenBuffEvent,
+    });
+  }, []);
+
   // NOTE: party_reward events are server-originated (combat-tick edge function).
   // No client-side broadcastReward sender is needed.
 
