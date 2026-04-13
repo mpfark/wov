@@ -30,7 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { User, Map as MapIconLucide, Zap, LogOut, RefreshCw, MessageCircle } from 'lucide-react';
-import { logActivity as _logActivity } from '@/hooks/useActivityLog';
+
 import { useKeyboardMovement } from '@/features/world';
 
 import { useChat } from '@/features/chat';
@@ -107,7 +107,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     return creatures.find(c => c.id === creatureId)?.name;
   }, [creatures]);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
-  const { broadcastOverrides, broadcastDamage, broadcastAttackHint: _broadcastAttackHint, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
+  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
 
   useEffect(() => {
     cleanupOverrides(creatures.map(c => c.id));
@@ -116,20 +116,19 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory: _inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id);
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
     leaveParty, kickMember, setTank, toggleFollow, fetchParty,
   } = useParty(character.id);
   const { pendingSummons, acceptSummon, declineSummon } = useSummonRequests(character.id);
-  const { entries: partyCombatEntries, addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
+  const { addPartyCombatLog } = usePartyCombatLog(party?.id ?? null);
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
     incomingPartyRegenBuff,
-    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastReward: _broadcastReward, broadcastPartyRegenBuff,
-    broadcastAttackEvent: _broadcastAttackEvent,
+    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastPartyRegenBuff,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
@@ -410,16 +409,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       processIncomingLog(entry.message, entry.character_name, entry.node_id);
     }
   }, [broadcastLogEntries, party, processIncomingLog]);
-  useEffect(() => {
-    if (!party) return;
-    for (const entry of partyCombatEntries) {
-      if (seenIdsRef.current.has(entry.id)) continue;
-      seenIdsRef.current.add(entry.id);
-      if (ownLogIdsRef.current.has(entry.id)) continue;
-      if (entry.character_name === character.name) continue;
-      processIncomingLog(entry.message, entry.character_name, entry.node_id);
-    }
-  }, [partyCombatEntries, party, processIncomingLog, character.name]);
 
   // Debounced scroll — prevent layout thrashing on rapid log updates
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -541,7 +530,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     localPredictionOverrides, lastTickTime, startCombat, stopCombat: stopCombatFn,
-    fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
+    fleeStopCombat, queueAbility } = combat;
 
   // Merge creature HP from all sources: combat-tick > prediction > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides, localPredictionOverrides);

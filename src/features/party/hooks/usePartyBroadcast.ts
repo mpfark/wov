@@ -135,16 +135,6 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
-  const broadcastReward = useCallback((charId: string, xp: number, gold: number, source: string) => {
-    if (!channelRef.current) return;
-    logBroadcast('out', `party`, 'party_reward');
-    channelRef.current.send({
-      type: 'broadcast',
-      event: 'party_reward',
-      payload: { character_id: charId, xp, gold, source } satisfies PartyRewardEvent,
-    });
-  }, []);
-
   const broadcastPartyRegenBuff = useCallback((healPerTick: number, expiresAt: number, source: 'healer' | 'bard', casterId: string) => {
     if (!channelRef.current) return;
     logBroadcast('out', `party`, 'party_regen_buff');
@@ -155,16 +145,8 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
-  /** Transient hint: a party member attacked a creature (for UI feedback only, no authority) */
-  const broadcastAttackEvent = useCallback((charId: string, charName: string, creatureId: string) => {
-    if (!channelRef.current) return;
-    logBroadcast('out', `party`, 'party_attack_event');
-    channelRef.current.send({
-      type: 'broadcast',
-      event: 'party_attack_event',
-      payload: { character_id: charId, character_name: charName, creature_id: creatureId },
-    });
-  }, []);
+  // NOTE: party_reward events are server-originated (combat-tick edge function).
+  // No client-side broadcastReward sender is needed.
 
   return {
     hpOverrides,
@@ -175,8 +157,6 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     broadcastHp,
     broadcastMove,
     broadcastCombatMsg,
-    broadcastReward,
     broadcastPartyRegenBuff,
-    broadcastAttackEvent,
   };
 }

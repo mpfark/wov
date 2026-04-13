@@ -92,16 +92,5 @@ export function useCreatureBroadcast(
     });
   }, [handle, characterId]);
 
-  /** Transient hint: a player attacked a creature (for animation/visual feedback only) */
-  const broadcastAttackHint = useCallback((creatureId: string, attackerName: string) => {
-    if (!handle.channelRef.current) return;
-    logBroadcast('out', `node`, 'creature_attacked');
-    handle.channelRef.current.send({
-      type: 'broadcast',
-      event: 'creature_attacked',
-      payload: { creature_id: creatureId, attacker_name: attackerName, sender_id: characterId },
-    });
-  }, [handle, characterId]);
-
-  return { broadcastOverrides, broadcastDamage, broadcastAttackHint, cleanupOverrides };
+  return { broadcastOverrides, broadcastDamage, cleanupOverrides };
 }
