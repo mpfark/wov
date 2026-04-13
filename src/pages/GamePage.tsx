@@ -409,16 +409,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       processIncomingLog(entry.message, entry.character_name, entry.node_id);
     }
   }, [broadcastLogEntries, party, processIncomingLog]);
-  useEffect(() => {
-    if (!party) return;
-    for (const entry of partyCombatEntries) {
-      if (seenIdsRef.current.has(entry.id)) continue;
-      seenIdsRef.current.add(entry.id);
-      if (ownLogIdsRef.current.has(entry.id)) continue;
-      if (entry.character_name === character.name) continue;
-      processIncomingLog(entry.message, entry.character_name, entry.node_id);
-    }
-  }, [partyCombatEntries, party, processIncomingLog, character.name]);
 
   // Debounced scroll — prevent layout thrashing on rapid log updates
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
