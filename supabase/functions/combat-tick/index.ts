@@ -111,6 +111,8 @@ Deno.serve(async (req) => {
       engaged_creature_ids, pending_abilities: rawPendingAbilities,
       // New: client can request session creation
       action,
+      // Client-side CP for freshness sync (solo only)
+      client_cp,
     } = await req.json();
 
     if (!node_id) throw new Error('Missing node_id');
@@ -313,7 +315,14 @@ Deno.serve(async (req) => {
     const killedCreatureIds = new Set<string>();
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
-    for (const m of members) { mHp[m.id] = m.c.hp; mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0; mCp[m.id] = m.c.cp ?? 0; }
+    for (const m of members) {
+      mHp[m.id] = m.c.hp;
+      mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0;
+      // Use freshest CP: max of DB value and client-reported value (solo only)
+      const dbCp = m.c.cp ?? 0;
+      const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number') ? Math.max(dbCp, client_cp) : dbCp;
+      mCp[m.id] = freshCp;
+    }
 
     // ── Unified creature kill handler ────────────────────────────
     const handleCreatureKill = (creature: any, killerLabel: string, chaForGold: number = 0) => {

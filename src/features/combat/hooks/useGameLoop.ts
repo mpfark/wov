@@ -119,14 +119,11 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       // ── HP Regen ──
       const { hp, max_hp, current_node_id, con, mp, dex } = regenCharRef.current;
-      const gearHpBonus = equipmentBonusesRef.current.hp || 0;
-      const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
-      const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
       const innFlat = node?.is_inn ? 10 : 0;
       const combatMult = inCombatRegenRef.current ? 0.1 : 1;
 
-      if (hp < effectiveMaxHp && hp > 0) {
+      if (hp < max_hp && hp > 0) {
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
         const conRegen = getStatRegen(conWithGear);
         const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
@@ -134,7 +131,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
         const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
         const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat) * combatMult), 1);
-        const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
+        const newHp = Math.min(hp + regenAmount, max_hp);
         if (newHp !== hp) {
           updates.hp = newHp;
           setRegenTick(true);
@@ -145,27 +142,27 @@ export function useGameLoop(params: UseGameLoopParams) {
       // ── CP Regen ──
       const { cp, level, int, wis, cha } = cpCharRef.current;
       const eqB = equipmentBonusesRef.current;
-      const gearAwareMaxCp = getMaxCp(level, int + (eqB.int || 0), wis + (eqB.wis || 0), cha + (eqB.cha || 0));
-      if (cp < gearAwareMaxCp) {
+      const maxCpBase = getMaxCp(level, int, wis, cha);
+      if (cp < maxCpBase) {
         const intWithGear = int + (eqB.int || 0);
         const intRegen = getStatRegen(intWithGear);
         const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
         const food = foodBuffRef.current;
         const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
         const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat) * combatMult), 1);
-        const newCp = Math.min(cp + regenAmount, gearAwareMaxCp);
+        const newCp = Math.min(cp + regenAmount, maxCpBase);
         if (newCp > cp) {
           updates.cp = newCp;
         }
       }
 
       // ── MP Regen ──
-      const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
-      const effectiveMaxMp = getMaxMp(regenCharRef.current.level, dexWithGear);
-      if (mp < effectiveMaxMp) {
+      const baseMaxMp = getMaxMp(regenCharRef.current.level, dex);
+      if (mp < baseMaxMp) {
+        const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
         // ×2 to compensate for 4s tick (was 2s)
         const regenAmount = getMpRegenRate(dexWithGear) * 2 + innFlat;
-        const newMp = Math.min(mp + regenAmount, effectiveMaxMp);
+        const newMp = Math.min(mp + regenAmount, baseMaxMp);
         if (newMp > mp) {
           updates.mp = newMp;
         }
@@ -223,10 +220,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         setPartyRegenBuff(null); clearInterval(interval); return;
       }
       const charState = regenCharRef.current;
-      const gearHpBonus = equipmentBonusesRef.current.hp || 0;
-      const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
-      const effectiveMaxHp = charState.max_hp + gearHpBonus + gearConMod;
-      const selfNewHp = Math.min(effectiveMaxHp, charState.hp + partyRegenBuff.healPerTick);
+      const selfNewHp = Math.min(charState.max_hp, charState.hp + partyRegenBuff.healPerTick);
       if (selfNewHp > charState.hp) {
         await updateCharacter({ hp: selfNewHp });
       }

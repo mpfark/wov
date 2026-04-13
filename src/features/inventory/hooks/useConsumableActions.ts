@@ -30,8 +30,7 @@ export function useConsumableActions(params: UseConsumableActionsParams) {
   const p = params;
 
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
-    const consGearConMod = Math.floor((p.equipmentBonuses.con || 0) / 2);
-    const consEffectiveMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + consGearConMod;
+    const consEffectiveMaxHp = p.character.max_hp;
     const result = await p.useConsumable(inventoryId, p.character.id, p.character.hp, consEffectiveMaxHp, p.updateCharacter);
     if (result) {
       if (result.isPotion) {

@@ -24,7 +24,7 @@ import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import { usePartyCombat } from '@/features/combat';
-import { getBagWeight, calculateAC, getMaxCp, getMaxMp } from '@/lib/game-data';
+import { getBagWeight, calculateAC } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -135,46 +135,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const gearConMod = Math.floor((equipmentBonuses.con || 0) / 2);
   const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0) + gearConMod;
 
-  // ── Login top-up: restore gear-boosted resources to effective caps ──
-  // DB clamps hp/cp/mp to base max on write; on relog we top them up once
-  // if they equal the base cap (meaning the player was at "full" before logout).
-  const loginTopUpDone = useRef(false);
-  useEffect(() => {
-    if (loginTopUpDone.current) return;
-    // Wait until equipment bonuses are loaded (non-zero means gear is parsed)
-    const hasGear = equipped.length > 0;
-    if (!hasGear && Object.keys(equipmentBonuses).length === 0) return;
-    loginTopUpDone.current = true;
-
-    const updates: Partial<Character> = {};
-
-    // HP: if at or above base max_hp, top up to effective max
-    if (character.hp >= character.max_hp && character.hp < effectiveMaxHp) {
-      updates.hp = effectiveMaxHp;
-    }
-
-    // CP: effective max with gear
-    const effMaxCp = getMaxCp(
-      character.level,
-      character.int + (equipmentBonuses.int || 0),
-      character.wis + (equipmentBonuses.wis || 0),
-      character.cha + (equipmentBonuses.cha || 0),
-    );
-    if ((character.cp ?? 0) >= character.max_cp && (character.cp ?? 0) < effMaxCp) {
-      updates.cp = effMaxCp;
-    }
-
-    // MP: effective max with gear
-    const effMaxMp = getMaxMp(character.level, character.dex + (equipmentBonuses.dex || 0));
-    if ((character.mp ?? 100) >= (character.max_mp ?? 100) && (character.mp ?? 100) < effMaxMp) {
-      updates.mp = effMaxMp;
-    }
-
-    if (Object.keys(updates).length > 0) {
-      // Local-only update — no DB write needed since gear bonuses are ephemeral
-      updateCharacterLocal?.(updates) ?? updateCharacter(updates);
-    }
-  }, [equipped, equipmentBonuses, character.id]);
+  // Login top-up removed — resources now capped at authoritative base max to prevent snap-down
   const lastBroadcastedHpRef = useRef<{ hp: number; max_hp: number } | null>(null);
   useEffect(() => {
     if (!party || !character) return;
@@ -529,11 +490,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    localPredictionOverrides, lastTickTime, startCombat, stopCombat: stopCombatFn,
+    lastTickTime, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, queueAbility } = combat;
 
-  // Merge creature HP from all sources: combat-tick > prediction > broadcast > base
-  const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides, localPredictionOverrides);
+  // Merge creature HP from all sources: combat-tick > broadcast > base
+  const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
 
   // ── Offscreen DoT wake-up scheduler ──────────────────────────────
   useOffscreenDotWakeup({

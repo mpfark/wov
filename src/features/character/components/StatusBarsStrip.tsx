@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { getXpForLevel, getMaxCp, getMaxMp } from '@/lib/game-data';
+import { getXpForLevel } from '@/lib/game-data';
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
@@ -140,22 +140,17 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 }
 
 export default function StatusBarsStrip({
-  character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
+  character, equipmentBonuses: _equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
-  // Include both direct HP bonuses and CON-derived HP from equipment
-  const gearConMod = Math.floor((equipmentBonuses.con || 0) / 2);
-  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0) + gearConMod;
+  // Use authoritative base max from server to avoid display-then-snap-down
+  const effectiveMaxHp = character.max_hp;
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const cp = character.cp ?? 100;
-  const intWithGear = character.int + (equipmentBonuses.int || 0);
-  const wisWithGear = character.wis + (equipmentBonuses.wis || 0);
-  const chaWithGear = character.cha + (equipmentBonuses.cha || 0);
-  const maxCp = getMaxCp(character.level, intWithGear, wisWithGear, chaWithGear);
+  const maxCp = character.max_cp ?? 100;
   const cpPercent = Math.round((cp / maxCp) * 100);
   const mp = character.mp ?? 100;
-  const dexWithGear = character.dex + (equipmentBonuses.dex || 0);
-  const maxMp = getMaxMp(character.level, dexWithGear);
+  const maxMp = character.max_mp ?? 100;
   const mpPercent = Math.round((mp / maxMp) * 100);
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
