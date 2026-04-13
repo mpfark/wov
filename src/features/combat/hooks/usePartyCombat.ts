@@ -15,7 +15,7 @@
  *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { CLASS_COMBAT_PROFILES } from '../utils/combat-math';
+
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
