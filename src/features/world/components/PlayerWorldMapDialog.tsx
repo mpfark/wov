@@ -290,7 +290,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
               ref={svgRef}
               className="w-full h-full cursor-grab active:cursor-grabbing"
               onWheel={handleWheel}
-              onMouseDown={handleMouseDown}
+              onMouseDown={(e) => { handleMouseDown(e); setSelectedTeleportNode(null); }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
