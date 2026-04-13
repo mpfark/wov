@@ -139,11 +139,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
-    memberAbilitiesRef.current = {};
+    memberAbilitiesRef.current = [];
     pendingAbilityRef.current = null;
     setPendingAbility(null);
-    currentTickIdRef.current = null;
-    setPredictedLogEntry(null);
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
