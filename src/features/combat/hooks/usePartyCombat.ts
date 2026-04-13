@@ -96,7 +96,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const [creatureHpOverrides, setCreatureHpOverrides] = useState<Record<string, number>>({});
   const creatureHpOverridesRef = useRef<Record<string, number>>({});
   const [lastTickTime, setLastTickTime] = useState<number | null>(null);
-  const [lastActiveEffects, setLastActiveEffects] = useState<any[] | null>(null);
+  
   const intervalRef = useRef<number | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastTickRef = useRef<number>(0);
@@ -320,7 +320,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     for (const cid of result.poisonProcs) ext.current.onPoisonProc?.(cid);
     for (const cid of result.igniteProcs) ext.current.onIgniteProc?.(cid);
 
-    if (result.activeEffectsSnapshot) setLastActiveEffects(result.activeEffectsSnapshot);
+    // result.activeEffectsSnapshot intentionally unused — server is authoritative
     if (result.dotsByChar && ext.current.onActiveDots) ext.current.onActiveDots(result.dotsByChar);
     if (result.creatureDebuffs && ext.current.onCreatureDebuffs) ext.current.onCreatureDebuffs(result.creatureDebuffs);
     if (result.hasLootDrop) ext.current.fetchGroundLoot();
@@ -623,7 +623,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     localPredictionOverrides,
     predictedLogEntry,
     lastTickTime,
-    lastActiveEffects,
     updateCreatureHp,
     startCombat: startCombatCore,
     stopCombat,

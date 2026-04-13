@@ -1,19 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
-export interface CombatLogEntry {
-  id: string;
-  party_id: string;
-  message: string;
-  node_id: string | null;
-  character_name: string | null;
-  created_at: string;
-}
 
 export function usePartyCombatLog(partyId: string | null) {
   // No realtime subscription — combat log entries arrive via party broadcast channel.
-  // This hook now only provides the insert helper.
-  const [entries] = useState<CombatLogEntry[]>([]);
+  // This hook only provides the insert helper.
 
   const addPartyCombatLog = useCallback(async (message: string, nodeId?: string | null, characterName?: string | null): Promise<string | null> => {
     if (!partyId) return null;
@@ -21,5 +11,5 @@ export function usePartyCombatLog(partyId: string | null) {
     return data?.id ?? null;
   }, [partyId]);
 
-  return { entries, addPartyCombatLog };
+  return { addPartyCombatLog };
 }
