@@ -1,65 +1,36 @@
 
 
-# Integrate Teleport into Player World Map
+# Fix Teleport from World Map + Unscaled Popup
 
-## Goal
-Let players click teleport nodes directly on the world map to teleport, instead of using the separate list dialog. Teleport-eligible nodes get a distinctive visual treatment (teleport-colored outline ring). Clicking one shows a confirmation tooltip with the CP cost.
+## Problems
 
-## Design
+1. **Click never registers on the teleport button**: The SVG `onMouseDown` calls `setSelectedTeleportNode(null)` which fires *before* the node's `onClick`. So when you click a teleport node, the popup opens then immediately closes. And clicking the teleport button inside the popup also triggers the SVG mousedown first, clearing the selection.
 
-### Visual Treatment
-- Teleport nodes (`is_teleport && visited`) get an extra outline ring using the teleport color (`hsl(var(--primary))` — the 🌀 color used throughout the teleport UI)
-- A small 🌀 icon rendered below/inside teleport nodes for quick identification
-- Current node is excluded from teleport targets (can't teleport to yourself)
+2. **Popup scales with the map**: The `<foreignObject>` confirmation tooltip is inside the SVG `<g>` transform group, so it shrinks/grows with zoom — making it unreadable at most zoom levels.
 
-### Interaction Flow
-1. Player opens world map
-2. Teleport nodes are visually distinct with a colored ring
-3. Clicking a teleport node (not the current node) shows a small confirmation popover/tooltip: node name, region, CP cost, and a "Teleport ⚡ X CP" button
-4. Clicking the button calls `onTeleport(nodeId, cpCost)` and closes the map
-5. If player can't afford the CP, the button is disabled with muted styling
-6. Non-teleport nodes remain non-interactive (no click action beyond hover)
+## Fix
 
-### Props Changes
+### 1. Move confirmation popup out of SVG — render as an HTML overlay
 
-**PlayerWorldMapDialog** — add new props:
-```typescript
-// Teleport integration
-playerCp?: number;
-playerMaxCp?: number;
-currentRegion?: Region;
-onTeleport?: (nodeId: string, cpCost: number) => void;
-characterLevel?: number;
-inCombat?: boolean;
+Instead of a `<foreignObject>` inside the scaled `<g>`, render the teleport confirmation as an absolutely-positioned `<div>` overlay on top of the SVG. Calculate its screen position by transforming the node's world coordinates through the current pan/zoom:
+
+```
+screenX = nodeX * zoom + pan.x + containerWidth/2
+screenY = nodeY * zoom + pan.y + containerHeight/2
 ```
 
-When `onTeleport` is provided, teleport mode is active on the map.
+This keeps the popup at a fixed readable size regardless of zoom.
 
-**MapPanel** — pass teleport props through to PlayerWorldMapDialog:
-- `playerCp`, `currentRegion`, `onTeleport` (from `onOpenTeleport` handler equivalent), `characterLevel`, `inCombat`
+### 2. Fix click propagation
 
-**GamePage** — pass `handleTeleport`, `character.cp`, `currentRegion`, `character.level`, and `inCombat` into the MapPanel props, which forwards them to PlayerWorldMapDialog.
-
-### CP Cost Calculation
-Reuse `calculateTeleportCpCost` from TeleportDialog — extract it to a shared location or inline the same logic. It's a pure function: `(fromRegion, toRegion) => cost`.
-
-### Confirmation UI
-A small SVG `<foreignObject>` or absolutely-positioned HTML tooltip near the clicked node showing:
-- Node name + region name + level range
-- "⚡ X CP" teleport button (disabled if insufficient CP)
-- Click away to dismiss
+- On the SVG `onMouseDown`, do NOT clear `selectedTeleportNode` immediately. Instead, track whether a drag happened.
+- On `onMouseUp`, if no drag occurred (mouse didn't move significantly), check if the click target was outside a teleport node — only then clear the selection.
+- On the node `<g>` `onClick`, call `e.stopPropagation()` to prevent the SVG background click from interfering.
+- On the overlay div, also stop propagation so clicking the teleport button doesn't trigger the SVG handlers.
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/features/world/components/PlayerWorldMapDialog.tsx` | Add teleport ring rendering, click handler, confirmation tooltip, CP cost logic |
-| `src/features/world/components/MapPanel.tsx` | Pass teleport-related props through to PlayerWorldMapDialog |
-| `src/pages/GamePage.tsx` | Pass `handleTeleport`, CP, region, level, combat state to MapPanel |
-| `src/features/world/components/TeleportDialog.tsx` | Export `calculateTeleportCpCost` for reuse |
-
-### Not Changed
-- TeleportDialog still works as before (list view remains accessible from the teleport button)
-- No combat, movement, or server changes
-- Waymark and party-member teleport stay in the list dialog only (map is for node-to-node teleport)
+| `src/features/world/components/PlayerWorldMapDialog.tsx` | Move tooltip out of `<g>` into HTML overlay div; fix click/drag logic to not clear selection prematurely |
 
