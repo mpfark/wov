@@ -288,6 +288,18 @@ function formatCreatureAttack(
     return `${attacker} misses ${event.target_name!}.`;
   }
 
+  // Boss crit flavor: if present, use themed text instead of tier-word system
+  if (isCrit && event.boss_flavor) {
+    const bf = event.boss_flavor;
+    const emoji = bf.emoji || '';
+    const prefix = emoji ? `${emoji} ` : '';
+    const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
+    if (isLocal) {
+      return `${prefix}${attacker} ${bf.text}${dmgSuffix}!`;
+    }
+    return `${prefix}${attacker} ${bf.text}${dmgSuffix}!`;
+  }
+
   const tierWord = getDamageTierWord(damage);
   const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
   const punct = isCrit ? '!' : '.';
