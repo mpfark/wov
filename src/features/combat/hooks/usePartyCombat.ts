@@ -30,7 +30,7 @@ import { useCombatLifecycle } from './useCombatLifecycle';
 /** Ability types that are processed server-side in the combat-tick */
 const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff']);
 
-let nextTickId = 1;
+
 
 interface Party {
   id: string;
@@ -189,25 +189,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       console.log(`[combat] startCombat creature=${creatureId} at ${Date.now()}`);
       if (import.meta.env.DEV) combatStartTimeRef.current = performance.now();
 
-      // Instant prediction: move creature HP bar before first server tick
-      const creature = ext.current.creatures.find(c => c.id === creatureId);
-      if (creature && creature.is_alive && creature.hp > 0) {
-        const profile = CLASS_COMBAT_PROFILES[ext.current.character.class];
-        if (profile) {
-          const attackerStat = (ext.current.character[profile.stat as keyof typeof ext.current.character] as number) || 10;
-          const prediction = predictConservativeDamage({
-            classKey: ext.current.character.class,
-            attackerStat,
-            int: ext.current.character.int,
-            str: ext.current.character.str,
-            creatureAC: creature.ac,
-          });
-          if (prediction.shouldPredict) {
-            const predictedHp = applyPredictedDamage(creature.hp, prediction.predictedDamage);
-            setLocalPredictionOverrides({ [creatureId]: { hp: predictedHp, ts: Date.now() } });
-          }
-        }
-      }
 
       if (intervalRef.current) clearWorkerInterval(intervalRef.current);
       doTickRef.current();
