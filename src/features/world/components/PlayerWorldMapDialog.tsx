@@ -5,7 +5,7 @@ import { ZoomIn, ZoomOut, Locate } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
-import { getAreaFillColor, getAreaStrokeColor, getAreaHeaderColor } from '@/features/world';
+import { getAreaFillColor, getAreaStrokeColor } from '@/features/world';
 import { computeRegionOutline, type Circle, type OutlineBBox } from '@/features/world/utils/outline-geometry';
 
 interface Props {
