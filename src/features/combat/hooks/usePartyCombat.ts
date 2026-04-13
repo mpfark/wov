@@ -111,10 +111,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
   const idleCountRef = useRef(0);
 
-  // Prediction state
-  const [localPredictionOverrides, setLocalPredictionOverrides] = useState<Record<string, PredictionOverride>>({});
-  const currentTickIdRef = useRef<number | null>(null);
-  const [predictedLogEntry, setPredictedLogEntry] = useState<{ tickId: number; message: string } | null>(null);
+   // Prediction removed — creature HP only updates from server responses
 
   // Leader aggregates non-leader buff stacks received via broadcast
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
@@ -142,10 +139,9 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     setCreatureHpOverrides({});
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
-    memberAbilitiesRef.current = [];
+    memberAbilitiesRef.current = {};
     pendingAbilityRef.current = null;
     setPendingAbility(null);
-    setLocalPredictionOverrides({});
     currentTickIdRef.current = null;
     setPredictedLogEntry(null);
     if (intervalRef.current) {
