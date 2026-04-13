@@ -223,6 +223,7 @@ export function useBuffState(params: UseBuffStateParams) {
     const now = Date.now();
     const defaultExpiry = now + 30000;
     const merged: ServerDotState = { poison: {}, ignite: {}, bleed: {} };
+    const sunderUpdates: Record<string, SunderDebuff> = {};
     for (const [creatureId, entry] of Object.entries(debuffs)) {
       if (entry.poison) merged.poison![creatureId] = { stacks: entry.poison.stacks, damage_per_tick: entry.poison.damage_per_tick, expires_at: defaultExpiry };
       if (entry.ignite) merged.ignite![creatureId] = { stacks: entry.ignite.stacks, damage_per_tick: entry.ignite.damage_per_tick, expires_at: defaultExpiry };
@@ -230,6 +231,9 @@ export function useBuffState(params: UseBuffStateParams) {
       if (entry.sunder) {
         sunderUpdates[creatureId] = { creatureId, acReduction: entry.sunder.stacks * 2, expiresAt: defaultExpiry, creatureName: '' };
       }
+    }
+    if (Object.keys(sunderUpdates).length > 0) {
+      setSunderDebuff(prev => ({ ...prev, ...sunderUpdates }));
     }
     const result = mapServerEffectsToStacks(merged, poisonStacks, igniteStacks, bleedStacks);
     setPoisonStacks(result.poison);

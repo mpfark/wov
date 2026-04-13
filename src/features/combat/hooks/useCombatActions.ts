@@ -716,7 +716,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const acReduction = Math.max(2, strMod);
       const durationSec = Math.min(20, 12 + strMod);
-      p.buffSetters.setSunderDebuff({ acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name });
+      p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name } }));
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
