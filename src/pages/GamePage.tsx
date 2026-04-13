@@ -529,11 +529,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
-    localPredictionOverrides, lastTickTime, startCombat, stopCombat: stopCombatFn,
+    lastTickTime, startCombat, stopCombat: stopCombatFn,
     fleeStopCombat, queueAbility } = combat;
 
-  // Merge creature HP from all sources: combat-tick > prediction > broadcast > base
-  const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides, localPredictionOverrides);
+  // Merge creature HP from all sources: combat-tick > broadcast > base
+  const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
 
   // ── Offscreen DoT wake-up scheduler ──────────────────────────────
   useOffscreenDotWakeup({
