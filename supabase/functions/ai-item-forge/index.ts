@@ -114,32 +114,60 @@ serve(async (req) => {
     const systemPrompt = `You are an item generator for "Wayfarers of Varneth", a text-based high-fantasy RPG.
 Generate a batch of ${count} distinct, lore-consistent items for a level ${level_min}–${level_max} world.
 
-GENERATION RULES:
-- ALL item names and descriptions must be written ENTIRELY in English. NO non-English words, NO accented/Unicode characters (ä, ö, ü, é, å, etc.). Use ONLY standard ASCII letters (A-Z, a-z), spaces, hyphens, and apostrophes.
-- Do NOT include any metadata, IDs, labels, or prefixes in the name or description fields. Names should be pure item names like "Iron Longsword" — never "name: Iron Longsword" or "平衡 Iron Longsword" or "item_3: Iron Longsword".
-- Descriptions must be a single evocative English sentence describing the item. Never leave description empty.
-- Item type: ${typeInstruction}
-- Slot: ${slotInstruction}
-- Rarity: ${rarityInstruction}
-- Stats focus: ${statsFocusInstruction}
+NAMING & DESCRIPTION RULES:
+- ALL item names and descriptions must be written ENTIRELY in English using ONLY standard ASCII letters (A-Z, a-z), spaces, hyphens, and apostrophes.
+- Do NOT include metadata, IDs, labels, or prefixes in name or description fields.
+- Descriptions must be a single evocative English sentence. Never leave description empty.
+- Names must be UNIQUE — do NOT generate items with names from this list: ${existingItemNames || "none"}
+
+THEMATIC CONSISTENCY RULES (CRITICAL):
+- Item names MUST match their stats thematically. A "Swift" item MUST have DEX. An "Ironclad" or "Iron" item MUST have STR or CON.
+- Naming conventions by stat focus:
+  - STR-focused: heavy, iron, war, mighty, brutal, crushing, titan
+  - DEX-focused: swift, nimble, agile, fleet, shadow, wind, light
+  - CON-focused: hardy, enduring, stalwart, fortified, resilient, iron
+  - INT-focused: arcane, mystic, scholar, sage, runed, enchanted
+  - WIS-focused: wise, oracle, seer, divine, blessed, sacred
+  - CHA-focused: charming, noble, regal, commanding, silver-tongued
+- Weapon names should evoke the weapon type: swords = blade/edge/saber, axes = cleaver/hatchet, staves = staff/stave, etc.
+- Armor slot names should match the slot: shoulders = pauldrons/spaulders/mantle, belt = girdle/cinch/sash, etc.
+
+ITEM TYPE: ${typeInstruction}
+SLOT: ${slotInstruction}
+RARITY: ${rarityInstruction}
+STATS FOCUS: ${statsFocusInstruction}
+
+STAT BUDGET FORMULA:
+- Equipment budget = floor(1 + (level - 1) × 0.3 × rarity_multiplier × hands_multiplier)
+- Consumable budget = equipment_budget × 3
+- Rarity multipliers: common=1.0, uncommon=1.5
+- Hands multiplier: 1.0 for 1-handed, 1.5 for 2-handed (hands=2, main_hand only)
 - Level: pick a level between ${level_min} and ${level_max} for each item.
-- Stat budget formula: floor(1 + (level - 1) * 0.3 * rarity_multiplier * hands_multiplier)
-  - For consumables: budget is 3x the normal formula
-  - Rarity multipliers: common=1.0, uncommon=1.5
-  - hands_multiplier: 1.0 for 1h, 1.5 for 2h (hands=2, main_hand only)
-- ABSOLUTE RULE: Equipment items MUST have AT LEAST 2 different stat keys. Items with only 1 stat will be REJECTED.
-- Distribute the full budget across multiple stats. Example for budget=2: {"str":1,"con":1}. Example for budget=4: {"str":2,"dex":1,"con":1}. Example for budget=6: {"str":2,"dex":2,"wis":1,"hp":2}.
-- Valid stat keys for equipment: str, dex, con, int, wis, cha, ac, hp, hp_regen
-- Valid stat keys for consumables: hp, hp_regen ONLY (no other stats allowed, no caps)
-- Even for budget=1 items, split across 2 stats like {"str":1,"dex":1} (going slightly over budget is fine for variety).
-- Stat value caps (equipment only): str/dex/con/int/wis/cha max (4 + floor(level/4)), ac max (2 + floor(level/10)), hp max (6 + floor(level/5)*2), hp_regen max 2
+
+STAT DISTRIBUTION RULES:
+- Equipment items MUST have AT LEAST 2 different stat keys. Items with only 1 stat will be REJECTED.
+- Distribute the FULL budget across multiple stats. Never leave budget unspent.
+- The PRIMARY stat (matching the item's theme) should get ~40-50% of the budget. Secondary stats get the rest.
+- Example for budget=2: {"str":1,"con":1}. Budget=4: {"str":2,"dex":1,"con":1}. Budget=6: {"str":2,"dex":2,"wis":1,"hp":2}.
+- Even for budget=1, split across 2 stats like {"str":1,"dex":1} (going slightly over is fine).
+
+STAT KEYS & COSTS:
+- Valid equipment stats: str(1pt), dex(1pt), con(1pt), int(1pt), wis(1pt), cha(1pt), ac(3pts), hp(0.5pts), hp_regen(2pts)
+- Valid consumable stats: hp, hp_regen ONLY (no other stats, no caps)
+
+STAT CAPS (equipment only):
+- Primary stats (str/dex/con/int/wis/cha): max = 4 + floor(level/4)
+- AC: max = 2 + floor(level/10)
+- HP: max = 6 + floor(level/5) × 2
+- HP Regen: max = 2
+
+OTHER FIELDS:
 - drop_chance: 0.1–0.5 (uncommon items lower, consumables 0.3–0.5)
-- For main_hand and off_hand items, set weapon_tag to one of: sword, axe, mace, dagger, bow, staff, wand, shield. Choose based on the item's name/concept. For non-weapon slots, omit weapon_tag.
-- max_durability: always 100 (fixed for all items)
-- Gold value: DO NOT set this, it will be auto-calculated.
-- Do NOT generate items with names from this list: ${existingItemNames || "none"}
-- Generate items with creative, lore-fitting names and evocative 1-sentence descriptions.
-- Ensure variety within the batch: don't repeat the same slot/stat combo.
+- weapon_tag: For main_hand/off_hand only, set to one of: sword, axe, mace, dagger, bow, staff, wand, shield. Choose based on item name. Non-weapon slots: omit.
+- max_durability: always 100
+- Gold value: set to 0, will be auto-calculated
+- Slot for consumables: null
+- Ensure variety in the batch: don't repeat the same slot/stat combo.
 
 ${prompt ? `FLAVOR CONTEXT: ${prompt}` : ""}
 

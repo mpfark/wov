@@ -164,13 +164,59 @@ export default function WorldBuilderRulebook() {
             Items are created separately from creature/loot generation via the <strong>Item Forge</strong> tab.
           </p>
           <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4">
-            <li><Badge variant="outline" className="text-[9px] px-1 py-0">Batch</Badge> — Generate multiple items at once. All items are saved directly to the <code className="text-[10px] bg-muted px-1 rounded">items</code> table with <code className="text-[10px] bg-muted px-1 rounded">world_drop: true</code>.</li>
+            <li><Badge variant="outline" className="text-[9px] px-1 py-0">Batch</Badge> — Generate multiple items at once. All saved to <code className="text-[10px] bg-muted px-1 rounded">items</code> with <code className="text-[10px] bg-muted px-1 rounded">world_drop: true</code>.</li>
             <li><Badge variant="outline" className="text-[9px] px-1 py-0">Single</Badge> — Generate one item with full control over slot, level, rarity, and description.</li>
-            <li><strong>Weapon tags</strong> are supported: <code className="text-[10px] bg-muted px-1 rounded">sword</code>, <code className="text-[10px] bg-muted px-1 rounded">axe</code>, <code className="text-[10px] bg-muted px-1 rounded">mace</code>, <code className="text-[10px] bg-muted px-1 rounded">dagger</code>, <code className="text-[10px] bg-muted px-1 rounded">staff</code>, <code className="text-[10px] bg-muted px-1 rounded">bow</code>, <code className="text-[10px] bg-muted px-1 rounded">crossbow</code>, <code className="text-[10px] bg-muted px-1 rounded">wand</code>, <code className="text-[10px] bg-muted px-1 rounded">spear</code>, <code className="text-[10px] bg-muted px-1 rounded">hammer</code>, <code className="text-[10px] bg-muted px-1 rounded">shield</code>.</li>
-            <li><strong>Duplicate name check</strong>: On save, items with names already in the database are filtered out and a warning is shown.</li>
-            <li>Item types: <Badge variant="outline" className="text-[9px] px-1 py-0">equipment</Badge>, <Badge variant="outline" className="text-[9px] px-1 py-0">consumable</Badge>, <Badge variant="outline" className="text-[9px] px-1 py-0">quest</Badge>. No "material" type.</li>
-            <li>Stats follow a budget formula based on level and rarity. The AI receives existing item names to avoid collisions.</li>
+            <li><strong>Duplicate name check</strong>: On save, items with names already in the database are filtered out.</li>
+            <li>Item types: <Badge variant="outline" className="text-[9px] px-1 py-0">equipment</Badge>, <Badge variant="outline" className="text-[9px] px-1 py-0">consumable</Badge>. No "material" type.</li>
           </ul>
+
+          <div className="text-[11px] text-muted-foreground mt-2">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Budget Formula:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">equipment: floor(1 + (level−1) × 0.3 × rarity_mult × hands_mult)</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">consumable: equipment_budget × 3</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Rarity Multipliers:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">common = ×1.0 · uncommon = ×1.5 · unique = ×3.0</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Hands Multiplier:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">1-handed = ×1.0 · 2-handed = ×1.5</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Costs (weighted budget):</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">str/dex/con/int/wis/cha = 1pt · ac = 3pts · hp = 0.5pts · hp_regen = 2pts</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Caps (equipment only):</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">Primary stats: 4 + floor(level/4) · AC: 2 + floor(level/10)</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">HP: 6 + floor(level/5)×2 · HP Regen: max 2 · Consumables: no caps</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Gold Value:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">round(level × 2.5 × rarity_mult²)</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Thematic Naming Rules:</p>
+            <ul className="text-[10px] space-y-0.5 list-disc pl-4">
+              <li><strong>STR</strong>: heavy, iron, war, mighty, brutal, crushing</li>
+              <li><strong>DEX</strong>: swift, nimble, agile, shadow, wind, light</li>
+              <li><strong>CON</strong>: hardy, enduring, stalwart, fortified, resilient</li>
+              <li><strong>INT</strong>: arcane, mystic, scholar, sage, runed, enchanted</li>
+              <li><strong>WIS</strong>: wise, oracle, seer, divine, blessed, sacred</li>
+              <li><strong>CHA</strong>: charming, noble, regal, commanding</li>
+            </ul>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Weapon Tags:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">sword · axe · mace · dagger · bow · staff · wand · shield</code>
+          </div>
+          <div className="text-[11px] text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-[11px] mb-0.5">Examples:</p>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">Lv5 common 1h: budget=floor(1+4×0.3×1)=2 → {`{"str":1,"dex":1}`}</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv10 uncommon 2h: budget=floor(1+9×0.3×1.5×1.5)=7 → {`{"str":3,"dex":2,"con":1,"wis":1}`}</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv20 common consumable: budget=floor(1+19×0.3)×3=18 → {`{"hp":18}`}</code>
+          </div>
         </Card>
 
         {/* AI Populate Mode */}
