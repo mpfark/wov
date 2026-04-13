@@ -276,7 +276,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[90vh] w-[95vw] h-[85vh] p-0 overflow-hidden bg-card border-border">
         <DialogTitle className="sr-only">World Map</DialogTitle>
-        <div className="relative w-full h-full">
+        <div className="relative w-full h-full" ref={containerRef}>
           {/* Zoom controls */}
           <div className="absolute top-3 right-3 z-20 flex flex-col gap-1">
             <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(5, z * 1.2))}>
