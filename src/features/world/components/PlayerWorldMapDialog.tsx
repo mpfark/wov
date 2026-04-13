@@ -470,11 +470,13 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                       key={node.id}
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (canTeleportHere) {
                           setSelectedTeleportNode(isSelected ? null : node.id);
                         }
                       }}
+                      onMouseDown={(e) => e.stopPropagation()}
                       style={{ cursor: canTeleportHere ? 'pointer' : 'default' }}
                     >
                       {/* Teleport ring */}
