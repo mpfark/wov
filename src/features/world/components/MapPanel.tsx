@@ -79,6 +79,7 @@ interface Props {
   onOpenBlacksmith?: () => void;
   onOpenTeleport?: () => void;
   onOpenTrainer?: () => void;
+  onMapTeleport?: (nodeId: string, cpCost: number) => void;
   searchDisabled?: boolean;
   hasDiscoverable?: boolean;
   unlockedConnections?: Map<string, number>;
@@ -104,7 +105,7 @@ export default function MapPanel({
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
   onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
-  unlockedConnections,
+  unlockedConnections, onMapTeleport,
   onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
   pendingSummons, onAcceptSummon, onDeclineSummon, onSummonRefetch,
@@ -454,6 +455,16 @@ export default function MapPanel({
         nodes={nodes}
         regions={regions}
         areas={areas}
+        playerCp={character.cp ?? 0}
+        playerMaxCp={character.max_cp ?? 30}
+        currentRegion={regions.find(r => r.id === currentRegionId) ?? undefined}
+        onTeleport={onOpenTeleport ? (nodeId: string, cpCost: number) => {
+          if (inCombat) return;
+          onMapTeleport?.(nodeId, cpCost);
+          setWorldMapOpen(false);
+        } : undefined}
+        characterLevel={characterLevel}
+        inCombat={summonInCombat}
       />
 
       {/* Incoming summon requests — any level can be summoned */}
