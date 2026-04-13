@@ -461,6 +461,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               member_buffs: memberBuffs,
               engaged_creature_ids: engagedCreatureIdsRef.current,
               pending_abilities: pendingAbilitiesForServer,
+              client_cp: p.character.cp ?? 0,
             }
           : {
               party_id: p.party!.id,
