@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Locate } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { GameNode, Region, Area, getNodeDisplayName } from '@/features/world';
+import { GameNode, Region, Area } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
 import { getAreaFillColor, getAreaStrokeColor } from '@/features/world';
 import { computeRegionOutline, type Circle, type OutlineBBox } from '@/features/world/utils/outline-geometry';
@@ -432,7 +432,8 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const isHovered = hoveredNode === node.id;
                   const area = node.area_id ? areaById.get(node.area_id) : null;
                   const emoji = area ? (emojiMap[area.area_type] || '📍') : '📍';
-                  const displayName = getNodeDisplayName(node, area);
+                  const hasUniqueName = node.name && node.name.trim() && (!area || node.name.trim() !== area.name);
+                  const showLabel = hasUniqueName || isCurrent;
                   const fillColor = isCurrent ? 'hsl(var(--primary) / 0.25)' : getAreaFillColor(emoji);
                   const strokeColor = isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.6)' : getAreaStrokeColor(emoji);
 
@@ -472,7 +473,8 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         </>
                       )}
 
-                      {/* Node name */}
+                      {/* Node name — only if unique or current */}
+                      {showLabel && (
                       <text
                         x={p.px} y={p.py - NODE_R * 0.6 - 4}
                         textAnchor="middle"
@@ -481,8 +483,9 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         fontSize={isHovered ? 8 : 7}
                         fontWeight={isCurrent ? 600 : 400}
                       >
-                        {displayName}
+                        {node.name || area?.name || 'Unknown'}
                       </text>
+                      )}
                     </g>
                   );
                 })}
