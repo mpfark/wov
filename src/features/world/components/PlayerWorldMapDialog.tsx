@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Locate } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { GameNode, Region, Area, getNodeDisplayName } from '@/features/world';
+import { GameNode, Region, Area } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
 import { getAreaFillColor, getAreaStrokeColor } from '@/features/world';
 import { computeRegionOutline, type Circle, type OutlineBBox } from '@/features/world/utils/outline-geometry';
@@ -473,7 +473,8 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         </>
                       )}
 
-                      {/* Node name */}
+                      {/* Node name — only if unique or current */}
+                      {showLabel && (
                       <text
                         x={p.px} y={p.py - NODE_R * 0.6 - 4}
                         textAnchor="middle"
@@ -482,7 +483,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         fontSize={isHovered ? 8 : 7}
                         fontWeight={isCurrent ? 600 : 400}
                       >
-                        {displayName}
+                        {node.name || area?.name || 'Unknown'}
                       </text>
                     </g>
                   );
