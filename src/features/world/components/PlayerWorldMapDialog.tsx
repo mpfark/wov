@@ -30,6 +30,7 @@ const SPACING = 90;
 const NODE_R = 22;
 const OUTLINE_RADIUS = NODE_R + 20;
 const AREA_OUTLINE_RADIUS = NODE_R + 10;
+const DRAG_THRESHOLD = 4;
 
 export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, currentRegion, onTeleport, inCombat }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
@@ -38,7 +39,9 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const didDrag = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { emojiMap } = useAreaTypes();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
