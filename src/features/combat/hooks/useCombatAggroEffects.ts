@@ -89,7 +89,7 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
     if (!inCombat) return;
     if (party && !isLeader) return;
     for (const c of creatures) {
-      if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id) && !recentlyKilledRef.current.has(c.id)) {
+      if (c.is_aggressive && c.is_alive && c.hp > 0 && !engagedCreatureIdsRef.current.includes(c.id) && !recentlyKilledRef.current.has(c.id) && !aggroProcessedRef.current.has(c.id)) {
         setEngagedCreatureIds(prev => {
           if (prev.includes(c.id)) return prev;
           const next = [...prev, c.id];
