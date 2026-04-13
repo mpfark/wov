@@ -33,7 +33,7 @@ export interface BuffState {
   igniteStacks: Record<string, IgniteStack>;
   absorbBuff: AbsorbBuff | null;
   partyRegenBuff: PartyRegenBuff | null;
-  sunderDebuff: SunderDebuff | null;
+  sunderDebuff: Record<string, SunderDebuff>;
   focusStrikeBuff: FocusStrikeBuff | null;
 }
 
@@ -53,7 +53,7 @@ export interface BuffSetters {
   setIgniteStacks: React.Dispatch<React.SetStateAction<Record<string, IgniteStack>>>;
   setAbsorbBuff: React.Dispatch<React.SetStateAction<AbsorbBuff | null>>;
   setPartyRegenBuff: React.Dispatch<React.SetStateAction<PartyRegenBuff | null>>;
-  setSunderDebuff: React.Dispatch<React.SetStateAction<SunderDebuff | null>>;
+  setSunderDebuff: React.Dispatch<React.SetStateAction<Record<string, SunderDebuff>>>;
   setFocusStrikeBuff: React.Dispatch<React.SetStateAction<FocusStrikeBuff | null>>;
 }
 
@@ -84,7 +84,7 @@ export function useBuffState(params: UseBuffStateParams) {
   const [igniteStacks, setIgniteStacks] = useState<Record<string, IgniteStack>>({});
   const [absorbBuff, setAbsorbBuff] = useState<AbsorbBuff | null>(null);
   const [partyRegenBuff, setPartyRegenBuff] = useState<PartyRegenBuff | null>(null);
-  const [sunderDebuff, setSunderDebuff] = useState<SunderDebuff | null>(null);
+  const [sunderDebuff, setSunderDebuff] = useState<Record<string, SunderDebuff>>({});
   const [focusStrikeBuff, setFocusStrikeBuff] = useState<FocusStrikeBuff | null>(null);
 
   // ── Purge all DoT stacks targeting a killed creature (UI cleanup) ──
@@ -181,9 +181,10 @@ export function useBuffState(params: UseBuffStateParams) {
     if (evasionBuff && now < evasionBuff.expiresAt) buffs.evasion_buff = { dodge_chance: evasionBuff.dodgeChance };
     if (igniteBuff && now < igniteBuff.expiresAt) buffs.ignite_buff = true;
     if (absorbBuff && now < absorbBuff.expiresAt) buffs.absorb_buff = { shield_hp: absorbBuff.shieldHp };
-    if (sunderDebuff && now < sunderDebuff.expiresAt) {
-      buffs.sunder_target = sunderDebuff.creatureId;
-      buffs.sunder_reduction = sunderDebuff.acReduction;
+    const activeSunder = Object.values(sunderDebuff).find(s => now < s.expiresAt);
+    if (activeSunder) {
+      buffs.sunder_target = activeSunder.creatureId;
+      buffs.sunder_reduction = activeSunder.acReduction;
     }
     if (disengageNextHit) buffs.disengage_next_hit = { bonus_mult: disengageNextHit.bonusMult };
     if (focusStrikeBuff) buffs.focus_strike = { bonus_dmg: focusStrikeBuff.bonusDmg };
@@ -222,17 +223,17 @@ export function useBuffState(params: UseBuffStateParams) {
     const now = Date.now();
     const defaultExpiry = now + 30000;
     const merged: ServerDotState = { poison: {}, ignite: {}, bleed: {} };
+    const sunderUpdates: Record<string, SunderDebuff> = {};
     for (const [creatureId, entry] of Object.entries(debuffs)) {
       if (entry.poison) merged.poison![creatureId] = { stacks: entry.poison.stacks, damage_per_tick: entry.poison.damage_per_tick, expires_at: defaultExpiry };
       if (entry.ignite) merged.ignite![creatureId] = { stacks: entry.ignite.stacks, damage_per_tick: entry.ignite.damage_per_tick, expires_at: defaultExpiry };
       if (entry.bleed) merged.bleed![creatureId] = { damage_per_tick: entry.bleed.damage_per_tick, expires_at: defaultExpiry };
       if (entry.sunder) {
-        // Sync sunder from server effects
-        setSunderDebuff(prev => {
-          if (prev && prev.creatureId === creatureId) return prev;
-          return { creatureId, acReduction: entry.sunder!.stacks * 2, expiresAt: defaultExpiry, creatureName: '' };
-        });
+        sunderUpdates[creatureId] = { creatureId, acReduction: entry.sunder.stacks * 2, expiresAt: defaultExpiry, creatureName: '' };
       }
+    }
+    if (Object.keys(sunderUpdates).length > 0) {
+      setSunderDebuff(prev => ({ ...prev, ...sunderUpdates }));
     }
     const result = mapServerEffectsToStacks(merged, poisonStacks, igniteStacks, bleedStacks);
     setPoisonStacks(result.poison);
