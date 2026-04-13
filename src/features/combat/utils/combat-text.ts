@@ -173,6 +173,15 @@ export function resolveCreatureAttackVerb(
 
 // ── Structured event types ──────────────────────────────────────
 
+export interface BossFlavorPayload {
+  name: string;
+  text: string;
+  emoji?: string;
+  // `damage_type` is stored for future extensibility (e.g., resistances or UI),
+  // but has no effect on combat mechanics in the current implementation.
+  damage_type?: string;
+}
+
 export interface StructuredAttackEvent {
   type: string;
   message: string;
@@ -186,6 +195,7 @@ export interface StructuredAttackEvent {
   character_id?: string;
   creature_id?: string;
   is_offhand?: boolean;
+  boss_flavor?: BossFlavorPayload;
 }
 
 // ── Combat event formatting (tier + flavor) ─────────────────────
