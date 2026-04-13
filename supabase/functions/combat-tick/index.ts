@@ -44,7 +44,28 @@ import {
   type HitQuality,
 } from "../_shared/combat-math.ts";
 
-const corsHeaders = {
+// ── Boss crit flavor selection (weighted random) ────────────────
+function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
+  const flavors = (Array.isArray(raw) ? raw : [])
+    .filter((f: any) => typeof f.text === 'string' && f.text.trim().length > 0)
+    .map((f: any) => ({
+      name: ((f.name as string) || '').trim(),
+      text: (f.text as string).trim(),
+      emoji: ((f.emoji as string) || '').trim(),
+      weight: Number.isFinite(f.weight) && (f.weight as number) > 0 ? (f.weight as number) : 1,
+      damage_type: ((f.damage_type as string) || '').trim() || undefined,
+    }));
+  if (flavors.length === 0) return null;
+  const totalWeight = flavors.reduce((s: number, f: any) => s + f.weight, 0);
+  let roll = Math.random() * totalWeight;
+  for (const f of flavors) {
+    roll -= f.weight;
+    if (roll <= 0) return { name: f.name, text: f.text, emoji: f.emoji, damage_type: f.damage_type };
+  }
+  const last = flavors[flavors.length - 1];
+  return { name: last.name, text: last.text, emoji: last.emoji, damage_type: last.damage_type };
+}
+
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
@@ -586,7 +607,17 @@ Deno.serve(async (req) => {
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
         const cab = creatureAtkBonus(creature.level);
-        events.push({ type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR${cab > 0 ? ` + ${cab} Lvl` : ''} = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality });
+        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR${cab > 0 ? ` + ${cab} Lvl` : ''} = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
+
+        // Boss crit flavor enrichment
+        if (isCrit) {
+          const bossFlavor = pickBossFlavor(creature.boss_crit_flavors);
+          if (bossFlavor) {
+            critEvent.boss_flavor = bossFlavor;
+          }
+        }
+
+        events.push(critEvent);
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }

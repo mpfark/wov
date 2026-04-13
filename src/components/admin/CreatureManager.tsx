@@ -72,6 +72,14 @@ const RARITY_COLORS: Record<string, string> = {
 const LOOT_MODES = ['legacy_table', 'item_pool', 'salvage_only'] as const;
 const LOOT_MODE_LABELS: Record<string, string> = { legacy_table: '📋 Legacy Table', item_pool: '🎲 Item Pool', salvage_only: '🔩 Salvage Only' };
 
+interface BossCritFlavor {
+  name: string;
+  text: string;
+  emoji: string;
+  weight: number;
+  damage_type: string;
+}
+
 const defaultForm = () => ({
   name: '', description: '', node_id: '' as string | null,
   level: 1, rarity: 'regular',
@@ -81,6 +89,7 @@ const defaultForm = () => ({
   loot_table_id: null as string | null,
   drop_chance: 0.5,
   loot_mode: 'legacy_table' as string,
+  boss_crit_flavors: [] as BossCritFlavor[],
 });
 
 export default function CreatureManager() {
@@ -162,6 +171,7 @@ export default function CreatureManager() {
       loot_table_id: c.loot_table_id || null,
       drop_chance: c.drop_chance ?? 0.5,
       loot_mode: (c as any).loot_mode || 'legacy_table',
+      boss_crit_flavors: Array.isArray((c as any).boss_crit_flavors) ? (c as any).boss_crit_flavors : [],
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
@@ -219,6 +229,15 @@ export default function CreatureManager() {
       loot_table_id: form.loot_table_id || null,
       drop_chance: form.drop_chance,
       loot_mode: form.loot_mode,
+      boss_crit_flavors: form.boss_crit_flavors
+        .map(f => ({
+          name: f.name?.trim() || '',
+          text: f.text?.trim() || '',
+          emoji: f.emoji?.trim() || '',
+          weight: Number.isFinite(f.weight) && f.weight > 0 ? f.weight : 1,
+          damage_type: f.damage_type?.trim() || undefined,
+        }))
+        .filter(f => f.text.length > 0),
     };
 
     let savedId = selectedId;
@@ -517,6 +536,88 @@ export default function CreatureManager() {
                   <span>⚔️ Damage: <strong className="text-primary">1d{getCreatureDamageDie(form.level, form.rarity)} + {getStatModifier(previewStats.stats.str)}</strong></span>
                   <span className="text-muted-foreground">({1 + getStatModifier(previewStats.stats.str)}–{getCreatureDamageDie(form.level, form.rarity) + getStatModifier(previewStats.stats.str)})</span>
                 </div>
+              </div>
+
+              {/* Boss Crit Flavors */}
+              <div className="space-y-1.5">
+                <p className="font-display text-xs text-primary">Boss Crit Flavors</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Optional. Write the flavor text as a continuation after the creature's name (e.g., "unleashes a searing breath of fire").
+                </p>
+                {form.boss_crit_flavors.map((flavor, idx) => (
+                  <div key={idx} className="p-2 bg-background/50 rounded border border-border space-y-1">
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={flavor.emoji}
+                        onChange={e => {
+                          const updated = [...form.boss_crit_flavors];
+                          updated[idx] = { ...updated[idx], emoji: e.target.value };
+                          setForm(f => ({ ...f, boss_crit_flavors: updated }));
+                        }}
+                        placeholder="🔥"
+                        className="w-10 h-7 text-xs px-1 text-center"
+                      />
+                      <Input
+                        value={flavor.name}
+                        onChange={e => {
+                          const updated = [...form.boss_crit_flavors];
+                          updated[idx] = { ...updated[idx], name: e.target.value };
+                          setForm(f => ({ ...f, boss_crit_flavors: updated }));
+                        }}
+                        placeholder="Fire Breath"
+                        className="flex-1 h-7 text-xs"
+                      />
+                      <Input
+                        type="number"
+                        value={flavor.weight}
+                        onChange={e => {
+                          const updated = [...form.boss_crit_flavors];
+                          updated[idx] = { ...updated[idx], weight: Number(e.target.value) };
+                          setForm(f => ({ ...f, boss_crit_flavors: updated }));
+                        }}
+                        placeholder="1"
+                        className="w-14 h-7 text-xs"
+                        min={1}
+                      />
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                        setForm(f => ({ ...f, boss_crit_flavors: f.boss_crit_flavors.filter((_, i) => i !== idx) }));
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <Input
+                      value={flavor.text}
+                      onChange={e => {
+                        const updated = [...form.boss_crit_flavors];
+                        updated[idx] = { ...updated[idx], text: e.target.value };
+                        setForm(f => ({ ...f, boss_crit_flavors: updated }));
+                      }}
+                      placeholder="unleashes a searing breath of fire"
+                      className="h-7 text-xs"
+                    />
+                    <Input
+                      value={flavor.damage_type}
+                      onChange={e => {
+                        const updated = [...form.boss_crit_flavors];
+                        updated[idx] = { ...updated[idx], damage_type: e.target.value };
+                        setForm(f => ({ ...f, boss_crit_flavors: updated }));
+                      }}
+                      placeholder="Damage type (optional, e.g. fire)"
+                      className="h-7 text-[10px] text-muted-foreground"
+                    />
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-7 text-xs"
+                  onClick={() => setForm(f => ({
+                    ...f,
+                    boss_crit_flavors: [...f.boss_crit_flavors, { name: '', text: '', emoji: '', weight: 1, damage_type: '' }],
+                  }))}
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Flavor
+                </Button>
               </div>
 
               {/* Loot Table selector */}

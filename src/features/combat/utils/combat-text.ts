@@ -173,6 +173,15 @@ export function resolveCreatureAttackVerb(
 
 // ── Structured event types ──────────────────────────────────────
 
+export interface BossFlavorPayload {
+  name: string;
+  text: string;
+  emoji?: string;
+  // `damage_type` is stored for future extensibility (e.g., resistances or UI),
+  // but has no effect on combat mechanics in the current implementation.
+  damage_type?: string;
+}
+
 export interface StructuredAttackEvent {
   type: string;
   message: string;
@@ -186,6 +195,7 @@ export interface StructuredAttackEvent {
   character_id?: string;
   creature_id?: string;
   is_offhand?: boolean;
+  boss_flavor?: BossFlavorPayload;
 }
 
 // ── Combat event formatting (tier + flavor) ─────────────────────
@@ -276,6 +286,18 @@ function formatCreatureAttack(
       return `${attacker} misses you.`;
     }
     return `${attacker} misses ${event.target_name!}.`;
+  }
+
+  // Boss crit flavor: if present, use themed text instead of tier-word system
+  if (isCrit && event.boss_flavor) {
+    const bf = event.boss_flavor;
+    const emoji = bf.emoji || '';
+    const prefix = emoji ? `${emoji} ` : '';
+    const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
+    if (isLocal) {
+      return `${prefix}${attacker} ${bf.text}${dmgSuffix}!`;
+    }
+    return `${prefix}${attacker} ${bf.text}${dmgSuffix}!`;
   }
 
   const tierWord = getDamageTierWord(damage);
