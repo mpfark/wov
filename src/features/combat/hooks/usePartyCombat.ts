@@ -21,8 +21,6 @@ import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/features/combat';
-import { predictConservativeDamage, applyPredictedDamage, clearPredictionForCreatures } from '../utils/combat-predictor';
-import type { PredictionOverride } from './useMergedCreatureState';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
 import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
 import { getStoredDisplayMode } from '../utils/combat-text';

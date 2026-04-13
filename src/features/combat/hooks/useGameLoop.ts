@@ -119,9 +119,8 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       // ── HP Regen ──
       const { hp, max_hp, current_node_id, con, mp, dex } = regenCharRef.current;
-      const gearHpBonus = equipmentBonusesRef.current.hp || 0;
-      const gearConMod = Math.floor((equipmentBonusesRef.current.con || 0) / 2);
-      const effectiveMaxHp = max_hp + gearHpBonus + gearConMod;
+      // Cap regen at authoritative base max (not gear-inflated)
+      const regenMaxHp = max_hp;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
       const innFlat = node?.is_inn ? 10 : 0;
       const combatMult = inCombatRegenRef.current ? 0.1 : 1;
