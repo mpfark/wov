@@ -150,19 +150,19 @@ export function useGameLoop(params: UseGameLoopParams) {
         const food = foodBuffRef.current;
         const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
         const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat) * combatMult), 1);
-        const newCp = Math.min(cp + regenAmount, gearAwareMaxCp);
+        const newCp = Math.min(cp + regenAmount, maxCpBase);
         if (newCp > cp) {
           updates.cp = newCp;
         }
       }
 
       // ── MP Regen ──
-      const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
-      const effectiveMaxMp = getMaxMp(regenCharRef.current.level, dexWithGear);
-      if (mp < effectiveMaxMp) {
+      const baseMaxMp = getMaxMp(regenCharRef.current.level, dex);
+      if (mp < baseMaxMp) {
+        const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
         // ×2 to compensate for 4s tick (was 2s)
         const regenAmount = getMpRegenRate(dexWithGear) * 2 + innFlat;
-        const newMp = Math.min(mp + regenAmount, effectiveMaxMp);
+        const newMp = Math.min(mp + regenAmount, baseMaxMp);
         if (newMp > mp) {
           updates.mp = newMp;
         }
