@@ -774,7 +774,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     absorb: !!(absorbBuff && Date.now() < absorbBuff.expiresAt && absorbBuff.shieldHp > 0),
     absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
     root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
-    sunder: !!(sunderDebuff && Date.now() < sunderDebuff.expiresAt),
+    sunder: Object.values(sunderDebuff).some(s => Date.now() < s.expiresAt),
     focusStrike: !!focusStrikeBuff,
   }), [stealthBuff, damageBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff, focusStrikeBuff]);
 

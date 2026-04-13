@@ -42,7 +42,7 @@ interface Props {
   actionBindings?: ActionBindings;
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
-  sunderDebuff?: { acReduction: number; expiresAt: number; creatureId: string; creatureName: string } | null;
+  sunderDebuff?: Record<string, { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }>;
   bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
