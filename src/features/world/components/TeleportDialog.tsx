@@ -39,7 +39,7 @@ interface Props {
   myCharacterId?: string;
 }
 
-function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Region): number {
+export function calculateTeleportCpCost(fromRegion: Region | undefined, toRegion: Region): number {
   if (!fromRegion) return 15;
   if (fromRegion.id === toRegion.id) return 10;
   const levelDiff = Math.abs(toRegion.min_level - fromRegion.min_level);

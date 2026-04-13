@@ -7,6 +7,7 @@ import { GameNode, Region, Area } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
 import { getAreaFillColor, getAreaStrokeColor } from '@/features/world';
 import { computeRegionOutline, type Circle, type OutlineBBox } from '@/features/world/utils/outline-geometry';
+import { calculateTeleportCpCost } from '@/features/world/components/TeleportDialog';
 
 interface Props {
   open: boolean;
@@ -16,6 +17,13 @@ interface Props {
   nodes: GameNode[];
   regions: Region[];
   areas?: Area[];
+  // Teleport integration
+  playerCp?: number;
+  playerMaxCp?: number;
+  currentRegion?: Region;
+  onTeleport?: (nodeId: string, cpCost: number) => void;
+  characterLevel?: number;
+  inCombat?: boolean;
 }
 
 const SPACING = 90;
@@ -23,7 +31,7 @@ const NODE_R = 22;
 const OUTLINE_RADIUS = NODE_R + 20;
 const AREA_OUTLINE_RADIUS = NODE_R + 10;
 
-export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas }: Props) {
+export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, currentRegion, onTeleport, inCombat }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -33,6 +41,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const svgRef = useRef<SVGSVGElement>(null);
   const { emojiMap } = useAreaTypes();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
 
   // Fetch visited nodes on open
   useEffect(() => {
@@ -281,7 +290,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
               ref={svgRef}
               className="w-full h-full cursor-grab active:cursor-grabbing"
               onWheel={handleWheel}
-              onMouseDown={handleMouseDown}
+              onMouseDown={(e) => { handleMouseDown(e); setSelectedTeleportNode(null); }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
@@ -436,13 +445,35 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const showLabel = hasUniqueName || isCurrent;
                   const fillColor = isCurrent ? 'hsl(var(--primary) / 0.25)' : getAreaFillColor(emoji);
                   const strokeColor = isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.6)' : getAreaStrokeColor(emoji);
+                  const isTeleportNode = node.is_teleport && visitedIds.has(node.id) && !isCurrent;
+                  const canTeleportHere = isTeleportNode && onTeleport && !inCombat;
+                  
+                  const isSelected = selectedTeleportNode === node.id;
 
                   return (
                     <g
                       key={node.id}
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
+                      onClick={() => {
+                        if (canTeleportHere) {
+                          setSelectedTeleportNode(isSelected ? null : node.id);
+                        }
+                      }}
+                      style={{ cursor: canTeleportHere ? 'pointer' : 'default' }}
                     >
+                      {/* Teleport ring */}
+                      {isTeleportNode && onTeleport && (
+                        <circle
+                          cx={p.px} cy={p.py} r={NODE_R * 0.6 + 5}
+                          fill="none"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={1.5}
+                          strokeDasharray="4 2"
+                          opacity={isSelected ? 0.9 : 0.5}
+                        />
+                      )}
+
                       <circle
                         cx={p.px} cy={p.py} r={NODE_R * 0.6}
                         fill={fillColor}
@@ -450,6 +481,17 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         strokeWidth={isCurrent ? 2.5 : 1.5}
                         opacity={isCurrent ? 1 : 0.85}
                       />
+
+                      {/* Teleport icon */}
+                      {isTeleportNode && onTeleport && !isCurrent && (
+                        <text
+                          x={p.px} y={p.py + 1}
+                          textAnchor="middle" dominantBaseline="middle"
+                          fontSize={8} opacity={0.7}
+                        >
+                          🌀
+                        </text>
+                      )}
 
                       {/* Current node pulse */}
                       {isCurrent && (
@@ -489,6 +531,55 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                     </g>
                   );
                 })}
+
+                {/* Teleport confirmation tooltip */}
+                {selectedTeleportNode && onTeleport && (() => {
+                  const node = nodes.find(n => n.id === selectedTeleportNode);
+                  const p = node ? nodePositions.get(node.id) : null;
+                  if (!node || !p) return null;
+                  const nodeRegion = regionById.get(node.region_id);
+                  const area = node.area_id ? areaById.get(node.area_id) : null;
+                  const cpCost = nodeRegion ? calculateTeleportCpCost(currentRegion, nodeRegion) : 15;
+                  const canAffordIt = (playerCp ?? 0) >= cpCost;
+                  const displayName = (node.name && node.name.trim() && (!area || node.name.trim() !== area.name))
+                    ? node.name : (area?.name || node.name || 'Unknown');
+
+                  return (
+                    <foreignObject
+                      x={p.px - 75} y={p.py + NODE_R * 0.6 + 8}
+                      width={150} height={70}
+                      style={{ overflow: 'visible' }}
+                    >
+                      <div
+                        className="bg-card border border-border rounded-md p-2 shadow-lg text-center"
+                        style={{ fontSize: '10px' }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <p className="font-display text-foreground truncate text-xs">{displayName}</p>
+                        {nodeRegion && (
+                          <p className="text-muted-foreground" style={{ fontSize: '9px' }}>
+                            {nodeRegion.name} · Lv {nodeRegion.min_level}–{nodeRegion.max_level}
+                          </p>
+                        )}
+                        <button
+                          disabled={!canAffordIt || inCombat}
+                          onClick={() => {
+                            onTeleport(node.id, cpCost);
+                            setSelectedTeleportNode(null);
+                            onOpenChange(false);
+                          }}
+                          className={`mt-1 px-2 py-0.5 rounded font-display text-[10px] border transition-colors ${
+                            canAffordIt && !inCombat
+                              ? 'bg-primary/20 border-primary/50 text-primary hover:bg-primary/30'
+                              : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
+                          }`}
+                        >
+                          ⚡ {cpCost} CP
+                        </button>
+                      </div>
+                    </foreignObject>
+                  );
+                })()}
               </g>
             </svg>
           )}

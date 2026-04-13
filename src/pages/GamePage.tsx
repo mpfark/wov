@@ -824,6 +824,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     searchDisabled: character.cp < 5 || creatures.length > 0,
     hasDiscoverable: !!(currentNode?.connections?.some((c: any) => c.hidden) || (currentNode?.searchable_items && currentNode.searchable_items.length > 0)),
     unlockedConnections,
+    onMapTeleport: handleTeleport,
     onlinePlayers,
     addLog,
     inCombat,
@@ -845,7 +846,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
     showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
-    creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon,
+    creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon, handleTeleport,
     getNode, getRegion, currentRegion,
   ]);
 
