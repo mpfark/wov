@@ -41,6 +41,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const svgRef = useRef<SVGSVGElement>(null);
   const { emojiMap } = useAreaTypes();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
 
   // Fetch visited nodes on open
   useEffect(() => {
