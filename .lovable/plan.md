@@ -1,53 +1,46 @@
 
+<final-text>
+I found the real issue: the first combat tick you showed had the creature miss, yet the response still came back with `hp/max_hp = 233`, `cp/max_cp = 174`, and `max_mp = 312`. So the drop was not combat damage or a hidden CP cost. The UI was showing client-only “effective” HP/CP/MP values, and the first combat tick corrected them back to the server-authoritative values. Separately, the creature HP moving early is coming from the local prediction system.
+</final-text>
 
-# Refine Combat Initiation Log Messages
+## Plan
 
-## Changes
+1. Remove creature HP prediction entirely
+- Delete the prediction-on-combat-start and prediction-before-tick logic in `src/features/combat/hooks/usePartyCombat.ts`.
+- Remove the related prediction state plumbing so creature HP only changes when the server responds.
+- Simplify the merge path in `GamePage` / `useMergedCreatureState` so it only uses authoritative combat data plus broadcast overrides.
 
-### 1. Remove "⚔️ Combat begins!" from aggro effects
-**File: `src/features/combat/hooks/useCombatAggroEffects.ts`**
+2. Stop client-only overfill of HP / CP / MP
+- Remove the login “top-up to effective caps” effect in `src/pages/GamePage.tsx`.
+- In `src/features/combat/hooks/useGameLoop.ts`, cap regen to authoritative `character.max_hp`, `character.max_cp`, and `character.max_mp`, not gear-derived caps.
+- In `src/features/combat/hooks/useCombatActions.ts`, `src/features/inventory/hooks/useConsumableActions.ts`, and the party-regen path, stop healing above authoritative max HP.
 
-Remove the two `addLocalLog('⚔️ Combat begins!')` lines:
-- Line 81 (re-engage after combat stops)
-- Line 125 (initial aggro on node entry)
+3. Show authoritative resource bars
+- In `src/features/character/components/StatusBarsStrip.tsx`, show HP/CP/MP against the same authoritative maxima the backend uses.
+- This removes the “looks full, then suddenly drops” behavior.
 
-The creature aggro phrase (e.g. "⚠️ Crystal-Back Weaver lunges at you!") is sufficient and more immersive on its own.
+4. Harden CP sync against true stale reads
+- Update `src/features/combat/hooks/usePartyCombat.ts` to send current `client_cp` with the combat tick request.
+- Update `supabase/functions/combat-tick/index.ts` to start from the freshest safe CP baseline instead of blindly using an older DB value.
+- This covers smaller race-condition cases even after the main overfill bug is removed.
 
-### 2. Add "You start attacking..." for player-initiated combat
-**File: `src/pages/GamePage.tsx`**
+## Technical details
+- The code already says gear-extended HP/CP/MP are “display-only on the client” in `useCharacter.ts`, but several systems still treat those inflated values as real current resources. That mismatch is the root cause.
+- No database schema change is needed.
+- Combat formulas, real costs, and tick timing stay unchanged.
 
-In `handleAttackFirst` (~line 629), after finding the creature to attack but before calling `startCombat`, add a log message. Only emit this when the creature is **not aggressive** (passive creature = player-initiated):
+## Files likely touched
+- `src/features/combat/hooks/usePartyCombat.ts`
+- `src/features/combat/hooks/useMergedCreatureState.ts`
+- `src/pages/GamePage.tsx`
+- `src/features/combat/hooks/useGameLoop.ts`
+- `src/features/character/components/StatusBarsStrip.tsx`
+- `src/features/combat/hooks/useCombatActions.ts`
+- `src/features/inventory/hooks/useConsumableActions.ts`
+- `supabase/functions/combat-tick/index.ts`
 
-```typescript
-const target = ...;
-if (!target.is_aggressive) {
-  addLog(`⚔️ You start attacking ${target.name}.`);
-}
-startCombat(target.id);
-```
-
-Apply this to both the selected-target path and the first-creature fallback path.
-
-### 3. Handle cycle-target attack
-**File: `src/pages/GamePage.tsx`**
-
-In `handleCycleTarget` (~line 650), when `startCombat` is called for a non-aggressive creature via target cycling, also add the log:
-
-```typescript
-if (!next.is_aggressive) {
-  addLog(`⚔️ You start attacking ${next.name}.`);
-}
-```
-
-## Files
-
-| File | Change |
-|------|--------|
-| `src/features/combat/hooks/useCombatAggroEffects.ts` | Remove 2× "Combat begins!" log lines |
-| `src/pages/GamePage.tsx` | Add "You start attacking..." log for passive creature engagements |
-
-## Not changed
-- Combat mechanics, tick logic, server authority
-- Party broadcast — the log is local-only via `addLog`
-- Mid-fight join messages ("joins the fight!") stay as-is
-
+## Expected result
+- Creature HP no longer moves before combat actually resolves.
+- HP/CP/MP no longer snap down at combat start “for no reason”.
+- CP stays stable even if combat starts right after regen/update.
+- The bars match the values the backend actually uses.
