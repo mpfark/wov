@@ -234,18 +234,30 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsPanning(true);
+    didDrag.current = false;
     panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
   }, [pan]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning) return;
+    const dx = e.clientX - panStart.current.x;
+    const dy = e.clientY - panStart.current.y;
+    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+      didDrag.current = true;
+    }
     setPan({
-      x: panStart.current.panX + (e.clientX - panStart.current.x),
-      y: panStart.current.panY + (e.clientY - panStart.current.y),
+      x: panStart.current.panX + dx,
+      y: panStart.current.panY + dy,
     });
   }, [isPanning]);
 
-  const handleMouseUp = useCallback(() => setIsPanning(false), []);
+  const handleMouseUp = useCallback(() => {
+    setIsPanning(false);
+    // If we didn't drag, treat as a background click — clear selection
+    if (!didDrag.current) {
+      setSelectedTeleportNode(null);
+    }
+  }, []);
 
   const centerOnCurrent = useCallback(() => {
     if (!currentNodeId) return;
