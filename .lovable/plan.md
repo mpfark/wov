@@ -1,97 +1,86 @@
 
 
-# Item Database Audit & Gap-Fill Plan
+# Gameplay Validation & Polish Pass
 
 ## Audit Findings
 
-### 1. Duplicate Names (6 items)
-| Name | Issue |
-|------|-------|
-| `Iron Longsword` (lvl 3) | Missing `weapon_tag` (null), should be `sword` |
-| `Iron Longsword` x3 | Three items with same name at lvl 3/5/8 — rename two |
-| `Studded Leather Vest` x2 | Same name at lvl 10 and 30 — rename one |
-| `Worn Leather Boots` x2 | Same name at lvl 1 and 3 — rename one |
-| `Crown` x2 | Two soulforged crowns, likely player-created — leave as-is |
-| `Iron Kite Shield` x2 | Same name at lvl 14 and 31 — rename one |
-| `Starlight Greatsword` x2 | Same name at lvl 14 and 20 — rename one |
+### Bug 1: Re-engagement after combat never triggers (CONFIRMED BUG)
 
-### 2. Thematic Name/Stat Mismatches
-| Item | Issue |
-|------|-------|
-| `Shoulderplates of the Ironclad` (lvl 17) | Name implies STR/CON tank, stats are CHA/INT/WIS |
-| `Silver Ring of the Swift` (lvl 11) | "Swift" implies DEX, has no DEX |
-| `Iron Kite Shield` (lvl 14) | "Iron" shield has DEX/INT/WIS, no STR/CON/AC |
-| `Simple Iron Ring` (lvl 1) | "Iron" implies physical, only has INT |
-| `Spiked Armbands` (lvl 30) | Name sounds like gloves/bracers, slotted as shoulders |
+In `useCombatAggroEffects.ts`, `justStoppedRef` is **never set to `true`**. The re-engage effect (line 66) guards on `!justStoppedRef.current`, so it never fires. The tracking effect (lines 58-62) only sets it to `false` when `inCombat` is true — when `inCombat` goes false, nothing sets it to `true`.
 
-### 3. Missing `weapon_tag`
-- `Iron Longsword` (id: `f8fdb81b`) at lvl 3 has `weapon_tag: null` — should be `sword`
+**Impact**: If aggressive creatures spawn/respawn while the player is between fights at the same node, re-engagement won't trigger. Mid-fight joining (lines 83-98) partially masks this because it adds aggressives during combat, but the gap exists for post-combat scenarios.
 
-### 4. Coverage Gaps (Slot × Rarity × Level Tier)
+**Fix**: Add a `wasInCombatRef` to detect the `true→false` transition and set `justStoppedRef.current = true`.
 
-**Severely underserved slots** (fewer than 2 items per rarity per tier):
+### Bug 2: Sunder debuff only shows on one creature at a time (CONFIRMED BUG)
 
-| Slot | Rarity | Missing Tiers |
-|------|--------|---------------|
-| **shoulders** | uncommon | 1-10, 21-30, 31-42 (only 1 uncommon total!) |
-| **belt** | common | 11-20, 31-42 |
-| **belt** | uncommon | 1-10, 11-20, 21-30 (only 1 uncommon at lvl 42!) |
-| **chest** | uncommon | 1-10 |
-| **gloves** | common | 11-20, 31-42 |
-| **gloves** | uncommon | 1-10, 21-30 |
-| **pants** | uncommon | 1-10 (only 1 at lvl 7) |
-| **trinket** | common | 21-30, 31-42 (max common is lvl 24) |
-| **off_hand** | uncommon | sparse across all tiers |
+`sunderDebuff` is a single `{ creatureId, acReduction, expiresAt }` object. In party play where multiple creatures are sundered (by different warriors or from `syncCreatureDebuffs`), the loop in `syncCreatureDebuffs` calls `setSunderDebuff` for each creature — React batches these, so only the last one survives.
 
-**Weapon tags with thin coverage** (1 item per rarity per tier):
-- bow, dagger, staff, wand — all have only 1 item per tier in mid/high levels
+Poison, ignite, and bleed are all `Record<string, ...>` (keyed by creature ID) and display correctly. Sunder is the odd one out.
 
-### 5. Items with Questionable Gold Values
-Not audited in detail, but the AI forge auto-calculates values so these should be consistent.
+**Fix**: Convert sunder from single-object to `Record<string, SunderDebuff>` matching the pattern used by other debuffs. Touch points:
+- `useGameLoop.ts` (type)
+- `useBuffState.ts` (state, gatherBuffs, syncCreatureDebuffs)
+- `useCombatActions.ts` (setSunderDebuff call)
+- `NodeView.tsx` (prop type + lookup)
+- `GamePage.tsx` (passing prop, status bar indicator)
 
----
+### Validated as Working Correctly
 
-## Plan: Fix Issues & Fill Gaps
+| System | Status |
+|--------|--------|
+| Party combat tick pipeline | Non-leaders enter combat state on broadcast ✅ |
+| Creature HP sync | mergedCreatureHpOverrides priority chain correct ✅ |
+| Poison/ignite/bleed display (party) | Per-creature records, shared via creatureDebuffs ✅ |
+| Follow grace window | 1000ms window, 2-miss tolerance, origin check ✅ |
+| Follow breaking | Only after 2 consecutive misses ✅ |
+| Server moveFollowers | Parallel DB writes, leader-authoritative ✅ |
+| Boss defense pipeline | block → absorb → battle cry DR, correct order ✅ |
+| Shield block frequency | DEX-based chance via `getShieldBlockChance` ✅ |
+| Anti-crit (Awareness) | WIS + shield bonus, checked before crit resolution ✅ |
+| Battle Cry DR | Percentage reduction with crit bonus ✅ |
+| Hit quality grading | AC determines tier, no overflow damage reduction ✅ |
+| Creature counterattack | Level-gap multiplier, STR modifier, correct ✅ |
+| Party reward broadcasts | Server-originated, client refetches on event ✅ |
+| Combat log dedup | ownLogIdsRef + seenIdsRef dual-gate ✅ |
 
-### Phase 1: Fix Data Issues (DB updates only, no code changes)
+## Changes
 
-1. **Fix null weapon_tag**: Update the lvl-3 Iron Longsword to `weapon_tag: 'sword'`
-2. **Rename duplicates** to unique names:
-   - Iron Longsword (lvl 3) → "Rusty Iron Blade"
-   - Iron Longsword (lvl 8) → "Heavy Iron Longsword"
-   - Studded Leather Vest (lvl 30) → "Reinforced Leather Vest"
-   - Worn Leather Boots (lvl 3) → "Scuffed Leather Boots"
-   - Iron Kite Shield (lvl 31) → "Battered Kite Shield"
-   - Starlight Greatsword (lvl 20) → "Starlight Claymore"
-3. **Fix thematic mismatches** — adjust stats to match names (keeping same budget):
-   - "Shoulderplates of the Ironclad": swap to CON/STR focus
-   - "Silver Ring of the Swift": add DEX, reduce WIS
-   - Iron Kite Shield (lvl 14): add CON or AC, reduce INT
+### File: `src/features/combat/hooks/useCombatAggroEffects.ts`
+Add `wasInCombatRef` to detect the `inCombat` true→false transition and set `justStoppedRef.current = true`, enabling re-engagement with remaining aggressives after combat ends.
 
-### Phase 2: Fill Coverage Gaps (~25-30 new items)
+### File: `src/features/combat/hooks/useGameLoop.ts`
+No change to `SunderDebuff` type — instead introduce `SunderStacks = Record<string, SunderDebuff>` as a new type export.
 
-Use the AI Item Forge or direct inserts to create items for the biggest gaps:
+### File: `src/features/combat/hooks/useBuffState.ts`
+- Change `sunderDebuff` state from `SunderDebuff | null` to `Record<string, SunderDebuff>`
+- Update `gatherBuffs` to pick the first active sunder entry (server only needs the target)
+- Update `syncCreatureDebuffs` to build the record correctly instead of overwriting a single value
+- Update `BuffState` and `BuffSetters` interfaces
 
-**Shoulders uncommon** (3 items needed): levels ~8, ~25, ~35
-**Belt common** (2 items): levels ~15, ~35
-**Belt uncommon** (3 items): levels ~8, ~18, ~28
-**Chest uncommon** (1 item): level ~8
-**Gloves common** (2 items): levels ~15, ~35
-**Gloves uncommon** (1 item): level ~25
-**Pants uncommon** (1 item): level ~5
-**Trinket common** (2 items): levels ~28, ~35
-**Off_hand uncommon** (2 items): levels ~20, ~30
-**Bow/dagger/staff/wand uncommon** (4 items): mid-high tier fill
+### File: `src/features/combat/hooks/useCombatActions.ts`
+- Update `setSunderDebuff` call to use record-based setter: `prev => ({ ...prev, [creatureId]: entry })`
 
-All new items will follow the stat budget formula: `floor(1 + (level-1) * 0.3 * rarity_mult * hands_mult)`, use thematically appropriate names, and have `world_drop: true`.
+### File: `src/features/world/components/NodeView.tsx`
+- Change `sunderDebuff` prop from single object to `Record<string, SunderDebuff>`
+- Change creature sunder check from `sunderDebuff?.creatureId === c.id` to `sunderStacks[c.id]`
 
-### Phase 3: Summary
+### File: `src/pages/GamePage.tsx`
+- Update `sunderDebuff` destructuring usage: status bar indicator checks any active entry
+- Pass the record to NodeView
 
-Total changes:
-- ~6 name renames (DB updates)
-- 1 weapon_tag fix
-- ~3 stat adjustments for name/stat mismatches
-- ~25 new items inserted to fill coverage gaps
+### File: `src/features/combat/index.ts`
+- No change needed (SunderDebuff type still valid)
 
-No code changes. No schema changes. All done via DB operations.
+## Not Changed
+- Combat formulas, tick rates, server authority
+- Movement rules, follow mechanics
+- Loot, progression, class balance
+- Boss damage numbers (validated as reasonable)
+- No new systems introduced
+
+## Summary for Next Pass
+- `GamePage.tsx` follower-sync effect (lines 210-253) remains a candidate for extraction into a dedicated hook
+- `usePartyCombat.processTickResult` still a future extraction target
+- No other half-wired paths found beyond bugs 1 and 2
 
