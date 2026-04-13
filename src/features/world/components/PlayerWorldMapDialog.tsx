@@ -7,6 +7,7 @@ import { GameNode, Region, Area } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
 import { getAreaFillColor, getAreaStrokeColor } from '@/features/world';
 import { computeRegionOutline, type Circle, type OutlineBBox } from '@/features/world/utils/outline-geometry';
+import { calculateTeleportCpCost } from '@/features/world/components/TeleportDialog';
 
 interface Props {
   open: boolean;
@@ -16,6 +17,13 @@ interface Props {
   nodes: GameNode[];
   regions: Region[];
   areas?: Area[];
+  // Teleport integration
+  playerCp?: number;
+  playerMaxCp?: number;
+  currentRegion?: Region;
+  onTeleport?: (nodeId: string, cpCost: number) => void;
+  characterLevel?: number;
+  inCombat?: boolean;
 }
 
 const SPACING = 90;
@@ -23,7 +31,7 @@ const NODE_R = 22;
 const OUTLINE_RADIUS = NODE_R + 20;
 const AREA_OUTLINE_RADIUS = NODE_R + 10;
 
-export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas }: Props) {
+export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, playerMaxCp, currentRegion, onTeleport, characterLevel, inCombat }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(1);
