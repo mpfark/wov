@@ -53,11 +53,16 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
   const aggroProcessedRef = useRef<Set<string>>(new Set());
   const recentlyKilledRef = useRef<Set<string>>(new Set());
   const justStoppedRef = useRef(false);
+  const wasInCombatRef = useRef(false);
 
-  // Track combat stop
+  // Track combat stop — detect the true→false transition to enable re-engagement
   useEffect(() => {
     if (inCombat) {
+      wasInCombatRef.current = true;
       justStoppedRef.current = false;
+    } else if (wasInCombatRef.current) {
+      wasInCombatRef.current = false;
+      justStoppedRef.current = true;
     }
   }, [inCombat]);
 
