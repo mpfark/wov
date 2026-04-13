@@ -197,7 +197,8 @@ export default function NodeView({
                   const hasPoisonStacks = creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
                   const creatureIgniteStacks = igniteStacks[c.id];
                   const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
-                  const isSundered = sunderDebuff && sunderDebuff.creatureId === c.id && Date.now() < sunderDebuff.expiresAt;
+                   const creatureSunder = sunderDebuff?.[c.id];
+                   const isSundered = creatureSunder && Date.now() < creatureSunder.expiresAt;
                   const creatureBleed = bleedStacks[c.id];
                   const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
                   const isFlashing = flashingIds.has(c.id);
@@ -255,7 +256,7 @@ export default function NodeView({
                               </span>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">
-                              Sundered: AC reduced by {sunderDebuff!.acReduction}
+                              Sundered: AC reduced by {creatureSunder!.acReduction}
                             </TooltipContent>
                           </Tooltip>
                         )}
