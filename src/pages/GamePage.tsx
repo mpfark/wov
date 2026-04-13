@@ -846,7 +846,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     createParty, invitePlayer, acceptInvite, declineInvite, leaveParty, kickMember,
     setTank, toggleFollow, keyboardMovement, activeBuffs, abilityTargetId,
     showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
-    creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon,
+    creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon, handleTeleport,
     getNode, getRegion, currentRegion,
   ]);
 
