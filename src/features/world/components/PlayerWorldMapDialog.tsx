@@ -432,7 +432,8 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const isHovered = hoveredNode === node.id;
                   const area = node.area_id ? areaById.get(node.area_id) : null;
                   const emoji = area ? (emojiMap[area.area_type] || '📍') : '📍';
-                  const displayName = getNodeDisplayName(node, area);
+                  const hasUniqueName = node.name && node.name.trim() && (!area || node.name.trim() !== area.name);
+                  const showLabel = hasUniqueName || isCurrent;
                   const fillColor = isCurrent ? 'hsl(var(--primary) / 0.25)' : getAreaFillColor(emoji);
                   const strokeColor = isCurrent ? 'hsl(var(--primary))' : isHovered ? 'hsl(var(--foreground) / 0.6)' : getAreaStrokeColor(emoji);
 
