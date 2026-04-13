@@ -78,7 +78,6 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
         console.debug('[aggro] re-engage detected', { creatureId: nextAggro.id, ts: performance.now().toFixed(0) });
       }
       addLocalLog(pickRandom(THREAT_PHRASES_REENGAGE)(nextAggro.name));
-      addLocalLog(`⚔️ Combat begins!`);
       startCombat(nextAggro.id);
     } else {
       justStoppedRef.current = false;
@@ -120,7 +119,6 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
         console.debug('[aggro] initial detected', { creatureId: firstAggro.id, ts: performance.now().toFixed(0) });
       }
       addLocalLog(pickRandom(THREAT_PHRASES_INITIAL)(firstAggro.name));
-      addLocalLog(`⚔️ Combat begins!`);
       startCombat(firstAggro.id);
     }
   }, [creatures, startCombat, isDead, character.hp, party, isLeader, addLocalLog]);

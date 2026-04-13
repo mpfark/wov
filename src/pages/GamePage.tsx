@@ -630,12 +630,19 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (isDead) return;
     if (selectedTargetId) {
       const target = creatures.find(c => c.id === selectedTargetId && c.is_alive);
-      if (target) { startCombat(target.id); return; }
+      if (target) {
+        if (!target.is_aggressive) addLog(`⚔️ You start attacking ${target.name}.`);
+        startCombat(target.id);
+        return;
+      }
     }
     if (inCombat) return;
     const firstCreature = creatures.find(c => c.is_alive);
-    if (firstCreature) startCombat(firstCreature.id);
-  }, [isDead, inCombat, creatures, selectedTargetId, startCombat]);
+    if (firstCreature) {
+      if (!firstCreature.is_aggressive) addLog(`⚔️ You start attacking ${firstCreature.name}.`);
+      startCombat(firstCreature.id);
+    }
+  }, [isDead, inCombat, creatures, selectedTargetId, startCombat, addLog]);
 
   const handleCycleTarget = useCallback(() => {
     if (isDead) return;
@@ -647,6 +654,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     setSelectedTargetId(next.id);
     const engagedSet = new Set(engagedCreatureIds);
     if (next.is_aggressive || engagedSet.has(next.id)) {
+      if (!next.is_aggressive) addLog(`⚔️ You start attacking ${next.name}.`);
       startCombat(next.id);
     }
   }, [isDead, creatures, selectedTargetId, activeCombatCreatureId, engagedCreatureIds, inCombat, startCombat]);
