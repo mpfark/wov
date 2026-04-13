@@ -448,7 +448,6 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const isTeleportNode = node.is_teleport && visitedIds.has(node.id) && !isCurrent;
                   const canTeleportHere = isTeleportNode && onTeleport && !inCombat;
                   const nodeRegion = regionById.get(node.region_id);
-                  const cpCost = canTeleportHere && nodeRegion ? calculateTeleportCpCost(currentRegion, nodeRegion) : 0;
                   
                   const isSelected = selectedTeleportNode === node.id;
 
