@@ -30,6 +30,7 @@ const SPACING = 90;
 const NODE_R = 22;
 const OUTLINE_RADIUS = NODE_R + 20;
 const AREA_OUTLINE_RADIUS = NODE_R + 10;
+const DRAG_THRESHOLD = 4;
 
 export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, currentRegion, onTeleport, inCombat }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
@@ -38,7 +39,9 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const didDrag = useRef(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { emojiMap } = useAreaTypes();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
@@ -231,18 +234,30 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     setIsPanning(true);
+    didDrag.current = false;
     panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
   }, [pan]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning) return;
+    const dx = e.clientX - panStart.current.x;
+    const dy = e.clientY - panStart.current.y;
+    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+      didDrag.current = true;
+    }
     setPan({
-      x: panStart.current.panX + (e.clientX - panStart.current.x),
-      y: panStart.current.panY + (e.clientY - panStart.current.y),
+      x: panStart.current.panX + dx,
+      y: panStart.current.panY + dy,
     });
   }, [isPanning]);
 
-  const handleMouseUp = useCallback(() => setIsPanning(false), []);
+  const handleMouseUp = useCallback(() => {
+    setIsPanning(false);
+    // If we didn't drag, treat as a background click — clear selection
+    if (!didDrag.current) {
+      setSelectedTeleportNode(null);
+    }
+  }, []);
 
   const centerOnCurrent = useCallback(() => {
     if (!currentNodeId) return;
@@ -261,7 +276,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] max-h-[90vh] w-[95vw] h-[85vh] p-0 overflow-hidden bg-card border-border">
         <DialogTitle className="sr-only">World Map</DialogTitle>
-        <div className="relative w-full h-full">
+        <div className="relative w-full h-full" ref={containerRef}>
           {/* Zoom controls */}
           <div className="absolute top-3 right-3 z-20 flex flex-col gap-1">
             <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(5, z * 1.2))}>
@@ -290,7 +305,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
               ref={svgRef}
               className="w-full h-full cursor-grab active:cursor-grabbing"
               onWheel={handleWheel}
-              onMouseDown={(e) => { handleMouseDown(e); setSelectedTeleportNode(null); }}
+              onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
@@ -455,11 +470,13 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                       key={node.id}
                       onMouseEnter={() => setHoveredNode(node.id)}
                       onMouseLeave={() => setHoveredNode(null)}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (canTeleportHere) {
                           setSelectedTeleportNode(isSelected ? null : node.id);
                         }
                       }}
+                      onMouseDown={(e) => e.stopPropagation()}
                       style={{ cursor: canTeleportHere ? 'pointer' : 'default' }}
                     >
                       {/* Teleport ring */}
@@ -532,57 +549,64 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   );
                 })}
 
-                {/* Teleport confirmation tooltip */}
-                {selectedTeleportNode && onTeleport && (() => {
-                  const node = nodes.find(n => n.id === selectedTeleportNode);
-                  const p = node ? nodePositions.get(node.id) : null;
-                  if (!node || !p) return null;
-                  const nodeRegion = regionById.get(node.region_id);
-                  const area = node.area_id ? areaById.get(node.area_id) : null;
-                  const cpCost = nodeRegion ? calculateTeleportCpCost(currentRegion, nodeRegion) : 15;
-                  const canAffordIt = (playerCp ?? 0) >= cpCost;
-                  const displayName = (node.name && node.name.trim() && (!area || node.name.trim() !== area.name))
-                    ? node.name : (area?.name || node.name || 'Unknown');
-
-                  return (
-                    <foreignObject
-                      x={p.px - 75} y={p.py + NODE_R * 0.6 + 8}
-                      width={150} height={70}
-                      style={{ overflow: 'visible' }}
-                    >
-                      <div
-                        className="bg-card border border-border rounded-md p-2 shadow-lg text-center"
-                        style={{ fontSize: '10px' }}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <p className="font-display text-foreground truncate text-xs">{displayName}</p>
-                        {nodeRegion && (
-                          <p className="text-muted-foreground" style={{ fontSize: '9px' }}>
-                            {nodeRegion.name} · Lv {nodeRegion.min_level}–{nodeRegion.max_level}
-                          </p>
-                        )}
-                        <button
-                          disabled={!canAffordIt || inCombat}
-                          onClick={() => {
-                            onTeleport(node.id, cpCost);
-                            setSelectedTeleportNode(null);
-                            onOpenChange(false);
-                          }}
-                          className={`mt-1 px-2 py-0.5 rounded font-display text-[10px] border transition-colors ${
-                            canAffordIt && !inCombat
-                              ? 'bg-primary/20 border-primary/50 text-primary hover:bg-primary/30'
-                              : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
-                          }`}
-                        >
-                          ⚡ {cpCost} CP
-                        </button>
-                      </div>
-                    </foreignObject>
-                  );
-                })()}
               </g>
             </svg>
           )}
+
+          {/* Teleport confirmation overlay — rendered as HTML outside SVG for fixed size */}
+          {selectedTeleportNode && onTeleport && !loading && (() => {
+            const node = nodes.find(n => n.id === selectedTeleportNode);
+            const p = node ? nodePositions.get(node.id) : null;
+            if (!node || !p || !containerRef.current) return null;
+            const rect = containerRef.current.getBoundingClientRect();
+            const cw = rect.width;
+            const ch = rect.height;
+            const screenX = p.px * zoom + pan.x + cw / 2;
+            const screenY = p.py * zoom + pan.y + ch / 2;
+            const nodeRegion = regionById.get(node.region_id);
+            const area = node.area_id ? areaById.get(node.area_id) : null;
+            const cpCost = nodeRegion ? calculateTeleportCpCost(currentRegion, nodeRegion) : 15;
+            const canAffordIt = (playerCp ?? 0) >= cpCost;
+            const displayName = (node.name && node.name.trim() && (!area || node.name.trim() !== area.name))
+              ? node.name : (area?.name || node.name || 'Unknown');
+
+            return (
+              <div
+                className="absolute z-30 pointer-events-auto"
+                style={{
+                  left: screenX,
+                  top: screenY + NODE_R * 0.6 * zoom + 8,
+                  transform: 'translateX(-50%)',
+                }}
+                onMouseDown={e => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="bg-card border border-border rounded-md p-2 shadow-lg text-center min-w-[140px]">
+                  <p className="font-display text-foreground truncate text-xs">{displayName}</p>
+                  {nodeRegion && (
+                    <p className="text-muted-foreground text-[9px]">
+                      {nodeRegion.name} · Lv {nodeRegion.min_level}–{nodeRegion.max_level}
+                    </p>
+                  )}
+                  <button
+                    disabled={!canAffordIt || inCombat}
+                    onClick={() => {
+                      onTeleport(node.id, cpCost);
+                      setSelectedTeleportNode(null);
+                      onOpenChange(false);
+                    }}
+                    className={`mt-1 px-2 py-0.5 rounded font-display text-[10px] border transition-colors ${
+                      canAffordIt && !inCombat
+                        ? 'bg-primary/20 border-primary/50 text-primary hover:bg-primary/30'
+                        : 'bg-muted border-border text-muted-foreground cursor-not-allowed'
+                    }`}
+                  >
+                    ⚡ {cpCost} CP
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </DialogContent>
     </Dialog>
