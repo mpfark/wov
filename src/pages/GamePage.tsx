@@ -116,7 +116,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, inventory: _inventory, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id);
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
@@ -530,7 +530,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     localPredictionOverrides, lastTickTime, startCombat, stopCombat: stopCombatFn,
-    fleeStopCombat, pendingAbility: _pendingAbility, queueAbility } = combat;
+    fleeStopCombat, queueAbility } = combat;
 
   // Merge creature HP from all sources: combat-tick > prediction > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides, localPredictionOverrides);
