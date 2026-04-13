@@ -458,9 +458,9 @@ export default function MapPanel({
         playerCp={character.cp ?? 0}
         playerMaxCp={character.max_cp ?? 30}
         currentRegion={regions.find(r => r.id === currentRegionId) ?? undefined}
-        onTeleport={onOpenTeleport ? (nodeId: string, cpCost: number) => {
+        onTeleport={onMapTeleport ? (nodeId: string, cpCost: number) => {
           if (summonInCombat) return;
-          onMapTeleport?.(nodeId, cpCost);
+          onMapTeleport(nodeId, cpCost);
           setWorldMapOpen(false);
         } : undefined}
         characterLevel={characterLevel}
