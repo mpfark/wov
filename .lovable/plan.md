@@ -1,61 +1,37 @@
 
 
-# Optimized combat-tick DB Queries — Refined Plan
+# Safety Verification Results
 
-## Summary
+## 1. `broadcastReward` — Confirmed Dead
 
-Same optimization approach (parallelize reads, batch effect upserts, parallelize writes). Two safety refinements applied.
+**Search results**: Only 2 files reference it:
+- `usePartyBroadcast.ts` — defines it (lines 138–145) and returns it
+- `GamePage.tsx` — destructures it as `_broadcastReward` (underscore-prefixed = unused)
 
-## Refinement 1: Order-dependent writes stay sequential
+No other file imports or calls `broadcastReward`. The **receiving** side (`party_reward` listener in `usePartyBroadcast`) is fully wired and works independently — it's a listener on the channel, not dependent on this sender function. Party rewards are actually sent by the server-side combat-tick function, not by the client.
 
-Post-tick writes split into two phases:
+**Verdict**: Safe to remove. Will add a brief comment in the removal commit noting that `party_reward` events are server-originated.
 
-**Phase A — parallel (independent writes):**
-```typescript
-await Promise.all([
-  writeCreatureState(db, creatures, cHp, cKilled),
-  cleanupEffects(db, expiredIds, killedCreatureIds),
-  ...memberUpdatePromises,
-  ...degradePromises,
-]);
-```
+## 2. `CombatLogEntry` — Confirmed Dead
 
-**Phase B — sequential (order-dependent):**
-```typescript
-// Loot depends on killed creatures being persisted
-const lootEvents = await processLootDrops(db, lootQueue);
+**Search results**: Only 2 files reference it:
+- `usePartyCombatLog.ts` — defines the interface (used only for the always-empty `entries` array)
+- `combat/index.ts` — re-exports the type
 
-// Effect upsert after cleanup to avoid conflicts
-if (liveEffects.length > 0) {
-  const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
-  await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
-}
+**No file imports `CombatLogEntry`** from either location. Zero consumer imports found.
 
-// Session update last (reflects final state)
-await db.from('combat_sessions').upsert(sessionRow);
-```
+**Verdict**: Safe to remove the type export from `index.ts` and the interface from `usePartyCombatLog.ts`. The `entries` state (always `[]`) is also dead and should be removed together.
 
-This preserves the performance win from Phase A while preventing ordering bugs in Phase B.
+## Plan
 
-## Refinement 2: Batch upsert conflict key is verified safe
+Proceed with the full cleanup plan as previously approved, with these two items now verified safe:
 
-Confirmed: `active_effects` has a `UNIQUE` constraint on `(source_id, target_id, effect_type)`:
-
-```
-active_effects_source_id_target_id_effect_type_key UNIQUE (source_id, target_id, effect_type)
-```
-
-The in-memory effect model enforces this too — poison/ignite/bleed find-and-update existing rows rather than creating duplicates (lines 705, 724 of combat-tick). Batch upsert with `onConflict: 'source_id,target_id,effect_type'` is correct.
-
-## Everything else unchanged from original plan
-
-- Parallelize reads (equipment, creatures, effects, xp_boost) via `Promise.all`
-- Early-exit idle path: parallelize the two queries
-- No DB schema changes, no client changes, no combat logic changes
-
-## File touched
-
-| File | Change |
+| Item | Action |
 |------|--------|
-| `supabase/functions/combat-tick/index.ts` | Parallelize reads, split writes into independent-parallel + ordered-sequential phases, batch effect upserts |
+| `broadcastReward` in `usePartyBroadcast.ts` | Remove function + return entry |
+| `_broadcastReward` in `GamePage.tsx` | Remove from destructuring |
+| `CombatLogEntry` interface in `usePartyCombatLog.ts` | Remove interface + `entries` state |
+| `CombatLogEntry` export in `combat/index.ts` | Remove type export line |
+
+No other changes beyond what the original audit plan specified.
 
