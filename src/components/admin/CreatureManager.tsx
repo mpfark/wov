@@ -171,6 +171,7 @@ export default function CreatureManager() {
       loot_table_id: c.loot_table_id || null,
       drop_chance: c.drop_chance ?? 0.5,
       loot_mode: (c as any).loot_mode || 'legacy_table',
+      boss_crit_flavors: Array.isArray((c as any).boss_crit_flavors) ? (c as any).boss_crit_flavors : [],
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
