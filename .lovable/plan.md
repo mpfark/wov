@@ -1,124 +1,85 @@
 
 
-# Admin UI Refinement — Sidebar Navigation
+# Admin UI Consistency Pass (Revised)
 
-## Current State
+## Shared Components (`src/components/admin/common/`)
 
-The admin interface is a single `AdminPage.tsx` (476 lines) with a horizontal tab bar containing 13 tabs: World, Creatures, NPCs, Items, Loot Tables, Item Forge, Races & Classes, Users, Issues, Roadmap, Rulebook, Manual. The XP Boost panel sits above all tabs. All editor components are already self-contained.
+| Component | Lines | Purpose |
+|-----------|-------|---------|
+| `AdminEntityToolbar` | ~20 | Slot-based header: icon, title, count badge, then `children` for whatever filters/search/buttons the page needs |
+| `AdminEditorHeader` | ~15 | Editor panel header with title + close button |
+| `AdminFormSection` | ~12 | Section title + optional description + children — used selectively |
+| `AdminStickyActions` | ~15 | Save/Cancel row with optional extra actions slot |
+| `AdminEmptyState` | ~10 | Consistent empty/no-selection placeholder |
+| `index.ts` | — | Barrel export |
 
-## Approach
+## Refinements Applied
 
-Replace the horizontal tab bar with a collapsible sidebar using the existing shadcn Sidebar component. The `AdminPage` stays as the main orchestrator — its state management, data loading, and editor overlay logic remain untouched. We simply swap the navigation mechanism from `<Tabs>` to sidebar + content area.
+**1. AdminFormSection — selective use only.** Applied where grouping genuinely helps readability:
+- CreatureManager: "Stats", "Loot", "Gold Drop", "Spawn & Behavior" — yes. Single-field rows or already-compact areas — no.
+- ItemManager: "Stats" grid, "Origin" section — yes. Top-level name/type/rarity fields — no (already compact).
+- NPCManager: Only "Location" section benefits. The rest is 3 fields — leave as-is.
+- UserManager: Action groups in column 3 ("Give Item", "Teleport", "Grant XP") — yes.
 
-## Navigation Hierarchy
+**2. AdminEntityToolbar — fully slot-based.** The component renders: icon + title + count badge + `{children}`. That's it. Each page passes its own filters, dropdowns, search inputs, and buttons as children. No fixed internal layout beyond the left-aligned title area. Pages like Items (with type/slot filter tabs) and Users (with role filters) keep their unique toolbar content.
 
-```text
-SIDEBAR
-─────────────────────
-🏠 Dashboard (new)
-─────────────────────
-WORLD
-  🗺️ World Map
-─────────────────────
-CONTENT
-  🐾 Creatures
-  👤 NPCs
-  ⚔️ Items
-  🎲 Loot Tables
-  🔨 Item Forge
-─────────────────────
-PLAYERS
-  👥 Users
-─────────────────────
-SYSTEMS
-  🧬 Races & Classes
-  ⚡ XP Boost
-─────────────────────
-OPERATIONS
-  🐛 Issues
-  🗺️ Roadmap
-─────────────────────
-REFERENCE
-  📖 Rulebook
-  📘 Manual
-```
+**3. LootTableManager — minimal wrapper.** Only add `AdminEntityToolbar` as a thin header above the existing `TabsList`. No extra framing around the sub-tabs. The component's own `<Tabs>` structure stays visually dominant.
 
-## New Files
+## Page Changes
 
-| File | Purpose |
-|------|---------|
-| `src/components/admin/AdminSidebar.tsx` | Sidebar component with grouped navigation items |
-| `src/components/admin/AdminLayout.tsx` | Layout wrapper: SidebarProvider + Sidebar + content area |
-| `src/components/admin/AdminDashboard.tsx` | Simple landing page with quick-links and summary counts |
-| `src/components/admin/AdminGlobalSearch.tsx` | Command palette (Cmd+K) for searching creatures, items, nodes, users |
+### CreatureManager
+- Toolbar div → `AdminEntityToolbar` (filters/search/New as children)
+- Editor header → `AdminEditorHeader`
+- Save/Cancel → `AdminStickyActions`
+- Empty states → `AdminEmptyState`
+- `AdminFormSection` on: Stats grid, Loot section, Gold Drop, Spawn & Behavior
+- Leave compact top fields (name, description, rarity, level) unwrapped
 
-## Changes to Existing Files
+### ItemManager
+- Toolbar div → `AdminEntityToolbar` (search/unassigned toggle/New as children)
+- Editor header → `AdminEditorHeader`
+- Save/Cancel → `AdminStickyActions`
+- Empty states → `AdminEmptyState`
+- `AdminFormSection` on: Stats grid, Origin section
+- Leave type/slot/rarity filter tabs and top form fields as-is
 
-### `src/pages/AdminPage.tsx`
-- Remove the `<Tabs>` / `<TabsList>` / `<TabsTrigger>` horizontal bar
-- Wrap content in `<AdminLayout>` which provides the sidebar
-- Keep `activeTab` state — the sidebar sets it via callback, content area renders the matching component (same conditional rendering as today)
-- Move `XpBoostPanel` from above tabs into the "Systems > XP Boost" section as its own view
-- All overlay panels (NodeEditorPanel, RegionEditorPanel, AreaEditorPanel, PopulatePanel, BatchNodeEditPanel) stay exactly as they are — they render inside the World content area
+### NPCManager
+- Toolbar div → `AdminEntityToolbar` (region filter/search/New as children)
+- Editor header → `AdminEditorHeader`
+- Save/Cancel → `AdminStickyActions`
+- Empty states → `AdminEmptyState`
+- `AdminFormSection` on: Location picker only
+- Leave name/description/dialogue fields unwrapped (already compact)
 
-### `src/pages/AdminRoute.tsx`
-- No changes — auth/role gating stays identical
+### LootTableManager
+- Add `AdminEntityToolbar` as a light header above the TabsList (title + icon only, no extra chrome)
+- All four sub-tabs stay completely untouched internally
 
-## Component Details
+### UserManager
+- User list search header → `AdminEntityToolbar` (search/role filter as children)
+- Empty states → `AdminEmptyState`
+- Column 3 action groups → `AdminFormSection` for section labels
+- 4-column layout stays as-is
 
-### AdminSidebar
-- Uses `Sidebar` with `collapsible="icon"` so it shrinks to icons on collapse
-- Groups: World, Content, Players, Systems, Operations, Reference
-- Each item calls `onNavigate(tabKey)` — maps to existing tab keys
-- Highlights active item based on current `activeTab`
-- Header shows role badge (Overlord/Steward) and Back button
+## Not Changed
+- All business logic, save handlers, data fetching, tab structures
+- World map tools
+- Database schemas, routes, auth
+- Internal sub-tab content in LootTableManager
 
-### AdminLayout
-- `SidebarProvider` wrapping `AdminSidebar` + main content div
-- Header bar with `SidebarTrigger`, page title, and global search trigger
-- Content area renders `children`
+## Files
 
-### AdminDashboard
-- Fetches summary counts (regions, nodes, creatures, items, users) from existing data
-- Quick-link cards that navigate to each section
-- No new data fetching — reuses counts passed as props
-
-### AdminGlobalSearch
-- Uses existing `CommandDialog` component from `src/components/ui/command.tsx`
-- Searches creatures, items, nodes, users via Supabase `.ilike()` queries
-- On select, sets the active tab and opens the relevant editor
-- Triggered by Cmd+K or a search icon in the header
-
-## Tab-to-Navigation Mapping
-
-| Current Tab | New Location | Component Reused |
-|-------------|-------------|-----------------|
-| world | World > World Map | AdminWorldMapView + overlays |
-| creatures | Content > Creatures | CreatureManager |
-| npcs | Content > NPCs | NPCManager |
-| items | Content > Items | ItemManager |
-| loot-tables | Content > Loot Tables | LootTableManager |
-| item-forge | Content > Item Forge | ItemForgePanel |
-| races-classes | Systems > Races & Classes | RaceClassManager |
-| users | Players > Users | UserManager |
-| issues | Operations > Issues | IssueReportManager |
-| roadmap | Operations > Roadmap | RoadmapManager |
-| rulebook | Reference > Rulebook | WorldBuilderRulebook |
-| manual | Reference > Manual | GameManual |
-| *(XpBoostPanel)* | Systems > XP Boost | XpBoostPanel |
-| *(new)* | Dashboard | AdminDashboard |
-
-## What Is NOT Changed
-- All editor components, their internal tabs, forms, and logic
-- Database schemas, RLS policies, edge functions
-- AdminRoute auth/role checks
-- AdminChatWidget (stays floating)
-- World map overlay panel system
-- Any business logic or combat/game mechanics
-
-## Implementation Order
-1. Create `AdminSidebar.tsx` and `AdminLayout.tsx`
-2. Refactor `AdminPage.tsx` to use the new layout (swap tabs → sidebar)
-3. Create `AdminDashboard.tsx` as the default landing view
-4. Create `AdminGlobalSearch.tsx` with CommandDialog
+| File | Action |
+|------|--------|
+| `src/components/admin/common/AdminEntityToolbar.tsx` | Create |
+| `src/components/admin/common/AdminEditorHeader.tsx` | Create |
+| `src/components/admin/common/AdminFormSection.tsx` | Create |
+| `src/components/admin/common/AdminStickyActions.tsx` | Create |
+| `src/components/admin/common/AdminEmptyState.tsx` | Create |
+| `src/components/admin/common/index.ts` | Create |
+| `src/components/admin/CreatureManager.tsx` | Refactor |
+| `src/components/admin/ItemManager.tsx` | Refactor |
+| `src/components/admin/NPCManager.tsx` | Refactor |
+| `src/components/admin/LootTableManager.tsx` | Light wrapper |
+| `src/components/admin/UserManager.tsx` | Refactor |
 
