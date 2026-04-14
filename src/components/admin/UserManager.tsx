@@ -1031,6 +1031,7 @@ export default function UserManager({ isValar }: Props) {
                       disabled={!teleportNodeId} onClick={() => handleTeleport(selectedChar.id)}>
                       <MapPin className="w-3 h-3" /> Tp
                     </Button>
+                  </div>
                 </AdminFormSection>
 
                 {/* Grant XP */}
