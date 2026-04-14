@@ -594,10 +594,7 @@ export default function ItemManager() {
               </div>
 
               <AdminFormSection title="Stat Bonuses" description={form.item_type === 'consumable' ? 'HP & Regen only, no caps' : 'Capped per stat'}>
-              <div>
-                  Stat Bonuses {form.item_type === 'consumable' ? '(HP & Regen only, no caps)' : '(capped per stat)'}
-                </label>
-                <div className="grid grid-cols-4 gap-1.5 mt-1">
+                <div className="grid grid-cols-4 gap-1.5">
                   {STAT_KEYS.filter(key => form.item_type !== 'consumable' || CONSUMABLE_ALLOWED_STATS.includes(key)).map(key => (
                     <div key={key} className="flex items-center gap-1">
                       <span className={`text-[10px] uppercase w-8 ${key === 'hp_regen' ? 'text-elvish' : 'text-muted-foreground'}`}>{STAT_KEY_LABELS[key] || key}</span>
@@ -608,7 +605,6 @@ export default function ItemManager() {
                     </div>
                   ))}
                 </div>
-              </div>
               </AdminFormSection>
 
               {form.rarity === 'unique' && (
