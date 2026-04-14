@@ -2,8 +2,6 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from './AdminSidebar';
 import AdminGlobalSearch from './AdminGlobalSearch';
-import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface AdminLayoutProps {
   children: ReactNode;
