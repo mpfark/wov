@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, MessageCircle } from 'lucide-react';
+import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import NodePicker from './NodePicker';
 
 interface NPC {
@@ -175,11 +176,7 @@ export default function NPCManager() {
     <div className="h-full flex">
       {/* Left: NPC List */}
       <div className="flex flex-col w-1/2 border-r border-border transition-all">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-          <MessageCircle className="w-4 h-4 text-primary" />
-          <h2 className="font-display text-sm text-primary">NPCs</h2>
-          <span className="text-xs text-muted-foreground">({npcs.length})</span>
-          <div className="flex-1" />
+        <AdminEntityToolbar icon={<MessageCircle className="w-4 h-4" />} title="NPCs" count={npcs.length}>
           <Select value={regionFilter} onValueChange={setRegionFilter}>
             <SelectTrigger className="w-32 h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
             <SelectContent className="bg-popover border-border z-50 max-h-60">
@@ -193,13 +190,11 @@ export default function NPCManager() {
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
-        </div>
+        </AdminEntityToolbar>
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8 italic">
-                {npcs.length === 0 ? 'No NPCs yet.' : 'No match.'}
-              </p>
+              <AdminEmptyState message={npcs.length === 0 ? 'No NPCs yet.' : 'No match.'} />
             ) : filtered.map(npc => (
               <div
                 key={npc.id}
@@ -235,14 +230,7 @@ export default function NPCManager() {
       <div className="w-1/2 flex flex-col bg-card/50">
         {panelOpen ? (
           <>
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-              <h2 className="font-display text-sm text-primary text-glow truncate">
-                {selectedId ? `Edit: ${form.name || 'NPC'}` : 'New NPC'}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={closePanel} className="h-6 w-6 p-0">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+            <AdminEditorHeader title={selectedId ? `Edit: ${form.name || 'NPC'}` : 'New NPC'} onClose={closePanel} />
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-3">
                 <Input placeholder="NPC name" value={form.name} maxLength={100}
@@ -255,8 +243,7 @@ export default function NPCManager() {
                     onChange={e => setForm(f => ({ ...f, dialogue: e.target.value }))} rows={4} className="text-xs" />
                 </div>
 
-                <div>
-                  <label className="text-[10px] text-muted-foreground">Location</label>
+                <AdminFormSection title="Location">
                   <NodePicker
                     nodes={nodes}
                     regions={npcRegions}
@@ -266,23 +253,14 @@ export default function NPCManager() {
                     allowNone
                     placeholder="Select node"
                   />
-                </div>
+                </AdminFormSection>
 
-                <div className="flex gap-2 pt-2">
-                  <Button onClick={handleSave} disabled={loading} className="font-display text-xs">
-                    <Save className="w-3 h-3 mr-1" /> {selectedId ? 'Update' : 'Create'}
-                  </Button>
-                  <Button variant="outline" onClick={closePanel} className="font-display text-xs">
-                    <X className="w-3 h-3 mr-1" /> Cancel
-                  </Button>
-                </div>
+                <AdminStickyActions onSave={handleSave} onCancel={closePanel} saveLabel={selectedId ? 'Update' : 'Create'} loading={loading} />
               </div>
             </ScrollArea>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic font-display">
-            Select an NPC to edit
-          </div>
+          <AdminEmptyState message="Select an NPC to edit" />
         )}
       </div>
     </div>

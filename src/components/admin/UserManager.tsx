@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
+import { Search, KeyRound, Shield, Ban, UserCheck, Pencil, Save, X, ScrollText, Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw, Users } from 'lucide-react';
+import { AdminEntityToolbar, AdminFormSection, AdminEmptyState } from './common';
 import ItemPicker from './ItemPicker';
 import NodePicker from './NodePicker';
 import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, getStatRegen, getCharacterTitle } from '@/lib/game-data';
@@ -828,8 +829,8 @@ export default function UserManager({ isValar }: Props) {
       <div className="flex h-full">
         {/* COL 1 — User List */}
         <div className="w-56 shrink-0 border-r border-border flex flex-col">
-          <div className="p-2 border-b border-border">
-            <div className="relative">
+          <AdminEntityToolbar icon={<Users className="w-4 h-4" />} title="Users" count={total}>
+            <div className="relative flex-1">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 value={search}
@@ -838,8 +839,7 @@ export default function UserManager({ isValar }: Props) {
                 className="pl-8 h-7 text-xs"
               />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">{total} users</p>
-          </div>
+          </AdminEntityToolbar>
 
           <ScrollArea className="flex-1">
             {loading ? (
@@ -885,9 +885,7 @@ export default function UserManager({ isValar }: Props) {
         {/* COL 2 — Character Cards */}
         <div className="w-60 shrink-0 border-r border-border flex flex-col">
           {!selectedUser ? (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-[10px] text-muted-foreground">Select a user</p>
-            </div>
+            <AdminEmptyState message="Select a user" />
           ) : (
             <>
               {/* User info header */}
@@ -991,20 +989,14 @@ export default function UserManager({ isValar }: Props) {
         {/* COL 3 — Actions */}
         <div className="w-[420px] shrink-0 border-r border-border flex flex-col overflow-y-auto">
           {!selectedChar ? (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-[10px] text-muted-foreground italic">
-                {!selectedUser ? 'Select a user' : 'Select a character'}
-              </p>
-            </div>
+            <AdminEmptyState message={!selectedUser ? 'Select a user' : 'Select a character'} />
           ) : (
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-3">
-                <h4 className="font-display text-[10px] text-muted-foreground flex items-center gap-1.5">
-                  <Shield className="w-3 h-3" /> Actions — {selectedChar.name}
-                </h4>
+                <AdminFormSection title={`Actions — ${selectedChar.name}`}>
+                </AdminFormSection>
 
-                {/* Give Item */}
-                <div className="space-y-1">
+                <AdminFormSection title="Give Item">
                   <div className="flex gap-1">
                     <div className="flex-1">
                       <ItemPicker
@@ -1020,10 +1012,9 @@ export default function UserManager({ isValar }: Props) {
                       <Gift className="w-3 h-3" /> Give
                     </Button>
                   </div>
-                </div>
+                </AdminFormSection>
 
-                {/* Teleport */}
-                <div className="space-y-1">
+                <AdminFormSection title="Teleport">
                   <div className="flex gap-1">
                     <div className="flex-1">
                       <NodePicker
@@ -1041,7 +1032,7 @@ export default function UserManager({ isValar }: Props) {
                       <MapPin className="w-3 h-3" /> Tp
                     </Button>
                   </div>
-                </div>
+                </AdminFormSection>
 
                 {/* Grant XP */}
                 <div className="flex gap-1">
