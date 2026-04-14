@@ -611,7 +611,7 @@ export default function ItemManager() {
               </div>
               </AdminFormSection>
 
-              {/* Origin tracking for unique items */}
+              {form.rarity === 'unique' && (
               <AdminFormSection title="Unique Item Origin" description="Where it returns when broken/offline">
                   
                   {/* Holder indicator */}
