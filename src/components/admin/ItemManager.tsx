@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, Package, Skull, ShoppingBag, Search, ArrowUpDown } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package } from 'lucide-react';
+import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 
 interface Item {
@@ -315,11 +316,7 @@ export default function ItemManager() {
     <div className="h-full flex">
       {/* Left: Item List */}
       <div className="flex flex-col w-1/2 border-r border-border transition-all">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-          <Package className="w-4 h-4 text-primary" />
-          <h2 className="font-display text-sm text-primary">Items</h2>
-          <span className="text-xs text-muted-foreground">({filtered.length})</span>
-          <div className="flex-1" />
+        <AdminEntityToolbar icon={<Package className="w-4 h-4" />} title="Items" count={filtered.length}>
           <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
           <button
             onClick={() => setShowUnassigned(v => !v)}
@@ -334,7 +331,7 @@ export default function ItemManager() {
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
-        </div>
+        </AdminEntityToolbar>
         <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border bg-card/30 shrink-0 flex-wrap">
           {['all', ...ITEM_TYPES].map(t => (
             <button
@@ -438,9 +435,7 @@ export default function ItemManager() {
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8 italic">
-                {items.length === 0 ? 'No items yet.' : 'No match.'}
-              </p>
+              <AdminEmptyState message={items.length === 0 ? 'No items yet.' : 'No match.'} />
             ) : filtered.map(item => (
               <div
                 key={item.id}
@@ -484,14 +479,7 @@ export default function ItemManager() {
       <div className="w-1/2 flex flex-col bg-card/50">
         {panelOpen ? (
           <>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-            <h2 className="font-display text-sm text-primary text-glow truncate">
-              {selectedId ? `Edit: ${form.name || 'Item'}` : 'New Item'}
-            </h2>
-            <Button variant="ghost" size="sm" onClick={closePanel} className="h-6 w-6 p-0">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <AdminEditorHeader title={selectedId ? `Edit: ${form.name || 'Item'}` : 'New Item'} onClose={closePanel} />
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
               <Input placeholder="Item name" value={form.name} maxLength={100}
@@ -605,8 +593,8 @@ export default function ItemManager() {
                 </div>
               </div>
 
+              <AdminFormSection title="Stat Bonuses" description={form.item_type === 'consumable' ? 'HP & Regen only, no caps' : 'Capped per stat'}>
               <div>
-                <label className="text-[10px] text-muted-foreground">
                   Stat Bonuses {form.item_type === 'consumable' ? '(HP & Regen only, no caps)' : '(capped per stat)'}
                 </label>
                 <div className="grid grid-cols-4 gap-1.5 mt-1">
@@ -621,11 +609,10 @@ export default function ItemManager() {
                   ))}
                 </div>
               </div>
+              </AdminFormSection>
 
               {/* Origin tracking for unique items */}
-              {form.rarity === 'unique' && (
-                <div className="space-y-2 border-t border-border pt-3">
-                  <label className="text-[10px] text-muted-foreground font-display">Unique Item Origin (where it returns when broken/offline)</label>
+              <AdminFormSection title="Unique Item Origin" description="Where it returns when broken/offline">
                   
                   {/* Holder indicator */}
                   {selectedId && itemUsage && (
@@ -673,7 +660,7 @@ export default function ItemManager() {
                       </Select>
                     </div>
                   </div>
-                </div>
+              </AdminFormSection>
               )}
 
               {/* Used In section */}
@@ -727,21 +714,12 @@ export default function ItemManager() {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2">
-                <Button onClick={handleSave} disabled={loading} className="font-display text-xs">
-                  <Save className="w-3 h-3 mr-1" /> {selectedId ? 'Update' : 'Create'}
-                </Button>
-                <Button variant="outline" onClick={closePanel} className="font-display text-xs">
-                  <X className="w-3 h-3 mr-1" /> Cancel
-                </Button>
-              </div>
+              <AdminStickyActions onSave={handleSave} onCancel={closePanel} saveLabel={selectedId ? 'Update' : 'Create'} loading={loading} />
             </div>
           </ScrollArea>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic font-display">
-            Select an item to edit
-          </div>
+          <AdminEmptyState message="Select an item to edit" />
         )}
       </div>
     </div>
