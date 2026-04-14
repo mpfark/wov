@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 interface AdminFormSectionProps {
   title: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export default function AdminFormSection({ title, description, children }: AdminFormSectionProps) {
