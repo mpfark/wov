@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, Skull } from 'lucide-react';
+import { Plus, Trash2, Skull } from 'lucide-react';
+import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
@@ -318,11 +319,7 @@ export default function CreatureManager() {
     <div className="h-full flex">
       {/* Left: Creature List */}
       <div className="flex flex-col w-1/2 border-r border-border transition-all">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-          <Skull className="w-4 h-4 text-primary" />
-          <h2 className="font-display text-sm text-primary">Creatures</h2>
-          <span className="text-xs text-muted-foreground">({creatures.length})</span>
-          <div className="flex-1" />
+        <AdminEntityToolbar icon={<Skull className="w-4 h-4" />} title="Creatures" count={creatures.length}>
           <Select value={regionFilter} onValueChange={setRegionFilter}>
             <SelectTrigger className="w-36 h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
             <SelectContent className="bg-popover border-border z-50 max-h-60">
@@ -365,13 +362,11 @@ export default function CreatureManager() {
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
-        </div>
+        </AdminEntityToolbar>
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8 italic">
-                {creatures.length === 0 ? 'No creatures yet.' : 'No match.'}
-              </p>
+              <AdminEmptyState message={creatures.length === 0 ? 'No creatures yet.' : 'No match.'} />
             ) : filtered.map(creature => (
               <div
                 key={creature.id}
@@ -406,14 +401,7 @@ export default function CreatureManager() {
       <div className="w-1/2 flex flex-col bg-card/50">
         {panelOpen ? (
           <>
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-            <h2 className="font-display text-sm text-primary text-glow truncate">
-              {selectedId ? `Edit: ${form.name || 'Creature'}` : 'New Creature'}
-            </h2>
-            <Button variant="ghost" size="sm" onClick={closePanel} className="h-6 w-6 p-0">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <AdminEditorHeader title={selectedId ? `Edit: ${form.name || 'Creature'}` : 'New Creature'} onClose={closePanel} />
           <ScrollArea className="flex-1">
             <div className="p-3 space-y-3">
               <Input placeholder="Creature name" value={form.name} maxLength={100}
@@ -462,18 +450,19 @@ export default function CreatureManager() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] text-muted-foreground">Spawn Location</label>
-                <NodePicker
-                  nodes={nodes}
-                  regions={cmRegions}
-                  areas={cmAreas}
-                  value={form.node_id}
-                  onChange={v => setForm(f => ({ ...f, node_id: v }))}
-                  allowNone
-                  placeholder="Select node"
-                />
-              </div>
+              <AdminFormSection title="Spawn & Behavior">
+                <div>
+                  <label className="text-[10px] text-muted-foreground">Spawn Location</label>
+                  <NodePicker
+                    nodes={nodes}
+                    regions={cmRegions}
+                    areas={cmAreas}
+                    value={form.node_id}
+                    onChange={v => setForm(f => ({ ...f, node_id: v }))}
+                    allowNone
+                    placeholder="Select node"
+                  />
+                </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -519,9 +508,10 @@ export default function CreatureManager() {
                   </div>
                 </div>
               </div>
+              </AdminFormSection>
 
+              <AdminFormSection title="Stats" description={`Auto-generated for Lvl ${form.level} ${form.rarity}`}>
               <div className="p-2 bg-background/50 rounded border border-border">
-                <p className="text-[10px] text-muted-foreground mb-1">Auto-generated stats (Lvl {form.level} {form.rarity})</p>
                 <div className="grid grid-cols-4 gap-x-3 gap-y-0.5 text-xs">
                   <span>HP: <strong>{previewStats.hp}</strong></span>
                   <span>AC: <strong>{previewStats.ac}</strong></span>
@@ -537,6 +527,7 @@ export default function CreatureManager() {
                   <span className="text-muted-foreground">({1 + getStatModifier(previewStats.stats.str)}–{getCreatureDamageDie(form.level, form.rarity) + getStatModifier(previewStats.stats.str)})</span>
                 </div>
               </div>
+              </AdminFormSection>
 
               {/* Boss Crit Flavors */}
               <div className="space-y-1.5">
@@ -620,7 +611,7 @@ export default function CreatureManager() {
                 </Button>
               </div>
 
-              {/* Loot Table selector */}
+              <AdminFormSection title="Loot">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <p className="font-display text-xs text-primary">Shared Loot Table</p>
@@ -673,10 +664,9 @@ export default function CreatureManager() {
                     onChange={v => setForm(f => ({ ...f, loot_table: v }))} />
                 )}
               </div>
+              </AdminFormSection>
 
-              {/* Gold drop config */}
-              <div className="space-y-1.5">
-                <p className="font-display text-xs text-primary">Gold Drop</p>
+              <AdminFormSection title="Gold Drop">
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="text-[10px] text-muted-foreground">Min</label>
@@ -703,23 +693,14 @@ export default function CreatureManager() {
                 <p className="text-[9px] text-muted-foreground">
                   {form.is_humanoid ? 'Auto-calculated from level & rarity.' : 'Set max > 0 to enable. Chance 0–1.'}
                 </p>
-              </div>
+              </AdminFormSection>
 
-              <div className="flex gap-2 pt-2">
-                <Button onClick={handleSave} disabled={loading} className="font-display text-xs">
-                  <Save className="w-3 h-3 mr-1" /> {selectedId ? 'Update' : 'Create'}
-                </Button>
-                <Button variant="outline" onClick={closePanel} className="font-display text-xs">
-                  <X className="w-3 h-3 mr-1" /> Cancel
-                </Button>
-              </div>
+              <AdminStickyActions onSave={handleSave} onCancel={closePanel} saveLabel={selectedId ? 'Update' : 'Create'} loading={loading} />
             </div>
           </ScrollArea>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground/50 text-sm italic font-display">
-            Select a creature to edit
-          </div>
+          <AdminEmptyState message="Select a creature to edit" />
         )}
       </div>
     </div>
