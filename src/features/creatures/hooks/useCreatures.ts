@@ -93,7 +93,7 @@ export async function reconcileNode(
   };
 }
 
-export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null) {
+export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null, onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [creaturesLoading, setCreaturesLoading] = useState(false);
   const [prefetchedCreatureCount, setPrefetchedCreatureCount] = useState(0);
@@ -115,17 +115,22 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
 
     if (!skipCatchup) {
       const t0 = performance.now();
-      const reconciled = await reconcileNode(nodeId, { force: true });
+      const result = await reconcileNode(nodeId, { force: true });
       const elapsed = performance.now() - t0;
-      console.log(`[creatures] catchup for ${nodeId}: ${elapsed.toFixed(0)}ms, ${reconciled.length} creatures`);
+      console.log(`[creatures] catchup for ${nodeId}: ${elapsed.toFixed(0)}ms, ${result.creatures.length} creatures`);
 
       // Set reconcile lock: only these creature IDs are valid for 500ms
-      const validIds = new Set(reconciled.map(c => c.id));
+      const validIds = new Set(result.creatures.map(c => c.id));
       reconcileLockRef.current = validIds;
       if (reconcileLockTimerRef.current) clearTimeout(reconcileLockTimerRef.current);
       reconcileLockTimerRef.current = setTimeout(() => { reconcileLockRef.current = null; }, 500);
 
-      setCreatures(reconciled);
+      setCreatures(result.creatures);
+
+      // Notify caller about any kill rewards from catchup
+      if (result.kill_rewards && result.kill_rewards.length > 0 && onCatchupRewards) {
+        onCatchupRewards(result.kill_rewards);
+      }
       prefetchCache.delete(nodeId);
       setCreaturesLoading(false);
       return;
@@ -252,9 +257,9 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
         // Reconcile nodes with active effects (selective wake-up)
         for (const nid of nodesWithEffects) {
           // Use the client throttle — won't spam
-          reconcileNode(nid).then(creatures => {
-            if (creatures.length > 0) {
-              prefetchCache.set(nid, { data: creatures, ts: Date.now() });
+          reconcileNode(nid).then(result => {
+            if (result.creatures.length > 0) {
+              prefetchCache.set(nid, { data: result.creatures, ts: Date.now() });
             }
           });
         }
