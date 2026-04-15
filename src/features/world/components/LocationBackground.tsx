@@ -44,7 +44,6 @@ export default function LocationBackground({ node, area, region }: LocationBackg
   }, [resolvedUrl]);
 
   // Preload adjacent node illustrations
-  const preloadAdjacentRef = useRef<Set<string>>(new Set());
   const preloadAdjacent = useCallback(() => {
     if (!node?.connections) return;
     // This could be extended to look up adjacent node illustration_urls
