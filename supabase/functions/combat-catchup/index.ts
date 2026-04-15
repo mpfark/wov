@@ -93,10 +93,10 @@ Deno.serve(async (req) => {
     if (!node_id) return json({ error: 'Missing node_id' }, 400);
 
     // ── Node proximity check ──────────────────────────────────────
-    // Verify the caller has a character at this node or an adjacent node
+    // Caller must have a character at, or adjacent to, the requested node.
     const { data: callerChars } = await db
       .from('characters')
-      .select('current_node_id')
+      .select('id, current_node_id')
       .eq('user_id', userId);
 
     if (!callerChars || callerChars.length === 0) {
@@ -107,11 +107,10 @@ Deno.serve(async (req) => {
       callerChars.map((c: any) => c.current_node_id).filter(Boolean)
     );
 
-    // Direct match — character is at the requested node
     let authorized = callerNodeIds.has(node_id);
 
-    // Adjacent match — character is at a node connected to the requested node
     if (!authorized) {
+      // Check adjacency: is the requested node connected to any of the caller's nodes?
       const { data: targetNode } = await db
         .from('nodes')
         .select('connections')
@@ -128,20 +127,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Party leader match — party leader is at or adjacent to the node
     if (!authorized) {
-      const { data: partyInfo } = await db
-        .from('party_members')
-        .select('party_id, party:parties(leader_id)')
-        .in('character_id', callerChars.map((c: any) => c.current_node_id ? undefined : null).length ? [] : 
-          (await db.from('characters').select('id').eq('user_id', userId)).data?.map((c: any) => c.id) || []
-        )
-        .eq('status', 'accepted')
-        .limit(1);
-      // Simplified: if not directly or adjacently at the node, deny
-      if (!authorized) {
-        return json({ error: 'Not authorized for this node' }, 403);
-      }
+      return json({ error: 'Not authorized for this node' }, 403);
     }
 
     // Snapshot-only mode: return raw effects + creatures without resolving
