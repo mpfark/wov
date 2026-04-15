@@ -4,14 +4,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { ChevronDown, Copy, Check, ImageIcon } from 'lucide-react';
-import { buildIllustrationPrompt, type IllustrationMetadata } from '@/lib/illustration-prompt';
+import { buildIllustrationPrompt } from '@/lib/illustration-prompt';
+import type { IllustrationMetadata } from '@/lib/illustration-prompt';
 import { AdminFormSection } from '@/components/admin/common';
+
+type MetadataRecord = Record<string, string>;
 
 interface IllustrationEditorProps {
   illustrationUrl: string;
   onUrlChange: (url: string) => void;
-  metadata: IllustrationMetadata;
-  onMetadataChange: (metadata: IllustrationMetadata) => void;
+  metadata: MetadataRecord;
+  onMetadataChange: (metadata: MetadataRecord) => void;
   inheritedUrl?: string;
   inheritedSource?: string;
 }
@@ -38,7 +41,7 @@ export default function IllustrationEditor({
   const effectiveUrl = illustrationUrl || inheritedUrl || '';
   const effectiveSource = illustrationUrl ? 'This entity' : inheritedSource || '';
 
-  const updateMeta = (key: keyof IllustrationMetadata, value: string) => {
+  const updateMeta = (key: string, value: string) => {
     onMetadataChange({ ...metadata, [key]: value });
   };
 
