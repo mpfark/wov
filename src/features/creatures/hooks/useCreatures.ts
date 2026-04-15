@@ -152,7 +152,7 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
       .eq('is_alive', true);
     if (data) setCreatures(data as Creature[]);
     setCreaturesLoading(false);
-  }, [nodeId]);
+  }, [nodeId, onCatchupRewards]);
 
   // Debounced fetch — prevents rapid-fire DB queries during combat
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
