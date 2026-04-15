@@ -22,6 +22,7 @@ export default function LocationBackground({ node, area, region }: LocationBackg
   useEffect(() => {
     if (!resolvedUrl) {
       setVisible(false);
+      prevUrlRef.current = '';
       const t = setTimeout(() => setLoadedUrl(''), 300);
       return () => clearTimeout(t);
     }
