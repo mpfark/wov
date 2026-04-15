@@ -192,6 +192,20 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
             <label className="text-xs text-muted-foreground font-display mb-1 block">Flavor Text</label>
             <Textarea placeholder="Atmospheric hints for AI generation..." value={form.flavor_text} onChange={e => setForm(f => ({ ...f, flavor_text: e.target.value }))} rows={3} className="text-xs" />
           </div>
+          <IllustrationEditor
+            illustrationUrl={form.illustration_url}
+            onUrlChange={url => setForm(f => ({ ...f, illustration_url: url }))}
+            metadata={form.illustration_metadata}
+            onMetadataChange={m => setForm(f => ({ ...f, illustration_metadata: m }))}
+            inheritedUrl={(() => {
+              const region = regions.find(r => r.id === form.region_id);
+              return (region as any)?.illustration_url || '';
+            })()}
+            inheritedSource={(() => {
+              const region = regions.find(r => r.id === form.region_id);
+              return (region as any)?.illustration_url ? 'Region' : '';
+            })()}
+          />
           <Button onClick={save} className="font-display text-xs w-full">
             <Save className="w-3 h-3 mr-1" /> {isNew ? 'Create Area' : 'Save Changes'}
           </Button>
