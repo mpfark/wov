@@ -36,10 +36,25 @@ const RECONCILE_THROTTLE_MS = 10_000;
  * Sends only { node_id } — the server recalculates everything from stored effect data.
  * Client-side throttle: max once per 10s per node (bypassed for force=true or partial retries).
  */
+export interface ReconcileResult {
+  creatures: Creature[];
+  kill_rewards?: Array<{
+    creature_name: string;
+    creature_level: number;
+    creature_rarity: string;
+    xp_each: number;
+    gold_each: number;
+    salvage_each: number;
+    bhp_each: number;
+    split_count: number;
+    primary_level: number;
+  }>;
+}
+
 export async function reconcileNode(
   nodeId: string,
   opts: { force?: boolean; _retryCount?: number; reason?: string } = {}
-): Promise<Creature[]> {
+): Promise<ReconcileResult> {
   const { force = false, _retryCount = 0, reason } = opts;
 
   // Client-side throttle (skip for force calls like node-entry, or partial retries)
@@ -47,7 +62,7 @@ export async function reconcileNode(
     const last = lastReconcileMap.get(nodeId);
     if (last && Date.now() - last < RECONCILE_THROTTLE_MS) {
       console.log(`[reconcileNode] throttled for ${nodeId}`);
-      return [];
+      return { creatures: [] };
     }
   }
 
@@ -59,7 +74,7 @@ export async function reconcileNode(
 
   if (error) {
     console.error('[reconcileNode] error:', error);
-    return [];
+    return { creatures: [] };
   }
 
   // Handle partial resolution: retry until complete (max 3 retries)
@@ -72,7 +87,10 @@ export async function reconcileNode(
     console.error(`[reconcileNode] partial resolution not resolved after 3 retries for ${nodeId}`);
   }
 
-  return (data?.creatures as Creature[]) ?? [];
+  return {
+    creatures: (data?.creatures as Creature[]) ?? [],
+    kill_rewards: data?.kill_rewards,
+  };
 }
 
 export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null) {
