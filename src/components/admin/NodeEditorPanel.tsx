@@ -886,6 +886,25 @@ export default function NodeEditorPanel({
                 </label>
               </div>
 
+              <IllustrationEditor
+                illustrationUrl={form.illustration_url}
+                onUrlChange={url => setForm(f => ({ ...f, illustration_url: url }))}
+                metadata={form.illustration_metadata}
+                onMetadataChange={m => setForm(f => ({ ...f, illustration_metadata: m }))}
+                inheritedUrl={(() => {
+                  const area = allAreas.find(a => a.id === form.area_id);
+                  if ((area as any)?.illustration_url) return (area as any).illustration_url;
+                  const region = regions.find(r => r.id === selectedRegionId);
+                  return (region as any)?.illustration_url || '';
+                })()}
+                inheritedSource={(() => {
+                  const area = allAreas.find(a => a.id === form.area_id);
+                  if ((area as any)?.illustration_url) return 'Area';
+                  const region = regions.find(r => r.id === selectedRegionId);
+                  return (region as any)?.illustration_url ? 'Region' : '';
+                })()}
+              />
+
               <div className="flex gap-2">
                 <Button onClick={saveNode} disabled={loading} className="font-display text-xs">
                   <Save className="w-3 h-3 mr-1" /> {activeNodeId ? 'Save' : 'Create'}
