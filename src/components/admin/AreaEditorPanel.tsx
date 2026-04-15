@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { useAreaTypes } from '@/features/world';
+import IllustrationEditor from './IllustrationEditor';
 
 interface Region {
   id: string;
@@ -29,16 +30,16 @@ interface Props {
 
 export default function AreaEditorPanel({ areaId, isNew, regions, areas, initialRegionId, onClose, onSaved, onDeleted }: Props) {
   const { areaTypes } = useAreaTypes();
-  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
+  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '', illustration_url: '', illustration_metadata: {} as Record<string, string> });
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (isNew) {
-      setForm({ name: '', description: '', region_id: initialRegionId || regions[0]?.id || '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '' });
+      setForm({ name: '', description: '', region_id: initialRegionId || regions[0]?.id || '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '', illustration_url: '', illustration_metadata: {} });
     } else if (areaId) {
       const area = areas.find(a => a.id === areaId);
       if (area) {
-        setForm({ name: area.name, description: area.description, region_id: area.region_id, area_type: area.area_type, min_level: area.min_level ?? 0, max_level: area.max_level ?? 0, creature_types: area.creature_types ?? '', flavor_text: area.flavor_text ?? '' });
+        setForm({ name: area.name, description: area.description, region_id: area.region_id, area_type: area.area_type, min_level: area.min_level ?? 0, max_level: area.max_level ?? 0, creature_types: area.creature_types ?? '', flavor_text: area.flavor_text ?? '', illustration_url: (area as any).illustration_url || '', illustration_metadata: (area as any).illustration_metadata || {} });
       }
     }
   }, [areaId, isNew, initialRegionId]);
@@ -87,6 +88,8 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
         max_level: form.max_level,
         creature_types: form.creature_types.trim(),
         flavor_text: form.flavor_text.trim(),
+        illustration_url: form.illustration_url,
+        illustration_metadata: form.illustration_metadata,
       } as any);
       if (error) return toast.error(error.message);
       toast.success('Area created');
@@ -100,6 +103,8 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
         max_level: form.max_level,
         creature_types: form.creature_types.trim(),
         flavor_text: form.flavor_text.trim(),
+        illustration_url: form.illustration_url,
+        illustration_metadata: form.illustration_metadata,
       } as any).eq('id', areaId);
       if (error) return toast.error(error.message);
       toast.success('Area updated');
@@ -186,6 +191,20 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
             <label className="text-xs text-muted-foreground font-display mb-1 block">Flavor Text</label>
             <Textarea placeholder="Atmospheric hints for AI generation..." value={form.flavor_text} onChange={e => setForm(f => ({ ...f, flavor_text: e.target.value }))} rows={3} className="text-xs" />
           </div>
+          <IllustrationEditor
+            illustrationUrl={form.illustration_url}
+            onUrlChange={url => setForm(f => ({ ...f, illustration_url: url }))}
+            metadata={form.illustration_metadata}
+            onMetadataChange={m => setForm(f => ({ ...f, illustration_metadata: m }))}
+            inheritedUrl={(() => {
+              const region = regions.find(r => r.id === form.region_id);
+              return (region as any)?.illustration_url || '';
+            })()}
+            inheritedSource={(() => {
+              const region = regions.find(r => r.id === form.region_id);
+              return (region as any)?.illustration_url ? 'Region' : '';
+            })()}
+          />
           <Button onClick={save} className="font-display text-xs w-full">
             <Save className="w-3 h-3 mr-1" /> {isNew ? 'Create Area' : 'Save Changes'}
           </Button>

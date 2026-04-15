@@ -15,6 +15,7 @@ import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
 import CreaturePicker from './CreaturePicker';
 import ItemPicker from './ItemPicker';
+import IllustrationEditor from './IllustrationEditor';
 
 interface VendorEntry {
   id: string;
@@ -413,6 +414,7 @@ export default function NodeEditorPanel({
     name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
+    illustration_url: '', illustration_metadata: {} as Record<string, string>,
   });
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
   const { areaTypes, emojiMap: _areaTypeEmoji, refetch: _refetchAreaTypes } = useAreaTypes();
@@ -502,7 +504,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, connections: '[]', searchable_items: [], area_id: '' });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -524,6 +526,8 @@ export default function NodeEditorPanel({
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
         area_id: (data as any).area_id || '',
+        illustration_url: (data as any).illustration_url || '',
+        illustration_metadata: (data as any).illustration_metadata || {},
       });
       setSelectedRegionId(data.region_id);
     }
@@ -684,6 +688,8 @@ export default function NodeEditorPanel({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
         is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, connections, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
+        illustration_url: form.illustration_url,
+        illustration_metadata: form.illustration_metadata,
       } as any).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
@@ -709,6 +715,8 @@ export default function NodeEditorPanel({
         name: form.name, description: form.description, region_id: selectedRegionId,
         is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, connections, searchable_items,
         area_id: form.area_id || null,
+        illustration_url: form.illustration_url,
+        illustration_metadata: form.illustration_metadata,
         x: newX, y: newY,
       } as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -877,6 +885,25 @@ export default function NodeEditorPanel({
                   🏋️ Is Boss Trainer (BHP attribute training, Lv30+)
                 </label>
               </div>
+
+              <IllustrationEditor
+                illustrationUrl={form.illustration_url}
+                onUrlChange={url => setForm(f => ({ ...f, illustration_url: url }))}
+                metadata={form.illustration_metadata}
+                onMetadataChange={m => setForm(f => ({ ...f, illustration_metadata: m }))}
+                inheritedUrl={(() => {
+                  const area = allAreas.find(a => a.id === form.area_id);
+                  if ((area as any)?.illustration_url) return (area as any).illustration_url;
+                  const region = regions.find(r => r.id === selectedRegionId);
+                  return (region as any)?.illustration_url || '';
+                })()}
+                inheritedSource={(() => {
+                  const area = allAreas.find(a => a.id === form.area_id);
+                  if ((area as any)?.illustration_url) return 'Area';
+                  const region = regions.find(r => r.id === selectedRegionId);
+                  return (region as any)?.illustration_url ? 'Region' : '';
+                })()}
+              />
 
               <div className="flex gap-2">
                 <Button onClick={saveNode} disabled={loading} className="font-display text-xs">

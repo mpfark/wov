@@ -123,6 +123,8 @@ export type Database = {
           description: string
           flavor_text: string
           id: string
+          illustration_metadata: Json | null
+          illustration_url: string | null
           max_level: number
           min_level: number
           name: string
@@ -135,6 +137,8 @@ export type Database = {
           description?: string
           flavor_text?: string
           id?: string
+          illustration_metadata?: Json | null
+          illustration_url?: string | null
           max_level?: number
           min_level?: number
           name: string
@@ -147,6 +151,8 @@ export type Database = {
           description?: string
           flavor_text?: string
           id?: string
+          illustration_metadata?: Json | null
+          illustration_url?: string | null
           max_level?: number
           min_level?: number
           name?: string
@@ -912,6 +918,8 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          illustration_metadata: Json | null
+          illustration_url: string | null
           is_blacksmith: boolean
           is_inn: boolean
           is_teleport: boolean
@@ -929,6 +937,8 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          illustration_metadata?: Json | null
+          illustration_url?: string | null
           is_blacksmith?: boolean
           is_inn?: boolean
           is_teleport?: boolean
@@ -946,6 +956,8 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          illustration_metadata?: Json | null
+          illustration_url?: string | null
           is_blacksmith?: boolean
           is_inn?: boolean
           is_teleport?: boolean
@@ -1158,6 +1170,8 @@ export type Database = {
           description: string
           direction: string | null
           id: string
+          illustration_metadata: Json | null
+          illustration_url: string | null
           max_level: number
           min_level: number
           name: string
@@ -1168,6 +1182,8 @@ export type Database = {
           description?: string
           direction?: string | null
           id?: string
+          illustration_metadata?: Json | null
+          illustration_url?: string | null
           max_level?: number
           min_level?: number
           name: string
@@ -1178,6 +1194,8 @@ export type Database = {
           description?: string
           direction?: string | null
           id?: string
+          illustration_metadata?: Json | null
+          illustration_url?: string | null
           max_level?: number
           min_level?: number
           name?: string

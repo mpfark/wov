@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, Sparkles, Loader2 } from 'lucide-react';
+import IllustrationEditor from './IllustrationEditor';
 
 interface Region {
   id: string;
@@ -24,7 +25,7 @@ interface Props {
 
 export default function RegionEditorPanel({ regionId, regions, onClose, onSaved }: Props) {
   const region = regions.find(r => r.id === regionId);
-  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10 });
+  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10, illustration_url: '', illustration_metadata: {} as Record<string, string> });
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
@@ -34,6 +35,8 @@ export default function RegionEditorPanel({ regionId, regions, onClose, onSaved 
         description: region.description,
         min_level: region.min_level,
         max_level: region.max_level,
+        illustration_url: (region as any).illustration_url || '',
+        illustration_metadata: (region as any).illustration_metadata || {},
       });
     }
   }, [regionId, region]);
@@ -68,7 +71,9 @@ export default function RegionEditorPanel({ regionId, regions, onClose, onSaved 
       description: form.description,
       min_level: form.min_level,
       max_level: form.max_level,
-    }).eq('id', regionId);
+      illustration_url: form.illustration_url,
+      illustration_metadata: form.illustration_metadata,
+    } as any).eq('id', regionId);
     if (error) return toast.error(error.message);
     toast.success('Region updated');
     onSaved();
@@ -112,6 +117,12 @@ export default function RegionEditorPanel({ regionId, regions, onClose, onSaved 
           <Button onClick={save} className="font-display text-xs w-full">
             <Save className="w-3 h-3 mr-1" /> Save Changes
           </Button>
+          <IllustrationEditor
+            illustrationUrl={form.illustration_url}
+            onUrlChange={url => setForm(f => ({ ...f, illustration_url: url }))}
+            metadata={form.illustration_metadata}
+            onMetadataChange={m => setForm(f => ({ ...f, illustration_metadata: m }))}
+          />
         </div>
       </ScrollArea>
     </div>
