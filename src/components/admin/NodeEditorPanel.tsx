@@ -15,6 +15,7 @@ import ItemPickerList from './ItemPickerList';
 import NodePicker from './NodePicker';
 import CreaturePicker from './CreaturePicker';
 import ItemPicker from './ItemPicker';
+import IllustrationEditor from './IllustrationEditor';
 
 interface VendorEntry {
   id: string;
