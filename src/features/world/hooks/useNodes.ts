@@ -14,6 +14,8 @@ export interface Area {
   max_level?: number;
   creature_types?: string;
   flavor_text?: string;
+  illustration_url?: string;
+  illustration_metadata?: Record<string, string>;
 }
 
 export interface GameNode {
@@ -31,6 +33,8 @@ export interface GameNode {
   area_id?: string | null;
   x: number;
   y: number;
+  illustration_url?: string;
+  illustration_metadata?: Record<string, string>;
 }
 
 export interface Region {
@@ -39,6 +43,8 @@ export interface Region {
   description: string;
   min_level: number;
   max_level: number;
+  illustration_url?: string;
+  illustration_metadata?: Record<string, string>;
 }
 
 /** Get the display name for a node: node.name if set, otherwise area name, otherwise fallback */
