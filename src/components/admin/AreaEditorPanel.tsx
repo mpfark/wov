@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 import { X, Save, Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { useAreaTypes } from '@/features/world';
 import IllustrationEditor from './IllustrationEditor';
-import type { IllustrationMetadata } from '@/lib/illustration-prompt';
 
 interface Region {
   id: string;
@@ -31,7 +30,7 @@ interface Props {
 
 export default function AreaEditorPanel({ areaId, isNew, regions, areas, initialRegionId, onClose, onSaved, onDeleted }: Props) {
   const { areaTypes } = useAreaTypes();
-  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '', illustration_url: '', illustration_metadata: {} as IllustrationMetadata });
+  const [form, setForm] = useState({ name: '', description: '', region_id: '', area_type: 'other', min_level: 0, max_level: 0, creature_types: '', flavor_text: '', illustration_url: '', illustration_metadata: {} as Record<string, string> });
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {

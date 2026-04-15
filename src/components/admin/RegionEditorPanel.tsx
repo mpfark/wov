@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, Sparkles, Loader2 } from 'lucide-react';
 import IllustrationEditor from './IllustrationEditor';
-import type { IllustrationMetadata } from '@/lib/illustration-prompt';
 
 interface Region {
   id: string;
@@ -26,7 +25,7 @@ interface Props {
 
 export default function RegionEditorPanel({ regionId, regions, onClose, onSaved }: Props) {
   const region = regions.find(r => r.id === regionId);
-  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10, illustration_url: '', illustration_metadata: {} as IllustrationMetadata });
+  const [form, setForm] = useState({ name: '', description: '', min_level: 1, max_level: 10, illustration_url: '', illustration_metadata: {} as Record<string, string> });
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
