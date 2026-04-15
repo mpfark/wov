@@ -173,276 +173,278 @@ export default function NodeView({
           </p>
         </div>
 
-        {/* Floating heartbeat indicator — visible during combat or DoT drain */}
-        {lastTickTime && (Date.now() - lastTickTime < 4000 || inCombat) && (
-          <div className="flex justify-center py-0.5">
-            <HeartbeatIndicator lastTickTime={lastTickTime} />
-          </div>
-        )}
+        <div className="relative z-10">
+          {/* Floating heartbeat indicator — visible during combat or DoT drain */}
+          {lastTickTime && (Date.now() - lastTickTime < 4000 || inCombat) && (
+            <div className="flex justify-center py-0.5">
+              <HeartbeatIndicator lastTickTime={lastTickTime} />
+            </div>
+          )}
 
-        {/* In the Area - sticks above action bar, outside scrollable area */}
-        {hasAreaContent && (
-          <Collapsible open={areaOpen} onOpenChange={setAreaOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
-              <h3 className="font-display text-xs text-muted-foreground">In the Area</h3>
-              <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${areaOpen ? '' : '-rotate-90'}`} />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="space-y-1">
-                {creatures.map(c => {
-                  const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
-                  const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
-                  const isSelected = !isActiveTarget && !isEngaged && selectedTargetId === c.id;
-                  const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
-                  const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
-                  const creaturePoisonStacks = poisonStacks[c.id];
-                  const hasPoisonStacks = creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
-                  const creatureIgniteStacks = igniteStacks[c.id];
-                  const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
-                   const creatureSunder = sunderDebuff?.[c.id];
-                   const isSundered = creatureSunder && Date.now() < creatureSunder.expiresAt;
-                  const creatureBleed = bleedStacks[c.id];
-                  const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
-                  const isFlashing = flashingIds.has(c.id);
-                  return (
-                    <div key={c.id} className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
-                      <div className="flex items-center gap-1.5">
-                        {/* Left: Name, level, debuffs */}
-                        <span className={`text-xs font-display truncate ${
-                          c.rarity === 'boss' ? 'text-primary text-glow' :
-                          c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
-                        }`}>{c.name}</span>
-                        {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive">⚠️</span>}
-                        <span className="text-[10px] text-muted-foreground">L{c.level}</span>
-                        {hasPoisonStacks && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-[10px] text-elvish font-display animate-pulse">
-                                🧪×{creaturePoisonStacks!.stacks}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">
-                              Poison: {creaturePoisonStacks!.stacks} stack{creaturePoisonStacks!.stacks > 1 ? 's' : ''} — {creaturePoisonStacks!.stacks * creaturePoisonStacks!.damagePerTick} dmg/tick
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {hasIgniteStacks && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dwarvish font-display animate-flicker">
-                                🔥×{creatureIgniteStacks!.stacks}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">
-                              Burn: {creatureIgniteStacks!.stacks} stack{creatureIgniteStacks!.stacks > 1 ? 's' : ''} — {creatureIgniteStacks!.stacks * creatureIgniteStacks!.damagePerTick} dmg/tick
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {isBleeding && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dot-bleed font-display animate-drip">
-                                🩸
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">
-                              Rend: {creatureBleed!.damagePerTick} dmg/tick
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {isSundered && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-[10px] text-dwarvish font-display">
-                                🔨
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="text-xs">
-                              Sundered: AC reduced by {creatureSunder!.acReduction}
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {/* Right: combat icon, HP bar, HP numbers, attack button */}
-                        <div className="ml-auto flex items-center gap-1 shrink-0">
-                          {(isActiveTarget || isEngaged) && (
-                            <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}>⚔️</span>
+          {/* In the Area - sticks above action bar, outside scrollable area */}
+          {hasAreaContent && (
+            <Collapsible open={areaOpen} onOpenChange={setAreaOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
+                <h3 className="font-display text-xs text-muted-foreground">In the Area</h3>
+                <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${areaOpen ? '' : '-rotate-90'}`} />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-1">
+                  {creatures.map(c => {
+                    const isActiveTarget = inCombat && activeCombatCreatureId === c.id;
+                    const isEngaged = inCombat && engagedCreatureIds.includes(c.id);
+                    const isSelected = !isActiveTarget && !isEngaged && selectedTargetId === c.id;
+                    const displayHp = creatureHpOverrides[c.id] !== undefined ? creatureHpOverrides[c.id] : c.hp;
+                    const hpPct = Math.max((displayHp / c.max_hp) * 100, 0);
+                    const creaturePoisonStacks = poisonStacks[c.id];
+                    const hasPoisonStacks = creaturePoisonStacks && Date.now() < creaturePoisonStacks.expiresAt && creaturePoisonStacks.stacks > 0;
+                    const creatureIgniteStacks = igniteStacks[c.id];
+                    const hasIgniteStacks = creatureIgniteStacks && Date.now() < creatureIgniteStacks.expiresAt && creatureIgniteStacks.stacks > 0;
+                     const creatureSunder = sunderDebuff?.[c.id];
+                     const isSundered = creatureSunder && Date.now() < creatureSunder.expiresAt;
+                    const creatureBleed = bleedStacks[c.id];
+                    const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
+                    const isFlashing = flashingIds.has(c.id);
+                    return (
+                      <div key={c.id} className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
+                        <div className="flex items-center gap-1.5">
+                          {/* Left: Name, level, debuffs */}
+                          <span className={`text-xs font-display truncate ${
+                            c.rarity === 'boss' ? 'text-primary text-glow' :
+                            c.rarity === 'rare' ? 'text-dwarvish' : 'text-foreground'
+                          }`}>{c.name}</span>
+                          {c.is_aggressive && <span className="text-[10px] text-destructive" title="Aggressive">⚠️</span>}
+                          <span className="text-[10px] text-muted-foreground">L{c.level}</span>
+                          {hasPoisonStacks && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-[10px] text-elvish font-display animate-pulse">
+                                  🧪×{creaturePoisonStacks!.stacks}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                Poison: {creaturePoisonStacks!.stacks} stack{creaturePoisonStacks!.stacks > 1 ? 's' : ''} — {creaturePoisonStacks!.stacks * creaturePoisonStacks!.damagePerTick} dmg/tick
+                              </TooltipContent>
+                            </Tooltip>
                           )}
-                          {isSelected && !isActiveTarget && !isEngaged && (
-                            <span className="text-[10px] text-primary">🎯</span>
+                          {hasIgniteStacks && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-[10px] text-dwarvish font-display animate-flicker">
+                                  🔥×{creatureIgniteStacks!.stacks}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                Burn: {creatureIgniteStacks!.stacks} stack{creatureIgniteStacks!.stacks > 1 ? 's' : ''} — {creatureIgniteStacks!.stacks * creatureIgniteStacks!.damagePerTick} dmg/tick
+                              </TooltipContent>
+                            </Tooltip>
                           )}
-                          <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
-                            <div
-                              className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
-                              style={{
-                                width: `${hpPct}%`,
-                                backgroundColor: isBleeding
-                                  ? 'hsl(var(--dot-bleed))'
-                                  : hasIgniteStacks
-                                  ? 'hsl(var(--dwarvish))'
-                                  : hasPoisonStacks
-                                  ? 'hsl(var(--elvish))'
-                                  : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
-                              }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
-                          {!isActiveTarget && !isEngaged && !isSelected && (
-                            <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
-                              {CLASS_COMBAT[character.class]?.label || 'Atk'}
-                            </Button>
+                          {isBleeding && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-[10px] text-dot-bleed font-display animate-drip">
+                                  🩸
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                Rend: {creatureBleed!.damagePerTick} dmg/tick
+                              </TooltipContent>
+                            </Tooltip>
                           )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                {npcs.map(npc => (
-                  <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
-                    <div className="min-w-0">
-                      <span className="text-xs font-display text-elvish">💬 {npc.name}</span>
-                      {npc.description && <span className="text-[10px] text-muted-foreground ml-1 truncate">{npc.description}</span>}
-                    </div>
-                    <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-[10px] h-5 px-1.5 border-elvish/50 text-elvish ml-1 shrink-0">
-                      Talk
-                    </Button>
-                  </div>
-                ))}
-                {otherPlayers.map(p => {
-                  const isPartyMate = partyMemberIds?.has(p.id);
-                  const hpData = partyMemberHp?.get(p.id);
-                  return (
-                    <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          className="text-xs font-display text-primary truncate text-left hover:underline cursor-pointer"
-                          onClick={() => setInspectPlayer({ id: p.id, name: p.name, level: p.level, race: p.race, class: p.class, gender: p.gender })}
-                        >
-                          {getCharacterTitle(p.level, p.gender) && <span className="text-primary/60 text-[9px] mr-0.5">{getCharacterTitle(p.level, p.gender)}</span>}
-                          {p.name}
-                        </button>
-                        <span className="text-[10px] text-muted-foreground">L{p.level}</span>
-                        {isPartyMate && hpData && (
+                          {isSundered && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-[10px] text-dwarvish font-display">
+                                  🔨
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                Sundered: AC reduced by {creatureSunder!.acReduction}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {/* Right: combat icon, HP bar, HP numbers, attack button */}
                           <div className="ml-auto flex items-center gap-1 shrink-0">
+                            {(isActiveTarget || isEngaged) && (
+                              <span className={`text-[10px] ${isActiveTarget ? 'text-destructive' : 'text-dwarvish'}`}>⚔️</span>
+                            )}
+                            {isSelected && !isActiveTarget && !isEngaged && (
+                              <span className="text-[10px] text-primary">🎯</span>
+                            )}
                             <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
                               <div
-                                className="h-full rounded-full transition-all duration-200"
+                                className="h-full rounded-full transition-[width] duration-300 transition-colors duration-700"
                                 style={{
-                                  width: `${Math.max((hpData.hp / hpData.max_hp) * 100, 0)}%`,
-                                  backgroundColor: (hpData.hp / hpData.max_hp) > 0.5 ? 'hsl(var(--elvish))' : (hpData.hp / hpData.max_hp) > 0.25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
+                                  width: `${hpPct}%`,
+                                  backgroundColor: isBleeding
+                                    ? 'hsl(var(--dot-bleed))'
+                                    : hasIgniteStacks
+                                    ? 'hsl(var(--dwarvish))'
+                                    : hasPoisonStacks
+                                    ? 'hsl(var(--elvish))'
+                                    : hpPct > 50 ? 'hsl(var(--elvish))' : hpPct > 25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
                                 }}
                               />
                             </div>
-                            <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{hpData.hp}/{hpData.max_hp}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
-        {/* Ground Loot */}
-        {groundLoot.length > 0 && (
-          <Collapsible defaultOpen>
-            <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
-              <h3 className="font-display text-xs text-muted-foreground">On the Ground ({groundLoot.length})</h3>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {groundLoot.map(g => {
-                   const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
-                    g.item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground';
-                  const statEntries = Object.entries(g.item.stats || {}).filter(([, v]) => v !== 0);
-                  return (
-                    <div key={g.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-border">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="min-w-0 flex-1 cursor-default">
-                            <span className={`text-xs font-display truncate ${rarityColor}`}>{g.item.name}</span>
-                            {g.creature_name && (
-                              <span className="text-[9px] text-muted-foreground ml-1">from {g.creature_name}</span>
+                            <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
+                            {!isActiveTarget && !isEngaged && !isSelected && (
+                              <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
+                                {CLASS_COMBAT[character.class]?.label || 'Atk'}
+                              </Button>
                             )}
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="left" className="text-xs max-w-[200px] space-y-0.5">
-                          <p className={`font-display ${rarityColor}`}>{g.item.name}</p>
-                          <p className="text-[10px] text-muted-foreground capitalize">
-                            {g.item.slot ? `${g.item.slot.replace('_', ' ')} · ` : ''}{g.item.item_type} · {g.item.rarity}
-                          </p>
-                          {g.item.description && <p className="text-[10px] italic text-foreground/70">{g.item.description}</p>}
-                          {statEntries.length > 0 && (
-                            <div className="text-[10px]">
-                              {statEntries.map(([k, v]) => (
-                                <span key={k} className="mr-1.5 text-elvish">{k.toUpperCase()} {v > 0 ? '+' : ''}{v}</span>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-[10px] text-dwarvish">{g.item.value}g</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <Button size="sm" variant="outline" onClick={() => onPickUpLoot?.(g.id)} className="font-display text-[10px] h-5 px-1.5 ml-1 shrink-0">
-                        Pick Up
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {npcs.map(npc => (
+                    <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
+                      <div className="min-w-0">
+                        <span className="text-xs font-display text-elvish">💬 {npc.name}</span>
+                        {npc.description && <span className="text-[10px] text-muted-foreground ml-1 truncate">{npc.description}</span>}
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-[10px] h-5 px-1.5 border-elvish/50 text-elvish ml-1 shrink-0">
+                        Talk
                       </Button>
                     </div>
+                  ))}
+                  {otherPlayers.map(p => {
+                    const isPartyMate = partyMemberIds?.has(p.id);
+                    const hpData = partyMemberHp?.get(p.id);
+                    return (
+                      <div key={p.id} className={`p-1.5 bg-background/50 rounded border ${isPartyMate ? 'border-elvish/40' : 'border-primary/30'}`}>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            className="text-xs font-display text-primary truncate text-left hover:underline cursor-pointer"
+                            onClick={() => setInspectPlayer({ id: p.id, name: p.name, level: p.level, race: p.race, class: p.class, gender: p.gender })}
+                          >
+                            {getCharacterTitle(p.level, p.gender) && <span className="text-primary/60 text-[9px] mr-0.5">{getCharacterTitle(p.level, p.gender)}</span>}
+                            {p.name}
+                          </button>
+                          <span className="text-[10px] text-muted-foreground">L{p.level}</span>
+                          {isPartyMate && hpData && (
+                            <div className="ml-auto flex items-center gap-1 shrink-0">
+                              <div className="w-[120px] h-2 bg-background rounded-full overflow-hidden border border-border">
+                                <div
+                                  className="h-full rounded-full transition-all duration-200"
+                                  style={{
+                                    width: `${Math.max((hpData.hp / hpData.max_hp) * 100, 0)}%`,
+                                    backgroundColor: (hpData.hp / hpData.max_hp) > 0.5 ? 'hsl(var(--elvish))' : (hpData.hp / hpData.max_hp) > 0.25 ? 'hsl(var(--dwarvish))' : 'hsl(var(--destructive))',
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{hpData.hp}/{hpData.max_hp}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Ground Loot */}
+          {groundLoot.length > 0 && (
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="flex items-center justify-between w-full py-1">
+                <h3 className="font-display text-xs text-muted-foreground">On the Ground ({groundLoot.length})</h3>
+                <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {groundLoot.map(g => {
+                     const rarityColor = g.item.rarity === 'unique' ? 'text-primary text-glow' :
+                      g.item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground';
+                    const statEntries = Object.entries(g.item.stats || {}).filter(([, v]) => v !== 0);
+                    return (
+                      <div key={g.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-border">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="min-w-0 flex-1 cursor-default">
+                              <span className={`text-xs font-display truncate ${rarityColor}`}>{g.item.name}</span>
+                              {g.creature_name && (
+                                <span className="text-[9px] text-muted-foreground ml-1">from {g.creature_name}</span>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="text-xs max-w-[200px] space-y-0.5">
+                            <p className={`font-display ${rarityColor}`}>{g.item.name}</p>
+                            <p className="text-[10px] text-muted-foreground capitalize">
+                              {g.item.slot ? `${g.item.slot.replace('_', ' ')} · ` : ''}{g.item.item_type} · {g.item.rarity}
+                            </p>
+                            {g.item.description && <p className="text-[10px] italic text-foreground/70">{g.item.description}</p>}
+                            {statEntries.length > 0 && (
+                              <div className="text-[10px]">
+                                {statEntries.map(([k, v]) => (
+                                  <span key={k} className="mr-1.5 text-elvish">{k.toUpperCase()} {v > 0 ? '+' : ''}{v}</span>
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-[10px] text-dwarvish">{g.item.value}g</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Button size="sm" variant="outline" onClick={() => onPickUpLoot?.(g.id)} className="font-display text-[10px] h-5 px-1.5 ml-1 shrink-0">
+                          Pick Up
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
+          {/* Status Bars — above action bar */}
+          {statusBarsProps && (
+            <div className="pt-1.5 border-t border-border mt-1">
+              <StatusBarsStrip character={character} {...statusBarsProps} />
+            </div>
+          )}
+
+          {/* Compact Action Bar - pinned to bottom */}
+          <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
+            {/* Row 3: Abilities */}
+            {classAbilities.length > 0 && onUseAbility && (
+              <div className="flex flex-wrap items-center gap-1 justify-center">
+                {classAbilities.map((ability, idx) => {
+                  const levelLocked = character.level < ability.levelRequired;
+                  const notEnoughCp = (character.cp ?? 0) < ability.cpCost;
+                  const needsTarget = ability.type === 'hp_transfer';
+                  const selfFallback = ability.type === 'ally_absorb' ? character.id : undefined;
+                  const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
+                  const disableNoTarget = needsTarget && !resolvedTarget;
+                  return (
+                    <Tooltip key={idx}>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onUseAbility(idx, resolvedTarget)}
+                            disabled={levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
+                            className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
+                          >
+                            {ability.emoji} {ability.label}
+                            {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && !levelLocked && !notEnoughCp && (
+                              <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`ability${idx + 1}` as keyof ActionBindings][0])}]</span>
+                            )}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs max-w-[200px]">
+                        {levelLocked
+                          ? `Unlocks at level ${ability.levelRequired}`
+                          : `${ability.description} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
+                        }
+                      </TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
-        {/* Status Bars — above action bar */}
-        {statusBarsProps && (
-          <div className="pt-1.5 border-t border-border mt-1">
-            <StatusBarsStrip character={character} {...statusBarsProps} />
+            )}
           </div>
-        )}
-
-        {/* Compact Action Bar - pinned to bottom */}
-        <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
-          {/* Row 3: Abilities */}
-          {classAbilities.length > 0 && onUseAbility && (
-            <div className="flex flex-wrap items-center gap-1 justify-center">
-              {classAbilities.map((ability, idx) => {
-                const levelLocked = character.level < ability.levelRequired;
-                const notEnoughCp = (character.cp ?? 0) < ability.cpCost;
-                const needsTarget = ability.type === 'hp_transfer';
-                const selfFallback = ability.type === 'ally_absorb' ? character.id : undefined;
-                const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
-                const disableNoTarget = needsTarget && !resolvedTarget;
-                return (
-                  <Tooltip key={idx}>
-                    <TooltipTrigger asChild>
-                      <span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onUseAbility(idx, resolvedTarget)}
-                          disabled={levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
-                          className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
-                        >
-                          {ability.emoji} {ability.label}
-                          {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && !levelLocked && !notEnoughCp && (
-                            <span className="ml-0.5 text-[8px] text-muted-foreground">[{getKeyLabel(actionBindings[`ability${idx + 1}` as keyof ActionBindings][0])}]</span>
-                          )}
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs max-w-[200px]">
-                      {levelLocked
-                        ? `Unlocks at level ${ability.levelRequired}`
-                        : `${ability.description} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
-                      }
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          )}
         </div>
         <InspectPlayerDialog
           player={inspectPlayer}
