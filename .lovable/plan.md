@@ -1,26 +1,44 @@
 
 
-# Fix: Status Bars Hidden Behind Background + Travel Loading Bug
+# Generate Placeholder Illustrations for Area Types
 
-## Issues Found
+## Confirmation
 
-### 1. Status bars hidden behind illustration
-In `NodeView.tsx`, the scrollable content div (line 147) has `relative z-10` to sit above the background, but the **StatusBarsStrip** (line 399-403), **HeartbeatIndicator** (line 177-181), **"In the Area" section** (line 184-396), and **Action Bar** (line 405-446) are all siblings outside that z-10 div. They render at the default stacking level and get covered by the `LocationBackground` overlay.
+Yes — the `background-images` public storage bucket is exactly the right place to store these. You can reference images via:
+```
+https://gpclaklkaolyzfnooajt.supabase.co/storage/v1/object/public/background-images/<filename>
+```
 
-**Fix**: Add `relative z-10` to the outer flex container (line 144) so all content sits above the background, or wrap the non-scrollable sections in a `relative z-10` as well.
+## Area Types (14 total)
 
-### 2. Background doesn't load when traveling from no-illustration to illustration
-In `LocationBackground.tsx`, when `resolvedUrl` becomes empty (line 23-27), the code fades out and clears `loadedUrl` but **does not reset `prevUrlRef.current`**. So when the player then travels to a node that resolves to the same URL that was previously shown (e.g., same area illustration), the check on line 29 (`resolvedUrl === prevUrlRef.current`) returns `true` and skips loading entirely.
+| Type | Emoji | Prompt Theme |
+|------|-------|-------------|
+| camp | 🏕️ | Adventurer's campsite in a forest clearing |
+| cave | 🕳️ | Dark cavern entrance with stalactites |
+| coast | 🌊 | Rocky shoreline with crashing waves |
+| desert | 🏜️ | Vast sand dunes under a blazing sun |
+| dungeon | ⚔️ | Stone dungeon corridor with torchlight |
+| forest | 🌲 | Dense old-growth forest with dappled light |
+| hideout | 🏕️ | Hidden outlaw camp in a ravine |
+| mountain | ⛰️ | Rugged mountain pass with snow-capped peaks |
+| other | 📍 | Generic fantasy waypoint, misty crossroads |
+| plains | 🌾 | Rolling grasslands under open sky |
+| ruins | 🏚️ | Crumbling ancient stone ruins overgrown with vines |
+| swamp | 🌿 | Murky marshland with twisted trees |
+| town | 🏘️ | Medieval fantasy village with cobblestone streets |
+| trail | 🏃 | Winding dirt path through wilderness |
 
-**Fix**: Reset `prevUrlRef.current = ''` when the URL becomes empty.
+## Implementation
 
-## Changes
+1. **Generate 14 images** using the AI image generation skill (`google/gemini-3-pro-image-preview` for high quality). Each prompt will follow the style: *"High-fantasy environment, [theme]. Richly detailed, atmospheric lighting, cinematic composition, digital painting, 16:9 aspect ratio, no text, no characters."*
 
-### `src/features/world/components/NodeView.tsx`
-- Line 144: Change the outer div to include `relative` so all child content (status bars, action bar, creatures) stacks above the background. The `LocationBackground` already uses `absolute inset-0 z-0`.
+2. **Upload each image** to the `background-images` bucket with filenames like `area-type-forest.png`, `area-type-cave.png`, etc.
 
-### `src/features/world/components/LocationBackground.tsx`
-- Inside the `if (!resolvedUrl)` branch (line 23-27): add `prevUrlRef.current = ''` so the ref resets when there's no illustration, preventing the stale-ref skip on the next navigation.
+3. **Output a reference list** mapping each area type to its public URL so you can assign them to areas in the admin panel.
 
-Both are one-line fixes.
+## Technical Notes
+
+- Images generated one at a time due to rate limits (~1-2 min each, ~20-25 min total)
+- Output as PNG, stored in the existing public `background-images` bucket
+- No code changes needed — these are just assets you assign via the admin IllustrationEditor
 
