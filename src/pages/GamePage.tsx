@@ -117,13 +117,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (r.bhp_each > 0) parts.push(`${r.bhp_each} BHP`);
       bus.emit('log:local', { message: `☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.` });
     }
-    updateCharacterLocal(prev => ({
-      ...prev,
-      xp: prev.xp + totalXp,
-      gold: prev.gold + totalGold,
-      salvage: prev.salvage + totalSalvage,
-      bhp: prev.bhp + totalBhp,
-    }));
+    updateCharacterLocal({
+      xp: character.xp + totalXp,
+      gold: character.gold + totalGold,
+      salvage: character.salvage + totalSalvage,
+      bhp: character.bhp + totalBhp,
+    });
   }, [bus, updateCharacterLocal]);
   const { creatures, creaturesLoading } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards);
   const creatureNameResolver = useCallback((creatureId: string) => {
