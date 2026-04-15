@@ -144,7 +144,7 @@ export default function NodeView({
        <div className={`h-full flex flex-col p-3 relative${combatFlash ? ' combat-start-flash' : ''}`}>
         <LocationBackground node={node} area={area} region={region} />
         {/* Scrollable content - only header & description */}
-        <div className="flex-1 min-h-0 overflow-y-auto space-y-2">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 relative z-10">
           {/* Location Header */}
            <div className="text-center border-b border-border pb-2">
             <h2
