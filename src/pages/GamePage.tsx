@@ -102,7 +102,29 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { playersHere } = nodeChannel;
   const { onlinePlayers } = useGlobalPresence(character);
   const currentNodeForPrefetch = getNode(character.current_node_id || '');
-  const { creatures, creaturesLoading } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch);
+  const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
+    if (!rewards || rewards.length === 0) return;
+    let totalXp = 0, totalGold = 0, totalSalvage = 0, totalBhp = 0;
+    for (const r of rewards) {
+      totalXp += r.xp_each;
+      totalGold += r.gold_each;
+      totalSalvage += r.salvage_each;
+      totalBhp += r.bhp_each;
+      const parts: string[] = [];
+      if (r.xp_each > 0) parts.push(`${r.xp_each} XP`);
+      if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
+      if (r.salvage_each > 0) parts.push(`${r.salvage_each} 🔩`);
+      if (r.bhp_each > 0) parts.push(`${r.bhp_each} BHP`);
+      bus.emit('log:local', { message: `☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.` });
+    }
+    updateCharacterLocal({
+      xp: character.xp + totalXp,
+      gold: character.gold + totalGold,
+      salvage: character.salvage + totalSalvage,
+      bhp: character.bhp + totalBhp,
+    });
+  }, [bus, updateCharacterLocal]);
+  const { creatures, creaturesLoading } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards);
   const creatureNameResolver = useCallback((creatureId: string) => {
     return creatures.find(c => c.id === creatureId)?.name;
   }, [creatures]);

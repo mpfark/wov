@@ -74,6 +74,7 @@ export function useCombatAggroEffects(params: UseCombatAggroEffectsParams) {
     const nextAggro = creatures.find(c => c.is_alive && c.hp > 0 && c.is_aggressive && !recentlyKilledRef.current.has(c.id));
     if (nextAggro) {
       justStoppedRef.current = false;
+      aggroProcessedRef.current.add(nextAggro.id);
       if (import.meta.env.DEV) {
         console.debug('[aggro] re-engage detected', { creatureId: nextAggro.id, ts: performance.now().toFixed(0) });
       }
