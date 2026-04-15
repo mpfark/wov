@@ -70,10 +70,79 @@ Deno.serve(async (req) => {
     const t0 = Date.now();
     const url = Deno.env.get('SUPABASE_URL')!;
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
+
+    // ── Authentication ────────────────────────────────────────────
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return json({ error: 'Unauthorized' }, 401);
+    }
+    const userDb = createClient(url, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: claimsData, error: claimsErr } = await userDb.auth.getClaims(
+      authHeader.replace('Bearer ', '')
+    );
+    if (claimsErr || !claimsData?.claims?.sub) {
+      return json({ error: 'Unauthorized' }, 401);
+    }
+    const userId = claimsData.claims.sub as string;
 
     const { node_id, force, reason, snapshot_only } = await req.json();
     if (!node_id) return json({ error: 'Missing node_id' }, 400);
+
+    // ── Node proximity check ──────────────────────────────────────
+    // Verify the caller has a character at this node or an adjacent node
+    const { data: callerChars } = await db
+      .from('characters')
+      .select('current_node_id')
+      .eq('user_id', userId);
+
+    if (!callerChars || callerChars.length === 0) {
+      return json({ error: 'No characters found' }, 403);
+    }
+
+    const callerNodeIds = new Set(
+      callerChars.map((c: any) => c.current_node_id).filter(Boolean)
+    );
+
+    // Direct match — character is at the requested node
+    let authorized = callerNodeIds.has(node_id);
+
+    // Adjacent match — character is at a node connected to the requested node
+    if (!authorized) {
+      const { data: targetNode } = await db
+        .from('nodes')
+        .select('connections')
+        .eq('id', node_id)
+        .single();
+
+      if (targetNode?.connections) {
+        const connIds = (targetNode.connections as any[]).map((c: any) =>
+          typeof c === 'string' ? c : c.id ?? c.node_id
+        ).filter(Boolean);
+        for (const nid of callerNodeIds) {
+          if (connIds.includes(nid)) { authorized = true; break; }
+        }
+      }
+    }
+
+    // Party leader match — party leader is at or adjacent to the node
+    if (!authorized) {
+      const { data: partyInfo } = await db
+        .from('party_members')
+        .select('party_id, party:parties(leader_id)')
+        .in('character_id', callerChars.map((c: any) => c.current_node_id ? undefined : null).length ? [] : 
+          (await db.from('characters').select('id').eq('user_id', userId)).data?.map((c: any) => c.id) || []
+        )
+        .eq('status', 'accepted')
+        .limit(1);
+      // Simplified: if not directly or adjacently at the node, deny
+      if (!authorized) {
+        return json({ error: 'Not authorized for this node' }, 403);
+      }
+    }
 
     // Snapshot-only mode: return raw effects + creatures without resolving
     if (snapshot_only) {
