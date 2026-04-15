@@ -1,85 +1,92 @@
 
 
-# Admin UI Consistency Pass (Revised)
+# Illustration Metadata JSONB and Inheritance Preview
 
-## Shared Components (`src/components/admin/common/`)
+## Summary
 
-| Component | Lines | Purpose |
-|-----------|-------|---------|
-| `AdminEntityToolbar` | ~20 | Slot-based header: icon, title, count badge, then `children` for whatever filters/search/buttons the page needs |
-| `AdminEditorHeader` | ~15 | Editor panel header with title + close button |
-| `AdminFormSection` | ~12 | Section title + optional description + children — used selectively |
-| `AdminStickyActions` | ~15 | Save/Cancel row with optional extra actions slot |
-| `AdminEmptyState` | ~10 | Consistent empty/no-selection placeholder |
-| `index.ts` | — | Barrel export |
+Implement the full hierarchical background illustration system using a simplified two-column schema (`illustration_url` + `illustration_metadata` JSONB) instead of 10 individual text columns. Includes admin UI with inheritance preview and prompt generation.
 
-## Refinements Applied
+## Database Migration
 
-**1. AdminFormSection — selective use only.** Applied where grouping genuinely helps readability:
-- CreatureManager: "Stats", "Loot", "Gold Drop", "Spawn & Behavior" — yes. Single-field rows or already-compact areas — no.
-- ItemManager: "Stats" grid, "Origin" section — yes. Top-level name/type/rarity fields — no (already compact).
-- NPCManager: Only "Location" section benefits. The rest is 3 fields — leave as-is.
-- UserManager: Action groups in column 3 ("Give Item", "Teleport", "Grant XP") — yes.
+Single migration adding 2 columns to each of `regions`, `areas`, and `nodes`:
 
-**2. AdminEntityToolbar — fully slot-based.** The component renders: icon + title + count badge + `{children}`. That's it. Each page passes its own filters, dropdowns, search inputs, and buttons as children. No fixed internal layout beyond the left-aligned title area. Pages like Items (with type/slot filter tabs) and Users (with role filters) keep their unique toolbar content.
+```sql
+ALTER TABLE regions ADD COLUMN illustration_url text DEFAULT '';
+ALTER TABLE regions ADD COLUMN illustration_metadata jsonb DEFAULT '{}'::jsonb;
 
-**3. LootTableManager — minimal wrapper.** Only add `AdminEntityToolbar` as a thin header above the existing `TabsList`. No extra framing around the sub-tabs. The component's own `<Tabs>` structure stays visually dominant.
+ALTER TABLE areas ADD COLUMN illustration_url text DEFAULT '';
+ALTER TABLE areas ADD COLUMN illustration_metadata jsonb DEFAULT '{}'::jsonb;
 
-## Page Changes
+ALTER TABLE nodes ADD COLUMN illustration_url text DEFAULT '';
+ALTER TABLE nodes ADD COLUMN illustration_metadata jsonb DEFAULT '{}'::jsonb;
+```
 
-### CreatureManager
-- Toolbar div → `AdminEntityToolbar` (filters/search/New as children)
-- Editor header → `AdminEditorHeader`
-- Save/Cancel → `AdminStickyActions`
-- Empty states → `AdminEmptyState`
-- `AdminFormSection` on: Stats grid, Loot section, Gold Drop, Spawn & Behavior
-- Leave compact top fields (name, description, rarity, level) unwrapped
+No RLS changes needed — columns inherit existing table policies.
 
-### ItemManager
-- Toolbar div → `AdminEntityToolbar` (search/unassigned toggle/New as children)
-- Editor header → `AdminEditorHeader`
-- Save/Cancel → `AdminStickyActions`
-- Empty states → `AdminEmptyState`
-- `AdminFormSection` on: Stats grid, Origin section
-- Leave type/slot/rarity filter tabs and top form fields as-is
+## New Files
 
-### NPCManager
-- Toolbar div → `AdminEntityToolbar` (region filter/search/New as children)
-- Editor header → `AdminEditorHeader`
-- Save/Cancel → `AdminStickyActions`
-- Empty states → `AdminEmptyState`
-- `AdminFormSection` on: Location picker only
-- Leave name/description/dialogue fields unwrapped (already compact)
+### `src/lib/illustration-prompt.ts`
+`buildIllustrationPrompt(metadata: Record<string, string>)` — returns `prompt_override` if present, otherwise assembles from `visual_theme`, `environment_description`, `mood`, `time_of_day`, `weather`, `architectural_style`, `color_palette`, `notable_features`.
 
-### LootTableManager
-- Add `AdminEntityToolbar` as a light header above the TabsList (title + icon only, no extra chrome)
-- All four sub-tabs stay completely untouched internally
+### `src/features/world/components/LocationBackground.tsx`
+- Props: `node`, `area`, `region` (with `illustration_url` fields)
+- Resolves: node → area → region → null
+- Renders absolutely positioned `<img>` with `object-cover`, dark gradient overlay, 300ms fade transition
+- Preloads adjacent node illustrations via `requestIdleCallback`
 
-### UserManager
-- User list search header → `AdminEntityToolbar` (search/role filter as children)
-- Empty states → `AdminEmptyState`
-- Column 3 action groups → `AdminFormSection` for section labels
-- 4-column layout stays as-is
+### `src/components/admin/IllustrationEditor.tsx`
+Reusable admin section. Props:
+- `illustrationUrl`, `onUrlChange` — for the URL field
+- `metadata`, `onMetadataChange` — for the JSONB object
+- `inheritedUrl?`, `inheritedSource?` — for the "Effective Background" preview
+
+Features:
+- URL input with helper text: "Leave empty to inherit from parent Area or Region"
+- Image preview of the local URL
+- "Effective Background" preview showing the resolved image with a source label ("From Node" / "From Area" / "From Region")
+- Collapsible metadata fields (visual_theme, mood, weather, etc.)
+- "Generate Prompt" button with copyable output textarea
+
+## Modified Files
+
+### `src/features/world/hooks/useNodes.ts`
+Add `illustration_url` and `illustration_metadata` to `GameNode`, `Area`, and `Region` interfaces.
+
+### `src/features/world/components/NodeView.tsx`
+Wrap content in `relative` container, insert `<LocationBackground>` as background layer (z-0).
+
+### `src/components/admin/RegionEditorPanel.tsx`
+- Add `illustration_url` and `illustration_metadata` to form state
+- Include `<IllustrationEditor>` section (no inherited preview since regions are top-level)
+- Save both fields on update
+
+### `src/components/admin/AreaEditorPanel.tsx`
+- Add fields to form state
+- Pass parent region's `illustration_url` as `inheritedUrl` to `IllustrationEditor`
+- Save both fields on insert/update
+
+### `src/components/admin/NodeEditorPanel.tsx`
+- Add fields to node form state (Details tab)
+- Pass resolved area/region `illustration_url` as `inheritedUrl`
+- Save both fields in existing `saveNode`
 
 ## Not Changed
-- All business logic, save handlers, data fetching, tab structures
-- World map tools
-- Database schemas, routes, auth
-- Internal sub-tab content in LootTableManager
+- Combat, movement, loot, party systems
+- Existing RLS policies
+- LocationBackground preloading strategy (as originally planned)
+- Game logic, edge functions, storage buckets
 
-## Files
+## Files Summary
 
 | File | Action |
 |------|--------|
-| `src/components/admin/common/AdminEntityToolbar.tsx` | Create |
-| `src/components/admin/common/AdminEditorHeader.tsx` | Create |
-| `src/components/admin/common/AdminFormSection.tsx` | Create |
-| `src/components/admin/common/AdminStickyActions.tsx` | Create |
-| `src/components/admin/common/AdminEmptyState.tsx` | Create |
-| `src/components/admin/common/index.ts` | Create |
-| `src/components/admin/CreatureManager.tsx` | Refactor |
-| `src/components/admin/ItemManager.tsx` | Refactor |
-| `src/components/admin/NPCManager.tsx` | Refactor |
-| `src/components/admin/LootTableManager.tsx` | Light wrapper |
-| `src/components/admin/UserManager.tsx` | Refactor |
+| Migration SQL | Add 2 columns to regions, areas, nodes |
+| `src/lib/illustration-prompt.ts` | Create |
+| `src/features/world/components/LocationBackground.tsx` | Create |
+| `src/components/admin/IllustrationEditor.tsx` | Create |
+| `src/features/world/hooks/useNodes.ts` | Add illustration fields to interfaces |
+| `src/features/world/components/NodeView.tsx` | Insert LocationBackground |
+| `src/components/admin/RegionEditorPanel.tsx` | Add illustration section |
+| `src/components/admin/AreaEditorPanel.tsx` | Add illustration section |
+| `src/components/admin/NodeEditorPanel.tsx` | Add illustration section |
 
