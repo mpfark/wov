@@ -141,7 +141,7 @@ export default function NodeView({
 
   return (
     <TooltipProvider delayDuration={300}>
-       <div className={`h-full flex flex-col p-3 relative${combatFlash ? ' combat-start-flash' : ''}`}>
+       <div className={`h-full flex flex-col p-3 relative z-10${combatFlash ? ' combat-start-flash' : ''}`}>
         <LocationBackground node={node} area={area} region={region} />
         {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2 relative z-10">
