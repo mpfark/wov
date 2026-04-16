@@ -665,15 +665,82 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const text = chatInput.trim();
     if (!text) return;
     setChatInput('');
+
+    // Whisper shortcut
     const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
     if (whisperMatch) {
       const err = await sendWhisper(whisperMatch[1], whisperMatch[2]);
       if (err) setEventLog(prev => [...prev.slice(-49), `⚠️ ${err}`]);
       return;
     }
+
+    // MUD-style command parsing
+    const cmd = parseCommand(text);
+    if (cmd) {
+      switch (cmd.type) {
+        case 'move': {
+          if (!currentNode) { addLocalLog("You can't go that way."); break; }
+          const conn = currentNode.connections?.find(
+            (c: any) => c.direction?.toLowerCase() === cmd.direction
+          );
+          if (conn) {
+            handleMove(conn.node_id, cmd.direction);
+          } else {
+            addLocalLog("You can't go that way.");
+          }
+          break;
+        }
+        case 'attack': {
+          const aliveCreatures = creatures.filter(c => c.is_alive);
+          if (aliveCreatures.length === 0) {
+            addLocalLog('Nothing to attack here.');
+          } else {
+            if (cmd.target) addLocalLog('⚔️ You attack the nearest creature.');
+            handleAttackFirst();
+          }
+          break;
+        }
+        case 'search': {
+          handleSearch();
+          break;
+        }
+        case 'loot': {
+          if (groundLoot.length === 0) {
+            addLocalLog('No loot to pick up.');
+          } else {
+            if (cmd.target) addLocalLog('📦 Picking up the nearest item.');
+            handlePickUpFirst();
+          }
+          break;
+        }
+        case 'look': {
+          if (currentNode) {
+            const area = currentNode.area_id ? getNodeArea(currentNode) : undefined;
+            const name = getNodeDisplayName(currentNode, area);
+            const desc = getNodeDisplayDescription(currentNode, area);
+            addLocalLog(`📍 ${name}`);
+            if (desc) addLocalLog(desc);
+            // List exits
+            const exits = currentNode.connections
+              ?.filter((c: any) => !c.hidden)
+              .map((c: any) => c.direction)
+              .join(', ');
+            if (exits) addLocalLog(`Exits: ${exits}`);
+          }
+          break;
+        }
+        case 'summon': {
+          addLocalLog(`🌀 Summon target set to ${cmd.name}. Use the Summon panel to confirm.`);
+          break;
+        }
+      }
+      return;
+    }
+
+    // Fallthrough to chat
     const sayText = text.replace(/^\/say\s+/i, '');
     sendSay(sayText);
-  }, [chatInput, sendSay, sendWhisper]);
+  }, [chatInput, sendSay, sendWhisper, currentNode, creatures, groundLoot, handleMove, handleAttackFirst, handleSearch, handlePickUpFirst, addLocalLog, getNodeArea]);
 
   const handleOpenChat = useCallback(() => {
     chatInputRef.current?.focus();
