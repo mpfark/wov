@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { KeyRound, Shield, Ban, UserCheck, ArrowUpDown } from 'lucide-react';
-import { AdminEntityToolbar, AdminEmptyState } from '../common';
+import { AdminEmptyState } from '../common';
 import { ROLE_BADGE_COLORS, formatDate } from './constants';
 import type { AdminUser, AdminNode } from './constants';
 import { CLASS_LABELS, RACE_LABELS } from '@/lib/game-data';

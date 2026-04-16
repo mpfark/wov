@@ -1,4 +1,4 @@
-import type { AdminCharacter, AdminNode } from './constants';
+import type { AdminCharacter } from './constants';
 import { CLASS_LABELS, RACE_LABELS } from '@/lib/game-data';
 
 interface Props {
