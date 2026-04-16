@@ -1,8 +1,7 @@
 /**
- * Owns: event/combat log list rendering, scroll anchor, inline chat input, display mode toggle.
+ * Owns: event/combat log list rendering, scroll anchor, display mode toggle.
  */
 import { RefObject, useState, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
 import { getLogColor } from '@/features/combat/utils/combat-log-utils';
 import {
   type CombatLogDisplayMode,
@@ -13,13 +12,6 @@ import {
 interface EventLogPanelProps {
   filteredEventLog: string[];
   logEndRef: RefObject<HTMLDivElement>;
-  chatOpen: boolean;
-  isWideScreen: boolean;
-  chatInput: string;
-  onChatInputChange: (value: string) => void;
-  onChatSubmit: () => void;
-  onChatClose: () => void;
-  chatInputRef: RefObject<HTMLInputElement>;
 }
 
 const MODE_LABELS: Record<CombatLogDisplayMode, string> = {
@@ -38,9 +30,6 @@ const MODE_CYCLE: CombatLogDisplayMode[] = ['numbers', 'words', 'both'];
 
 export default function EventLogPanel({
   filteredEventLog, logEndRef,
-  chatOpen, isWideScreen,
-  chatInput, onChatInputChange, onChatSubmit, onChatClose,
-  chatInputRef,
 }: EventLogPanelProps) {
   const [displayMode, setDisplayMode] = useState<CombatLogDisplayMode>(getStoredDisplayMode);
 
@@ -79,22 +68,6 @@ export default function EventLogPanel({
         )}
         <div ref={logEndRef} />
       </div>
-      {(!isWideScreen && chatOpen) && (
-        <div className="shrink-0 mt-1">
-          <Input
-            ref={chatInputRef}
-            value={chatInput}
-            onChange={e => onChatInputChange(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') { e.preventDefault(); onChatSubmit(); }
-              if (e.key === 'Escape') { onChatClose(); }
-            }}
-            placeholder="Say something... (/w name message to whisper)"
-            className="h-7 text-xs bg-background/50 border-border"
-            autoComplete="off"
-          />
-        </div>
-      )}
     </div>
   );
 }

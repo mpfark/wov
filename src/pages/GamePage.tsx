@@ -48,6 +48,7 @@ import MovementPad from '@/features/world/components/MovementPad';
 import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import ChatPanel from '@/features/chat/components/ChatPanel';
+import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
 
 
@@ -307,7 +308,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [character.current_node_id, nodeChannel]);
 
   const logEndRef = useRef<HTMLDivElement>(null);
-  const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const chatInputRef = useRef<HTMLInputElement>(null);
   const ownLogIdsRef = useRef<Set<string>>(new Set());
@@ -662,9 +662,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const handleChatSubmit = useCallback(async () => {
     const text = chatInput.trim();
-    if (!text) { setChatOpen(false); return; }
+    if (!text) return;
     setChatInput('');
-    setChatOpen(false);
     const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
     if (whisperMatch) {
       const err = await sendWhisper(whisperMatch[1], whisperMatch[2]);
@@ -676,8 +675,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [chatInput, sendSay, sendWhisper]);
 
   const handleOpenChat = useCallback(() => {
-    setChatOpen(true);
-    setTimeout(() => chatInputRef.current?.focus(), 50);
+    chatInputRef.current?.focus();
   }, []);
 
   const keyboardMovement = useKeyboardMovement({
@@ -988,13 +986,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           <EventLogPanel
             filteredEventLog={filteredEventLog}
             logEndRef={logEndRef}
-            chatOpen={chatOpen}
-            isWideScreen={isWideScreen}
+          />
+          <CommandInputBar
             chatInput={chatInput}
             onChatInputChange={setChatInput}
             onChatSubmit={handleChatSubmit}
-            onChatClose={() => { setChatOpen(false); setChatInput(''); }}
             chatInputRef={chatInputRef}
+            isMobile={isMobile}
           />
         </div>
 
@@ -1037,11 +1035,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         {isWideScreen && !isTablet && chatPanelOpen && (
           <ChatPanel
             messages={chatMessages}
-            chatInput={chatInput}
-            onChatInputChange={setChatInput}
-            onChatSubmit={handleChatSubmit}
             onClose={() => setChatPanelOpen(false)}
-            chatInputRef={chatInputRef}
           />
         )}
       </div>
