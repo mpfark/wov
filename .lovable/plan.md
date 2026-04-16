@@ -1,47 +1,76 @@
 
 
-# Relocate Chat/Command Input to Center Panel
+# MUD-Style Text Command System — Implementation Plan
 
 ## Overview
-Move the chat input from the right-side ChatPanel and the conditional inline input in EventLogPanel into a new dedicated `CommandInputBar` component, permanently anchored below the event log in the center panel. ChatPanel becomes display-only.
+Create a command parser utility and wire it into the existing `handleChatSubmit` in GamePage. Add command history (ArrowUp/Down with draft preservation) to CommandInputBar. Four refinements from the user's feedback are incorporated.
 
-## Changes
+## Files
 
-### 1. Create `src/features/chat/components/CommandInputBar.tsx`
-New reusable component wrapping the existing `<Input>` with:
-- Same `onKeyDown` logic (Enter → submit, Escape → blur/clear)
-- Placeholder: `"Type a command or message... (/w name to whisper)"`
-- Desktop: rendered inline below EventLogPanel in the center column
-- Mobile/tablet: fixed to bottom of viewport via `fixed bottom-0 left-0 right-0 z-40` with padding for safe area
+### 1. Create `src/features/chat/utils/commandParser.ts`
+Pure function `parseCommand(input: string) → ParsedCommand | null`:
+- **Movement**: single-word only — `n`, `north`, `s`, `south`, `e`, `east`, `w`, `west`, `ne`, `nw`, `se`, `sw` + full names
+- **Attack**: `attack`, `kill`, `k` — optional target arg (stored but not matched in phase 1)
+- **Search**: `search` — single word only
+- **Loot**: `loot`, `pickup`, `get` — optional `all` or target arg (stored but not matched in phase 1)
+- **Look**: `look`, `l` — single word only
+- **Summon**: `summon <name>` — requires at least one arg
+- Returns `null` for anything that doesn't clearly match → falls through to chat
+- Conservative matching: multi-word input starting with non-command words is always chat
 
-Props: `chatInput`, `onChatInputChange`, `onChatSubmit`, `chatInputRef`
+### 2. Modify `src/pages/GamePage.tsx` — wire parser into `handleChatSubmit`
+Insert command dispatch after whisper check, before `sendSay`:
 
-### 2. Modify `EventLogPanel.tsx`
-- Remove the conditional `(!isWideScreen && chatOpen)` input block (lines 82-97)
-- Remove `chatOpen`, `isWideScreen`, `chatInput`, `onChatInputChange`, `onChatSubmit`, `onChatClose`, `chatInputRef` from props
-- Component becomes purely a log display + display mode toggle
+```
+const cmd = parseCommand(text);
+if (cmd) {
+  switch (cmd.type):
+    'move'   → find connection matching direction on currentNode
+               if found: handleMove(targetNodeId, direction)
+               else: addLocalLog("You can't go that way.")
+    'attack' → if no alive creatures: addLocalLog("Nothing to attack here.")
+               else: handleAttackFirst()
+               (target arg logged but not resolved to creature by name in phase 1)
+    'search' → handleSearch()
+    'loot'   → if groundLoot empty: addLocalLog("No loot to pick up.")
+               else: handlePickUpFirst()
+               (target arg not matched in phase 1)
+    'look'   → use getNodeDisplayName + getNodeDisplayDescription to log
+               current node name and description via addLocalLog
+               (reuses existing helpers from useNodes — no duplication)
+    'summon' → call existing summon handler if available, or set summon
+               target name into state and show feedback:
+               "🌀 Summon target set to <name>. Use the Summon panel to confirm."
+  return; // skip chat
+}
+```
 
-### 3. Modify `ChatPanel.tsx`
-- Remove the `<Input>` block at the bottom (lines 45-57)
-- Remove `chatInput`, `onChatInputChange`, `onChatSubmit`, `chatInputRef` from props
-- Keep: messages list, close button, header — display-only panel
+**Summon refinement**: GamePage already renders `SummonPlayerPanel`. We'll expose a `setSummonTarget` callback or simply log actionable feedback so the command doesn't feel like a dead-end.
 
-### 4. Modify `GamePage.tsx`
-- Import `CommandInputBar`
-- Place `<CommandInputBar>` after `<EventLogPanel>` inside the center column div (line ~999), so it's always visible below the event log
-- On mobile (`isMobile`), render it with fixed-bottom positioning instead
-- Remove chat-related props from `EventLogPanel` usage
-- Remove chat-related props from `ChatPanel` usage
-- Remove the `chatOpen` state and `handleOpenChat` — input is always visible
-- Update `handleChatSubmit`: remove `setChatOpen(false)` calls since there's no open/close toggle
-- Keep `chatInputRef` for keyboard shortcut focus (Enter key in `useKeyboardMovement`)
+**Look refinement**: Reuses `getNodeDisplayName` and `getNodeDisplayDescription` from `@/features/world` — same helpers NodeView uses. No duplicated formatting.
 
-### 5. Update `useKeyboardMovement` integration
-- The existing `onOpenChat` callback focuses `chatInputRef` — keep this working but simplify since input is always rendered (just call `.focus()`)
+**Named targeting honesty**: Parser stores target args but phase-1 dispatch calls `handleAttackFirst()` / `handlePickUpFirst()` without name matching. No misleading feedback — if a target arg is provided, log it transparently: `"⚔️ You attack the nearest creature."` (not `"You attack wolf"`).
 
-## Not Changed
-- All chat/whisper logic, `handleChatSubmit`, `sendSay`, `sendWhisper` — unchanged
-- Backend, database, Supabase — unchanged
-- ChatPanel toggle button and localStorage persistence for wide-screen — unchanged
-- Command parser (future feature) — not part of this change
+### 3. Modify `src/features/chat/components/CommandInputBar.tsx` — add command history
+- Add local `useState<string[]>` for history (capped at 20)
+- Add `useRef` for `historyIndex` and `draftBeforeHistory`
+- **ArrowUp**: save current input as draft (if at bottom), navigate backward
+- **ArrowDown**: navigate forward; past newest entry → restore saved draft
+- On submit: push to history, reset index and draft
+- Session-only, not persisted
+
+### 4. Update `src/features/chat/index.ts` barrel export
+Add `parseCommand` export.
+
+## What stays unchanged
+- All click actions, keyboard shortcuts, combat logic, backend
+- CommandInputBar position and styling
+- Chat whisper system (`/w name message`)
+- `sendSay` fallthrough for non-command text
+
+## Implementation order
+1. `commandParser.ts` — pure utility with types
+2. `CommandInputBar.tsx` — add history with draft preservation
+3. `GamePage.tsx` — wire parser into `handleChatSubmit`, add look/summon feedback
+4. Update barrel export
 
