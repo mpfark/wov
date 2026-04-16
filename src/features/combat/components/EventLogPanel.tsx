@@ -2,6 +2,7 @@
  * Owns: event/combat log list rendering, scroll anchor, display mode toggle.
  */
 import { RefObject, useState, useCallback } from 'react';
+import { getLogColor } from '@/features/combat/utils/combat-log-utils';
 import {
   type CombatLogDisplayMode,
   getStoredDisplayMode,
@@ -70,6 +71,3 @@ export default function EventLogPanel({
     </div>
   );
 }
-
-// Re-import getLogColor at top level
-import { getLogColor } from '@/features/combat/utils/combat-log-utils';
