@@ -308,7 +308,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [character.current_node_id, nodeChannel]);
 
   const logEndRef = useRef<HTMLDivElement>(null);
-  const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const chatInputRef = useRef<HTMLInputElement>(null);
   const ownLogIdsRef = useRef<Set<string>>(new Set());
