@@ -33,7 +33,8 @@ import { User, Map as MapIconLucide, Zap, LogOut, RefreshCw, MessageCircle } fro
 
 import { useKeyboardMovement } from '@/features/world';
 
-import { useChat } from '@/features/chat';
+import { useChat, parseCommand } from '@/features/chat';
+import { getNodeDisplayName, getNodeDisplayDescription } from '@/features/world';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
