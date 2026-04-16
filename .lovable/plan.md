@@ -1,44 +1,79 @@
 
 
-# Fix: DoT Kill Rewards Not Updating Client + Duplicate Re-engagement Messages
+# Users Page Enhancement and UX Refinement
 
-## Issue 1: Rend/DoT Kill — No Reward Shown Until Reload
+## Overview
+Refactor the 1137-line `UserManager.tsx` into a cleaner multi-file structure with improved UX across all five columns (Users, Characters, Actions, Character Sheet, Logs). No backend or schema changes.
 
-**Root cause**: When the last engaged creature dies from a DoT (bleed) tick during a live combat-tick, the server correctly awards XP/gold/BHP and persists them to the database. The client also applies the `member_states` update locally via `updateCharacterLocal`. However, if the creature dies between live ticks (e.g., after the combat loop stops because `aliveEngagedIds` becomes empty), the kill is resolved by `combat-catchup` on the next node visit. `combat-catchup` writes rewards to the DB but its response (`kill_rewards`) is never used to update client character state — the player only sees the change on reload.
+## Architecture
 
-Additionally, there's a subtle race: when the last creature dies from a DoT tick, `processTickResult` calls `stopCombat()` via `setTimeout(250ms)`, ending the tick loop. If there are still active effects for a creature the DoT hasn't finished killing yet (e.g., bleed still running), the kill resolves offscreen.
+Extract subcomponents from the monolithic file:
 
-**Fix**: After `reconcileNode` returns in `useCreatures` (which is called on every node entry), check the `kill_rewards` in the catchup response and apply any pending rewards to the character. This requires:
+```text
+src/components/admin/users/
+├── UserManager.tsx          (orchestrator — state, handlers, layout)
+├── UserListColumn.tsx       (COL 1 — user list with search + role filter)
+├── CharacterListColumn.tsx  (COL 2 — user info header + character cards)
+├── CharacterActionsColumn.tsx (COL 3 — grouped admin actions)
+├── CharacterSheetColumn.tsx (COL 4 — character sheet with summary header)
+├── ActivityLogColumn.tsx    (COL 5 — logs with date grouping + event filter)
+├── AdminEquipSlot.tsx       (shared equip slot component)
+├── AdminCharacterSheet.tsx  (character detail view)
+├── CharacterSummaryCard.tsx (compact header for selected character)
+└── constants.ts             (RARITY_COLORS, STAT_*, SLOT_LABELS, EVENT_TYPE_*)
+```
 
-1. **`useCreatures.ts`**: Return `kill_rewards` from `reconcileNode` to the caller
-2. **`GamePage.tsx`**: After creatures are fetched on node entry, if `kill_rewards` exist, update the character with the awarded XP/gold/BHP/salvage and log the kill messages
+## Column-by-Column Changes
 
-## Issue 2: Duplicate Re-engagement Messages
+### COL 1 — Users List
+- Add role filter dropdown (All / Player / Steward / Overlord) next to search
+- Show "last active" relative time (e.g. "2h ago") under email
+- Highlight selected row with stronger left-border accent
+- Keep existing pagination
 
-**Root cause**: The re-engagement effect in `useCombatAggroEffects` (line 70-85) uses `creatures` as a dependency. When combat ends (`inCombat` → false), the effect fires and finds an aggressive creature. It logs a message and calls `startCombat`. But `startCombat` → `setInCombat(true)` is async state. Meanwhile, if `creatures` updates (e.g., from a postgres_changes realtime event updating the just-killed creature), the effect re-triggers. The `justStoppedRef` guard works for the re-engagement itself, but the **mid-fight join** effect (line 87-102) runs simultaneously and may also fire for the same creature if `engagedCreatureIdsRef` hasn't been updated yet.
+### COL 2 — Characters Panel
+- Use `AdminEntityToolbar` header: "Characters (N)"
+- Add location display per character card (node name from lookup)
+- Add optional sort toggle (alpha / level)
+- Keep existing user info header and account action buttons
 
-**Fix**: Add the re-engaging creature's ID to `aggroProcessedRef` immediately in the re-engagement path, so the mid-fight join effect (which checks `aggroProcessedRef`) won't produce a duplicate message for the same creature.
+### COL 3 — Actions (reorganized)
+- Add `CharacterSummaryCard` at top: name, class, level, HP/CP bars, location
+- Group actions using `AdminFormSection`:
+  - **Items & Inventory**: Give Item, Remove Item
+  - **Progression**: Grant XP, Grant Respec, Grant Salvage
+  - **Movement**: Teleport
+  - **Character Management**: Revive, Reset Stats
+- Add confirmation dialog for Reset Stats (destructive)
 
-## Changes
+### COL 4 — Character Sheet
+- Keep existing `AdminCharacterSheet` component largely intact
+- Use `AdminEditorHeader` for consistent header
+- Minor spacing/alignment cleanup
 
-### `src/features/creatures/hooks/useCreatures.ts`
-- Make `reconcileNode` return the full catchup response (including `kill_rewards`)
-- Add a callback parameter to `useCreatures` for `onCatchupRewards`
-- After reconcileNode succeeds and has `kill_rewards`, invoke the callback
+### COL 5 — Activity Logs
+- Add event type filter dropdown (All / Combat / Movement / Items / Admin)
+- Group logs by date with date separator headers
+- Use `AdminEntityToolbar` for header consistency
 
-### `src/pages/GamePage.tsx`
-- Pass an `onCatchupRewards` callback to `useCreatures` that:
-  - Updates character state with XP/gold/BHP/salvage from catchup rewards
-  - Logs kill reward messages to the event log
+## Technical Details
 
-### `src/features/combat/hooks/useCombatAggroEffects.ts`
-- In the re-engagement effect (line 74-81), add `nextAggro.id` to `aggroProcessedRef` before calling `startCombat`, preventing the mid-fight join from duplicating the message
+- **No new state management** — all state stays in the orchestrator
+- **No backend changes** — all data already available from existing `callAdmin('list')` and node lookups
+- **Node name lookup** for character location: use existing `allNodes` state already fetched
+- Constants and interfaces extracted to `constants.ts` for reuse
+- All existing handlers (`handleGiveItem`, `handleTeleport`, etc.) preserved exactly as-is
+- Parent `AdminPage.tsx` import path updated from `./UserManager` to `./users/UserManager`
 
-## Files Summary
-
-| File | Action |
-|------|--------|
-| `src/features/creatures/hooks/useCreatures.ts` | Return catchup rewards, add callback |
-| `src/pages/GamePage.tsx` | Handle catchup rewards for character updates |
-| `src/features/combat/hooks/useCombatAggroEffects.ts` | Add aggroProcessedRef guard to re-engagement |
+## Implementation Order
+1. Create `constants.ts` with extracted constants/interfaces
+2. Create `CharacterSummaryCard.tsx` and `AdminEquipSlot.tsx`
+3. Create `AdminCharacterSheet.tsx` (moved from inline)
+4. Create `ActivityLogColumn.tsx` with date grouping + event filter
+5. Create `UserListColumn.tsx` with role filter
+6. Create `CharacterListColumn.tsx` with location + sort
+7. Create `CharacterActionsColumn.tsx` with grouped sections + confirmation
+8. Create `CharacterSheetColumn.tsx` wrapper
+9. Rewrite `UserManager.tsx` as slim orchestrator
+10. Update import in `AdminPage.tsx`
 
