@@ -8,7 +8,7 @@ import NodeEditorPanel from '@/components/admin/NodeEditorPanel';
 import RegionManager from '@/components/admin/RegionManager';
 import ItemManager from '@/components/admin/ItemManager';
 import CreatureManager from '@/components/admin/CreatureManager';
-import UserManager from '@/components/admin/UserManager';
+import UserManager from '@/components/admin/users/UserManager';
 import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
