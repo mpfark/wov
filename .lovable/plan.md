@@ -1,47 +1,50 @@
 
 
-## Plan: Replace Local Area title bar with icon toolbar
+## Illustration Gallery Page
 
-Replace the "Local Area" header text and the entire top bar with a compact icon-only toolbar across the top of the Map panel. Icons get tooltips on hover. XP boost only renders when active and pulses.
+A new public-facing gallery page at `/gallery` that showcases all illustrations from regions and areas (and nodes if any get added later). Accessible via a new icon in the Map panel toolbar.
 
 ### Layout
-The Map panel header row becomes a single horizontal toolbar (no title text), icons spread across the available width:
+- Responsive grid of illustration cards (1 col mobile / 2 tablet / 3-4 desktop)
+- Each card: image, title (region/area name), small badge (Region / Area / Node), and short description snippet
+- Click a card → opens a lightbox dialog with the full-size image, name, description, level range, and source type
+- Top of page: title "Gallery of Varneth", filter chips (All / Regions / Areas / Nodes), and a Back-to-game link
+- Same parchment/dark-fantasy theme as the rest of the app
+- Skeleton placeholders while loading; empty state if no illustrations exist for the selected filter
 
-```text
-[⌨️] [☰legend] [👥 Online] [⚡Admin*] [🔄 Switch] [⚠️ Report]    [⚡2x pulsing*]    [🚪 Sign Out]
-```
-*Admin only visible to admins. XP boost only visible when `xpMultiplier > 1`.
+### Data
+- One client-side query on mount: select `id, name, description, illustration_url, min_level, max_level` from each of `regions`, `areas`, `nodes` where `illustration_url IS NOT NULL AND illustration_url <> ''`
+- These tables are already publicly readable (players see them in the world view), so no new RLS work is needed
+- Merge into a single typed array tagged with `source: 'region' | 'area' | 'node'`, sort alphabetically by name
+- Lazy-load images with native `loading="lazy"` and a soft fade-in (reuse the pattern from `LocationBackground`)
 
-All buttons are `size="icon" variant="ghost"` (h-8 w-8) wrapped in `Tooltip` with descriptive labels.
+### Routing
+- New route `/gallery` in `src/App.tsx` (lazy-loaded like `GameRoute`)
+- Public — no auth required (the illustrations are content showcase, not gameplay state)
+- Add a small back-link in the gallery header that returns to `/game` if signed in, otherwise `/`
 
-### Changes
+### Map panel toolbar entry
+- Add an `ImageIcon` (lucide `Image`) button next to the existing toolbar icons in `MapPanel.tsx`
+- Tooltip: "Illustration Gallery"
+- Click → `window.open('/gallery', '_blank')` so players don't lose their game session
 
-**1. `src/features/world/components/MapPanel.tsx`**
-- Remove the "Local Area" `<h2>` text from the header row.
-- Restructure header as a flex row of icon buttons spanning full width: keyboard shortcuts (existing), legend (existing if any), Online Players, Admin (conditional), Switch Character, Report Issue, XP boost badge (conditional + pulsing), Sign Out (right-aligned, destructive tint).
-- Wrap each icon button in `<Tooltip>` from `@/components/ui/tooltip` with clear labels ("Online Players", "Admin Panel", "Switch Character", "Report Issue", "Sign Out").
-- Add new props: `appVersion`, `xpMultiplier`, `onlinePlayers`, `myCharacterId`, `isAdmin`, `onOpenAdmin`, `onSwitchCharacter`, `userId`, `characterId`, `characterName`, `onSignOut`.
-- Use `OnlinePlayersDialog` and `ReportIssueDialog` in their existing `compact` mode (icon-only triggers).
-- XP boost badge: only render when `xpMultiplier > 1`, using `animate-pulse` Tailwind class with `⚡ {xpMultiplier}x` content and gold styling. Tooltip shows "XP Boost active — expires {time}".
-- Wrap the toolbar in a single `TooltipProvider`.
+### Files
 
-**2. `src/pages/GamePage.tsx`**
-- Delete the entire top bar `<div>` block (the one containing title, version, XP badge, Online/Admin/Switch/Report/Sign Out buttons).
-- Pass new props through `mapPanelProps` to `MapPanel`.
-- Clean up unused imports (`APP_VERSION`, `Zap`, `RefreshCw`, `LogOut`, `OnlinePlayersDialog`, `ReportIssueDialog`) if no longer referenced.
+**New:**
+- `src/pages/GalleryPage.tsx` — main page (data fetch, filter state, grid, lightbox)
+
+**Modified:**
+- `src/App.tsx` — add lazy `GalleryPage` import + `/gallery` route
+- `src/features/world/components/MapPanel.tsx` — add Image icon button in toolbar opening `/gallery` in new tab
 
 ### What stays unchanged
-- All dialog components (Online Players, Report Issue) and their internal behavior
-- Keyboard shortcuts popover (still icon-only, just sits in the new toolbar)
-- Sheet overlays for mobile/tablet (Character, Map, Chat)
-- All other game logic
+- All existing pages, routes, dialogs
+- Database schema and RLS (read-only public selects)
+- Top toolbar layout otherwise
 
 ### Edge cases
-- Mobile: Map is in a Sheet — toolbar remains icon-only and fits comfortably.
-- Tooltips on touch devices: Radix Tooltip auto-handles tap-to-show on touch.
-- Layout reflow: removing the top bar gives the node view + event log extra vertical space automatically (existing `flex-1` handles it).
-
-### Files touched
-- `src/features/world/components/MapPanel.tsx` — replace title with icon toolbar, add props
-- `src/pages/GamePage.tsx` — delete top bar, pass props
+- No illustrations for a filter → friendly empty state ("No illustrations yet — keep exploring!")
+- Broken/404 image URL → `onError` hides the card
+- Mobile lightbox → image scales to viewport with `max-h-[90vh] object-contain`
+- Long descriptions → clamp to 2 lines on the card, full text in lightbox
 
