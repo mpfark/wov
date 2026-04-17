@@ -1,76 +1,63 @@
 
 
-# MUD-Style Text Command System — Implementation Plan
+# Locked Connection Hints
 
 ## Overview
-Create a command parser utility and wire it into the existing `handleChatSubmit` in GamePage. Add command history (ArrowUp/Down with draft preservation) to CommandInputBar. Four refinements from the user's feedback are incorporated.
+Add an optional `lock_hint` description to locked connections so players can discover where to look for the key when they search the node. Hints are revealed by the existing `search` command (no DB schema change — `connections` is a JSONB array, we just add a new optional field).
 
-## Files
+## Changes
 
-### 1. Create `src/features/chat/utils/commandParser.ts`
-Pure function `parseCommand(input: string) → ParsedCommand | null`:
-- **Movement**: single-word only — `n`, `north`, `s`, `south`, `e`, `east`, `w`, `west`, `ne`, `nw`, `se`, `sw` + full names
-- **Attack**: `attack`, `kill`, `k` — optional target arg (stored but not matched in phase 1)
-- **Search**: `search` — single word only
-- **Loot**: `loot`, `pickup`, `get` — optional `all` or target arg (stored but not matched in phase 1)
-- **Look**: `look`, `l` — single word only
-- **Summon**: `summon <name>` — requires at least one arg
-- Returns `null` for anything that doesn't clearly match → falls through to chat
-- Conservative matching: multi-word input starting with non-command words is always chat
-
-### 2. Modify `src/pages/GamePage.tsx` — wire parser into `handleChatSubmit`
-Insert command dispatch after whisper check, before `sendSay`:
-
-```
-const cmd = parseCommand(text);
-if (cmd) {
-  switch (cmd.type):
-    'move'   → find connection matching direction on currentNode
-               if found: handleMove(targetNodeId, direction)
-               else: addLocalLog("You can't go that way.")
-    'attack' → if no alive creatures: addLocalLog("Nothing to attack here.")
-               else: handleAttackFirst()
-               (target arg logged but not resolved to creature by name in phase 1)
-    'search' → handleSearch()
-    'loot'   → if groundLoot empty: addLocalLog("No loot to pick up.")
-               else: handlePickUpFirst()
-               (target arg not matched in phase 1)
-    'look'   → use getNodeDisplayName + getNodeDisplayDescription to log
-               current node name and description via addLocalLog
-               (reuses existing helpers from useNodes — no duplication)
-    'summon' → call existing summon handler if available, or set summon
-               target name into state and show feedback:
-               "🌀 Summon target set to <name>. Use the Summon panel to confirm."
-  return; // skip chat
-}
+### 1. Type update — `src/features/world/hooks/useNodes.ts`
+Extend the connection shape:
+```ts
+connections: Array<{
+  node_id: string; direction: string; label?: string;
+  hidden?: boolean; locked?: boolean; lock_key?: string;
+  lock_hint?: string;  // NEW
+}>;
 ```
 
-**Summon refinement**: GamePage already renders `SummonPlayerPanel`. We'll expose a `setSummonTarget` callback or simply log actionable feedback so the command doesn't feel like a dead-end.
+### 2. Admin editor — `src/components/admin/NodeEditorPanel.tsx`
+For both Add and Edit connection forms, when `locked` is checked, show a second field directly under the Lock Key input:
+- `Textarea` (rows=2) bound to `addLockHint` / `editLockHint` state
+- Placeholder: `"Hint shown when players search (e.g. 'The gate seems sturdy. Perhaps the innkeeper holds the key.')"`
+- Persist as `lock_hint` in the connection object (only included if non-empty, mirroring the existing `lock_key` pattern)
+- Show a small 💡 indicator in the connection row when a hint is set
 
-**Look refinement**: Reuses `getNodeDisplayName` and `getNodeDisplayDescription` from `@/features/world` — same helpers NodeView uses. No duplicated formatting.
+### 3. Search reveal — `src/features/world/hooks/useMovementActions.ts` `handleSearch`
+After the existing hidden-path / loot resolution, add a final reveal step for locked connections with hints:
+- Collect `currentNode.connections.filter(c => c.locked && c.lock_hint)`
+- If the search roll `total >= 10` and any locked-with-hint exits exist, append one log line per locked exit:
+  - `🗝️ ${direction}: ${lock_hint}`
+- This runs **in addition to** the existing outcome (so a successful search that finds nothing material still surfaces hints, making search feel rewarding near locked exits)
+- Skip if the player already holds the matching `lock_key` (no need to hint)
 
-**Named targeting honesty**: Parser stores target args but phase-1 dispatch calls `handleAttackFirst()` / `handlePickUpFirst()` without name matching. No misleading feedback — if a target arg is provided, log it transparently: `"⚔️ You attack the nearest creature."` (not `"You attack wolf"`).
+### 4. Keyword search (`search gate`) — Phase-1 scope decision
+The parser currently treats `search` as single-word only. Extending it to accept a keyword (`search gate`) would require:
+- Updating `commandParser.ts` to accept an optional `target` arg on `search`
+- Filtering hints by matching the keyword against the connection's `direction`, `label`, or `lock_key` (case-insensitive substring)
 
-### 3. Modify `src/features/chat/components/CommandInputBar.tsx` — add command history
-- Add local `useState<string[]>` for history (capped at 20)
-- Add `useRef` for `historyIndex` and `draftBeforeHistory`
-- **ArrowUp**: save current input as draft (if at bottom), navigate backward
-- **ArrowDown**: navigate forward; past newest entry → restore saved draft
-- On submit: push to history, reset index and draft
-- Session-only, not persisted
+**Recommendation**: include this in the same change. It's a small parser tweak and matches the pattern already used for `attack <target>` / `loot <target>`. When `search <keyword>` is used and matches a locked exit, only that exit's hint is shown (and we can lower the DC slightly, e.g. `total >= 8`, since the player is being specific). Unmatched keyword falls back to a generic search.
 
-### 4. Update `src/features/chat/index.ts` barrel export
-Add `parseCommand` export.
+### 5. Parser — `src/features/chat/utils/commandParser.ts`
+Change the `search` branch to accept an optional target (up to 3 words total), mirroring `loot`:
+```ts
+type ParsedCommand = ... | { type: 'search'; target?: string };
+```
+
+### 6. Wire keyword through — `src/pages/GamePage.tsx`
+`handleSearch` currently takes no args. Add an optional `keyword?: string` param to `handleSearch` and pass `cmd.target` from the command dispatcher.
 
 ## What stays unchanged
-- All click actions, keyboard shortcuts, combat logic, backend
-- CommandInputBar position and styling
-- Chat whisper system (`/w name message`)
-- `sendSay` fallthrough for non-command text
+- DB schema (connections JSONB already flexible)
+- Lock enforcement, key-consumption behavior, 30s unlock window
+- Click-driven Search button (calls `handleSearch()` with no keyword — same behavior as before)
+- All other commands and chat fallthrough
 
-## Implementation order
-1. `commandParser.ts` — pure utility with types
-2. `CommandInputBar.tsx` — add history with draft preservation
-3. `GamePage.tsx` — wire parser into `handleChatSubmit`, add look/summon feedback
-4. Update barrel export
+## Files touched
+- `src/features/world/hooks/useNodes.ts` (type)
+- `src/components/admin/NodeEditorPanel.tsx` (admin UI)
+- `src/features/world/hooks/useMovementActions.ts` (search reveal + optional keyword filter)
+- `src/features/chat/utils/commandParser.ts` (allow `search <keyword>`)
+- `src/pages/GamePage.tsx` (pass keyword to handleSearch)
 
