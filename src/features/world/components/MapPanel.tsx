@@ -331,6 +331,21 @@ export default function MapPanel({
               <TooltipContent side="bottom"><p className="text-xs">Report Issue</p></TooltipContent>
             </Tooltip>
 
+            {/* Illustration Gallery */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => window.open('/gallery', '_blank')}
+                >
+                  <ImageIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p className="text-xs">Illustration Gallery</p></TooltipContent>
+            </Tooltip>
+
             {/* Spacer */}
             <div className="flex-1" />
 
