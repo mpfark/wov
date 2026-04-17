@@ -299,10 +299,7 @@ export default function NodeView({
                   })}
                   {npcs.map(npc => (
                     <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
-                      <div className="min-w-0">
-                        <span className="text-xs font-display text-elvish">💬 {npc.name}</span>
-                        {npc.description && <span className="text-[10px] text-muted-foreground ml-1 truncate">{npc.description}</span>}
-                      </div>
+                      <span className="text-xs font-display text-elvish min-w-0 truncate">💬 {npc.name}</span>
                       <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-[10px] h-5 px-1.5 border-elvish/50 text-elvish ml-1 shrink-0">
                         Talk
                       </Button>
