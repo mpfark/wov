@@ -681,10 +681,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         case 'move': {
           if (!currentNode) { addLocalLog("You can't go that way."); break; }
           const conn = currentNode.connections?.find(
-            (c: any) => c.direction?.toLowerCase() === cmd.direction
+            (c: any) => c.direction?.toUpperCase() === cmd.direction && !c.hidden
           );
           if (conn) {
-            handleMove(conn.node_id, cmd.direction);
+            handleMove(conn.node_id, cmd.direction as any);
           } else {
             addLocalLog("You can't go that way.");
           }
