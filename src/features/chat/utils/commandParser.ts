@@ -14,23 +14,17 @@ export type ParsedCommand =
   | { type: 'look' }
   | { type: 'summon'; name: string };
 
+// Directions normalize to short compass codes ("N", "NE", etc.) to match
+// how node connections store the `direction` field in the database.
 const DIRECTION_MAP: Record<string, string> = {
-  n: 'north',
-  s: 'south',
-  e: 'east',
-  w: 'west',
-  ne: 'northeast',
-  nw: 'northwest',
-  se: 'southeast',
-  sw: 'southwest',
-  north: 'north',
-  south: 'south',
-  east: 'east',
-  west: 'west',
-  northeast: 'northeast',
-  northwest: 'northwest',
-  southeast: 'southeast',
-  southwest: 'southwest',
+  n: 'N', north: 'N',
+  s: 'S', south: 'S',
+  e: 'E', east: 'E',
+  w: 'W', west: 'W',
+  ne: 'NE', northeast: 'NE',
+  nw: 'NW', northwest: 'NW',
+  se: 'SE', southeast: 'SE',
+  sw: 'SW', southwest: 'SW',
 };
 
 const ATTACK_VERBS = new Set(['attack', 'kill', 'k']);
