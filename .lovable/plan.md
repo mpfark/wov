@@ -1,4 +1,4 @@
 
-The user is reporting that when `handleSearch` reveals a lock hint, it still logs "You find nothing of note." which contradicts the hint that immediately follows. I need to look at the search logic to fix the messaging.
+Looking at NodeView, NPCs are likely rendered with name + description inline. The NPCDialogPanel already shows the description in the dialog header. I need to find and remove the inline description rendering in NodeView.
 
-Let me check the current implementation.
+Let me check the NodeView NPC rendering.
