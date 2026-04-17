@@ -387,7 +387,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
   // ── Search ─────────────────────────────────────────────────────
   const SEARCH_CP_COST = 5;
-  const handleSearch = useCallback(async () => {
+  const handleSearch = useCallback(async (keyword?: string) => {
     if (p.isDead) return;
     if (!p.currentNode) return;
     if (p.creatures && p.creatures.length > 0) {
@@ -409,6 +409,37 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const searchItems = p.currentNode.searchable_items as any[];
     const canFindPath = total >= 10 && hiddenPaths.length > 0;
     const canFindLoot = total >= 12 && searchItems && searchItems.length > 0;
+
+    // ── Locked-connection hint reveal (always evaluated; appended after main outcome) ──
+    const allItems = [...p.equipped, ...p.unequipped];
+    const lockedWithHints = (p.currentNode.connections as any[]).filter((c: any) => {
+      if (!c.locked || !c.lock_hint) return false;
+      // Skip if player already has the matching key
+      const hasKey = allItems.some(inv => inv.item?.name?.toLowerCase() === (c.lock_key || '').toLowerCase());
+      return !hasKey;
+    });
+    const kw = keyword?.trim().toLowerCase();
+    let matchedLocked: any[] = [];
+    let keywordDC = 10;
+    if (kw) {
+      keywordDC = 8; // easier when player is specific
+      matchedLocked = lockedWithHints.filter((c: any) => {
+        const dir = (c.direction || '').toLowerCase();
+        const label = (c.label || '').toLowerCase();
+        const key = (c.lock_key || '').toLowerCase();
+        return dir.includes(kw) || label.includes(kw) || key.includes(kw);
+      });
+    }
+    const hintsToReveal = kw
+      ? (total >= keywordDC ? matchedLocked : [])
+      : (total >= 10 ? lockedWithHints : []);
+
+    const revealHints = () => {
+      for (const c of hintsToReveal) {
+        p.addLog(`🗝️ ${c.direction}: ${c.lock_hint}`);
+      }
+    };
+
     let tryPathFirst = canFindPath && (!canFindLoot || Math.random() < 0.5);
     if (tryPathFirst) {
       const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
@@ -419,6 +450,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
         await p.updateCharacter({ current_node_id: discovered.node_id });
         p.addLog(`You travel through the hidden path to ${targetName}.`);
       }
+      revealHints();
       return;
     }
     if (canFindLoot) {
@@ -432,6 +464,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
               });
               if (!acquired) {
                 p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — The unique power of ${item.name} is already claimed by another...`);
+                revealHints();
                 return;
               }
             } else {
@@ -442,6 +475,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
             p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You found ${item.name}!`);
             logActivity(p.character.user_id, p.character.id, 'item_found', `Found ${item.name} while searching`, { item_name: item.name });
             p.fetchInventory();
+            revealHints();
             return;
           }
         }
@@ -459,7 +493,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
     } else {
       p.addLog(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You find nothing of note.`);
     }
-  }, [p.currentNode, p.character, p.addLog, p.fetchInventory, p.isDead, p.getNode, p.updateCharacter, p.creatures]);
+    revealHints();
+  }, [p.currentNode, p.character, p.addLog, p.fetchInventory, p.isDead, p.getNode, p.updateCharacter, p.creatures, p.equipped, p.unequipped]);
 
   return {
     handleMove, handleTeleport, handleReturnToWaymark, handleSearch,
