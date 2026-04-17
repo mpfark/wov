@@ -97,6 +97,15 @@ interface Props {
   onAcceptSummon?: (requestId: string) => Promise<string | null>;
   onDeclineSummon?: (requestId: string) => Promise<string | null>;
   onSummonRefetch?: () => void;
+  // Toolbar (replaces top bar)
+  appVersion?: string;
+  xpMultiplier?: number;
+  xpBoostExpiresAt?: string | null;
+  isAdmin?: boolean;
+  onOpenAdmin?: () => void;
+  onSwitchCharacter?: () => void;
+  onSignOut?: () => void;
+  isCompactToolbar?: boolean;
 }
 
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
@@ -111,6 +120,7 @@ export default function MapPanel({
   onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
   pendingSummons, onAcceptSummon, onDeclineSummon, onSummonRefetch,
+  appVersion, xpMultiplier = 1, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
 }: Props) {
   currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
