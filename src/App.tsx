@@ -36,6 +36,7 @@ const App = () => (
               <Route path="/game" element={<GameRoute />} />
               <Route path="/admin" element={<AdminRoute />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/gallery" element={<GalleryPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
