@@ -83,8 +83,62 @@ function getNodeLabel(node: any, areas: any[]): string {
   return `${areaName}${flagStr} (${shortId})`;
 }
 
+/* ─── AI Suggest Lock Hint Button ────────────────────── */
+function AiSuggestHintButton({ lockKey, direction, nodeName, nodeDescription, regionName, onSuggestion }: {
+  lockKey: string;
+  direction: string;
+  nodeName: string;
+  nodeDescription: string;
+  regionName: string;
+  onSuggestion: (hint: string) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const suggest = async () => {
+    if (!lockKey.trim()) {
+      toast.error('Set a Lock Key first');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-name-suggest', {
+        body: {
+          type: 'lock_hint',
+          context: {
+            lock_key: lockKey,
+            direction,
+            node_name: nodeName,
+            node_description: nodeDescription,
+            region_name: regionName,
+          },
+        },
+      });
+      if (error) throw error;
+      if (!data?.hint) throw new Error('No hint returned');
+      onSuggestion(data.hint);
+      toast.success('Hint suggested');
+    } catch (e: any) {
+      toast.error(e.message || 'AI suggestion failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={suggest}
+      disabled={loading || !lockKey.trim()}
+      title={lockKey.trim() ? 'AI Suggest hint from lock key + location' : 'Enter a Lock Key first'}
+      className="h-8 shrink-0"
+    >
+      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+    </Button>
+  );
+}
+
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, suggestedNodes }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, suggestedNodes, nodeName: parentNodeName, nodeDescription, regionName }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
@@ -92,6 +146,9 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   allRegions: any[];
   onUpdated: () => void;
   suggestedNodes?: Array<{ id: string; direction: string; name: string }>;
+  nodeName: string;
+  nodeDescription: string;
+  regionName: string;
 }) {
   const [addDir, setAddDir] = useState('N');
   const [addNodeId, setAddNodeId] = useState('');
