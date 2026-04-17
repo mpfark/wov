@@ -480,7 +480,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
           }
         }
       }
-      p.addLog(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You rummage around but find nothing useful.`);
+      const noLootMsg = hintsToReveal.length > 0
+        ? `🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You rummage around but find nothing useful, though something else catches your eye...`
+        : `Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You rummage around but find nothing useful.`;
+      p.addLog(noLootMsg);
     } else if (canFindPath) {
       const discovered = hiddenPaths[Math.floor(Math.random() * hiddenPaths.length)];
       const targetNode = p.getNode(discovered.node_id);
@@ -491,7 +494,10 @@ export function useMovementActions(params: UseMovementActionsParams) {
         p.addLog(`You travel through the hidden path to ${targetName}.`);
       }
     } else {
-      p.addLog(`Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You find nothing of note.`);
+      const noneMsg = hintsToReveal.length > 0
+        ? `🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — Your search reveals a clue...`
+        : `Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You find nothing of note.`;
+      p.addLog(noneMsg);
     }
     revealHints();
   }, [p.currentNode, p.character, p.addLog, p.fetchInventory, p.isDead, p.getNode, p.updateCharacter, p.creatures, p.equipped, p.unequipped]);
