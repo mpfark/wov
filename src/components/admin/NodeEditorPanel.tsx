@@ -99,6 +99,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   const [addHidden, setAddHidden] = useState(false);
   const [addLocked, setAddLocked] = useState(false);
   const [addLockKey, setAddLockKey] = useState('');
+  const [addLockHint, setAddLockHint] = useState('');
   const [saving, setSaving] = useState(false);
   const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [editDir, setEditDir] = useState('N');
@@ -106,8 +107,9 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   const [editHidden, setEditHidden] = useState(false);
   const [editLocked, setEditLocked] = useState(false);
   const [editLockKey, setEditLockKey] = useState('');
+  const [editLockHint, setEditLockHint] = useState('');
 
-  const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string }[] = (() => {
+  const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string; lock_hint?: string }[] = (() => {
     try { return JSON.parse(connections) || []; } catch { return []; }
   })();
 
@@ -116,13 +118,14 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     return n ? getNodeLabel(n, allAreas) : `#${id.slice(0, 6)}`;
   };
 
-  const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string }) => {
+  const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string; lock_hint?: string }) => {
     setEditingConnId(c.node_id);
     setEditDir(c.direction);
     setEditLabel(c.label || '');
     setEditHidden(!!c.hidden);
     setEditLocked(!!c.locked);
     setEditLockKey(c.lock_key || '');
+    setEditLockHint(c.lock_hint || '');
   };
 
   const saveEditConnection = async () => {
@@ -130,7 +133,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     setSaving(true);
     const newConns = parsed.map(c =>
       c.node_id === editingConnId
-        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}), ...(editLocked ? { locked: true, lock_key: editLockKey } : {}) }
+        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}), ...(editLocked ? { locked: true, lock_key: editLockKey, ...(editLockHint.trim() ? { lock_hint: editLockHint.trim() } : {}) } : {}) }
         : c
     );
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
@@ -154,7 +157,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     if (!addNodeId) return toast.error('Select a target node');
     if (parsed.some(c => c.node_id === addNodeId)) return toast.error('Already connected to that node');
     setSaving(true);
-    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}), ...(addLocked ? { locked: true, lock_key: addLockKey } : {}) }];
+    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}), ...(addLocked ? { locked: true, lock_key: addLockKey, ...(addLockHint.trim() ? { lock_hint: addLockHint.trim() } : {}) } : {}) }];
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
     const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
     if (targetNode) {
@@ -170,6 +173,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     setAddHidden(false);
     setAddLocked(false);
     setAddLockKey('');
+    setAddLockHint('');
     setSaving(false);
     onUpdated();
   };
@@ -252,7 +256,16 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
                   🔒 Locked (requires key item)
                 </label>
                 {editLocked && (
-                  <Input value={editLockKey} onChange={e => setEditLockKey(e.target.value)} className="h-8 text-xs" placeholder="Lock Key (item name)" />
+                  <>
+                    <Input value={editLockKey} onChange={e => setEditLockKey(e.target.value)} className="h-8 text-xs" placeholder="Lock Key (item name)" />
+                    <Textarea
+                      value={editLockHint}
+                      onChange={e => setEditLockHint(e.target.value)}
+                      rows={2}
+                      className="text-xs"
+                      placeholder="Hint shown when players search (e.g. 'The gate seems sturdy. Perhaps the innkeeper holds the key.')"
+                    />
+                  </>
                 )}
                 <div className="flex gap-2">
                   <Button size="sm" onClick={saveEditConnection} disabled={saving} className="h-7 text-xs font-display">
@@ -268,6 +281,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
                 {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
                 {c.hidden && <span className="text-[10px] text-primary/70 font-mono">👁️ Hidden</span>}
                 {c.locked && <span className="text-[10px] text-amber-500/70 font-mono">🔒 {c.lock_key}</span>}
+                {c.locked && c.lock_hint && <span className="text-[10px]" title={c.lock_hint}>💡</span>}
                 <Button size="sm" variant="ghost" disabled={saving} onClick={() => startEditConnection(c)} className="h-6 px-2 text-[10px]">
                   Edit
                 </Button>
@@ -316,8 +330,17 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
           🔒 Locked (requires key item)
         </label>
         {addLocked && (
-          <Input placeholder="Lock Key (item name)" value={addLockKey}
-            onChange={e => setAddLockKey(e.target.value)} className="h-8 text-xs" />
+          <>
+            <Input placeholder="Lock Key (item name)" value={addLockKey}
+              onChange={e => setAddLockKey(e.target.value)} className="h-8 text-xs" />
+            <Textarea
+              placeholder="Hint shown when players search (e.g. 'The gate seems sturdy. Perhaps the innkeeper holds the key.')"
+              value={addLockHint}
+              onChange={e => setAddLockHint(e.target.value)}
+              rows={2}
+              className="text-xs"
+            />
+          </>
         )}
         <Button onClick={addConnection} disabled={saving || !addNodeId} className="font-display text-xs">
           <Plus className="w-3 h-3 mr-1" /> Add Connection

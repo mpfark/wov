@@ -701,7 +701,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           break;
         }
         case 'search': {
-          handleSearch();
+          handleSearch(cmd.target);
           break;
         }
         case 'loot': {
