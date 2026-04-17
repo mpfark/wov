@@ -133,7 +133,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     setSaving(true);
     const newConns = parsed.map(c =>
       c.node_id === editingConnId
-        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}), ...(editLocked ? { locked: true, lock_key: editLockKey } : {}) }
+        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}), ...(editLocked ? { locked: true, lock_key: editLockKey, ...(editLockHint.trim() ? { lock_hint: editLockHint.trim() } : {}) } : {}) }
         : c
     );
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
@@ -157,7 +157,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     if (!addNodeId) return toast.error('Select a target node');
     if (parsed.some(c => c.node_id === addNodeId)) return toast.error('Already connected to that node');
     setSaving(true);
-    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}), ...(addLocked ? { locked: true, lock_key: addLockKey } : {}) }];
+    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}), ...(addLocked ? { locked: true, lock_key: addLockKey, ...(addLockHint.trim() ? { lock_hint: addLockHint.trim() } : {}) } : {}) }];
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
     const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
     if (targetNode) {
@@ -173,6 +173,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     setAddHidden(false);
     setAddLocked(false);
     setAddLockKey('');
+    setAddLockHint('');
     setSaving(false);
     onUpdated();
   };
