@@ -99,6 +99,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   const [addHidden, setAddHidden] = useState(false);
   const [addLocked, setAddLocked] = useState(false);
   const [addLockKey, setAddLockKey] = useState('');
+  const [addLockHint, setAddLockHint] = useState('');
   const [saving, setSaving] = useState(false);
   const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [editDir, setEditDir] = useState('N');
@@ -106,8 +107,9 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
   const [editHidden, setEditHidden] = useState(false);
   const [editLocked, setEditLocked] = useState(false);
   const [editLockKey, setEditLockKey] = useState('');
+  const [editLockHint, setEditLockHint] = useState('');
 
-  const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string }[] = (() => {
+  const parsed: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string; lock_hint?: string }[] = (() => {
     try { return JSON.parse(connections) || []; } catch { return []; }
   })();
 
@@ -116,13 +118,14 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     return n ? getNodeLabel(n, allAreas) : `#${id.slice(0, 6)}`;
   };
 
-  const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string }) => {
+  const startEditConnection = (c: { node_id: string; direction: string; label?: string; hidden?: boolean; locked?: boolean; lock_key?: string; lock_hint?: string }) => {
     setEditingConnId(c.node_id);
     setEditDir(c.direction);
     setEditLabel(c.label || '');
     setEditHidden(!!c.hidden);
     setEditLocked(!!c.locked);
     setEditLockKey(c.lock_key || '');
+    setEditLockHint(c.lock_hint || '');
   };
 
   const saveEditConnection = async () => {
