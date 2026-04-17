@@ -12,7 +12,6 @@ import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
 import { useNodeChannel } from '@/features/world';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
-import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/features/creatures';
 import { useItemCache } from '@/features/inventory';
 import { useCreatureBroadcast, useMergedCreatureHpOverrides } from '@/features/combat';
@@ -29,7 +28,7 @@ import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User, Map as MapIconLucide, Zap, LogOut, RefreshCw, MessageCircle } from 'lucide-react';
+import { User, Map as MapIconLucide, MessageCircle } from 'lucide-react';
 
 import { useKeyboardMovement } from '@/features/world';
 
@@ -37,7 +36,6 @@ import { useChat, parseCommand } from '@/features/chat';
 import { getNodeDisplayName, getNodeDisplayDescription } from '@/features/world';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
-import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
@@ -897,6 +895,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         updateCharacterLocal({ current_node_id: data.current_node_id });
       }
     },
+    appVersion: APP_VERSION,
+    xpMultiplier,
+    xpBoostExpiresAt,
+    isAdmin,
+    onOpenAdmin,
+    onSwitchCharacter,
+    onSignOut,
   }), [
     regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
     party, pendingInvites, isLeader, isTank, myMembership, playersHere,
@@ -905,6 +910,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
     creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon, handleTeleport,
     getNode, getRegion, currentRegion,
+    xpMultiplier, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
   ]);
 
   // ── Rendering ──────────────────────────────────────────────────
