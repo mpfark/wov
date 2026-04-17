@@ -8,12 +8,14 @@ import { PlayerPresence } from '@/features/world';
 import { Character } from '@/features/character';
 import PlayerGraphView from '@/features/world/components/PlayerGraphView';
 import PartyPanel from '@/features/party/components/PartyPanel';
-import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe } from 'lucide-react';
+import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe, Zap, RefreshCw, LogOut } from 'lucide-react';
 import PlayerWorldMapDialog from '@/features/world/components/PlayerWorldMapDialog';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
+import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/features/world';
 
 export interface ActiveBuffs {
@@ -95,6 +97,15 @@ interface Props {
   onAcceptSummon?: (requestId: string) => Promise<string | null>;
   onDeclineSummon?: (requestId: string) => Promise<string | null>;
   onSummonRefetch?: () => void;
+  // Toolbar (replaces top bar)
+  appVersion?: string;
+  xpMultiplier?: number;
+  xpBoostExpiresAt?: string | null;
+  isAdmin?: boolean;
+  onOpenAdmin?: () => void;
+  onSwitchCharacter?: () => void;
+  onSignOut?: () => void;
+  isCompactToolbar?: boolean;
 }
 
 const DIRECTION_ORDER: Direction[] = ['NW', 'N', 'NE', 'W', 'E', 'SW', 'S', 'SE'] as const;
@@ -109,6 +120,7 @@ export default function MapPanel({
   onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
   pendingSummons, onAcceptSummon, onDeclineSummon, onSummonRefetch,
+  appVersion, xpMultiplier = 1, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
 }: Props) {
   currentRegionId ? regions.find(r => r.id === currentRegionId) : null;
   const [rebindingDir, setRebindingDir] = useState<Direction | null>(null);
@@ -186,101 +198,169 @@ export default function MapPanel({
 
       {/* Local Map — SVG Graph */}
       <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <h3 className="font-display text-xs text-muted-foreground">Local Area</h3>
-          {keyboardBindings && (
-            <Popover>
-              <TooltipProvider>
+        <TooltipProvider delayDuration={200}>
+          <div className="flex items-center gap-1 mb-1.5">
+            {/* Keyboard shortcuts popover */}
+            {keyboardBindings && (
+              <Popover>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-5 w-5">
-                        <Keyboard className="h-3 w-3" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Keyboard className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
                   </TooltipTrigger>
-                  <TooltipContent side="left"><p className="text-xs">Movement Keys</p></TooltipContent>
+                  <TooltipContent side="bottom"><p className="text-xs">Keyboard Shortcuts</p></TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
-              <PopoverContent className="w-64 p-3 max-h-[70vh] overflow-y-auto" align="end">
-                <div className="space-y-2" onKeyDown={(rebindingDir || rebindingAction) ? handleKeyCapture : undefined}>
-                  <div className="flex items-center justify-between">
-                    <span className="font-display text-xs">Keybindings</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={() => keyboardBindings.resetBindings()}
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                    </Button>
-                  </div>
+                <PopoverContent className="w-64 p-3 max-h-[70vh] overflow-y-auto" align="start">
+                  <div className="space-y-2" onKeyDown={(rebindingDir || rebindingAction) ? handleKeyCapture : undefined}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-display text-xs">Keybindings</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={() => keyboardBindings.resetBindings()}
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </Button>
+                    </div>
 
-                  {/* Movement - 3x3 compass grid */}
-                  <div className="space-y-1">
-                    <span className="font-display text-[10px] text-muted-foreground">Movement</span>
-                    <div className="grid grid-cols-3 gap-1">
-                      {DIRECTION_ORDER.map((dir, i) => {
-                        const cells: React.ReactNode[] = [];
-                        if (i === 4) {
-                          cells.push(<div key="center" className="h-8" />);
-                        }
-                        const keys = keyboardBindings.bindings[dir];
-                        const isBinding = rebindingDir === dir;
-                        cells.push(
-                          <button
-                            key={dir}
-                            tabIndex={0}
-                            onClick={() => { setRebindingDir(dir); setRebindingAction(null); }}
-                            onKeyDown={isBinding ? handleKeyCapture : undefined}
-                            className={`h-8 rounded border text-[10px] flex flex-col items-center justify-center transition-colors
-                              ${isBinding ? 'border-primary bg-primary/20 ring-1 ring-primary' : 'border-border bg-muted/30 hover:bg-muted/60'}`}
-                          >
-                            <span className="font-display text-muted-foreground leading-none">{dir}</span>
-                            {isBinding ? (
-                              <span className="text-primary text-[8px] animate-pulse">press key</span>
-                            ) : keys.length > 0 ? (
-                              <span className="text-foreground/70 text-[8px] leading-none">
-                                {keys.map(getKeyLabel).join(' / ')}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground/50 text-[8px] leading-none">—</span>
-                            )}
-                          </button>
-                        );
-                        return cells;
-                      })}
+                    {/* Movement - 3x3 compass grid */}
+                    <div className="space-y-1">
+                      <span className="font-display text-[10px] text-muted-foreground">Movement</span>
+                      <div className="grid grid-cols-3 gap-1">
+                        {DIRECTION_ORDER.map((dir, i) => {
+                          const cells: React.ReactNode[] = [];
+                          if (i === 4) {
+                            cells.push(<div key="center" className="h-8" />);
+                          }
+                          const keys = keyboardBindings.bindings[dir];
+                          const isBinding = rebindingDir === dir;
+                          cells.push(
+                            <button
+                              key={dir}
+                              tabIndex={0}
+                              onClick={() => { setRebindingDir(dir); setRebindingAction(null); }}
+                              onKeyDown={isBinding ? handleKeyCapture : undefined}
+                              className={`h-8 rounded border text-[10px] flex flex-col items-center justify-center transition-colors
+                                ${isBinding ? 'border-primary bg-primary/20 ring-1 ring-primary' : 'border-border bg-muted/30 hover:bg-muted/60'}`}
+                            >
+                              <span className="font-display text-muted-foreground leading-none">{dir}</span>
+                              {isBinding ? (
+                                <span className="text-primary text-[8px] animate-pulse">press key</span>
+                              ) : keys.length > 0 ? (
+                                <span className="text-foreground/70 text-[8px] leading-none">
+                                  {keys.map(getKeyLabel).join(' / ')}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/50 text-[8px] leading-none">—</span>
+                              )}
+                            </button>
+                          );
+                          return cells;
+                        })}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="space-y-1 border-t border-border pt-2">
-                    <span className="font-display text-[10px] text-muted-foreground">Actions</span>
-                    {/* Attack & Search & Pickup */}
-                    <div className="grid grid-cols-3 gap-1">
-                      {renderActionKey('attack')}
-                      {renderActionKey('search')}
-                      {renderActionKey('pickup')}
+                    {/* Actions */}
+                    <div className="space-y-1 border-t border-border pt-2">
+                      <span className="font-display text-[10px] text-muted-foreground">Actions</span>
+                      <div className="grid grid-cols-3 gap-1">
+                        {renderActionKey('attack')}
+                        {renderActionKey('search')}
+                        {renderActionKey('pickup')}
+                      </div>
+                      <div className="grid grid-cols-4 gap-1">
+                        {(['ability1', 'ability2', 'ability3', 'ability4'] as ActionName[]).map(name => renderActionKey(name))}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(['potion1', 'potion2', 'potion3'] as ActionName[]).map(name => renderActionKey(name))}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(['potion4', 'potion5', 'potion6'] as ActionName[]).map(name => renderActionKey(name))}
+                      </div>
                     </div>
-                    {/* Abilities */}
-                    <div className="grid grid-cols-4 gap-1">
-                      {(['ability1', 'ability2', 'ability3', 'ability4'] as ActionName[]).map(name => renderActionKey(name))}
-                    </div>
-                    {/* Potions */}
-                    <div className="grid grid-cols-3 gap-1">
-                      {(['potion1', 'potion2', 'potion3'] as ActionName[]).map(name => renderActionKey(name))}
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      {(['potion4', 'potion5', 'potion6'] as ActionName[]).map(name => renderActionKey(name))}
-                    </div>
-                  </div>
 
-                  <p className="text-[9px] text-muted-foreground text-center">Click a slot, then press a key to bind</p>
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
+                    <p className="text-[9px] text-muted-foreground text-center">Click a slot, then press a key to bind</p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Online Players */}
+            {summonOnlinePlayers && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span><OnlinePlayersDialog onlinePlayers={summonOnlinePlayers} myCharacterId={myCharacterId} compact /></span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p className="text-xs">Online Players ({summonOnlinePlayers.length})</p></TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Admin (admin only) */}
+            {isAdmin && onOpenAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onOpenAdmin}>
+                    <Zap className="h-4 w-4 text-primary" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p className="text-xs">Admin Panel</p></TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Switch Character */}
+            {onSwitchCharacter && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onSwitchCharacter}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p className="text-xs">Switch Character</p></TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Report Issue */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span><ReportIssueDialog userId={character.user_id} characterId={character.id} characterName={character.name} compact /></span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p className="text-xs">Report Issue</p></TooltipContent>
+            </Tooltip>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* XP Boost (active + pulsing only) */}
+            {xpMultiplier > 1 && xpBoostExpiresAt && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] font-display text-primary animate-pulse px-2 py-0.5 bg-primary/10 rounded-full border border-primary/30 cursor-default">
+                    ⚡ {xpMultiplier}x
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">XP Boost active{appVersion ? ` · ${appVersion}` : ''}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Sign Out */}
+            {onSignOut && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={onSignOut}>
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom"><p className="text-xs">Sign Out{appVersion ? ` · ${appVersion}` : ''}</p></TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
         <div className="relative">
           {currentNodeId ? (
             <PlayerGraphView

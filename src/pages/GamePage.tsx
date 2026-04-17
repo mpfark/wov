@@ -12,7 +12,6 @@ import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
 import { useNodeChannel } from '@/features/world';
 import { useGlobalPresence } from '@/hooks/useGlobalPresence';
-import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
 import { useCreatures } from '@/features/creatures';
 import { useItemCache } from '@/features/inventory';
 import { useCreatureBroadcast, useMergedCreatureHpOverrides } from '@/features/combat';
@@ -29,7 +28,7 @@ import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User, Map as MapIconLucide, Zap, LogOut, RefreshCw, MessageCircle } from 'lucide-react';
+import { User, Map as MapIconLucide, MessageCircle } from 'lucide-react';
 
 import { useKeyboardMovement } from '@/features/world';
 
@@ -37,7 +36,6 @@ import { useChat, parseCommand } from '@/features/chat';
 import { getNodeDisplayName, getNodeDisplayDescription } from '@/features/world';
 import { useXpBoost } from '@/hooks/useXpBoost';
 import { APP_VERSION } from '@/lib/version';
-import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
@@ -897,6 +895,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         updateCharacterLocal({ current_node_id: data.current_node_id });
       }
     },
+    appVersion: APP_VERSION,
+    xpMultiplier,
+    xpBoostExpiresAt,
+    isAdmin,
+    onOpenAdmin,
+    onSwitchCharacter,
+    onSignOut,
   }), [
     regions, nodes, areas, character, currentNode, handleMove, mergedPartyMembers,
     party, pendingInvites, isLeader, isTank, myMembership, playersHere,
@@ -905,6 +910,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     showTargetSelector, handleSearch, inCombat, addLog, setTeleportOpen,
     creatures.length, unlockedConnections, onlinePlayers, isDead, updateCharacter, pendingSummons, acceptSummon, declineSummon, handleTeleport,
     getNode, getRegion, currentRegion,
+    xpMultiplier, xpBoostExpiresAt, isAdmin, onOpenAdmin, onSwitchCharacter, onSignOut,
   ]);
 
   // ── Rendering ──────────────────────────────────────────────────
@@ -929,56 +935,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   return (
     <div className="h-screen flex flex-col parchment-bg max-w-[1920px] mx-auto w-full">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-sm text-primary text-glow">
-            {isTablet ? 'WoV' : 'Wayfarers of Varneth'}
-            <span className="text-xs text-muted-foreground font-body ml-1">{APP_VERSION}</span>
-          </h1>
-          {xpMultiplier > 1 && xpBoostExpiresAt && (
-            <span className="text-xs font-display text-primary animate-pulse px-2 py-0.5 bg-primary/10 rounded-full border border-primary/30">
-              ⚡ {xpMultiplier}x XP
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          <OnlinePlayersDialog onlinePlayers={onlinePlayers} myCharacterId={character.id} compact={isTablet} />
-          {isAdmin && (
-            isTablet ? (
-              <Button variant="outline" size="icon" onClick={onOpenAdmin} className="h-8 w-8">
-                <Zap className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={onOpenAdmin} className="text-xs font-display">
-                ⚡ Admin
-              </Button>
-            )
-          )}
-          {onSwitchCharacter && (
-            isTablet ? (
-              <Button variant="outline" size="icon" onClick={onSwitchCharacter} className="h-8 w-8">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={onSwitchCharacter} className="text-xs font-display">
-                Switch Character
-              </Button>
-            )
-          )}
-          <ReportIssueDialog userId={character.user_id} characterId={character.id} characterName={character.name} compact={isTablet} />
-          {isTablet ? (
-            <Button variant="ghost" size="icon" onClick={onSignOut} className="h-8 w-8 text-muted-foreground">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" onClick={onSignOut} className="text-xs text-muted-foreground">
-              Sign Out
-            </Button>
-          )}
-        </div>
-      </div>
-
 
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex">
