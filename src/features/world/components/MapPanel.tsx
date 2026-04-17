@@ -8,7 +8,7 @@ import { PlayerPresence } from '@/features/world';
 import { Character } from '@/features/character';
 import PlayerGraphView from '@/features/world/components/PlayerGraphView';
 import PartyPanel from '@/features/party/components/PartyPanel';
-import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe, Zap, RefreshCw, LogOut } from 'lucide-react';
+import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe, Zap, RefreshCw, LogOut, Image as ImageIcon } from 'lucide-react';
 import PlayerWorldMapDialog from '@/features/world/components/PlayerWorldMapDialog';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Button } from '@/components/ui/button';
@@ -329,6 +329,21 @@ export default function MapPanel({
                 <span><ReportIssueDialog userId={character.user_id} characterId={character.id} characterName={character.name} compact /></span>
               </TooltipTrigger>
               <TooltipContent side="bottom"><p className="text-xs">Report Issue</p></TooltipContent>
+            </Tooltip>
+
+            {/* Illustration Gallery */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => window.open('/gallery', '_blank')}
+                >
+                  <ImageIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom"><p className="text-xs">Illustration Gallery</p></TooltipContent>
             </Tooltip>
 
             {/* Spacer */}
