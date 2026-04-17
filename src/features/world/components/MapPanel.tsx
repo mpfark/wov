@@ -8,12 +8,14 @@ import { PlayerPresence } from '@/features/world';
 import { Character } from '@/features/character';
 import PlayerGraphView from '@/features/world/components/PlayerGraphView';
 import PartyPanel from '@/features/party/components/PartyPanel';
-import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe } from 'lucide-react';
+import { Keyboard, RotateCcw, MapIcon, Search, ShoppingCart, Hammer, Globe, Zap, RefreshCw, LogOut } from 'lucide-react';
 import PlayerWorldMapDialog from '@/features/world/components/PlayerWorldMapDialog';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
+import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/features/world';
 
 export interface ActiveBuffs {
