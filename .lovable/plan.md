@@ -1,63 +1,56 @@
 
 
-# Locked Connection Hints
+# AI-Suggested Lock Hints
 
 ## Overview
-Add an optional `lock_hint` description to locked connections so players can discover where to look for the key when they search the node. Hints are revealed by the existing `search` command (no DB schema change — `connections` is a JSONB array, we just add a new optional field).
+Add a ✨ button next to the lock hint Textarea (in both Add and Edit connection forms) that calls the existing `ai-name-suggest` edge function with a new `type: 'lock_hint'`. The AI generates an atmospheric, lore-appropriate hint based on the lock_key item name and the current node's name + description.
 
 ## Changes
 
-### 1. Type update — `src/features/world/hooks/useNodes.ts`
-Extend the connection shape:
+### 1. Extend `supabase/functions/ai-name-suggest/index.ts`
+Add a new branch alongside `region` / `area` / `node`:
+
 ```ts
-connections: Array<{
-  node_id: string; direction: string; label?: string;
-  hidden?: boolean; locked?: boolean; lock_key?: string;
-  lock_hint?: string;  // NEW
-}>;
+} else if (type === "lock_hint") {
+  userPrompt = `Generate an atmospheric in-world hint that a player would discover when searching this location. The hint should subtly point toward where the key item might be found, without revealing it directly.
+
+Locked exit direction: ${context.direction || "unknown"}
+Lock requires: "${context.lock_key}" (an item the player must find)
+Current location: ${context.node_name || "unknown"}
+Location description: ${context.node_description || "(none)"}
+Region: ${context.region_name || "unknown"}
+
+The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perceptive adventurer would notice.`;
+}
 ```
 
-### 2. Admin editor — `src/components/admin/NodeEditorPanel.tsx`
-For both Add and Edit connection forms, when `locked` is checked, show a second field directly under the Lock Key input:
-- `Textarea` (rows=2) bound to `addLockHint` / `editLockHint` state
-- Placeholder: `"Hint shown when players search (e.g. 'The gate seems sturdy. Perhaps the innkeeper holds the key.')"`
-- Persist as `lock_hint` in the connection object (only included if non-empty, mirroring the existing `lock_key` pattern)
-- Show a small 💡 indicator in the connection row when a hint is set
+Reuse the existing `suggest_name` tool schema — but for `lock_hint` we only need the `description` field. Simplest path: add a second tool `suggest_hint` with a single `hint` property and select it via `tool_choice` when `type === "lock_hint"`. Keep auth, rate-limit, and steward/overlord role check unchanged.
 
-### 3. Search reveal — `src/features/world/hooks/useMovementActions.ts` `handleSearch`
-After the existing hidden-path / loot resolution, add a final reveal step for locked connections with hints:
-- Collect `currentNode.connections.filter(c => c.locked && c.lock_hint)`
-- If the search roll `total >= 10` and any locked-with-hint exits exist, append one log line per locked exit:
-  - `🗝️ ${direction}: ${lock_hint}`
-- This runs **in addition to** the existing outcome (so a successful search that finds nothing material still surfaces hints, making search feel rewarding near locked exits)
-- Skip if the player already holds the matching `lock_key` (no need to hint)
+### 2. Add a small `AiSuggestHintButton` component in `NodeEditorPanel.tsx`
+Modeled on the existing `AiSuggestNodeButton`. Props: `lockKey`, `direction`, `nodeName`, `nodeDescription`, `regionName`, `onSuggestion(hint)`. Renders a `Sparkles` icon button (loader while pending). Disabled when `lockKey` is empty.
 
-### 4. Keyword search (`search gate`) — Phase-1 scope decision
-The parser currently treats `search` as single-word only. Extending it to accept a keyword (`search gate`) would require:
-- Updating `commandParser.ts` to accept an optional `target` arg on `search`
-- Filtering hints by matching the keyword against the connection's `direction`, `label`, or `lock_key` (case-insensitive substring)
+### 3. Wire the button into `ConnectionsManager`
+The component already has access to `nodeId` but needs `nodeName`, `nodeDescription`, and `regionName`. Pass these as new props from the parent (the main `NodeEditorPanel` already holds `form.name`, `form.description`, and can resolve region name via `selectedRegionId` + `regions`).
 
-**Recommendation**: include this in the same change. It's a small parser tweak and matches the pattern already used for `attack <target>` / `loot <target>`. When `search <keyword>` is used and matches a locked exit, only that exit's hint is shown (and we can lower the DC slightly, e.g. `total >= 8`, since the player is being specific). Unmatched keyword falls back to a generic search.
+Place the ✨ button:
+- **Add form** (around line 336–342): inline with the `Textarea` (flex row), disabled until `addLockKey` is non-empty
+- **Edit form** (around line 261–268): same treatment for `editLockHint` / `editLockKey`
 
-### 5. Parser — `src/features/chat/utils/commandParser.ts`
-Change the `search` branch to accept an optional target (up to 3 words total), mirroring `loot`:
-```ts
-type ParsedCommand = ... | { type: 'search'; target?: string };
-```
+On success: populate the corresponding state (`setAddLockHint` / `setEditLockHint`) and toast `"Hint suggested"`.
 
-### 6. Wire keyword through — `src/pages/GamePage.tsx`
-`handleSearch` currently takes no args. Add an optional `keyword?: string` param to `handleSearch` and pass `cmd.target` from the command dispatcher.
+### 4. Update `ConnectionsManager` props interface
+Add `nodeName`, `nodeDescription`, `regionName` to the props and pass them through from `NodeEditorPanel` (single call site, low risk).
+
+## Error handling
+Reuse the existing pattern: `toast.error(e.message)` on failure. Surfaces 429/402 messages from the edge function unchanged.
 
 ## What stays unchanged
-- DB schema (connections JSONB already flexible)
-- Lock enforcement, key-consumption behavior, 30s unlock window
-- Click-driven Search button (calls `handleSearch()` with no keyword — same behavior as before)
-- All other commands and chat fallthrough
+- Existing `region` / `area` / `node` suggestion paths
+- Auth, rate limiting (15 req/min/user), role gating
+- Lock hint storage format (still optional `lock_hint` field on the connection)
+- Player-facing search reveal logic
 
 ## Files touched
-- `src/features/world/hooks/useNodes.ts` (type)
-- `src/components/admin/NodeEditorPanel.tsx` (admin UI)
-- `src/features/world/hooks/useMovementActions.ts` (search reveal + optional keyword filter)
-- `src/features/chat/utils/commandParser.ts` (allow `search <keyword>`)
-- `src/pages/GamePage.tsx` (pass keyword to handleSearch)
+- `supabase/functions/ai-name-suggest/index.ts` — add `lock_hint` branch + tool
+- `src/components/admin/NodeEditorPanel.tsx` — new `AiSuggestHintButton`, pass node context to `ConnectionsManager`, wire button into Add + Edit forms
 
