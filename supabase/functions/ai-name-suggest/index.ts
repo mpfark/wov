@@ -87,8 +87,21 @@ Region: ${context.region_name || "unknown"}.
 Node flags: ${[context.is_vendor && "vendor", context.is_inn && "inn", context.is_blacksmith && "blacksmith", context.is_teleport && "teleport"].filter(Boolean).join(", ") || "none"}.
 Nearby locations: ${context.nearby_nodes || "none"}.
 ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
+    } else if (type === "lock_hint") {
+      if (!context.lock_key) {
+        return new Response(JSON.stringify({ error: "lock_key is required for lock_hint" }), { status: 400, headers: corsHeaders });
+      }
+      userPrompt = `Generate an atmospheric in-world hint that a player would discover when searching this location. The hint should subtly point toward where the key item might be found, without revealing it directly.
+
+Locked exit direction: ${context.direction || "unknown"}
+Lock requires: "${context.lock_key}" (an item the player must find)
+Current location: ${context.node_name || "unknown"}
+Location description: ${context.node_description || "(none)"}
+Region: ${context.region_name || "unknown"}
+
+The hint should be 1-2 short sentences, atmospheric, and feel like a clue a perceptive adventurer would notice. Do not name the key item directly.`;
     } else {
-      return new Response(JSON.stringify({ error: "Invalid type. Use: region, area, node" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Invalid type. Use: region, area, node, lock_hint" }), { status: 400, headers: corsHeaders });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -108,7 +121,23 @@ ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        tools: [
+        tools: type === "lock_hint" ? [
+          {
+            type: "function",
+            function: {
+              name: "suggest_hint",
+              description: "Return an atmospheric in-world hint pointing toward where the key item might be found.",
+              parameters: {
+                type: "object",
+                properties: {
+                  hint: { type: "string", description: "An atmospheric 1-2 sentence hint, under 200 characters" },
+                },
+                required: ["hint"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ] : [
           {
             type: "function",
             function: {
@@ -126,7 +155,7 @@ ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "suggest_name" } },
+        tool_choice: { type: "function", function: { name: type === "lock_hint" ? "suggest_hint" : "suggest_name" } },
       }),
     });
 
