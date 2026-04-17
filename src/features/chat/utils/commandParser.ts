@@ -9,7 +9,7 @@
 export type ParsedCommand =
   | { type: 'move'; direction: string }
   | { type: 'attack'; target?: string }
-  | { type: 'search' }
+  | { type: 'search'; target?: string }
   | { type: 'loot'; target?: string; all?: boolean }
   | { type: 'look' }
   | { type: 'summon'; name: string };
@@ -48,9 +48,10 @@ export function parseCommand(input: string): ParsedCommand | null {
     return { type: 'look' };
   }
 
-  // Single-word search
-  if (parts.length === 1 && verb === 'search') {
-    return { type: 'search' };
+  // Search — single word or with optional keyword (up to 3 words total)
+  if (verb === 'search' && parts.length <= 3) {
+    const target = parts.length > 1 ? parts.slice(1).join(' ') : undefined;
+    return { type: 'search', target };
   }
 
   // Attack — single word or with target (up to 4 words total)
