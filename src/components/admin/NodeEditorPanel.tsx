@@ -256,7 +256,16 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
                   🔒 Locked (requires key item)
                 </label>
                 {editLocked && (
-                  <Input value={editLockKey} onChange={e => setEditLockKey(e.target.value)} className="h-8 text-xs" placeholder="Lock Key (item name)" />
+                  <>
+                    <Input value={editLockKey} onChange={e => setEditLockKey(e.target.value)} className="h-8 text-xs" placeholder="Lock Key (item name)" />
+                    <Textarea
+                      value={editLockHint}
+                      onChange={e => setEditLockHint(e.target.value)}
+                      rows={2}
+                      className="text-xs"
+                      placeholder="Hint shown when players search (e.g. 'The gate seems sturdy. Perhaps the innkeeper holds the key.')"
+                    />
+                  </>
                 )}
                 <div className="flex gap-2">
                   <Button size="sm" onClick={saveEditConnection} disabled={saving} className="h-7 text-xs font-display">
@@ -272,6 +281,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
                 {c.label && <span className="text-xs text-muted-foreground italic">{c.label}</span>}
                 {c.hidden && <span className="text-[10px] text-primary/70 font-mono">👁️ Hidden</span>}
                 {c.locked && <span className="text-[10px] text-amber-500/70 font-mono">🔒 {c.lock_key}</span>}
+                {c.locked && c.lock_hint && <span className="text-[10px]" title={c.lock_hint}>💡</span>}
                 <Button size="sm" variant="ghost" disabled={saving} onClick={() => startEditConnection(c)} className="h-6 px-2 text-[10px]">
                   Edit
                 </Button>
@@ -320,8 +330,17 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
           🔒 Locked (requires key item)
         </label>
         {addLocked && (
-          <Input placeholder="Lock Key (item name)" value={addLockKey}
-            onChange={e => setAddLockKey(e.target.value)} className="h-8 text-xs" />
+          <>
+            <Input placeholder="Lock Key (item name)" value={addLockKey}
+              onChange={e => setAddLockKey(e.target.value)} className="h-8 text-xs" />
+            <Textarea
+              placeholder="Hint shown when players search (e.g. 'The gate seems sturdy. Perhaps the innkeeper holds the key.')"
+              value={addLockHint}
+              onChange={e => setAddLockHint(e.target.value)}
+              rows={2}
+              className="text-xs"
+            />
+          </>
         )}
         <Button onClick={addConnection} disabled={saving || !addNodeId} className="font-display text-xs">
           <Plus className="w-3 h-3 mr-1" /> Add Connection
