@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
+import { useAppearanceEntries } from '@/features/character/hooks/useAppearanceEntries';
 
 interface Item {
   id: string;
