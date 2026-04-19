@@ -762,6 +762,7 @@ export type Database = {
           drop_weight: number
           hands: number | null
           id: string
+          illustration_metadata: Json
           illustration_url: string
           is_soulbound: boolean
           item_type: string
@@ -784,6 +785,7 @@ export type Database = {
           drop_weight?: number
           hands?: number | null
           id?: string
+          illustration_metadata?: Json
           illustration_url?: string
           is_soulbound?: boolean
           item_type?: string
@@ -806,6 +808,7 @@ export type Database = {
           drop_weight?: number
           hands?: number | null
           id?: string
+          illustration_metadata?: Json
           illustration_url?: string
           is_soulbound?: boolean
           item_type?: string

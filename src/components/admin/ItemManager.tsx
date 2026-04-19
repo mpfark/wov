@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
+import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 
 interface Item {
   id: string;
@@ -28,6 +29,7 @@ interface Item {
   is_soulbound: boolean;
   appearance_key: string | null;
   illustration_url: string | null;
+  illustration_metadata: Record<string, string> | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique'];
@@ -51,7 +53,7 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
   origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
-  appearance_key: null, illustration_url: null,
+  appearance_key: null, illustration_url: null, illustration_metadata: {},
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
@@ -218,6 +220,7 @@ export default function ItemManager() {
       is_soulbound: item.is_soulbound ?? false,
       appearance_key: (item as any).appearance_key ?? null,
       illustration_url: (item as any).illustration_url ?? null,
+      illustration_metadata: ((item as any).illustration_metadata ?? {}) as Record<string, string>,
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -253,6 +256,7 @@ export default function ItemManager() {
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
       weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
       illustration_url: form.illustration_url ?? '',
+      illustration_metadata: form.illustration_metadata ?? {},
     };
 
     let savedId = selectedId;
@@ -614,6 +618,19 @@ export default function ItemManager() {
                     )}
                   </div>
                 </div>
+
+                {/* AI Generation Metadata */}
+                <ItemIllustrationMetadataEditor
+                  metadata={form.illustration_metadata ?? {}}
+                  onMetadataChange={meta => setForm(f => ({ ...f, illustration_metadata: meta }))}
+                  context={{
+                    name: form.name,
+                    description: form.description,
+                    rarity: form.rarity,
+                    slot: form.slot,
+                    item_type: form.item_type,
+                  }}
+                />
               </AdminFormSection>
 
 

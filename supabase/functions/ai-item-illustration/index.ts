@@ -29,7 +29,27 @@ const RARITY_STYLE: Record<string, string> = {
   unique: "ornate, jeweled, glowing arcane runes, masterwork, legendary aura",
 };
 
-function buildPrompt(name: string, description: string, rarity: string, slot: string | null, itemType: string): string {
+interface Metadata {
+  visual_theme?: string;
+  material?: string;
+  silhouette?: string;
+  ornamentation?: string;
+  color_palette?: string;
+  mood?: string;
+  notable_features?: string;
+  prompt_override?: string;
+}
+
+function buildPrompt(
+  name: string,
+  description: string,
+  rarity: string,
+  slot: string | null,
+  itemType: string,
+  metadata: Metadata,
+): string {
+  if (metadata.prompt_override?.trim()) return metadata.prompt_override.trim();
+
   const style = RARITY_STYLE[rarity] || RARITY_STYLE.common;
   const subject =
     itemType === "consumable"
@@ -37,14 +57,21 @@ function buildPrompt(name: string, description: string, rarity: string, slot: st
       : slot
         ? `a fantasy ${slot.replace("_", " ")} item called "${name}"`
         : `a fantasy item called "${name}"`;
-  return [
-    `A single hero-shot illustration of ${subject}.`,
-    description ? `Lore: ${description}` : "",
-    `Style: ${style}.`,
+
+  const parts: string[] = [`A single hero-shot illustration of ${subject}.`];
+  if (description) parts.push(`Lore: ${description}`);
+  if (metadata.visual_theme) parts.push(`Theme: ${metadata.visual_theme}.`);
+  if (metadata.material) parts.push(`Material: ${metadata.material}.`);
+  if (metadata.silhouette) parts.push(`Silhouette: ${metadata.silhouette}.`);
+  if (metadata.ornamentation) parts.push(`Ornamentation: ${metadata.ornamentation}.`);
+  if (metadata.color_palette) parts.push(`Color palette: ${metadata.color_palette}.`);
+  if (metadata.mood) parts.push(`Mood: ${metadata.mood}.`);
+  if (metadata.notable_features) parts.push(`Notable features: ${metadata.notable_features}.`);
+  parts.push(`Style: ${style}.`);
+  parts.push(
     "Dark fantasy painterly art, dramatic chiaroscuro lighting against a deep neutral background, centered framing, no text, no watermark, no border, square 1:1 composition, item only — no character, no hands.",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  );
+  return parts.join(" ");
 }
 
 // Decode a base64 data URL like "data:image/png;base64,...." into raw bytes
@@ -119,7 +146,7 @@ serve(async (req) => {
 
     const { data: item, error: itemErr } = await admin
       .from("items")
-      .select("id, name, description, rarity, slot, item_type")
+      .select("id, name, description, rarity, slot, item_type, illustration_metadata")
       .eq("id", itemId)
       .maybeSingle();
     if (itemErr || !item) {
@@ -129,7 +156,8 @@ serve(async (req) => {
       });
     }
 
-    const prompt = buildPrompt(item.name, item.description ?? "", item.rarity, item.slot, item.item_type);
+    const metadata: Metadata = (item.illustration_metadata ?? {}) as Metadata;
+    const prompt = buildPrompt(item.name, item.description ?? "", item.rarity, item.slot, item.item_type, metadata);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
