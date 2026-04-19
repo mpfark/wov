@@ -14,6 +14,7 @@ import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
 import ItemForgePanel from '@/components/admin/ItemForgePanel';
+import AppearanceLibrary from '@/components/admin/AppearanceLibrary';
 import GameManual from '@/components/admin/GameManual';
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
