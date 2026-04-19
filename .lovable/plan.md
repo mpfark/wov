@@ -1,50 +1,114 @@
 
 
-## Illustration Gallery Page
+The user wants two refinements to the existing paper-doll plan. Both are clarifications/improvements rather than new scope. I'll integrate them and re-present the full updated plan concisely.
 
-A new public-facing gallery page at `/gallery` that showcases all illustrations from regions and areas (and nodes if any get added later). Accessible via a new icon in the Map panel toolbar.
+Refinement 1: Unify unique items into the same resolver path. So drop `appearance_override_url` on items. Instead, create unique appearance entries in the same `appearance_pools` table (or rename it to make the unification clearer). Items always resolve via `appearance_key`. Unique items just point to a unique-tier entry that happens to be one-of-a-kind.
 
-### Layout
-- Responsive grid of illustration cards (1 col mobile / 2 tablet / 3-4 desktop)
-- Each card: image, title (region/area name), small badge (Region / Area / Node), and short description snippet
-- Click a card → opens a lightbox dialog with the full-size image, name, description, level range, and source type
-- Top of page: title "Gallery of Varneth", filter chips (All / Regions / Areas / Nodes), and a Back-to-game link
-- Same parchment/dark-fantasy theme as the rest of the app
-- Skeleton placeholders while loading; empty state if no illustrations exist for the selected filter
+Refinement 2: Codify a per-slot rendering contract upfront — canvas size, anchor, z-index, occlusion rules, layering behavior. This becomes the source of truth for asset creation and rendering.
 
-### Data
-- One client-side query on mount: select `id, name, description, illustration_url, min_level, max_level` from each of `regions`, `areas`, `nodes` where `illustration_url IS NOT NULL AND illustration_url <> ''`
-- These tables are already publicly readable (players see them in the world view), so no new RLS work is needed
-- Merge into a single typed array tagged with `source: 'region' | 'area' | 'node'`, sort alphabetically by name
-- Lazy-load images with native `loading="lazy"` and a soft fade-in (reuse the pattern from `LocationBackground`)
+I'll keep the rest of the plan as-is and present the revised version tightly.
 
-### Routing
-- New route `/gallery` in `src/App.tsx` (lazy-loaded like `GameRoute`)
-- Public — no auth required (the illustrations are content showcase, not gameplay state)
-- Add a small back-link in the gallery header that returns to `/game` if signed in, otherwise `/`
+# Paper Doll Equipment Visual System (Revised)
 
-### Map panel toolbar entry
-- Add an `ImageIcon` (lucide `Image`) button next to the existing toolbar icons in `MapPanel.tsx`
-- Tooltip: "Illustration Gallery"
-- Click → `window.open('/gallery', '_blank')` so players don't lose their game session
+## Concept (unchanged)
 
-### Files
+Character = stack of transparent PNG layers on a fixed pose. Items don't carry art; they reference an entry in a single shared appearance library. Whether an item is common iron gloves or a one-of-a-kind Soulforged Crown, it resolves through **the same path**.
 
-**New:**
-- `src/pages/GalleryPage.tsx` — main page (data fetch, filter state, grid, lightbox)
+## Refinement 1 — Unified appearance library
 
-**Modified:**
-- `src/App.tsx` — add lazy `GalleryPage` import + `/gallery` route
-- `src/features/world/components/MapPanel.tsx` — add Image icon button in toolbar opening `/gallery` in new tab
+Drop the idea of a separate `appearance_override_url` field on items. There is **one** library, one resolver, one rendering model.
 
-### What stays unchanged
-- All existing pages, routes, dialogs
-- Database schema and RLS (read-only public selects)
-- Top toolbar layout otherwise
+**Single table `appearance_entries`** (replaces "appearance_pools"):
+```text
+id            uuid pk
+slot          item_slot
+material      text         -- 'cloth' | 'leather' | 'mail' | 'plate' | 'metal' | 'wood' | 'magical' | 'unique'
+tier          text         -- 'common' | 'uncommon' | 'unique'
+asset_url     text         -- transparent PNG in storage bucket
+layer_order   smallint     -- z-index within slot (default per slot, overridable)
+occludes      text[]       -- which other layers this entry hides (e.g. ['hair'] for full helms)
+prompt_notes  text         -- AI generation guidance (offline use)
+is_shared     boolean      -- true = pool (many items can reference); false = bespoke (one item)
+created_at    timestamptz
+```
 
-### Edge cases
-- No illustrations for a filter → friendly empty state ("No illustrations yet — keep exploring!")
-- Broken/404 image URL → `onError` hides the card
-- Mobile lightbox → image scales to viewport with `max-h-[90vh] object-contain`
-- Long descriptions → clamp to 2 lines on the card, full text in lightbox
+**Items table** gets only one new column:
+```text
+items.appearance_key  text  -- references appearance_entries.id (or a stable slug)
+```
+
+**Resolver behavior** (same for all items):
+1. If `items.appearance_key` is set → look up the entry directly.
+2. Else → infer a default entry from `(slot, weapon_tag/material hint, rarity tier)` so legacy items still render.
+
+Unique items simply point to an `appearance_entries` row where `is_shared = false` and `tier = 'unique'`. They live in the same library, are previewed in the same admin tool, and render through the same code path. If a unique entry is ever retired, it can be reassigned without touching item rows.
+
+This eliminates the two-system risk. The `appearance_override_url` idea from the prior plan is dropped entirely — no transitional compromise needed because we're starting fresh.
+
+## Refinement 2 — Per-slot rendering contract
+
+Before any assets are produced, ship a contract document and a runtime constants file. Both the renderer and the asset pipeline read from the same source of truth.
+
+**`src/features/character/utils/doll-contract.ts`** — exported constants:
+
+```text
+DOLL_CANVAS = { width: 256, height: 384 }   // displayed; assets authored at 2× = 512×768
+
+SLOT_CONTRACT = {
+  base_body:  { z: 10,  size: 512×768, anchor: 'center',     occludes: [],            kind: 'base' },
+  hair:       { z: 20,  size: 512×768, anchor: 'head',       occludes: [],            kind: 'overlay' },
+  cloak:      { z: 15,  size: 512×768, anchor: 'shoulders',  occludes: [],            kind: 'back' },
+  legs:       { z: 30,  size: 512×768, anchor: 'hips',       occludes: ['base_legs'], kind: 'overlay' },
+  boots:      { z: 35,  size: 512×768, anchor: 'feet',       occludes: ['legs_feet'], kind: 'overlay' },
+  chest:      { z: 40,  size: 512×768, anchor: 'torso',      occludes: ['base_torso'],kind: 'overlay' },
+  hands:      { z: 45,  size: 512×768, anchor: 'wrists',     occludes: [],            kind: 'overlay' },
+  off_hand:   { z: 50,  size: 512×768, anchor: 'left_grip',  occludes: [],            kind: 'prop_left' },
+  main_hand:  { z: 60,  size: 512×768, anchor: 'right_grip', occludes: [],            kind: 'prop_right' },
+  head:       { z: 70,  size: 512×768, anchor: 'head',       occludes: ['hair?'],     kind: 'overlay' },
+}
+```
+
+Rules every asset (pooled or unique) must obey:
+- **Canvas:** authored at 512×768 PNG, transparent background, no padding crop.
+- **Pose & framing:** identical T-pose, eye-level camera, no perspective distortion. The pose is fixed forever; new poses would require a separate doll variant.
+- **Anchor:** asset is positioned so the named anchor (head, hips, wrists, etc.) lines up with the base doll's anchor at fixed pixel coordinates.
+- **Z-order:** taken from `SLOT_CONTRACT[slot].z` unless the entry sets a `layer_order` override.
+- **Occlusion:** if the entry's `occludes` array names another layer, that layer is hidden when this one renders (full helms hide hair; chest plates hide bare torso). Optional occluders use `?` (e.g. some hats keep hair visible).
+- **Lighting:** soft top-left key, no baked cast shadows on the ground.
+- **Style:** dark fantasy painterly, matching the existing Varneth illustration set.
+
+**Where the contract is enforced:**
+1. **Renderer (`PaperDoll.tsx`)** — reads `SLOT_CONTRACT` to decide z-index and occlusion at draw time.
+2. **Admin authoring (`AppearanceLibrary.tsx`)** — uploaded PNGs are validated against `size` and previewed against the live doll before save.
+3. **AI asset prompts** — the `prompt_notes` field on each entry auto-prepends the contract block (canvas, pose, anchor, lighting, transparent BG) so external generations stay aligned.
+
+If the contract ever needs to evolve (e.g. add a new slot or change canvas size), it changes in one file and the asset library is re-validated against it.
+
+## Phases (unchanged scope)
+
+- **Phase 1:** doll-contract.ts + base bodies (M/F) + Phase-1 slots (head, chest, hands, legs, boots, main_hand, off_hand) + resolver + `PaperDoll` in Character Panel + admin appearance library.
+- **Phase 2:** customization (hair style/color via tinted overlays, body type) + admin preview-equip tool.
+- **Phase 3:** populate unique entries for milestone gear (Crown, Soulforged) + cloak slot + richer materials.
+
+## Files (revised)
+
+**New (Phase 1):**
+- `src/features/character/utils/doll-contract.ts` — single source of truth
+- `src/features/character/utils/appearance-resolver.ts`
+- `src/features/character/components/PaperDoll.tsx`
+- `src/features/character/hooks/useAppearanceEntries.ts`
+- migration: `appearance_entries` table, `items.appearance_key` column, `paper-doll-assets` storage bucket
+
+**New (Phase 2):**
+- `src/components/admin/AppearanceLibrary.tsx`
+
+**Modified across phases:**
+- `CharacterPanel.tsx`, `AdminCharacterSheet.tsx`, `ItemManager.tsx` (appearance_key picker only — no override URL field), `AdminSidebar.tsx`, `CharacterCreation.tsx`
+- migration (Phase 3): hair/body columns on `characters`
+
+## What stays unchanged
+- All combat, loot, equipping logic
+- Item stats, rarity tiers, world drops
+- Existing Equipment slot grid (doll renders above it)
+- All other pages and RLS
 
