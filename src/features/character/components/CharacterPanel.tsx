@@ -634,6 +634,7 @@ export default function CharacterPanel({
                             </span>
                           </TooltipTrigger>
                           <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                            <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
                             <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
                             {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
                             <p className="text-xs text-muted-foreground">{inv.item.description}</p>
