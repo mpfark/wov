@@ -1588,6 +1588,7 @@ export type Database = {
           description: string
           durability_pct: number
           hands: number
+          illustration_url: string
           item_level: number
           item_name: string
           item_type: string
