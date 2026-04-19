@@ -15,6 +15,7 @@ export interface AdminInventoryItem {
     value: number;
     max_durability: number;
     hands: number | null;
+    illustration_url?: string | null;
   };
 }
 

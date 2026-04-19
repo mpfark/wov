@@ -23,6 +23,7 @@ export interface InventoryItem {
     is_soulbound?: boolean;
     weapon_tag?: string | null;
     appearance_key?: string | null;
+    illustration_url?: string | null;
   };
 }
 
