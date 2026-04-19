@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, X } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 
@@ -81,6 +81,8 @@ function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: num
 
 export default function ItemManager() {
   const [generatingArt, setGeneratingArt] = useState(false);
+  // generatingArt is referenced by the AI button below
+  void generatingArt;
   const [items, setItems] = useState<Item[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -542,48 +544,78 @@ export default function ItemManager() {
                 </div>
               )}
 
-              {form.item_type === 'equipment' && form.slot && (
-                <div>
-                  <label className="text-[10px] text-muted-foreground flex items-center justify-between">
-                    <span>Appearance (Paper Doll)</span>
-                    <span className="text-[9px] opacity-60">filtered by slot: {form.slot.replace('_', ' ')}</span>
-                  </label>
-                  <Select
-                    value={form.appearance_key || 'none'}
-                    onValueChange={v => setForm(f => ({ ...f, appearance_key: v === 'none' ? null : v }))}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Auto (infer from material/tier)" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border z-50 max-h-72">
-                      <SelectItem value="none" className="text-xs text-muted-foreground">
-                        Auto — infer from rarity/material
-                      </SelectItem>
-                      {appearanceEntries
-                        .filter(e => e.slot === form.slot)
-                        .sort((a, b) => {
-                          const tierOrder: Record<string, number> = { unique: 0, uncommon: 1, common: 2 };
-                          return (tierOrder[a.tier] ?? 9) - (tierOrder[b.tier] ?? 9);
-                        })
-                        .map(e => (
-                          <SelectItem key={e.id} value={e.id} className="text-xs">
-                            <span className={RARITY_COLORS[e.tier] || ''}>
-                              {e.display_name || `${e.material} ${e.tier}`}
-                            </span>
-                            <span className="text-muted-foreground ml-2 text-[10px]">
-                              {e.material} · {e.tier} {!e.is_shared && '· bespoke'}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      {appearanceEntries.filter(e => e.slot === form.slot).length === 0 && (
-                        <div className="px-2 py-1.5 text-[10px] text-muted-foreground italic">
-                          No entries for this slot yet — add some in Appearance Library.
-                        </div>
+              {/* Illustration */}
+              <AdminFormSection title="Illustration" description="Optional picture shown in tooltips">
+                <div className="flex items-start gap-3">
+                  <div className="w-24 h-24 shrink-0 rounded border border-border bg-background/40 overflow-hidden flex items-center justify-center">
+                    {form.illustration_url ? (
+                      <img src={form.illustration_url} alt={form.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[9px] text-muted-foreground/50 italic">No image</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <Input
+                      placeholder="Image URL (or generate)"
+                      value={form.illustration_url ?? ''}
+                      onChange={e => setForm(f => ({ ...f, illustration_url: e.target.value || null }))}
+                      className="h-7 text-xs"
+                    />
+                    <div className="flex gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] flex-1"
+                        disabled={!selectedId || !form.name.trim() || generatingArt}
+                        onClick={async () => {
+                          if (!selectedId) {
+                            toast.error('Save the item first, then generate art');
+                            return;
+                          }
+                          setGeneratingArt(true);
+                          try {
+                            const { data, error } = await supabase.functions.invoke('ai-item-illustration', {
+                              body: { item_id: selectedId },
+                            });
+                            if (error) throw error;
+                            if (data?.error) throw new Error(data.error);
+                            const url = data?.illustration_url as string | undefined;
+                            if (url) {
+                              setForm(f => ({ ...f, illustration_url: url }));
+                              toast.success('Illustration generated');
+                              const { data: refreshed } = await supabase.from('items').select('*').order('name');
+                              if (refreshed) setItems(refreshed as Item[]);
+                            }
+                          } catch (err: any) {
+                            toast.error(err?.message || 'Failed to generate illustration');
+                          } finally {
+                            setGeneratingArt(false);
+                          }
+                        }}
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        {generatingArt ? 'Generating…' : 'Generate with AI'}
+                      </Button>
+                      {form.illustration_url && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-[10px]"
+                          onClick={() => setForm(f => ({ ...f, illustration_url: null }))}
+                        >
+                          Clear
+                        </Button>
                       )}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                    {!selectedId && (
+                      <p className="text-[9px] text-muted-foreground italic">Save the item first to enable AI generation.</p>
+                    )}
+                  </div>
                 </div>
-              )}
+              </AdminFormSection>
+
 
               {/* Potion slots for belt items */}
               {form.item_type === 'equipment' && form.slot === 'belt' && (

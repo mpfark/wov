@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
+import ItemIllustration from '@/components/items/ItemIllustration';
 
 const SLOT_LABELS: Record<string, string> = {
   head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
@@ -29,6 +30,7 @@ interface EquippedItem {
   durability_pct: number;
   item_level: number;
   description: string;
+  illustration_url?: string | null;
 }
 
 interface PlayerInfo {
@@ -71,6 +73,7 @@ function InspectSlot({ slot, item }: { slot: string; item: EquippedItem | undefi
       </TooltipTrigger>
       {item && (
         <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+          <ItemIllustration url={item.illustration_url} alt={item.item_name} />
           <p className={`font-display ${getInspectItemColor(item.rarity)}`}>{item.item_name}</p>
           <p className="text-xs text-muted-foreground">{item.description}</p>
           <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.slot] || item.slot} · {item.item_type}</p>
