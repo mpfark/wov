@@ -14,7 +14,6 @@ import {
   AdminEntityToolbar,
   AdminEditorHeader,
   AdminFormSection,
-  AdminStickyActions,
   AdminEmptyState,
 } from './common';
 import {
@@ -156,8 +155,8 @@ export default function AppearanceLibrary() {
     setLoading(false);
     await loadEntries();
     if (savedId) {
-      const next = entries.find((e) => e.id === savedId);
-      if (next) openEdit(next);
+      const { data: refreshed } = await supabase.from('appearance_entries').select('*').eq('id', savedId).single();
+      if (refreshed) openEdit(refreshed as AppearanceEntryRow);
     }
   }
 
@@ -191,220 +190,222 @@ export default function AppearanceLibrary() {
   }, [entries, slotTab, filter]);
 
   return (
-    <div className="flex h-full">
-      {/* Left: list */}
-      <div className="w-[380px] border-r border-border flex flex-col">
-        <AdminEntityToolbar
-          search={filter}
-          onSearchChange={setFilter}
-          onNew={openNew}
-          newLabel="New Entry"
-          searchPlaceholder="Filter by name / material / tier"
-        />
-        <div className="px-3 pb-2 flex flex-wrap gap-1">
-          <Button size="sm" variant={slotTab === 'all' ? 'default' : 'outline'} className="h-6 text-[10px]" onClick={() => setSlotTab('all')}>All</Button>
-          {DOLL_SLOTS.map((s) => (
-            <Button key={s} size="sm" variant={slotTab === s ? 'default' : 'outline'} className="h-6 text-[10px]" onClick={() => setSlotTab(s)}>{s}</Button>
-          ))}
-        </div>
-        <ScrollArea className="flex-1">
-          {filtered.length === 0 ? (
-            <AdminEmptyState
-              icon={ImageIcon}
-              title="No entries yet"
-              description="Create the first appearance entry to start building the library."
+    <div className="flex flex-col h-full">
+      <AdminEntityToolbar icon={<ImageIcon className="w-4 h-4" />} title="Appearance Library" count={entries.length}>
+        <Button size="sm" onClick={openNew}>
+          <Plus className="w-3 h-3 mr-1" /> New Entry
+        </Button>
+      </AdminEntityToolbar>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left: list */}
+        <div className="w-[380px] border-r border-border flex flex-col">
+          <div className="p-2 space-y-2 border-b border-border">
+            <Input
+              placeholder="Filter by name / material / tier"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="h-7 text-xs"
             />
-          ) : (
-            <ul className="p-2 space-y-1">
-              {filtered.map((e) => (
-                <li key={e.id}>
-                  <button
-                    onClick={() => openEdit(e)}
-                    className={`w-full flex items-center gap-2 p-2 rounded border text-left transition ${
-                      selectedId === e.id ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/40'
-                    }`}
-                  >
-                    <div className="w-10 h-14 shrink-0 rounded border border-border bg-muted/30 overflow-hidden">
-                      {e.asset_url && (
-                        <img src={e.asset_url} alt="" className="w-full h-full object-contain" loading="lazy" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-display text-xs truncate">
-                        {e.display_name || `${e.material} ${e.slot}`}
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        <Badge variant="outline" className="text-[9px] h-4 px-1">{e.slot}</Badge>
-                        <Badge variant="outline" className="text-[9px] h-4 px-1">{e.material}</Badge>
-                        <Badge variant="outline" className="text-[9px] h-4 px-1">{e.tier}</Badge>
-                        {!e.is_shared && <Badge className="text-[9px] h-4 px-1 bg-primary/20 text-primary border-primary/40">unique</Badge>}
-                      </div>
-                    </div>
-                  </button>
-                </li>
+            <div className="flex flex-wrap gap-1">
+              <Button size="sm" variant={slotTab === 'all' ? 'default' : 'outline'} className="h-6 text-[10px] px-2" onClick={() => setSlotTab('all')}>All</Button>
+              {DOLL_SLOTS.map((s) => (
+                <Button key={s} size="sm" variant={slotTab === s ? 'default' : 'outline'} className="h-6 text-[10px] px-2" onClick={() => setSlotTab(s)}>{s}</Button>
               ))}
-            </ul>
-          )}
-        </ScrollArea>
-      </div>
-
-      {/* Right: editor */}
-      <div className="flex-1 flex flex-col">
-        {!selectedId && !isNew ? (
-          <AdminEmptyState
-            icon={ImageIcon}
-            title="Select or create an entry"
-            description="Each entry is a reusable visual layer that one or many items can map to."
-          />
-        ) : (
-          <>
-            <AdminEditorHeader
-              title={isNew ? 'New Appearance Entry' : form.display_name || `${form.material} ${form.slot}`}
-              onClose={closePanel}
-            />
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4 max-w-3xl">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Preview */}
-                  <div>
-                    <Label className="text-xs">Preview</Label>
-                    <div
-                      className="mt-1 mx-auto rounded border border-border bg-gradient-to-b from-muted/20 to-background/40 overflow-hidden flex items-center justify-center"
-                      style={{ width: DOLL_CANVAS.width, height: DOLL_CANVAS.height }}
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            {filtered.length === 0 ? (
+              <AdminEmptyState message="No entries yet — create one to start the library." icon="🎨" />
+            ) : (
+              <ul className="p-2 space-y-1">
+                {filtered.map((e) => (
+                  <li key={e.id}>
+                    <button
+                      onClick={() => openEdit(e)}
+                      className={`w-full flex items-center gap-2 p-2 rounded border text-left transition ${
+                        selectedId === e.id ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/40'
+                      }`}
                     >
-                      {form.asset_url ? (
-                        <img src={form.asset_url} alt="Preview" className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">No asset</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Upload + meta */}
-                  <div className="space-y-3">
-                    <AdminFormSection title="Asset">
-                      <div className="space-y-2">
-                        <input
-                          id="asset-upload"
-                          type="file"
-                          accept="image/png"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) handleUpload(f);
-                          }}
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => document.getElementById('asset-upload')?.click()}
-                          disabled={uploading}
-                          className="w-full"
-                        >
-                          <Upload className="w-3 h-3 mr-1" />
-                          {uploading ? 'Uploading…' : 'Upload PNG (transparent, 512×768)'}
-                        </Button>
-                        {form.asset_url && (
-                          <Input
-                            value={form.asset_url}
-                            onChange={(e) => setForm({ ...form, asset_url: e.target.value })}
-                            className="text-[10px] font-mono"
-                          />
+                      <div className="w-10 h-14 shrink-0 rounded border border-border bg-muted/30 overflow-hidden">
+                        {e.asset_url && (
+                          <img src={e.asset_url} alt="" className="w-full h-full object-contain" loading="lazy" />
                         )}
                       </div>
-                    </AdminFormSection>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-display text-xs truncate">
+                          {e.display_name || `${e.material} ${e.slot}`}
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">{e.slot}</Badge>
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">{e.material}</Badge>
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">{e.tier}</Badge>
+                          {!e.is_shared && <Badge className="text-[9px] h-4 px-1 bg-primary/20 text-primary border-primary/40">unique</Badge>}
+                        </div>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ScrollArea>
+        </div>
+
+        {/* Right: editor */}
+        <div className="flex-1 flex flex-col">
+          {!selectedId && !isNew ? (
+            <AdminEmptyState message="Select an entry on the left, or create a new one." icon="🎨" />
+          ) : (
+            <>
+              <AdminEditorHeader
+                title={isNew ? 'New Appearance Entry' : (form.display_name || `${form.material} ${form.slot}`)}
+                onClose={closePanel}
+              />
+              <ScrollArea className="flex-1">
+                <div className="p-4 space-y-4 max-w-3xl">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Preview */}
+                    <div>
+                      <Label className="text-xs">Preview</Label>
+                      <div
+                        className="mt-1 mx-auto rounded border border-border bg-gradient-to-b from-muted/20 to-background/40 overflow-hidden flex items-center justify-center"
+                        style={{ width: DOLL_CANVAS.width, height: DOLL_CANVAS.height }}
+                      >
+                        {form.asset_url ? (
+                          <img src={form.asset_url} alt="Preview" className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">No asset</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Upload */}
+                    <div className="space-y-3">
+                      <AdminFormSection title="Asset">
+                        <div className="space-y-2">
+                          <input
+                            id="asset-upload"
+                            type="file"
+                            accept="image/png"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) handleUpload(f);
+                            }}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => document.getElementById('asset-upload')?.click()}
+                            disabled={uploading}
+                            className="w-full"
+                          >
+                            <Upload className="w-3 h-3 mr-1" />
+                            {uploading ? 'Uploading…' : 'Upload PNG (transparent, 512×768)'}
+                          </Button>
+                          {form.asset_url && (
+                            <Input
+                              value={form.asset_url}
+                              onChange={(e) => setForm({ ...form, asset_url: e.target.value })}
+                              className="text-[10px] font-mono"
+                            />
+                          )}
+                        </div>
+                      </AdminFormSection>
+                    </div>
                   </div>
+
+                  <AdminFormSection title="Classification">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-xs">Slot</Label>
+                        <Select value={form.slot} onValueChange={(v) => setForm({ ...form, slot: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {DOLL_SLOTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Material</Label>
+                        <Select value={form.material} onValueChange={(v) => setForm({ ...form, material: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {MATERIALS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Tier</Label>
+                        <Select value={form.tier} onValueChange={(v) => setForm({ ...form, tier: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {TIERS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <Label className="text-xs">Display Name (optional)</Label>
+                      <Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} placeholder="e.g. Iron Plate Chest" />
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Switch checked={form.is_shared} onCheckedChange={(v) => setForm({ ...form, is_shared: v })} id="is-shared" />
+                      <Label htmlFor="is-shared" className="text-xs">Shared (pool entry — multiple items may use this)</Label>
+                    </div>
+                  </AdminFormSection>
+
+                  <AdminFormSection title="Layering">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs">Layer Order Override</Label>
+                        <Input
+                          type="number"
+                          value={form.layer_order ?? ''}
+                          onChange={(e) => setForm({ ...form, layer_order: e.target.value ? Number(e.target.value) : null })}
+                          placeholder={`default: ${SLOT_CONTRACT[form.slot as DollSlot]?.z ?? '—'}`}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Occludes (comma-separated doll slots)</Label>
+                        <Input
+                          value={(form.occludes ?? []).join(', ')}
+                          onChange={(e) => setForm({ ...form, occludes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
+                          placeholder="e.g. hair, base_torso"
+                        />
+                      </div>
+                    </div>
+                  </AdminFormSection>
+
+                  <AdminFormSection title="AI Generation Prompt">
+                    <Textarea
+                      value={form.prompt_notes}
+                      onChange={(e) => setForm({ ...form, prompt_notes: e.target.value })}
+                      placeholder="Custom notes for AI image tools (style direction, color hints, motifs)"
+                      rows={3}
+                    />
+                    <Button variant="outline" size="sm" onClick={copyPrompt} className="mt-2">
+                      <Copy className="w-3 h-3 mr-1" /> Copy full prompt (with contract preamble)
+                    </Button>
+                  </AdminFormSection>
                 </div>
+              </ScrollArea>
 
-                <AdminFormSection title="Classification">
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <Label className="text-xs">Slot</Label>
-                      <Select value={form.slot} onValueChange={(v) => setForm({ ...form, slot: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {DOLL_SLOTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Material</Label>
-                      <Select value={form.material} onValueChange={(v) => setForm({ ...form, material: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {MATERIALS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Tier</Label>
-                      <Select value={form.tier} onValueChange={(v) => setForm({ ...form, tier: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {TIERS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <Label className="text-xs">Display Name (optional)</Label>
-                    <Input value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} placeholder="e.g. Iron Plate Chest" />
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Switch checked={form.is_shared} onCheckedChange={(v) => setForm({ ...form, is_shared: v })} id="is-shared" />
-                    <Label htmlFor="is-shared" className="text-xs">Shared (pool entry — multiple items may use this)</Label>
-                  </div>
-                </AdminFormSection>
-
-                <AdminFormSection title="Layering">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Layer Order Override</Label>
-                      <Input
-                        type="number"
-                        value={form.layer_order ?? ''}
-                        onChange={(e) => setForm({ ...form, layer_order: e.target.value ? Number(e.target.value) : null })}
-                        placeholder={`default: ${SLOT_CONTRACT[form.slot as DollSlot]?.z ?? '—'}`}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Occludes (comma-separated doll slots)</Label>
-                      <Input
-                        value={(form.occludes ?? []).join(', ')}
-                        onChange={(e) => setForm({ ...form, occludes: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) })}
-                        placeholder="e.g. hair, base_torso"
-                      />
-                    </div>
-                  </div>
-                </AdminFormSection>
-
-                <AdminFormSection title="AI Generation Prompt">
-                  <Textarea
-                    value={form.prompt_notes}
-                    onChange={(e) => setForm({ ...form, prompt_notes: e.target.value })}
-                    placeholder="Custom notes for AI image tools (style direction, color hints, motifs)"
-                    rows={3}
-                  />
-                  <Button variant="outline" size="sm" onClick={copyPrompt} className="mt-2">
-                    <Copy className="w-3 h-3 mr-1" /> Copy full prompt (with contract preamble)
+              <div className="flex gap-2 p-3 border-t border-border shrink-0">
+                {selectedId && (
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedId)}>
+                    <Trash2 className="w-3 h-3 mr-1" /> Delete
                   </Button>
-                </AdminFormSection>
-              </div>
-            </ScrollArea>
-
-            <AdminStickyActions>
-              {selectedId && (
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(selectedId)}>
-                  <Trash2 className="w-3 h-3 mr-1" /> Delete
+                )}
+                <div className="flex-1" />
+                <Button variant="outline" onClick={closePanel}>Cancel</Button>
+                <Button onClick={handleSave} disabled={loading}>
+                  {loading ? 'Saving…' : selectedId ? 'Save Changes' : 'Create Entry'}
                 </Button>
-              )}
-              <div className="flex-1" />
-              <Button onClick={handleSave} disabled={loading}>
-                {loading ? 'Saving…' : selectedId ? 'Save Changes' : 'Create Entry'}
-              </Button>
-            </AdminStickyActions>
-          </>
-        )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
