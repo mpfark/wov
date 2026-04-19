@@ -541,6 +541,49 @@ export default function ItemManager() {
                 </div>
               )}
 
+              {form.item_type === 'equipment' && form.slot && (
+                <div>
+                  <label className="text-[10px] text-muted-foreground flex items-center justify-between">
+                    <span>Appearance (Paper Doll)</span>
+                    <span className="text-[9px] opacity-60">filtered by slot: {form.slot.replace('_', ' ')}</span>
+                  </label>
+                  <Select
+                    value={form.appearance_key || 'none'}
+                    onValueChange={v => setForm(f => ({ ...f, appearance_key: v === 'none' ? null : v }))}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder="Auto (infer from material/tier)" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50 max-h-72">
+                      <SelectItem value="none" className="text-xs text-muted-foreground">
+                        Auto — infer from rarity/material
+                      </SelectItem>
+                      {appearanceEntries
+                        .filter(e => e.slot === form.slot)
+                        .sort((a, b) => {
+                          const tierOrder: Record<string, number> = { unique: 0, uncommon: 1, common: 2 };
+                          return (tierOrder[a.tier] ?? 9) - (tierOrder[b.tier] ?? 9);
+                        })
+                        .map(e => (
+                          <SelectItem key={e.id} value={e.id} className="text-xs">
+                            <span className={RARITY_COLORS[e.tier] || ''}>
+                              {e.display_name || `${e.material} ${e.tier}`}
+                            </span>
+                            <span className="text-muted-foreground ml-2 text-[10px]">
+                              {e.material} · {e.tier} {!e.is_shared && '· bespoke'}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      {appearanceEntries.filter(e => e.slot === form.slot).length === 0 && (
+                        <div className="px-2 py-1.5 text-[10px] text-muted-foreground italic">
+                          No entries for this slot yet — add some in Appearance Library.
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Potion slots for belt items */}
               {form.item_type === 'equipment' && form.slot === 'belt' && (
                 <div>
