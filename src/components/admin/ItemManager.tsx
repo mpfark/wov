@@ -80,6 +80,7 @@ function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: num
 }
 
 export default function ItemManager() {
+  const { entries: appearanceEntries } = useAppearanceEntries();
   const [items, setItems] = useState<Item[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
