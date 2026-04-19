@@ -1,0 +1,1 @@
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS illustration_metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
