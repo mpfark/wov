@@ -446,6 +446,7 @@ export default function CharacterPanel({
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                                  <ItemIllustration url={potion.item.illustration_url} alt={potion.item.name} />
                                   <p className={`font-display ${getItemColor(potion.item)}`}>{potion.item.name}</p>
                                   <p className="text-xs text-muted-foreground">{potion.item.description}</p>
                                   <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
@@ -513,6 +514,7 @@ export default function CharacterPanel({
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                                <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
                                 <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
                                 <p className="text-xs text-muted-foreground">{inv.item.description}</p>
                                 <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>
