@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 import StatPlannerDialog from '@/features/character/components/StatPlannerDialog';
+import PaperDoll from '@/features/character/components/PaperDoll';
 
 interface Props {
   character: Character;

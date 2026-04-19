@@ -28,6 +28,7 @@ import {
   BookOpen,
   BookText,
   ArrowLeft,
+  Shirt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -53,6 +54,7 @@ const NAV_GROUPS = [
       { key: 'items', label: 'Items', icon: Swords },
       { key: 'loot-tables', label: 'Loot Tables', icon: Dice3 },
       { key: 'item-forge', label: 'Item Forge', icon: Hammer },
+      { key: 'appearance', label: 'Appearance', icon: Shirt },
     ],
   },
   {

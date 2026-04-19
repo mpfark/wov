@@ -26,6 +26,7 @@ interface Item {
   origin_id: string | null;
   weapon_tag: string | null;
   is_soulbound: boolean;
+  appearance_key: string | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique'];
@@ -49,6 +50,7 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
   origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
+  appearance_key: null,
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
@@ -210,6 +212,7 @@ export default function ItemManager() {
       origin_type: item.origin_type, origin_id: item.origin_id,
       weapon_tag: (item as any).weapon_tag || null,
       is_soulbound: item.is_soulbound ?? false,
+      appearance_key: (item as any).appearance_key ?? null,
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -244,6 +247,7 @@ export default function ItemManager() {
       origin_type: form.rarity === 'unique' ? form.origin_type : null,
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
       weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
+      appearance_key: form.item_type === 'equipment' ? form.appearance_key : null,
     };
 
     let savedId = selectedId;

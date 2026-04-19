@@ -97,6 +97,51 @@ export type Database = {
           },
         ]
       }
+      appearance_entries: {
+        Row: {
+          asset_url: string
+          created_at: string
+          display_name: string
+          id: string
+          is_shared: boolean
+          layer_order: number | null
+          material: string
+          occludes: string[]
+          prompt_notes: string
+          slot: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          asset_url?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_shared?: boolean
+          layer_order?: number | null
+          material?: string
+          occludes?: string[]
+          prompt_notes?: string
+          slot: string
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_url?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_shared?: boolean
+          layer_order?: number | null
+          material?: string
+          occludes?: string[]
+          prompt_notes?: string
+          slot?: string
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       area_types: {
         Row: {
           created_at: string
@@ -711,6 +756,7 @@ export type Database = {
       }
       items: {
         Row: {
+          appearance_key: string | null
           created_at: string
           description: string
           drop_weight: number
@@ -731,6 +777,7 @@ export type Database = {
           world_drop: boolean
         }
         Insert: {
+          appearance_key?: string | null
           created_at?: string
           description?: string
           drop_weight?: number
@@ -751,6 +798,7 @@ export type Database = {
           world_drop?: boolean
         }
         Update: {
+          appearance_key?: string | null
           created_at?: string
           description?: string
           drop_weight?: number
@@ -770,7 +818,15 @@ export type Database = {
           weapon_tag?: string | null
           world_drop?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "items_appearance_key_fkey"
+            columns: ["appearance_key"]
+            isOneToOne: false
+            referencedRelation: "appearance_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loot_pool_config: {
         Row: {
