@@ -6,10 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, X } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
-import { useAppearanceEntries } from '@/features/character/hooks/useAppearanceEntries';
 
 interface Item {
   id: string;
@@ -28,6 +27,7 @@ interface Item {
   weapon_tag: string | null;
   is_soulbound: boolean;
   appearance_key: string | null;
+  illustration_url: string | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique'];
@@ -51,7 +51,7 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
   origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
-  appearance_key: null,
+  appearance_key: null, illustration_url: null,
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
@@ -80,7 +80,7 @@ function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: num
 }
 
 export default function ItemManager() {
-  const { entries: appearanceEntries } = useAppearanceEntries();
+  const [generatingArt, setGeneratingArt] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -215,6 +215,7 @@ export default function ItemManager() {
       weapon_tag: (item as any).weapon_tag || null,
       is_soulbound: item.is_soulbound ?? false,
       appearance_key: (item as any).appearance_key ?? null,
+      illustration_url: (item as any).illustration_url ?? null,
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -249,7 +250,7 @@ export default function ItemManager() {
       origin_type: form.rarity === 'unique' ? form.origin_type : null,
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
       weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
-      appearance_key: form.item_type === 'equipment' ? form.appearance_key : null,
+      illustration_url: form.illustration_url ?? '',
     };
 
     let savedId = selectedId;
