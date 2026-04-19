@@ -28,6 +28,7 @@ interface Item {
   is_soulbound: boolean;
   appearance_key: string | null;
   illustration_url: string | null;
+  illustration_metadata: Record<string, string> | null;
 }
 
 const RARITIES = ['common', 'uncommon', 'unique'];
@@ -51,7 +52,7 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   name: '', description: '', item_type: 'equipment', rarity: 'common',
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
   origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
-  appearance_key: null, illustration_url: null,
+  appearance_key: null, illustration_url: null, illustration_metadata: {},
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
