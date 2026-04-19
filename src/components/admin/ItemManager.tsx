@@ -6,11 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, ChevronDown, Copy, Check } from 'lucide-react';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
-import { buildItemIllustrationPrompt } from '@/lib/item-illustration-prompt';
+import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 
 interface Item {
   id: string;
@@ -624,6 +623,13 @@ export default function ItemManager() {
                 <ItemIllustrationMetadataEditor
                   metadata={form.illustration_metadata ?? {}}
                   onMetadataChange={meta => setForm(f => ({ ...f, illustration_metadata: meta }))}
+                  context={{
+                    name: form.name,
+                    description: form.description,
+                    rarity: form.rarity,
+                    slot: form.slot,
+                    item_type: form.item_type,
+                  }}
                 />
               </AdminFormSection>
 
