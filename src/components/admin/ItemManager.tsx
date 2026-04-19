@@ -219,6 +219,7 @@ export default function ItemManager() {
       is_soulbound: item.is_soulbound ?? false,
       appearance_key: (item as any).appearance_key ?? null,
       illustration_url: (item as any).illustration_url ?? null,
+      illustration_metadata: ((item as any).illustration_metadata ?? {}) as Record<string, string>,
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -254,6 +255,7 @@ export default function ItemManager() {
       origin_id: form.rarity === 'unique' ? form.origin_id : null,
       weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
       illustration_url: form.illustration_url ?? '',
+      illustration_metadata: form.illustration_metadata ?? {},
     };
 
     let savedId = selectedId;
