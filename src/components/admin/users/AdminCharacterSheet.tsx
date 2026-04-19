@@ -3,6 +3,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Pencil, Save, X } from 'lucide-react';
 import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, getStatRegen, getCharacterTitle } from '@/lib/game-data';
 import AdminEquipSlot from './AdminEquipSlot';
+import ItemIllustration from '@/components/items/ItemIllustration';
 import { RARITY_COLORS, STAT_FULL_NAMES, STAT_DESCRIPTIONS, SLOT_LABELS } from './constants';
 import type { AdminCharacter, AdminInventoryItem, CharacterEdits } from './constants';
 
@@ -302,6 +303,7 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="bg-popover border-border z-50">
+                    <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
                     <p className={`font-display ${RARITY_COLORS[inv.item.rarity]}`}>{inv.item.name}</p>
                     {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
                     <p className="text-xs text-muted-foreground">{inv.item.description}</p>

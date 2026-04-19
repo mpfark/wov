@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 import StatPlannerDialog from '@/features/character/components/StatPlannerDialog';
-import PaperDoll from '@/features/character/components/PaperDoll';
+import ItemIllustration from '@/components/items/ItemIllustration';
 
 interface Props {
   character: Character;
@@ -114,6 +114,7 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked }: {
       </TooltipTrigger>
       {item && !blocked && (
         <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+          <ItemIllustration url={item.item.illustration_url} alt={item.item.name} />
           <p className={`font-display ${getItemColor(item.item)}`}>{item.item.name}</p>
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
           {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
@@ -373,20 +374,6 @@ export default function CharacterPanel({
             {/* Equipment */}
             <TabsContent value="equipment" className="mt-0">
               <div className="relative flex flex-col items-center gap-1">
-                <PaperDoll
-                  gender={character.gender}
-                  equipped={equipped.filter((i) => i.equipped_slot).map((i) => ({
-                    equipped_slot: i.equipped_slot,
-                    item: {
-                      slot: i.item.slot,
-                      rarity: i.item.rarity,
-                      weapon_tag: i.item.weapon_tag,
-                      appearance_key: i.item.appearance_key,
-                    },
-                  }))}
-                  scale={0.6}
-                  className="mb-2"
-                />
                 <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
                   <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
                   <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
@@ -459,6 +446,7 @@ export default function CharacterPanel({
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                                  <ItemIllustration url={potion.item.illustration_url} alt={potion.item.name} />
                                   <p className={`font-display ${getItemColor(potion.item)}`}>{potion.item.name}</p>
                                   <p className="text-xs text-muted-foreground">{potion.item.description}</p>
                                   <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
@@ -526,6 +514,7 @@ export default function CharacterPanel({
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                                <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
                                 <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
                                 <p className="text-xs text-muted-foreground">{inv.item.description}</p>
                                 <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>
@@ -645,6 +634,7 @@ export default function CharacterPanel({
                             </span>
                           </TooltipTrigger>
                           <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                            <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
                             <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
                             {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
                             <p className="text-xs text-muted-foreground">{inv.item.description}</p>

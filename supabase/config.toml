@@ -5,6 +5,8 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.ai-item-forge]
     verify_jwt = false
+  [functions.ai-item-illustration]
+    verify_jwt = false
   [functions.ai-name-suggest]
     verify_jwt = false
   [functions.ai-world-builder]

@@ -762,6 +762,7 @@ export type Database = {
           drop_weight: number
           hands: number | null
           id: string
+          illustration_url: string
           is_soulbound: boolean
           item_type: string
           level: number
@@ -783,6 +784,7 @@ export type Database = {
           drop_weight?: number
           hands?: number | null
           id?: string
+          illustration_url?: string
           is_soulbound?: boolean
           item_type?: string
           level?: number
@@ -804,6 +806,7 @@ export type Database = {
           drop_weight?: number
           hands?: number | null
           id?: string
+          illustration_url?: string
           is_soulbound?: boolean
           item_type?: string
           level?: number
@@ -1585,6 +1588,7 @@ export type Database = {
           description: string
           durability_pct: number
           hands: number
+          illustration_url: string
           item_level: number
           item_name: string
           item_type: string

@@ -1,6 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SLOT_LABELS, RARITY_COLORS } from './constants';
 import type { AdminInventoryItem } from './constants';
+import ItemIllustration from '@/components/items/ItemIllustration';
 
 interface Props {
   slot: string;
@@ -35,6 +36,7 @@ export default function AdminEquipSlot({ slot, item, blocked }: Props) {
       </TooltipTrigger>
       {item && !blocked && (
         <TooltipContent className="bg-popover border-border z-50">
+          <ItemIllustration url={item.item.illustration_url} alt={item.item.name} />
           <p className={`font-display ${RARITY_COLORS[item.item.rarity]}`}>{item.item.name}</p>
           <p className="text-xs text-muted-foreground">{item.item.description}</p>
           {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
@@ -51,3 +53,4 @@ export default function AdminEquipSlot({ slot, item, blocked }: Props) {
     </Tooltip>
   );
 }
+
