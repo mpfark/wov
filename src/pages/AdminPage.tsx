@@ -391,6 +391,8 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
         return <LootTableManager />;
       case 'item-forge':
         return <ItemForgePanel onDataChanged={loadData} />;
+      case 'appearance':
+        return <AppearanceLibrary />;
       case 'races-classes':
         return <RaceClassManager />;
       case 'xp-boost':

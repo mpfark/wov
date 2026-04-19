@@ -22,6 +22,7 @@ export interface InventoryItem {
     hands: number | null;
     is_soulbound?: boolean;
     weapon_tag?: string | null;
+    appearance_key?: string | null;
   };
 }
 
