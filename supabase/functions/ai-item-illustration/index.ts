@@ -146,7 +146,7 @@ serve(async (req) => {
 
     const { data: item, error: itemErr } = await admin
       .from("items")
-      .select("id, name, description, rarity, slot, item_type")
+      .select("id, name, description, rarity, slot, item_type, illustration_metadata")
       .eq("id", itemId)
       .maybeSingle();
     if (itemErr || !item) {
@@ -156,7 +156,8 @@ serve(async (req) => {
       });
     }
 
-    const prompt = buildPrompt(item.name, item.description ?? "", item.rarity, item.slot, item.item_type);
+    const metadata: Metadata = (item.illustration_metadata ?? {}) as Metadata;
+    const prompt = buildPrompt(item.name, item.description ?? "", item.rarity, item.slot, item.item_type, metadata);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
