@@ -29,11 +29,10 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 
 interface AdminPageProps {
-  onBack: () => void;
   isValar: boolean;
 }
 
-export default function AdminPage({ onBack, isValar }: AdminPageProps) {
+export default function AdminPage({ isValar }: AdminPageProps) {
   const [regions, setRegions] = useState<any[]>([]);
   const [nodes, setNodes] = useState<any[]>([]);
   const [creatureCounts, setCreatureCounts] = useState<Map<string, { total: number; aggressive: number }>>(new Map());
@@ -419,7 +418,6 @@ export default function AdminPage({ onBack, isValar }: AdminPageProps) {
     <AdminLayout
       activeTab={activeTab}
       onNavigate={setActiveTab}
-      onBack={onBack}
       isValar={isValar}
     >
       {renderContent()}

@@ -19,5 +19,5 @@ export default function AdminRoute() {
     return <Navigate to="/game" replace />;
   }
 
-  return <AdminPage onBack={() => { window.close(); window.location.href = '/'; }} isValar={isValar} />;
+  return <AdminPage isValar={isValar} />;
 }

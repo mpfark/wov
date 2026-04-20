@@ -27,9 +27,7 @@ import {
   MapPin,
   BookOpen,
   BookText,
-  ArrowLeft,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface AdminSidebarProps {
   activeTab: string;
