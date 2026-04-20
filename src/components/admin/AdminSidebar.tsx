@@ -32,7 +32,6 @@ import {
 interface AdminSidebarProps {
   activeTab: string;
   onNavigate: (tab: string) => void;
-  onBack: () => void;
   isValar: boolean;
 }
 
@@ -82,25 +81,20 @@ const NAV_GROUPS = [
   },
 ];
 
-export default function AdminSidebar({ activeTab, onNavigate, onBack, isValar }: AdminSidebarProps) {
+export default function AdminSidebar({ activeTab, onNavigate, isValar }: AdminSidebarProps) {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
       <SidebarHeader className="p-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={onBack} className="h-7 w-7 shrink-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          {!collapsed && (
-            <div className="flex items-center gap-2 min-w-0">
-              <Badge variant="outline" className="text-[10px] font-display shrink-0 border-primary/40 text-primary">
-                {isValar ? '⚡ Overlord' : '✨ Steward'}
-              </Badge>
-            </div>
-          )}
-        </div>
+        {!collapsed && (
+          <div className="flex items-center gap-2 min-w-0">
+            <Badge variant="outline" className="text-[10px] font-display shrink-0 border-primary/40 text-primary">
+              {isValar ? '⚡ Overlord' : '✨ Steward'}
+            </Badge>
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent>
