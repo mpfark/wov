@@ -1,53 +1,49 @@
 
 
-The user clarified two important things:
-1. The "Crown" duplicates aren't accidental — every L40 player forges one, and they intentionally share the name
-2. The L42 player-named soulforge item is also player-named, so duplicate names are expected there too
+## Current state vs. spec
 
-These items don't fit cleanly in `common`/`uncommon`/`unique` because:
-- They're soulbound and one-per-character (like uniques)
-- But they can have name collisions across players (unlike uniques)
-- They're player-created, not loot-table-rolled
+The illustration system already exists end-to-end. Audit:
 
-A new `soulforged` rarity tier solves this cleanly: distinct visual treatment, exempt from naming-convention rules, exempt from unique-item exclusivity locks, and matches the existing memory note about a magenta color for soulforged items.
+| Spec requirement | Status |
+|---|---|
+| `IllustrationEditor` shared between Node/Area/Region | ✅ Already shared |
+| URL input + helper text | ✅ Present |
+| Effective background preview with source label ("From Area"/"From Region") | ✅ Present (line 76-98 of `IllustrationEditor.tsx`) |
+| Dark overlay matching in-game | ✅ Present (line 94) |
+| Node → Area → Region fallback in editor preview | ✅ Wired in `NodeEditorPanel.tsx` lines 994-1005 |
+| Item illustration preview + Clear + AI Generate | ✅ Present (`ItemManager.tsx` lines 552-635) |
+| Multiple items/nodes can reuse same URL | ✅ Plain text field, no constraints |
+| No new tables / no upload system | ✅ Already URL-only |
 
-Let me check what exists today.
+## Real gaps (small)
+
+Three minor polish items from the spec are missing:
+
+1. **Local vs. effective preview distinction.** Today only the *effective* preview shows. When a node has its own URL, you can't tell at a glance whether you're looking at "this entity's image" or "an inherited one" — the source label is the only hint. Spec asks for two clearly-labeled previews: "Local illustration" and "Effective background".
+
+2. **Clear button.** Items have one; Node/Area/Region editors don't. Admins must select-all + delete the URL text to fall back to parent.
+
+3. **Helper text in Item editor.** Currently says "Optional picture shown in tooltips" — spec asks for the explicit "Multiple items may reuse the same image" hint so admins know reuse is fine.
+
+4. **Broken-image fallback in IllustrationEditor preview.** Currently sets `display:none` on error, which leaves the overlay visible over a blank box. Should show a small "Image failed to load" placeholder.
 
 ## Plan
 
-### 1. Add `soulforged` to the `item_rarity` enum
-Migration: `ALTER TYPE item_rarity ADD VALUE 'soulforged';`
+Edit only `src/components/admin/IllustrationEditor.tsx` and add a one-line helper in `src/components/admin/ItemManager.tsx`. No schema changes, no new components, no behavior changes elsewhere.
 
-### 2. Backfill existing soulforged/crown items
-`UPDATE items SET rarity = 'soulforged' WHERE id IN (… all items created by `soulforge-item` edge function …)` — identifiable via `is_soulbound = true AND description LIKE 'Soulforged by %' OR description LIKE 'Royal Crown forged by %'`.
+### `IllustrationEditor.tsx` changes
+- Show **two** preview blocks when local URL exists *and* differs from inherited:
+  - "Local illustration" (from this entity's URL, no overlay — raw)
+  - "Effective Background" (resolved URL with overlay — what the player sees)
+- When local URL is empty and inherited exists, show only the Effective preview labeled "From {source}" (current behavior).
+- Add a small `Clear` button next to the URL input (only visible when URL is set) — sets URL to empty, falls back to parent automatically.
+- On image load error, show an "Image failed to load" placeholder inside the preview frame instead of hiding the img.
+- Add subtle loading state (browser-native via `loading="lazy"` already in place; add a spinner overlay using `onLoad` to flip a state flag).
 
-### 3. Update the soulforge edge function
-`supabase/functions/soulforge-item/index.ts` line 156: change `rarity: "uncommon"` → `rarity: "soulforged"`. The stat-budget multiplier (currently 1.5, the uncommon value) stays as-is so balance is unchanged — the rarity label is the only change.
-
-### 4. Frontend visual treatment
-- `RARITY_COLORS` maps in `CharacterPanel.tsx`, `InspectPlayerDialog.tsx`, `AdminEquipSlot.tsx`, `constants.ts`, `ItemManager.tsx`, `BlacksmithPanel.tsx`, `ItemPicker.tsx`: add `soulforged: 'text-soulforged text-glow'` (magenta, per the existing visual-theme memory)
-- `tailwind.config.ts` + `index.css`: add a `soulforged` color token (magenta, e.g. `hsl(300 80% 65%)`) if not already present
-- Rarity dropdowns in admin (`ItemManager.tsx`, `ItemForgePanel.tsx`): include `soulforged` so admins can see/filter but **not** set it manually (or allow it — your call; default plan: read-only filter, not assignable)
-
-### 5. Exempt soulforged items from the rename pass
-The rename plan from the previous turn updates only `rarity IN ('common', 'uncommon')`. After the backfill in step 2, the Crowns + future player-soulforged items move to `rarity = 'soulforged'` and are automatically excluded — no extra logic needed. The duplicate-Crown deletion from the earlier plan is dropped.
-
-### 6. Unique-item exclusivity check
-`try_acquire_unique_item` and `return_unique_items` only act on `rarity = 'unique'` — soulforged items are unaffected, duplicates allowed by design. No change needed.
-
-### 7. Loot rolls
-`item_pool` loot mode rolls only common/uncommon. Soulforged tier is excluded automatically because it's not in the percentage config (`common_pct`, `uncommon_pct`). No change needed.
-
-### Files touched
-- New migration: enum value + backfill UPDATE
-- Edit: `supabase/functions/soulforge-item/index.ts`
-- Edit: `tailwind.config.ts`, `src/index.css` (soulforged color token if missing)
-- Edit: `CharacterPanel.tsx`, `InspectPlayerDialog.tsx`, `AdminEquipSlot.tsx`, `users/constants.ts`, `ItemManager.tsx`, `BlacksmithPanel.tsx`, `ItemPicker.tsx` (RARITY_COLORS + dropdown options)
-
-### Then re-run the rename
-With Crowns + soulforged items safely on their own tier, the previous common/uncommon rename pass runs cleanly with no special cases.
+### `ItemManager.tsx` change
+- Update the `AdminFormSection` description on line 553 from `"Optional picture shown in tooltips"` to `"Optional. Used for tooltip illustration. Multiple items may reuse the same image."` — single-line edit.
 
 ### Out of scope
-- Changing soulforge stat budget or balance
-- Letting admins manually set `rarity = 'soulforged'` on regular items (keep it strictly server-issued via the soulforge function)
+- Item illustration reuse helper text only — no other ItemManager changes (preview + clear + AI generate already work).
+- No changes to `LocationBackground`, tooltips, AI prompts, schema, or storage.
 
