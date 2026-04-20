@@ -60,9 +60,6 @@ export default function GalleryPage() {
     metaDesc.setAttribute('content', 'Browse the illustrated regions, areas, and locations of the world of Varneth.');
   }, []);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -149,13 +146,6 @@ export default function GalleryPage() {
     <div className="min-h-screen parchment-bg">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <header className="mb-6">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <Button asChild variant="ghost" size="sm">
-              <Link to={signedIn ? '/game' : '/'}>
-                <ArrowLeft className="mr-1" /> Back
-              </Link>
-            </Button>
-          </div>
           <h1 className="font-display text-4xl md:text-5xl text-primary text-glow text-center mb-2">
             Gallery of Varneth
           </h1>
