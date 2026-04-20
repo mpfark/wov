@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2 } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
@@ -98,7 +98,42 @@ export default function ItemManager() {
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'value' | 'rarity'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
+  const [renamingLegacy, setRenamingLegacy] = useState(false);
   const [showUnassigned, setShowUnassigned] = useState(false);
+
+  const handleRenameLegacy = async () => {
+    if (renamingLegacy) return;
+    setRenamingLegacy(true);
+    try {
+      toast.info('Scanning legacy items…');
+      const dry = await supabase.functions.invoke('ai-item-rename', { body: { dry_run: true } });
+      if (dry.error) throw dry.error;
+      const dryData = dry.data as { total_violators: number; proposed: number; preview: { old: string; new: string }[]; skipped: { old: string; reason: string }[] };
+      if (!dryData || dryData.total_violators === 0) {
+        toast.success('No legacy violators found.');
+        return;
+      }
+      const sample = dryData.preview.slice(0, 8).map(p => `• ${p.old} → ${p.new}`).join('\n');
+      const more = dryData.preview.length > 8 ? `\n…and ${dryData.preview.length - 8} more` : '';
+      const ok = window.confirm(
+        `Found ${dryData.total_violators} legacy items. Proposed renames: ${dryData.proposed}.\n\nSample:\n${sample}${more}\n\nApply renames now?`
+      );
+      if (!ok) { toast.info('Rename cancelled.'); return; }
+
+      toast.info('Applying renames…');
+      const apply = await supabase.functions.invoke('ai-item-rename', { body: { dry_run: false } });
+      if (apply.error) throw apply.error;
+      const applyData = apply.data as { renamed: number; skipped: { old: string; reason: string }[] };
+      toast.success(`Renamed ${applyData.renamed} items. Skipped ${applyData.skipped.length}.`);
+      if (applyData.skipped.length > 0) console.warn('Skipped renames:', applyData.skipped);
+      await loadItems();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || 'Rename failed');
+    } finally {
+      setRenamingLegacy(false);
+    }
+  };
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
@@ -342,6 +377,9 @@ export default function ItemManager() {
           >
             Unassigned ({unassignedCount})
           </button>
+          <Button size="sm" variant="outline" onClick={handleRenameLegacy} disabled={renamingLegacy} className="font-display text-xs h-7" title="AI-rewrite legacy common/uncommon names to match the current naming policy">
+            <Wand2 className="w-3 h-3 mr-1" /> {renamingLegacy ? 'Renaming…' : 'Rename Legacy'}
+          </Button>
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
