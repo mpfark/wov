@@ -267,9 +267,9 @@ function GalleryCard({
           loading="lazy"
           onLoad={() => setLoaded(true)}
           onError={onError}
-          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${
-            loaded ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`w-full h-full transition-all duration-500 group-hover:scale-105 ${
+            item.source === 'item' ? 'object-contain p-2' : 'object-cover'
+          } ${loaded ? 'opacity-100' : 'opacity-0'}`}
         />
         <div className="absolute top-2 left-2">
           <Badge variant="outline" className={`${SOURCE_BADGE[item.source]} backdrop-blur-sm`}>
