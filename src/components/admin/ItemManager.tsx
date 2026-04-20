@@ -399,7 +399,18 @@ export default function ItemManager() {
   });
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex flex-col">
+      {/* Page-level global actions bar */}
+      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-border bg-card/40 shrink-0">
+        <span className="text-[10px] font-display text-muted-foreground mr-auto uppercase tracking-wide">Catalog Tools</span>
+        <Button size="sm" variant="outline" onClick={handleRenameLegacy} disabled={renamingLegacy} className="font-display text-xs h-7" title="AI-rewrite legacy common/uncommon names to match the current naming policy">
+          <Wand2 className="w-3 h-3 mr-1" /> {renamingLegacy ? 'Renaming…' : 'Rename Legacy'}
+        </Button>
+        <Button size="sm" variant="outline" onClick={handleRebalanceStats} disabled={rebalancing} className="font-display text-xs h-7" title="AI-rebalance stats on common/uncommon equipment to match the canonical budget formula">
+          <Sparkles className="w-3 h-3 mr-1" /> {rebalancing ? 'Rebalancing…' : 'Rebalance Stats'}
+        </Button>
+      </div>
+      <div className="flex-1 flex min-h-0">
       {/* Left: Item List */}
       <div className="flex flex-col w-1/2 border-r border-border transition-all">
         <AdminEntityToolbar icon={<Package className="w-4 h-4" />} title="Items" count={filtered.length}>
@@ -414,12 +425,6 @@ export default function ItemManager() {
           >
             Unassigned ({unassignedCount})
           </button>
-          <Button size="sm" variant="outline" onClick={handleRenameLegacy} disabled={renamingLegacy} className="font-display text-xs h-7" title="AI-rewrite legacy common/uncommon names to match the current naming policy">
-            <Wand2 className="w-3 h-3 mr-1" /> {renamingLegacy ? 'Renaming…' : 'Rename Legacy'}
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleRebalanceStats} disabled={rebalancing} className="font-display text-xs h-7" title="AI-rebalance stats on common/uncommon equipment to match the canonical budget formula">
-            <Sparkles className="w-3 h-3 mr-1" /> {rebalancing ? 'Rebalancing…' : 'Rebalance Stats'}
-          </Button>
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
           </Button>
@@ -895,6 +900,7 @@ export default function ItemManager() {
         ) : (
           <AdminEmptyState message="Select an item to edit" />
         )}
+      </div>
       </div>
     </div>
   );
