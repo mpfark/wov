@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ArrowLeft, ImageOff } from 'lucide-react';
 
-type Source = 'region' | 'area' | 'node';
+type Source = 'region' | 'area' | 'node' | 'item';
 
 interface Illustration {
   id: string;
@@ -18,18 +18,21 @@ interface Illustration {
   illustration_url: string;
   min_level?: number | null;
   max_level?: number | null;
+  rarity?: string | null;
 }
 
 const SOURCE_LABEL: Record<Source, string> = {
   region: 'Region',
   area: 'Area',
   node: 'Node',
+  item: 'Item',
 };
 
 const SOURCE_BADGE: Record<Source, string> = {
   region: 'bg-primary/20 text-primary border-primary/40',
   area: 'bg-secondary/30 text-secondary-foreground border-secondary/50',
   node: 'bg-accent/20 text-accent-foreground border-accent/40',
+  item: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
 };
 
 const FILTERS: Array<{ key: 'all' | Source; label: string }> = [
@@ -37,6 +40,7 @@ const FILTERS: Array<{ key: 'all' | Source; label: string }> = [
   { key: 'region', label: 'Regions' },
   { key: 'area', label: 'Areas' },
   { key: 'node', label: 'Nodes' },
+  { key: 'item', label: 'Items' },
 ];
 
 export default function GalleryPage() {
@@ -65,7 +69,7 @@ export default function GalleryPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [reg, ar, nd] = await Promise.all([
+      const [reg, ar, nd, it] = await Promise.all([
         supabase
           .from('regions')
           .select('id, name, description, illustration_url, min_level, max_level')
@@ -81,6 +85,11 @@ export default function GalleryPage() {
           .select('id, name, description, illustration_url')
           .not('illustration_url', 'is', null)
           .neq('illustration_url', ''),
+        supabase
+          .from('items')
+          .select('id, name, description, illustration_url, level, rarity')
+          .not('illustration_url', 'is', null)
+          .neq('illustration_url', ''),
       ]);
 
       const merged: Illustration[] = [
@@ -92,6 +101,16 @@ export default function GalleryPage() {
           description: n.description || '',
           illustration_url: n.illustration_url || '',
           source: 'node',
+        })),
+        ...(it.data ?? []).map((i): Illustration => ({
+          id: i.id,
+          name: i.name,
+          description: i.description || '',
+          illustration_url: i.illustration_url || '',
+          source: 'item',
+          min_level: i.level,
+          max_level: i.level,
+          rarity: i.rarity,
         })),
       ].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -111,7 +130,7 @@ export default function GalleryPage() {
   );
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: 0, region: 0, area: 0, node: 0 };
+    const c: Record<string, number> = { all: 0, region: 0, area: 0, node: 0, item: 0 };
     for (const it of items) {
       if (hiddenIds.has(it.id)) continue;
       c.all++;
