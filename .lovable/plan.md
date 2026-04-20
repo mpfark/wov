@@ -1,62 +1,53 @@
 
 
-The user picked Option A (drop the layered paper doll) and wants to extend it: each item gets its own optional illustration that shows in tooltips. This is a clean, achievable scope.
+The user clarified two important things:
+1. The "Crown" duplicates aren't accidental — every L40 player forges one, and they intentionally share the name
+2. The L42 player-named soulforge item is also player-named, so duplicate names are expected there too
 
-Let me check what tooltips currently exist for items so the plan covers all the surfaces.
+These items don't fit cleanly in `common`/`uncommon`/`unique` because:
+- They're soulbound and one-per-character (like uniques)
+- But they can have name collisions across players (unlike uniques)
+- They're player-created, not loot-table-rolled
 
-The item tooltip surfaces I know about from the codebase:
-- `CharacterPanel.tsx` — equipped slots + inventory list (main tooltip surface)
-- `InspectPlayerDialog.tsx` — inspecting other players
-- `AdminEquipSlot.tsx` — admin character sheet
-- `ItemPicker.tsx`, `ItemPickerList.tsx` — admin pickers
-- Vendor/Blacksmith/Soulforge/Scroll panels — service dialogs
+A new `soulforged` rarity tier solves this cleanly: distinct visual treatment, exempt from naming-convention rules, exempt from unique-item exclusivity locks, and matches the existing memory note about a magenta color for soulforged items.
 
-Items already have an `appearance_key` column (UUID → appearance_entries). Two options for the illustration:
-1. Reuse `appearance_key` + appearance_entries (already wired)
-2. Add a new `illustration_url` column directly on `items`
-
-Option 2 is simpler and more honest about intent: the appearance library was for layered doll assets; an item illustration is a single image. Cleaner to keep them separate.
+Let me check what exists today.
 
 ## Plan
 
-### Step 1 — Remove the paper doll
-- Delete `PaperDoll.tsx`, `doll-contract.ts`, `appearance-resolver.ts`, `useAppearanceEntries.ts`
-- Remove `<PaperDoll>` usage in `CharacterPanel.tsx` and `AdminCharacterSheet.tsx`
-- Keep the existing equipment slot grid (already there and works fine)
-- Leave `appearance_entries` table and admin `AppearanceLibrary` in place for now (unused but harmless; can prune later if you want)
+### 1. Add `soulforged` to the `item_rarity` enum
+Migration: `ALTER TYPE item_rarity ADD VALUE 'soulforged';`
 
-### Step 2 — Add `illustration_url` to items
-- Migration: `ALTER TABLE items ADD COLUMN illustration_url text DEFAULT '' NOT NULL`
-- No RLS changes needed (existing item policies cover it)
+### 2. Backfill existing soulforged/crown items
+`UPDATE items SET rarity = 'soulforged' WHERE id IN (… all items created by `soulforge-item` edge function …)` — identifiable via `is_soulbound = true AND description LIKE 'Soulforged by %' OR description LIKE 'Royal Crown forged by %'`.
 
-### Step 3 — Item Manager: illustration field + AI generation
-- In `ItemManager.tsx` add an Illustration section to the editor form:
-  - Text input for `illustration_url`
-  - Small preview thumbnail
-  - "Generate with AI" button → reuses the existing `ai-item-forge` pattern, generates a square portrait of the item based on its name/description/rarity, uploads to a new `item-illustrations` storage bucket, returns the URL
-- New edge function `ai-item-illustration` (or extend existing one) using Lovable AI image generation (`google/gemini-3.1-flash-image-preview`)
-- New public storage bucket `item-illustrations`
+### 3. Update the soulforge edge function
+`supabase/functions/soulforge-item/index.ts` line 156: change `rarity: "uncommon"` → `rarity: "soulforged"`. The stat-budget multiplier (currently 1.5, the uncommon value) stays as-is so balance is unchanged — the rarity label is the only change.
 
-### Step 4 — Show illustration in tooltips
-Update item tooltips to render the illustration above the name when present:
-- `CharacterPanel.tsx` (EquipSlot tooltip + inventory item tooltip)
-- `InspectPlayerDialog.tsx` (InspectSlot tooltip)
-- `AdminEquipSlot.tsx`
-- `ItemPicker.tsx` / `ItemPickerList.tsx` (optional, can defer)
+### 4. Frontend visual treatment
+- `RARITY_COLORS` maps in `CharacterPanel.tsx`, `InspectPlayerDialog.tsx`, `AdminEquipSlot.tsx`, `constants.ts`, `ItemManager.tsx`, `BlacksmithPanel.tsx`, `ItemPicker.tsx`: add `soulforged: 'text-soulforged text-glow'` (magenta, per the existing visual-theme memory)
+- `tailwind.config.ts` + `index.css`: add a `soulforged` color token (magenta, e.g. `hsl(300 80% 65%)`) if not already present
+- Rarity dropdowns in admin (`ItemManager.tsx`, `ItemForgePanel.tsx`): include `soulforged` so admins can see/filter but **not** set it manually (or allow it — your call; default plan: read-only filter, not assignable)
 
-Tooltip layout: 96×96px illustration on top, then existing name/stats/description below. Falls back to text-only when `illustration_url` is empty.
+### 5. Exempt soulforged items from the rename pass
+The rename plan from the previous turn updates only `rarity IN ('common', 'uncommon')`. After the backfill in step 2, the Crowns + future player-soulforged items move to `rarity = 'soulforged'` and are automatically excluded — no extra logic needed. The duplicate-Crown deletion from the earlier plan is dropped.
 
-### Step 5 — Backfill helper (optional)
-Add a "Generate illustrations for all items missing one" admin button on the Item Manager toolbar that batch-generates for any item with `illustration_url = ''`. Run it once at your leisure.
+### 6. Unique-item exclusivity check
+`try_acquire_unique_item` and `return_unique_items` only act on `rarity = 'unique'` — soulforged items are unaffected, duplicates allowed by design. No change needed.
+
+### 7. Loot rolls
+`item_pool` loot mode rolls only common/uncommon. Soulforged tier is excluded automatically because it's not in the percentage config (`common_pct`, `uncommon_pct`). No change needed.
 
 ### Files touched
-- Delete: `src/features/character/components/PaperDoll.tsx`, `src/features/character/utils/doll-contract.ts`, `src/features/character/utils/appearance-resolver.ts`, `src/features/character/hooks/useAppearanceEntries.ts`
-- Edit: `CharacterPanel.tsx`, `AdminCharacterSheet.tsx`, `InspectPlayerDialog.tsx`, `AdminEquipSlot.tsx`, `ItemManager.tsx`
-- New: `supabase/functions/ai-item-illustration/index.ts`
-- Migration: `items.illustration_url` column + `item-illustrations` storage bucket
+- New migration: enum value + backfill UPDATE
+- Edit: `supabase/functions/soulforge-item/index.ts`
+- Edit: `tailwind.config.ts`, `src/index.css` (soulforged color token if missing)
+- Edit: `CharacterPanel.tsx`, `InspectPlayerDialog.tsx`, `AdminEquipSlot.tsx`, `users/constants.ts`, `ItemManager.tsx`, `BlacksmithPanel.tsx`, `ItemPicker.tsx` (RARITY_COLORS + dropdown options)
 
-### What stays unchanged
-- All gameplay, stats, equipment logic
-- The equipment slot grid in CharacterPanel
-- The appearance_entries table (left in place, unused for now)
+### Then re-run the rename
+With Crowns + soulforged items safely on their own tier, the previous common/uncommon rename pass runs cleanly with no special cases.
+
+### Out of scope
+- Changing soulforge stat budget or balance
+- Letting admins manually set `rarity = 'soulforged'` on regular items (keep it strictly server-issued via the soulforge function)
 
