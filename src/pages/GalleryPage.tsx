@@ -1,12 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ArrowLeft, ImageOff } from 'lucide-react';
+import { ImageOff } from 'lucide-react';
 
 type Source = 'region' | 'area' | 'node' | 'item';
 
@@ -49,7 +48,6 @@ export default function GalleryPage() {
   const [filter, setFilter] = useState<'all' | Source>('all');
   const [selected, setSelected] = useState<Illustration | null>(null);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
-  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     document.title = 'Gallery of Varneth — Illustrations';
