@@ -7,7 +7,6 @@ interface AdminLayoutProps {
   children: ReactNode;
   activeTab: string;
   onNavigate: (tab: string) => void;
-  onBack: () => void;
   isValar: boolean;
 }
 
@@ -28,14 +27,13 @@ const TAB_TITLES: Record<string, string> = {
   manual: 'Manual',
 };
 
-export default function AdminLayout({ children, activeTab, onNavigate, onBack, isValar }: AdminLayoutProps) {
+export default function AdminLayout({ children, activeTab, onNavigate, isValar }: AdminLayoutProps) {
   return (
     <SidebarProvider>
       <div className="h-screen flex w-full parchment-bg overflow-hidden">
         <AdminSidebar
           activeTab={activeTab}
           onNavigate={onNavigate}
-          onBack={onBack}
           isValar={isValar}
         />
         <div className="flex-1 flex flex-col min-w-0">
