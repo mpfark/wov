@@ -216,7 +216,14 @@ export default function GalleryPage() {
                   </Badge>
                   {selected.min_level != null && selected.max_level != null && (
                     <Badge variant="outline" className="text-xs">
-                      Lv {selected.min_level}–{selected.max_level}
+                      {selected.source === 'item' || selected.min_level === selected.max_level
+                        ? `Lv ${selected.min_level}`
+                        : `Lv ${selected.min_level}–${selected.max_level}`}
+                    </Badge>
+                  )}
+                  {selected.rarity && (
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {selected.rarity}
                     </Badge>
                   )}
                 </div>
