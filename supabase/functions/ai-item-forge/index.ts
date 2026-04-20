@@ -120,17 +120,37 @@ NAMING & DESCRIPTION RULES:
 - Descriptions must be a single evocative English sentence. Never leave description empty.
 - Names must be UNIQUE — do NOT generate items with names from this list: ${existingItemNames || "none"}
 
-THEMATIC CONSISTENCY RULES (CRITICAL):
-- Item names MUST match their stats thematically. A "Swift" item MUST have DEX. An "Ironclad" or "Iron" item MUST have STR or CON.
-- Naming conventions by stat focus:
-  - STR-focused: heavy, iron, war, mighty, brutal, crushing, titan
-  - DEX-focused: swift, nimble, agile, fleet, shadow, wind, light
-  - CON-focused: hardy, enduring, stalwart, fortified, resilient, iron
-  - INT-focused: arcane, mystic, scholar, sage, runed, enchanted
-  - WIS-focused: wise, oracle, seer, divine, blessed, sacred
-  - CHA-focused: charming, noble, regal, commanding, silver-tongued
-- Weapon names should evoke the weapon type: swords = blade/edge/saber, axes = cleaver/hatchet, staves = staff/stave, etc.
-- Armor slot names should match the slot: shoulders = pauldrons/spaulders/mantle, belt = girdle/cinch/sash, etc.
+NAMING POLICY BY RARITY (CRITICAL — FOLLOW EXACTLY):
+
+COMMON items — boring, generic, material-based. Format: [Tier Adjective] [Material] [Slot Noun]
+- Tier adjectives by level band (use to hint at strength, NOT for flavor):
+  - L1-9: omit, or use "Crude", "Worn", "Rough", "Simple"
+  - L10-19: "Sturdy", "Hardened", "Reinforced"
+  - L20-29: "Heavy", "Tempered", "Banded"
+  - L30-42: "Masterwork", "Riveted", "Honed"
+- Materials by level: Cloth → Leather → Studded Leather → Iron → Steel → Banded Steel → Reinforced Steel
+- Slot nouns: Helm, Pauldrons, Cuirass, Gauntlets, Belt, Greaves, Boots, Ring, Amulet, Pendant, Trinket, Sword, Axe, Dagger, Mace, Bow, Staff, Shield, etc.
+- GOOD examples: "Sturdy Iron Helm", "Masterwork Steel Pauldrons", "Heavy Bone Amulet", "Iron Dagger", "Worn Leather Boots", "Tempered Steel Sword"
+- BAD examples (NEVER for common): "Helm of the Cairn Warden", "Pendant of the Astral Journey", "Whispering Skull Fragment", "Heart of the Ancient Forest"
+- NO proper nouns. NO place names. NO factions. NO "of the X" titles.
+
+UNCOMMON items — slightly evocative but still generic archetypes. Format: [Quality Adjective] [Material/Style] [Slot Noun]
+- Allowed quality words ONLY: Fine, Engraved, Etched, Reinforced, Plated, Banded, Polished, Runed, Gilded, Enchanted, Greater
+- GOOD examples: "Gilded Circlet", "Runed Kite Shield", "Engraved Greatsword", "Etched Dagger", "Plated Pauldrons", "Fine Longbow"
+- BAD examples (NEVER for uncommon — these belong to UNIQUE tier only): "Aegis of Dawn", "Dawnbreaker", "Stormsplitter", "Phantom Edge", "Mantle of the Obsidian Watch"
+- NO proper nouns. NO place names. NO factions. NO "of the X" titles.
+
+THEMATIC CONSISTENCY (apply WITHIN the naming policy above):
+- Item names MUST match their stats. A "Heavy" item leans STR/CON, a "Runed" item leans INT/WIS, a "Gilded" item leans CHA.
+- Material/quality hints by stat focus (incorporate into the boring/generic format above):
+  - STR-focused: Heavy, Iron, Banded, Reinforced
+  - DEX-focused: Light, Polished, Fine, Etched
+  - CON-focused: Hardened, Sturdy, Tempered, Plated
+  - INT-focused: Runed, Engraved, Etched
+  - WIS-focused: Engraved, Runed
+  - CHA-focused: Gilded, Polished, Fine
+- Weapon slot nouns: swords = Sword/Blade/Greatsword, axes = Axe/Greataxe/Hatchet, staves = Staff, etc.
+- Armor slot nouns must match the slot: shoulders = Pauldrons/Spaulders, belt = Belt/Girdle, chest = Cuirass/Hauberk, etc.
 
 ITEM TYPE: ${typeInstruction}
 SLOT: ${slotInstruction}
