@@ -86,8 +86,9 @@ Deno.serve(async (req) => {
     // 1. Fetch all items, filter to common/uncommon violators
     const { data: allItems, error: itemsErr } = await supabase
       .from("items")
-      .select("id, name, rarity, level, slot, stats")
+      .select("id, name, rarity, level, slot, stats, item_type")
       .in("rarity", ["common", "uncommon"])
+      .eq("item_type", "equipment")
       .limit(5000);
 
     if (itemsErr) throw itemsErr;
