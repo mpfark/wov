@@ -80,6 +80,7 @@ export const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
   unique: 'text-primary text-glow',
+  soulforged: 'text-soulforged text-glow-soulforged',
 };
 
 export const STAT_FULL_NAMES: Record<string, string> = {

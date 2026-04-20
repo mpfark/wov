@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
         description: isCrown ? `Royal Crown forged by ${char.name}` : `Soulforged by ${char.name}`,
         item_type: "equipment",
         slot: effectiveSlot,
-        rarity: "uncommon",
+        rarity: "soulforged",
         level: effectiveLevel,
         hands: effectiveHands,
         stats: cleanStats,

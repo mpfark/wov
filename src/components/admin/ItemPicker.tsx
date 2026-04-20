@@ -25,8 +25,9 @@ interface ItemPickerProps {
   className?: string;
 }
 
-const RARITY_ORDER: Record<string, number> = { unique: 0, uncommon: 1, common: 2 };
+const RARITY_ORDER: Record<string, number> = { soulforged: 0, unique: 1, uncommon: 2, common: 3 };
 const RARITY_COLORS: Record<string, string> = {
+  soulforged: 'text-soulforged text-glow-soulforged',
   unique: 'text-primary',
   uncommon: 'text-elvish',
   common: 'text-foreground',

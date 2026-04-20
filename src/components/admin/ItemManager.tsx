@@ -32,7 +32,7 @@ interface Item {
   illustration_metadata: Record<string, string> | null;
 }
 
-const RARITIES = ['common', 'uncommon', 'unique'];
+const RARITIES = ['common', 'uncommon', 'unique', 'soulforged'];
 const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
 const ITEM_TYPES = ['equipment', 'consumable', 'quest'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];
@@ -47,6 +47,7 @@ const RARITY_COLORS: Record<string, string> = {
   uncommon: 'text-elvish',
   rare: 'text-dwarvish',
   unique: 'text-primary text-glow',
+  soulforged: 'text-soulforged text-glow-soulforged',
 };
 
 const defaultForm = (): Omit<Item, 'id'> => ({
