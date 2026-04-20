@@ -550,7 +550,7 @@ export default function ItemManager() {
               )}
 
               {/* Illustration */}
-              <AdminFormSection title="Illustration" description="Optional picture shown in tooltips">
+              <AdminFormSection title="Illustration" description="Optional. Used for tooltip illustration. Multiple items may reuse the same image.">
                 <div className="flex items-start gap-3">
                   <div className="w-24 h-24 shrink-0 rounded border border-border bg-background/40 overflow-hidden flex items-center justify-center">
                     {form.illustration_url ? (

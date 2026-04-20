@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { ChevronDown, Copy, Check, ImageIcon } from 'lucide-react';
+import { ChevronDown, Copy, Check, ImageIcon, X, Loader2, ImageOff } from 'lucide-react';
 import { buildIllustrationPrompt } from '@/lib/illustration-prompt';
 import type { IllustrationMetadata } from '@/lib/illustration-prompt';
 import { AdminFormSection } from '@/components/admin/common';
@@ -30,6 +30,69 @@ const METADATA_FIELDS: { key: keyof IllustrationMetadata; label: string; placeho
   { key: 'notable_features', label: 'Notable Features', placeholder: 'e.g. ancient tree, lava river, crystal formations' },
 ];
 
+type LoadState = 'loading' | 'loaded' | 'error';
+
+interface PreviewFrameProps {
+  url: string;
+  label: string;
+  sourceLabel?: string;
+  withOverlay?: boolean;
+}
+
+function PreviewFrame({ url, label, sourceLabel, withOverlay }: PreviewFrameProps) {
+  const [state, setState] = useState<LoadState>('loading');
+
+  useEffect(() => {
+    setState('loading');
+  }, [url]);
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1.5">
+        <ImageIcon className="w-3 h-3 text-muted-foreground" />
+        <span className="text-[10px] text-muted-foreground font-display">
+          {label}
+          {sourceLabel && (
+            <span className="ml-1 text-primary/70">— {sourceLabel}</span>
+          )}
+        </span>
+      </div>
+      <div className="relative w-full h-24 rounded border border-border overflow-hidden bg-background">
+        {state === 'error' ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+            <ImageOff className="w-4 h-4" />
+            <span className="text-[9px] font-display">Image failed to load</span>
+          </div>
+        ) : (
+          <>
+            <img
+              src={url}
+              alt={label}
+              className="w-full h-full object-cover"
+              onLoad={() => setState('loaded')}
+              onError={() => setState('error')}
+              style={{ opacity: state === 'loaded' ? 1 : 0, transition: 'opacity 150ms' }}
+            />
+            {state === 'loading' && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {withOverlay && state === 'loaded' && (
+              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50 pointer-events-none" />
+            )}
+            {state === 'loaded' && (
+              <span className="absolute bottom-1 left-1.5 text-[9px] text-white/70 font-display">
+                {withOverlay ? 'In-game preview' : 'Raw'}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function IllustrationEditor({
   illustrationUrl, onUrlChange, metadata, onMetadataChange,
   inheritedUrl, inheritedSource,
@@ -38,8 +101,10 @@ export default function IllustrationEditor({
   const [promptText, setPromptText] = useState('');
   const [copied, setCopied] = useState(false);
 
+  const hasLocal = !!illustrationUrl;
   const effectiveUrl = illustrationUrl || inheritedUrl || '';
   const effectiveSource = illustrationUrl ? 'This entity' : inheritedSource || '';
+  const showBothPreviews = hasLocal && !!inheritedUrl && illustrationUrl !== inheritedUrl;
 
   const updateMeta = (key: string, value: string) => {
     onMetadataChange({ ...metadata, [key]: value });
@@ -61,40 +126,47 @@ export default function IllustrationEditor({
     <AdminFormSection title="Illustration">
       <div className="space-y-2">
         <div>
-          <Input
-            placeholder="Image URL (e.g. https://...)"
-            value={illustrationUrl}
-            onChange={e => onUrlChange(e.target.value)}
-            className="text-xs"
-          />
+          <div className="flex gap-1.5">
+            <Input
+              placeholder="Image URL (e.g. https://...)"
+              value={illustrationUrl}
+              onChange={e => onUrlChange(e.target.value)}
+              className="text-xs"
+            />
+            {hasLocal && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onUrlChange('')}
+                className="h-9 px-2 shrink-0"
+                title="Clear local URL — falls back to parent"
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
           <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-            Leave empty to inherit from parent Area or Region.
+            Optional. Falls back to parent Area or Region if empty. Multiple entities may reuse the same image.
           </p>
         </div>
 
+        {/* Local illustration preview (only when local differs from inherited) */}
+        {showBothPreviews && (
+          <PreviewFrame
+            url={illustrationUrl}
+            label="Local Illustration"
+            sourceLabel="This entity"
+          />
+        )}
+
         {/* Effective Background Preview */}
         {effectiveUrl && (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5">
-              <ImageIcon className="w-3 h-3 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-display">
-                Effective Background
-                {effectiveSource && (
-                  <span className="ml-1 text-primary/70">— From {effectiveSource}</span>
-                )}
-              </span>
-            </div>
-            <div className="relative w-full h-24 rounded border border-border overflow-hidden bg-background">
-              <img
-                src={effectiveUrl}
-                alt="Background preview"
-                className="w-full h-full object-cover"
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" />
-              <span className="absolute bottom-1 left-1.5 text-[9px] text-white/70 font-display">Preview</span>
-            </div>
-          </div>
+          <PreviewFrame
+            url={effectiveUrl}
+            label="Effective Background"
+            sourceLabel={effectiveSource ? `From ${effectiveSource}` : undefined}
+            withOverlay
+          />
         )}
 
         {/* AI Generation Metadata */}
