@@ -1681,7 +1681,7 @@ export type Database = {
         | "edain"
         | "half_elf"
       creature_rarity: "regular" | "rare" | "boss"
-      item_rarity: "common" | "uncommon" | "unique"
+      item_rarity: "common" | "uncommon" | "unique" | "soulforged"
       item_slot:
         | "head"
         | "amulet"
@@ -1854,7 +1854,7 @@ export const Constants = {
         "half_elf",
       ],
       creature_rarity: ["regular", "rare", "boss"],
-      item_rarity: ["common", "uncommon", "unique"],
+      item_rarity: ["common", "uncommon", "unique", "soulforged"],
       item_slot: [
         "head",
         "amulet",
