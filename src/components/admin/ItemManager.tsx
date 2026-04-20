@@ -901,6 +901,7 @@ export default function ItemManager() {
           <AdminEmptyState message="Select an item to edit" />
         )}
       </div>
+      </div>
     </div>
   );
 }
