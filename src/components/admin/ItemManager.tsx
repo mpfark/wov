@@ -99,6 +99,7 @@ export default function ItemManager() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [loading, setLoading] = useState(false);
   const [renamingLegacy, setRenamingLegacy] = useState(false);
+  const [rebalancing, setRebalancing] = useState(false);
   const [showUnassigned, setShowUnassigned] = useState(false);
 
   const handleRenameLegacy = async () => {
@@ -134,6 +135,42 @@ export default function ItemManager() {
       setRenamingLegacy(false);
     }
   };
+
+  const handleRebalanceStats = async () => {
+    if (rebalancing) return;
+    setRebalancing(true);
+    try {
+      toast.info('Scanning equipment stat budgets…');
+      const dry = await supabase.functions.invoke('ai-item-rebalance', { body: { dry_run: true } });
+      if (dry.error) throw dry.error;
+      const dryData = dry.data as { total_mismatches: number; proposed: number; preview: { name: string; old_stats: Record<string, number>; new_stats: Record<string, number>; budget: number }[]; skipped: { name: string; reason: string }[] };
+      if (!dryData || dryData.total_mismatches === 0) {
+        toast.success('All equipment is within budget.');
+        return;
+      }
+      const fmt = (s: Record<string, number>) => Object.entries(s).map(([k, v]) => `${k}:${v}`).join(' ');
+      const sample = dryData.preview.slice(0, 6).map(p => `• ${p.name} (budget ${p.budget})\n  ${fmt(p.old_stats)} → ${fmt(p.new_stats)}`).join('\n');
+      const more = dryData.preview.length > 6 ? `\n…and ${dryData.preview.length - 6} more` : '';
+      const ok = window.confirm(
+        `Found ${dryData.total_mismatches} items with stat-budget mismatches. Proposed rebalances: ${dryData.proposed}. Skipped: ${dryData.skipped.length}.\n\nSample:\n${sample}${more}\n\nApply rebalance now?`
+      );
+      if (!ok) { toast.info('Rebalance cancelled.'); return; }
+
+      toast.info('Applying rebalance…');
+      const apply = await supabase.functions.invoke('ai-item-rebalance', { body: { dry_run: false } });
+      if (apply.error) throw apply.error;
+      const applyData = apply.data as { rebalanced: number; skipped: { name: string; reason: string }[] };
+      toast.success(`Rebalanced ${applyData.rebalanced} items. Skipped ${applyData.skipped.length}.`);
+      if (applyData.skipped.length > 0) console.warn('Skipped rebalances:', applyData.skipped);
+      await loadItems();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || 'Rebalance failed');
+    } finally {
+      setRebalancing(false);
+    }
+  };
+
   const [usedItemIds, setUsedItemIds] = useState<Set<string>>(new Set());
   const [allCreatures, setAllCreatures] = useState<{ id: string; name: string }[]>([]);
   const [allNodes, setAllNodes] = useState<{ id: string; name: string }[]>([]);
@@ -379,6 +416,9 @@ export default function ItemManager() {
           </button>
           <Button size="sm" variant="outline" onClick={handleRenameLegacy} disabled={renamingLegacy} className="font-display text-xs h-7" title="AI-rewrite legacy common/uncommon names to match the current naming policy">
             <Wand2 className="w-3 h-3 mr-1" /> {renamingLegacy ? 'Renaming…' : 'Rename Legacy'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleRebalanceStats} disabled={rebalancing} className="font-display text-xs h-7" title="AI-rebalance stats on common/uncommon equipment to match the canonical budget formula">
+            <Sparkles className="w-3 h-3 mr-1" /> {rebalancing ? 'Rebalancing…' : 'Rebalance Stats'}
           </Button>
           <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
             <Plus className="w-3 h-3 mr-1" /> New
