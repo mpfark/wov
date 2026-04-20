@@ -30,6 +30,7 @@ const RARITY_COLORS: Record<string, string> = {
   uncommon: 'text-elvish',
   rare: 'text-dwarvish',
   unique: 'text-primary text-glow',
+  soulforged: 'text-soulforged text-glow-soulforged',
 };
 
 const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>

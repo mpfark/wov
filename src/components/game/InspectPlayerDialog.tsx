@@ -16,6 +16,7 @@ const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
   unique: 'text-primary text-glow',
+  soulforged: 'text-soulforged text-glow-soulforged',
 };
 
 const getInspectItemColor = (rarity: string) => RARITY_COLORS[rarity] || 'text-foreground';
