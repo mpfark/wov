@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2 } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
@@ -859,6 +859,24 @@ export default function ItemManager() {
                 <AdminFormSection title="On-Hit Procs" description="Chance-based effects that trigger when this weapon hits">
                   {(form.procs || []).map((proc, idx) => (
                     <div key={idx} className="flex flex-wrap items-end gap-1.5 p-2 rounded border border-border bg-background/30 mb-2">
+                      <div className="flex flex-col gap-0.5 mr-1">
+                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === 0}
+                          onClick={() => {
+                            const procs = [...form.procs];
+                            [procs[idx - 1], procs[idx]] = [procs[idx], procs[idx - 1]];
+                            setForm(f => ({ ...f, procs }));
+                          }}>
+                          <ChevronUp className="w-3 h-3" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === (form.procs || []).length - 1}
+                          onClick={() => {
+                            const procs = [...form.procs];
+                            [procs[idx], procs[idx + 1]] = [procs[idx + 1], procs[idx]];
+                            setForm(f => ({ ...f, procs }));
+                          }}>
+                          <ChevronDown className="w-3 h-3" />
+                        </Button>
+                      </div>
                       <div className="w-[110px]">
                         <label className="text-[9px] text-muted-foreground">Type</label>
                         <Select value={proc.type} onValueChange={v => {
