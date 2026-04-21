@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2 } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
