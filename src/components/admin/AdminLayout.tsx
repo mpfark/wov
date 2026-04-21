@@ -23,9 +23,6 @@ export default function AdminLayout({ children, activeTab, onNavigate, isValar }
           {/* Header bar */}
           <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-card/50 shrink-0">
             <SidebarTrigger className="h-7 w-7" />
-            <h1 className="font-display text-sm text-primary text-glow truncate">
-              {TAB_TITLES[activeTab] || 'Admin'}
-            </h1>
             <div className="flex-1" />
             <AdminGlobalSearch onNavigate={onNavigate} />
           </div>
