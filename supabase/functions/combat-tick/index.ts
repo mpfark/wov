@@ -910,6 +910,11 @@ Deno.serve(async (req) => {
             hit_quality: quality2,
           });
 
+          // ── Proc-on-hit (off hand) ──
+          if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
+            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
+          }
+
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
             handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
           }
