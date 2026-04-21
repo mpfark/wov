@@ -963,6 +963,16 @@ export default function ItemManager() {
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
+                    <p className="text-[9px] text-muted-foreground italic pl-8 -mt-1 mb-1 truncate">
+                      Preview: {proc.emoji} Hero's weapon {proc.text || '...'} Goblin!{' '}
+                      {proc.type === 'lifesteal' || proc.type === 'heal_pulse'
+                        ? `(+${proc.value} HP)`
+                        : proc.type === 'burst_damage'
+                          ? `(${proc.value} dmg)`
+                          : proc.type === 'weaken'
+                            ? `(${Math.round(proc.value * 100)}% weaken)`
+                            : ''}
+                    </p>
                   ))}
                   <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]"
                     onClick={() => setForm(f => ({ ...f, procs: [...(f.procs || []), { type: 'lifesteal', chance: 0.1, value: 5, emoji: '💚', text: 'drains life from' }] }))}>
