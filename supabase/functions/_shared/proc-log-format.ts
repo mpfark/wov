@@ -1,6 +1,6 @@
 /**
- * Shared proc log-message formatter (Edge Function copy).
- * Keep in sync with src/lib/proc-log-format.ts
+ * Shared proc log-message formatter.
+ * Single source of truth — imported by both combat-tick (Deno) and admin UI (Vite via @shared alias).
  */
 
 export interface ProcLogInput {
