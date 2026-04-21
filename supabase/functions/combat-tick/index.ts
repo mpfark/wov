@@ -363,7 +363,7 @@ Deno.serve(async (req) => {
       mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0;
       // Use freshest CP: max of DB value and client-reported value (solo only)
       const dbCp = m.c.cp ?? 0;
-      const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number') ? Math.min(Math.max(dbCp, client_cp), m.c.max_cp ?? dbCp) : dbCp;
+      const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number') ? Math.min(client_cp, m.c.max_cp ?? dbCp) : dbCp;
       mCp[m.id] = freshCp;
     }
 
