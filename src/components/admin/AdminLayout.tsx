@@ -10,23 +10,6 @@ interface AdminLayoutProps {
   isValar: boolean;
 }
 
-const TAB_TITLES: Record<string, string> = {
-  dashboard: 'Dashboard',
-  world: 'World Map',
-  creatures: 'Creatures',
-  npcs: 'NPCs',
-  items: 'Items',
-  'loot-tables': 'Loot Tables',
-  'item-forge': 'Item Forge',
-  users: 'Users',
-  'races-classes': 'Races & Classes',
-  'xp-boost': 'XP Boost',
-  issues: 'Issues',
-  roadmap: 'Roadmap',
-  rulebook: 'Rulebook',
-  manual: 'Manual',
-};
-
 export default function AdminLayout({ children, activeTab, onNavigate, isValar }: AdminLayoutProps) {
   return (
     <SidebarProvider>
