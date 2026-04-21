@@ -29,5 +29,10 @@ export function formatProcMessage(
     }
   })();
 
-  return `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}!${suffix}`;
+  const interpolated = proc.text
+    .replace(/%a/g, attackerName)
+    .replace(/%e/g, targetName)
+    .replace(/%v/g, String(proc.value));
+
+  return `${proc.emoji} ${interpolated}!${suffix}`;
 }
