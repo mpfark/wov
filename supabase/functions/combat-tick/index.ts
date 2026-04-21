@@ -254,10 +254,12 @@ Deno.serve(async (req) => {
     const mainHandTag: Record<string, string | null> = {};
     const offHandTag: Record<string, string | null> = {};
     const isTwoHanded: Record<string, boolean> = {};
+    const memberProcs: Record<string, { type: string; chance: number; value: number; emoji: string; text: string }[]> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
       let mhTag: string | null = null;
       let ohTag: string | null = null;
+      const procs: any[] = [];
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
           b[s] = (b[s] || 0) + (v as number);
@@ -265,14 +267,19 @@ Deno.serve(async (req) => {
         if (e.equipped_slot === 'main_hand') {
           if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
           if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
+          const itemProcs = (e.item as any)?.procs;
+          if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
-        if (e.equipped_slot === 'off_hand' && (e.item as any)?.weapon_tag) {
-          ohTag = (e.item as any).weapon_tag;
+        if (e.equipped_slot === 'off_hand') {
+          if ((e.item as any)?.weapon_tag) ohTag = (e.item as any).weapon_tag;
+          const itemProcs = (e.item as any)?.procs;
+          if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
       }
       eq[cid] = b;
       mainHandTag[cid] = mhTag;
       offHandTag[cid] = ohTag;
+      memberProcs[cid] = procs;
     }
 
     // ── Alive creatures at combat node ───────────────────────────
