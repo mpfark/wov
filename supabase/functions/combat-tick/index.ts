@@ -827,6 +827,11 @@ Deno.serve(async (req) => {
             events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
           }
 
+          // ── Proc-on-hit (main hand) ──
+          if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
+            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
+          }
+
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
             handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
           }
