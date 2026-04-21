@@ -11,6 +11,14 @@ import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyAct
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 
+interface ProcEntry {
+  type: string;
+  chance: number;
+  value: number;
+  emoji: string;
+  text: string;
+}
+
 interface Item {
   id: string;
   name: string;
@@ -30,6 +38,7 @@ interface Item {
   appearance_key: string | null;
   illustration_url: string | null;
   illustration_metadata: Record<string, string> | null;
+  procs: ProcEntry[];
 }
 
 const RARITIES = ['common', 'uncommon', 'unique', 'soulforged'];
@@ -55,6 +64,7 @@ const defaultForm = (): Omit<Item, 'id'> => ({
   slot: null, stats: {}, value: 0, max_durability: 100, hands: null, level: 1,
   origin_type: null, origin_id: null, weapon_tag: null, is_soulbound: false,
   appearance_key: null, illustration_url: null, illustration_metadata: {},
+  procs: [],
 });
 
 function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: number; rarity: string; stats: Record<string, number>; hands?: number; itemType?: string }) {
@@ -184,7 +194,7 @@ export default function ItemManager() {
 
   const loadItems = async () => {
     const { data } = await supabase.from('items').select('*').order('name');
-    if (data) setItems(data as Item[]);
+    if (data) setItems(data as unknown as Item[]);
   };
 
   const loadItemUsage = async (itemId: string, itemRarity?: string) => {
@@ -294,6 +304,7 @@ export default function ItemManager() {
       appearance_key: (item as any).appearance_key ?? null,
       illustration_url: (item as any).illustration_url ?? null,
       illustration_metadata: ((item as any).illustration_metadata ?? {}) as Record<string, string>,
+      procs: Array.isArray((item as any).procs) ? (item as any).procs : [],
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -330,6 +341,7 @@ export default function ItemManager() {
       weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
       illustration_url: form.illustration_url ?? '',
       illustration_metadata: form.illustration_metadata ?? {},
+      procs: form.rarity === 'unique' ? (form.procs || []) : [],
     };
 
     let savedId = selectedId;
@@ -346,10 +358,10 @@ export default function ItemManager() {
     setLoading(false);
     const { data: refreshed } = await supabase.from('items').select('*').order('name');
     if (refreshed) {
-      setItems(refreshed as Item[]);
+      setItems(refreshed as unknown as Item[]);
       const updated = refreshed.find((i: any) => i.id === savedId);
       if (updated) {
-        openEdit(updated as Item);
+        openEdit(updated as unknown as Item);
       }
     }
   };
@@ -673,7 +685,7 @@ export default function ItemManager() {
                               setForm(f => ({ ...f, illustration_url: url }));
                               toast.success('Illustration generated');
                               const { data: refreshed } = await supabase.from('items').select('*').order('name');
-                              if (refreshed) setItems(refreshed as Item[]);
+                              if (refreshed) setItems(refreshed as unknown as Item[]);
                             }
                           } catch (err: any) {
                             toast.error(err?.message || 'Failed to generate illustration');
@@ -842,7 +854,78 @@ export default function ItemManager() {
               </AdminFormSection>
               )}
 
-              {/* Used In section */}
+              {/* Procs (unique items only) */}
+              {form.rarity === 'unique' && (
+                <AdminFormSection title="On-Hit Procs" description="Chance-based effects that trigger when this weapon hits">
+                  {(form.procs || []).map((proc, idx) => (
+                    <div key={idx} className="flex flex-wrap items-end gap-1.5 p-2 rounded border border-border bg-background/30 mb-2">
+                      <div className="w-[110px]">
+                        <label className="text-[9px] text-muted-foreground">Type</label>
+                        <Select value={proc.type} onValueChange={v => {
+                          const procs = [...form.procs];
+                          procs[idx] = { ...procs[idx], type: v };
+                          setForm(f => ({ ...f, procs }));
+                        }}>
+                          <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50">
+                            {['lifesteal', 'fire_damage', 'frost_damage', 'lightning_damage', 'weaken', 'heal_pulse'].map(t => (
+                              <SelectItem key={t} value={t} className="text-[10px] capitalize">{t.replace('_', ' ')}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-16">
+                        <label className="text-[9px] text-muted-foreground">Chance %</label>
+                        <Input type="number" min={1} max={100} value={Math.round(proc.chance * 100)}
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], chance: Math.min(1, Math.max(0.01, +e.target.value / 100)) };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px]" />
+                      </div>
+                      <div className="w-14">
+                        <label className="text-[9px] text-muted-foreground">Value</label>
+                        <Input type="number" min={1} value={proc.value}
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], value: Math.max(1, +e.target.value) };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px]" />
+                      </div>
+                      <div className="w-10">
+                        <label className="text-[9px] text-muted-foreground">Emoji</label>
+                        <Input value={proc.emoji} maxLength={4}
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], emoji: e.target.value };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px] text-center" />
+                      </div>
+                      <div className="flex-1 min-w-[100px]">
+                        <label className="text-[9px] text-muted-foreground">Log text</label>
+                        <Input value={proc.text} placeholder="drains life from"
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], text: e.target.value };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px]" />
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive"
+                        onClick={() => {
+                          const procs = form.procs.filter((_, i) => i !== idx);
+                          setForm(f => ({ ...f, procs }));
+                        }}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]"
+                    onClick={() => setForm(f => ({ ...f, procs: [...(f.procs || []), { type: 'lifesteal', chance: 0.1, value: 5, emoji: '💚', text: 'drains life from' }] }))}>
+                    <Plus className="w-3 h-3 mr-1" /> Add Proc
+                  </Button>
+                </AdminFormSection>
+              )}
+
               {selectedId && itemUsage && (itemUsage.creatures.length > 0 || itemUsage.searchNodes.length > 0 || itemUsage.vendors.length > 0 || itemUsage.lootTables.length > 0) && (
                 <div className="space-y-2 border-t border-border pt-3">
                   <p className="font-display text-xs text-primary">📍 Used In</p>

@@ -65,6 +65,47 @@ function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; 
   const last = flavors[flavors.length - 1];
   return { name: last.name, text: last.text, emoji: last.emoji, damage_type: last.damage_type };
 }
+// ── Proc-on-hit resolver ────────────────────────────────────
+function resolveProcs(
+  procs: { type: string; chance: number; value: number; emoji: string; text: string }[],
+  attackerName: string,
+  attackerId: string,
+  targetName: string,
+  targetId: string,
+  mHp: Record<string, number>,
+  cHp: Record<string, number>,
+  maxHp: number,
+  events: any[],
+  cKilled: Set<string>,
+) {
+  for (const proc of procs) {
+    if (Math.random() >= proc.chance) continue;
+    const label = proc.type.replace('_', ' ');
+    switch (proc.type) {
+      case 'lifesteal':
+      case 'heal_pulse': {
+        mHp[attackerId] = Math.min(mHp[attackerId] + proc.value, maxHp);
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (+${proc.value} HP)`, character_id: attackerId });
+        break;
+      }
+      case 'fire_damage':
+      case 'frost_damage':
+      case 'lightning_damage': {
+        if (cKilled.has(targetId)) break;
+        cHp[targetId] = Math.max(cHp[targetId] - proc.value, 0);
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${proc.value} ${label})`, character_id: attackerId });
+        break;
+      }
+      case 'weaken': {
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${Math.round(proc.value * 100)}% weaken)`, character_id: attackerId });
+        break;
+      }
+      default: {
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}!`, character_id: attackerId });
+      }
+    }
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -236,7 +277,7 @@ Deno.serve(async (req) => {
     const combatNodeId = session.node_id;
     const [equipRes, creaturesRes, effectsRes, xpRes] = await Promise.all([
       db.from('character_inventory')
-        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands)')
+        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs)')
         .in('character_id', charIds)
         .not('equipped_slot', 'is', null),
       db.from('creatures').select('*').eq('node_id', combatNodeId).eq('is_alive', true),
@@ -254,10 +295,12 @@ Deno.serve(async (req) => {
     const mainHandTag: Record<string, string | null> = {};
     const offHandTag: Record<string, string | null> = {};
     const isTwoHanded: Record<string, boolean> = {};
+    const memberProcs: Record<string, { type: string; chance: number; value: number; emoji: string; text: string }[]> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
       let mhTag: string | null = null;
       let ohTag: string | null = null;
+      const procs: any[] = [];
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
           b[s] = (b[s] || 0) + (v as number);
@@ -265,14 +308,19 @@ Deno.serve(async (req) => {
         if (e.equipped_slot === 'main_hand') {
           if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
           if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
+          const itemProcs = (e.item as any)?.procs;
+          if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
-        if (e.equipped_slot === 'off_hand' && (e.item as any)?.weapon_tag) {
-          ohTag = (e.item as any).weapon_tag;
+        if (e.equipped_slot === 'off_hand') {
+          if ((e.item as any)?.weapon_tag) ohTag = (e.item as any).weapon_tag;
+          const itemProcs = (e.item as any)?.procs;
+          if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
       }
       eq[cid] = b;
       mainHandTag[cid] = mhTag;
       offHandTag[cid] = ohTag;
+      memberProcs[cid] = procs;
     }
 
     // ── Alive creatures at combat node ───────────────────────────
@@ -779,6 +827,11 @@ Deno.serve(async (req) => {
             events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
           }
 
+          // ── Proc-on-hit (main hand) ──
+          if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
+            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
+          }
+
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
             handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
           }
@@ -856,6 +909,11 @@ Deno.serve(async (req) => {
             is_offhand: true,
             hit_quality: quality2,
           });
+
+          // ── Proc-on-hit (off hand) ──
+          if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
+            resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
+          }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
             handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
