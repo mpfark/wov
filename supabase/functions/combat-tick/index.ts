@@ -65,8 +65,49 @@ function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; 
   const last = flavors[flavors.length - 1];
   return { name: last.name, text: last.text, emoji: last.emoji, damage_type: last.damage_type };
 }
+// ── Proc-on-hit resolver ────────────────────────────────────
+function resolveProcs(
+  procs: { type: string; chance: number; value: number; emoji: string; text: string }[],
+  attackerName: string,
+  attackerId: string,
+  targetName: string,
+  targetId: string,
+  mHp: Record<string, number>,
+  cHp: Record<string, number>,
+  maxHp: number,
+  events: any[],
+  cKilled: Set<string>,
+) {
+  for (const proc of procs) {
+    if (Math.random() >= proc.chance) continue;
+    const label = proc.type.replace('_', ' ');
+    switch (proc.type) {
+      case 'lifesteal':
+      case 'heal_pulse': {
+        mHp[attackerId] = Math.min(mHp[attackerId] + proc.value, maxHp);
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (+${proc.value} HP)`, character_id: attackerId });
+        break;
+      }
+      case 'fire_damage':
+      case 'frost_damage':
+      case 'lightning_damage': {
+        if (cKilled.has(targetId)) break;
+        cHp[targetId] = Math.max(cHp[targetId] - proc.value, 0);
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${proc.value} ${label})`, character_id: attackerId });
+        break;
+      }
+      case 'weaken': {
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${Math.round(proc.value * 100)}% weaken)`, character_id: attackerId });
+        break;
+      }
+      default: {
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}!`, character_id: attackerId });
+      }
+    }
+  }
+}
 
-const corsHeaders = {
+
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
