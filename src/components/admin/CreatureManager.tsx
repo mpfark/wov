@@ -533,7 +533,7 @@ export default function CreatureManager() {
               <div className="space-y-1.5">
                 <p className="font-display text-xs text-primary">Boss Crit Flavors</p>
                 <p className="text-[10px] text-muted-foreground">
-                  Optional. Write the flavor text as a continuation after the creature's name (e.g., "unleashes a searing breath of fire").
+                  Optional. Use template variables: <span className="font-mono">%a</span> = attacker, <span className="font-mono">%e</span> = enemy, <span className="font-mono">%v</span> = damage value. Example: "%a unleashes fire upon %e".
                 </p>
                 {form.boss_crit_flavors.map((flavor, idx) => (
                   <div key={idx} className="p-2 bg-background/50 rounded border border-border space-y-1">
@@ -583,7 +583,7 @@ export default function CreatureManager() {
                         updated[idx] = { ...updated[idx], text: e.target.value };
                         setForm(f => ({ ...f, boss_crit_flavors: updated }));
                       }}
-                      placeholder="unleashes a searing breath of fire"
+                      placeholder="%a unleashes a searing breath upon %e"
                       className="h-7 text-xs"
                     />
                     <Input
@@ -596,6 +596,16 @@ export default function CreatureManager() {
                       placeholder="Damage type (optional, e.g. fire)"
                       className="h-7 text-[10px] text-muted-foreground"
                     />
+                    {flavor.text && (
+                      <p className="text-[9px] text-muted-foreground italic truncate">
+                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}{(() => {
+                          const hasVars = /%[aev]/.test(flavor.text);
+                          return hasVars
+                            ? flavor.text.replace(/%a/g, form.name || 'Dragon').replace(/%e/g, 'Hero').replace(/%v/g, '25')
+                            : `${form.name || 'Dragon'} ${flavor.text}`;
+                        })()}!
+                      </p>
+                    )}
                   </div>
                 ))}
                 <Button
