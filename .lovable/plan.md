@@ -1,42 +1,41 @@
 
 
-## Simplify Proc Types and Add Log Preview
+## Template Variables for Proc Log Text
+
+Replace the hardcoded sentence structure in `formatProcMessage` with user-authored template strings that support placeholder variables.
+
+### How it works
+
+The `text` field in each proc entry becomes a full template string instead of a verb fragment. Available placeholders:
+
+- `%a` -- attacker name (e.g. "Hero")
+- `%e` -- enemy/target name (e.g. "Goblin")
+- `%v` -- the proc's value (e.g. "5")
+
+The formatter simply does string replacement and prepends the emoji. The type-specific suffix (e.g. `(+5 HP)`) is still auto-appended based on proc type so you don't have to repeat it.
+
+**Example authored text:** `%a's blade drains the life from %e`
+**Rendered result:** `💚 Hero's blade drains the life from Goblin! (+5 HP)`
 
 ### Changes
 
-**1. Consolidate proc types**
+**1. `supabase/functions/_shared/proc-log-format.ts`** -- update `formatProcMessage`
+- Replace the hardcoded `"{emoji} {attacker}'s weapon {text} {target}!{suffix}"` template
+- Instead: replace `%a` with attacker name, `%e` with target name, `%v` with value in the `text` field
+- Prepend emoji, append `!` and type suffix
+- Result: `"{emoji} {interpolated text}!{suffix}"`
 
-Replace `fire_damage`, `frost_damage`, `lightning_damage` with a single `burst_damage` type. The damage type flavor (fire, frost, lightning, etc.) is already captured in the emoji and log text fields -- just like creature boss flavors work. This keeps the door open for future resistance systems by adding a `damage_type` tag later without changing the proc engine.
+**2. `src/components/admin/ItemManager.tsx`** -- update proc editor UI
+- Add a helper hint beneath the text input showing available placeholders: `%a = attacker, %e = enemy, %v = value`
+- The existing live preview already calls `formatProcMessage` so it will reflect the new format automatically
 
-New proc type list:
-- `lifesteal` -- steal HP from target (heals attacker)
-- `burst_damage` -- bonus flat damage on hit (replaces fire/frost/lightning)
-- `weaken` -- reduce target effectiveness (log-only for now)
-- `heal_pulse` -- self-heal on hit
-
-**2. Update combat-tick resolver**
-
-In `supabase/functions/combat-tick/index.ts`, replace the three elemental cases with a single `burst_damage` case that applies flat bonus damage (same logic as before).
-
-**3. Add log preview beneath each proc entry**
-
-In the admin proc editor, render a small preview line below each proc row showing exactly what the combat log message will look like, using placeholder names:
-
-```
-💚 Hero's weapon drains life from Goblin! (+5 HP)
-```
-
-This is computed live from the proc's emoji, text, value, and type -- so the admin sees the final log format as they type.
-
-**4. Update memory**
-
-Update `mem://game/proc-on-hit-system.md` with the simplified type list.
+**3. Deploy `combat-tick`** -- picks up the shared formatter change
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `supabase/functions/combat-tick/index.ts` | Replace 3 elemental cases with `burst_damage` |
-| `src/components/admin/ItemManager.tsx` | Update type list, add log preview beneath each proc |
-| `mem://game/proc-on-hit-system.md` | Update supported types |
+| `supabase/functions/_shared/proc-log-format.ts` | Update formatter to use `%a`/`%e`/`%v` replacement |
+| `src/components/admin/ItemManager.tsx` | Add placeholder hint text below proc text input |
+| `combat-tick` edge function | Redeploy |
 
