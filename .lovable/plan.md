@@ -1,35 +1,42 @@
 
 
-## Add Image Upload to Illustration Editors
+## Simplify Proc Types and Add Log Preview
 
-Currently you have to manually upload images via the backend and paste URLs. This plan adds drag-and-drop / file picker upload buttons directly into both the background illustration editor (regions, areas, nodes) and the item illustration editor.
+### Changes
 
-### What changes
+**1. Consolidate proc types**
 
-**1. Shared upload helper** — `src/lib/upload-illustration.ts`
-A small utility function that uploads a file to a specified storage bucket (`background-images` or `item-illustrations`), generates a unique filename, and returns the public URL. Used by both editors.
+Replace `fire_damage`, `frost_damage`, `lightning_damage` with a single `burst_damage` type. The damage type flavor (fire, frost, lightning, etc.) is already captured in the emoji and log text fields -- just like creature boss flavors work. This keeps the door open for future resistance systems by adding a `damage_type` tag later without changing the proc engine.
 
-**2. Background IllustrationEditor** — `src/components/admin/IllustrationEditor.tsx`
-- Add an **Upload** button next to the URL input
-- Accepts image files (png, jpg, webp) via a hidden `<input type="file">`
-- Uploads to the `background-images` bucket using the Supabase client
-- On success, calls `onUrlChange(publicUrl)` to populate the URL field
-- Shows a loading spinner during upload
+New proc type list:
+- `lifesteal` -- steal HP from target (heals attacker)
+- `burst_damage` -- bonus flat damage on hit (replaces fire/frost/lightning)
+- `weaken` -- reduce target effectiveness (log-only for now)
+- `heal_pulse` -- self-heal on hit
 
-**3. Item illustration section** — `src/components/admin/ItemManager.tsx`
-- Add an **Upload** button next to the existing URL input and "Generate with AI" button
-- Uploads to the `item-illustrations` bucket
-- On success, sets `form.illustration_url` to the public URL
-- Shows loading state during upload
+**2. Update combat-tick resolver**
 
-### No database or RLS changes needed
-Both `background-images` and `item-illustrations` buckets already exist and have admin upload/update/delete policies configured.
+In `supabase/functions/combat-tick/index.ts`, replace the three elemental cases with a single `burst_damage` case that applies flat bonus damage (same logic as before).
+
+**3. Add log preview beneath each proc entry**
+
+In the admin proc editor, render a small preview line below each proc row showing exactly what the combat log message will look like, using placeholder names:
+
+```
+💚 Hero's weapon drains life from Goblin! (+5 HP)
+```
+
+This is computed live from the proc's emoji, text, value, and type -- so the admin sees the final log format as they type.
+
+**4. Update memory**
+
+Update `mem://game/proc-on-hit-system.md` with the simplified type list.
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `src/lib/upload-illustration.ts` | **Create** — shared upload helper |
-| `src/components/admin/IllustrationEditor.tsx` | **Edit** — add Upload button |
-| `src/components/admin/ItemManager.tsx` | **Edit** — add Upload button to item illustration section |
+| `supabase/functions/combat-tick/index.ts` | Replace 3 elemental cases with `burst_damage` |
+| `src/components/admin/ItemManager.tsx` | Update type list, add log preview beneath each proc |
+| `mem://game/proc-on-hit-system.md` | Update supported types |
 
