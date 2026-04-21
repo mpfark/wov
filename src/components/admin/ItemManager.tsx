@@ -194,7 +194,7 @@ export default function ItemManager() {
 
   const loadItems = async () => {
     const { data } = await supabase.from('items').select('*').order('name');
-    if (data) setItems(data as Item[]);
+    if (data) setItems(data as unknown as Item[]);
   };
 
   const loadItemUsage = async (itemId: string, itemRarity?: string) => {
@@ -304,6 +304,7 @@ export default function ItemManager() {
       appearance_key: (item as any).appearance_key ?? null,
       illustration_url: (item as any).illustration_url ?? null,
       illustration_metadata: ((item as any).illustration_metadata ?? {}) as Record<string, string>,
+      procs: Array.isArray((item as any).procs) ? (item as any).procs : [],
     });
     loadItemUsage(item.id, item.rarity);
   };
@@ -356,10 +357,10 @@ export default function ItemManager() {
     setLoading(false);
     const { data: refreshed } = await supabase.from('items').select('*').order('name');
     if (refreshed) {
-      setItems(refreshed as Item[]);
+      setItems(refreshed as unknown as Item[]);
       const updated = refreshed.find((i: any) => i.id === savedId);
       if (updated) {
-        openEdit(updated as Item);
+        openEdit(updated as unknown as Item);
       }
     }
   };
@@ -683,7 +684,7 @@ export default function ItemManager() {
                               setForm(f => ({ ...f, illustration_url: url }));
                               toast.success('Illustration generated');
                               const { data: refreshed } = await supabase.from('items').select('*').order('name');
-                              if (refreshed) setItems(refreshed as Item[]);
+                              if (refreshed) setItems(refreshed as unknown as Item[]);
                             }
                           } catch (err: any) {
                             toast.error(err?.message || 'Failed to generate illustration');
