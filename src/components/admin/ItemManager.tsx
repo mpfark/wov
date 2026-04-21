@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown, Upload, Loader2 } from 'lucide-react';
 import { uploadIllustration } from '@/lib/upload-illustration';
+import { formatProcMessage } from '@/lib/proc-log-format';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
@@ -965,14 +966,7 @@ export default function ItemManager() {
                         </Button>
                       </div>
                       <p className="text-[9px] text-muted-foreground italic pl-8 mt-0.5 truncate">
-                        Preview: {proc.emoji} Hero's weapon {proc.text || '...'} Goblin!{' '}
-                        {proc.type === 'lifesteal' || proc.type === 'heal_pulse'
-                          ? `(+${proc.value} HP)`
-                          : proc.type === 'burst_damage'
-                            ? `(${proc.value} dmg)`
-                            : proc.type === 'weaken'
-                              ? `(${Math.round(proc.value * 100)}% weaken)`
-                              : ''}
+                        Preview: {formatProcMessage(proc, 'Hero', 'Goblin')}
                       </p>
                     </div>
                   ))}
