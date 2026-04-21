@@ -1,41 +1,22 @@
 
 
-## Template Variables for Proc Log Text
+## Remove Duplicate Admin Page Headers
 
-Replace the hardcoded sentence structure in `formatProcMessage` with user-authored template strings that support placeholder variables.
+The `AdminLayout` header bar displays the tab title (e.g. "Creatures"), and then each manager component renders its own `AdminEntityToolbar` with the same title plus count and controls. This creates the double headline visible in the screenshot.
 
-### How it works
+### Fix
 
-The `text` field in each proc entry becomes a full template string instead of a verb fragment. Available placeholders:
-
-- `%a` -- attacker name (e.g. "Hero")
-- `%e` -- enemy/target name (e.g. "Goblin")
-- `%v` -- the proc's value (e.g. "5")
-
-The formatter simply does string replacement and prepends the emoji. The type-specific suffix (e.g. `(+5 HP)`) is still auto-appended based on proc type so you don't have to repeat it.
-
-**Example authored text:** `%a's blade drains the life from %e`
-**Rendered result:** `💚 Hero's blade drains the life from Goblin! (+5 HP)`
+**Remove the title text from the `AdminLayout` header bar.** The sidebar trigger and global search remain, but the `<h1>` tab title is removed since the individual panels already display their own contextual header with richer information (count, filters, sort buttons).
 
 ### Changes
 
-**1. `supabase/functions/_shared/proc-log-format.ts`** -- update `formatProcMessage`
-- Replace the hardcoded `"{emoji} {attacker}'s weapon {text} {target}!{suffix}"` template
-- Instead: replace `%a` with attacker name, `%e` with target name, `%v` with value in the `text` field
-- Prepend emoji, append `!` and type suffix
-- Result: `"{emoji} {interpolated text}!{suffix}"`
-
-**2. `src/components/admin/ItemManager.tsx`** -- update proc editor UI
-- Add a helper hint beneath the text input showing available placeholders: `%a = attacker, %e = enemy, %v = value`
-- The existing live preview already calls `formatProcMessage` so it will reflect the new format automatically
-
-**3. Deploy `combat-tick`** -- picks up the shared formatter change
+**`src/components/admin/AdminLayout.tsx`**
+- Remove the `TAB_TITLES` map and the `<h1>` element from the header bar
+- Keep the sidebar trigger, spacer, and global search in the slim top bar
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `supabase/functions/_shared/proc-log-format.ts` | Update formatter to use `%a`/`%e`/`%v` replacement |
-| `src/components/admin/ItemManager.tsx` | Add placeholder hint text below proc text input |
-| `combat-tick` edge function | Redeploy |
+| `src/components/admin/AdminLayout.tsx` | Remove title text from header bar |
 
