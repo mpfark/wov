@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown, Upload, Loader2 } from 'lucide-react';
+import { uploadIllustration } from '@/lib/upload-illustration';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
@@ -94,8 +95,8 @@ function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: num
 
 export default function ItemManager() {
   const [generatingArt, setGeneratingArt] = useState(false);
-  // generatingArt is referenced by the AI button below
-  void generatingArt;
+  const [uploadingArt, setUploadingArt] = useState(false);
+  const itemFileRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -661,7 +662,7 @@ export default function ItemManager() {
                       onChange={e => setForm(f => ({ ...f, illustration_url: e.target.value || null }))}
                       className="h-7 text-xs"
                     />
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1.5 flex-wrap">
                       <Button
                         type="button"
                         variant="outline"
@@ -696,6 +697,32 @@ export default function ItemManager() {
                       >
                         <Sparkles className="w-3 h-3 mr-1" />
                         {generatingArt ? 'Generating…' : 'Generate with AI'}
+                      </Button>
+                      <input ref={itemFileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingArt(true);
+                        try {
+                          const url = await uploadIllustration(file, 'item-illustrations');
+                          setForm(f => ({ ...f, illustration_url: url }));
+                          toast.success('Image uploaded');
+                        } catch (err: any) {
+                          toast.error(err?.message || 'Upload failed');
+                        } finally {
+                          setUploadingArt(false);
+                          if (itemFileRef.current) itemFileRef.current.value = '';
+                        }
+                      }} />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px]"
+                        disabled={uploadingArt}
+                        onClick={() => itemFileRef.current?.click()}
+                      >
+                        {uploadingArt ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                        Upload
                       </Button>
                       {form.illustration_url && (
                         <Button
