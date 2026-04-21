@@ -11,6 +11,14 @@ import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyAct
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 
+interface ProcEntry {
+  type: string;
+  chance: number;
+  value: number;
+  emoji: string;
+  text: string;
+}
+
 interface Item {
   id: string;
   name: string;
@@ -30,6 +38,7 @@ interface Item {
   appearance_key: string | null;
   illustration_url: string | null;
   illustration_metadata: Record<string, string> | null;
+  procs: ProcEntry[];
 }
 
 const RARITIES = ['common', 'uncommon', 'unique', 'soulforged'];
