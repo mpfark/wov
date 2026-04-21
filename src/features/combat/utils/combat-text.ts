@@ -294,10 +294,13 @@ function formatCreatureAttack(
     const emoji = bf.emoji || '';
     const prefix = emoji ? `${emoji} ` : '';
     const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
-    if (isLocal) {
-      return `${prefix}${attacker} ${bf.text}${dmgSuffix}!`;
-    }
-    return `${prefix}${attacker} ${bf.text}${dmgSuffix}!`;
+    const targetLabel = isLocal ? 'you' : event.target_name!;
+    // Support %a/%e/%v template variables; fall back to legacy "{creature} {text}" format
+    const hasTemplateVars = /%[aev]/.test(bf.text);
+    const interpolated = hasTemplateVars
+      ? bf.text.replace(/%a/g, attacker).replace(/%e/g, targetLabel).replace(/%v/g, String(damage))
+      : `${attacker} ${bf.text}`;
+    return `${prefix}${interpolated}${dmgSuffix}!`;
   }
 
   const tierWord = getDamageTierWord(damage);
