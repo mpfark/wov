@@ -140,17 +140,21 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 }
 
 export default function StatusBarsStrip({
-  character, equipmentBonuses: _equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
+  character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
-  // Use authoritative base max from server to avoid display-then-snap-down
-  const effectiveMaxHp = character.max_hp;
+  // Include equipment bonuses so bars match the Attributes panel
+  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const cp = character.cp ?? 100;
-  const maxCp = character.max_cp ?? 100;
+  const eInt = character.int + (equipmentBonuses.int || 0);
+  const eWis = character.wis + (equipmentBonuses.wis || 0);
+  const eCha = character.cha + (equipmentBonuses.cha || 0);
+  const eDex = character.dex + (equipmentBonuses.dex || 0);
+  const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
   const cpPercent = Math.round((cp / maxCp) * 100);
   const mp = character.mp ?? 100;
-  const maxMp = character.max_mp ?? 100;
+  const maxMp = getMaxMp(character.level, eDex);
   const mpPercent = Math.round((mp / maxMp) * 100);
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
