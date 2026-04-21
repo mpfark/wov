@@ -913,7 +913,7 @@ export default function ItemManager() {
                         }}>
                           <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
                           <SelectContent className="bg-popover border-border z-50">
-                            {['lifesteal', 'fire_damage', 'frost_damage', 'lightning_damage', 'weaken', 'heal_pulse'].map(t => (
+                            {['lifesteal', 'burst_damage', 'weaken', 'heal_pulse'].map(t => (
                               <SelectItem key={t} value={t} className="text-[10px] capitalize">{t.replace('_', ' ')}</SelectItem>
                             ))}
                           </SelectContent>

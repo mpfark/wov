@@ -88,12 +88,10 @@ function resolveProcs(
         events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (+${proc.value} HP)`, character_id: attackerId });
         break;
       }
-      case 'fire_damage':
-      case 'frost_damage':
-      case 'lightning_damage': {
+      case 'burst_damage': {
         if (cKilled.has(targetId)) break;
         cHp[targetId] = Math.max(cHp[targetId] - proc.value, 0);
-        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${proc.value} ${label})`, character_id: attackerId });
+        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${proc.value} dmg)`, character_id: attackerId });
         break;
       }
       case 'weaken': {
