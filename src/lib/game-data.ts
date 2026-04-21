@@ -118,7 +118,7 @@ export function calculateAC(charClass: string, dex: number) {
 
 // Item stat budget system
 export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {
-  common: 1.0, uncommon: 1.5, unique: 3.0,
+  common: 1.0, uncommon: 1.5, soulforged: 2.0, unique: 3.0,
 };
 
 export const ITEM_STAT_COSTS: Record<string, number> = {
