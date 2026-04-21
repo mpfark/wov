@@ -1,22 +1,40 @@
 
 
-## Remove Duplicate Admin Page Headers
+## Fix: CP Reverts to Full During Combat
 
-The `AdminLayout` header bar displays the tab title (e.g. "Creatures"), and then each manager component renders its own `AdminEntityToolbar` with the same title plus count and controls. This creates the double headline visible in the screenshot.
+### Root Cause
+
+In `combat-tick/index.ts` (line 366), when initializing a member's CP for the tick, the server picks `Math.max(dbCp, client_cp)`. This was intended to capture client-side CP regen that hadn't been written to DB yet. However, when a player uses an ability:
+
+1. Client deducts CP (e.g. 30 -> 20) and writes to DB
+2. Next combat tick fires before the DB write lands
+3. Server reads old DB value (30) and client reports 20
+4. `Math.max(30, 20)` = 30 -- the deduction is reverted
+
+The server then returns `cp: 30` in `member_states`, and the client applies it locally, restoring full CP.
 
 ### Fix
 
-**Remove the title text from the `AdminLayout` header bar.** The sidebar trigger and global search remain, but the `<h1>` tab title is removed since the individual panels already display their own contextual header with richer information (count, filters, sort buttons).
+**`supabase/functions/combat-tick/index.ts`** -- Change the CP freshness logic from `Math.max` to `Math.min`. Since CP can only decrease between ticks during combat (ability usage), the lower value is always the more correct one. CP regen is suppressed during combat, so the "regen hasn't reached DB yet" scenario doesn't apply.
 
-### Changes
+```typescript
+// Before:
+const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
+  ? Math.min(Math.max(dbCp, client_cp), m.c.max_cp ?? dbCp)
+  : dbCp;
 
-**`src/components/admin/AdminLayout.tsx`**
-- Remove the `TAB_TITLES` map and the `<h1>` element from the header bar
-- Keep the sidebar trigger, spacer, and global search in the slim top bar
+// After:
+const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
+  ? Math.min(client_cp, m.c.max_cp ?? dbCp)
+  : dbCp;
+```
+
+Then redeploy the `combat-tick` edge function.
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `src/components/admin/AdminLayout.tsx` | Remove title text from header bar |
+| `supabase/functions/combat-tick/index.ts` | Fix CP freshness to use `Math.min` instead of `Math.max` |
+| `combat-tick` edge function | Redeploy |
 
