@@ -885,83 +885,95 @@ export default function ItemManager() {
               {form.rarity === 'unique' && (
                 <AdminFormSection title="On-Hit Procs" description="Chance-based effects that trigger when this weapon hits">
                   {(form.procs || []).map((proc, idx) => (
-                    <div key={idx} className="flex flex-wrap items-end gap-1.5 p-2 rounded border border-border bg-background/30 mb-2">
-                      <div className="flex flex-col gap-0.5 mr-1">
-                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === 0}
-                          onClick={() => {
+                    <div key={idx} className="mb-2">
+                      <div className="flex flex-wrap items-end gap-1.5 p-2 rounded border border-border bg-background/30">
+                        <div className="flex flex-col gap-0.5 mr-1">
+                          <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === 0}
+                            onClick={() => {
+                              const procs = [...form.procs];
+                              [procs[idx - 1], procs[idx]] = [procs[idx], procs[idx - 1]];
+                              setForm(f => ({ ...f, procs }));
+                            }}>
+                            <ChevronUp className="w-3 h-3" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === (form.procs || []).length - 1}
+                            onClick={() => {
+                              const procs = [...form.procs];
+                              [procs[idx], procs[idx + 1]] = [procs[idx + 1], procs[idx]];
+                              setForm(f => ({ ...f, procs }));
+                            }}>
+                            <ChevronDown className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="w-[110px]">
+                          <label className="text-[9px] text-muted-foreground">Type</label>
+                          <Select value={proc.type} onValueChange={v => {
                             const procs = [...form.procs];
-                            [procs[idx - 1], procs[idx]] = [procs[idx], procs[idx - 1]];
+                            procs[idx] = { ...procs[idx], type: v };
                             setForm(f => ({ ...f, procs }));
                           }}>
-                          <ChevronUp className="w-3 h-3" />
-                        </Button>
-                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === (form.procs || []).length - 1}
+                            <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-popover border-border z-50">
+                              {['lifesteal', 'burst_damage', 'weaken', 'heal_pulse'].map(t => (
+                                <SelectItem key={t} value={t} className="text-[10px] capitalize">{t.replace('_', ' ')}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-16">
+                          <label className="text-[9px] text-muted-foreground">Chance %</label>
+                          <Input type="number" min={1} max={100} value={Math.round(proc.chance * 100)}
+                            onChange={e => {
+                              const procs = [...form.procs];
+                              procs[idx] = { ...procs[idx], chance: Math.min(1, Math.max(0.01, +e.target.value / 100)) };
+                              setForm(f => ({ ...f, procs }));
+                            }} className="h-7 text-[10px]" />
+                        </div>
+                        <div className="w-14">
+                          <label className="text-[9px] text-muted-foreground">Value</label>
+                          <Input type="number" min={1} value={proc.value}
+                            onChange={e => {
+                              const procs = [...form.procs];
+                              procs[idx] = { ...procs[idx], value: Math.max(1, +e.target.value) };
+                              setForm(f => ({ ...f, procs }));
+                            }} className="h-7 text-[10px]" />
+                        </div>
+                        <div className="w-10">
+                          <label className="text-[9px] text-muted-foreground">Emoji</label>
+                          <Input value={proc.emoji} maxLength={4}
+                            onChange={e => {
+                              const procs = [...form.procs];
+                              procs[idx] = { ...procs[idx], emoji: e.target.value };
+                              setForm(f => ({ ...f, procs }));
+                            }} className="h-7 text-[10px] text-center" />
+                        </div>
+                        <div className="flex-1 min-w-[100px]">
+                          <label className="text-[9px] text-muted-foreground">Log text</label>
+                          <Input value={proc.text} placeholder="drains life from"
+                            onChange={e => {
+                              const procs = [...form.procs];
+                              procs[idx] = { ...procs[idx], text: e.target.value };
+                              setForm(f => ({ ...f, procs }));
+                            }} className="h-7 text-[10px]" />
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive"
                           onClick={() => {
-                            const procs = [...form.procs];
-                            [procs[idx], procs[idx + 1]] = [procs[idx + 1], procs[idx]];
+                            const procs = form.procs.filter((_, i) => i !== idx);
                             setForm(f => ({ ...f, procs }));
                           }}>
-                          <ChevronDown className="w-3 h-3" />
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
-                      <div className="w-[110px]">
-                        <label className="text-[9px] text-muted-foreground">Type</label>
-                        <Select value={proc.type} onValueChange={v => {
-                          const procs = [...form.procs];
-                          procs[idx] = { ...procs[idx], type: v };
-                          setForm(f => ({ ...f, procs }));
-                        }}>
-                          <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-popover border-border z-50">
-                            {['lifesteal', 'fire_damage', 'frost_damage', 'lightning_damage', 'weaken', 'heal_pulse'].map(t => (
-                              <SelectItem key={t} value={t} className="text-[10px] capitalize">{t.replace('_', ' ')}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="w-16">
-                        <label className="text-[9px] text-muted-foreground">Chance %</label>
-                        <Input type="number" min={1} max={100} value={Math.round(proc.chance * 100)}
-                          onChange={e => {
-                            const procs = [...form.procs];
-                            procs[idx] = { ...procs[idx], chance: Math.min(1, Math.max(0.01, +e.target.value / 100)) };
-                            setForm(f => ({ ...f, procs }));
-                          }} className="h-7 text-[10px]" />
-                      </div>
-                      <div className="w-14">
-                        <label className="text-[9px] text-muted-foreground">Value</label>
-                        <Input type="number" min={1} value={proc.value}
-                          onChange={e => {
-                            const procs = [...form.procs];
-                            procs[idx] = { ...procs[idx], value: Math.max(1, +e.target.value) };
-                            setForm(f => ({ ...f, procs }));
-                          }} className="h-7 text-[10px]" />
-                      </div>
-                      <div className="w-10">
-                        <label className="text-[9px] text-muted-foreground">Emoji</label>
-                        <Input value={proc.emoji} maxLength={4}
-                          onChange={e => {
-                            const procs = [...form.procs];
-                            procs[idx] = { ...procs[idx], emoji: e.target.value };
-                            setForm(f => ({ ...f, procs }));
-                          }} className="h-7 text-[10px] text-center" />
-                      </div>
-                      <div className="flex-1 min-w-[100px]">
-                        <label className="text-[9px] text-muted-foreground">Log text</label>
-                        <Input value={proc.text} placeholder="drains life from"
-                          onChange={e => {
-                            const procs = [...form.procs];
-                            procs[idx] = { ...procs[idx], text: e.target.value };
-                            setForm(f => ({ ...f, procs }));
-                          }} className="h-7 text-[10px]" />
-                      </div>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive"
-                        onClick={() => {
-                          const procs = form.procs.filter((_, i) => i !== idx);
-                          setForm(f => ({ ...f, procs }));
-                        }}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                      <p className="text-[9px] text-muted-foreground italic pl-8 mt-0.5 truncate">
+                        Preview: {proc.emoji} Hero's weapon {proc.text || '...'} Goblin!{' '}
+                        {proc.type === 'lifesteal' || proc.type === 'heal_pulse'
+                          ? `(+${proc.value} HP)`
+                          : proc.type === 'burst_damage'
+                            ? `(${proc.value} dmg)`
+                            : proc.type === 'weaken'
+                              ? `(${Math.round(proc.value * 100)}% weaken)`
+                              : ''}
+                      </p>
                     </div>
                   ))}
                   <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]"
