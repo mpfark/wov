@@ -341,6 +341,7 @@ export default function ItemManager() {
       weapon_tag: (form.item_type === 'equipment' && (form.slot === 'main_hand' || form.slot === 'off_hand')) ? form.weapon_tag : null,
       illustration_url: form.illustration_url ?? '',
       illustration_metadata: form.illustration_metadata ?? {},
+      procs: form.rarity === 'unique' ? (form.procs || []) : [],
     };
 
     let savedId = selectedId;
