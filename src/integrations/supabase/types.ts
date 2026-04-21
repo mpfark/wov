@@ -771,6 +771,7 @@ export type Database = {
           name: string
           origin_id: string | null
           origin_type: string | null
+          procs: Json
           rarity: Database["public"]["Enums"]["item_rarity"]
           slot: Database["public"]["Enums"]["item_slot"] | null
           stats: Json
@@ -794,6 +795,7 @@ export type Database = {
           name: string
           origin_id?: string | null
           origin_type?: string | null
+          procs?: Json
           rarity?: Database["public"]["Enums"]["item_rarity"]
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json
@@ -817,6 +819,7 @@ export type Database = {
           name?: string
           origin_id?: string | null
           origin_type?: string | null
+          procs?: Json
           rarity?: Database["public"]["Enums"]["item_rarity"]
           slot?: Database["public"]["Enums"]["item_slot"] | null
           stats?: Json

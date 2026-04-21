@@ -1,0 +1,1 @@
+ALTER TABLE items ADD COLUMN procs jsonb NOT NULL DEFAULT '[]'::jsonb;
