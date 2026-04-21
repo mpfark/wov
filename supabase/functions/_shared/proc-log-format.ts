@@ -10,6 +10,22 @@ export interface ProcLogInput {
   text: string;
 }
 
+/**
+ * Interpolate %a/%e/%v template variables in a text string.
+ * Shared by proc formatting AND boss-flavor formatting to prevent sync drift.
+ */
+export function interpolateTemplate(
+  text: string,
+  attackerName: string,
+  targetName: string,
+  value: number,
+): string {
+  return text
+    .replace(/%a/g, attackerName)
+    .replace(/%e/g, targetName)
+    .replace(/%v/g, String(value));
+}
+
 export function formatProcMessage(
   proc: ProcLogInput,
   attackerName: string,
@@ -29,10 +45,7 @@ export function formatProcMessage(
     }
   })();
 
-  const interpolated = proc.text
-    .replace(/%a/g, attackerName)
-    .replace(/%e/g, targetName)
-    .replace(/%v/g, String(proc.value));
+  const interpolated = interpolateTemplate(proc.text, attackerName, targetName, proc.value);
 
   return `${proc.emoji} ${interpolated}!${suffix}`;
 }

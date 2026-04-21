@@ -6,6 +6,7 @@
  */
 
 import { CLASS_COMBAT } from './class-abilities';
+import { interpolateTemplate } from '@shared/proc-log-format';
 
 // ── Display mode ────────────────────────────────────────────────
 
@@ -298,7 +299,7 @@ function formatCreatureAttack(
     // Support %a/%e/%v template variables; fall back to legacy "{creature} {text}" format
     const hasTemplateVars = /%[aev]/.test(bf.text);
     const interpolated = hasTemplateVars
-      ? bf.text.replace(/%a/g, attacker).replace(/%e/g, targetLabel).replace(/%v/g, String(damage))
+      ? interpolateTemplate(bf.text, attacker, targetLabel, damage)
       : `${attacker} ${bf.text}`;
     return `${prefix}${interpolated}${dmgSuffix}!`;
   }
