@@ -483,6 +483,35 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
         if (seq !== tickSeqRef.current) {
           console.log(`[combat] stale tick response ignored`, { seq, current: tickSeqRef.current, latency: tickLatency });
+          // Still emit kill notifications from stale responses (e.g. last tick before node change)
+          const staleResult = data as CombatTickResponse | null;
+          if (staleResult?.events?.length) {
+            const killEvents = staleResult.events.filter(ev =>
+              ev.type === 'creature_death' || ev.type === 'xp_reward' || ev.type === 'gold_reward' ||
+              ev.type === 'salvage_reward' || ev.type === 'bhp_reward' || ev.type === 'loot_drop'
+            );
+            if (killEvents.length > 0) {
+              console.log(`[combat] processing ${killEvents.length} kill-related events from stale tick`);
+              for (const ev of killEvents) {
+                ext.current.addLocalLog(ev.message);
+              }
+              // Apply character state updates (XP, gold, etc.) from the kill
+              const myState = staleResult.member_states?.find(m => m.character_id === ext.current.character.id);
+              if (myState && ext.current.updateCharacterLocal) {
+                const updates: Record<string, number> = {};
+                if (myState.xp !== undefined) updates.xp = myState.xp;
+                if (myState.gold !== undefined) updates.gold = myState.gold;
+                if (myState.salvage !== undefined) updates.salvage = myState.salvage;
+                if (myState.bhp !== undefined) updates.bhp = myState.bhp;
+                if (myState.level !== undefined) updates.level = myState.level;
+                if (Object.keys(updates).length > 0) ext.current.updateCharacterLocal(updates);
+              }
+              // Trigger ground loot refresh if there was a loot drop
+              if (staleResult.events.some(ev => ev.type === 'loot_drop')) {
+                ext.current.fetchGroundLoot();
+              }
+            }
+          }
         } else if (error) {
           console.error('Combat tick error:', error);
         } else {

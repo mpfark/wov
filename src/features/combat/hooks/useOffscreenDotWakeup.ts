@@ -128,25 +128,63 @@ export function useOffscreenDotWakeup({
       const departedNodeId = prevNode;
       console.log(`[offscreen-dot] node departure detected: ${departedNodeId} → ${currentNodeId}`);
 
-      // Query via edge function (service role) to bypass RLS on active_effects
-      (async () => {
+      // Delay snapshot to let the last in-flight combat-tick finish processing
+      const departureTimerId = setTimeout(async () => {
         try {
-          const { data, error: snapErr } = await supabase.functions.invoke('combat-catchup', {
-            body: { node_id: departedNodeId, snapshot_only: true },
+          // First try a full catchup (not snapshot-only) to resolve any remaining effects
+          // and capture kill_rewards from DOT kills that happened during the delay
+          const { data: catchupData, error: catchupErr } = await supabase.functions.invoke('combat-catchup', {
+            body: { node_id: departedNodeId, force: true, reason: 'departure_delayed_check' },
           });
 
-          if (snapErr || !data) {
-            console.error(`[offscreen-dot] snapshot query failed for node=${departedNodeId}:`, snapErr);
+          if (catchupErr) {
+            console.error(`[offscreen-dot] delayed catchup failed for node=${departedNodeId}:`, catchupErr);
             return;
           }
 
-          const effects = (data.effects || []) as ActiveEffectSnapshot[];
-          const creatures = (data.creatures || []) as { id: string; hp: number; max_hp: number }[];
+          // Emit kill rewards if the catchup resolved any kills
+          if (catchupData?.kill_rewards && Array.isArray(catchupData.kill_rewards) && catchupData.kill_rewards.length > 0) {
+            console.log(`[offscreen-dot] delayed catchup found ${catchupData.kill_rewards.length} kills at node=${departedNodeId}`);
+            for (const reward of catchupData.kill_rewards) {
+              eventBus.emit('combat:kill', {
+                creatureName: reward.creature_name,
+                creatureLevel: reward.creature_level,
+                creatureRarity: reward.creature_rarity,
+                xp: reward.xp_each,
+                gold: reward.gold_each,
+              });
 
-          console.log(`[offscreen-dot] snapshot for node=${departedNodeId}: effects=${effects.length}, creatures=${creatures.length}`);
+              const isLevelCapped = reward.primary_level >= 42;
+              const xpPart = isLevelCapped
+                ? 'Your power transcends experience.'
+                : `+${reward.xp_each} XP`;
+              const goldPart = reward.gold_each > 0 ? `, +${reward.gold_each} gold` : '';
+              const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
+              const bhpPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏋️ BHP` : '';
+
+              eventBus.emit('log', {
+                message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`,
+              });
+            }
+          }
+
+          // Now check if there are still remaining effects that need prediction tracking
+          const { data: snapData, error: snapErr } = await supabase.functions.invoke('combat-catchup', {
+            body: { node_id: departedNodeId, snapshot_only: true },
+          });
+
+          if (snapErr || !snapData) {
+            console.error(`[offscreen-dot] post-catchup snapshot failed for node=${departedNodeId}:`, snapErr);
+            return;
+          }
+
+          const effects = (snapData.effects || []) as ActiveEffectSnapshot[];
+          const creatures = (snapData.creatures || []) as { id: string; hp: number; max_hp: number }[];
+
+          console.log(`[offscreen-dot] post-catchup snapshot for node=${departedNodeId}: effects=${effects.length}, creatures=${creatures.length}`);
 
           if (effects.length === 0) {
-            console.log(`[offscreen-dot] no active effects for node=${departedNodeId}, not tracking`);
+            console.log(`[offscreen-dot] no remaining effects for node=${departedNodeId}, not tracking`);
             return;
           }
 
@@ -164,9 +202,19 @@ export function useOffscreenDotWakeup({
 
           scheduleWakeup(trackedRef.current, snapshot, 0, eventBus);
         } catch (err) {
-          console.error(`[offscreen-dot] failed to query DB for node=${departedNodeId}:`, err);
+          console.error(`[offscreen-dot] delayed departure check failed for node=${departedNodeId}:`, err);
         }
-      })();
+      }, 3000); // 3s delay to let the last combat-tick complete
+
+      // Store the departure timer so it can be cleaned up if needed
+      const existingEntry = trackedRef.current.get(departedNodeId);
+      if (existingEntry?.timerId) clearTimeout(existingEntry.timerId);
+      trackedRef.current.set(departedNodeId, {
+        snapshot: { nodeId: departedNodeId, capturedAt: Date.now(), creatureHp: {}, effects: [] },
+        timerId: departureTimerId,
+        rescheduleCount: 0,
+        predictedDeathTime: null,
+      });
     }
 
     // If we entered a tracked node, clear its timer
