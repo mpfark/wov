@@ -95,8 +95,8 @@ function BudgetIndicator({ level, rarity, stats, hands, itemType }: { level: num
 
 export default function ItemManager() {
   const [generatingArt, setGeneratingArt] = useState(false);
-  // generatingArt is referenced by the AI button below
-  void generatingArt;
+  const [uploadingArt, setUploadingArt] = useState(false);
+  const itemFileRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -697,6 +697,32 @@ export default function ItemManager() {
                       >
                         <Sparkles className="w-3 h-3 mr-1" />
                         {generatingArt ? 'Generating…' : 'Generate with AI'}
+                      </Button>
+                      <input ref={itemFileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingArt(true);
+                        try {
+                          const url = await uploadIllustration(file, 'item-illustrations');
+                          setForm(f => ({ ...f, illustration_url: url }));
+                          toast.success('Image uploaded');
+                        } catch (err: any) {
+                          toast.error(err?.message || 'Upload failed');
+                        } finally {
+                          setUploadingArt(false);
+                          if (itemFileRef.current) itemFileRef.current.value = '';
+                        }
+                      }} />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px]"
+                        disabled={uploadingArt}
+                        onClick={() => itemFileRef.current?.click()}
+                      >
+                        {uploadingArt ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
+                        Upload
                       </Button>
                       {form.illustration_url && (
                         <Button
