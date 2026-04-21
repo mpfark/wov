@@ -950,12 +950,13 @@ export default function ItemManager() {
                         </div>
                         <div className="flex-1 min-w-[100px]">
                           <label className="text-[9px] text-muted-foreground">Log text</label>
-                          <Input value={proc.text} placeholder="drains life from"
+                          <Input value={proc.text} placeholder="%a's blade drains life from %e"
                             onChange={e => {
                               const procs = [...form.procs];
                               procs[idx] = { ...procs[idx], text: e.target.value };
                               setForm(f => ({ ...f, procs }));
                             }} className="h-7 text-[10px]" />
+                          <p className="text-[8px] text-muted-foreground mt-0.5">%a = attacker, %e = enemy, %v = value</p>
                         </div>
                         <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive"
                           onClick={() => {
