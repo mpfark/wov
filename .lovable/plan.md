@@ -1,40 +1,26 @@
 
 
-## Fix: CP Reverts to Full During Combat
+## Fix: Status Bar HP/CP/MP Not Including Equipment Bonuses
 
-### Root Cause
+### Problem
 
-In `combat-tick/index.ts` (line 366), when initializing a member's CP for the tick, the server picks `Math.max(dbCp, client_cp)`. This was intended to capture client-side CP regen that hadn't been written to DB yet. However, when a player uses an ability:
+The status bars (HP, CP, MP) in the center panel use `character.max_hp` directly from the database, which is the **base** max HP without gear bonuses. The Attributes tab correctly adds equipment bonuses (flat HP bonus + CON gear modifier) on top. This causes the bars to show a lower max than the Attributes panel.
 
-1. Client deducts CP (e.g. 30 -> 20) and writes to DB
-2. Next combat tick fires before the DB write lands
-3. Server reads old DB value (30) and client reports 20
-4. `Math.max(30, 20)` = 30 -- the deduction is reverted
-
-The server then returns `cp: 30` in `member_states`, and the client applies it locally, restoring full CP.
+The same issue likely applies to CP and MP if there are gear bonuses affecting INT, WIS, or DEX.
 
 ### Fix
 
-**`supabase/functions/combat-tick/index.ts`** -- Change the CP freshness logic from `Math.max` to `Math.min`. Since CP can only decrease between ticks during combat (ability usage), the lower value is always the more correct one. CP regen is suppressed during combat, so the "regen hasn't reached DB yet" scenario doesn't apply.
+**`src/features/character/components/StatusBarsStrip.tsx`** -- Use the already-passed `equipmentBonuses` prop to calculate effective max values that include gear:
 
-```typescript
-// Before:
-const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
-  ? Math.min(Math.max(dbCp, client_cp), m.c.max_cp ?? dbCp)
-  : dbCp;
+- `effectiveMaxHp` = `character.max_hp + (equipmentBonuses.hp || 0) + floor((equipmentBonuses.con || 0) / 2)`
+- `effectiveMaxCp` = recalculate using `getMaxCp` with gear-adjusted INT/WIS, or add the delta from gear
+- `effectiveMaxMp` = recalculate using `getMaxMp` with gear-adjusted DEX, or add the delta from gear
 
-// After:
-const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
-  ? Math.min(client_cp, m.c.max_cp ?? dbCp)
-  : dbCp;
-```
-
-Then redeploy the `combat-tick` edge function.
+This matches exactly what the Attributes panel already computes, ensuring both views are consistent.
 
 ### Files
 
 | File | Action |
 |------|--------|
-| `supabase/functions/combat-tick/index.ts` | Fix CP freshness to use `Math.min` instead of `Math.max` |
-| `combat-tick` edge function | Redeploy |
+| `src/features/character/components/StatusBarsStrip.tsx` | Include equipment bonuses in effective max HP/CP/MP calculations |
 
