@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { ChevronDown, Copy, Check, ImageIcon, X, Loader2, ImageOff } from 'lucide-react';
+import { ChevronDown, Copy, Check, ImageIcon, X, Loader2, ImageOff, Upload } from 'lucide-react';
 import { buildIllustrationPrompt } from '@/lib/illustration-prompt';
 import type { IllustrationMetadata } from '@/lib/illustration-prompt';
 import { AdminFormSection } from '@/components/admin/common';
+import { uploadIllustration } from '@/lib/upload-illustration';
+import { toast } from 'sonner';
 
 type MetadataRecord = Record<string, string>;
 
@@ -100,6 +102,24 @@ export default function IllustrationEditor({
   const [metaOpen, setMetaOpen] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [copied, setCopied] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadIllustration(file, 'background-images');
+      onUrlChange(url);
+      toast.success('Image uploaded');
+    } catch (err: any) {
+      toast.error(err?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
 
   const hasLocal = !!illustrationUrl;
   const effectiveUrl = illustrationUrl || inheritedUrl || '';
@@ -133,6 +153,17 @@ export default function IllustrationEditor({
               onChange={e => onUrlChange(e.target.value)}
               className="text-xs"
             />
+            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleUpload} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="h-9 px-2 shrink-0"
+              title="Upload image"
+            >
+              {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            </Button>
             {hasLocal && (
               <Button
                 variant="outline"
