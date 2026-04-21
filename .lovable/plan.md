@@ -1,53 +1,89 @@
 
 
-## Problem
+## On-Hit Proc System for Unique Items
 
-The Items page toolbar is stuffed into the left list panel (`w-1/2`), so adding "Rename Legacy" + "Rebalance Stats" alongside Search, Unassigned, and New overflows the available width.
+Add a generic proc-on-hit system stored as item data, processed in combat-tick, and authored in the admin Item Editor. Unique items only.
 
-Looking at the other admin managers: most only have list-scoped controls (Search, Region filter, New) that comfortably fit inside the list column. **Items is the only page with global cleanup actions** that operate on the whole table, not just the visible list.
+### Data Model
 
-## Recommendation
+Add a `procs` jsonb column to the `items` table. Default `'[]'::jsonb`. Each entry is a self-describing effect:
 
-Don't change all admin pages. Only Items has the overflow problem because only Items has page-wide bulk actions. A blanket full-width toolbar would (a) waste space on the other pages and (b) blur the meaning of the existing pattern where the toolbar header belongs to the list column.
-
-## Plan: split Items toolbar into two rows
-
-**Row 1 — Page-level actions bar** (full width across `ItemManager`, above the two columns)
-- Lives outside the `w-1/2` list panel, spans the full content area
-- Contains the global cleanup actions: **Rename Legacy**, **Rebalance Stats**
-- Right-aligned, small height, subtle separator below
-- Reads as "tools that affect the whole item catalog"
-
-**Row 2 — List toolbar** (unchanged position, inside the list column)
-- `AdminEntityToolbar` keeps: icon + "Items" + count + Search + Unassigned + **New**
-- These are all list-scoped (search filters the list; New adds a row that appears in the list)
-- Now fits comfortably in the `w-1/2` width
-
-### Layout sketch
-
-```text
-┌─────────────────────────────────────────────────────┐
-│              [Rename Legacy] [Rebalance Stats]      │  ← new full-width bar
-├──────────────────────────┬──────────────────────────┤
-│ 📦 Items (349)  Search   │                          │
-│   Unassigned (305) [+New]│      Editor panel        │
-├──────────────────────────┤                          │
-│ [All] [Equipment] [...]  │                          │
-│  ...item list...         │                          │
-└──────────────────────────┴──────────────────────────┘
+```json
+[
+  {
+    "type": "lifesteal",
+    "chance": 0.10,
+    "value": 5,
+    "emoji": "💚",
+    "text": "drains life from"
+  }
+]
 ```
 
-### Files
+**Supported proc types at launch:**
 
-- **Edited file**: `src/components/admin/ItemManager.tsx`
-  - Wrap the existing `<div className="h-full flex">` in `<div className="h-full flex flex-col">`
-  - Add a new top bar div above the flex row containing the two AI buttons
-  - Remove `Rename Legacy` and `Rebalance Stats` from inside `AdminEntityToolbar` (lines 417–422)
-  - Keep Search, Unassigned, New inside the toolbar
+| Type | Effect | Value meaning |
+|---|---|---|
+| `lifesteal` | Heal attacker for flat HP on hit | HP restored |
+| `fire_damage` | Bonus fire damage on hit | Extra damage |
+| `frost_damage` | Bonus frost damage on hit | Extra damage |
+| `lightning_damage` | Bonus lightning damage on hit | Extra damage |
+| `weaken` | Reduce target's next attack damage by % | Reduction % (e.g. 0.25 = 25%) |
+| `heal_pulse` | Small self-heal on hit | HP restored |
 
-### Out of scope
+Each proc has a `chance` (0.0–1.0), a `value`, and cosmetic fields (`emoji`, `text`) for the combat log message.
 
-- No changes to `CreatureManager`, `NPCManager`, `LootTableManager`, `UserManager`, etc. — they don't have overflow.
-- No changes to the shared `AdminEntityToolbar` component — its contract stays the same.
-- No new shared component for the page actions bar — it's a single inline `<div>` in `ItemManager` for now. If a second manager later grows global actions, we promote it then.
+### Schema Migration
+
+```sql
+ALTER TABLE items ADD COLUMN procs jsonb NOT NULL DEFAULT '[]'::jsonb;
+```
+
+### Combat-Tick Changes
+
+**File:** `supabase/functions/combat-tick/index.ts`
+
+After a successful player hit (main-hand and off-hand), iterate the equipped weapon's `procs` array. For each entry, roll `Math.random() < proc.chance`. On success, apply the effect based on `type`:
+
+- `lifesteal` / `heal_pulse`: `mHp[memberId] = Math.min(mHp[memberId] + proc.value, member.c.max_hp)`
+- `fire_damage` / `frost_damage` / `lightning_damage`: `cHp[target.id] = Math.max(cHp[target.id] - proc.value, 0)` (with kill check)
+- `weaken`: push a combat event (visual only for now; a full debuff system can be added later)
+
+Emit a log event: `{proc.emoji} {charName}'s weapon {proc.text} {targetName}! ({proc.value} {label})`
+
+**Equipment loading** (line ~238): extend the equipment query to include `procs` alongside `stats, weapon_tag, hands`. Store procs per character in a `memberProcs` map.
+
+### Admin UI: Proc Editor
+
+**File:** `src/components/admin/ItemManager.tsx`
+
+Add a "Procs" section in the item editor, visible only when `rarity === 'unique'`. UI:
+
+- List of current procs with type dropdown, chance slider (0–100%), value input, emoji input, text input
+- Add/remove buttons
+- Saved as part of the normal item save flow
+
+### Item Interface Update
+
+**File:** `src/components/admin/ItemManager.tsx` (Item interface, line 14)
+
+Add `procs: { type: string; chance: number; value: number; emoji: string; text: string }[]` to the interface. Update `defaultForm` to include `procs: []`.
+
+### Client-Side Display
+
+No immediate client UI changes needed beyond the combat log messages. The proc effects will show up as combat log events with their custom emoji and text, making each unique weapon feel distinct.
+
+### Files Changed
+
+1. **Migration** — add `procs` column to `items`
+2. **`supabase/functions/combat-tick/index.ts`** — load procs from equipment, roll after hits, apply effects
+3. **`src/components/admin/ItemManager.tsx`** — add proc editor UI for unique items, update Item interface
+4. **`src/integrations/supabase/types.ts`** — auto-updated after migration
+
+### Out of Scope
+
+- Common/uncommon/soulforged items (unique only per your choice)
+- Proc effects on creature attacks (only player weapons)
+- Persistent debuffs from procs (weaken is log-only initially; can wire into `active_effects` later)
+- AI Forge auto-generating procs (manual admin authoring only for now)
 
