@@ -6,6 +6,7 @@ import {
   cleanupEffects,
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
+import { formatProcMessage } from "../_shared/proc-log-format.ts";
 import {
   getStatModifier as sm,
   rollD20,
@@ -80,26 +81,22 @@ function resolveProcs(
 ) {
   for (const proc of procs) {
     if (Math.random() >= proc.chance) continue;
-    const label = proc.type.replace('_', ' ');
+    const message = formatProcMessage(proc, attackerName, targetName);
     switch (proc.type) {
       case 'lifesteal':
       case 'heal_pulse': {
         mHp[attackerId] = Math.min(mHp[attackerId] + proc.value, maxHp);
-        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (+${proc.value} HP)`, character_id: attackerId });
+        events.push({ type: 'proc', message, character_id: attackerId });
         break;
       }
       case 'burst_damage': {
         if (cKilled.has(targetId)) break;
         cHp[targetId] = Math.max(cHp[targetId] - proc.value, 0);
-        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${proc.value} dmg)`, character_id: attackerId });
-        break;
-      }
-      case 'weaken': {
-        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}! (${Math.round(proc.value * 100)}% weaken)`, character_id: attackerId });
+        events.push({ type: 'proc', message, character_id: attackerId });
         break;
       }
       default: {
-        events.push({ type: 'proc', message: `${proc.emoji} ${attackerName}'s weapon ${proc.text} ${targetName}!`, character_id: attackerId });
+        events.push({ type: 'proc', message, character_id: attackerId });
       }
     }
   }
