@@ -854,7 +854,78 @@ export default function ItemManager() {
               </AdminFormSection>
               )}
 
-              {/* Used In section */}
+              {/* Procs (unique items only) */}
+              {form.rarity === 'unique' && (
+                <AdminFormSection title="On-Hit Procs" description="Chance-based effects that trigger when this weapon hits">
+                  {(form.procs || []).map((proc, idx) => (
+                    <div key={idx} className="flex flex-wrap items-end gap-1.5 p-2 rounded border border-border bg-background/30 mb-2">
+                      <div className="w-[110px]">
+                        <label className="text-[9px] text-muted-foreground">Type</label>
+                        <Select value={proc.type} onValueChange={v => {
+                          const procs = [...form.procs];
+                          procs[idx] = { ...procs[idx], type: v };
+                          setForm(f => ({ ...f, procs }));
+                        }}>
+                          <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-popover border-border z-50">
+                            {['lifesteal', 'fire_damage', 'frost_damage', 'lightning_damage', 'weaken', 'heal_pulse'].map(t => (
+                              <SelectItem key={t} value={t} className="text-[10px] capitalize">{t.replace('_', ' ')}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-16">
+                        <label className="text-[9px] text-muted-foreground">Chance %</label>
+                        <Input type="number" min={1} max={100} value={Math.round(proc.chance * 100)}
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], chance: Math.min(1, Math.max(0.01, +e.target.value / 100)) };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px]" />
+                      </div>
+                      <div className="w-14">
+                        <label className="text-[9px] text-muted-foreground">Value</label>
+                        <Input type="number" min={1} value={proc.value}
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], value: Math.max(1, +e.target.value) };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px]" />
+                      </div>
+                      <div className="w-10">
+                        <label className="text-[9px] text-muted-foreground">Emoji</label>
+                        <Input value={proc.emoji} maxLength={4}
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], emoji: e.target.value };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px] text-center" />
+                      </div>
+                      <div className="flex-1 min-w-[100px]">
+                        <label className="text-[9px] text-muted-foreground">Log text</label>
+                        <Input value={proc.text} placeholder="drains life from"
+                          onChange={e => {
+                            const procs = [...form.procs];
+                            procs[idx] = { ...procs[idx], text: e.target.value };
+                            setForm(f => ({ ...f, procs }));
+                          }} className="h-7 text-[10px]" />
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive"
+                        onClick={() => {
+                          const procs = form.procs.filter((_, i) => i !== idx);
+                          setForm(f => ({ ...f, procs }));
+                        }}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-[10px]"
+                    onClick={() => setForm(f => ({ ...f, procs: [...(f.procs || []), { type: 'lifesteal', chance: 0.1, value: 5, emoji: '💚', text: 'drains life from' }] }))}>
+                    <Plus className="w-3 h-3 mr-1" /> Add Proc
+                  </Button>
+                </AdminFormSection>
+              )}
+
               {selectedId && itemUsage && (itemUsage.creatures.length > 0 || itemUsage.searchNodes.length > 0 || itemUsage.vendors.length > 0 || itemUsage.lootTables.length > 0) && (
                 <div className="space-y-2 border-t border-border pt-3">
                   <p className="font-display text-xs text-primary">📍 Used In</p>
