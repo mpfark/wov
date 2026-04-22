@@ -23,7 +23,7 @@ import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import { usePartyCombat } from '@/features/combat';
-import { getBagWeight, calculateAC } from '@/lib/game-data';
+import { getBagWeight, calculateAC, getEffectiveMaxHp } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -154,8 +154,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
-  const gearConMod = Math.floor((equipmentBonuses.con || 0) / 2);
-  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0) + gearConMod;
+  const effectiveMaxHp = getEffectiveMaxHp(character.max_hp, equipmentBonuses);
 
   // Login top-up removed — resources now capped at authoritative base max to prevent snap-down
   const lastBroadcastedHpRef = useRef<{ hp: number; max_hp: number } | null>(null);

@@ -7,6 +7,7 @@
 import { useCallback } from 'react';
 import { Character } from '@/features/character';
 import { logActivity } from '@/hooks/useActivityLog';
+import { getEffectiveMaxHp } from '@/lib/game-data';
 import type { BuffSetters } from '@/features/combat/hooks/useBuffState';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -30,7 +31,7 @@ export function useConsumableActions(params: UseConsumableActionsParams) {
   const p = params;
 
   const handleUseConsumable = useCallback(async (inventoryId: string) => {
-    const consEffectiveMaxHp = p.character.max_hp;
+    const consEffectiveMaxHp = getEffectiveMaxHp(p.character.max_hp, p.equipmentBonuses);
     const result = await p.useConsumable(inventoryId, p.character.id, p.character.hp, consEffectiveMaxHp, p.updateCharacter);
     if (result) {
       if (result.isPotion) {
