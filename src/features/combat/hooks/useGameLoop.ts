@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
-import { getStatRegen, getMaxCp, getMaxMp, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen } from '@/lib/game-data';
+import { getStatRegen, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useBuffState } from './useBuffState';
