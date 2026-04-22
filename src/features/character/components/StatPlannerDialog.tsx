@@ -78,9 +78,9 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const eStr = stats.str + (equipmentBonuses.str || 0);
 
       const maxHp = getEffectiveMaxHp(character.class, stats.con, character.level, equipmentBonuses);
-      const ac = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
-      const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
-      const maxMp = getMaxMp(character.level, eDex);
+      const ac = getEffectiveAC(character.class, stats.dex, equipmentBonuses, false);
+      const maxCp = getEffectiveMaxCp(character.level, stats.int, stats.wis, stats.cha, equipmentBonuses);
+      const maxMp = getEffectiveMaxMp(character.level, stats.dex, equipmentBonuses);
       const hpRegen = getStatRegen(eCon) + (equipmentBonuses.hp_regen || 0);
       const cpRegen = getStatRegen(eInt);
       const mpRegen = getMpRegenRate(eDex);

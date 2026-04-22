@@ -166,6 +166,13 @@ export function getEffectiveMaxMp(level: number, dex: number, equipmentBonuses: 
   return getMaxMp(level, dex + (equipmentBonuses.dex || 0));
 }
 
+/** Effective AC with gear bonuses and optional shield. */
+export function getEffectiveAC(charClass: string, baseDex: number, equipmentBonuses: Record<string, number>, hasShield: boolean): number {
+  const effectiveDex = baseDex + (equipmentBonuses.dex || 0);
+  // Import SHIELD_AC_BONUS would create circular dep; inline the constant (value = 1)
+  return calculateAC(charClass, effectiveDex) + (equipmentBonuses.ac || 0) + (hasShield ? 1 : 0);
+}
+
 // MP (Stamina) system — DEX-based
 export function getMaxMp(level: number, dex: number = 10): number {
   const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
