@@ -3,12 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Character } from '@/features/character';
 import {
-  calculateAC,
-  getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
+  getStatModifier, getMpRegenRate,
   getStatRegen,
   getIntHitBonus, getDexCritBonus, getWisAntiCrit,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
-  getEffectiveMaxHp,
+  getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC,
 } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/features/combat';
 
