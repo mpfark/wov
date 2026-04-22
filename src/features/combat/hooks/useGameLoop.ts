@@ -144,7 +144,7 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       // ── CP Regen ──
       const { cp, level: cpLevel, int, wis, cha } = cpCharRef.current;
-      const effectiveMaxCp = getEffectiveMaxCp(level, int, wis, cha, eqB);
+      const effectiveMaxCp = getEffectiveMaxCp(cpLevel, int, wis, cha, eqB);
       if (cp < effectiveMaxCp) {
         const intWithGear = int + (eqB.int || 0);
         const intRegen = getStatRegen(intWithGear);
