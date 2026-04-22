@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Character } from '@/features/character';
 import {
-  calculateHP, calculateAC,
+  calculateAC,
   getStatModifier, getMaxCp, getMaxMp, getMpRegenRate,
   getStatRegen,
   getIntHitBonus, getDexCritBonus, getWisAntiCrit,
