@@ -90,7 +90,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const isDeadRef = useRef(false);
 
   // ── Regen refs (avoid stale closures in intervals) ─────────
-  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex });
+  const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class });
   const foodBuffRef = useRef(foodBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
@@ -124,7 +124,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const combatMult = inCombatRegenRef.current ? 0.1 : 1;
       const eqB = equipmentBonusesRef.current;
 
-      const effectiveMaxHp = getEffectiveMaxHp(charClass, con, level, eqB);
+      const effectiveMaxHp = getEffectiveMaxHp(charClass, con, charLevel, eqB);
 
       if (hp < effectiveMaxHp && hp > 0) {
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
@@ -143,7 +143,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
 
       // ── CP Regen ──
-      const { cp, level, int, wis, cha } = cpCharRef.current;
+      const { cp, level: cpLevel, int, wis, cha } = cpCharRef.current;
       const effectiveMaxCp = getEffectiveMaxCp(level, int, wis, cha, eqB);
       if (cp < effectiveMaxCp) {
         const intWithGear = int + (eqB.int || 0);
