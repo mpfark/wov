@@ -8,6 +8,7 @@ import {
   getStatRegen,
   getIntHitBonus, getDexCritBonus, getWisAntiCrit,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
+  getEffectiveMaxHp,
 } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/features/combat';
 
@@ -76,7 +77,7 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
       const eCha = stats.cha + (equipmentBonuses.cha || 0);
       const eStr = stats.str + (equipmentBonuses.str || 0);
 
-      const maxHp = calculateHP(character.class, eCon) + (character.level - 1) * 5 + (equipmentBonuses.hp || 0);
+      const maxHp = getEffectiveMaxHp(character.class, stats.con, character.level, equipmentBonuses);
       const ac = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0);
       const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
       const maxMp = getMaxMp(character.level, eDex);
