@@ -141,19 +141,21 @@ export function useGameLoop(params: UseGameLoopParams) {
         }
       }
 
-      // ── CP Regen ──
-      const { cp, level: cpLevel, int, wis, cha } = cpCharRef.current;
-      const effectiveMaxCp = getEffectiveMaxCp(cpLevel, int, wis, cha, eqB);
-      if (cp < effectiveMaxCp) {
-        const intWithGear = int + (eqB.int || 0);
-        const intRegen = getStatRegen(intWithGear);
-        const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
-        const food = foodBuffRef.current;
-        const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-        const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat) * combatMult), 1);
-        const newCp = Math.min(cp + regenAmount, effectiveMaxCp);
-        if (newCp > cp) {
-          updates.cp = newCp;
+      // ── CP Regen (skipped during combat to avoid stale-ref race with ability costs) ──
+      if (!inCombatRegenRef.current) {
+        const { cp, level: cpLevel, int, wis, cha } = cpCharRef.current;
+        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, int, wis, cha, eqB);
+        if (cp < effectiveMaxCp) {
+          const intWithGear = int + (eqB.int || 0);
+          const intRegen = getStatRegen(intWithGear);
+          const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
+          const food = foodBuffRef.current;
+          const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
+          const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat)), 1);
+          const newCp = Math.min(cp + regenAmount, effectiveMaxCp);
+          if (newCp > cp) {
+            updates.cp = newCp;
+          }
         }
       }
 
