@@ -154,8 +154,8 @@ export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha
 }
 
 // ── Effective max helpers (gear-adjusted caps) ──────────────
-export function getEffectiveMaxHp(maxHp: number, equipmentBonuses: Record<string, number>): number {
-  return maxHp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2);
+export function getEffectiveMaxHp(charClass: string, baseCon: number, level: number, equipmentBonuses: Record<string, number>): number {
+  return getMaxHp(charClass, baseCon + (equipmentBonuses.con || 0), level) + (equipmentBonuses.hp || 0);
 }
 
 export function getEffectiveMaxCp(level: number, int: number, wis: number, cha: number, equipmentBonuses: Record<string, number>): number {

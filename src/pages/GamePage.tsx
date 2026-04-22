@@ -154,7 +154,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
-  const effectiveMaxHp = getEffectiveMaxHp(character.max_hp, equipmentBonuses);
+  const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
 
   // Login top-up removed — resources now capped at authoritative base max to prevent snap-down
   const lastBroadcastedHpRef = useRef<{ hp: number; max_hp: number } | null>(null);
