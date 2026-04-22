@@ -118,13 +118,14 @@ export function useGameLoop(params: UseGameLoopParams) {
       const updates: Partial<Character> = {};
 
       // ── HP Regen ──
-      const { hp, max_hp, current_node_id, con, mp, dex } = regenCharRef.current;
+      const { hp, max_hp, current_node_id, con, mp, dex, level } = regenCharRef.current;
+      const charClass = regenCharRef.current.class;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
       const innFlat = node?.is_inn ? 10 : 0;
       const combatMult = inCombatRegenRef.current ? 0.1 : 1;
       const eqB = equipmentBonusesRef.current;
 
-      const effectiveMaxHp = getEffectiveMaxHp(max_hp, eqB);
+      const effectiveMaxHp = getEffectiveMaxHp(charClass, con, level, eqB);
 
       if (hp < effectiveMaxHp && hp > 0) {
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
@@ -223,7 +224,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
       const charState = regenCharRef.current;
       const eqBonuses = equipmentBonusesRef.current;
-      const partyEffectiveMaxHp = getEffectiveMaxHp(charState.max_hp, eqBonuses);
+      const partyEffectiveMaxHp = getEffectiveMaxHp(charState.class, charState.con, charState.level, eqBonuses);
       const selfNewHp = Math.min(partyEffectiveMaxHp, charState.hp + partyRegenBuff.healPerTick);
       if (selfNewHp > charState.hp) {
         await updateCharacter({ hp: selfNewHp });
