@@ -1,44 +1,48 @@
 
 
-## Audit: HP/CP/MP Calculation Consistency
+## Audit: Bundle Inline Calculations Into Shared Helpers
 
 ### Findings
 
-1. **HP rounding bug in `getEffectiveMaxHp`** — The current formula `maxHp + floor(gearCon / 2)` is an approximation that produces wrong results when both base CON and gear CON are odd. The correct approach (used in StatPlannerDialog) passes the combined CON into the full modifier formula: `floor((baseCon + gearCon - 10) / 2)` vs `floor((baseCon - 10) / 2) + floor(gearCon / 2)`. Example: baseCon=15, gearCon=3 yields effective max HP off by 1.
+Five categories of inline calculations that should use centralized helpers to prevent drift:
 
-2. **CharacterPanel attributes tab (line 985)** — Uses the same broken inline formula instead of calling the shared helper.
+#### 1. AC Calculation (3 inconsistent versions)
+- **GamePage** (line 473): `calculateAC(class, effectiveDex) + equipmentBonuses.ac` — no shield bonus
+- **CharacterPanel** (line 941): `calculateAC(class, eDex) + equipmentBonuses.ac + SHIELD_AC_BONUS` — includes shield
+- **StatPlannerDialog** (line 81): `calculateAC(class, eDex) + equipmentBonuses.ac` — no shield bonus
+- **AdminCharacterSheet** (line 41): `c.ac + equipmentBonuses.ac` — uses DB field, different formula entirely
 
-3. **CP and MP** — No issues found. Both `getEffectiveMaxCp` and `getEffectiveMaxMp` correctly pass gear-adjusted stats into `getMaxCp`/`getMaxMp`, matching what StatPlannerDialog does.
+**Fix**: Create `getEffectiveAC(charClass, baseDex, equipmentBonuses, hasShield)` in `game-data.ts`.
 
-4. **Admin views** — `CharacterSummaryCard` and `AdminCharacterSheet` display raw database `max_hp`/`max_cp` without gear bonuses. This is acceptable for admin inspection of base DB values.
+#### 2. Opportunity Attack AC Ignores Gear (Bug)
+- **useMovementActions.ts** (line 103): Party members' AC during opportunity attacks uses `calculateAC(class, dex)` with **raw database dex**, ignoring all gear bonuses. A party member with +5 DEX from gear gets hit more often than they should during fleeing.
 
-### Fix
+**Fix**: The `resolveOpportunityAttacks` function already receives `effectiveAC` for the fleeing player but party member AC is computed inline without gear. This needs the new `getEffectiveAC` helper or at minimum should factor in gear.
 
-Change `getEffectiveMaxHp` to accept `charClass`, `baseCon`, and `level` so it can use the proper `getMaxHp` formula with combined CON, eliminating the rounding error. Update all callsites to pass the additional parameters.
+#### 3. CP/MP Max Inline Instead of Using Helpers
+- **CharacterPanel** (line 916-917): Uses `getMaxCp(level, eInt, eWis, eCha)` and `getMaxMp(level, eDex)` with manually gear-adjusted stats instead of `getEffectiveMaxCp` / `getEffectiveMaxMp`.
+- **StatPlannerDialog** (line 82-83): Same pattern.
 
-### New signature
+**Fix**: Replace with `getEffectiveMaxCp(level, int, wis, cha, equipmentBonuses)` and `getEffectiveMaxMp(level, dex, equipmentBonuses)`.
 
-```typescript
-export function getEffectiveMaxHp(
-  charClass: string,
-  baseCon: number,
-  level: number,
-  equipmentBonuses: Record<string, number>
-): number {
-  return getMaxHp(charClass, baseCon + (equipmentBonuses.con || 0), level) + (equipmentBonuses.hp || 0);
-}
-```
+#### 4. Regen Computation in useGameLoop Duplicates Gear Addition
+- **useGameLoop** (lines 130-131, 149-150, 164): Manually computes `con + equipped.reduce(...)` instead of using `equipmentBonusesRef.current` which is already available. This is fragile — if the bonus aggregation logic changes, these spots would drift.
 
-### Callsites to update
+**Fix**: Use `equipmentBonusesRef.current.con`, `.int`, `.dex` consistently (some lines already do, others use manual reduce).
 
-| File | Change |
+#### 5. HP Regen Formula (potential drift)
+- HP regen in `useGameLoop` adds `itemHpRegen` computed at line 109, but the regen tick at line 132 recomputes it from `equippedRef` again. Two separate computations of the same value.
+
+**Fix**: Use the already-computed `itemHpRegenRef` inside the tick callback.
+
+### Changes
+
+| File | Action |
 |------|--------|
-| `src/lib/game-data.ts` | Update `getEffectiveMaxHp` signature and formula |
-| `src/features/character/components/StatusBarsStrip.tsx` | Pass `character.class`, `character.con`, `character.level` to new signature |
-| `src/features/combat/hooks/useGameLoop.ts` | Pass class, con, level from `regenCharRef` to new signature |
-| `src/features/combat/hooks/useCombatActions.ts` | Pass class, con, level in heal and self_heal branches |
-| `src/features/inventory/hooks/useConsumableActions.ts` | Pass class, con, level when computing potion cap |
-| `src/pages/GamePage.tsx` | Pass class, con, level for HP broadcast |
-| `src/features/character/components/CharacterPanel.tsx` (line 985) | Replace inline formula with `getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses)` |
-| `src/features/character/components/StatPlannerDialog.tsx` (line 79) | Replace inline `calculateHP(class, eCon) + (level-1)*5 + hp` with `getEffectiveMaxHp` using planned stats |
+| `src/lib/game-data.ts` | Add `getEffectiveAC(charClass, baseDex, equipmentBonuses, hasShield)` helper |
+| `src/pages/GamePage.tsx` | Replace inline AC calculation with `getEffectiveAC` |
+| `src/features/character/components/CharacterPanel.tsx` | Replace inline AC, CP max, MP max with shared helpers |
+| `src/features/character/components/StatPlannerDialog.tsx` | Replace inline AC, CP max, MP max with shared helpers |
+| `src/features/combat/hooks/useGameLoop.ts` | Use `equipmentBonusesRef` consistently instead of manual `reduce`; use pre-computed `itemHpRegen` |
+| `src/features/world/hooks/useMovementActions.ts` | **Bug fix**: Use gear-aware AC for party member opportunity attacks |
 
