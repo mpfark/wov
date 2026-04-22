@@ -12,6 +12,7 @@ import { Character } from '@/features/character';
 import {
   getStatModifier, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty,
   getMaxCp, getMaxMp, getMaxHp, getChaGoldMultiplier, CLASS_LEVEL_BONUSES, CLASS_LABELS,
+  getEffectiveMaxHp,
 } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
