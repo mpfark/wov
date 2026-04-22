@@ -98,7 +98,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   const inCombatRegenRef = useRef(false);
   const equipmentBonusesRef = useRef(equipmentBonuses);
 
-  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex]);
+  useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex, character.class]);
   useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
@@ -118,8 +118,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const updates: Partial<Character> = {};
 
       // ── HP Regen ──
-      const { hp, max_hp, current_node_id, con, mp, dex, level } = regenCharRef.current;
-      const charClass = regenCharRef.current.class;
+      const { hp, current_node_id, con, mp, dex, level: charLevel, class: charClass } = regenCharRef.current;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
       const innFlat = node?.is_inn ? 10 : 0;
       const combatMult = inCombatRegenRef.current ? 0.1 : 1;
