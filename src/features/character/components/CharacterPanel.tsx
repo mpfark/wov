@@ -1023,7 +1023,7 @@ export default function CharacterPanel({
                   const blockAmount = offHandIsShield ? getShieldBlockAmount(character.str + (equipmentBonuses.str || 0)) : 0;
 
                   const defenseRows: DerivedRow[] = [
-                    { label: 'AC', value: `${totalAC}`, tip: `Base ${baseAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''} vs regular creature atk +${creatureAtkMod}` },
+                    { label: 'AC', value: `${totalAC}`, tip: `Base ${totalAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''} vs regular creature atk +${creatureAtkMod}` },
                     ...(battleCryActive ? [{ label: 'Dmg Reduction', value: `${Math.round(battleCryBuff!.damageReduction * 100)}%`, tip: `Battle Cry reduces incoming damage by ${Math.round(battleCryBuff!.damageReduction * 100)}%. Crits reduced by additional ${Math.round(battleCryBuff!.critReduction * 100)}%.`, buffed: true, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'Crit Resistance', value: wisAntiCritChance > 0 ? `${Math.round(wisAntiCritChance * 100)}%` : '–', tip: wisAntiCritChance > 0 ? `WIS bonus: chance to downgrade incoming crits${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for crit resistance' },
