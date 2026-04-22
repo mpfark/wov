@@ -1,48 +1,44 @@
 
 
-## Refactor: Extract Shared Effective Max HP/CP/MP Helpers
+## Audit: HP/CP/MP Calculation Consistency
 
-### Problem
+### Findings
 
-The formula for computing gear-adjusted max HP, CP, and MP is duplicated in 5 locations with slight inconsistencies (e.g. `useConsumableActions` still uses base `max_hp` without gear bonuses).
+1. **HP rounding bug in `getEffectiveMaxHp`** — The current formula `maxHp + floor(gearCon / 2)` is an approximation that produces wrong results when both base CON and gear CON are odd. The correct approach (used in StatPlannerDialog) passes the combined CON into the full modifier formula: `floor((baseCon + gearCon - 10) / 2)` vs `floor((baseCon - 10) / 2) + floor(gearCon / 2)`. Example: baseCon=15, gearCon=3 yields effective max HP off by 1.
 
-### Solution
+2. **CharacterPanel attributes tab (line 985)** — Uses the same broken inline formula instead of calling the shared helper.
 
-Add three pure helper functions to `src/lib/game-data.ts` and replace all inline calculations.
+3. **CP and MP** — No issues found. Both `getEffectiveMaxCp` and `getEffectiveMaxMp` correctly pass gear-adjusted stats into `getMaxCp`/`getMaxMp`, matching what StatPlannerDialog does.
 
-### New helpers in `src/lib/game-data.ts`
+4. **Admin views** — `CharacterSummaryCard` and `AdminCharacterSheet` display raw database `max_hp`/`max_cp` without gear bonuses. This is acceptable for admin inspection of base DB values.
+
+### Fix
+
+Change `getEffectiveMaxHp` to accept `charClass`, `baseCon`, and `level` so it can use the proper `getMaxHp` formula with combined CON, eliminating the rounding error. Update all callsites to pass the additional parameters.
+
+### New signature
 
 ```typescript
 export function getEffectiveMaxHp(
-  maxHp: number,
+  charClass: string,
+  baseCon: number,
+  level: number,
   equipmentBonuses: Record<string, number>
 ): number {
-  return maxHp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2);
-}
-
-export function getEffectiveMaxCp(
-  level: number, int: number, wis: number, cha: number,
-  equipmentBonuses: Record<string, number>
-): number {
-  return getMaxCp(level, int + (equipmentBonuses.int || 0), wis + (equipmentBonuses.wis || 0), cha + (equipmentBonuses.cha || 0));
-}
-
-export function getEffectiveMaxMp(
-  level: number, dex: number,
-  equipmentBonuses: Record<string, number>
-): number {
-  return getMaxMp(level, dex + (equipmentBonuses.dex || 0));
+  return getMaxHp(charClass, baseCon + (equipmentBonuses.con || 0), level) + (equipmentBonuses.hp || 0);
 }
 ```
 
 ### Callsites to update
 
-| File | What changes |
-|------|-------------|
-| `src/lib/game-data.ts` | Add the three helper functions |
-| `src/features/character/components/StatusBarsStrip.tsx` | Replace inline HP/CP/MP max calculations with `getEffectiveMaxHp`, `getEffectiveMaxCp`, `getEffectiveMaxMp` |
-| `src/features/combat/hooks/useGameLoop.ts` | Replace inline effective max calculations in HP regen, CP regen, MP regen, and party heal sections |
-| `src/features/combat/hooks/useCombatActions.ts` | Replace inline `healEffMaxHp` in heal and self_heal branches |
-| `src/pages/GamePage.tsx` | Replace inline `effectiveMaxHp` for HP broadcast |
-| `src/features/inventory/hooks/useConsumableActions.ts` | **Bug fix**: use `getEffectiveMaxHp` with `equipmentBonuses` instead of bare `max_hp` (requires adding `equipmentBonuses` to the params interface) |
+| File | Change |
+|------|--------|
+| `src/lib/game-data.ts` | Update `getEffectiveMaxHp` signature and formula |
+| `src/features/character/components/StatusBarsStrip.tsx` | Pass `character.class`, `character.con`, `character.level` to new signature |
+| `src/features/combat/hooks/useGameLoop.ts` | Pass class, con, level from `regenCharRef` to new signature |
+| `src/features/combat/hooks/useCombatActions.ts` | Pass class, con, level in heal and self_heal branches |
+| `src/features/inventory/hooks/useConsumableActions.ts` | Pass class, con, level when computing potion cap |
+| `src/pages/GamePage.tsx` | Pass class, con, level for HP broadcast |
+| `src/features/character/components/CharacterPanel.tsx` (line 985) | Replace inline formula with `getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses)` |
+| `src/features/character/components/StatPlannerDialog.tsx` (line 79) | Replace inline `calculateHP(class, eCon) + (level-1)*5 + hp` with `getEffectiveMaxHp` using planned stats |
 
