@@ -569,7 +569,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'heal') {
       const wisMod = getStatModifier(p.character.wis);
       const healAmount = Math.max(3, wisMod * 3 + p.character.level);
-      const healEffMaxHp = getEffectiveMaxHp(p.character.max_hp, p.equipmentBonuses);
+      const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`); }
@@ -577,7 +577,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'self_heal') {
       const conMod = getStatModifier(p.character.con);
       const healAmount = Math.max(3, conMod * 3 + p.character.level);
-      const healEffMaxHp = getEffectiveMaxHp(p.character.max_hp, p.equipmentBonuses);
+      const healEffMaxHp = getEffectiveMaxHp(p.character.class, p.character.con, p.character.level, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
