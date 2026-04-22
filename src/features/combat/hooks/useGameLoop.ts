@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
-import { getStatRegen, getMaxCp, getMaxMp, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen } from '@/lib/game-data';
+import { getStatRegen, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { useBuffState } from './useBuffState';
@@ -124,7 +124,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       const combatMult = inCombatRegenRef.current ? 0.1 : 1;
       const eqB = equipmentBonusesRef.current;
 
-      const effectiveMaxHp = max_hp + (eqB.hp || 0) + Math.floor((eqB.con || 0) / 2);
+      const effectiveMaxHp = getEffectiveMaxHp(max_hp, eqB);
 
       if (hp < effectiveMaxHp && hp > 0) {
         const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
@@ -144,7 +144,7 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       // ── CP Regen ──
       const { cp, level, int, wis, cha } = cpCharRef.current;
-      const effectiveMaxCp = getMaxCp(level, int + (eqB.int || 0), wis + (eqB.wis || 0), cha + (eqB.cha || 0));
+      const effectiveMaxCp = getEffectiveMaxCp(level, int, wis, cha, eqB);
       if (cp < effectiveMaxCp) {
         const intWithGear = int + (eqB.int || 0);
         const intRegen = getStatRegen(intWithGear);
@@ -159,7 +159,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
 
       // ── MP Regen ──
-      const effectiveMaxMp = getMaxMp(regenCharRef.current.level, dex + (eqB.dex || 0));
+      const effectiveMaxMp = getEffectiveMaxMp(regenCharRef.current.level, dex, eqB);
       if (mp < effectiveMaxMp) {
         const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
         // ×2 to compensate for 4s tick (was 2s)
@@ -223,7 +223,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
       const charState = regenCharRef.current;
       const eqBonuses = equipmentBonusesRef.current;
-      const partyEffectiveMaxHp = charState.max_hp + (eqBonuses.hp || 0) + Math.floor((eqBonuses.con || 0) / 2);
+      const partyEffectiveMaxHp = getEffectiveMaxHp(charState.max_hp, eqBonuses);
       const selfNewHp = Math.min(partyEffectiveMaxHp, charState.hp + partyRegenBuff.healPerTick);
       if (selfNewHp > charState.hp) {
         await updateCharacter({ hp: selfNewHp });

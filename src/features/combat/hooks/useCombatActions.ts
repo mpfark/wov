@@ -12,6 +12,7 @@ import { Character } from '@/features/character';
 import {
   getStatModifier, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty,
   getMaxCp, getMaxMp, getMaxHp, getChaGoldMultiplier, CLASS_LEVEL_BONUSES, CLASS_LABELS,
+  getEffectiveMaxHp,
 } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
@@ -568,7 +569,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'heal') {
       const wisMod = getStatModifier(p.character.wis);
       const healAmount = Math.max(3, wisMod * 3 + p.character.level);
-      const healEffMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + Math.floor((p.equipmentBonuses.con || 0) / 2);
+      const healEffMaxHp = getEffectiveMaxHp(p.character.max_hp, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You cast Heal and restore ${restored} HP!`); }
@@ -576,7 +577,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'self_heal') {
       const conMod = getStatModifier(p.character.con);
       const healAmount = Math.max(3, conMod * 3 + p.character.level);
-      const healEffMaxHp = p.character.max_hp + (p.equipmentBonuses.hp || 0) + Math.floor((p.equipmentBonuses.con || 0) / 2);
+      const healEffMaxHp = getEffectiveMaxHp(p.character.max_hp, p.equipmentBonuses);
       const newHp = Math.min(healEffMaxHp, p.character.hp + healAmount);
       const restored = newHp - p.character.hp;
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
