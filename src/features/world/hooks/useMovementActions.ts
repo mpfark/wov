@@ -100,7 +100,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
     for (const member of membersHere) {
       for (const creature of livingCreatures) {
         const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
-        const memberAC = calculateAC(member.character.class, member.character.dex ?? 10);
+        const memberAC = calculateAC(member.character.class, (member.character.dex ?? 10) + (member.equipmentBonuses?.dex || 0)) + (member.equipmentBonuses?.ac || 0);
         if (atkRoll >= memberAC) {
           const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
           logs.push(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing! (Rolled ${atkRoll}) — ${dmg} damage!`);

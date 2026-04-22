@@ -127,9 +127,8 @@ export function useGameLoop(params: UseGameLoopParams) {
       const effectiveMaxHp = getEffectiveMaxHp(charClass, con, charLevel, eqB);
 
       if (hp < effectiveMaxHp && hp > 0) {
-        const conWithGear = con + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.con || 0), 0));
-        const conRegen = getStatRegen(conWithGear);
-        const eqItemRegen = equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.hp_regen || 0), 0);
+        const conRegen = getStatRegen(con + (eqB.con || 0));
+        const eqItemRegen = eqB.hp_regen || 0;
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
         const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
@@ -161,7 +160,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       // ── MP Regen ──
       const effectiveMaxMp = getEffectiveMaxMp(regenCharRef.current.level, dex, eqB);
       if (mp < effectiveMaxMp) {
-        const dexWithGear = dex + (equippedRef.current.reduce((s, inv) => s + ((inv.item.stats as any)?.dex || 0), 0));
+        const dexWithGear = dex + (eqB.dex || 0);
         // ×2 to compensate for 4s tick (was 2s)
         const regenAmount = getMpRegenRate(dexWithGear) * 2 + innFlat;
         const newMp = Math.min(mp + regenAmount, effectiveMaxMp);
