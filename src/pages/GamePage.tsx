@@ -23,7 +23,7 @@ import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import { usePartyCombat } from '@/features/combat';
-import { getBagWeight, calculateAC, getEffectiveMaxHp } from '@/lib/game-data';
+import { getBagWeight, getEffectiveMaxHp, getEffectiveAC } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -469,8 +469,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
 
   // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
-  const effectiveDex = character.dex + (equipmentBonuses.dex || 0);
-  const effectiveAC = calculateAC(character.class, effectiveDex) + (equipmentBonuses.ac || 0);
+  const effectiveAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, false);
 
   // ── Server effect sync — delegated to useBuffState via useGameLoop ──
   const handleActiveDots = useCallback((dots: Record<string, any>) => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
-import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getMaxCp, getMaxMp, getMpRegenRate, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, calculateAC, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp } from '@/lib/game-data';
+import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getMpRegenRate, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
 import { CLASS_COMBAT } from '@/features/combat';
 import { SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount } from '@/features/combat';
 import { Button } from '@/components/ui/button';
@@ -913,8 +913,8 @@ export default function CharacterPanel({
                   const eWis = character.wis + (equipmentBonuses.wis || 0);
                   const eCha = character.cha + (equipmentBonuses.cha || 0);
                   const hpRegen = getStatRegen(eCon) + (itemHpRegen || 0);
-                  const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
-                  const maxMp = getMaxMp(character.level, eDex);
+                  const maxCp = getEffectiveMaxCp(character.level, character.int, character.wis, character.cha, equipmentBonuses);
+                  const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
                   const baseCpRegen = getStatRegen(eInt);
                   const mpRegen = getMpRegenRate(eDex);
 
@@ -938,8 +938,7 @@ export default function CharacterPanel({
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
 
-                  const baseAC = calculateAC(character.class, eDex) + (equipmentBonuses.ac || 0) + (offHandIsShield ? SHIELD_AC_BONUS : 0);
-                  const totalAC = baseAC;
+                  const totalAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, offHandIsShield);
 
                    const affinityHit = isProficient ? 1 : 0;
                    const totalHitBonus = atkMod + intHit + affinityHit;
@@ -1024,7 +1023,7 @@ export default function CharacterPanel({
                   const blockAmount = offHandIsShield ? getShieldBlockAmount(character.str + (equipmentBonuses.str || 0)) : 0;
 
                   const defenseRows: DerivedRow[] = [
-                    { label: 'AC', value: `${totalAC}`, tip: `Base ${baseAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''} vs regular creature atk +${creatureAtkMod}` },
+                    { label: 'AC', value: `${totalAC}`, tip: `Base ${totalAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''} vs regular creature atk +${creatureAtkMod}` },
                     ...(battleCryActive ? [{ label: 'Dmg Reduction', value: `${Math.round(battleCryBuff!.damageReduction * 100)}%`, tip: `Battle Cry reduces incoming damage by ${Math.round(battleCryBuff!.damageReduction * 100)}%. Crits reduced by additional ${Math.round(battleCryBuff!.critReduction * 100)}%.`, buffed: true, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'Crit Resistance', value: wisAntiCritChance > 0 ? `${Math.round(wisAntiCritChance * 100)}%` : '–', tip: wisAntiCritChance > 0 ? `WIS bonus: chance to downgrade incoming crits${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for crit resistance' },
