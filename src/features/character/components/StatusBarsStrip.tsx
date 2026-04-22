@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { getXpForLevel, getMaxCp, getMaxMp } from '@/lib/game-data';
+import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 
 // Duration constants for buff background calculation (in ms)
 const BUFF_DURATIONS: Record<string, number> = {
@@ -143,18 +143,13 @@ export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
 }: StatusBarsStripProps) {
-  // Include equipment bonuses so bars match the Attributes panel
-  const effectiveMaxHp = character.max_hp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2);
+  const effectiveMaxHp = getEffectiveMaxHp(character.max_hp, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const cp = character.cp ?? 100;
-  const eInt = character.int + (equipmentBonuses.int || 0);
-  const eWis = character.wis + (equipmentBonuses.wis || 0);
-  const eCha = character.cha + (equipmentBonuses.cha || 0);
-  const eDex = character.dex + (equipmentBonuses.dex || 0);
-  const maxCp = getMaxCp(character.level, eInt, eWis, eCha);
+  const maxCp = getEffectiveMaxCp(character.level, character.int, character.wis, character.cha, equipmentBonuses);
   const cpPercent = Math.round((cp / maxCp) * 100);
   const mp = character.mp ?? 100;
-  const maxMp = getMaxMp(character.level, eDex);
+  const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
   const mpPercent = Math.round((mp / maxMp) * 100);
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);

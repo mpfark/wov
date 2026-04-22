@@ -153,6 +153,19 @@ export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha
   return 30 + (level - 1) * 3 + (intMod + wisMod) * 3;
 }
 
+// ── Effective max helpers (gear-adjusted caps) ──────────────
+export function getEffectiveMaxHp(maxHp: number, equipmentBonuses: Record<string, number>): number {
+  return maxHp + (equipmentBonuses.hp || 0) + Math.floor((equipmentBonuses.con || 0) / 2);
+}
+
+export function getEffectiveMaxCp(level: number, int: number, wis: number, cha: number, equipmentBonuses: Record<string, number>): number {
+  return getMaxCp(level, int + (equipmentBonuses.int || 0), wis + (equipmentBonuses.wis || 0), cha + (equipmentBonuses.cha || 0));
+}
+
+export function getEffectiveMaxMp(level: number, dex: number, equipmentBonuses: Record<string, number>): number {
+  return getMaxMp(level, dex + (equipmentBonuses.dex || 0));
+}
+
 // MP (Stamina) system — DEX-based
 export function getMaxMp(level: number, dex: number = 10): number {
   const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
