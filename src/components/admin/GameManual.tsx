@@ -540,6 +540,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod + <code className="text-primary">floor(level × 0.4)</code> attack bonus vs player AC</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
+                <p><strong className="text-foreground">Party XP Bonus:</strong> Grouped play grants a scaling XP bonus — 2 players: <code className="text-primary">×1.15</code>, 3 players: <code className="text-primary">×1.30</code>, 4 players: <code className="text-primary">×1.40</code></p>
                 <p><strong className="text-foreground">Flee:</strong> All party members suffer opportunity attacks</p>
                 <p><strong className="text-foreground">Durability:</strong> Each hit degrades 1 random equipped item by 1 durability</p>
                 <p><strong className="text-foreground">XP Penalty:</strong> Graduated: −10%/lvl (Lv1-5), −15%/lvl (Lv6-10), −20%/lvl (Lv11+). Min 10% reward.</p>
