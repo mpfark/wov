@@ -382,63 +382,55 @@ Deno.serve(async (req) => {
         if (activeEffects[i].target_id === creature.id) activeEffects.splice(i, 1);
       }
       killedCreatureIds.add(creature.id);
-      const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
-      const lt = (creature.loot_table || []) as any[];
-      const goldEntry = lt.find((e: any) => e.type === 'gold');
-      let totalGold = 0;
-      if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-        totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-        if (creature.is_humanoid && chaForGold > 0) {
-          totalGold = Math.floor(totalGold * chaGoldMult(chaForGold));
-        }
+
+      // ── Reward calculation (delegated to shared helper) ──
+      const rewardMembers = members.map(mm => ({
+        id: mm.id,
+        level: mm.c.level,
+        cha: (mm.c.cha || 10) + ((eq[mm.id] as any)?.cha || 0),
+        isUncapped: mm.c.level < 42,
+      }));
+      const rewards = calculateCreatureRewards({
+        level: creature.level,
+        rarity: creature.rarity,
+        isHumanoid: creature.is_humanoid,
+        isBoss: creature.rarity === 'boss',
+        lootTable: creature.loot_table || [],
+        xpBoostMultiplier: xpMult,
+        partySize: members.length,
+      }, rewardMembers);
+
+      // Accumulate per-member rewards
+      for (const mr of rewards.memberRewards) {
+        mXp[mr.memberId] += mr.xp;
+        mGold[mr.memberId] += mr.gold;
+        mBhp[mr.memberId] += mr.bhp;
+        mSalvage[mr.memberId] += mr.salvage;
       }
-      const goldSplit = members.length;
+
+      // ── Event messages ──
       const uncapped = members.filter(mm => mm.c.level < 42);
-      const xpSplit = uncapped.length || 1;
-      const goldEach = Math.floor(totalGold / goldSplit);
-      for (const mm of members) {
-        if (mm.c.level < 42) {
-          const penalty = xpPenalty(mm.c.level, creature.level);
-          mXp[mm.id] += Math.floor(Math.floor(baseXp * penalty * xpMult) / xpSplit);
-        }
-        mGold[mm.id] += goldEach;
-      }
-      const displayMember = uncapped[0] || members[0];
-      const displayPenalty = xpPenalty(displayMember.c.level, creature.level);
-      const displayXp = displayMember.c.level >= 42 ? 0 : Math.floor(Math.floor(baseXp * displayPenalty * xpMult) / xpSplit);
+      const displayReward = rewards.memberRewards.find(r => r.memberId === (uncapped[0] || members[0]).id)!;
+      const displayXp = displayReward.xp;
+      const goldEach = displayReward.gold;
       const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
-      const penaltyNote = displayPenalty < 1 ? ` (${Math.round(displayPenalty * 100)}% XP — level penalty)` : '';
+      const penaltyNote = displayReward.xpPenaltyApplied < 1 ? ` (${Math.round(displayReward.xpPenaltyApplied * 100)}% XP — level penalty)` : '';
+      const partyBonusNote = rewards.partyBonus > 1 ? ` (🤝 +${Math.round((rewards.partyBonus - 1) * 100)}% party bonus)` : '';
       const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
       const allCapped = uncapped.length === 0;
       if (allCapped) {
-        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${goldSplit > 1 ? ' each' : ''}.` : '';
+        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${members.length > 1 ? ' each' : ''}.` : '';
         events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain!${cappedGoldNote} Your power transcends experience.` });
-      } else if (goldSplit > 1) {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! Rewards split ${xpSplit} ways: +${displayXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}` });
+      } else if (members.length > 1) {
+        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! Rewards split ${uncapped.length} ways: +${displayXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}${partyBonusNote}` });
       } else {
         events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! +${displayXp} XP${goldNote}.${penaltyNote}${xpBoostNote}` });
       }
-      if (creature.rarity === 'boss') {
-        const bhpReward = Math.floor(creature.level * 0.5);
-        if (bhpReward > 0) {
-          const bhpEach = Math.floor(bhpReward / members.length);
-          if (bhpEach > 0) {
-            for (const mm of members) {
-              mBhp[mm.id] += bhpEach;
-            }
-            events.push({ type: 'bhp_award', message: `🏋️ +${bhpEach} Boss Hunter Points each!` });
-          }
-        }
+      if (displayReward.bhp > 0) {
+        events.push({ type: 'bhp_award', message: `🏋️ +${displayReward.bhp} Boss Hunter Points each!` });
       }
-      if (!creature.is_humanoid) {
-        const baseSalvage = 1 + Math.floor(creature.level / 5);
-        const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
-        const totalSalvage = baseSalvage * rarityMult;
-        const salvageEach = Math.floor(totalSalvage / members.length);
-        if (salvageEach > 0) {
-          for (const mm of members) mSalvage[mm.id] += salvageEach;
-          events.push({ type: 'salvage', message: `🔩 +${salvageEach} salvage each from ${creature.name}.` });
-        }
+      if (displayReward.salvage > 0) {
+        events.push({ type: 'salvage', message: `🔩 +${displayReward.salvage} salvage each from ${creature.name}.` });
       }
       const lootMode = creature.loot_mode || 'legacy_table';
       if (lootMode === 'item_pool') {
