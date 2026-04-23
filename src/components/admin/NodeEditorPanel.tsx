@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
+import { Save, Trash2, Plus, Unlink, Skull, MessageSquare, Shield, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { type AreaType } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
