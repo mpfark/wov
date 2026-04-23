@@ -433,6 +433,7 @@ Deno.serve(async (req) => {
         events.push({ type: 'salvage', message: `🔩 +${displayReward.salvage} salvage each from ${creature.name}.` });
       }
       const lootMode = creature.loot_mode || 'legacy_table';
+      const lootTableEntries = (creature.loot_table || []) as any[];
       if (lootMode === 'item_pool') {
         lootQueue.push({ nodeId: combatNodeId, lootTableId: null, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5, mode: 'item_pool', creatureLevel: creature.level });
       } else if (lootMode === 'salvage_only') {
@@ -440,7 +441,7 @@ Deno.serve(async (req) => {
       } else if (creature.loot_table_id) {
         lootQueue.push({ nodeId: combatNodeId, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5, mode: 'legacy' });
       } else {
-        for (const entry of lt) {
+        for (const entry of lootTableEntries) {
           if (entry.type === 'gold') continue;
           if (Math.random() <= (entry.chance || 0.1)) {
             lootQueue.push({ nodeId: combatNodeId, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1, mode: 'legacy' });
