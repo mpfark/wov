@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, Trash2, Plus, X, Unlink, Skull, MessageSquare, Shield, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
+import { Save, Trash2, Plus, Unlink, Skull, MessageSquare, Shield, Clock, Sparkles, Loader2, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { type AreaType } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
@@ -16,6 +16,7 @@ import NodePicker from './NodePicker';
 import CreaturePicker from './CreaturePicker';
 import ItemPicker from './ItemPicker';
 import IllustrationEditor from './IllustrationEditor';
+import { AdminEditorHeader, AdminStickyActions } from './common';
 
 interface VendorEntry {
   id: string;
@@ -776,7 +777,6 @@ export default function NodeEditorPanel({
   /* ── Save node ── */
   const saveNode = async () => {
     if (!selectedRegionId) return toast.error('Select a region');
-    if (!selectedRegionId) return toast.error('Select a region');
     let connections: any;
     const searchable_items = form.searchable_items;
     try { connections = JSON.parse(form.connections); } catch { return toast.error('Invalid connections JSON'); }
@@ -868,15 +868,7 @@ export default function NodeEditorPanel({
   /* ─── Render ──────────────────────────────────────── */
   return (
     <div className="h-full flex flex-col bg-card/50">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <h2 className="font-display text-sm text-primary text-glow truncate">
-          {activeNodeId ? `Edit: ${form.name || 'Node'}` : 'New Node'}
-        </h2>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-6 w-6 p-0">
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
+      <AdminEditorHeader title={activeNodeId ? `Edit: ${form.name || 'Node'}` : 'New Node'} onClose={onClose} />
 
       <ScrollArea className="flex-1">
         <div className="p-3">
@@ -1005,16 +997,17 @@ export default function NodeEditorPanel({
                 })()}
               />
 
-              <div className="flex gap-2">
-                <Button onClick={saveNode} disabled={loading} className="font-display text-xs">
-                  <Save className="w-3 h-3 mr-1" /> {activeNodeId ? 'Save' : 'Create'}
-                </Button>
-                {activeNodeId && isValar && (
+              <AdminStickyActions
+                onSave={saveNode}
+                onCancel={onClose}
+                saveLabel={activeNodeId ? 'Save' : 'Create'}
+                loading={loading}
+                extraActions={activeNodeId && isValar ? (
                   <Button variant="destructive" onClick={deleteNode} className="font-display text-xs">
                     <Trash2 className="w-3 h-3 mr-1" /> Delete
                   </Button>
-                )}
-              </div>
+                ) : undefined}
+              />
             </TabsContent>
 
             {/* ── Creatures ── */}
