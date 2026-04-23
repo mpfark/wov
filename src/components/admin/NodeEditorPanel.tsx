@@ -997,16 +997,17 @@ export default function NodeEditorPanel({
                 })()}
               />
 
-              <div className="flex gap-2">
-                <Button onClick={saveNode} disabled={loading} className="font-display text-xs">
-                  <Save className="w-3 h-3 mr-1" /> {activeNodeId ? 'Save' : 'Create'}
-                </Button>
-                {activeNodeId && isValar && (
+              <AdminStickyActions
+                onSave={saveNode}
+                onCancel={onClose}
+                saveLabel={activeNodeId ? 'Save' : 'Create'}
+                loading={loading}
+                extraActions={activeNodeId && isValar ? (
                   <Button variant="destructive" onClick={deleteNode} className="font-display text-xs">
                     <Trash2 className="w-3 h-3 mr-1" /> Delete
                   </Button>
-                )}
-              </div>
+                ) : undefined}
+              />
             </TabsContent>
 
             {/* ── Creatures ── */}
