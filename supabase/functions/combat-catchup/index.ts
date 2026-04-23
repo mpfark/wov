@@ -110,19 +110,33 @@ Deno.serve(async (req) => {
     let authorized = callerNodeIds.has(node_id);
 
     if (!authorized) {
-      // Check adjacency: is the requested node connected to any of the caller's nodes?
-      const { data: targetNode } = await db
+      // Check adjacency in both directions:
+      // 1. Target node's connections contain a caller node
+      // 2. Any caller node's connections contain the target node
+      const nodeIdsToCheck = [node_id, ...callerNodeIds];
+      const { data: nodesData } = await db
         .from('nodes')
-        .select('connections')
-        .eq('id', node_id)
-        .single();
+        .select('id, connections')
+        .in('id', nodeIdsToCheck);
 
-      if (targetNode?.connections) {
-        const connIds = (targetNode.connections as any[]).map((c: any) =>
-          typeof c === 'string' ? c : c.id ?? c.node_id
-        ).filter(Boolean);
-        for (const nid of callerNodeIds) {
-          if (connIds.includes(nid)) { authorized = true; break; }
+      if (nodesData) {
+        const extractConnIds = (conns: any) =>
+          (conns as any[] || []).map((c: any) =>
+            typeof c === 'string' ? c : c.id ?? c.node_id
+          ).filter(Boolean);
+
+        for (const n of nodesData) {
+          const connIds = extractConnIds(n.connections);
+          if (n.id === node_id) {
+            // Target node connects to one of caller's nodes
+            for (const nid of callerNodeIds) {
+              if (connIds.includes(nid)) { authorized = true; break; }
+            }
+          } else {
+            // Caller's node connects to target node
+            if (connIds.includes(node_id)) { authorized = true; }
+          }
+          if (authorized) break;
         }
       }
     }
