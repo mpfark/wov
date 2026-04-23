@@ -142,7 +142,9 @@ Deno.serve(async (req) => {
     }
 
     if (!authorized) {
-      return json({ error: 'Not authorized for this node' }, 403);
+      // Return empty result instead of 403 — this is a benign race from
+      // adjacent-node prefetch / offscreen wakeup after character moved away.
+      return json({ creatures: [], skipped: 'not_adjacent' });
     }
 
     // Snapshot-only mode: return raw effects + creatures without resolving
