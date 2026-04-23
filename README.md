@@ -1,73 +1,62 @@
-# Welcome to your Lovable project
+# Wayfarers of Varneth
 
-## Project info
+A browser-based MUD-style RPG set in the fantasy world of Varneth. Players create characters, explore an interconnected node-based world, engage in real-time combat with creatures, collect loot, and progress through a class-based leveling system.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Live**: [wayfarersofvarneth.dk](https://wayfarersofvarneth.dk)
 
-## How can I edit this code?
+## Tech Stack
 
-There are several ways of editing your application.
+- **Frontend**: React 18, Vite 5, TypeScript, Tailwind CSS, shadcn/ui
+- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions, Realtime)
+- **AI**: Google Gemini via Lovable AI Gateway (world building, item generation)
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Getting Started
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+cd wayfarers-of-varneth
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── features/          # Feature modules (combat, character, world, party, chat, inventory, creatures)
+│   ├── combat/        # Game loop, combat resolver, abilities, buff state
+│   ├── character/     # Character panel, stat allocation, status bars
+│   ├── world/         # Map, movement, node rendering, teleport
+│   ├── party/         # Party management, broadcast sync
+│   ├── inventory/     # Equipment, vendor, blacksmith, consumables
+│   ├── chat/          # Chat panel, command parser
+│   └── creatures/     # Creature hooks, NPC dialog
+├── components/
+│   ├── admin/         # Admin tools (world editor, item/creature managers, user management)
+│   └── ui/            # shadcn/ui component library
+├── contexts/          # Game context (central state orchestration)
+├── hooks/             # Shared hooks (auth, roles, activity log)
+├── lib/               # Utilities (game data formulas, illustration prompts)
+└── pages/             # Route pages (game, auth, admin, character creation)
 
-**Use GitHub Codespaces**
+supabase/
+├── functions/         # Edge Functions (combat-tick, AI forge, world builder, email)
+└── config.toml        # Supabase project configuration
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Architecture
 
-## What technologies are used for this project?
+- **State ownership**: Server owns simulation state (HP, XP, combat), client owns display and prediction
+- **Combat**: Hybrid model — live combat ticks via Edge Functions while players are present, persistent effects on wake-up
+- **Realtime**: Supabase Realtime channels for creature state, party sync, and combat broadcasts
+- **World**: Three-layer hierarchy (Region → Area → Node) with directional connections
 
-This project is built with:
+## Admin Access
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Admin tools are role-gated with a three-tier hierarchy:
 
-## How can I deploy this project?
+- **Player** — standard game access
+- **Steward** — can edit world content (nodes, creatures, areas)
+- **Overlord** — full access including user management and dangerous operations
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Roles are stored in a dedicated `user_roles` table and checked via a `SECURITY DEFINER` function.

@@ -16,6 +16,7 @@ import NodePicker from './NodePicker';
 import CreaturePicker from './CreaturePicker';
 import ItemPicker from './ItemPicker';
 import IllustrationEditor from './IllustrationEditor';
+import { AdminEditorHeader, AdminStickyActions } from './common';
 
 interface VendorEntry {
   id: string;
@@ -776,7 +777,6 @@ export default function NodeEditorPanel({
   /* ── Save node ── */
   const saveNode = async () => {
     if (!selectedRegionId) return toast.error('Select a region');
-    if (!selectedRegionId) return toast.error('Select a region');
     let connections: any;
     const searchable_items = form.searchable_items;
     try { connections = JSON.parse(form.connections); } catch { return toast.error('Invalid connections JSON'); }
@@ -868,15 +868,7 @@ export default function NodeEditorPanel({
   /* ─── Render ──────────────────────────────────────── */
   return (
     <div className="h-full flex flex-col bg-card/50">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <h2 className="font-display text-sm text-primary text-glow truncate">
-          {activeNodeId ? `Edit: ${form.name || 'Node'}` : 'New Node'}
-        </h2>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-6 w-6 p-0">
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
+      <AdminEditorHeader title={activeNodeId ? `Edit: ${form.name || 'Node'}` : 'New Node'} onClose={onClose} />
 
       <ScrollArea className="flex-1">
         <div className="p-3">
