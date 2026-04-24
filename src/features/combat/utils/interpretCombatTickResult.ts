@@ -14,7 +14,7 @@ import type { Character } from '@/features/character';
 import { formatCombatEvent, type CombatLogDisplayMode, type StructuredAttackEvent } from './combat-text';
 
 export interface CombatTickResponse {
-  events: { type: string; message: string; character_id?: string; creature_id?: string }[];
+  events: { type: string; message: string; character_id?: string; creature_id?: string; creature_name?: string }[];
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: {
     character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number;
