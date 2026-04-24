@@ -530,6 +530,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       await executeAbilityRef.current?.(index, targetId);
     },
     onAbsorbSync: gameLoop.handleAbsorbDamage,
+    onBossDeathCry: ({ creatureName, text }) => {
+      sendGlobal({
+        kind: 'boss_death',
+        icon: '👑',
+        text: `${creatureName}: "${text}"`,
+      });
+    },
     setPoisonBuff: buffSetters.setPoisonBuff,
     setIgniteBuff: buffSetters.setIgniteBuff,
   });
