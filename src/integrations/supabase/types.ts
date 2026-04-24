@@ -927,6 +927,57 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_listings: {
+        Row: {
+          buyer_character_id: string | null
+          created_at: string
+          current_durability: number
+          expires_at: string
+          id: string
+          inventory_item_id: string | null
+          item_id: string
+          item_snapshot: Json
+          price: number
+          seller_character_id: string
+          sold_at: string | null
+          status: string
+          tax_amount: number
+          tax_rate: number
+        }
+        Insert: {
+          buyer_character_id?: string | null
+          created_at?: string
+          current_durability?: number
+          expires_at?: string
+          id?: string
+          inventory_item_id?: string | null
+          item_id: string
+          item_snapshot?: Json
+          price: number
+          seller_character_id: string
+          sold_at?: string | null
+          status?: string
+          tax_amount?: number
+          tax_rate?: number
+        }
+        Update: {
+          buyer_character_id?: string | null
+          created_at?: string
+          current_durability?: number
+          expires_at?: string
+          id?: string
+          inventory_item_id?: string | null
+          item_id?: string
+          item_snapshot?: Json
+          price?: number
+          seller_character_id?: string
+          sold_at?: string | null
+          status?: string
+          tax_amount?: number
+          tax_rate?: number
+        }
+        Relationships: []
+      }
       node_ground_loot: {
         Row: {
           creature_name: string | null
@@ -987,6 +1038,7 @@ export type Database = {
           illustration_url: string | null
           is_blacksmith: boolean
           is_inn: boolean
+          is_marketplace: boolean
           is_teleport: boolean
           is_trainer: boolean
           is_vendor: boolean
@@ -1006,6 +1058,7 @@ export type Database = {
           illustration_url?: string | null
           is_blacksmith?: boolean
           is_inn?: boolean
+          is_marketplace?: boolean
           is_teleport?: boolean
           is_trainer?: boolean
           is_vendor?: boolean
@@ -1025,6 +1078,7 @@ export type Database = {
           illustration_url?: string | null
           is_blacksmith?: boolean
           is_inn?: boolean
+          is_marketplace?: boolean
           is_teleport?: boolean
           is_trainer?: boolean
           is_vendor?: boolean
@@ -1500,6 +1554,7 @@ export type Database = {
         Returns: undefined
       }
       accept_summon: { Args: { _request_id: string }; Returns: undefined }
+      admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
@@ -1518,6 +1573,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      buy_unique_listing: {
+        Args: { p_character_id: string; p_listing_id: string }
+        Returns: Json
+      }
       buy_vendor_item:
         | {
             Args: { p_character_id: string; p_vendor_item_id: string }
@@ -1531,6 +1590,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      cancel_unique_listing: {
+        Args: { p_character_id: string; p_listing_id: string }
+        Returns: boolean
+      }
       cleanup_ground_loot: { Args: never; Returns: undefined }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
@@ -1557,6 +1620,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_marketplace_listings: { Args: never; Returns: number }
       find_character_id_by_name: { Args: { _name: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
       grant_starting_gear: {
@@ -1607,6 +1671,14 @@ export type Database = {
       is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_steward_or_overlord: { Args: never; Returns: boolean }
+      list_unique_item: {
+        Args: {
+          p_character_id: string
+          p_inventory_id: string
+          p_price: number
+        }
+        Returns: Json
+      }
       log_activity: {
         Args: {
           _character_id: string

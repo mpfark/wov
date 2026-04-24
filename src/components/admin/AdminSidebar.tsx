@@ -27,6 +27,7 @@ import {
   MapPin,
   BookOpen,
   BookText,
+  Store,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -69,6 +70,7 @@ const NAV_GROUPS = [
     label: 'Operations',
     items: [
       { key: 'issues', label: 'Issues', icon: Bug },
+      { key: 'marketplace', label: 'Marketplace', icon: Store },
       { key: 'roadmap', label: 'Roadmap', icon: MapPin },
     ],
   },

@@ -470,6 +470,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   🏋️
                 </text>
               )}
+              {(node as any).is_marketplace && (
+                <text x={pos.px + 26} y={pos.py + 12} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                  🏛️
+                </text>
+              )}
             </g>
           );
         })}

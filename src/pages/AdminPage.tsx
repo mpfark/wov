@@ -20,6 +20,7 @@ import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
+import MarketplaceManager from '@/components/admin/MarketplaceManager';
 import AdminChatWidget from '@/components/admin/AdminChatWidget';
 import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
 import AreaEditorPanel from '@/components/admin/AreaEditorPanel';
@@ -403,6 +404,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <UserManager isValar={isValar} />;
       case 'issues':
         return <IssueReportManager />;
+      case 'marketplace':
+        return <MarketplaceManager />;
       case 'roadmap':
         return <RoadmapManager />;
       case 'rulebook':

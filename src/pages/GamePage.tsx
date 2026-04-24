@@ -19,6 +19,7 @@ import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
+import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
 import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
@@ -238,6 +239,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [trainerOpen, setTrainerOpen] = useState(false);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(nodeChannel, character.current_node_id, character.id);
 
@@ -870,6 +872,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onOpenVendor: currentNode?.is_vendor ? () => setVendorOpen(true) : undefined,
     onOpenBlacksmith: currentNode?.is_blacksmith ? () => setBlacksmithOpen(true) : undefined,
     onOpenTrainer: (currentNode?.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined,
+    onOpenMarketplace: (currentNode as any)?.is_marketplace ? () => setMarketplaceOpen(true) : undefined,
     onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
       if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
       setTeleportOpen(true);
@@ -1092,6 +1095,20 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
+          addLog={addLog}
+        />
+      )}
+
+      {/* Marketplace Dialog */}
+      {(currentNode as any).is_marketplace && (
+        <MarketplacePanel
+          open={marketplaceOpen}
+          onClose={() => setMarketplaceOpen(false)}
+          characterId={character.id}
+          characterName={character.name}
+          characterGold={character.gold}
+          inventory={[...equipped, ...unequipped]}
+          onTransacted={() => { fetchInventory(); }}
           addLog={addLog}
         />
       )}
