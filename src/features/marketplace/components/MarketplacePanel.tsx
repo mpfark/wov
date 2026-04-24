@@ -119,6 +119,26 @@ export default function MarketplacePanel({
     onTransacted();
   };
 
+  const totalUncollected = useMemo(
+    () => uncollectedSales.reduce((sum, s) => sum + (s.payout_amount ?? 0), 0),
+    [uncollectedSales],
+  );
+
+  const handleCollect = async () => {
+    if (!atMarketplace) {
+      toast.error('You must be at a marketplace to collect your earnings.');
+      return;
+    }
+    if (uncollectedSales.length === 0) return;
+    const result = await collect();
+    if (!result.ok) { toast.error(result.error || 'Failed to collect'); return; }
+    const total = result.data?.total_gold ?? 0;
+    const count = result.data?.collected_count ?? 0;
+    toast.success(`+${total.toLocaleString()} gold collected from ${count} sale${count === 1 ? '' : 's'}`);
+    addLog?.(`💰 You collect ${total.toLocaleString()} gold from your marketplace sales.`);
+    onTransacted();
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
