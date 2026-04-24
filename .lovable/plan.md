@@ -1,100 +1,58 @@
 
 
-## Unified Global Broadcast Channel + Death Cries
+## Boss Death Cries as Atmospheric Emotes
+
+### Current Behavior
+
+Boss death cries are currently displayed as if the boss is speaking, formatted like:
+> 👑 Bone Tyrant: "You will join my army!"
+
+The admin field is labeled "Boss Death Cry" and the server formats the broadcast as `<bossName>: "<cry>"` (in `combat-tick/index.ts`). The frontend then prepends 👑 and appends `<bossName>:` framing.
 
 ### Goal
 
-Replace the one-off `marketplace-global` channel with a single `world-global` channel that any feature can publish to. Add player **death cries** (auto-broadcast on death) and **boss death cries** (admin-authored, broadcast when a boss creature is killed). Every online player sees these in their event log in real time.
+Reframe these as **world emotes / atmospheric flavor** — narrated by the world itself, not the boss. The admin writes a complete sentence (or two) that stands alone, and the broadcast displays it verbatim with no `BossName:` prefix and no quotes. Killer name substitution (`%a`) still works for cases where it fits the line.
 
-### Channel Design
+Example outputs:
+- `🌫️ For a brief moment, something feels… missing. Then the world settles, as if correcting itself.`
+- `🌫️ A long-held breath leaves the stones of the ruin.`
+- `🌫️ Somewhere far away, a crow stops singing.`
 
-One Supabase Realtime broadcast channel: **`world-global`**.
+### Design Decisions
 
-Event shape (single event type, discriminated by `kind`):
-```ts
-{
-  event: 'world',
-  payload: {
-    kind: 'market_listed' | 'player_death' | 'boss_death',
-    icon: string,        // emoji to prepend (📜, 💀, 👑)
-    text: string,        // pre-formatted, ready-to-display
-    actor?: string,      // sender's character name (for self-skip)
-    nonce?: string,      // dedupe key
-  }
-}
-```
-
-A small helper hook centralizes subscribe/publish so features don't each manage their own channel:
-
-```ts
-// src/hooks/useGlobalBroadcast.ts
-export function useGlobalBroadcastSender() { … }   // returns send(payload)
-export function useGlobalBroadcastListener(onMsg) { … } // subscribes once
-```
+| Aspect | Before | After |
+|---|---|---|
+| Framing | `BossName: "<text>"` | Plain `<text>` (no name, no quotes) |
+| Icon | 👑 (crown — "boss speaks") | 🌫️ (mist — "world reacts") |
+| Field label (admin) | "Boss Death Cry" | "World Emote on Death" |
+| Field helper text | "What the boss shouts when dying" | "An atmospheric line shown to all players when this boss dies. Written as world narration, not the boss speaking. `%a` = killer's name." |
+| Placeholder | `"You will join my army!"` | `For a brief moment, something feels… missing. Then the world settles, as if correcting itself.` |
+| Server payload | quoted line | raw line |
+| Client display | `👑 Name: "..."` | `🌫️ ...` |
 
 ### Files Changed
 
 | File | Change |
 |---|---|
-| `src/hooks/useGlobalBroadcast.ts` | **New** — singleton-style channel manager with `useGlobalBroadcastSender` + `useGlobalBroadcastListener`. One channel reused across features. |
-| `src/pages/GamePage.tsx` | Replace the marketplace-only effect with `useGlobalBroadcastListener`. Route incoming `kind` to `addLocalLog` (skip self via `actor === character.name`). Add a sender ref and call it from the new player-death effect (see below). |
-| `src/features/marketplace/components/MarketplacePanel.tsx` | Replace the inline `supabase.channel('marketplace-global')` send with `useGlobalBroadcastSender().send({ kind: 'market_listed', icon: '📜', text: 'X lists Y for Z gold.', actor: characterName })`. |
-| `src/features/combat/hooks/useGameLoop.ts` | In the death-detection effect, after `setIsDead(true)` fire a global broadcast: `📜 Death: <name> has fallen at <region/area>.` Use the existing bus or pass a `broadcastDeath` callback param to keep the hook side-effect-free; emit via `useGameEvent` `'player:death'` is already declared — just wire a listener in `GamePage` that publishes to global. |
-| `src/pages/GamePage.tsx` (death wire) | Subscribe `useGameEvent(bus, 'player:death', …)` (already emitted shape compatible) → call `globalSend({ kind: 'player_death', icon: '💀', text: '<name> has fallen.', actor: name })`. Also append the *receiver* path so others see it. |
-| `supabase/functions/combat-tick/index.ts` | In `handleCreatureKill`, when `creature.rarity === 'boss'` and `creature.boss_death_cry` is non-empty, push a new event `{ type: 'boss_death_cry', message: <text>, creature_id }` into the `events` array returned to the client. |
-| `src/features/combat/utils/interpretCombatTickResult.ts` | Recognize the new `boss_death_cry` event type and surface it as a top-level field `bossDeathCries: { creatureName: string; text: string }[]` in `TickInterpretation`. |
-| `src/features/combat/hooks/usePartyCombat.ts` | When processing tick result, forward each `bossDeathCries` entry to a callback prop `onBossDeathCry` (added to `UsePartyCombatParams`). |
-| `src/pages/GamePage.tsx` | Pass `onBossDeathCry` that publishes to `world-global` with `kind: 'boss_death'`, icon `'👑'`, and the text. |
-| `src/components/admin/CreatureManager.tsx` | New form field `boss_death_cry` (single textarea, `%a` = killer placeholder optional, default empty). Only shown when `rarity === 'boss'`. Persisted to `creatures.boss_death_cry`. |
-| `supabase/migrations/<ts>_boss_death_cry.sql` | `ALTER TABLE public.creatures ADD COLUMN boss_death_cry text NOT NULL DEFAULT '';` |
-
-### Event Texts
-
-- **Marketplace listed**: `📜 Market: <seller> lists <item> for <price> gold.`
-- **Player death**: `💀 <name> has fallen.` (region/area appended only if cheap to compute; otherwise plain)
-- **Boss death**: `👑 <bossName>: "<deathCry>"` — the admin-authored line is the centerpiece. If the cry contains `%a` it's substituted with the killer's name (resolved server-side from the kill context already available in `handleCreatureKill`).
-
-### Self-Echo Handling
-
-The receiver in `GamePage` skips messages where `actor === character.name`. The marketplace already adds a local "You list…" line on success (kept). For player death, the dying player already sees the death overlay + "You have fallen" log, so the global echo is suppressed for the dier. Boss death cries are broadcast by the party leader / solo player; everyone (including the killer) sees them — they are flavor, not actor-attributable.
-
-### Data Flow Diagrams
-
-```text
-Marketplace list:
- Player A → list_unique_item RPC → success
-        → useGlobalBroadcastSender.send({kind:'market_listed', ...})
-            → world-global channel
-                → all clients' useGlobalBroadcastListener
-                   → addLocalLog("📜 Market: A lists Sword for 500 gold.")
-
-Player death:
- useGameLoop detects hp ≤ 0 → emit bus 'player:death'
-   → GamePage listener → globalSend({kind:'player_death', actor:name, ...})
-       → world-global → all other players see "💀 A has fallen."
-
-Boss death:
- combat-tick handleCreatureKill (rarity=boss, boss_death_cry!='')
-   → events.push({type:'boss_death_cry', message, creature_id})
-     → interpretCombatTickResult → bossDeathCries[]
-       → usePartyCombat → onBossDeathCry callback
-         → GamePage → globalSend({kind:'boss_death', icon:'👑', text})
-           → world-global → everyone sees "👑 Bone Tyrant: 'You will join my army!'"
-```
+| `supabase/functions/combat-tick/index.ts` | In the boss-death event push, change `message` from quoted/named form to the raw `cry` (already substitutes `%a`). Drop the `BossName:` prefix and quotation marks. Keep `creature_name` on the event for client-side context (e.g. logging/debugging) but don't use it in the message. |
+| `src/features/combat/utils/interpretCombatTickResult.ts` | No change to event handling — already passes `text` through as-is. Confirm no extra formatting is applied. |
+| `src/pages/GamePage.tsx` | When forwarding boss death cries to `useGlobalBroadcastSender`, change `icon` from `'👑'` to `'🌫️'` and pass `text` verbatim (no `BossName:` wrapping). The receiver-side renderer already prepends `icon` + space + `text`. |
+| `src/components/admin/CreatureManager.tsx` | Rename the field UI: label → "World Emote on Death"; helper text updated to clarify the narrative voice; placeholder updated to the example above. The DB column name `boss_death_cry` stays (no migration needed — internal name only). Visible only when rarity is `boss`. |
+| `mem://game/combat-system/boss-flavors.md` | Update memory note: clarify that boss death cries are world-narration emotes (icon 🌫️), distinct from boss crit flavors (which still use boss-voice formatting). |
 
 ### Not Changed
 
-- Existing per-node channel (`useNodeChannel`), party broadcast channel, whisper channels — all stay independent. `world-global` is additive.
-- `boss_crit_flavors` column / behavior — death cry is a separate field and a separate trigger (kill, not crit).
-- Marketplace RPCs, listing rules, escrow, 12h expiry — unchanged.
-- Death respawn / gold-loss logic — unchanged; only adds a broadcast emission.
-- No realtime DB publication changes needed (this is broadcast, not `postgres_changes`).
+- Database schema — column stays `creatures.boss_death_cry`
+- Global broadcast plumbing (`useGlobalBroadcast.ts`, `world-global` channel)
+- `%a` killer-name substitution behavior
+- Boss **crit** flavors (`boss_crit_flavors`) — those remain in-character boss speech and keep their existing format
+- Player death broadcasts (still 💀 with name) — only boss deaths become emotes
+- Empty `boss_death_cry` still produces no broadcast
 
 ### Success Criteria
 
-- Listing an item produces one `📜 Market: …` line in every other online player's event log within ~1s; the lister sees their existing local "You list…" line only.
-- Any player's death produces one `💀 <name> has fallen.` line for every other online player; the dier still sees their local death log + overlay.
-- Killing a boss with a non-empty `boss_death_cry` produces one `👑 <bossName>: "<cry>"` line for every online player (including the killer / party). Bosses with empty cry produce nothing.
-- Admin can add/edit `boss_death_cry` per boss in the Creature Manager (only visible when rarity is `boss`).
-- Removing the old `marketplace-global` channel doesn't drop any messages — the unified channel handles them.
+- Killing a boss with a non-empty emote produces one global log line in the form `🌫️ <emote text>` for every online player — no boss name prefix, no quotation marks.
+- Admin Creature Manager shows the field as "World Emote on Death" with the new helper text and example placeholder, only when rarity is boss.
+- `%a` placeholder still substitutes the killer's name when used.
+- Boss crit lines (a separate field) are unaffected and still read as boss speech.
 
