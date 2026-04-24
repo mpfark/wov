@@ -106,17 +106,14 @@ export function useMarketplace(characterId: string | null) {
     return { ok: true, data: data as any };
   }, [characterId]);
 
-  const cancel = useCallback(async (listingId: string) => {
-    if (!characterId) return { ok: false, error: 'No character' };
-    const { error } = await supabase.rpc('cancel_unique_listing' as any, {
-      p_character_id: characterId,
-      p_listing_id: listingId,
-    });
-    if (error) return { ok: false, error: error.message };
-    // Optimistically remove the cancelled listing for snappy local feedback.
-    setListings(prev => prev.filter(l => l.id !== listingId));
-    return { ok: true };
-  }, [characterId]);
+  // Listings are final and cannot be cancelled by sellers.
+  // This stub remains so any stale UI/API caller gets a clear error instead of a crash.
+  const cancel = useCallback(async (_listingId: string) => {
+    return {
+      ok: false,
+      error: 'Listings cannot be cancelled. They expire automatically after 12 hours.',
+    };
+  }, []);
 
   return { listings, loading, fetchListings, list, buy, cancel };
 }
