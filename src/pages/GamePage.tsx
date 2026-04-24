@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { toast } from 'sonner';
 
 import CharacterPanel from '@/features/character/components/CharacterPanel';
 import NodeView from '@/features/world/components/NodeView';
