@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Coins, Tag, Search, Plus, AlertTriangle } from 'lucide-react';
 import { useMarketplace } from '../hooks/useMarketplace';
 import type { InventoryItem } from '@/features/inventory/hooks/useInventory';
-import { supabase } from '@/integrations/supabase/client';
+import { useGlobalBroadcastSender } from '@/hooks/useGlobalBroadcast';
 
 interface Props {
   open: boolean;
@@ -51,6 +51,7 @@ export default function MarketplacePanel({
   open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLog,
 }: Props) {
   const { listings, loading, list, buy } = useMarketplace(characterId);
+  const sendGlobal = useGlobalBroadcastSender();
   const [tab, setTab] = useState<'browse' | 'mine' | 'create'>('browse');
   const [search, setSearch] = useState('');
   const [pickedInv, setPickedInv] = useState<string>('');
@@ -93,20 +94,14 @@ export default function MarketplacePanel({
     toast.success('Item listed');
     onTransacted();
     addLog?.(`📜 You list ${result.data?.item_name} for ${price} gold.`);
-    // Global broadcast
+    // Global broadcast — every other online player sees this in their event log
     try {
-      const ch = supabase.channel('marketplace-global');
-      await ch.subscribe();
-      ch.send({
-        type: 'broadcast',
-        event: 'listed',
-        payload: {
-          seller: characterName,
-          item_name: result.data?.item_name,
-          price,
-        },
+      sendGlobal({
+        kind: 'market_listed',
+        icon: '📜',
+        text: `Market: ${characterName} lists ${result.data?.item_name} for ${price.toLocaleString()} gold.`,
+        actor: characterName,
       });
-      setTimeout(() => { supabase.removeChannel(ch); }, 1000);
     } catch {/* non-critical */}
     setPickedInv('');
     setPrice(1000);
