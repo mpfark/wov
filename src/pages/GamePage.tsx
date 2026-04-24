@@ -337,6 +337,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const addLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
   const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
 
+  // ── Marketplace global broadcast receiver ─────────────────────
+  // Every player sees "📜 Market: X lists Y for Z gold" in real time.
+  // Skip self-echo — the seller already added a local log on success.
+  useEffect(() => {
+    const ch = supabase.channel('marketplace-global');
+    ch.on('broadcast', { event: 'listed' }, ({ payload }) => {
+      const seller = payload?.seller as string | undefined;
+      const itemName = payload?.item_name as string | undefined;
+      const price = payload?.price as number | undefined;
+      if (!seller || !itemName || typeof price !== 'number') return;
+      if (seller === character.name) return;
+      addLocalLog(`📜 Market: ${seller} lists ${itemName} for ${price.toLocaleString()} gold.`);
+    });
+    ch.subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [character.name, addLocalLog]);
+
   // Track player arrivals/departures
   const prevPlayersRef = useRef<Set<string>>(new Set());
   const prevPlayerNamesRef = useRef<Map<string, string>>(new Map());
