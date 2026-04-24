@@ -41,6 +41,17 @@ function formatTimeLeft(expiresAt: string): string {
   return `${m}m`;
 }
 
+function formatTimeAgo(ts: string): string {
+  const ms = Date.now() - new Date(ts).getTime();
+  if (ms < 60 * 1000) return 'just now';
+  const m = Math.floor(ms / (60 * 1000));
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
 function statSummary(stats: Record<string, number> | undefined): string {
   if (!stats) return '—';
   const parts = Object.entries(stats)
