@@ -20,6 +20,7 @@ import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
+import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
 import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
