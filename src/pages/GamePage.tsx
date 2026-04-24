@@ -1153,6 +1153,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           inventory={[...equipped, ...unequipped]}
           onTransacted={() => { fetchInventory(); }}
           addLog={addLog}
+          atMarketplace={true}
         />
       )}
 
