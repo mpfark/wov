@@ -95,15 +95,44 @@ export function useMarketplace(
   useEffect(() => {
     fetchListings();
     fetchUncollectedSales();
+    // Seed seen-sold set so we don't re-notify for sales completed before this session
+    (async () => {
+      if (!characterId) return;
+      const { data } = await supabase
+        .from('marketplace_listings' as any)
+        .select('id')
+        .eq('seller_character_id', characterId)
+        .eq('status', 'sold');
+      if (data) for (const r of data as any[]) seenSoldIdsRef.current.add(r.id);
+    })();
+
     const ch = supabase
       .channel('marketplace-listings-sub')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, (payload: any) => {
         fetchListings();
         fetchUncollectedSales();
+        // Detect "my listing just sold" → fire one-time notification
+        const row = payload?.new;
+        if (
+          characterId &&
+          row &&
+          row.status === 'sold' &&
+          row.seller_character_id === characterId &&
+          !row.payout_collected_at &&
+          !seenSoldIdsRef.current.has(row.id)
+        ) {
+          seenSoldIdsRef.current.add(row.id);
+          onMySaleRef.current?.({
+            listing_id: row.id,
+            item_name: row.item_snapshot?.name ?? 'item',
+            price: row.price,
+            payout: row.payout_amount ?? Math.max(0, Math.floor(row.price * (1 - (row.tax_rate ?? 0.1)))),
+          });
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchListings, fetchUncollectedSales]);
+  }, [fetchListings, fetchUncollectedSales, characterId]);
 
   // Periodically expire listings (every 5 min) and on focus
   useEffect(() => {
