@@ -50,6 +50,7 @@ import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
+import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/useGlobalBroadcast';
 
 
 interface Props {
@@ -337,22 +338,27 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const addLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
   const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
 
-  // ── Marketplace global broadcast receiver ─────────────────────
-  // Every player sees "📜 Market: X lists Y for Z gold" in real time.
-  // Skip self-echo — the seller already added a local log on success.
-  useEffect(() => {
-    const ch = supabase.channel('marketplace-global');
-    ch.on('broadcast', { event: 'listed' }, ({ payload }) => {
-      const seller = payload?.seller as string | undefined;
-      const itemName = payload?.item_name as string | undefined;
-      const price = payload?.price as number | undefined;
-      if (!seller || !itemName || typeof price !== 'number') return;
-      if (seller === character.name) return;
-      addLocalLog(`📜 Market: ${seller} lists ${itemName} for ${price.toLocaleString()} gold.`);
+  // ── Unified global broadcast (`world-global`) ─────────────────
+  // Receives flavor events visible to every online player:
+  //   - market_listed  — "📜 Market: X lists Y for Z gold"
+  //   - player_death   — "💀 X has fallen."
+  //   - boss_death     — "👑 BossName: 'death cry'"
+  // Self-echo is skipped via `actor === character.name`.
+  const sendGlobal = useGlobalBroadcastSender();
+  useGlobalBroadcastListener((p) => {
+    if (p.actor && p.actor === character.name) return;
+    addLocalLog(`${p.icon} ${p.text}`);
+  });
+
+  // ── Player death cry — broadcast to other players ─────────────
+  useGameEvent(bus, 'player:death', () => {
+    sendGlobal({
+      kind: 'player_death',
+      icon: '💀',
+      text: `${character.name} has fallen.`,
+      actor: character.name,
     });
-    ch.subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [character.name, addLocalLog]);
+  });
 
   // Track player arrivals/departures
   const prevPlayersRef = useRef<Set<string>>(new Set());
@@ -454,6 +460,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures,
     party, partyMembers,
+    bus,
   });
 
   const { buffState, buffSetters } = gameLoop;
@@ -523,6 +530,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       await executeAbilityRef.current?.(index, targetId);
     },
     onAbsorbSync: gameLoop.handleAbsorbDamage,
+    onBossDeathCry: ({ creatureName, text }) => {
+      sendGlobal({
+        kind: 'boss_death',
+        icon: '👑',
+        text: `${creatureName}: "${text}"`,
+      });
+    },
     setPoisonBuff: buffSetters.setPoisonBuff,
     setIgniteBuff: buffSetters.setIgniteBuff,
   });

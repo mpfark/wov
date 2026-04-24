@@ -78,6 +78,8 @@ export interface UsePartyCombatParams {
   onCreatureDebuffs?: (debuffs: Record<string, any>) => void;
   /** Callback to sync absorb shield HP from server */
   onAbsorbSync?: (remaining: number) => void;
+  /** Callback when a boss creature dies with an admin-authored death cry */
+  onBossDeathCry?: (entry: { creatureName: string; text: string }) => void;
   /** Buff setters for death cleanup (Envenom/Ignite) */
   setPoisonBuff?: React.Dispatch<React.SetStateAction<any>>;
   setIgniteBuff?: React.Dispatch<React.SetStateAction<any>>;
@@ -291,6 +293,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     // Sync absorb shield HP from server
     if (result.absorbRemaining !== null && ext.current.onAbsorbSync) {
       ext.current.onAbsorbSync(result.absorbRemaining);
+    }
+
+    // Boss death cries — broadcast to all players via the global channel
+    if (result.bossDeathCries.length && ext.current.onBossDeathCry) {
+      for (const entry of result.bossDeathCries) ext.current.onBossDeathCry(entry);
     }
 
     if (result.sessionEnded) {

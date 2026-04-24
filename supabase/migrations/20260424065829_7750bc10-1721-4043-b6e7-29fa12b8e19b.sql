@@ -1,0 +1,1 @@
+ALTER TABLE public.creatures ADD COLUMN IF NOT EXISTS boss_death_cry text NOT NULL DEFAULT '';

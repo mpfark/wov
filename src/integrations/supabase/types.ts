@@ -505,6 +505,7 @@ export type Database = {
           ac: number
           base_aggressive: boolean
           boss_crit_flavors: Json
+          boss_death_cry: string
           created_at: string
           description: string
           died_at: string | null
@@ -529,6 +530,7 @@ export type Database = {
           ac?: number
           base_aggressive?: boolean
           boss_crit_flavors?: Json
+          boss_death_cry?: string
           created_at?: string
           description?: string
           died_at?: string | null
@@ -553,6 +555,7 @@ export type Database = {
           ac?: number
           base_aggressive?: boolean
           boss_crit_flavors?: Json
+          boss_death_cry?: string
           created_at?: string
           description?: string
           died_at?: string | null

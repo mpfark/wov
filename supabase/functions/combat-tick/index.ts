@@ -380,6 +380,12 @@ Deno.serve(async (req) => {
       }
       killedCreatureIds.add(creature.id);
 
+      // ── Boss death cry — admin-authored flavor broadcast to all players ──
+      if (creature.rarity === 'boss' && typeof creature.boss_death_cry === 'string' && creature.boss_death_cry.trim().length > 0) {
+        const cry = creature.boss_death_cry.trim().replace(/%a/g, killerLabel || 'a hero');
+        events.push({ type: 'boss_death_cry', message: cry, creature_id: creature.id, creature_name: creature.name });
+      }
+
       // ── Reward calculation (delegated to shared helper) ──
       const rewardMembers = members.map(mm => ({
         id: mm.id,

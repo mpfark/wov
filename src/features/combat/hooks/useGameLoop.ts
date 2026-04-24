@@ -9,6 +9,7 @@ import { Character } from '@/features/character';
 import { getStatRegen, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
+import type { GameEventBus } from '@/hooks/useGameEvents';
 import { useBuffState } from './useBuffState';
 
 // ─── Buff / debuff types ──────────────────────────────────────────
@@ -68,13 +69,15 @@ export interface UseGameLoopParams {
   creatures: { id: string; name: string; level: number; rarity: string; hp: number; max_hp: number; loot_table: any; loot_table_id: string | null; drop_chance: number; node_id?: string | null; [k: string]: any }[];
   party: any;
   partyMembers: any[];
+  /** Optional event bus — when provided, fires 'player:death' on death */
+  bus?: GameEventBus;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
 export function useGameLoop(params: UseGameLoopParams) {
   const {
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
-    startingNodeId, creatures, party, partyMembers,
+    startingNodeId, creatures, party, partyMembers, bus,
   } = params;
 
   // ── Buff state (delegated to useBuffState) ─────────────────
@@ -193,6 +196,8 @@ export function useGameLoop(params: UseGameLoopParams) {
     isDeadRef.current = true;
     setIsDead(true);
     setDeathCountdown(3);
+    // Emit global death event so GamePage can broadcast a death cry
+    try { bus?.emit('player:death', { goldLost: Math.floor(deathGoldRef.current * 0.1) }); } catch {/* no-op */}
     const countdownInterval = setInterval(() => {
       setDeathCountdown(prev => Math.max(prev - 1, 0));
     }, 1000);
