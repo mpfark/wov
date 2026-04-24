@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Coins, Tag, Search, Plus, AlertTriangle } from 'lucide-react';
+import { Coins, Tag, Search, Plus, AlertTriangle, HandCoins } from 'lucide-react';
 import { useMarketplace } from '../hooks/useMarketplace';
 import type { InventoryItem } from '@/features/inventory/hooks/useInventory';
 import { useGlobalBroadcastSender } from '@/hooks/useGlobalBroadcast';
@@ -20,6 +20,8 @@ interface Props {
   inventory: InventoryItem[];
   onTransacted: () => void;
   addLog?: (msg: string) => void;
+  /** True when the player is currently standing at a marketplace node. */
+  atMarketplace?: boolean;
 }
 
 const RARITY_COLORS: Record<string, string> = {
