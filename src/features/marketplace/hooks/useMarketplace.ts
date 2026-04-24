@@ -100,6 +100,9 @@ export function useMarketplace(characterId: string | null) {
       p_listing_id: listingId,
     });
     if (error) return { ok: false, error: error.message };
+    // Optimistically remove the bought listing so the buyer's UI updates instantly,
+    // even before the realtime event arrives.
+    setListings(prev => prev.filter(l => l.id !== listingId));
     return { ok: true, data: data as any };
   }, [characterId]);
 
@@ -110,6 +113,8 @@ export function useMarketplace(characterId: string | null) {
       p_listing_id: listingId,
     });
     if (error) return { ok: false, error: error.message };
+    // Optimistically remove the cancelled listing for snappy local feedback.
+    setListings(prev => prev.filter(l => l.id !== listingId));
     return { ok: true };
   }, [characterId]);
 
