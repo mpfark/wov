@@ -271,7 +271,7 @@ export default function MarketplaceManager() {
                       </Button>
                       {l.status === 'active' && l.escrow_state === 'escrowed' && (
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => adminCancel(l.id)} title="Cancel & return item">
-                          <X className="h-3 w-3 text-amber-500" />
+                          <X className="h-3 w-3 text-muted-foreground" />
                         </Button>
                       )}
                       {l.status === 'active' && l.escrow_state === 'in_inventory' && (
