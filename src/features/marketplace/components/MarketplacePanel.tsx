@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Coins, Tag, X, Search, Plus } from 'lucide-react';
+import { Coins, Tag, Search, Plus, AlertTriangle } from 'lucide-react';
 import { useMarketplace } from '../hooks/useMarketplace';
 import type { InventoryItem } from '@/features/inventory/hooks/useInventory';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,7 +50,7 @@ function statSummary(stats: Record<string, number> | undefined): string {
 export default function MarketplacePanel({
   open, onClose, characterId, characterName, characterGold, inventory, onTransacted, addLog,
 }: Props) {
-  const { listings, loading, list, buy, cancel } = useMarketplace(characterId);
+  const { listings, loading, list, buy } = useMarketplace(characterId);
   const [tab, setTab] = useState<'browse' | 'mine' | 'create'>('browse');
   const [search, setSearch] = useState('');
   const [pickedInv, setPickedInv] = useState<string>('');
@@ -122,13 +122,6 @@ export default function MarketplacePanel({
     onTransacted();
   };
 
-  const handleCancel = async (id: string, itemName: string) => {
-    if (!confirm(`Cancel listing for ${itemName}?`)) return;
-    const result = await cancel(id);
-    if (!result.ok) { toast.error(result.error || 'Failed to cancel'); return; }
-    toast.success('Listing cancelled');
-    onTransacted();
-  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -235,7 +228,11 @@ export default function MarketplacePanel({
 
           {/* MY LISTINGS */}
           <TabsContent value="mine" className="space-y-2 mt-3">
-            <ScrollArea className="h-[55vh] rounded border border-border">
+            <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2 text-[10px] text-destructive">
+              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+              <span>Listings are final and cannot be cancelled. Unsold items after 12 hours return to the world.</span>
+            </div>
+            <ScrollArea className="h-[52vh] rounded border border-border">
               {myListings.length === 0 ? (
                 <p className="p-4 text-xs text-muted-foreground italic">You have no active listings.</p>
               ) : (
@@ -247,7 +244,6 @@ export default function MarketplacePanel({
                       <th className="text-left p-2">Time Left</th>
                       <th className="text-right p-2">Price</th>
                       <th className="text-right p-2">Payout</th>
-                      <th className="p-2" />
                     </tr>
                   </thead>
                   <tbody>
@@ -266,16 +262,6 @@ export default function MarketplacePanel({
                           <td className="p-2 text-[10px] text-muted-foreground">{formatTimeLeft(l.expires_at)}</td>
                           <td className="p-2 text-right font-mono">{l.price.toLocaleString()}</td>
                           <td className="p-2 text-right font-mono text-elvish">{payout.toLocaleString()}</td>
-                          <td className="p-2 text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 text-[10px] text-destructive"
-                              onClick={() => handleCancel(l.id, l.item_snapshot?.name)}
-                            >
-                              <X className="h-3 w-3 mr-1" /> Cancel
-                            </Button>
-                          </td>
                         </tr>
                       );
                     })}
@@ -322,6 +308,13 @@ export default function MarketplacePanel({
               )}
             </div>
 
+            <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2 text-[10px] text-destructive">
+              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+              <span>
+                <strong>Listings are final.</strong> Items cannot be recovered or cancelled. Unsold items after 12 hours return to the world drop pool.
+              </span>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-[10px] text-muted-foreground font-display">Asking price (gold)</label>
               <Input
@@ -348,7 +341,7 @@ export default function MarketplacePanel({
               <Plus className="h-3 w-3 mr-1" /> List Item
             </Button>
             <p className="text-[10px] text-muted-foreground italic">
-              Listings expire after 48 hours. The item is held in escrow until sold or returned.
+              Listings expire after 12 hours. Once listed, items cannot be recovered.
             </p>
           </TabsContent>
         </Tabs>
