@@ -940,6 +940,8 @@ export type Database = {
           inventory_item_id: string | null
           item_id: string
           item_snapshot: Json
+          payout_amount: number | null
+          payout_collected_at: string | null
           price: number
           seller_character_id: string
           sold_at: string | null
@@ -956,6 +958,8 @@ export type Database = {
           inventory_item_id?: string | null
           item_id: string
           item_snapshot?: Json
+          payout_amount?: number | null
+          payout_collected_at?: string | null
           price: number
           seller_character_id: string
           sold_at?: string | null
@@ -972,6 +976,8 @@ export type Database = {
           inventory_item_id?: string | null
           item_id?: string
           item_snapshot?: Json
+          payout_amount?: number | null
+          payout_collected_at?: string | null
           price?: number
           seller_character_id?: string
           sold_at?: string | null
@@ -1598,6 +1604,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_ground_loot: { Args: never; Returns: undefined }
+      collect_marketplace_payouts: {
+        Args: { p_character_id: string }
+        Returns: Json
+      }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
         Returns: undefined
