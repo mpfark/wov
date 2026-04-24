@@ -1,85 +1,100 @@
 
 
-## Refine Marketplace: No Cancellation, 12h Listings, Items Return to Pool
+## Unified Global Broadcast Channel + Death Cries
 
-The user wants the marketplace economy to be harsher and more decisive: once a unique is listed, it leaves the seller's hands permanently. If it doesn't sell within 12 hours, it returns to the world drop pool — not the seller's inventory.
+### Goal
 
-### Behavior Changes
+Replace the one-off `marketplace-global` channel with a single `world-global` channel that any feature can publish to. Add player **death cries** (auto-broadcast on death) and **boss death cries** (admin-authored, broadcast when a boss creature is killed). Every online player sees these in their event log in real time.
 
-| Aspect | Before | After |
-|---|---|---|
-| Listing duration | 48 hours | **12 hours** |
-| Seller cancel | Allowed (item returned) | **Forbidden** |
-| Admin cancel | Returns item to seller | **Returns nothing** (item back to world pool) |
-| Listing expiry | Returns item to seller | **Item not returned** (back to world pool) |
-| Offline-seller sync (6h rule) | Plan to expire stale listings | Same outcome — item simply not returned, naturally re-enters pool |
+### Channel Design
 
-Because unique items are gated by `try_acquire_unique_item` (advisory lock + "no one currently holds it"), simply **not** re-inserting the item into any inventory is enough for it to become eligible to drop again from creatures. No explicit "return to pool" table or state is needed.
+One Supabase Realtime broadcast channel: **`world-global`**.
 
-### Database Changes (single migration)
-
-**1. Default listing duration → 12 hours**
-```sql
-ALTER TABLE public.marketplace_listings
-  ALTER COLUMN expires_at SET DEFAULT (now() + interval '12 hours');
+Event shape (single event type, discriminated by `kind`):
+```ts
+{
+  event: 'world',
+  payload: {
+    kind: 'market_listed' | 'player_death' | 'boss_death',
+    icon: string,        // emoji to prepend (📜, 💀, 👑)
+    text: string,        // pre-formatted, ready-to-display
+    actor?: string,      // sender's character name (for self-skip)
+    nonce?: string,      // dedupe key
+  }
+}
 ```
-Existing active listings keep their original `expires_at`; only new listings use 12h.
 
-**2. `expire_marketplace_listings` — never return item**
-Replace the body so expired listings are simply marked `expired`. No insert into `character_inventory`. The unique becomes droppable again automatically.
+A small helper hook centralizes subscribe/publish so features don't each manage their own channel:
 
-**3. `cancel_unique_listing` — disabled**
-Replace the body to always raise:
-```sql
-RAISE EXCEPTION 'Listings cannot be cancelled. They expire automatically after 12 hours.';
+```ts
+// src/hooks/useGlobalBroadcast.ts
+export function useGlobalBroadcastSender() { … }   // returns send(payload)
+export function useGlobalBroadcastListener(onMsg) { … } // subscribes once
 ```
-Keep the function (it's referenced in code) so we get a clean, user-facing error rather than a 404.
-
-**4. `admin_cancel_listing` — never return item**
-Admins can still force-close a stuck/abusive listing for moderation, but the item is **not** returned to the seller. It simply re-enters the world pool. (No insert into `character_inventory`.)
-
-### Frontend Changes
-
-**`src/features/marketplace/hooks/useMarketplace.ts`**
-- Remove the exported `cancel` function (or keep it as a stub that returns an "unsupported" error). Since `MarketplacePanel` uses it, simplest is to keep the function but have it return a hard "Listings cannot be cancelled" error without calling the RPC.
-
-**`src/features/marketplace/components/MarketplacePanel.tsx`**
-- Remove the **"My Listings → Cancel"** button entirely.
-- Replace the My Listings tab content's per-row action area with a read-only display showing:
-  - `Expires in <countdown>` (using existing `formatTimeLeft`)
-  - A small notice: *"Listings are final and cannot be cancelled."*
-- In the "Create Listing" tab, add a clear warning above the price input:
-  > *"⚠️ Listings are final. Items cannot be recovered. Unsold items after 12 hours return to the world."*
-- Update the listing-duration label everywhere it says "48 hours" → "12 hours".
-
-**`src/components/admin/MarketplaceManager.tsx`**
-- Keep the **Admin Cancel** action but rename it to **"Force Close"** with a confirmation dialog explaining the item will not be returned to the seller — it goes back to the world pool.
-- Remove or relabel the "Resolve Stuck" action: with the new rules, "stuck" (item somehow still in inventory while listed) is purely a data-integrity issue — keep it as an admin-only escape hatch but rename to **"Mark Resolved"** and document it doesn't move items.
-- Update the timeline / inspect dialog to show **12h** as the default expiry window.
 
 ### Files Changed
 
 | File | Change |
 |---|---|
-| `supabase/migrations/<ts>_marketplace_harsh_rules.sql` | New — default 12h, rewrite `expire_marketplace_listings`, `cancel_unique_listing`, `admin_cancel_listing` to never return items |
-| `src/features/marketplace/hooks/useMarketplace.ts` | `cancel()` returns hard "not supported" error; no RPC call |
-| `src/features/marketplace/components/MarketplacePanel.tsx` | Remove cancel button, add "final sale" warnings, update durations to 12h |
-| `src/components/admin/MarketplaceManager.tsx` | Rename Admin Cancel → Force Close (no item return), update copy/timeline to 12h |
+| `src/hooks/useGlobalBroadcast.ts` | **New** — singleton-style channel manager with `useGlobalBroadcastSender` + `useGlobalBroadcastListener`. One channel reused across features. |
+| `src/pages/GamePage.tsx` | Replace the marketplace-only effect with `useGlobalBroadcastListener`. Route incoming `kind` to `addLocalLog` (skip self via `actor === character.name`). Add a sender ref and call it from the new player-death effect (see below). |
+| `src/features/marketplace/components/MarketplacePanel.tsx` | Replace the inline `supabase.channel('marketplace-global')` send with `useGlobalBroadcastSender().send({ kind: 'market_listed', icon: '📜', text: 'X lists Y for Z gold.', actor: characterName })`. |
+| `src/features/combat/hooks/useGameLoop.ts` | In the death-detection effect, after `setIsDead(true)` fire a global broadcast: `📜 Death: <name> has fallen at <region/area>.` Use the existing bus or pass a `broadcastDeath` callback param to keep the hook side-effect-free; emit via `useGameEvent` `'player:death'` is already declared — just wire a listener in `GamePage` that publishes to global. |
+| `src/pages/GamePage.tsx` (death wire) | Subscribe `useGameEvent(bus, 'player:death', …)` (already emitted shape compatible) → call `globalSend({ kind: 'player_death', icon: '💀', text: '<name> has fallen.', actor: name })`. Also append the *receiver* path so others see it. |
+| `supabase/functions/combat-tick/index.ts` | In `handleCreatureKill`, when `creature.rarity === 'boss'` and `creature.boss_death_cry` is non-empty, push a new event `{ type: 'boss_death_cry', message: <text>, creature_id }` into the `events` array returned to the client. |
+| `src/features/combat/utils/interpretCombatTickResult.ts` | Recognize the new `boss_death_cry` event type and surface it as a top-level field `bossDeathCries: { creatureName: string; text: string }[]` in `TickInterpretation`. |
+| `src/features/combat/hooks/usePartyCombat.ts` | When processing tick result, forward each `bossDeathCries` entry to a callback prop `onBossDeathCry` (added to `UsePartyCombatParams`). |
+| `src/pages/GamePage.tsx` | Pass `onBossDeathCry` that publishes to `world-global` with `kind: 'boss_death'`, icon `'👑'`, and the text. |
+| `src/components/admin/CreatureManager.tsx` | New form field `boss_death_cry` (single textarea, `%a` = killer placeholder optional, default empty). Only shown when `rarity === 'boss'`. Persisted to `creatures.boss_death_cry`. |
+| `supabase/migrations/<ts>_boss_death_cry.sql` | `ALTER TABLE public.creatures ADD COLUMN boss_death_cry text NOT NULL DEFAULT '';` |
+
+### Event Texts
+
+- **Marketplace listed**: `📜 Market: <seller> lists <item> for <price> gold.`
+- **Player death**: `💀 <name> has fallen.` (region/area appended only if cheap to compute; otherwise plain)
+- **Boss death**: `👑 <bossName>: "<deathCry>"` — the admin-authored line is the centerpiece. If the cry contains `%a` it's substituted with the killer's name (resolved server-side from the kill context already available in `handleCreatureKill`).
+
+### Self-Echo Handling
+
+The receiver in `GamePage` skips messages where `actor === character.name`. The marketplace already adds a local "You list…" line on success (kept). For player death, the dying player already sees the death overlay + "You have fallen" log, so the global echo is suppressed for the dier. Boss death cries are broadcast by the party leader / solo player; everyone (including the killer) sees them — they are flavor, not actor-attributable.
+
+### Data Flow Diagrams
+
+```text
+Marketplace list:
+ Player A → list_unique_item RPC → success
+        → useGlobalBroadcastSender.send({kind:'market_listed', ...})
+            → world-global channel
+                → all clients' useGlobalBroadcastListener
+                   → addLocalLog("📜 Market: A lists Sword for 500 gold.")
+
+Player death:
+ useGameLoop detects hp ≤ 0 → emit bus 'player:death'
+   → GamePage listener → globalSend({kind:'player_death', actor:name, ...})
+       → world-global → all other players see "💀 A has fallen."
+
+Boss death:
+ combat-tick handleCreatureKill (rarity=boss, boss_death_cry!='')
+   → events.push({type:'boss_death_cry', message, creature_id})
+     → interpretCombatTickResult → bossDeathCries[]
+       → usePartyCombat → onBossDeathCry callback
+         → GamePage → globalSend({kind:'boss_death', icon:'👑', text})
+           → world-global → everyone sees "👑 Bone Tyrant: 'You will join my army!'"
+```
 
 ### Not Changed
 
-- `list_unique_item`, `buy_unique_listing` — purchase flow unaffected
-- Tax math, escrow snapshot, durability preservation
-- Realtime subscription, optimistic updates
-- Unique-item exclusivity / drop-pool eligibility logic (already handled by `try_acquire_unique_item`)
-- 6-hour offline return rule — becomes a non-issue: if a seller goes offline, the listing still expires after 12h and the item re-enters the pool either way
+- Existing per-node channel (`useNodeChannel`), party broadcast channel, whisper channels — all stay independent. `world-global` is additive.
+- `boss_crit_flavors` column / behavior — death cry is a separate field and a separate trigger (kill, not crit).
+- Marketplace RPCs, listing rules, escrow, 12h expiry — unchanged.
+- Death respawn / gold-loss logic — unchanged; only adds a broadcast emission.
+- No realtime DB publication changes needed (this is broadcast, not `postgres_changes`).
 
 ### Success Criteria
 
-- New listings show `expires_at = now() + 12 hours`.
-- Player UI has no Cancel button on My Listings.
-- Calling `cancel_unique_listing` (e.g. via stale UI or API) returns a clear error and does nothing.
-- Listing reaching `expires_at` is marked `expired`; the unique does **not** appear in any inventory and becomes eligible to drop again from creatures.
-- Admin "Force Close" marks the listing `cancelled` and does **not** restore the item to the seller.
-- Existing 48h-window active listings continue to expire on their original schedule (only the default changes); they also will not return items to sellers.
+- Listing an item produces one `📜 Market: …` line in every other online player's event log within ~1s; the lister sees their existing local "You list…" line only.
+- Any player's death produces one `💀 <name> has fallen.` line for every other online player; the dier still sees their local death log + overlay.
+- Killing a boss with a non-empty `boss_death_cry` produces one `👑 <bossName>: "<cry>"` line for every online player (including the killer / party). Bosses with empty cry produce nothing.
+- Admin can add/edit `boss_death_cry` per boss in the Creature Manager (only visible when rarity is `boss`).
+- Removing the old `marketplace-global` channel doesn't drop any messages — the unified channel handles them.
 
