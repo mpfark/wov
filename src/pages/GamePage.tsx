@@ -1099,6 +1099,20 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
       )}
 
+      {/* Marketplace Dialog */}
+      {(currentNode as any).is_marketplace && (
+        <MarketplacePanel
+          open={marketplaceOpen}
+          onClose={() => setMarketplaceOpen(false)}
+          characterId={character.id}
+          characterName={character.name}
+          characterGold={character.gold}
+          inventory={[...equipped, ...unequipped]}
+          onTransacted={() => { fetchInventory(); }}
+          addLog={addLog}
+        />
+      )}
+
       {/* Boss Trainer Dialog */}
       {currentNode.is_trainer && character.level >= 30 && (
         <BossTrainerPanel
