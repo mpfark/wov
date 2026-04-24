@@ -532,19 +532,19 @@ export default function CreatureManager() {
               </div>
               </AdminFormSection>
 
-              {/* Boss Death Cry — single broadcast line shown to all players when this boss dies */}
+              {/* World Emote on Death — atmospheric narration broadcast to all players when this boss dies */}
               {form.rarity === 'boss' && (
                 <div className="space-y-1.5">
-                  <p className="font-display text-xs text-primary">Boss Death Cry</p>
+                  <p className="font-display text-xs text-primary">World Emote on Death</p>
                   <p className="text-[10px] text-muted-foreground">
-                    Broadcast to every online player as <span className="font-mono">👑 {form.name || 'BossName'}: "your text"</span> when this boss is slain.
-                    Use <span className="font-mono">%a</span> for the killer's name. Leave empty to disable.
+                    An atmospheric line shown to all players when this boss dies. Written as world narration, not the boss speaking.
+                    Broadcast verbatim, prefixed with <span className="font-mono">🌫️</span>. Use <span className="font-mono">%a</span> for the killer's name. Leave empty to disable.
                   </p>
                   <Textarea
                     value={form.boss_death_cry}
                     onChange={e => setForm(f => ({ ...f, boss_death_cry: e.target.value }))}
-                    placeholder='You will join my army, %a...'
-                    rows={2}
+                    placeholder="For a brief moment, something feels… missing. Then the world settles, as if correcting itself."
+                    rows={3}
                     maxLength={300}
                     className="text-xs"
                   />
