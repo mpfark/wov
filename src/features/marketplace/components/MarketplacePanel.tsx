@@ -251,12 +251,75 @@ export default function MarketplacePanel({
           </TabsContent>
 
           {/* MY LISTINGS */}
-          <TabsContent value="mine" className="space-y-2 mt-3">
+          <TabsContent value="mine" className="space-y-3 mt-3">
+            {/* Uncollected sales section */}
+            {uncollectedSales.length > 0 && (
+              <div className="rounded border border-primary/40 bg-primary/5 p-2 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <HandCoins className="h-4 w-4 text-primary" />
+                    <span className="font-display text-xs text-primary">
+                      Earnings awaiting collection
+                    </span>
+                    <Badge variant="outline" className="text-[9px]">
+                      {uncollectedSales.length} sale{uncollectedSales.length === 1 ? '' : 's'}
+                    </Badge>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    disabled={!atMarketplace || totalUncollected <= 0}
+                    onClick={handleCollect}
+                    className="h-7 text-[10px] font-display"
+                    title={atMarketplace ? '' : 'Travel to a marketplace to collect your earnings'}
+                  >
+                    <Coins className="h-3 w-3 mr-1" />
+                    Collect {totalUncollected.toLocaleString()} gold
+                  </Button>
+                </div>
+                {!atMarketplace && (
+                  <p className="text-[10px] text-muted-foreground italic">
+                    You must be standing at a marketplace to collect.
+                  </p>
+                )}
+                <div className="rounded border border-border/50 max-h-40 overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-muted/40 backdrop-blur z-10">
+                      <tr className="text-[10px] text-muted-foreground">
+                        <th className="text-left p-1.5">Sold item</th>
+                        <th className="text-left p-1.5">Sold</th>
+                        <th className="text-right p-1.5">Payout</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {uncollectedSales.map(s => {
+                        const colorClass = RARITY_COLORS[s.item_snapshot?.rarity] || 'text-foreground';
+                        const soldAgo = s.sold_at
+                          ? formatTimeAgo(s.sold_at)
+                          : '—';
+                        return (
+                          <tr key={s.id} className="border-t border-border/40">
+                            <td className="p-1.5">
+                              <span className={`font-display ${colorClass}`}>{s.item_snapshot?.name}</span>
+                            </td>
+                            <td className="p-1.5 text-[10px] text-muted-foreground">{soldAgo}</td>
+                            <td className="p-1.5 text-right font-mono text-elvish">
+                              {(s.payout_amount ?? 0).toLocaleString()}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2 text-[10px] text-destructive">
               <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
               <span>Listings are final and cannot be cancelled. Unsold items after 12 hours return to the world.</span>
             </div>
-            <ScrollArea className="h-[52vh] rounded border border-border">
+            <ScrollArea className="h-[42vh] rounded border border-border">
               {myListings.length === 0 ? (
                 <p className="p-4 text-xs text-muted-foreground italic">You have no active listings.</p>
               ) : (
