@@ -42,7 +42,13 @@ export interface MarketplaceListing {
   seller_name?: string;
 }
 
-export function useMarketplace(characterId: string | null) {
+export function useMarketplace(
+  characterId: string | null,
+  onMySaleCompleted?: (sale: MySaleNotification) => void,
+) {
+  const onMySaleRef = useRef(onMySaleCompleted);
+  useEffect(() => { onMySaleRef.current = onMySaleCompleted; }, [onMySaleCompleted]);
+  const seenSoldIdsRef = useRef<Set<string>>(new Set());
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [uncollectedSales, setUncollectedSales] = useState<MarketplaceListing[]>([]);
   const [loading, setLoading] = useState(false);
