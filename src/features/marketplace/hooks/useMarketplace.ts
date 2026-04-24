@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+export interface MySaleNotification {
+  listing_id: string;
+  item_name: string;
+  price: number;
+  payout: number;
+}
+
 
 export interface MarketplaceListing {
   id: string;
