@@ -153,7 +153,14 @@ export default function MarketplacePanel({
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
           <TabsList className="h-8">
             <TabsTrigger value="browse" className="text-xs font-display">Browse ({listings.length})</TabsTrigger>
-            <TabsTrigger value="mine" className="text-xs font-display">My Listings ({myListings.length})</TabsTrigger>
+            <TabsTrigger value="mine" className="text-xs font-display relative">
+              My Listings ({myListings.length})
+              {uncollectedSales.length > 0 && (
+                <Badge variant="default" className="ml-1.5 h-4 px-1 text-[9px] bg-primary text-primary-foreground">
+                  {uncollectedSales.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="create" className="text-xs font-display">List Item</TabsTrigger>
           </TabsList>
 
