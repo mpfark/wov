@@ -339,6 +339,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const addLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
   const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
 
+  // Sale-completed alert: fires whenever one of this character's listings sells,
+  // whether or not the marketplace panel is open. Tells the seller to go collect.
+  useMarketplaceSaleAlerts(character.id, (sale) => {
+    addLog(`📜 Your ${sale.item_name} sold for ${sale.price.toLocaleString()} gold — collect your earnings at any marketplace.`);
+    toast.success(`${sale.item_name} sold for ${sale.price.toLocaleString()} gold`, {
+      description: 'Visit any marketplace to collect your earnings.',
+    });
+  });
+
   // ── Unified global broadcast (`world-global`) ─────────────────
   // Receives flavor events visible to every online player:
   //   - market_listed  — "📜 Market: X lists Y for Z gold"
