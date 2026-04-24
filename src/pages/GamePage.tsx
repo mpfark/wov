@@ -460,6 +460,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures,
     party, partyMembers,
+    bus,
   });
 
   const { buffState, buffSetters } = gameLoop;

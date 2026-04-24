@@ -83,6 +83,8 @@ export interface TickInterpretation {
   ticksProcessed: number | undefined;
   /** Remaining absorb shield HP from server (null if no absorb active) */
   absorbRemaining: number | null;
+  /** Boss death cries — admin-authored flavor lines, broadcast to all online players */
+  bossDeathCries: { creatureName: string; text: string }[];
 }
 
 /**
@@ -106,12 +108,20 @@ export function interpretCombatTickResult(
 
   // ── Format log messages ──
   const formattedLogMessages: string[] = [];
+  const bossDeathCries: { creatureName: string; text: string }[] = [];
   if (data.events.length > 0) {
     formattedLogMessages.push('---tick---');
   }
   for (const ev of data.events) {
     if (ev.type === 'tick_separator') {
       formattedLogMessages.push('---tick---');
+      continue;
+    }
+    // Surface boss death cries separately — they're broadcast globally,
+    // not appended to the local combat log here (avoids double-render).
+    if (ev.type === 'boss_death_cry') {
+      const cn = (ev as any).creature_name as string | undefined;
+      if (cn && ev.message) bossDeathCries.push({ creatureName: cn, text: ev.message });
       continue;
     }
     // Try MUD-style formatting for structured attack events
@@ -253,5 +263,6 @@ export function interpretCombatTickResult(
     aliveEngagedIds,
     ticksProcessed: data.ticks_processed,
     absorbRemaining,
+    bossDeathCries,
   };
 }
