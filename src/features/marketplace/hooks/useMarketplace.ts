@@ -28,6 +28,8 @@ export interface MarketplaceListing {
   created_at: string;
   expires_at: string;
   sold_at: string | null;
+  payout_amount: number | null;
+  payout_collected_at: string | null;
   // Joined seller name (resolved client-side)
   seller_name?: string;
 }
