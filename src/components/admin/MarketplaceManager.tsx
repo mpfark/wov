@@ -141,24 +141,29 @@ export default function MarketplaceManager() {
   );
 
   const adminCancel = async (id: string) => {
-    if (!confirm('Cancel this listing and return the item to the seller?')) return;
+    if (!confirm(
+      'Force close this listing?\n\n' +
+      'The item will NOT be returned to the seller. ' +
+      'It re-enters the world drop pool and may drop again from creatures.'
+    )) return;
     const { error } = await supabase.rpc('admin_cancel_listing' as any, { p_listing_id: id });
     if (error) toast.error(error.message);
-    else { toast.success('Listing cancelled'); load(); }
+    else { toast.success('Listing force-closed'); load(); }
   };
 
   const resolveStuck = async (l: Listing) => {
     if (l.escrow_state !== 'in_inventory') return;
     if (!confirm(
+      `Data-integrity action only.\n\n` +
       `This active listing's item is currently held by "${l.current_holder_name}". ` +
-      `Mark the listing as cancelled WITHOUT returning the item (the holder keeps it). Continue?`
+      `Mark the listing as cancelled. The holder keeps the item; nothing is moved.\n\nContinue?`
     )) return;
     const { error } = await supabase
       .from('marketplace_listings' as any)
       .update({ status: 'cancelled' })
       .eq('id', l.id);
     if (error) toast.error(error.message);
-    else { toast.success('Stuck listing resolved'); load(); }
+    else { toast.success('Listing marked resolved'); load(); }
   };
 
   const hardDelete = async (id: string) => {
@@ -270,12 +275,12 @@ export default function MarketplaceManager() {
                         <Eye className="h-3 w-3" />
                       </Button>
                       {l.status === 'active' && l.escrow_state === 'escrowed' && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => adminCancel(l.id)} title="Cancel & return item">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => adminCancel(l.id)} title="Force close (item NOT returned to seller; re-enters world pool)">
                           <X className="h-3 w-3 text-muted-foreground" />
                         </Button>
                       )}
                       {l.status === 'active' && l.escrow_state === 'in_inventory' && (
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => resolveStuck(l)} title="Resolve stuck listing (mark cancelled, item stays with holder)">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => resolveStuck(l)} title="Mark resolved (data-integrity only; nothing moves)">
                           <AlertTriangle className="h-3 w-3 text-destructive" />
                         </Button>
                       )}
@@ -347,13 +352,13 @@ export default function MarketplaceManager() {
 
               <div className="border-t border-border pt-2 flex justify-end gap-2">
                 {inspecting.status === 'active' && inspecting.escrow_state === 'escrowed' && (
-                  <Button size="sm" variant="outline" onClick={() => { adminCancel(inspecting.id); setInspecting(null); }}>
-                    Cancel & return
+                  <Button size="sm" variant="outline" onClick={() => { adminCancel(inspecting.id); setInspecting(null); }} title="Item is NOT returned to seller; re-enters world pool">
+                    Force close
                   </Button>
                 )}
                 {inspecting.status === 'active' && inspecting.escrow_state === 'in_inventory' && (
-                  <Button size="sm" variant="destructive" onClick={() => { resolveStuck(inspecting); setInspecting(null); }}>
-                    Resolve stuck
+                  <Button size="sm" variant="destructive" onClick={() => { resolveStuck(inspecting); setInspecting(null); }} title="Mark resolved (data-integrity only; nothing moves)">
+                    Mark resolved
                   </Button>
                 )}
                 <Button size="sm" variant="ghost" onClick={() => { hardDelete(inspecting.id); setInspecting(null); }}>
