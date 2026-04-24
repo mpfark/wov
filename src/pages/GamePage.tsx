@@ -342,7 +342,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Receives flavor events visible to every online player:
   //   - market_listed  — "📜 Market: X lists Y for Z gold"
   //   - player_death   — "💀 X has fallen."
-  //   - boss_death     — "👑 BossName: 'death cry'"
+  //   - boss_death     — "🌫️ <world emote>" (atmospheric narration, no boss name)
   // Self-echo is skipped via `actor === character.name`.
   const sendGlobal = useGlobalBroadcastSender();
   useGlobalBroadcastListener((p) => {
@@ -530,11 +530,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       await executeAbilityRef.current?.(index, targetId);
     },
     onAbsorbSync: gameLoop.handleAbsorbDamage,
-    onBossDeathCry: ({ creatureName, text }) => {
+    onBossDeathCry: ({ text }) => {
+      // World emote — atmospheric narration, broadcast verbatim with no boss-name framing.
       sendGlobal({
         kind: 'boss_death',
-        icon: '👑',
-        text: `${creatureName}: "${text}"`,
+        icon: '🌫️',
+        text,
       });
     },
     setPoisonBuff: buffSetters.setPoisonBuff,
