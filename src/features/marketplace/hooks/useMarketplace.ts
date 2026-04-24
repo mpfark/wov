@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+
+export interface MySaleNotification {
+  listing_id: string;
+  item_name: string;
+  price: number;
+  payout: number;
+}
+
 
 export interface MarketplaceListing {
   id: string;
@@ -28,12 +36,21 @@ export interface MarketplaceListing {
   created_at: string;
   expires_at: string;
   sold_at: string | null;
+  payout_amount: number | null;
+  payout_collected_at: string | null;
   // Joined seller name (resolved client-side)
   seller_name?: string;
 }
 
-export function useMarketplace(characterId: string | null) {
+export function useMarketplace(
+  characterId: string | null,
+  onMySaleCompleted?: (sale: MySaleNotification) => void,
+) {
+  const onMySaleRef = useRef(onMySaleCompleted);
+  useEffect(() => { onMySaleRef.current = onMySaleCompleted; }, [onMySaleCompleted]);
+  const seenSoldIdsRef = useRef<Set<string>>(new Set());
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [uncollectedSales, setUncollectedSales] = useState<MarketplaceListing[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchListings = useCallback(async () => {
@@ -60,17 +77,62 @@ export function useMarketplace(characterId: string | null) {
     setLoading(false);
   }, []);
 
+  const fetchUncollectedSales = useCallback(async () => {
+    if (!characterId) { setUncollectedSales([]); return; }
+    const { data, error } = await supabase
+      .from('marketplace_listings' as any)
+      .select('*')
+      .eq('seller_character_id', characterId)
+      .eq('status', 'sold')
+      .is('payout_collected_at', null)
+      .order('sold_at', { ascending: false });
+    if (!error && data) {
+      setUncollectedSales(data as unknown as MarketplaceListing[]);
+    }
+  }, [characterId]);
+
   // Initial load + realtime updates
   useEffect(() => {
     fetchListings();
+    fetchUncollectedSales();
+    // Seed seen-sold set so we don't re-notify for sales completed before this session
+    (async () => {
+      if (!characterId) return;
+      const { data } = await supabase
+        .from('marketplace_listings' as any)
+        .select('id')
+        .eq('seller_character_id', characterId)
+        .eq('status', 'sold');
+      if (data) for (const r of data as any[]) seenSoldIdsRef.current.add(r.id);
+    })();
+
     const ch = supabase
       .channel('marketplace-listings-sub')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, (payload: any) => {
         fetchListings();
+        fetchUncollectedSales();
+        // Detect "my listing just sold" → fire one-time notification
+        const row = payload?.new;
+        if (
+          characterId &&
+          row &&
+          row.status === 'sold' &&
+          row.seller_character_id === characterId &&
+          !row.payout_collected_at &&
+          !seenSoldIdsRef.current.has(row.id)
+        ) {
+          seenSoldIdsRef.current.add(row.id);
+          onMySaleRef.current?.({
+            listing_id: row.id,
+            item_name: row.item_snapshot?.name ?? 'item',
+            price: row.price,
+            payout: row.payout_amount ?? Math.max(0, Math.floor(row.price * (1 - (row.tax_rate ?? 0.1)))),
+          });
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchListings]);
+  }, [fetchListings, fetchUncollectedSales, characterId]);
 
   // Periodically expire listings (every 5 min) and on focus
   useEffect(() => {
@@ -100,14 +162,21 @@ export function useMarketplace(characterId: string | null) {
       p_listing_id: listingId,
     });
     if (error) return { ok: false, error: error.message };
-    // Optimistically remove the bought listing so the buyer's UI updates instantly,
-    // even before the realtime event arrives.
     setListings(prev => prev.filter(l => l.id !== listingId));
     return { ok: true, data: data as any };
   }, [characterId]);
 
+  const collect = useCallback(async () => {
+    if (!characterId) return { ok: false, error: 'No character' };
+    const { data, error } = await supabase.rpc('collect_marketplace_payouts' as any, {
+      p_character_id: characterId,
+    });
+    if (error) return { ok: false, error: error.message };
+    setUncollectedSales([]);
+    return { ok: true, data: data as any };
+  }, [characterId]);
+
   // Listings are final and cannot be cancelled by sellers.
-  // This stub remains so any stale UI/API caller gets a clear error instead of a crash.
   const cancel = useCallback(async (_listingId: string) => {
     return {
       ok: false,
@@ -115,5 +184,6 @@ export function useMarketplace(characterId: string | null) {
     };
   }, []);
 
-  return { listings, loading, fetchListings, list, buy, cancel };
+  return { listings, uncollectedSales, loading, fetchListings, fetchUncollectedSales, list, buy, collect, cancel };
 }
+

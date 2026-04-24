@@ -1,58 +1,77 @@
+## Marketplace Sale Escrow — Go Collect Your Gold
 
+Right now `buy_unique_listing` immediately credits the seller's gold the moment a buyer purchases. That works, but it's invisible — the seller may not even notice. This plan changes sales to use an **escrow + manual collection** flow: when an item sells, the gold is held by the marketplace, and the seller must travel to a marketplace node to collect it.
 
-## Boss Death Cries as Atmospheric Emotes
-
-### Current Behavior
-
-Boss death cries are currently displayed as if the boss is speaking, formatted like:
-> 👑 Bone Tyrant: "You will join my army!"
-
-The admin field is labeled "Boss Death Cry" and the server formats the broadcast as `<bossName>: "<cry>"` (in `combat-tick/index.ts`). The frontend then prepends 👑 and appends `<bossName>:` framing.
-
-### Goal
-
-Reframe these as **world emotes / atmospheric flavor** — narrated by the world itself, not the boss. The admin writes a complete sentence (or two) that stands alone, and the broadcast displays it verbatim with no `BossName:` prefix and no quotes. Killer name substitution (`%a`) still works for cases where it fits the line.
-
-Example outputs:
-- `🌫️ For a brief moment, something feels… missing. Then the world settles, as if correcting itself.`
-- `🌫️ A long-held breath leaves the stones of the ruin.`
-- `🌫️ Somewhere far away, a crow stops singing.`
-
-### Design Decisions
+### Behavior Changes
 
 | Aspect | Before | After |
 |---|---|---|
-| Framing | `BossName: "<text>"` | Plain `<text>` (no name, no quotes) |
-| Icon | 👑 (crown — "boss speaks") | 🌫️ (mist — "world reacts") |
-| Field label (admin) | "Boss Death Cry" | "World Emote on Death" |
-| Field helper text | "What the boss shouts when dying" | "An atmospheric line shown to all players when this boss dies. Written as world narration, not the boss speaking. `%a` = killer's name." |
-| Placeholder | `"You will join my army!"` | `For a brief moment, something feels… missing. Then the world settles, as if correcting itself.` |
-| Server payload | quoted line | raw line |
-| Client display | `👑 Name: "..."` | `🌫️ ...` |
+| Buyer pays | Gold deducted immediately | Same |
+| Seller credited | Gold added to seller instantly (anywhere) | Gold held in escrow on the listing |
+| Seller notification | Global broadcast only | Global broadcast + persistent "uncollected" state |
+| Collecting payout | Automatic | Seller visits any marketplace node, opens marketplace, clicks "Collect" |
+| Expired/cancelled listings | No payout (already correct) | Unchanged |
 
-### Files Changed
+### Database Changes
 
-| File | Change |
-|---|---|
-| `supabase/functions/combat-tick/index.ts` | In the boss-death event push, change `message` from quoted/named form to the raw `cry` (already substitutes `%a`). Drop the `BossName:` prefix and quotation marks. Keep `creature_name` on the event for client-side context (e.g. logging/debugging) but don't use it in the message. |
-| `src/features/combat/utils/interpretCombatTickResult.ts` | No change to event handling — already passes `text` through as-is. Confirm no extra formatting is applied. |
-| `src/pages/GamePage.tsx` | When forwarding boss death cries to `useGlobalBroadcastSender`, change `icon` from `'👑'` to `'🌫️'` and pass `text` verbatim (no `BossName:` wrapping). The receiver-side renderer already prepends `icon` + space + `text`. |
-| `src/components/admin/CreatureManager.tsx` | Rename the field UI: label → "World Emote on Death"; helper text updated to clarify the narrative voice; placeholder updated to the example above. The DB column name `boss_death_cry` stays (no migration needed — internal name only). Visible only when rarity is `boss`. |
-| `mem://game/combat-system/boss-flavors.md` | Update memory note: clarify that boss death cries are world-narration emotes (icon 🌫️), distinct from boss crit flavors (which still use boss-voice formatting). |
+**New columns on `marketplace_listings`:**
+- `payout_amount integer` — frozen at sale time = `price - tax_amount`
+- `payout_collected_at timestamptz NULL` — set when seller collects
+- (Existing `status` flow stays: `active → sold → (sold + collected)` — collection is a separate flag, not a new status, so analytics & filters keep working.)
 
-### Not Changed
+**Modify `buy_unique_listing` RPC:**
+- Remove the `UPDATE characters SET gold = gold + _payout WHERE id = seller` line.
+- Store `_payout` into the new `payout_amount` column on the listing row.
+- Everything else (buyer gold deduction, item transfer, status='sold', global broadcast payload) stays.
 
-- Database schema — column stays `creatures.boss_death_cry`
-- Global broadcast plumbing (`useGlobalBroadcast.ts`, `world-global` channel)
-- `%a` killer-name substitution behavior
-- Boss **crit** flavors (`boss_crit_flavors`) — those remain in-character boss speech and keep their existing format
-- Player death broadcasts (still 💀 with name) — only boss deaths become emotes
-- Empty `boss_death_cry` still produces no broadcast
+**New RPC `collect_marketplace_payouts(p_character_id uuid)`:**
+- Auth: `owns_character(p_character_id)`
+- Verify caller is currently at a node where `is_marketplace = true` (same check as buying).
+- Lock all `marketplace_listings` rows with `seller_character_id = p_character_id AND status = 'sold' AND payout_collected_at IS NULL FOR UPDATE`.
+- Sum `payout_amount`, mark each `payout_collected_at = now()`.
+- Use the trusted-RPC bypass (`set_config('app.trusted_rpc','true',true)`) and credit the sum to the seller's gold.
+- Return `{ collected_count, total_gold, items: [{name, payout}, …] }`.
 
-### Success Criteria
+**Backfill migration**: for existing `status='sold'` rows with no `payout_amount`, set `payout_amount = price - tax_amount` and `payout_collected_at = sold_at` (treat as already paid out — they were credited under the old model).
 
-- Killing a boss with a non-empty emote produces one global log line in the form `🌫️ <emote text>` for every online player — no boss name prefix, no quotation marks.
-- Admin Creature Manager shows the field as "World Emote on Death" with the new helper text and example placeholder, only when rarity is boss.
-- `%a` placeholder still substitutes the killer's name when used.
-- Boss crit lines (a separate field) are unaffected and still read as boss speech.
+### Frontend Changes
 
+**`useMarketplace` hook**
+- Extend `MarketplaceListing` type with `payout_amount`, `payout_collected_at`.
+- Listings query: keep current "active only" for browse, but add a separate `myUncollected` derivation that fetches `seller_character_id = me AND status='sold' AND payout_collected_at IS NULL` (one extra select, refreshed on the same channel).
+- New `collect()` function calling `collect_marketplace_payouts`.
+
+**`MarketplacePanel.tsx`**
+- "My Listings" tab gains two sub-sections:
+  1. **Active** — current 12h listings (unchanged).
+  2. **Uncollected sales** — table of sold items awaiting pickup, each row showing item name, sold_at relative time ("2h ago"), and payout. A single prominent **"Collect X gold"** button at the top of the section sums all uncollected payouts. Disabled (with tooltip) when not at a marketplace node.
+- The "My Listings" tab label gets a numeric badge when uncollected sales exist (visual nudge).
+- After successful collect: toast `"+1,234 gold collected from 2 sales"`, append a local log line `💰 You collect 1,234 gold from your sales.`, refresh inventory & character via `onTransacted()`.
+
+**Sale-side broadcast / log (immersion polish)**
+- Seller no longer gets the gold instantly, so the existing sold-event handling needs a clear message. When the seller is online and their listing sells (detected via the realtime `marketplace_listings` UPDATE → `status='sold'`), show a local toast + log line: `📜 Your <ItemName> sold for <price> gold — collect your earnings at any marketplace.` Already-online sellers see this immediately; offline sellers see the uncollected badge next time they open the panel.
+- Global broadcast text stays the same so other players still see the sale.
+
+### Security & Edge Cases
+
+- Collection RPC is `SECURITY DEFINER`, validates ownership and current-node marketplace flag, and uses `FOR UPDATE` to prevent double-collection races.
+- A seller deleted between sale and collection: payout stays in escrow on the listing. No automatic forfeit; listing simply remains uncollected (acceptable — character deletion is rare).
+- Tax behavior is unchanged: tax is "burned" the same way (price − payout never enters anyone's gold).
+- Admin force-close (`admin_cancel_listing`) only fires on `active` listings, so it doesn't interact with payouts.
+- The `mine` filter currently uses the `listings` array (active only). Uncollected sales are **not** active listings, so we fetch them with a separate small query keyed off the same realtime channel.
+
+### Files Touched
+
+- New migration: add columns to `marketplace_listings`, modify `buy_unique_listing`, add `collect_marketplace_payouts`, backfill existing sold rows.
+- `src/features/marketplace/hooks/useMarketplace.ts` — add type fields, uncollected sales fetch, `collect()`.
+- `src/features/marketplace/components/MarketplacePanel.tsx` — uncollected sales section + Collect button + sold-toast handler.
+- `src/integrations/supabase/types.ts` — auto-regenerated.
+
+### Acceptance Criteria
+
+- Buying a listing transfers the item and deducts buyer gold immediately, but does **not** credit the seller's gold.
+- The sold listing shows up under "My Listings → Uncollected sales" for the seller, with the correct payout amount.
+- Online seller sees a toast + log line `📜 Your <Item> sold for <price> gold — collect your earnings at any marketplace.` within a second or two of the sale.
+- Clicking **Collect** at any marketplace node credits the seller the full sum of uncollected payouts, marks them collected, and removes them from the section.
+- Trying to collect away from a marketplace node returns a clear error and does nothing.
+- Existing sold listings (pre-migration) are treated as already collected and never appear in the uncollected section.

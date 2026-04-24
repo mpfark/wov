@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { toast } from 'sonner';
 
 import CharacterPanel from '@/features/character/components/CharacterPanel';
 import NodeView from '@/features/world/components/NodeView';
@@ -20,6 +21,7 @@ import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
+import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
 import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
@@ -337,6 +339,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Log emitters ───────────────────────────────────────────────
   const addLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
   const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
+
+  // Sale-completed alert: fires whenever one of this character's listings sells,
+  // whether or not the marketplace panel is open. Tells the seller to go collect.
+  useMarketplaceSaleAlerts(character.id, (sale) => {
+    addLog(`📜 Your ${sale.item_name} sold for ${sale.price.toLocaleString()} gold — collect your earnings at any marketplace.`);
+    toast.success(`${sale.item_name} sold for ${sale.price.toLocaleString()} gold`, {
+      description: 'Visit any marketplace to collect your earnings.',
+    });
+  });
 
   // ── Unified global broadcast (`world-global`) ─────────────────
   // Receives flavor events visible to every online player:
@@ -1142,6 +1153,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           inventory={[...equipped, ...unequipped]}
           onTransacted={() => { fetchInventory(); }}
           addLog={addLog}
+          atMarketplace={true}
         />
       )}
 
