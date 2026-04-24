@@ -1,161 +1,151 @@
 
 
-## Reward Flow Audit + Party XP Bonus Extraction
+## Marketplace for Unique Items (v1)
 
-### Current Reward Flow (Audit Summary)
+A global, fixed-price marketplace for unique items, accessed at marketplace nodes, with escrow, durability preservation, sale tax, global announcements, and an admin moderation page.
 
-All reward logic lives inside `handleCreatureKill` (lines 371-457 of `combat-tick/index.ts`):
+### Database Schema
 
-1. **Base XP**: `Math.floor(creature.level * 10 * XP_RARITY_MULTIPLIER)` (line 384)
-2. **Gold**: Rolled from creature `loot_table` gold entry, CHA multiplier applied for humanoids (lines 386-393)
-3. **Level penalty**: `xpPenalty(memberLevel, creatureLevel)` per member (line 400)
-4. **XP boost**: Global `xpMult` from `xp_boost` table (line 401)
-5. **XP split**: Divided by number of uncapped (< L42) members (line 401)
-6. **Gold split**: Divided equally among all members (lines 394-403)
-7. **BHP**: Boss kills award `floor(level * 0.5)` split evenly (lines 420-431)
-8. **Salvage**: Non-humanoid kills award `(1 + floor(level/5)) * rarityMult` split evenly (lines 432-441)
-9. **Loot queuing**: Pushed to `lootQueue` for later DB processing (lines 442-456)
-10. **DB writes**: Accumulated in `mXp`/`mGold`/`mBhp`/`mSalvage`, written in member update loop (lines 986-1054)
-11. **Level-up**: Checked inline after reward accumulation (lines 1001-1043)
-12. **Notifications**: Kill event messages pushed to `events` array, returned in response (lines 405-419)
+**New table `marketplace_listings`** (migration):
+- `id` uuid pk
+- `seller_character_id` uuid
+- `inventory_item_id` uuid (nullable — set null when item leaves escrow)
+- `item_id` uuid (snapshot reference)
+- `item_snapshot` jsonb (name, rarity, slot, stats, value, hands, illustration_url at list time)
+- `current_durability` int (preserved exactly through sale)
+- `price` int
+- `tax_rate` numeric (default 0.10)
+- `status` text: `active` | `sold` | `cancelled` | `expired`
+- `buyer_character_id` uuid nullable
+- `created_at`, `expires_at` (default `now() + 48h`), `sold_at` nullable
 
-### Plan
+RLS:
+- SELECT: any authenticated user (global browse)
+- INSERT/UPDATE/DELETE: service role only (all writes via RPC/edge)
+- Admin SELECT/UPDATE: stewards/overlords
 
-#### 1. Create `supabase/functions/_shared/reward-calculator.ts`
+**Marketplace tax sink**: tax simply removed from economy (no destination table). Recorded via `tax_amount` column for admin auditing.
 
-A pure helper that owns reward math only. No DB access, no event formatting.
+**New nodes column**: `is_marketplace boolean default false` — added alongside existing `is_vendor`, `is_inn`, etc.
 
-```typescript
-interface RewardMember {
-  id: string;
-  level: number;
-  cha: number;        // effective CHA (base + gear)
-  isUncapped: boolean; // level < 42
-}
+### Server-Side RPCs (security definer, SECURITY DEFINER pattern)
 
-interface CreatureRewardInput {
-  level: number;
-  rarity: string;
-  isHumanoid: boolean;
-  isBoss: boolean;
-  lootTable: any[];    // for gold entry lookup
-  xpBoostMultiplier: number;
-  partySize: number;   // eligible members at node
-}
+1. **`list_unique_item(p_character_id, p_inventory_id, p_price)`**
+   - Verify ownership, item rarity is `'unique'`, not equipped, not soulbound
+   - Snapshot item data + durability
+   - DELETE from `character_inventory` (escrow)
+   - INSERT into `marketplace_listings` status=active
+   - Returns listing id + snapshot for broadcast
 
-interface MemberReward {
-  memberId: string;
-  xp: number;
-  gold: number;
-  bhp: number;
-  salvage: number;
-  xpPenaltyApplied: number;  // 0-1 multiplier for display
-  partyBonusApplied: number; // 1.0-1.4 multiplier for display
-}
+2. **`buy_unique_listing(p_character_id, p_listing_id)`**
+   - Lock listing FOR UPDATE, verify status=active and not expired
+   - Verify buyer at a node where `is_marketplace = true`
+   - Verify buyer has gold ≥ price
+   - For unique exclusivity: `pg_advisory_xact_lock(hashtext('unique_item_'||item_id))`, ensure no character currently holds it (escrow already removed it from inventory, so this is a sanity check)
+   - Deduct gold from buyer, set `app.trusted_rpc=true`, credit seller `floor(price * (1 - tax_rate))`
+   - INSERT item into buyer's `character_inventory` with snapshot's `current_durability`
+   - UPDATE listing status=sold, set buyer_character_id, sold_at
+   - Returns payload for broadcast
 
-interface RewardResult {
-  memberRewards: MemberReward[];
-  totalGoldRolled: number;
-  baseXp: number;
-}
-```
+3. **`cancel_unique_listing(p_character_id, p_listing_id)`**
+   - Verify caller owns seller, status=active
+   - Return item to seller inventory with original durability
+   - UPDATE status=cancelled
 
-**Calculation order** (matches current flow, party bonus inserted after penalty):
-1. Compute `baseXp = floor(level * 10 * rarityMult)`
-2. Roll gold from loot table gold entry
-3. Apply CHA gold multiplier (humanoids only, using highest CHA among members)
-4. For each uncapped member: apply level penalty → apply XP boost → apply party size bonus → split by uncapped count
-5. Split gold evenly among all members
-6. Compute BHP (boss only): `floor(level * 0.5 / partySize)`
-7. Compute salvage (non-humanoid): `floor((1 + floor(level/5)) * rarityMult / partySize)`
+4. **`expire_marketplace_listings()`** (called periodically client-side like `cleanup_ground_loot`)
+   - For each active listing past `expires_at`: return item to seller, mark expired
 
-**Party XP bonus** (new):
-```typescript
-const PARTY_XP_BONUS: Record<number, number> = { 1: 1.0, 2: 1.15, 3: 1.30, 4: 1.40 };
-function getPartyXpBonus(memberCount: number): number {
-  return PARTY_XP_BONUS[Math.min(memberCount, 4)] ?? 1.0;
-}
-```
+5. **`admin_cancel_listing(p_listing_id)`** — stewards/overlords
+   - Same as cancel but bypasses ownership; returns item to seller (or destroys if seller deleted)
 
-Applied per-member after level penalty and XP boost, before split:
-```
-finalXp = floor(floor(baseXp * penalty * xpBoost * partyBonus) / xpSplit)
-```
+### Frontend — Player UI
 
-#### 2. Refactor `combat-tick/index.ts` — `handleCreatureKill`
+**Node feature**: When `currentNode.is_marketplace`, show new toolbar button (🏛️ Marketplace) in `MapPanel` alongside vendor/blacksmith/teleport buttons.
 
-Replace the inline reward math (lines 384-441) with a call to the new helper:
+**New `MarketplacePanel.tsx`** (`src/features/marketplace/components/MarketplacePanel.tsx`):
+- Two tabs: **Browse** and **My Listings**
+- Browse: search by name, sortable table (Name, Stats, Durability, Price, Seller, Time Left), Buy button per row
+- My Listings: shows seller's active listings with Cancel button
+- Create Listing: a "+ List Unique Item" action that opens an inline picker filtered to inventory items with `rarity=unique` and not equipped/soulbound
+   - Price input → shows tax breakdown ("Price: 10,000 · Tax (10%): 1,000 · You receive: 9,000")
+   - Confirm → calls `list_unique_item` RPC
 
-```typescript
-import { calculateCreatureRewards } from "../_shared/reward-calculator.ts";
+**New `useMarketplace` hook** (`src/features/marketplace/hooks/useMarketplace.ts`):
+- Fetches active listings (global)
+- Subscribes to `marketplace_listings` postgres_changes for live updates
+- Exposes `list`, `buy`, `cancel` actions + listings array
 
-const handleCreatureKill = (creature, killerLabel, chaForGold) => {
-  // ... existing kill bookkeeping (cKilled, effect cleanup, etc.) stays
-  
-  const rewardMembers = members.map(mm => ({
-    id: mm.id,
-    level: mm.c.level,
-    cha: (mm.c.cha || 10) + (eq[mm.id]?.cha || 0),
-    isUncapped: mm.c.level < 42,
-  }));
-  
-  const result = calculateCreatureRewards({
-    level: creature.level,
-    rarity: creature.rarity,
-    isHumanoid: creature.is_humanoid,
-    isBoss: creature.rarity === 'boss',
-    lootTable: creature.loot_table || [],
-    xpBoostMultiplier: xpMult,
-    partySize: members.length,
-  }, rewardMembers);
-  
-  // Accumulate rewards (same as current)
-  for (const mr of result.memberRewards) {
-    mXp[mr.memberId] += mr.xp;
-    mGold[mr.memberId] += mr.gold;
-    mBhp[mr.memberId] += mr.bhp;
-    mSalvage[mr.memberId] += mr.salvage;
-  }
-  
-  // Event messages — rebuilt from structured result (same format as current)
-  // ... kill message with penalty/boost/party bonus notes
-  
-  // Loot queuing — stays inline (unchanged)
-};
-```
+**Global announcements**:
+- Subscribe to a new global broadcast channel `marketplace-global`
+- After successful `list_unique_item`, the client sends `{event: 'listed', payload: {seller, item_name, price}}`
+- All players receive it and append to event log: `📜 Market: {seller} lists {item_name} for {price} gold.`
+- Subscription lives in `GamePage` (alongside other global events) so all players hear it regardless of route
 
-**What stays in `handleCreatureKill`**: kill bookkeeping (cKilled, effect cleanup, killedCreatureIds), event message formatting, loot queue push logic.
+### Admin UI
 
-**What stays in the tick loop**: level-up processing, DB writes, session management, combat flow.
+**New sidebar entry** in `AdminSidebar` under "Operations": `Marketplace` (icon: `Store` from lucide-react)
 
-#### 3. Update kill event messages
+**New `MarketplaceManager.tsx`** (`src/components/admin/MarketplaceManager.tsx`):
+- Mirrors `IssueReportManager` patterns (shared admin styling)
+- Status filter: All / Active / Sold / Cancelled / Expired
+- Search by seller name + item name
+- Table columns: Created, Seller, Item Name, Rarity, Durability, Price, Tax, Status, Actions
+- Inspect listing → modal showing full snapshot + stats
+- Action: Cancel listing (calls `admin_cancel_listing`)
+- Action: Delete listing row (hard delete, for stuck/broken states)
 
-Add party bonus note to kill messages when bonus > 1.0:
-```
-☠️ Wolf has been slain! Rewards split 2 ways: +45 XP, +3 gold each. (🤝 +15% party bonus)
-```
+**Wire into `AdminPage.tsx`**: add `case 'marketplace': return <MarketplaceManager />;`
 
-### Files Changed
+### Node Editor Integration
+
+In `NodeEditorPanel.tsx`, add `is_marketplace` checkbox to the existing "Node Services" section (next to vendor/inn/blacksmith/teleport). Update `WorldBuilderPanel` types and `PlayerGraphView` icon overlay (🏛️ marker).
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/<ts>_marketplace.sql` | Table + nodes column + RLS + RPCs |
+| `src/features/marketplace/index.ts` | Public exports |
+| `src/features/marketplace/hooks/useMarketplace.ts` | Listings query/sub + actions |
+| `src/features/marketplace/components/MarketplacePanel.tsx` | Browse / list / cancel UI |
+| `src/components/admin/MarketplaceManager.tsx` | Admin moderation page |
+
+### Files Modified
 
 | File | Change |
 |------|--------|
-| `supabase/functions/_shared/reward-calculator.ts` | **New** — pure reward math helper |
-| `supabase/functions/combat-tick/index.ts` | Replace inline reward math with helper calls; add party bonus display |
+| `src/components/admin/AdminSidebar.tsx` | Add Marketplace nav item |
+| `src/pages/AdminPage.tsx` | Route Marketplace tab |
+| `src/components/admin/NodeEditorPanel.tsx` | Add `is_marketplace` checkbox |
+| `src/features/world/components/PlayerGraphView.tsx` | 🏛️ icon for marketplace nodes |
+| `src/features/world/components/MapPanel.tsx` | Marketplace toolbar button + prop |
+| `src/pages/GamePage.tsx` | Wire `MarketplacePanel`, global listing broadcast subscription |
+| `src/integrations/supabase/types.ts` | Auto-regen after migration |
+
+### Tax / Economy
+
+- Default `tax_rate = 0.10`, stored per-listing (allows future per-node rates)
+- Seller payout: `floor(price * (1 - tax_rate))`
+- Tax amount removed from economy (sink), stored in listing for audit
+
+### Expiration
+
+- Listings expire after 48h default (`expires_at` column)
+- Client calls `expire_marketplace_listings()` RPC on `MarketplacePanel` open + every 5min, mirroring `cleanup_ground_loot` pattern
 
 ### Not Changed
 
-- Combat formulas, movement, loot drops, command system, client-side display
-- Level-up processing (remains in combat-tick member update loop)
-- Reward DB writes (remain in combat-tick)
-- Broadcast/notification structure (same event types and format)
-- `combat-catchup` (does not handle rewards)
+- Combat, durability rules, loot system, command system, class balance, equip rules
+- `is_vendor`/`is_blacksmith`/`is_inn`/`is_teleport` behavior (marketplace is additive)
+- `try_acquire_unique_item` and existing unique-item exclusivity flow remain untouched
 
-### Final Party XP Bonus Values
+### Success Criteria
 
-| Members at node | XP Multiplier |
-|----------------|---------------|
-| 1 | 1.00x |
-| 2 | 1.15x |
-| 3 | 1.30x |
-| 4+ | 1.40x |
+- Only `rarity='unique'` items can be listed (RPC validation)
+- Listings global, browseable from any marketplace node
+- Item escrowed (removed from `character_inventory`) on list
+- Durability preserved exactly through sale
+- Tax applied; seller payout = `price - tax`
+- Global event log message on each new listing
+- Admin can view all listings and cancel/delete from a dedicated page
 
