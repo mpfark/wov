@@ -81,6 +81,7 @@ interface Props {
   onOpenBlacksmith?: () => void;
   onOpenTeleport?: () => void;
   onOpenTrainer?: () => void;
+  onOpenMarketplace?: () => void;
   onMapTeleport?: (nodeId: string, cpCost: number) => void;
   searchDisabled?: boolean;
   hasDiscoverable?: boolean;
@@ -115,7 +116,7 @@ export default function MapPanel({
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
-  onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, searchDisabled, hasDiscoverable,
+  onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, onOpenMarketplace, searchDisabled, hasDiscoverable,
   unlockedConnections, onMapTeleport,
   onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
@@ -466,6 +467,19 @@ export default function MapPanel({
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">Boss Trainer</TooltipContent>
+                  </Tooltip>
+                )}
+                {onOpenMarketplace && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onOpenMarketplace}
+                        className="h-5 w-5 flex items-center justify-center rounded bg-primary/15 border border-primary/40 shadow-[0_0_6px_hsl(var(--primary)/0.3)] hover:bg-primary/25 transition-colors"
+                      >
+                        <span className="text-[10px]">🏛️</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Marketplace</TooltipContent>
                   </Tooltip>
                 )}
               </TooltipProvider>
