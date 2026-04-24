@@ -91,6 +91,7 @@ const defaultForm = () => ({
   drop_chance: 0.5,
   loot_mode: 'legacy_table' as string,
   boss_crit_flavors: [] as BossCritFlavor[],
+  boss_death_cry: '',
 });
 
 export default function CreatureManager() {
@@ -173,6 +174,7 @@ export default function CreatureManager() {
       drop_chance: c.drop_chance ?? 0.5,
       loot_mode: (c as any).loot_mode || 'legacy_table',
       boss_crit_flavors: Array.isArray((c as any).boss_crit_flavors) ? (c as any).boss_crit_flavors : [],
+      boss_death_cry: typeof (c as any).boss_death_cry === 'string' ? (c as any).boss_death_cry : '',
     });
     // Load entries for selected loot table
     if (c.loot_table_id) {
@@ -239,6 +241,7 @@ export default function CreatureManager() {
           damage_type: f.damage_type?.trim() || undefined,
         }))
         .filter(f => f.text.length > 0),
+      boss_death_cry: form.rarity === 'boss' ? form.boss_death_cry.trim() : '',
     };
 
     let savedId = selectedId;
