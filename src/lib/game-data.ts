@@ -103,7 +103,18 @@ export function calculateHP(charClass: string, con: number) {
   return baseHP + conMod;
 }
 
-/** Full max HP formula: base class HP + CON modifier + (level-1)*5 */
+/** Full max HP formula: base class HP + CON modifier + (level-1)*5
+ *
+ *  ⚠️ FORMULA SYNC — if you change this, also update:
+ *    - `getMaxHp` in `src/features/combat/utils/combat-math.ts`
+ *    - `getMaxHp` in `supabase/functions/_shared/combat-math.ts` (Deno mirror)
+ *    - `sync_character_resources()` in the database (SQL `_base_hp`/`_new_max_hp`)
+ *
+ *  Note: this returns the BASE max — gear bonuses are layered on by
+ *  `getEffectiveMaxHp`. Persisted `characters.max_hp` includes gear bonuses
+ *  (kept in sync by the `sync_character_resources` RPC), so do not call this
+ *  directly to populate `max_hp` in a DB write — use the RPC instead.
+ */
 export function getMaxHp(charClass: string, con: number, level: number): number {
   const baseHP = CLASS_BASE_HP[charClass] || 18;
   const conMod = Math.floor((con - 10) / 2);
