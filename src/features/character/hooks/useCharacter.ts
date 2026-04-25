@@ -85,9 +85,6 @@ export function useCharacter(user: User | null) {
     fetchCharactersRef.current();
   }, []);
 
-  // Track fields with pending DB writes so realtime doesn't revert optimistic updates
-  const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
-
   const selectedCharacter = characters.find(c => c.id === selectedCharacterId) ?? null;
 
   useEffect(() => {
@@ -95,6 +92,8 @@ export function useCharacter(user: User | null) {
       prevUserIdRef.current = null;
       setCharacters([]);
       setSelectedCharacterId(null);
+      // Drop all pending masks on sign-out so a future login starts clean.
+      pendingWritesRef.current.clear();
       setLoading(false);
       return;
     }
