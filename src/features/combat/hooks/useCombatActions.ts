@@ -499,6 +499,8 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // writes to max_*, so this RPC is the only sanctioned write path.
       try {
         await supabase.rpc('sync_character_resources' as any, { p_character_id: p.character.id });
+        // Pull the freshly-synced max_* into local state immediately.
+        p.onResourcesSynced?.();
       } catch (e) {
         console.error('Failed to sync resources after level-up:', e);
       }
