@@ -484,7 +484,24 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         const tickGap = lastTickRef.current ? tickT0 - lastTickRef.current : 0;
         console.log(`[combat] tick #${seq} start (gap: ${tickGap}ms, engaged: ${engagedCreatureIdsRef.current.length})`);
 
-        const { data, error } = await supabase.functions.invoke('combat-tick', { body });
+        // Retry transient edge runtime errors (503 cold-start / boot failures)
+        let data: any = null;
+        let error: any = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const res = await supabase.functions.invoke('combat-tick', { body });
+          data = res.data;
+          error = res.error;
+          if (!error) break;
+          const msg = String(error?.message ?? '');
+          const ctx: any = (error as any)?.context;
+          const status = ctx?.status ?? ctx?.response?.status;
+          const isTransient =
+            status === 503 || status === 502 || status === 504 ||
+            /temporarily unavailable|non-2xx/i.test(msg);
+          if (!isTransient) break;
+          console.warn(`[combat] tick transient error (attempt ${attempt + 1}/3), retrying...`, { status, msg });
+          await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
+        }
 
         const tickLatency = Date.now() - tickT0;
 
