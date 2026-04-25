@@ -32,7 +32,7 @@ import {
   getHitQuality, HIT_QUALITY_MULT,
 } from '@/shared/formulas/combat';
 import {
-  getXpPenaltySolo, getXpPenaltyParty, getXpPenalty,
+  getXpPenalty,
   getCreatureXp, getXpForLevel,
 } from '@/shared/formulas/xp';
 import { getItemStatBudget } from '@/shared/formulas/items';
@@ -104,24 +104,15 @@ describe('Anti-crit & shield block — fixed snapshots', () => {
 });
 
 describe('XP — fixed snapshots', () => {
-  it('Solo penalty (lenient)', () => {
-    // playerLevel ≤ 5 → 6%/level, floor 10%
-    expect(getXpPenaltySolo(3, 1)).toBeCloseTo(1 - 2 * 0.06, 5);
-    expect(getXpPenaltySolo(5, 5)).toBe(1);
-    // playerLevel 6–10 → 9%
-    expect(getXpPenaltySolo(8, 5)).toBeCloseTo(1 - 3 * 0.09, 5);
-    // playerLevel 11+ → 12%
-    expect(getXpPenaltySolo(15, 12)).toBeCloseTo(1 - 3 * 0.12, 5);
-    expect(getXpPenaltySolo(42, 1)).toBe(0.10); // floor
-  });
-  it('Party penalty (harsher)', () => {
-    expect(getXpPenaltyParty(3, 1)).toBeCloseTo(1 - 2 * 0.10, 5);
-    expect(getXpPenaltyParty(8, 5)).toBeCloseTo(1 - 3 * 0.15, 5);
-    expect(getXpPenaltyParty(13, 11)).toBeCloseTo(1 - 2 * 0.20, 5);
-    expect(getXpPenaltyParty(42, 1)).toBe(0.10);
-  });
-  it('Legacy alias = solo', () => {
-    expect(getXpPenalty(8, 5)).toBe(getXpPenaltySolo(8, 5));
+  it('Penalty curve (server-authoritative; harsher)', () => {
+    // playerLevel ≤ 5 → 10%/level
+    expect(getXpPenalty(3, 1)).toBeCloseTo(1 - 2 * 0.10, 5);
+    expect(getXpPenalty(5, 5)).toBe(1);
+    // playerLevel 6–10 → 15%
+    expect(getXpPenalty(8, 5)).toBeCloseTo(1 - 3 * 0.15, 5);
+    // playerLevel 11+ → 20%
+    expect(getXpPenalty(13, 11)).toBeCloseTo(1 - 2 * 0.20, 5);
+    expect(getXpPenalty(42, 1)).toBe(0.10); // floor
   });
   it('Creature XP base', () => {
     expect(getCreatureXp(10, 'regular')).toBe(100);
@@ -166,8 +157,8 @@ describe('Barrels re-export the canonical implementation', () => {
   it('@/lib/game-data forwards getMaxHp identically', () => {
     expect(gameData.getMaxHp('warrior', 14, 10)).toBe(getMaxHp('warrior', 14, 10));
   });
-  it('@/lib/game-data forwards getXpPenalty as the SOLO curve', () => {
-    expect(gameData.getXpPenalty(20, 10)).toBe(getXpPenaltySolo(20, 10));
+  it('@/lib/game-data forwards getXpPenalty identically', () => {
+    expect(gameData.getXpPenalty(20, 10)).toBe(getXpPenalty(20, 10));
   });
   it('@/features/combat/utils/combat-math forwards calculateAC identically', () => {
     expect(clientCombat.calculateAC('rogue', 16)).toBe(calculateAC('rogue', 16));
