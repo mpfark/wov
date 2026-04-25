@@ -1,77 +1,60 @@
-## Marketplace Sale Escrow — Go Collect Your Gold
+## Diagnosis
 
-Right now `buy_unique_listing` immediately credits the seller's gold the moment a buyer purchases. That works, but it's invisible — the seller may not even notice. This plan changes sales to use an **escrow + manual collection** flow: when an item sells, the gold is held by the marketplace, and the seller must travel to a marketplace node to collect it.
+Your read of the situation is exactly right. Cithrawiel has a base `max_hp` of 233 stored in the database, plus +17 HP from gear (CON bonus / flat HP) bringing the **effective** max to 250.
 
-### Behavior Changes
+Two things conspire to make HP visibly bounce 250 → 233 → regen → 250 → 233:
 
-| Aspect | Before | After |
-|---|---|---|
-| Buyer pays | Gold deducted immediately | Same |
-| Seller credited | Gold added to seller instantly (anywhere) | Gold held in escrow on the listing |
-| Seller notification | Global broadcast only | Global broadcast + persistent "uncollected" state |
-| Collecting payout | Automatic | Seller visits any marketplace node, opens marketplace, clicks "Collect" |
-| Expired/cancelled listings | No payout (already correct) | Unchanged |
+### 1. Stale base `max_hp` shown briefly on login
 
-### Database Changes
+On login the character row is fetched directly. Its `hp` and `max_hp` come back as the last persisted base values (e.g. 233/233). Equipped items load a moment later, and only after `equipmentBonuses` is computed does `getEffectiveMaxHp(...)` return 250. So the bar reads "233/233" for a frame before settling to "x/250".
 
-**New columns on `marketplace_listings`:**
-- `payout_amount integer` — frozen at sale time = `price - tax_amount`
-- `payout_collected_at timestamptz NULL` — set when seller collects
-- (Existing `status` flow stays: `active → sold → (sold + collected)` — collection is a separate flag, not a new status, so analytics & filters keep working.)
+This is cosmetic and self-corrects. Nothing in the DB is wrong.
 
-**Modify `buy_unique_listing` RPC:**
-- Remove the `UPDATE characters SET gold = gold + _payout WHERE id = seller` line.
-- Store `_payout` into the new `payout_amount` column on the listing row.
-- Everything else (buyer gold deduction, item transfer, status='sold', global broadcast payload) stays.
+### 2. Snap-back from 250 → 233 (the real bug)
 
-**New RPC `collect_marketplace_payouts(p_character_id uuid)`:**
-- Auth: `owns_character(p_character_id)`
-- Verify caller is currently at a node where `is_marketplace = true` (same check as buying).
-- Lock all `marketplace_listings` rows with `seller_character_id = p_character_id AND status = 'sold' AND payout_collected_at IS NULL FOR UPDATE`.
-- Sum `payout_amount`, mark each `payout_collected_at = now()`.
-- Use the trusted-RPC bypass (`set_config('app.trusted_rpc','true',true)`) and credit the sum to the seller's gold.
-- Return `{ collected_count, total_gold, items: [{name, payout}, …] }`.
+In `src/features/character/hooks/useCharacter.ts` (`updateCharacter`), every write to the DB clamps `hp` to the **base** `max_hp`, not the effective max:
 
-**Backfill migration**: for existing `status='sold'` rows with no `payout_amount`, set `payout_amount = price - tax_amount` and `payout_collected_at = sold_at` (treat as already paid out — they were credited under the old model).
+```ts
+if (dbUpdates.hp != null) dbUpdates.hp = Math.min(dbUpdates.hp, charForCaps.max_hp); // 233
+```
 
-### Frontend Changes
+Meanwhile `useGameLoop` regens HP up to `effectiveMaxHp` (250) and persists it via `updateCharacter`. The clamp silently writes `hp = 233` to the DB. The realtime echo then arrives and overwrites the optimistic local `hp = 250` with `233`, the regen tick fires again, repeat. Switching tabs paused the worker-timer regen, which is why the loop stopped.
 
-**`useMarketplace` hook**
-- Extend `MarketplaceListing` type with `payout_amount`, `payout_collected_at`.
-- Listings query: keep current "active only" for browse, but add a separate `myUncollected` derivation that fetches `seller_character_id = me AND status='sold' AND payout_collected_at IS NULL` (one extra select, refreshed on the same channel).
-- New `collect()` function calling `collect_marketplace_payouts`.
+The comment in that block ("gear bonuses are display-only on the client") is the root cause — it's no longer true now that effective max HP/CP/MP are the real cap used everywhere else.
 
-**`MarketplacePanel.tsx`**
-- "My Listings" tab gains two sub-sections:
-  1. **Active** — current 12h listings (unchanged).
-  2. **Uncollected sales** — table of sold items awaiting pickup, each row showing item name, sold_at relative time ("2h ago"), and payout. A single prominent **"Collect X gold"** button at the top of the section sums all uncollected payouts. Disabled (with tooltip) when not at a marketplace node.
-- The "My Listings" tab label gets a numeric badge when uncollected sales exist (visual nudge).
-- After successful collect: toast `"+1,234 gold collected from 2 sales"`, append a local log line `💰 You collect 1,234 gold from your sales.`, refresh inventory & character via `onTransacted()`.
+## Fix
 
-**Sale-side broadcast / log (immersion polish)**
-- Seller no longer gets the gold instantly, so the existing sold-event handling needs a clear message. When the seller is online and their listing sells (detected via the realtime `marketplace_listings` UPDATE → `status='sold'`), show a local toast + log line: `📜 Your <ItemName> sold for <price> gold — collect your earnings at any marketplace.` Already-online sellers see this immediately; offline sellers see the uncollected badge next time they open the panel.
-- Global broadcast text stays the same so other players still see the sale.
+### `src/features/character/hooks/useCharacter.ts`
 
-### Security & Edge Cases
+In `updateCharacter`, compute the effective caps using the same helpers the regen loop uses, and clamp DB writes to those instead of the base maxes:
 
-- Collection RPC is `SECURITY DEFINER`, validates ownership and current-node marketplace flag, and uses `FOR UPDATE` to prevent double-collection races.
-- A seller deleted between sale and collection: payout stays in escrow on the listing. No automatic forfeit; listing simply remains uncollected (acceptable — character deletion is rare).
-- Tax behavior is unchanged: tax is "burned" the same way (price − payout never enters anyone's gold).
-- Admin force-close (`admin_cancel_listing`) only fires on `active` listings, so it doesn't interact with payouts.
-- The `mine` filter currently uses the `listings` array (active only). Uncollected sales are **not** active listings, so we fetch them with a separate small query keyed off the same realtime channel.
+- Import `getEffectiveMaxHp`, `getEffectiveMaxCp`, `getEffectiveMaxMp` from `@/lib/game-data`.
+- Compute current `equipmentBonuses` for the character being updated (sum of equipped item `stats`, same shape used in `useGameLoop`/`StatusBarsStrip`). Easiest: lift the small bonus aggregator into a shared util, or accept that `updateCharacter` already has access to `selectedCharacter` and re-derive bonuses from `useInventory` results — but to avoid coupling the hook to inventory, add an optional `effectiveCaps` parameter:
 
-### Files Touched
+  ```ts
+  updateCharacter(updates, { maxHp?, maxCp?, maxMp? })
+  ```
 
-- New migration: add columns to `marketplace_listings`, modify `buy_unique_listing`, add `collect_marketplace_payouts`, backfill existing sold rows.
-- `src/features/marketplace/hooks/useMarketplace.ts` — add type fields, uncollected sales fetch, `collect()`.
-- `src/features/marketplace/components/MarketplacePanel.tsx` — uncollected sales section + Collect button + sold-toast handler.
-- `src/integrations/supabase/types.ts` — auto-regenerated.
+- The single caller that needs this is the regen loop in `useGameLoop` — it already computes `effectiveMaxHp`, `effectiveMaxCp`, `effectiveMaxMp`. Pass them through.
+- Default behavior (no caps passed) keeps clamping to base, preserving safety for any other caller.
 
-### Acceptance Criteria
+### `src/features/combat/hooks/useGameLoop.ts`
 
-- Buying a listing transfers the item and deducts buyer gold immediately, but does **not** credit the seller's gold.
-- The sold listing shows up under "My Listings → Uncollected sales" for the seller, with the correct payout amount.
-- Online seller sees a toast + log line `📜 Your <Item> sold for <price> gold — collect your earnings at any marketplace.` within a second or two of the sale.
-- Clicking **Collect** at any marketplace node credits the seller the full sum of uncollected payouts, marks them collected, and removes them from the section.
-- Trying to collect away from a marketplace node returns a clear error and does nothing.
-- Existing sold listings (pre-migration) are treated as already collected and never appear in the uncollected section.
+When the regen interval calls `updateCharRegenRef.current(updates)`, also pass the three effective maxes it just computed. No other logic changes.
+
+### Optional polish: avoid the brief "233/233" flash on login
+
+Once the fix above lands, the bar still shows base max for ~1 frame until inventory loads. Acceptable as-is, but if you want it cleaner, gate the StatusBars render on `inventoryLoaded` or default the displayed max to `Math.max(character.max_hp, character.hp)` so it never displays a max lower than current HP.
+
+## Technical Details
+
+- Files touched: `src/features/character/hooks/useCharacter.ts`, `src/features/combat/hooks/useGameLoop.ts`.
+- No DB migration. No schema change. The server-side trigger already locks `max_hp` so it cannot be tampered with — we're only changing the client clamp on `hp` writes.
+- `heal_party_member` RPC already accepts an `_effective_max_hp` arg, so this aligns the solo path with the party path.
+
+## Acceptance
+
+- Logging in with Cithrawiel shows 250/250 (or whatever current HP / 250) and stays there.
+- HP no longer drops from 250 to 233 every few seconds.
+- CP and MP behave the same way (no snap-back to base max when gear pushes effective max above base).
+- After a server restart / refetch, the persisted `hp` value can equal the effective max (e.g. 250) without the trigger reverting it.
