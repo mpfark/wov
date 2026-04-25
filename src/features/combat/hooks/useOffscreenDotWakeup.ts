@@ -15,6 +15,7 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/features/combat/utils/invokeWithRetry';
 import type { GameEventBus } from '@/hooks/useGameEvents';
 
 // ── Types ────────────────────────────────────────────────────────
