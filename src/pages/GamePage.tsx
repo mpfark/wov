@@ -592,6 +592,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     fetchInventory, fetchGroundLoot,
     buffState, buffSetters,
     notifyCreatureKilled: gameLoop.notifyCreatureKilled,
+    onResourcesSynced: refetchCharacters,
   });
 
   const movementActions = useMovementActions({
