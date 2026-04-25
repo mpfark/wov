@@ -272,13 +272,13 @@ Deno.serve(async (req) => {
 
         const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
 
-        // Build party grouping: source_id → list of party member chars
-        const partyGroupMap = new Map<string, { id: string; level: number; cha: number }[]>();
+        // Build party grouping: source_id → { partyId, members[] }
+        const partyGroupMap = new Map<string, { partyId: string; members: { id: string; name: string; level: number; cha: number }[] }>();
         if (partyMembers && partyMembers.length > 0) {
           const partyIds = [...new Set(partyMembers.map(pm => pm.party_id))];
           const { data: allPartyMembers } = await db
             .from('party_members')
-            .select('character_id, party_id, character:characters(id, level, cha)')
+            .select('character_id, party_id, character:characters(id, name, level, cha)')
             .in('party_id', partyIds)
             .eq('status', 'accepted');
 
@@ -288,9 +288,9 @@ Deno.serve(async (req) => {
               .filter(apm => apm.party_id === partyId)
               .map(apm => {
                 const c = apm.character as any;
-                return { id: apm.character_id, level: c?.level ?? 1, cha: c?.cha ?? 10 };
+                return { id: apm.character_id, name: c?.name ?? '', level: c?.level ?? 1, cha: c?.cha ?? 10 };
               });
-            partyGroupMap.set(pm.character_id, groupMembers);
+            partyGroupMap.set(pm.character_id, { partyId, members: groupMembers });
           }
         }
 
