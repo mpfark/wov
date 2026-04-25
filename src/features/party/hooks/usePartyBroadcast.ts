@@ -22,6 +22,9 @@ interface PartyCombatMsgEvent {
   message: string;
   node_id: string | null;
   character_name: string | null;
+  /** When set, the listener skips this message on the source player's client
+   *  (they already get a richer first-person line from the originating HTTP path). */
+  source_character_id?: string | null;
 }
 
 interface PartyRewardEvent {
@@ -82,6 +85,9 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
       .on('broadcast', { event: 'party_combat_msg' }, (payload) => {
         const data = payload.payload as PartyCombatMsgEvent;
         if (!data?.id) return;
+        // Source player already has a first-person log line from the HTTP path
+        // that produced this broadcast — skip the third-person echo for them.
+        if (data.source_character_id && data.source_character_id === characterId) return;
         logBroadcast('in', `party`, 'party_combat_msg');
         setBroadcastLogEntries(prev => [...prev.slice(-49), data]);
       })

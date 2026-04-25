@@ -422,6 +422,7 @@ Deno.serve(async (req) => {
                   message: summary,
                   node_id: null,
                   character_name: primaryChar.name || null,
+                  source_character_id: primarySourceId,
                 },
               });
 
