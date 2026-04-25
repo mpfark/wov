@@ -1,4 +1,49 @@
-// D&D-style stat modifiers by race
+/**
+ * game-data.ts — Static UI data (race/class labels, descriptions, weapon
+ * vocabulary, milestone titles) plus a thin barrel re-export of every
+ * gameplay formula.
+ *
+ * Formula ownership lives under `src/shared/formulas/`. This module keeps
+ * the historic `@/lib/game-data` import path alive for the ~30 call sites
+ * across the app, but new code should generally import formulas directly
+ * from their canonical module:
+ *
+ *   import { getMaxHp } from '@/shared/formulas/resources';
+ *
+ * What stays in this file:
+ *   - RACE_STATS / CLASS_STATS         (character creation stat math)
+ *   - RACE_LABELS / CLASS_LABELS       (UI display)  ← CLASS_LABELS also re-exported via formulas/classes
+ *   - RACE_DESCRIPTIONS / CLASS_DESCRIPTIONS / STAT_LABELS
+ *   - WEAPON_TAGS / WEAPON_TAG_LABELS  (admin UI)
+ *   - MILESTONE_TITLES + getCharacterTitle
+ *   - calculateStats, calculateHP, calculateAC (legacy convenience wrappers)
+ */
+
+// ── Barrel re-export of canonical formulas ──────────────────────
+export * from '@/shared/formulas/stats';
+export * from '@/shared/formulas/classes';
+export * from '@/shared/formulas/resources';
+export * from '@/shared/formulas/combat';
+export * from '@/shared/formulas/xp';
+export * from '@/shared/formulas/items';
+export * from '@/shared/formulas/creatures';
+export * from '@/shared/formulas/economy';
+
+// ── Deprecated compatibility shim (still used by CharacterPanel.tsx) ─
+import { getWisAntiCrit } from '@/shared/formulas/combat';
+
+/** @deprecated Renamed to `getWisAntiCrit`. WIS no longer grants outright dodge.
+ *  Migrate `CharacterPanel.tsx` and remove. */
+export function getWisDodgeChance(wis: number): number {
+  return getWisAntiCrit(wis);
+}
+
+// ── Static data: races / classes ────────────────────────────────
+
+import { CLASS_BASE_HP, CLASS_BASE_AC } from '@/shared/formulas/classes';
+import { getStatModifier } from '@/shared/formulas/stats';
+
+/** D&D-style stat modifiers by race */
 export const RACE_STATS: Record<string, Record<string, number>> = {
   human:    { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
   elf:      { str: -1, dex: 2, con: -1, int: 2, wis: 3, cha: 0 },
@@ -8,7 +53,7 @@ export const RACE_STATS: Record<string, Record<string, number>> = {
   half_elf: { str: 0, dex: 1, con: 0, int: 1, wis: 2, cha: 3 },
 };
 
-// Base stats by class
+/** Base stats by class */
 export const CLASS_STATS: Record<string, Record<string, number>> = {
   warrior: { str: 3, dex: 1, con: 2, int: 0, wis: 0, cha: 0 },
   wizard:  { str: 0, dex: 0, con: 0, int: 3, wis: 2, cha: 1 },
@@ -18,50 +63,9 @@ export const CLASS_STATS: Record<string, Record<string, number>> = {
   bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
 };
 
-// HP by class
-export const CLASS_BASE_HP: Record<string, number> = {
-  warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
-};
-
-// AC by class
-export const CLASS_BASE_AC: Record<string, number> = {
-  warrior: 12, wizard: 9, ranger: 10, rogue: 10, healer: 9, bard: 9,
-};
-
-// Class-based stat bonuses awarded every 3 levels
-export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
-  warrior: { str: 1, dex: 1 },
-  wizard:  { int: 1, wis: 1 },
-  ranger:  { dex: 1, wis: 1 },
-  rogue:   { dex: 1, cha: 1 },
-  healer:  { wis: 1, con: 1 },
-  bard:    { cha: 1, int: 1 },
-};
-
 export const RACE_LABELS: Record<string, string> = {
   human: 'Human', elf: 'Elf', dwarf: 'Dwarf', halfling: 'Halfling',
   edain: 'Edain', half_elf: 'Half-Elf',
-};
-
-export const CLASS_LABELS: Record<string, string> = {
-  warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger',
-  rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
-};
-
-export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
-  warrior: ['sword', 'axe', 'mace'],
-  ranger:  ['bow', 'dagger'],
-  rogue:   ['dagger', 'sword'],
-  wizard:  ['staff', 'wand'],
-  healer:  ['mace', 'staff'],
-  bard:    ['sword', 'wand'],
-};
-
-export const WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand', 'shield'] as const;
-
-export const WEAPON_TAG_LABELS: Record<string, string> = {
-  sword: 'Sword', axe: 'Axe', mace: 'Mace', dagger: 'Dagger',
-  bow: 'Bow', staff: 'Staff', wand: 'Wand', shield: 'Shield',
 };
 
 export const RACE_DESCRIPTIONS: Record<string, string> = {
@@ -86,6 +90,15 @@ export const STAT_LABELS: Record<string, string> = {
   str: 'STR', dex: 'DEX', con: 'CON', int: 'INT', wis: 'WIS', cha: 'CHA',
 };
 
+export const WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand', 'shield'] as const;
+
+export const WEAPON_TAG_LABELS: Record<string, string> = {
+  sword: 'Sword', axe: 'Axe', mace: 'Mace', dagger: 'Dagger',
+  bow: 'Bow', staff: 'Staff', wand: 'Wand', shield: 'Shield',
+};
+
+// ── Character creation helpers ──────────────────────────────────
+
 export function calculateStats(race: string, charClass: string) {
   const baseStats = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
   const raceBonus = RACE_STATS[race] || {};
@@ -97,309 +110,14 @@ export function calculateStats(race: string, charClass: string) {
   return stats;
 }
 
+/** @deprecated Use getMaxHp(charClass, con, level) for the full level-aware value. */
 export function calculateHP(charClass: string, con: number) {
   const baseHP = CLASS_BASE_HP[charClass] || 18;
-  const conMod = Math.floor((con - 10) / 2);
-  return baseHP + conMod;
+  return baseHP + getStatModifier(con);
 }
 
-/** Full max HP formula: base class HP + CON modifier + (level-1)*5
- *
- *  ⚠️ FORMULA SYNC — if you change this, also update:
- *    - `getMaxHp` in `src/features/combat/utils/combat-math.ts`
- *    - `getMaxHp` in `supabase/functions/_shared/combat-math.ts` (Deno mirror)
- *    - `sync_character_resources()` in the database (SQL `_base_hp`/`_new_max_hp`)
- *
- *  Note: this returns the BASE max — gear bonuses are layered on by
- *  `getEffectiveMaxHp`. Persisted `characters.max_hp` includes gear bonuses
- *  (kept in sync by the `sync_character_resources` RPC), so do not call this
- *  directly to populate `max_hp` in a DB write — use the RPC instead.
- */
-export function getMaxHp(charClass: string, con: number, level: number): number {
-  const baseHP = CLASS_BASE_HP[charClass] || 18;
-  const conMod = Math.floor((con - 10) / 2);
-  return baseHP + conMod + (level - 1) * 5;
-}
+// ── Nobility titles by level (every 2 levels from 28–42) ────────
 
-export function calculateAC(charClass: string, dex: number) {
-  const baseAC = CLASS_BASE_AC[charClass] || 10;
-  const dexMod = Math.floor((dex - 10) / 2);
-  return baseAC + dexMod;
-}
-
-// Item stat budget system
-export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {
-  common: 1.0, uncommon: 1.5, soulforged: 2.0, unique: 3.0,
-};
-
-export const ITEM_STAT_COSTS: Record<string, number> = {
-  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2, potion_slots: 1,
-};
-
-export const ITEM_STAT_CAPS: Record<string, number> = {
-  str: 5, dex: 5, con: 5, int: 5, wis: 5, cha: 5, ac: 3, hp: 10, hp_regen: 3,
-};
-
-/** Unified regen base: same formula for HP (CON) and CP (INT). */
-export function getStatRegen(stat: number): number {
-  return 2 + Math.floor(Math.sqrt(Math.max(0, stat - 10)));
-}
-
-/** @deprecated Use getStatRegen instead */
-export const getBaseRegen = getStatRegen;
-/** @deprecated Use getStatRegen instead */
-export function getCpRegenRate(primaryStatValue: number): number {
-  return getStatRegen(primaryStatValue);
-}
-/** @deprecated No longer used — CP regen now scales with INT */
-export const CLASS_PRIMARY_STAT: Record<string, string> = {
-  warrior: 'con', wizard: 'int', ranger: 'dex',
-  rogue: 'dex', healer: 'wis', bard: 'cha',
-};
-
-// CP (Concentration Points) system — scales with INT + WIS
-/** ⚠️ Sync with `sync_character_resources()` SQL and `combat-tick` edge function. */
-export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
-  const intMod = Math.max(Math.floor((int - 10) / 2), 0);
-  const wisMod = Math.max(Math.floor((wis - 10) / 2), 0);
-  return 30 + (level - 1) * 3 + (intMod + wisMod) * 3;
-}
-
-// ── Effective max helpers (gear-adjusted caps) ──────────────
-//
-// These are the values shown in the UI and used as caps for regen/healing.
-// They MATCH the formulas inside `sync_character_resources()` so that the
-// persisted `characters.max_*` columns and the on-screen numbers stay equal.
-export function getEffectiveMaxHp(charClass: string, baseCon: number, level: number, equipmentBonuses: Record<string, number>): number {
-  return getMaxHp(charClass, baseCon + (equipmentBonuses.con || 0), level) + (equipmentBonuses.hp || 0);
-}
-
-export function getEffectiveMaxCp(level: number, int: number, wis: number, cha: number, equipmentBonuses: Record<string, number>): number {
-  return getMaxCp(level, int + (equipmentBonuses.int || 0), wis + (equipmentBonuses.wis || 0), cha + (equipmentBonuses.cha || 0));
-}
-
-export function getEffectiveMaxMp(level: number, dex: number, equipmentBonuses: Record<string, number>): number {
-  return getMaxMp(level, dex + (equipmentBonuses.dex || 0));
-}
-
-/** Effective AC with gear bonuses and optional shield. */
-export function getEffectiveAC(charClass: string, baseDex: number, equipmentBonuses: Record<string, number>, hasShield: boolean): number {
-  const effectiveDex = baseDex + (equipmentBonuses.dex || 0);
-  // Import SHIELD_AC_BONUS would create circular dep; inline the constant (value = 1)
-  return calculateAC(charClass, effectiveDex) + (equipmentBonuses.ac || 0) + (hasShield ? 1 : 0);
-}
-
-// MP (Stamina) system — DEX-based
-/** ⚠️ Sync with `sync_character_resources()` SQL and `combat-tick` edge function. */
-export function getMaxMp(level: number, dex: number = 10): number {
-  const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
-  return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
-}
-
-export function getMpRegenRate(dex: number = 10): number {
-  const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
-  return Math.round((5 + dexMod) * 0.67);
-}
-
-// Encumbrance system
-export function getCarryCapacity(str: number): number {
-  const strMod = getStatModifier(str);
-  return Math.max(12 + strMod, 10);
-}
-
-// Calculate weighted bag size: equipment = 1 slot, consumables = 1/3 slot
-export function getBagWeight(bagItems: { item: { item_type: string } }[]): number {
-  let weight = 0;
-  for (const i of bagItems) {
-    weight += i.item.item_type === 'consumable' ? 1 / 3 : 1;
-  }
-  return Math.ceil(weight);
-}
-
-export function getMoveCost(bagWeight: number, str: number): number {
-  const capacity = getCarryCapacity(str);
-  const itemsOver = Math.max(0, bagWeight - capacity);
-  return 10 + itemsOver * 5;
-}
-
-export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {
-  const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
-  const handsMult = hands === 2 ? 1.5 : 1;
-  const base = Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
-  // Consumables get 3x budget since they're single-use
-  return itemType === 'consumable' ? base * 3 : base;
-}
-
-export function calculateItemStatCost(stats: Record<string, number>): number {
-  return Object.entries(stats).reduce(
-    (sum, [key, val]) => sum + val * (ITEM_STAT_COSTS[key] || 1), 0
-  );
-}
-
-export function getItemStatCap(statKey: string, level: number = 1, itemType: string = 'equipment'): number {
-  // Consumables have no stat caps (single-use)
-  if (itemType === 'consumable') return 9999;
-  if (statKey === 'potion_slots') return 4;
-  if (statKey === 'ac' || statKey === 'hp_regen') {
-    return 2 + Math.floor(level / 10);
-  }
-  if (statKey === 'hp') {
-    return 6 + Math.floor(level / 5) * 2;
-  }
-  // Primary stats: str, dex, con, int, wis, cha
-  return 4 + Math.floor(level / 4);
-}
-
-// Stats allowed per item type
-export const CONSUMABLE_ALLOWED_STATS = ['hp', 'hp_regen'];
-
-export function suggestItemGoldValue(level: number, rarity: string): number {
-  const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
-  return Math.round(level * 2.5 * mult * mult);
-}
-
-// Repair cost calculation
-const REPAIR_RARITY_MULT: Record<string, number> = {
-  common: 1, uncommon: 1.5, unique: 0,
-};
-
-export function calculateRepairCost(_maxDurability: number, currentDurability: number, value: number, rarity: string): number {
-  const mult = REPAIR_RARITY_MULT[rarity] ?? 1;
-  if (mult === 0) return 0; // unique = unrepairable
-  // All items have a fixed max durability of 100
-  return Math.max(1, Math.ceil((100 - currentDurability) * value * mult / 100));
-}
-
-// XP curve and rarity multipliers
-export const XP_RARITY_MULTIPLIER: Record<string, number> = {
-  regular: 1, rare: 1.5, boss: 2.5,
-};
-
-export function getXpForLevel(level: number): number {
-  return Math.floor(Math.pow(level, 2.0) * 50);
-}
-
-export function getCreatureXp(level: number, rarity: string): number {
-  return Math.floor(level * 10 * (XP_RARITY_MULTIPLIER[rarity] || 1));
-}
-
-// Graduated XP penalty: lenient at low levels, moderate at high levels
-export function getXpPenalty(playerLevel: number, creatureLevel: number): number {
-  const levelDiff = Math.max(playerLevel - creatureLevel, 0);
-  let penaltyRate = 0.12;
-  if (playerLevel <= 5) penaltyRate = 0.06;
-  else if (playerLevel <= 10) penaltyRate = 0.09;
-  return Math.max(1 - levelDiff * penaltyRate, 0.10);
-}
-
-// Dice rolling
-export function rollD20(): number {
-  return Math.floor(Math.random() * 20) + 1;
-}
-
-export function rollDamage(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-export function getStatModifier(stat: number): number {
-  return Math.floor((stat - 10) / 2);
-}
-
-// ── Cross-Stat Bonuses ─────────────────────────────────────────
-
-// ── Diminishing returns helper: sqrt-based soft cap ──────────────
-function diminishing(mod: number, cap: number): number {
-  return Math.min(cap, Math.floor(Math.sqrt(Math.max(0, mod))));
-}
-
-function diminishingFloat(mod: number, perPoint: number, cap: number): number {
-  return Math.min(cap, Math.sqrt(Math.max(0, mod)) * perPoint);
-}
-
-// INT → Hit Bonus: sqrt curve, capped at +5
-export function getIntHitBonus(int: number): number {
-  return diminishing(getStatModifier(int), 5);
-}
-
-// DEX → Critical Hit Chance: sqrt curve, capped at +4 (crit on 16-20 max)
-export function getDexCritBonus(dex: number): number {
-  return diminishing(getStatModifier(dex), 4);
-}
-
-// WIS → Anti-Crit: chance to downgrade incoming crit to normal hit, capped at 15%
-export function getWisAntiCrit(wis: number): number {
-  return diminishingFloat(getStatModifier(wis), 0.03, 0.15);
-}
-
-/** @deprecated Use getWisAntiCrit instead */
-export function getWisDodgeChance(wis: number): number {
-  return getWisAntiCrit(wis);
-}
-
-// Shield block system
-export function getShieldBlockChance(dex: number): number {
-  const mod = Math.max(getStatModifier(dex), 0);
-  return 0.05 + Math.sqrt(mod) * 0.045;
-}
-
-export function getShieldBlockAmount(str: number): number {
-  const mod = Math.max(getStatModifier(str), 0);
-  return Math.round(11 + 2.5 * Math.sqrt(mod));
-}
-
-// CHA → Vendor Price Modifiers
-export function getChaSellMultiplier(cha: number): number {
-  const mod = Math.max(0, getStatModifier(cha));
-  return Math.min(0.8, 0.5 + Math.sqrt(mod) * 0.03);
-}
-
-export function getChaBuyDiscount(cha: number): number {
-  return diminishingFloat(getStatModifier(cha), 0.02, 0.10);
-}
-
-// CHA → Bonus gold from humanoid kills: sqrt curve, capped at +25%
-export function getChaGoldMultiplier(cha: number): number {
-  return 1 + diminishingFloat(getStatModifier(cha), 0.05, 0.25);
-}
-
-// STR → Minimum damage floor on all attacks: sqrt curve, capped at +3
-export function getStrDamageFloor(str: number): number {
-  return diminishing(getStatModifier(str), 3);
-}
-
-// Humanoid gold scaling
-const HUMANOID_GOLD_RARITY_MULT: Record<string, number> = {
-  regular: 1, rare: 1.5, boss: 3,
-};
-
-export function calculateHumanoidGold(level: number, rarity: string): { type: string; min: number; max: number; chance: number } {
-  const mult = HUMANOID_GOLD_RARITY_MULT[rarity] || 1;
-  return {
-    type: 'gold',
-    min: Math.round(level * 1 * mult),
-    max: Math.round(level * 3 * mult),
-    chance: 1.0,
-  };
-}
-
-// Generate creature stats based on level and rarity
-const RARITY_MULTIPLIER: Record<string, { stat: number; hp: number; ac: number }> = {
-  regular: { stat: 1, hp: 1, ac: 2 },
-  rare:    { stat: 1.3, hp: 1.5, ac: 2 },
-  boss:    { stat: 2.5, hp: 6.0, ac: 6 },
-};
-
-// Creature damage dice base by rarity
-const CREATURE_DAMAGE_BASE: Record<string, number> = {
-  regular: 4, rare: 6, boss: 10,
-};
-
-export function getCreatureDamageDie(level: number, rarity: string): number {
-  const base = CREATURE_DAMAGE_BASE[rarity] || 4;
-  return base + Math.floor(level * 0.7);
-}
-
-// Nobility titles by level (every 2 levels from 28–42)
 const MILESTONE_TITLES: { level: number; male: string; female: string }[] = [
   { level: 42, male: 'Emperor', female: 'Empress' },
   { level: 40, male: 'King', female: 'Queen' },
@@ -416,49 +134,4 @@ export function getCharacterTitle(level: number, gender: 'male' | 'female' = 'ma
     if (level >= m.level) return gender === 'female' ? m.female : m.male;
   }
   return null;
-}
-
-export function generateCreatureStats(level: number, rarity: string) {
-  const mult = RARITY_MULTIPLIER[rarity] || RARITY_MULTIPLIER.regular;
-  const baseStat = 8 + Math.floor(level * 0.7);
-  const stats = {
-    str: Math.round(baseStat * mult.stat),
-    dex: Math.round((baseStat - 1) * mult.stat),
-    con: Math.round((baseStat + 1) * mult.stat),
-    int: Math.round((baseStat - 2) * mult.stat),
-    wis: Math.round((baseStat - 1) * mult.stat),
-    cha: Math.round((baseStat - 3) * mult.stat),
-  };
-  const hp = Math.round((15 + level * 8) * mult.hp);
-  const ac = Math.round(10 + level * 0.575 + mult.ac);
-  return { stats, hp, ac };
-}
-
-// ── Milestone Regen Track (Level 20+) ───────────────────────────
-
-export function getMilestoneHpRegen(level: number): number {
-  if (level >= 40) return 10;
-  if (level >= 35) return 8;
-  if (level >= 30) return 6;
-  if (level >= 25) return 4;
-  if (level >= 20) return 2;
-  return 0;
-}
-
-export function getMilestoneCpRegen(level: number): number {
-  if (level >= 40) return 5;
-  if (level >= 35) return 4;
-  if (level >= 30) return 3;
-  if (level >= 25) return 2;
-  if (level >= 20) return 1;
-  return 0;
-}
-
-// ── Teleport CP cost (shared between teleport & summon) ─────────
-
-export function calculateTeleportCpCost(fromRegionMinLevel: number | undefined, toRegionMinLevel: number, sameRegion: boolean): number {
-  if (fromRegionMinLevel === undefined) return 15;
-  if (sameRegion) return 10;
-  const levelDiff = Math.abs(toRegionMinLevel - fromRegionMinLevel);
-  return Math.min(10 + levelDiff * 2, 30);
 }
