@@ -64,9 +64,9 @@ describe('Gear-effective caps add bonuses correctly', () => {
     const eff = getEffectiveMaxHp('warrior', 10, 5, { con: 4 });
     expect(eff).toBe(base + 2);
   });
-  it('+4 int / +4 wis raises CP by 6', () => {
+  it('+4 int / +4 wis raises CP by (2+2)*3 = 12', () => {
     const base = getMaxCp(5, 10, 10, 10);
-    expect(getEffectiveMaxCp(5, 10, 10, 10, { int: 4, wis: 4 })).toBe(base + 6);
+    expect(getEffectiveMaxCp(5, 10, 10, 10, { int: 4, wis: 4 })).toBe(base + 12);
   });
   it('+4 dex raises MP by 20', () => {
     const base = getMaxMp(5, 10);
