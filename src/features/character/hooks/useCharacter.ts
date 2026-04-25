@@ -54,6 +54,9 @@ export function useCharacter(user: User | null) {
   const [loading, setLoading] = useState(true);
   const prevUserIdRef = useRef<string | null>(null);
 
+  // Track fields with pending DB writes so realtime doesn't revert optimistic updates
+  const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
+
   const fetchCharactersRef = useRef(async () => {});
   fetchCharactersRef.current = async () => {
     if (!user) return;
@@ -63,6 +66,16 @@ export function useCharacter(user: User | null) {
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
     if (!error && data) {
+      // A fresh fetch is the new source of truth — drop any stale pending masks
+      // for the rows we just received so the next realtime echo is honored.
+      // (Otherwise, e.g. after re-login, an old 3 s mask from a pre-relog regen
+      // write could hide the post-login authoritative HP/CP/MP for several seconds.)
+      const fetchedIds = new Set((data as Character[]).map(c => c.id));
+      for (const id of fetchedIds) pendingWritesRef.current.delete(id);
+      // Drop entries for characters that no longer belong to this user.
+      for (const id of Array.from(pendingWritesRef.current.keys())) {
+        if (!fetchedIds.has(id)) pendingWritesRef.current.delete(id);
+      }
       setCharacters(data as Character[]);
     }
     setLoading(false);
@@ -72,9 +85,6 @@ export function useCharacter(user: User | null) {
     fetchCharactersRef.current();
   }, []);
 
-  // Track fields with pending DB writes so realtime doesn't revert optimistic updates
-  const pendingWritesRef = useRef<Map<string, Set<string>>>(new Map());
-
   const selectedCharacter = characters.find(c => c.id === selectedCharacterId) ?? null;
 
   useEffect(() => {
@@ -82,6 +92,8 @@ export function useCharacter(user: User | null) {
       prevUserIdRef.current = null;
       setCharacters([]);
       setSelectedCharacterId(null);
+      // Drop all pending masks on sign-out so a future login starts clean.
+      pendingWritesRef.current.clear();
       setLoading(false);
       return;
     }

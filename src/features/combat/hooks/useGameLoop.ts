@@ -71,6 +71,11 @@ export interface UseGameLoopParams {
   partyMembers: any[];
   /** Optional event bus — when provided, fires 'player:death' on death */
   bus?: GameEventBus;
+  /** When false, the regen interval is suppressed. Used to wait until the
+   *  server-side `sync_character_resources` RPC has resolved on entry so we
+   *  don't write against pre-sync `max_*` (which the row-level trigger would
+   *  silently clamp). Defaults to true for backward compatibility. */
+  enabled?: boolean;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
@@ -78,7 +83,13 @@ export function useGameLoop(params: UseGameLoopParams) {
   const {
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures, party, partyMembers, bus,
+    enabled = true,
   } = params;
+
+  // Keep a ref so the long-lived interval below can read the latest value
+  // without being re-created.
+  const enabledRef = useRef(enabled);
+  useEffect(() => { enabledRef.current = enabled; }, [enabled]);
 
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
@@ -118,24 +129,33 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   useEffect(() => {
     const interval = setInterval(() => {
+      // Wait until the on-entry `sync_character_resources` RPC has resolved.
+      // Writing before that means we may write against stale `max_*` and have
+      // the row trigger silently clamp `hp`/`cp`/`mp` down.
+      if (!enabledRef.current) return;
+
       const updates: Partial<Character> = {};
 
       // ── HP Regen ──
+      // During combat, the `combat-tick` edge function is the SOLE writer for
+      // the character's HP. Doing client-side regen writes here races with the
+      // server: a stale-ref or interleaved write can re-inflate the row's HP
+      // and the next tick will deal damage off the inflated value, producing
+      // the visible "bars jumping up and down" symptom.
       const { hp, current_node_id, con, mp, dex, level: charLevel, class: charClass } = regenCharRef.current;
       const node = current_node_id ? getNodeRef.current(current_node_id) : null;
       const innFlat = node?.is_inn ? 10 : 0;
-      const combatMult = inCombatRegenRef.current ? 0.1 : 1;
       const eqB = equipmentBonusesRef.current;
 
       const effectiveMaxHp = getEffectiveMaxHp(charClass, con, charLevel, eqB);
 
-      if (hp < effectiveMaxHp && hp > 0) {
+      if (!inCombatRegenRef.current && hp < effectiveMaxHp && hp > 0) {
         const conRegen = getStatRegen(con + (eqB.con || 0));
         const eqItemRegen = eqB.hp_regen || 0;
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
         const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
-        const regenAmount = Math.max(Math.floor((conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat) * combatMult), 1);
+        const regenAmount = Math.max(Math.floor(conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
           updates.hp = newHp;
@@ -162,9 +182,9 @@ export function useGameLoop(params: UseGameLoopParams) {
         }
       }
 
-      // ── MP Regen ──
+      // ── MP Regen (skipped during combat — same race-avoidance reason) ──
       const effectiveMaxMp = getEffectiveMaxMp(regenCharRef.current.level, dex, eqB);
-      if (mp < effectiveMaxMp) {
+      if (!inCombatRegenRef.current && mp < effectiveMaxMp) {
         const dexWithGear = dex + (eqB.dex || 0);
         // ×2 to compensate for 4s tick (was 2s)
         const regenAmount = getMpRegenRate(dexWithGear) * 2 + innFlat;

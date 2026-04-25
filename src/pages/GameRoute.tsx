@@ -54,6 +54,7 @@ export default function GameRoute() {
       startingNodeId={startingNode?.id ?? nodes[0]?.id}
       onSwitchCharacter={() => { clearSelectedCharacter(); navigate('/'); }}
       refetchCharacters={refetchCharacters}
+      resourcesSynced={syncedForCharRef.current === character.id && !syncing}
     />
   );
 }
