@@ -116,6 +116,21 @@ function json(data: unknown) {
   });
 }
 
+// Decode user id from JWT locally — avoids per-tick GoTrue round-trip that was
+// returning intermittent (then persistent) Unauthorized errors and stalling combat.
+function getUserIdFromJwt(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 const TICK_RATE = 2000;
 const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so large backlogs should not occur
 
@@ -132,13 +147,11 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const db = createClient(url, srvKey);
 
-    // Auth — verify JWT and extract user
+    // Auth — extract user id from JWT (no network round-trip; getUser() was
+    // returning intermittent 401s under tick load and stalling combat entirely).
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('Unauthorized');
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const userDb = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user }, error: authErr } = await userDb.auth.getUser();
-    if (authErr || !user) throw new Error('Unauthorized');
+    const userId = getUserIdFromJwt(authHeader);
+    if (!userId) throw new Error('Unauthorized');
 
     const {
       party_id, character_id, node_id, member_buffs,
@@ -166,7 +179,7 @@ Deno.serve(async (req) => {
     if (party_id) {
       const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
       if (!party) throw new Error('Party not found');
-      const { data: userChars } = await db.from('characters').select('id').eq('user_id', user.id);
+      const { data: userChars } = await db.from('characters').select('id').eq('user_id', userId);
       if (!userChars?.some(c => c.id === party.leader_id)) throw new Error('Not the party leader');
 
       const { data: membersRaw } = await db
@@ -187,7 +200,7 @@ Deno.serve(async (req) => {
       sessionKey = { party_id };
     } else {
       const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
-      if (!char || char.user_id !== user.id) throw new Error('Not authorized');
+      if (!char || char.user_id !== userId) throw new Error('Not authorized');
       if (char.hp <= 0) {
         return json({ events: [], creature_states: [], member_states: [], ticks_processed: 0 });
       }
