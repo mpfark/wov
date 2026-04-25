@@ -66,11 +66,19 @@ function resolveCreatureTarget(
   return activeCombatCreatureId;
 }
 
-/** Build updates object for a level-up (stat recalc, class bonuses, milestones, soulwright whisper) */
+/** Build updates object for a level-up (stat recalc, class bonuses, milestones, soulwright whisper).
+ *
+ *  IMPORTANT: max_hp / max_cp / max_mp are NOT written here. They are protected
+ *  by the `restrict_party_leader_updates` DB trigger and only the
+ *  `sync_character_resources` RPC (called by the caller after this returns) is
+ *  allowed to update them. We DO compute the gear-effective new maxima locally
+ *  so the optimistic UI shows correct hp/cp/mp values during the brief window
+ *  before the sync round-trip completes.
+ */
 function buildLevelUpUpdates(
   character: Character,
   newLevel: number,
-  _equipmentBonuses: Record<string, number>,
+  equipmentBonuses: Record<string, number>,
   addLog: (msg: string) => void,
 ): Partial<Character> {
   const levelUpUpdates: Partial<Character> = {
@@ -121,26 +129,25 @@ function buildLevelUpUpdates(
     addLog(`🌟 You feel a strange presence calling to you from the Ash-Veil Perimeter...`);
   }
 
-  // Recalculate derived stats
+  // Compute gear-effective new maxima for optimistic local hp/cp/mp values.
+  // The DB columns max_hp/max_cp/max_mp will be brought in line by the
+  // `sync_character_resources` RPC the caller invokes after this update.
   const finalCon = (levelUpUpdates as any).con ?? character.con;
-  const newMaxHp = getMaxHp(character.class, finalCon, newLevel);
-  levelUpUpdates.max_hp = newMaxHp;
-  levelUpUpdates.hp = newMaxHp;
-
   const finalInt = (levelUpUpdates as any).int ?? character.int;
   const finalWis = (levelUpUpdates as any).wis ?? character.wis;
   const finalCha = (levelUpUpdates as any).cha ?? character.cha;
   const finalDex = (levelUpUpdates as any).dex ?? character.dex;
 
-  const newMaxCp = getMaxCp(newLevel, finalInt, finalWis, finalCha);
-  const oldMaxCp = character.max_cp ?? 30;
-  levelUpUpdates.max_cp = newMaxCp;
-  levelUpUpdates.cp = Math.min((character.cp ?? 0) + (newMaxCp - oldMaxCp), newMaxCp);
+  const effMaxHp = getEffectiveMaxHp(character.class, finalCon, newLevel, equipmentBonuses);
+  const effMaxCp = getEffectiveMaxCp(newLevel, finalInt, finalWis, finalCha, equipmentBonuses);
+  const effMaxMp = getEffectiveMaxMp(newLevel, finalDex, equipmentBonuses);
 
-  const newMaxMp = getMaxMp(newLevel, finalDex);
-  const oldMaxMp = character.max_mp ?? 100;
-  levelUpUpdates.max_mp = newMaxMp;
-  levelUpUpdates.mp = Math.min((character.mp ?? 100) + (newMaxMp - oldMaxMp), newMaxMp);
+  // Heal to full on level-up; CP/MP gain the delta from the previous effective max.
+  const oldEffMaxCp = getEffectiveMaxCp(character.level, character.int, character.wis, character.cha, equipmentBonuses);
+  const oldEffMaxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
+  levelUpUpdates.hp = effMaxHp;
+  levelUpUpdates.cp = Math.min((character.cp ?? 0) + Math.max(0, effMaxCp - oldEffMaxCp), effMaxCp);
+  levelUpUpdates.mp = Math.min((character.mp ?? 100) + Math.max(0, effMaxMp - oldEffMaxMp), effMaxMp);
 
   return levelUpUpdates;
 }
