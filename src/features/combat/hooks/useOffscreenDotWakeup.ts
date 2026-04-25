@@ -134,7 +134,7 @@ export function useOffscreenDotWakeup({
         try {
           // First try a full catchup (not snapshot-only) to resolve any remaining effects
           // and capture kill_rewards from DOT kills that happened during the delay
-          const { data: catchupData, error: catchupErr } = await supabase.functions.invoke('combat-catchup', {
+          const { data: catchupData, error: catchupErr } = await invokeWithRetry<any>('combat-catchup', {
             body: { node_id: departedNodeId, force: true, reason: 'departure_delayed_check' },
           });
 
