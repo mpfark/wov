@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { clampResourceUpdates } from '../utils/clampResources';
 
 export interface Character {
   id: string;
@@ -205,21 +206,15 @@ export function useCharacter(user: User | null) {
     // Build DB payload — clamp hp/cp/mp so the server-side trigger doesn't
     // silently reduce them. Prefer caller-supplied effective caps (which
     // include equipment bonuses); fall back to the base max on the row.
-    const dbUpdates = { ...updates } as any;
     const charForCaps = characters.find(c => c.id === charId);
-    if (charForCaps) {
-      const hpCap = effectiveCaps?.maxHp ?? charForCaps.max_hp;
-      const cpCap = effectiveCaps?.maxCp ?? charForCaps.max_cp;
-      const mpCap = effectiveCaps?.maxMp ?? charForCaps.max_mp;
-      if (dbUpdates.hp != null) dbUpdates.hp = Math.min(dbUpdates.hp, hpCap);
-      if (dbUpdates.cp != null) dbUpdates.cp = Math.min(dbUpdates.cp, cpCap);
-      if (dbUpdates.mp != null) dbUpdates.mp = Math.min(dbUpdates.mp, mpCap);
-    }
+    const dbUpdates = charForCaps
+      ? clampResourceUpdates(updates, charForCaps, effectiveCaps)
+      : { ...updates };
 
     try {
       const { error } = await supabase
         .from('characters')
-        .update(dbUpdates)
+        .update(dbUpdates as any)
         .eq('id', charId);
       if (error) throw error;
     } finally {
