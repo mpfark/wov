@@ -170,7 +170,7 @@ export function useOffscreenDotWakeup({
           }
 
           // Now check if there are still remaining effects that need prediction tracking
-          const { data: snapData, error: snapErr } = await supabase.functions.invoke('combat-catchup', {
+          const { data: snapData, error: snapErr } = await invokeWithRetry<any>('combat-catchup', {
             body: { node_id: departedNodeId, snapshot_only: true },
           });
 
