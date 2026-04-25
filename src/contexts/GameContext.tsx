@@ -21,7 +21,7 @@ interface GameContextValue {
   clearSelectedCharacter: () => void;
   deleteCharacter: (id: string) => Promise<void>;
   createCharacter: (data: any) => Promise<any>;
-  updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacter: (updates: Partial<Character>, effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }) => Promise<void>;
   updateCharacterLocal: (updates: Partial<Character>) => void;
   selectCharacterAfterCreate: (id: string) => void;
   refetchCharacters: () => void;
