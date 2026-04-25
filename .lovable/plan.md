@@ -1,122 +1,66 @@
-## Analysis: how reward/kill handling works today
+## Problem
 
-There are **two execution paths** that can kill a creature and grant rewards. They follow the *same conceptual order* but live in different files, with subtle drift.
+When a player logs in (or refreshes their session) while combat is in progress, the HP/CP/MP bars visibly oscillate and the character "suddenly dies" with full-looking bars. The actual HP at the server has been zero for a while; the UI just kept painting an inflated value.
 
-### Path 1 — Live combat (`combat-tick`)
-Runs while ≥1 player is actively attacking on the node.
+## Root cause (why it happens)
 
-- A single `handleCreatureKill(creature, killerLabel, chaForGold)` closure handles every kill source: weapon hit, off-hand, ability, proc, or DoT tick (DoT-from-resolver kills are routed through it explicitly to avoid duplicate loot).
-- It calls `calculateCreatureRewards()` from `_shared/reward-calculator.ts` — the single source of truth for math.
-- **Recipients = `members[]`**, which is everyone in the active `combat_session` (party at node, or just the solo player). There is no branching "if party else solo"; solo is just `members.length === 1`.
-- Per-member XP/gold/salvage/BHP is accumulated into `mXp/mGold/mBhp/mSalvage` maps and applied during the post-tick character `UPDATE` along with level-up logic.
+Two server-authoritative facts:
 
-### Path 2 — Offscreen reconciliation (`combat-catchup`)
-Runs when a player wakes up an adjacent/leader node where DoTs (poison/bleed/ignite) were ticking after everyone walked away.
+1. `combat-tick` returns `member_states[].hp/cp/mp` from the DB row and we apply them via `updateCharacterLocal` (no DB write — server already wrote). Those fields then get marked **pending** in `useCharacter.pendingWritesRef` for 3 s.
+2. `useGameLoop`'s 4-second regen interval calls `updateCharacter({hp, cp, mp})`, which both writes to the DB **and** marks those fields pending for 3 s.
 
-- Resolves all elapsed effect ticks via `resolveEffectTicks`, gets `cKilled` set.
-- Atomically claims `creatures.rewards_awarded_at` (idempotency guard you just added).
-- For each claimed kill: looks up the **DoT source character**, fetches their accepted party, decides recipients = party-mates if in a party, else just the source.
-- Calls `award_party_member` RPC per recipient (does XP + level-up + gold + salvage in one DB function), then a separate `bhp` update.
-- Broadcasts `party_combat_msg` (third-person) + per-recipient `party_reward` (with `nonce` + `source_character_id` for client dedup), plus `world-global` boss death cry.
-- **Does NOT use `calculateCreatureRewards`** — it open-codes the same formulas inline (baseXp, gold roll, CHA mult, salvage, BHP, party XP bonus is *missing* here).
+That sets up two interacting races, both of which get worse the moment a fresh login hydrates state alongside an already-running combat:
 
-### Standards / order of operations (what the code actually does)
+A. **Local stale ref → DB heal-back loop.** The regen interval reads `regenCharRef.current.hp` (synced via `useEffect` on `character.hp`). When `combat-tick` writes a low HP via `updateCharacterLocal`, the next regen tick can fire before the ref-syncing `useEffect` runs (or with a still-valid old value if multiple ticks queue during reconciliation). It then `UPDATE characters SET hp = oldHp + regen` to the DB. The next `combat-tick` reads that inflated row, deals damage off the inflated number, and bounces the bars.
 
-There is no "party-first then solo-fallback" branch. The order, in both paths, is:
+B. **Pending-mask bug at login.** `pendingWritesRef` is keyed by `character.id` and lives across the entire session. When the user logs back in, `useCharacter` does a fresh `fetch` that overwrites local state — but it does **not clear** `pendingWritesRef`. Any in-flight regen write from before the relog (or any write that happens within the first 3 s after the realtime channel reconnects) keeps the new realtime echoes from being applied. The bar stays at the cached optimistic value while the server marches HP toward zero. The only way the UI catches up is when a `combat-tick` lands and `updateCharacterLocal` happens to overwrite — which is exactly what produces the "death from a full-looking bar" symptom.
 
-```text
-1. Determine recipients
-   - combat-tick: every member in the combat_session at the kill node
-   - combat-catchup: party of the DoT-source character, or just the source if soloing
-2. Compute totals once (baseXp, gold roll, BHP, salvage)  ← party-aware (CHA from best member, party XP bonus)
-3. Split per recipient
-   - XP: per-recipient level penalty, then divide by uncapped count
-   - Gold/BHP/salvage: floor-divide by recipient count
-4. Apply per recipient (XP triggers level-up, max_hp/cp/mp recalc)
-5. Side-effects: loot drops, boss death cry, broadcasts
-```
+A secondary contributor: `useGameLoop` starts its regen interval immediately on mount, even before `GameRoute`'s `sync_character_resources` RPC completes. During that window the row's `max_hp/max_cp/max_mp` may still be the pre-sync values, and any regen `UPDATE` is silently clamped by the `restrict_party_leader_updates` trigger (which uses the row's own `max_*`, not the gear-effective caps). That clamp can pull `hp` down across a write.
 
-Solo is just party-size-1. There is no separate solo code path conceptually — it diverges only because catchup re-implements step 2/3 by hand.
+## Fix
 
-## Problems this causes
+Three changes, all small:
 
-1. **Two implementations of the same math.** `combat-catchup` is missing the party XP bonus (1.0 / 1.15 / 1.30 / 1.40), so killing a level-30 boss with DoTs while offscreen pays *less* than killing it live with the same party. It also picks the "primary" CHA (DoT source) rather than the best CHA in the party.
-2. **Inconsistent display vs. award math.** Live path produces `displayReward` from the chosen uncapped member; catchup uses `primaryChar` (the DoT source) which may be capped → mismatched log message vs. actual XP for other members.
-3. **Reward-message generation is duplicated** in two unrelated string-builders → already caused the recent "Cithrawiel's power…" / "Your power…" duplication.
-4. **No catchup-time loot for `item_pool` mode.** `processLootDrops` runs on `result.lootQueue`, but `resolveEffectTicks` only emits `lootQueue` entries based on `creature.loot_table` legacy entries — `item_pool`/`salvage_only` aren't honored offscreen.
-5. **BHP grant in catchup bypasses any future bhp logic** because it does a raw `UPDATE characters SET bhp = ...` instead of going through `award_party_member` (which already accepts xp/gold/salvage but not bhp).
-6. **No "killer label" recorded for catchup kills.** Live path uses the killing player's name (or `'DoT'`); catchup just uses the DoT source's name as both killer and reward primary, which is fine but undocumented.
+### 1. Don't run regen for resources the server owns during combat
 
-## Proposed standardization
+In `useGameLoop`'s 4-second interval:
+- While `inCombatRegenRef.current === true`, skip the `hp` write entirely (today it still writes `floor(...*0.1)` at minimum 1). The server's `combat-tick` is the sole writer for HP during combat.
+- Keep CP regen-out-of-combat-only behavior (already the case).
+- Continue MP regen but only when *not* in combat (it has no server-side counterpart, but it still races at login). Out-of-combat behavior is unchanged.
 
-**One shared kill-resolution module** that both edge functions call. Each path stays responsible for *gathering inputs* and *applying outputs*; the shared module owns the rules.
+This eliminates race A entirely: there is no client write that can re-inflate `characters.hp` while a tick is in flight.
 
-### New shared module: `supabase/functions/_shared/kill-resolver.ts`
+### 2. Clear pending-write masks on login / character (re)fetch
 
-Pure functions, no DB. Responsibilities:
+In `src/features/character/hooks/useCharacter.ts`:
+- When `fetchCharactersRef.current()` runs (login, user change, manual refetch), clear `pendingWritesRef` for any character ids no longer in the result, and clear the entry for the freshly fetched selected character so the very next realtime echo is honored.
+- When `user` changes (sign in/out), clear the whole `pendingWritesRef` map alongside the existing `setCharacters([])`/`setSelectedCharacterId(null)` reset.
 
-- `resolveCreatureKill(creature, killer, recipients, ctx) → KillOutcome`
-  - Calls existing `calculateCreatureRewards` (already correct).
-  - Builds the canonical event messages (the "☠️ … slain …" line, BHP line, salvage line, transcend variant, party-bonus note).
-  - Builds the loot-queue entries based on `loot_mode` (`item_pool` / `legacy_table` / `salvage_only`) — the live path's logic, lifted out.
-  - Returns `{ memberRewards, events, lootQueue, bossDeathCry, displayMember }`.
+This eliminates race B: a stale 3-second mask from before login can no longer hide the post-login realtime values.
 
-This is the single place that defines "what happens when a creature dies". Solo and party are the same code path with `recipients.length === 1` vs `> 1`.
+### 3. Gate the regen interval on auth + character readiness
 
-### `combat-tick` changes
+Still in `useGameLoop`:
+- Add a guard at the top of the interval callback: if `regenCharRef.current.hp <= 0`, or the character has not yet completed its post-mount sync (track a `readyRef` flipped to `true` once we've seen at least one realtime/fetch update after mount, or simply once `GameRoute`'s `sync_character_resources` has resolved — easiest is to add an `enabled` boolean param threaded from `GameRoute`/`GamePage` that is `true` only after the sync RPC resolves), skip the tick.
 
-- Replace the body of `handleCreatureKill` with: build `recipients` from `members`, call `resolveCreatureKill`, accumulate `mXp/mGold/mBhp/mSalvage` from `memberRewards`, push returned `events` and `lootQueue` entries.
-- Keep the post-tick character-update / level-up / equipment-degrade code untouched.
+This closes the "first 4 s after login" window where regen could write against pre-sync `max_*` and get clamped.
 
-### `combat-catchup` changes
+## Files to change
 
-- Build `recipients` from the party (or solo source) as today.
-- Call `resolveCreatureKill` instead of the inline math block (lines ~347–404).
-- Apply `memberRewards` via `award_party_member` for XP/gold/salvage, and either:
-  - extend `award_party_member` to take `_bhp`, OR
-  - keep the separate `bhp` update but route it through a tiny `award_bhp` RPC for consistency.
-- Use the shared `events[0]` text as the broadcast `party_combat_msg` body (kills the duplicate-message divergence permanently).
-- Honor `lootQueue` properly so `item_pool` creatures drop offscreen too.
+- `src/features/character/hooks/useCharacter.ts` — clear `pendingWritesRef` on user change and on every fetch; key the clearing per-character so other characters in the list aren't disturbed.
+- `src/features/combat/hooks/useGameLoop.ts` — remove HP write while `inCombatRegenRef.current` is true; add `enabled`/ready gate for the interval.
+- `src/pages/GameRoute.tsx` and `src/pages/GamePage.tsx` — thread a `resourcesSynced` boolean (true after `sync_character_resources` resolves) down to `useGameLoop` so its interval can stay quiet until the gear-effective caps are persisted.
 
-### Recipient-set rules (documented in the new module's header)
+No DB changes, no edge-function changes.
 
-```text
-Live combat (combat-tick):
-  recipients = combat_session.members at the kill node
-  → solo player OR full party-at-node
+## What this does NOT change
 
-Offscreen catchup (combat-catchup):
-  recipients = accepted party of the DoT source character
-                if source is in a party (regardless of where members are);
-              otherwise [source] only.
-  Rationale: DoT damage is "remote labor" by the source — they share with their
-  party the same way live kills do, but solo kills only pay the source.
-```
+- `combat-tick` remains the sole authority for combat HP/CP. We are only stopping the client from writing back values the server is actively managing.
+- Out-of-combat HP/CP/MP regen behavior, caps, and tick rate are unchanged.
+- The existing `clampResourceUpdates` safety net stays in place.
 
-This matches today's behavior; the plan just makes it explicit and documented in one place.
+## How we'll verify
 
-### Migration
-
-- Optional: `award_party_member(_character_id, _xp, _gold, _salvage, _bhp DEFAULT 0)` overload so catchup can do one RPC per recipient instead of two writes.
-- `respawn_creatures()` already clears `rewards_awarded_at` — no change needed.
-
-### Files touched
-
-- New: `supabase/functions/_shared/kill-resolver.ts`
-- Edit: `supabase/functions/combat-tick/index.ts` (replace `handleCreatureKill` body, ~80 lines net deletion)
-- Edit: `supabase/functions/combat-catchup/index.ts` (replace inline reward block, ~70 lines net deletion)
-- Optional migration: extend `award_party_member` with `_bhp`
-
-## Out of scope
-
-- Changing the actual reward formulas (XP, gold, CHA, BHP, salvage, party bonus) — math stays identical, just relocated.
-- Changing the offscreen wakeup trigger logic in `useOffscreenDotWakeup`.
-- Changing the idempotency guard (`rewards_awarded_at`) — it stays.
-
-## Expected wins
-
-- One place to read when answering "how does a kill pay out?"
-- Catchup gets the missing party XP bonus and best-CHA gold automatically.
-- Duplicate / divergent log strings become impossible.
-- `item_pool` creatures finally drop loot when killed offscreen.
-- Future tweaks (e.g. boss-only multipliers, new currencies) land in one file.
+- Log in mid-combat (a node with an aggressive creature, or a lingering DoT from a stronger boss). Confirm the HP bar tracks server values smoothly without jumps and that death happens at the right HP, not after a delay.
+- Check `[combat] tick #N` console logs — `member_states.hp` should match the bar at all times.
+- Out-of-combat regen still ticks every 4 s as before.
