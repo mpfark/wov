@@ -466,9 +466,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [partyRewardEvents, character.id, updateCharacter]);
 
   // ── Forward-declared refs for circular deps ────────────────────
-  const rollLootRef = useRef<(lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null) => Promise<void>>(async () => {});
   const degradeEquipmentRef = useRef<() => Promise<void>>(async () => {});
-  const awardKillRewardsRef = useRef<(creature: any, opts?: { stopCombat?: boolean }) => Promise<void>>(async () => {});
 
   // ── useGameLoop: regen, death, buff state ────────────────
   const gameLoop = useGameLoop({
@@ -623,9 +621,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   });
 
   // Wire forward-declared refs
-  useEffect(() => { rollLootRef.current = combatActions.rollLoot; }, [combatActions.rollLoot]);
   useEffect(() => { degradeEquipmentRef.current = combatActions.degradeEquipment; }, [combatActions.degradeEquipment]);
-  useEffect(() => { awardKillRewardsRef.current = combatActions.awardKillRewards; }, [combatActions.awardKillRewards]);
 
   // Wire ability executor ref (updated synchronously to avoid stale closures)
   executeAbilityRef.current = (index: number, targetId?: string) => combatActions.handleUseAbility(index, targetId, true);

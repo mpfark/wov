@@ -10,13 +10,11 @@
 import { useState, useCallback } from 'react';
 import { Character } from '@/features/character';
 import {
-  getStatModifier, XP_RARITY_MULTIPLIER, getXpForLevel, getXpPenalty,
-  getChaGoldMultiplier, CLASS_LEVEL_BONUSES, CLASS_LABELS,
-  getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp,
+  getStatModifier,
+  getEffectiveMaxHp,
 } from '@/lib/game-data';
 import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
-import { getCachedItemAsync } from '@/features/inventory';
 import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 
@@ -66,158 +64,13 @@ function resolveCreatureTarget(
   return activeCombatCreatureId;
 }
 
-/** Build updates object for a level-up (stat recalc, class bonuses, milestones, soulwright whisper).
- *
- *  IMPORTANT: max_hp / max_cp / max_mp are NOT written here. They are protected
- *  by the `restrict_party_leader_updates` DB trigger and only the
- *  `sync_character_resources` RPC (called by the caller after this returns) is
- *  allowed to update them. We DO compute the gear-effective new maxima locally
- *  so the optimistic UI shows correct hp/cp/mp values during the brief window
- *  before the sync round-trip completes.
- */
-function buildLevelUpUpdates(
-  character: Character,
-  newLevel: number,
-  equipmentBonuses: Record<string, number>,
-  addLog: (msg: string) => void,
-): Partial<Character> {
-  const levelUpUpdates: Partial<Character> = {
-    xp: 0, // caller sets the remainder
-    level: newLevel,
-    unspent_stat_points: (character.unspent_stat_points || 0) + 1,
-  };
-
-  addLog(`🎉 Level Up! You are now level ${newLevel}!`);
-  addLog(`📊 You gained 1 stat point to allocate!`);
-
-  if ([10, 20, 30, 40].includes(newLevel)) {
-    levelUpUpdates.respec_points = (character.respec_points || 0) + 1;
-    addLog(`🔄 You earned a respec point! You can reallocate a stat point.`);
-  }
-
-  // Apply class stat bonuses every 3 levels
-  if (newLevel % 3 === 0) {
-    const bonuses = CLASS_LEVEL_BONUSES[character.class] || {};
-    const bonusNames: string[] = [];
-    for (const [stat, amount] of Object.entries(bonuses)) {
-      const currentVal = (levelUpUpdates as any)[stat] ?? (character as any)[stat] ?? 10;
-      (levelUpUpdates as any)[stat] = currentVal + amount;
-      bonusNames.push(`+${amount} ${stat.toUpperCase()}`);
-    }
-    if (bonusNames.length > 0) {
-      addLog(`📈 ${CLASS_LABELS[character.class] || character.class} bonus: ${bonusNames.join(', ')}!`);
-    }
-  }
-
-  // Level 42 — Soulforge whisper
-  if (newLevel === 42) {
-    const whisperChannel = supabase.channel(`chat-whisper-${character.id}`);
-    whisperChannel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        whisperChannel.send({
-          type: 'broadcast',
-          event: 'whisper',
-          payload: {
-            senderId: 'soulwright',
-            senderName: 'The Soulwright',
-            text: 'You have reached the pinnacle of mortal power. Come find me at The Soulwright\'s Forge deep within Kharak-Dum, and I shall forge for you a weapon born of your own soul. This gift can only be claimed once.',
-          },
-        });
-        setTimeout(() => supabase.removeChannel(whisperChannel), 2000);
-      }
-    });
-    addLog(`🌟 You feel a strange presence calling to you from the Ash-Veil Perimeter...`);
-  }
-
-  // Compute gear-effective new maxima for optimistic local hp/cp/mp values.
-  // The DB columns max_hp/max_cp/max_mp will be brought in line by the
-  // `sync_character_resources` RPC the caller invokes after this update.
-  const finalCon = (levelUpUpdates as any).con ?? character.con;
-  const finalInt = (levelUpUpdates as any).int ?? character.int;
-  const finalWis = (levelUpUpdates as any).wis ?? character.wis;
-  const finalCha = (levelUpUpdates as any).cha ?? character.cha;
-  const finalDex = (levelUpUpdates as any).dex ?? character.dex;
-
-  const effMaxHp = getEffectiveMaxHp(character.class, finalCon, newLevel, equipmentBonuses);
-  const effMaxCp = getEffectiveMaxCp(newLevel, finalInt, finalWis, finalCha, equipmentBonuses);
-  const effMaxMp = getEffectiveMaxMp(newLevel, finalDex, equipmentBonuses);
-
-  // Heal to full on level-up; CP/MP gain the delta from the previous effective max.
-  const oldEffMaxCp = getEffectiveMaxCp(character.level, character.int, character.wis, character.cha, equipmentBonuses);
-  const oldEffMaxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
-  levelUpUpdates.hp = effMaxHp;
-  levelUpUpdates.cp = Math.min((character.cp ?? 0) + Math.max(0, effMaxCp - oldEffMaxCp), effMaxCp);
-  levelUpUpdates.mp = Math.min((character.mp ?? 100) + Math.max(0, effMaxMp - oldEffMaxMp), effMaxMp);
-
-  return levelUpUpdates;
-}
-
-/** Award XP and gold to other party members on the same node */
-async function awardPartyXpGold(
-  partyId: string,
-  characterId: string,
-  currentNodeId: string,
-  totalXp: number,
-  totalGold: number,
-  xpSplitCount: number,
-  goldSplitCount: number,
-): Promise<void> {
-  const { data: freshMembers } = await supabase
-    .from('party_members')
-    .select('character_id, character:characters(current_node_id, level)')
-    .eq('party_id', partyId)
-    .eq('status', 'accepted');
-  const membersHere = (freshMembers || []).filter(
-    (m: any) => m.character?.current_node_id === currentNodeId
-  );
-  const goldShare = Math.floor(totalGold / goldSplitCount);
-  for (const m of membersHere) {
-    if (m.character_id === characterId || !m.character_id) continue;
-    const memberCapped = (m.character?.level || 0) >= 42;
-    const memberXp = memberCapped ? 0 : Math.floor(totalXp / xpSplitCount);
-    try {
-      await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: memberXp, _gold: goldShare });
-    } catch (e) { console.error('Failed to award party member:', e); }
-  }
-}
-
-/** Award salvage to character and party members for non-humanoid kills */
-async function awardPartySalvage(
-  character: Character,
-  creature: any,
-  goldSplitCount: number,
-  partyId: string | null,
-  updateCharacterLocal: (u: Partial<Character>) => void,
-  addLog: (msg: string) => void,
-): Promise<void> {
-  const baseSalvage = 1 + Math.floor(creature.level / 5);
-  const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
-  const totalSalvage = baseSalvage * rarityMult;
-  const salvageShare = Math.floor(totalSalvage / goldSplitCount);
-  if (salvageShare <= 0) return;
-
-  const newSalvage = (character.salvage || 0) + salvageShare;
-  await supabase.rpc('award_party_member', { _character_id: character.id, _xp: 0, _gold: 0, _salvage: salvageShare });
-  updateCharacterLocal({ salvage: newSalvage });
-
-  // Award party members
-  if (partyId) {
-    const { data: freshMembers } = await supabase
-      .from('party_members')
-      .select('character_id, character:characters(current_node_id)')
-      .eq('party_id', partyId)
-      .eq('status', 'accepted');
-    const membersHere = (freshMembers || []).filter(
-      (m: any) => m.character?.current_node_id === character.current_node_id && m.character_id !== character.id
-    );
-    for (const m of membersHere) {
-      try {
-        await supabase.rpc('award_party_member', { _character_id: m.character_id, _xp: 0, _gold: 0, _salvage: salvageShare });
-      } catch (e) { console.error('Failed to award salvage to party member:', e); }
-    }
-  }
-  addLog(`🔩 You salvaged ${salvageShare} materials from ${creature.name}.`);
-}
+// NOTE: Kill rewards (XP, gold, BHP, salvage), level-up bookkeeping, and loot
+// rolling all live server-side in `combat-tick` (see `_shared/kill-resolver.ts`
+// + `_shared/reward-calculator.ts`). The server is the SOLE writer for those
+// fields; results land in `member_states` and are applied to local state by
+// `interpretCombatTickResult`. Solo and party kills go through the same code
+// path, which is why we no longer need a client-side `awardKillRewards`,
+// `buildLevelUpUpdates`, `awardPartyXpGold`, `awardPartySalvage`, or `rollLoot`.
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Params interface
@@ -282,253 +135,14 @@ export function useCombatActions(params: UseCombatActionsParams) {
     p.fetchInventory();
   }, [p.equipped, p.addLog, p.fetchInventory]);
 
-  // ── Loot rolling ───────────────────────────────────────────────
-  const rollLoot = useCallback(async (lootTable: any[], creatureName: string, lootTableId?: string | null, dropChance?: number, creatureNodeId?: string | null, lootMode?: string, creatureLevel?: number) => {
-    const targetNodeId = creatureNodeId || p.character.current_node_id;
-    if (!targetNodeId) return;
+  // NOTE: `rollLoot` removed — server (`combat-tick` → `processLootDrops`) is
+  // the sole authority for ground-loot drops on kill.
 
-    const mode = lootMode || 'legacy_table';
 
-    // ── item_pool mode ──────────────────────────────────────────
-    if (mode === 'item_pool') {
-      const chance = dropChance ?? 0.5;
-      if (Math.random() > chance) { p.fetchGroundLoot(); return; }
+  // NOTE: `awardKillRewards` removed — `combat-tick` is the sole authority
+  // for kill rewards (XP/gold/BHP/salvage), level-ups, and loot resolution.
+  // Local state lands via `interpretCombatTickResult` from the tick response.
 
-      // Fetch pool config
-      const { data: poolConfig } = await supabase.from('loot_pool_config' as any).select('*').eq('id', 1).single();
-      const cfg = poolConfig || { equip_level_min_offset: -3, equip_level_max_offset: 0, common_pct: 80, uncommon_pct: 20, consumable_drop_chance: 0.15, consumable_level_min_offset: -5, consumable_level_max_offset: 0 };
-      const cLevel = creatureLevel || 1;
-
-      // Roll equipment
-      const rarityRoll = Math.random() * 100;
-      const rolledRarity = rarityRoll < (cfg as any).common_pct ? 'common' : 'uncommon';
-      const minLevel = cLevel + (cfg as any).equip_level_min_offset;
-      const maxLevel = cLevel + (cfg as any).equip_level_max_offset;
-
-      const { data: eligible } = await supabase
-        .from('items')
-        .select('id, name, rarity, drop_weight')
-        .eq('world_drop', true)
-        .eq('rarity', rolledRarity)
-        .eq('item_type', 'equipment')
-        .eq('is_soulbound', false)
-        .gte('level', minLevel)
-        .lte('level', maxLevel);
-
-      if (eligible && eligible.length > 0) {
-        const totalW = eligible.reduce((s, e: any) => s + (e.drop_weight || 10), 0);
-        let r = Math.random() * totalW;
-        let picked: any = eligible[eligible.length - 1];
-        for (const e of eligible) {
-          r -= ((e as any).drop_weight || 10);
-          if (r <= 0) { picked = e; break; }
-        }
-        await supabase.from('node_ground_loot' as any).insert({
-          node_id: targetNodeId,
-          item_id: picked.id,
-          creature_name: creatureName,
-        });
-        p.addLog(`💎 ${creatureName} dropped ${picked.name}!`);
-      }
-
-      // Separate consumable roll
-      if (Math.random() < (cfg as any).consumable_drop_chance) {
-        const cMinLevel = cLevel + (cfg as any).consumable_level_min_offset;
-        const cMaxLevel = cLevel + (cfg as any).consumable_level_max_offset;
-        const { data: consumables } = await supabase
-          .from('items')
-          .select('id, name, drop_weight')
-          .eq('world_drop', true)
-          .eq('item_type', 'consumable')
-          .gte('level', cMinLevel)
-          .lte('level', cMaxLevel);
-
-        if (consumables && consumables.length > 0) {
-          const totalCW = consumables.reduce((s, e: any) => s + (e.drop_weight || 10), 0);
-          let cr = Math.random() * totalCW;
-          let pickedC: any = consumables[consumables.length - 1];
-          for (const e of consumables) {
-            cr -= ((e as any).drop_weight || 10);
-            if (cr <= 0) { pickedC = e; break; }
-          }
-          await supabase.from('node_ground_loot' as any).insert({
-            node_id: targetNodeId,
-            item_id: pickedC.id,
-            creature_name: creatureName,
-          });
-          p.addLog(`🧴 ${creatureName} dropped ${pickedC.name}!`);
-        }
-      }
-
-      p.fetchGroundLoot();
-      return;
-    }
-
-    // ── salvage_only mode — no item loot ──────────────────────────
-    if (mode === 'salvage_only') return;
-
-    // ── legacy_table mode ────────────────────────────────────────
-    if (lootTableId) {
-      const chance = dropChance ?? 0.5;
-      if (Math.random() > chance) return;
-      const { data: tableEntries } = await supabase
-        .from('loot_table_entries')
-        .select('item_id, weight')
-        .eq('loot_table_id', lootTableId);
-      if (!tableEntries || tableEntries.length === 0) return;
-      const totalWeight = tableEntries.reduce((s, e) => s + e.weight, 0);
-      let roll = Math.random() * totalWeight;
-      let pickedItemId: string | null = null;
-      for (const entry of tableEntries) {
-        roll -= entry.weight;
-        if (roll <= 0) { pickedItemId = entry.item_id; break; }
-      }
-      if (!pickedItemId) pickedItemId = tableEntries[tableEntries.length - 1].item_id;
-      const item = await getCachedItemAsync(pickedItemId);
-      if (item) {
-        if (item.rarity === 'unique') {
-          const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', pickedItemId);
-          if (count && count > 0) {
-            p.addLog(`✨ The unique power of ${item.name} is already claimed by another...`);
-            p.fetchGroundLoot();
-            return;
-          }
-        }
-        await supabase.from('node_ground_loot' as any).insert({
-          node_id: targetNodeId,
-          item_id: pickedItemId,
-          creature_name: creatureName,
-        });
-        p.addLog(`💎 ${creatureName} dropped ${item.name}!`);
-      }
-      p.fetchGroundLoot();
-      return;
-    }
-
-    // Legacy inline loot table
-    if (!lootTable || lootTable.length === 0) return;
-    for (const entry of lootTable) {
-      if (entry.type === 'gold') continue;
-      if (Math.random() <= (entry.chance || 0.1)) {
-        const item = await getCachedItemAsync(entry.item_id);
-        if (item) {
-          if (item.rarity === 'unique') {
-            const { count } = await supabase.from('character_inventory').select('id', { count: 'exact', head: true }).eq('item_id', entry.item_id);
-            if (count && count > 0) {
-              p.addLog(`✨ The unique power of ${item.name} is already claimed by another...`);
-              continue;
-            }
-          }
-          await supabase.from('node_ground_loot' as any).insert({
-            node_id: targetNodeId,
-            item_id: entry.item_id,
-            creature_name: creatureName,
-          });
-          p.addLog(`💎 ${creatureName} dropped ${item.name}!`);
-        }
-      }
-    }
-    p.fetchGroundLoot();
-  }, [p.character.current_node_id, p.addLog, p.fetchGroundLoot]);
-
-  // ── Kill rewards (orchestration — delegates to extracted helpers) ──
-  const awardKillRewards = useCallback(async (creature: any, opts?: { stopCombat?: boolean }) => {
-    p.notifyCreatureKilled?.(creature.id);
-
-    const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
-    const xpPenalty = getXpPenalty(p.character.level, creature.level);
-    const totalXp = Math.floor(baseXp * xpPenalty * p.xpMultiplier);
-    const lootTableData = creature.loot_table as any[];
-    const goldEntry = lootTableData?.find((e: any) => e.type === 'gold');
-    let totalGold = 0;
-    if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-      totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-      if (creature.is_humanoid) {
-        const effectiveCha = p.character.cha + (p.equipmentBonuses.cha || 0);
-        totalGold = Math.floor(totalGold * getChaGoldMultiplier(effectiveCha));
-      }
-    }
-
-    // Determine split counts
-    let goldSplitCount = 1;
-    let xpSplitCount = 1;
-    if (p.party?.id) {
-      const { data: freshMembers } = await supabase
-        .from('party_members')
-        .select('character_id, character:characters(current_node_id, level)')
-        .eq('party_id', p.party.id)
-        .eq('status', 'accepted');
-      const membersHere = (freshMembers || []).filter(
-        (m: any) => m.character?.current_node_id === p.character.current_node_id
-      );
-      goldSplitCount = membersHere.length > 1 ? membersHere.length : 1;
-      const uncappedHere = membersHere.filter((m: any) => (m.character?.level || 0) < 42);
-      xpSplitCount = uncappedHere.length > 0 ? uncappedHere.length : 1;
-    }
-
-    // Award party members (other than self)
-    if (p.party?.id) {
-      await awardPartyXpGold(p.party.id, p.character.id, p.character.current_node_id!, totalXp, totalGold, xpSplitCount, goldSplitCount);
-    }
-
-    // Award self
-    const xpShare = p.character.level >= 42 ? 0 : Math.floor(totalXp / xpSplitCount);
-    const goldShare = Math.floor(totalGold / goldSplitCount);
-    const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
-    const boostNote = p.xpMultiplier > 1 ? ` ⚡${p.xpMultiplier}x` : '';
-    const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
-    if (p.character.level >= 42) {
-      const maxGoldNote = goldShare > 0 ? ` +${goldShare} gold.` : '';
-      p.addLog(`☠️ ${creature.name} has been slain!${maxGoldNote} Your power transcends experience.`);
-    } else {
-      p.addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}${boostNote}`);
-    }
-
-    const newXp = p.character.xp + xpShare;
-    const newGold = p.character.gold + goldShare;
-    const xpForNext = getXpForLevel(p.character.level);
-
-    if (newXp >= xpForNext && p.character.level < 42) {
-      const newLevel = Math.min(p.character.level + 1, 42);
-      const levelUpUpdates = buildLevelUpUpdates(p.character, newLevel, p.equipmentBonuses, p.addLog);
-      levelUpUpdates.xp = newXp - xpForNext;
-      levelUpUpdates.gold = newGold;
-      await p.updateCharacter(levelUpUpdates);
-      // Persist the new gear-effective max_hp/max_cp/max_mp so refresh/login
-      // doesn't snap them back to base values. The trigger discards client
-      // writes to max_*, so this RPC is the only sanctioned write path.
-      try {
-        await supabase.rpc('sync_character_resources' as any, { p_character_id: p.character.id });
-        // Pull the freshly-synced max_* into local state immediately.
-        p.onResourcesSynced?.();
-      } catch (e) {
-        console.error('Failed to sync resources after level-up:', e);
-      }
-    } else {
-      await p.updateCharacter({ xp: newXp, gold: newGold });
-    }
-
-    // BHP for boss kills
-    if (creature.rarity === 'boss') {
-      const bhpReward = Math.floor(creature.level * 0.5);
-      if (bhpReward > 0) {
-        const bhpShare = Math.floor(bhpReward / goldSplitCount);
-        if (bhpShare > 0) {
-          const newBhp = (p.character.bhp || 0) + bhpShare;
-          await p.updateCharacter({ bhp: newBhp });
-          p.addLog(`🏋️ +${bhpShare} Boss Hunter Points!`);
-        }
-      }
-    }
-
-    // Salvage for non-humanoid kills
-    if (!creature.is_humanoid) {
-      await awardPartySalvage(p.character, creature, goldSplitCount, p.party?.id ?? null, p.updateCharacterLocal, p.addLog);
-    }
-
-    await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance, creature.node_id, creature.loot_mode, creature.level);
-    if (opts?.stopCombat) p.stopCombat();
-  }, [p.character, p.party, p.addLog, p.updateCharacter, p.updateCharacterLocal, rollLoot, p.stopCombat, p.xpMultiplier, p.equipmentBonuses, p.notifyCreatureKilled, p.fetchGroundLoot]);
 
   // ── Use Ability ────────────────────────────────────────────────
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
@@ -753,7 +367,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
     setLastUsedAbilityCost(finalCpCost);
-  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost, awardKillRewards]);
+  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost]);
 
   // ── Attack ─────────────────────────────────────────────────────
   const handleAttack = useCallback((creatureId: string) => {
@@ -762,7 +376,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
   }, [p.isDead, p.startCombat]);
 
   return {
-    degradeEquipment, rollLoot, awardKillRewards,
+    degradeEquipment,
     handleUseAbility, handleAttack,
     lastUsedAbilityCost,
   };
