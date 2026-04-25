@@ -500,6 +500,7 @@ Deno.serve(async (req) => {
       creatures_alive: finalCreatures.length,
       creatures_killed: cKilled.size,
       kills: cKilled.size,
+      kills_claimed: claimedKills.size,
       rewards_awarded: killRewards.length,
       ticks_resolved: result.advancedEffects.length,
       partial: isPartial,
