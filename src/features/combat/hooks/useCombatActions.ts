@@ -367,7 +367,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
     const newCp = Math.max((p.character.cp ?? 0) - finalCpCost, 0);
     await p.updateCharacter({ cp: newCp });
     setLastUsedAbilityCost(finalCpCost);
-  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost, awardKillRewards]);
+  }, [p.isDead, p.character, p.updateCharacter, p.addLog, p.party, p.partyMembers, p.inCombat, p.activeCombatCreatureId, p.creatures, p.equipmentBonuses, p.creatureHpOverrides, p.buffState.poisonStacks, p.buffState.igniteStacks, p.buffState.poisonBuff, p.buffState.igniteBuff, lastUsedAbilityCost]);
 
   // ── Attack ─────────────────────────────────────────────────────
   const handleAttack = useCallback((creatureId: string) => {
