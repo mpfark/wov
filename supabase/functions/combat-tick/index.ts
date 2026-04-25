@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { calculateCreatureRewards } from "../_shared/reward-calculator.ts";
+import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import {
   resolveEffectTicks,
   processLootDrops,
@@ -379,7 +379,11 @@ Deno.serve(async (req) => {
     }
 
     // ── Unified creature kill handler ────────────────────────────
-    const handleCreatureKill = (creature: any, killerLabel: string, chaForGold: number = 0) => {
+    // All reward math + event formatting + loot-queue building lives in the
+    // shared `resolveCreatureKill` helper. This function only handles the
+    // tick-loop-local bookkeeping (effects purge, session engagement, kill set)
+    // and applies the resolver's outputs to the local accumulators.
+    const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0) => {
       cKilled.add(creature.id);
       sessionEngaged.delete(creature.id);
       // Purge all active_effects targeting this creature (and track for client)
@@ -393,77 +397,57 @@ Deno.serve(async (req) => {
       }
       killedCreatureIds.add(creature.id);
 
-      // ── Boss death cry — admin-authored flavor broadcast to all players ──
-      if (creature.rarity === 'boss' && typeof creature.boss_death_cry === 'string' && creature.boss_death_cry.trim().length > 0) {
-        const cry = creature.boss_death_cry.trim().replace(/%a/g, killerLabel || 'a hero');
-        events.push({ type: 'boss_death_cry', message: cry, creature_id: creature.id, creature_name: creature.name });
-      }
-
-      // ── Reward calculation (delegated to shared helper) ──
-      const rewardMembers = members.map(mm => ({
+      // Recipients = every member in this combat session (party-at-node, or solo).
+      const recipients = members.map(mm => ({
         id: mm.id,
         level: mm.c.level,
         cha: (mm.c.cha || 10) + ((eq[mm.id] as any)?.cha || 0),
         isUncapped: mm.c.level < 42,
       }));
-      const rewards = calculateCreatureRewards({
-        level: creature.level,
-        rarity: creature.rarity,
-        isHumanoid: creature.is_humanoid,
-        isBoss: creature.rarity === 'boss',
-        lootTable: creature.loot_table || [],
-        xpBoostMultiplier: xpMult,
-        partySize: members.length,
-      }, rewardMembers);
+
+      const outcome = resolveCreatureKill(
+        {
+          id: creature.id,
+          name: creature.name,
+          level: creature.level,
+          rarity: creature.rarity,
+          is_humanoid: creature.is_humanoid,
+          loot_table: creature.loot_table,
+          loot_table_id: creature.loot_table_id,
+          loot_mode: creature.loot_mode,
+          drop_chance: creature.drop_chance,
+          boss_death_cry: creature.boss_death_cry,
+        },
+        recipients,
+        { nodeId: combatNodeId, killerLabel, xpBoostMultiplier: xpMult },
+      );
 
       // Accumulate per-member rewards
-      for (const mr of rewards.memberRewards) {
+      for (const mr of outcome.memberRewards) {
         mXp[mr.memberId] += mr.xp;
         mGold[mr.memberId] += mr.gold;
         mBhp[mr.memberId] += mr.bhp;
         mSalvage[mr.memberId] += mr.salvage;
       }
 
-      // ── Event messages ──
-      const uncapped = members.filter(mm => mm.c.level < 42);
-      const displayReward = rewards.memberRewards.find(r => r.memberId === (uncapped[0] || members[0]).id)!;
-      const displayXp = displayReward.xp;
-      const goldEach = displayReward.gold;
-      const xpBoostNote = xpMult > 1 ? ` ⚡${xpMult}x` : '';
-      const penaltyNote = displayReward.xpPenaltyApplied < 1 ? ` (${Math.round(displayReward.xpPenaltyApplied * 100)}% XP — level penalty)` : '';
-      const partyBonusNote = rewards.partyBonus > 1 ? ` (🤝 +${Math.round((rewards.partyBonus - 1) * 100)}% party bonus)` : '';
-      const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-      const allCapped = uncapped.length === 0;
-      if (allCapped) {
-        const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${members.length > 1 ? ' each' : ''}.` : '';
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain!${cappedGoldNote} Your power transcends experience.` });
-      } else if (members.length > 1) {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! Rewards split ${uncapped.length} ways: +${displayXp} XP${goldNote} each.${penaltyNote}${xpBoostNote}${partyBonusNote}` });
-      } else {
-        events.push({ type: 'creature_kill', message: `☠️ ${creature.name} has been slain! +${displayXp} XP${goldNote}.${penaltyNote}${xpBoostNote}` });
+      // Boss death cry: live combat broadcasts via a dedicated event type so
+      // both the killer and any party-mates at other nodes can render the
+      // world-narration line. catchup uses the realtime `world` channel
+      // instead, since live tick replies travel through the HTTP response.
+      if (outcome.bossDeathCryText) {
+        events.push({
+          type: 'boss_death_cry',
+          message: outcome.bossDeathCryText,
+          creature_id: creature.id,
+          creature_name: creature.name,
+        });
       }
-      if (displayReward.bhp > 0) {
-        events.push({ type: 'bhp_award', message: `🏋️ +${displayReward.bhp} Boss Hunter Points each!` });
-      }
-      if (displayReward.salvage > 0) {
-        events.push({ type: 'salvage', message: `🔩 +${displayReward.salvage} salvage each from ${creature.name}.` });
-      }
-      const lootMode = creature.loot_mode || 'legacy_table';
-      const lootTableEntries = (creature.loot_table || []) as any[];
-      if (lootMode === 'item_pool') {
-        lootQueue.push({ nodeId: combatNodeId, lootTableId: null, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5, mode: 'item_pool', creatureLevel: creature.level });
-      } else if (lootMode === 'salvage_only') {
-        // No item loot for salvage_only creatures
-      } else if (creature.loot_table_id) {
-        lootQueue.push({ nodeId: combatNodeId, lootTableId: creature.loot_table_id, itemId: null, creatureName: creature.name, dropChance: creature.drop_chance ?? 0.5, mode: 'legacy' });
-      } else {
-        for (const entry of lootTableEntries) {
-          if (entry.type === 'gold') continue;
-          if (Math.random() <= (entry.chance || 0.1)) {
-            lootQueue.push({ nodeId: combatNodeId, lootTableId: null, itemId: entry.item_id, creatureName: creature.name, dropChance: 1, mode: 'legacy' });
-          }
-        }
-      }
+
+      // Push canonical event lines (kill / BHP / salvage)
+      for (const ev of outcome.events) events.push(ev);
+
+      // Queue loot drops
+      for (const lq of outcome.lootQueue) lootQueue.push(lq);
     };
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──

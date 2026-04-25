@@ -1,77 +1,122 @@
-# Fix duplicate offscreen DoT-kill log line for the source player
+## Analysis: how reward/kill handling works today
 
-## What you saw
+There are **two execution paths** that can kill a creature and grant rewards. They follow the *same conceptual order* but live in different files, with subtle drift.
 
-```
-☠️ Ser Caldris ... has been slain by DoT! Cithrawiel's power transcends experience., +47 gold, +7 🏋️ BHP.
-☠️ Ser Caldris ... has been slain by DoT! Your power transcends experience., +47 gold, +7 🏋️ BHP.
-🌫️ The faint sound of water receding ...
-```
+### Path 1 — Live combat (`combat-tick`)
+Runs while ≥1 player is actively attacking on the node.
 
-The kill message appears twice in *your* log. The boss-death cry only fires once (correct).
+- A single `handleCreatureKill(creature, killerLabel, chaForGold)` closure handles every kill source: weapon hit, off-hand, ability, proc, or DoT tick (DoT-from-resolver kills are routed through it explicitly to avoid duplicate loot).
+- It calls `calculateCreatureRewards()` from `_shared/reward-calculator.ts` — the single source of truth for math.
+- **Recipients = `members[]`**, which is everyone in the active `combat_session` (party at node, or just the solo player). There is no branching "if party else solo"; solo is just `members.length === 1`.
+- Per-member XP/gold/salvage/BHP is accumulated into `mXp/mGold/mBhp/mSalvage` maps and applied during the post-tick character `UPDATE` along with level-up logic.
 
-## Root cause
+### Path 2 — Offscreen reconciliation (`combat-catchup`)
+Runs when a player wakes up an adjacent/leader node where DoTs (poison/bleed/ignite) were ticking after everyone walked away.
 
-`combat-catchup` reports an offscreen DoT kill through **two parallel paths**, and the source player's client listens to both:
+- Resolves all elapsed effect ticks via `resolveEffectTicks`, gets `cKilled` set.
+- Atomically claims `creatures.rewards_awarded_at` (idempotency guard you just added).
+- For each claimed kill: looks up the **DoT source character**, fetches their accepted party, decides recipients = party-mates if in a party, else just the source.
+- Calls `award_party_member` RPC per recipient (does XP + level-up + gold + salvage in one DB function), then a separate `bhp` update.
+- Broadcasts `party_combat_msg` (third-person) + per-recipient `party_reward` (with `nonce` + `source_character_id` for client dedup), plus `world-global` boss death cry.
+- **Does NOT use `calculateCreatureRewards`** — it open-codes the same formulas inline (baseXp, gold roll, CHA mult, salvage, BHP, party XP bonus is *missing* here).
 
-1. **HTTP response → `useOffscreenDotWakeup`** — the hook that called `combat-catchup` reads `kill_rewards` from the HTTP response and emits a local log line:  
-   `"☠️ Ser Caldris … Your power transcends experience. …"`
+### Standards / order of operations (what the code actually does)
 
-2. **`party_combat_msg` broadcast → `usePartyBroadcast` → `GamePage.processIncomingLog`** — the same edge function call also broadcasts a third-person summary on `party-broadcast-{partyId}`:  
-   `"☠️ Ser Caldris … Cithrawiel's power transcends experience. …"`  
-   Every party member, **including the source**, subscribes to this channel and writes the message into their own log.
+There is no "party-first then solo-fallback" branch. The order, in both paths, is:
 
-Other party members at a different node only receive path (2), so they only see one line. The source player sees both.
-
-The dedupe ref (`seenIdsRef` keyed by `entry.id = "${creatureId}:catchup"`) only guards against re-processing the same broadcast id; it does not catch the cross-path duplicate.
-
-The boss death cry is handled correctly because the world-global broadcast and the local emit use a `nonce`-style guard at a higher layer, and the catchup hook also runs the local emit only for the source player.
-
-## Fix
-
-Skip the broadcast on the source player's client. The broadcast is intended for **other** party members; the source player already gets a richer, first-person line from the HTTP response.
-
-### Edge function — `supabase/functions/combat-catchup/index.ts`
-
-Add `source_character_id` to the `party_combat_msg` payload so the receiver can self-skip:
-
-```ts
-await partyChannel.send({
-  type: 'broadcast',
-  event: 'party_combat_msg',
-  payload: {
-    id: `${creatureId}:catchup`,
-    message: summary,
-    node_id: null,
-    character_name: primaryChar.name || null,
-    source_character_id: primarySourceId,   // NEW
-  },
-});
+```text
+1. Determine recipients
+   - combat-tick: every member in the combat_session at the kill node
+   - combat-catchup: party of the DoT-source character, or just the source if soloing
+2. Compute totals once (baseXp, gold roll, BHP, salvage)  ← party-aware (CHA from best member, party XP bonus)
+3. Split per recipient
+   - XP: per-recipient level penalty, then divide by uncapped count
+   - Gold/BHP/salvage: floor-divide by recipient count
+4. Apply per recipient (XP triggers level-up, max_hp/cp/mp recalc)
+5. Side-effects: loot drops, boss death cry, broadcasts
 ```
 
-### Client — `src/features/party/hooks/usePartyBroadcast.ts`
+Solo is just party-size-1. There is no separate solo code path conceptually — it diverges only because catchup re-implements step 2/3 by hand.
 
-Extend the `PartyCombatMsgEvent` type with the optional `source_character_id` field and skip in the listener when it matches the local character:
+## Problems this causes
 
-```ts
-.on('broadcast', { event: 'party_combat_msg' }, (payload) => {
-  const data = payload.payload as PartyCombatMsgEvent;
-  if (!data?.id) return;
-  if (data.source_character_id && data.source_character_id === characterId) return; // self-skip
-  logBroadcast('in', `party`, 'party_combat_msg');
-  setBroadcastLogEntries(prev => [...prev.slice(-49), data]);
-})
+1. **Two implementations of the same math.** `combat-catchup` is missing the party XP bonus (1.0 / 1.15 / 1.30 / 1.40), so killing a level-30 boss with DoTs while offscreen pays *less* than killing it live with the same party. It also picks the "primary" CHA (DoT source) rather than the best CHA in the party.
+2. **Inconsistent display vs. award math.** Live path produces `displayReward` from the chosen uncapped member; catchup uses `primaryChar` (the DoT source) which may be capped → mismatched log message vs. actual XP for other members.
+3. **Reward-message generation is duplicated** in two unrelated string-builders → already caused the recent "Cithrawiel's power…" / "Your power…" duplication.
+4. **No catchup-time loot for `item_pool` mode.** `processLootDrops` runs on `result.lootQueue`, but `resolveEffectTicks` only emits `lootQueue` entries based on `creature.loot_table` legacy entries — `item_pool`/`salvage_only` aren't honored offscreen.
+5. **BHP grant in catchup bypasses any future bhp logic** because it does a raw `UPDATE characters SET bhp = ...` instead of going through `award_party_member` (which already accepts xp/gold/salvage but not bhp).
+6. **No "killer label" recorded for catchup kills.** Live path uses the killing player's name (or `'DoT'`); catchup just uses the DoT source's name as both killer and reward primary, which is fine but undocumented.
+
+## Proposed standardization
+
+**One shared kill-resolution module** that both edge functions call. Each path stays responsible for *gathering inputs* and *applying outputs*; the shared module owns the rules.
+
+### New shared module: `supabase/functions/_shared/kill-resolver.ts`
+
+Pure functions, no DB. Responsibilities:
+
+- `resolveCreatureKill(creature, killer, recipients, ctx) → KillOutcome`
+  - Calls existing `calculateCreatureRewards` (already correct).
+  - Builds the canonical event messages (the "☠️ … slain …" line, BHP line, salvage line, transcend variant, party-bonus note).
+  - Builds the loot-queue entries based on `loot_mode` (`item_pool` / `legacy_table` / `salvage_only`) — the live path's logic, lifted out.
+  - Returns `{ memberRewards, events, lootQueue, bossDeathCry, displayMember }`.
+
+This is the single place that defines "what happens when a creature dies". Solo and party are the same code path with `recipients.length === 1` vs `> 1`.
+
+### `combat-tick` changes
+
+- Replace the body of `handleCreatureKill` with: build `recipients` from `members`, call `resolveCreatureKill`, accumulate `mXp/mGold/mBhp/mSalvage` from `memberRewards`, push returned `events` and `lootQueue` entries.
+- Keep the post-tick character-update / level-up / equipment-degrade code untouched.
+
+### `combat-catchup` changes
+
+- Build `recipients` from the party (or solo source) as today.
+- Call `resolveCreatureKill` instead of the inline math block (lines ~347–404).
+- Apply `memberRewards` via `award_party_member` for XP/gold/salvage, and either:
+  - extend `award_party_member` to take `_bhp`, OR
+  - keep the separate `bhp` update but route it through a tiny `award_bhp` RPC for consistency.
+- Use the shared `events[0]` text as the broadcast `party_combat_msg` body (kills the duplicate-message divergence permanently).
+- Honor `lootQueue` properly so `item_pool` creatures drop offscreen too.
+
+### Recipient-set rules (documented in the new module's header)
+
+```text
+Live combat (combat-tick):
+  recipients = combat_session.members at the kill node
+  → solo player OR full party-at-node
+
+Offscreen catchup (combat-catchup):
+  recipients = accepted party of the DoT source character
+                if source is in a party (regardless of where members are);
+              otherwise [source] only.
+  Rationale: DoT damage is "remote labor" by the source — they share with their
+  party the same way live kills do, but solo kills only pay the source.
 ```
 
-That's it — the source player keeps the personal "Your power transcends…" line from the HTTP path; party-mates keep the third-person "Cithrawiel's power transcends…" line from the broadcast path. No path is removed, no duplicate remains.
+This matches today's behavior; the plan just makes it explicit and documented in one place.
 
-## Files changed
+### Migration
 
-- `supabase/functions/combat-catchup/index.ts` — add `source_character_id` to `party_combat_msg` payload (one line).
-- `src/features/party/hooks/usePartyBroadcast.ts` — extend type + add self-skip guard (two lines).
+- Optional: `award_party_member(_character_id, _xp, _gold, _salvage, _bhp DEFAULT 0)` overload so catchup can do one RPC per recipient instead of two writes.
+- `respawn_creatures()` already clears `rewards_awarded_at` — no change needed.
 
-## Out of scope / verified clean
+### Files touched
 
-- Boss death cry: only one occurrence in the log → world-global broadcast + local emit are already coordinated correctly.
-- Reward XP/gold double-grant: already protected by the `rewards_awarded_at` idempotency claim added in the previous turn — no change needed there.
-- `combat-tick` live kills: not affected; this path only runs in `combat-catchup`.
+- New: `supabase/functions/_shared/kill-resolver.ts`
+- Edit: `supabase/functions/combat-tick/index.ts` (replace `handleCreatureKill` body, ~80 lines net deletion)
+- Edit: `supabase/functions/combat-catchup/index.ts` (replace inline reward block, ~70 lines net deletion)
+- Optional migration: extend `award_party_member` with `_bhp`
+
+## Out of scope
+
+- Changing the actual reward formulas (XP, gold, CHA, BHP, salvage, party bonus) — math stays identical, just relocated.
+- Changing the offscreen wakeup trigger logic in `useOffscreenDotWakeup`.
+- Changing the idempotency guard (`rewards_awarded_at`) — it stays.
+
+## Expected wins
+
+- One place to read when answering "how does a kill pay out?"
+- Catchup gets the missing party XP bonus and best-CHA gold automatically.
+- Duplicate / divergent log strings become impossible.
+- `item_pool` creatures finally drop loot when killed offscreen.
+- Future tweaks (e.g. boss-only multipliers, new currencies) land in one file.

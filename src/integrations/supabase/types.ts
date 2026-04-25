@@ -1585,6 +1585,16 @@ export type Database = {
             }
             Returns: undefined
           }
+        | {
+            Args: {
+              _bhp?: number
+              _character_id: string
+              _gold: number
+              _salvage?: number
+              _xp: number
+            }
+            Returns: undefined
+          }
       buy_unique_listing: {
         Args: { p_character_id: string; p_listing_id: string }
         Returns: Json

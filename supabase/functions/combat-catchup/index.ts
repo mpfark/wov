@@ -29,11 +29,8 @@ import {
   writeCreatureState,
   cleanupEffects,
 } from "../_shared/combat-resolver.ts";
-import {
-  XP_RARITY_MULTIPLIER as XP_RARITY,
-  getXpPenalty as xpPenalty,
-  getChaGoldMultiplier as chaGoldMult,
-} from "../_shared/combat-math.ts";
+import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -329,91 +326,79 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Use the first source character for CHA gold calc
-          const primarySourceId = crSourceIds.values().next().value;
+          const primarySourceId = crSourceIds.values().next().value as string | undefined;
           if (!primarySourceId) continue;
 
-          // Determine reward recipients (party or solo) and party_id (if any)
+          // Recipients = full party of the DoT source if in a party, else just the source.
           const partyGroup = partyGroupMap.get(primarySourceId);
-          const recipients: { id: string; name: string; level: number; cha: number }[] = partyGroup
+          const recipientChars: { id: string; name: string; level: number; cha: number }[] = partyGroup
             ? partyGroup.members
             : (sourceChars || []).filter(c => c.id === primarySourceId).map(c => ({ id: c.id, name: (c as any).name ?? '', level: c.level, cha: c.cha }));
           const partyIdForCreature = partyGroup?.partyId ?? null;
 
-          if (recipients.length === 0) continue;
+          if (recipientChars.length === 0) continue;
 
-          const primaryChar = recipients.find(r => r.id === primarySourceId) || recipients[0];
+          const primaryChar = recipientChars.find(r => r.id === primarySourceId) || recipientChars[0];
 
-          // Calculate rewards (same formula as combat-tick)
-          const baseXp = Math.floor(creature.level * 10 * (XP_RARITY[creature.rarity] || 1));
-          const lt = (creature.loot_table || []) as any[];
-          const goldEntry = lt.find((e: any) => e.type === 'gold');
-          let totalGold = 0;
-          if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-            totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-            if (creature.is_humanoid) {
-              totalGold = Math.floor(totalGold * chaGoldMult(primaryChar.cha));
-            }
-          }
-          const splitCount = recipients.length;
-          const goldEach = Math.floor(totalGold / splitCount);
+          // ── Delegate ALL math + formatting to the shared kill resolver ──
+          const recipients = recipientChars.map(r => ({
+            id: r.id,
+            level: r.level,
+            cha: r.cha,
+            isUncapped: r.level < 42,
+          }));
 
-          // Salvage for non-humanoid
-          let salvageEach = 0;
-          if (!creature.is_humanoid) {
-            const baseSalvage = 1 + Math.floor(creature.level / 5);
-            const rarityMult = creature.rarity === 'boss' ? 4 : creature.rarity === 'rare' ? 2 : 1;
-            salvageEach = Math.floor((baseSalvage * rarityMult) / splitCount);
-          }
+          const outcome = resolveCreatureKill(
+            {
+              id: creature.id,
+              name: creature.name,
+              level: creature.level,
+              rarity: creature.rarity,
+              is_humanoid: creature.is_humanoid,
+              loot_table: creature.loot_table,
+              loot_table_id: (creature as any).loot_table_id ?? null,
+              loot_mode: (creature as any).loot_mode ?? null,
+              drop_chance: (creature as any).drop_chance ?? null,
+              boss_death_cry: creature.boss_death_cry,
+            },
+            recipients,
+            { nodeId: node_id, killerLabel: 'DoT', xpBoostMultiplier: xpMult },
+          );
 
-          // BHP for boss kills
-          let bhpEach = 0;
-          if (creature.rarity === 'boss') {
-            const bhpReward = Math.floor(creature.level * 0.5);
-            bhpEach = Math.floor(bhpReward / splitCount);
-          }
+          // Honor item_pool / legacy loot offscreen too
+          for (const lq of outcome.lootQueue) result.lootQueue.push(lq);
 
-          // Award each recipient
-          for (const recipient of recipients) {
-            const uncapped = recipient.level < 42;
-            const penalty = xpPenalty(recipient.level, creature.level);
-            const xpEach = uncapped ? Math.floor(Math.floor(baseXp * penalty * xpMult) / splitCount) : 0;
-
+          // Apply per-recipient rewards. We can't run the full level-up logic
+          // here (that lives in combat-tick), but `award_party_member` updates
+          // XP/gold/salvage/BHP atomically and the next combat-tick / refetch
+          // will reconcile derived values (level, max_hp, etc.) when the
+          // player engages again.
+          for (const mr of outcome.memberRewards) {
             await db.rpc('award_party_member', {
-              _character_id: recipient.id,
-              _xp: xpEach,
-              _gold: goldEach,
-              _salvage: salvageEach,
+              _character_id: mr.memberId,
+              _xp: mr.xp,
+              _gold: mr.gold,
+              _salvage: mr.salvage,
+              _bhp: mr.bhp,
             });
-
-            // Award BHP separately (runs as service role so trigger bypass works)
-            if (bhpEach > 0) {
-              const { data: charRow } = await db.from('characters').select('bhp').eq('id', recipient.id).single();
-              const currentBhp = charRow?.bhp ?? 0;
-              await db.from('characters').update({ bhp: currentBhp + bhpEach }).eq('id', recipient.id);
-            }
           }
 
-          const primaryUncapped = primaryChar.level < 42;
-          const xpForDisplay = primaryUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount) : 0;
+          // Display values for HTTP response + broadcasts (uses shared resolver's
+          // chosen display recipient — first uncapped, else first member).
+          const displayReward = outcome.memberRewards.find(r => r.memberId === outcome.displayMemberId)!;
+          const xpForDisplay = displayReward.xp;
+          const goldEach = displayReward.gold;
+          const salvageEach = displayReward.salvage;
+          const bhpEach = displayReward.bhp;
 
-          // ── Boss death cry (admin-authored) ──
-          let bossDeathCryText: string | null = null;
-          if (creature.rarity === 'boss' && typeof creature.boss_death_cry === 'string' && creature.boss_death_cry.trim().length > 0) {
-            bossDeathCryText = creature.boss_death_cry.trim().replace(/%a/g, primaryChar.name || 'a hero');
-          }
-
-          // ── Broadcast to party (so party-mates at other nodes get the message + UI refresh) ──
-          if (partyIdForCreature && recipients.length > 1) {
+          // ── Broadcast to party (so party-mates at other nodes see it) ──
+          if (partyIdForCreature && recipientChars.length > 1) {
             try {
               const partyChannel = db.channel(`party-broadcast-${partyIdForCreature}`);
-              const xpPart = primaryUncapped ? `+${xpForDisplay} XP` : 'Your power transcends experience.';
-              const goldPart = goldEach > 0 ? `, +${goldEach} gold` : '';
-              const salvagePart = salvageEach > 0 ? `, +${salvageEach} salvage` : '';
-              const bhpPart = bhpEach > 0 ? `, +${bhpEach} 🏋️ BHP` : '';
-              const summary = `☠️ ${creature.name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`;
+              // Use the canonical kill log line from the resolver — same
+              // wording as live combat — to keep formatting consistent.
+              const summary = outcome.events[0]?.message ?? `☠️ ${creature.name} has been slain by DoT!`;
 
-              // Combat log line for non-source party-mates
               await partyChannel.send({
                 type: 'broadcast',
                 event: 'party_combat_msg',
@@ -426,20 +411,18 @@ Deno.serve(async (req) => {
                 },
               });
 
-              // Per-recipient party_reward to trigger UI refetch on each non-source member
-              for (const recipient of recipients) {
-                if (recipient.id === primarySourceId) continue;
-                const recipUncapped = recipient.level < 42;
-                const recipXp = recipUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(recipient.level, creature.level) * xpMult) / splitCount) : 0;
+              // Per-recipient party_reward to trigger UI refetch on each non-source member.
+              for (const mr of outcome.memberRewards) {
+                if (mr.memberId === primarySourceId) continue;
                 await partyChannel.send({
                   type: 'broadcast',
                   event: 'party_reward',
                   payload: {
-                    character_id: recipient.id,
-                    xp: recipXp,
-                    gold: goldEach,
+                    character_id: mr.memberId,
+                    xp: mr.xp,
+                    gold: mr.gold,
                     source: 'catchup',
-                    nonce: `${creatureId}:catchup:${recipient.id}`,
+                    nonce: `${creatureId}:catchup:${mr.memberId}`,
                   },
                 });
               }
@@ -449,7 +432,7 @@ Deno.serve(async (req) => {
           }
 
           // ── World-global broadcast for boss death cry ──
-          if (bossDeathCryText) {
+          if (outcome.bossDeathCryText) {
             try {
               const worldChannel = db.channel('world-global');
               await worldChannel.send({
@@ -458,7 +441,7 @@ Deno.serve(async (req) => {
                 payload: {
                   kind: 'boss_death',
                   icon: '🌫️',
-                  text: bossDeathCryText,
+                  text: outcome.bossDeathCryText,
                   actor: primaryChar.name || undefined,
                   nonce: `${creatureId}:catchup`,
                 },
@@ -476,10 +459,10 @@ Deno.serve(async (req) => {
             gold_each: goldEach,
             salvage_each: salvageEach,
             bhp_each: bhpEach,
-            split_count: splitCount,
+            split_count: recipientChars.length,
             primary_level: primaryChar.level,
             source_character_name: primaryChar.name || null,
-            boss_death_cry_text: bossDeathCryText,
+            boss_death_cry_text: outcome.bossDeathCryText,
           });
         }
       }
