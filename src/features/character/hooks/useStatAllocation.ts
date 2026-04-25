@@ -18,11 +18,15 @@ interface UseStatAllocationArgs {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   addLog: (msg: string) => void;
+  /** Optional: called after sync_character_resources runs so callers can
+   *  refetch the character row immediately instead of waiting for realtime. */
+  onResourcesSynced?: () => void;
 }
 
-async function syncResources(characterId: string) {
+async function syncResources(characterId: string, onSynced?: () => void) {
   try {
     await supabase.rpc('sync_character_resources' as any, { p_character_id: characterId });
+    onSynced?.();
   } catch (e) {
     console.error('Failed to sync character resources after stat change:', e);
   }
