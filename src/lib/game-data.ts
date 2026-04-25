@@ -103,7 +103,18 @@ export function calculateHP(charClass: string, con: number) {
   return baseHP + conMod;
 }
 
-/** Full max HP formula: base class HP + CON modifier + (level-1)*5 */
+/** Full max HP formula: base class HP + CON modifier + (level-1)*5
+ *
+ *  ⚠️ FORMULA SYNC — if you change this, also update:
+ *    - `getMaxHp` in `src/features/combat/utils/combat-math.ts`
+ *    - `getMaxHp` in `supabase/functions/_shared/combat-math.ts` (Deno mirror)
+ *    - `sync_character_resources()` in the database (SQL `_base_hp`/`_new_max_hp`)
+ *
+ *  Note: this returns the BASE max — gear bonuses are layered on by
+ *  `getEffectiveMaxHp`. Persisted `characters.max_hp` includes gear bonuses
+ *  (kept in sync by the `sync_character_resources` RPC), so do not call this
+ *  directly to populate `max_hp` in a DB write — use the RPC instead.
+ */
 export function getMaxHp(charClass: string, con: number, level: number): number {
   const baseHP = CLASS_BASE_HP[charClass] || 18;
   const conMod = Math.floor((con - 10) / 2);
@@ -147,6 +158,7 @@ export const CLASS_PRIMARY_STAT: Record<string, string> = {
 };
 
 // CP (Concentration Points) system — scales with INT + WIS
+/** ⚠️ Sync with `sync_character_resources()` SQL and `combat-tick` edge function. */
 export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
   const intMod = Math.max(Math.floor((int - 10) / 2), 0);
   const wisMod = Math.max(Math.floor((wis - 10) / 2), 0);
@@ -154,6 +166,10 @@ export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha
 }
 
 // ── Effective max helpers (gear-adjusted caps) ──────────────
+//
+// These are the values shown in the UI and used as caps for regen/healing.
+// They MATCH the formulas inside `sync_character_resources()` so that the
+// persisted `characters.max_*` columns and the on-screen numbers stay equal.
 export function getEffectiveMaxHp(charClass: string, baseCon: number, level: number, equipmentBonuses: Record<string, number>): number {
   return getMaxHp(charClass, baseCon + (equipmentBonuses.con || 0), level) + (equipmentBonuses.hp || 0);
 }
@@ -174,6 +190,7 @@ export function getEffectiveAC(charClass: string, baseDex: number, equipmentBonu
 }
 
 // MP (Stamina) system — DEX-based
+/** ⚠️ Sync with `sync_character_resources()` SQL and `combat-tick` edge function. */
 export function getMaxMp(level: number, dex: number = 10): number {
   const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
   return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
