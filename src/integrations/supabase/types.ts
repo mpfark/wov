@@ -1730,6 +1730,10 @@ export type Database = {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
       }
+      sync_character_resources: {
+        Args: { p_character_id: string }
+        Returns: Json
+      }
       try_acquire_unique_item: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
