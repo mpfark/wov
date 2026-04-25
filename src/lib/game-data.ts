@@ -190,6 +190,7 @@ export function getEffectiveAC(charClass: string, baseDex: number, equipmentBonu
 }
 
 // MP (Stamina) system — DEX-based
+/** ⚠️ Sync with `sync_character_resources()` SQL and `combat-tick` edge function. */
 export function getMaxMp(level: number, dex: number = 10): number {
   const dexMod = Math.max(Math.floor((dex - 10) / 2), 0);
   return 100 + dexMod * 10 + Math.floor((level - 1) * 2);
