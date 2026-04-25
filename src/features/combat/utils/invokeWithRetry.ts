@@ -26,7 +26,7 @@ function isTransient(err: unknown): boolean {
 export async function invokeWithRetry<T = unknown>(
   fn: string,
   options: Parameters<typeof supabase.functions.invoke>[1],
-  { retries = 1, backoffMs = 350 }: { retries?: number; backoffMs?: number } = {}
+  { retries = 2, backoffMs = 400 }: { retries?: number; backoffMs?: number } = {}
 ): Promise<{ data: T | null; error: any }> {
   let lastErr: any = null;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -34,6 +34,7 @@ export async function invokeWithRetry<T = unknown>(
     if (!error) return { data: data as T, error: null };
     lastErr = error;
     if (attempt === retries || !isTransient(error)) break;
+    // Exponential-ish backoff: 400ms, 800ms, 1200ms
     await new Promise((r) => setTimeout(r, backoffMs * (attempt + 1)));
   }
   return { data: null, error: lastErr };
