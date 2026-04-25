@@ -188,12 +188,22 @@ export function calculateAC(charClass: string, dex: number): number {
 }
 
 // ── Max HP formula ───────────────────────────────────────────────
+//
+// ⚠️ FORMULA SYNC: This is the SHARED definition used by both the client
+// (via `combat-math.ts`) and server (via `supabase/functions/_shared/combat-math.ts`,
+// which is a byte-mirror of this file). The same formula is *also* defined in:
+//   - src/lib/game-data.ts                (canonical client formula)
+//   - supabase/functions/_shared/combat-math.ts (Deno mirror)
+//   - supabase/functions/combat-tick/index.ts  (imports the Deno mirror)
+//   - public.sync_character_resources()        (PL/pgSQL mirror)
+// If you change the numbers here, update ALL of the above.
 
 const CLASS_BASE_HP: Record<string, number> = {
   warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
 };
 
-/** Max HP = base class HP + CON modifier + (level-1)*5 */
+/** Max HP = base class HP + CON modifier + (level-1)*5
+ *  ⚠️ Keep in sync with `getMaxHp` in `src/lib/game-data.ts` and the SQL RPC `sync_character_resources`. */
 export function getMaxHp(charClass: string, con: number, level: number): number {
   const baseHP = CLASS_BASE_HP[charClass] || 18;
   return baseHP + getStatModifier(con) + (level - 1) * 5;
