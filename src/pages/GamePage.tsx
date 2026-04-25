@@ -476,6 +476,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     startingNodeId, creatures,
     party, partyMembers,
     bus,
+    enabled: resourcesSynced,
   });
 
   const { buffState, buffSetters } = gameLoop;
