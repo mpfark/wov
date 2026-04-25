@@ -12,11 +12,11 @@
  * This file has NO database access and NO event formatting.
  */
 
-import {
-  getXpPenalty as xpPenalty,
-  getChaGoldMultiplier as chaGoldMult,
-  XP_RARITY_MULTIPLIER as XP_RARITY,
-} from "./combat-math.ts";
+// XP penalty: party reward distribution uses the harsher curve
+// (matches the historic value previously inlined in `combat-math.ts`).
+import { getXpPenaltyParty as xpPenalty } from "./formulas/xp.ts";
+import { getChaGoldMultiplier as chaGoldMult } from "./formulas/economy.ts";
+import { XP_RARITY_MULTIPLIER as XP_RARITY } from "./formulas/xp.ts";
 
 // ── Party XP bonus table ───────────────────────────────────────
 const PARTY_XP_BONUS: Record<number, number> = {

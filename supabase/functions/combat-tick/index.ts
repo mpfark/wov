@@ -16,7 +16,7 @@ import {
   getDexCritBonus as dexCritBonus,
   getWisAntiCrit as wisAntiCrit,
   getStrDamageFloor as strDmgFloor,
-  getDexMultiAttack as dexMultiAttack,
+  
   getCreatureDamageDie as creatureDmgDie,
   getCreatureLevelGapMultiplier as creatureLevelGapMult,
   getXpForLevel as xpForLevel,
