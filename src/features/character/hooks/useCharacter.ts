@@ -184,8 +184,13 @@ export function useCharacter(user: User | null) {
     setSelectedCharacterId(id);
   }, []);
 
-  /** Update character state locally AND persist to DB (for player-initiated actions) */
-  const updateCharacter = async (updates: Partial<Character>) => {
+  /** Update character state locally AND persist to DB (for player-initiated actions).
+   *  Optional `effectiveCaps` lets callers (e.g. regen loop) clamp to gear-boosted
+   *  effective maxima instead of the base max stored on the row. */
+  const updateCharacter = async (
+    updates: Partial<Character>,
+    effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }
+  ) => {
     if (!selectedCharacter) return;
     const charId = selectedCharacter.id;
     const fields = Object.keys(updates);
@@ -197,15 +202,18 @@ export function useCharacter(user: User | null) {
 
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
 
-    // Build DB payload — clamp hp/cp/mp to their base maximums so the
-    // server-side trigger doesn't silently reduce them. Gear bonuses that
-    // push effective maximums above the base are display-only on the client.
+    // Build DB payload — clamp hp/cp/mp so the server-side trigger doesn't
+    // silently reduce them. Prefer caller-supplied effective caps (which
+    // include equipment bonuses); fall back to the base max on the row.
     const dbUpdates = { ...updates } as any;
     const charForCaps = characters.find(c => c.id === charId);
     if (charForCaps) {
-      if (dbUpdates.hp != null) dbUpdates.hp = Math.min(dbUpdates.hp, charForCaps.max_hp);
-      if (dbUpdates.cp != null) dbUpdates.cp = Math.min(dbUpdates.cp, charForCaps.max_cp);
-      if (dbUpdates.mp != null) dbUpdates.mp = Math.min(dbUpdates.mp, charForCaps.max_mp);
+      const hpCap = effectiveCaps?.maxHp ?? charForCaps.max_hp;
+      const cpCap = effectiveCaps?.maxCp ?? charForCaps.max_cp;
+      const mpCap = effectiveCaps?.maxMp ?? charForCaps.max_mp;
+      if (dbUpdates.hp != null) dbUpdates.hp = Math.min(dbUpdates.hp, hpCap);
+      if (dbUpdates.cp != null) dbUpdates.cp = Math.min(dbUpdates.cp, cpCap);
+      if (dbUpdates.mp != null) dbUpdates.mp = Math.min(dbUpdates.mp, mpCap);
     }
 
     try {
