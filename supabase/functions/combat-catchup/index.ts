@@ -265,20 +265,20 @@ Deno.serve(async (req) => {
       if (sourceCharIds.size > 0) {
         // Fetch source characters, party memberships, and XP boost in parallel
         const [{ data: sourceChars }, { data: partyMembers }, { data: xpB }] = await Promise.all([
-          db.from('characters').select('id, level, cha, user_id').in('id', Array.from(sourceCharIds)),
-          db.from('party_members').select('character_id, party_id, character:characters(id, level, cha)').in('character_id', Array.from(sourceCharIds)).eq('status', 'accepted'),
+          db.from('characters').select('id, name, level, cha, user_id').in('id', Array.from(sourceCharIds)),
+          db.from('party_members').select('character_id, party_id, character:characters(id, name, level, cha)').in('character_id', Array.from(sourceCharIds)).eq('status', 'accepted'),
           db.from('xp_boost').select('multiplier, expires_at').limit(1).single(),
         ]);
 
         const xpMult = (xpB?.expires_at && new Date(xpB.expires_at) > new Date()) ? Number(xpB.multiplier) : 1;
 
-        // Build party grouping: source_id → list of party member chars
-        const partyGroupMap = new Map<string, { id: string; level: number; cha: number }[]>();
+        // Build party grouping: source_id → { partyId, members[] }
+        const partyGroupMap = new Map<string, { partyId: string; members: { id: string; name: string; level: number; cha: number }[] }>();
         if (partyMembers && partyMembers.length > 0) {
           const partyIds = [...new Set(partyMembers.map(pm => pm.party_id))];
           const { data: allPartyMembers } = await db
             .from('party_members')
-            .select('character_id, party_id, character:characters(id, level, cha)')
+            .select('character_id, party_id, character:characters(id, name, level, cha)')
             .in('party_id', partyIds)
             .eq('status', 'accepted');
 
@@ -288,9 +288,9 @@ Deno.serve(async (req) => {
               .filter(apm => apm.party_id === partyId)
               .map(apm => {
                 const c = apm.character as any;
-                return { id: apm.character_id, level: c?.level ?? 1, cha: c?.cha ?? 10 };
+                return { id: apm.character_id, name: c?.name ?? '', level: c?.level ?? 1, cha: c?.cha ?? 10 };
               });
-            partyGroupMap.set(pm.character_id, groupMembers);
+            partyGroupMap.set(pm.character_id, { partyId, members: groupMembers });
           }
         }
 
@@ -310,9 +310,12 @@ Deno.serve(async (req) => {
           const primarySourceId = crSourceIds.values().next().value;
           if (!primarySourceId) continue;
 
-          // Determine reward recipients (party or solo)
-          const recipients = partyGroupMap.get(primarySourceId)
-            || (sourceChars || []).filter(c => c.id === primarySourceId).map(c => ({ id: c.id, level: c.level, cha: c.cha }));
+          // Determine reward recipients (party or solo) and party_id (if any)
+          const partyGroup = partyGroupMap.get(primarySourceId);
+          const recipients: { id: string; name: string; level: number; cha: number }[] = partyGroup
+            ? partyGroup.members
+            : (sourceChars || []).filter(c => c.id === primarySourceId).map(c => ({ id: c.id, name: (c as any).name ?? '', level: c.level, cha: c.cha }));
+          const partyIdForCreature = partyGroup?.partyId ?? null;
 
           if (recipients.length === 0) continue;
 
@@ -369,16 +372,89 @@ Deno.serve(async (req) => {
           }
 
           const primaryUncapped = primaryChar.level < 42;
+          const xpForDisplay = primaryUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount) : 0;
+
+          // ── Boss death cry (admin-authored) ──
+          let bossDeathCryText: string | null = null;
+          if (creature.rarity === 'boss' && typeof creature.boss_death_cry === 'string' && creature.boss_death_cry.trim().length > 0) {
+            bossDeathCryText = creature.boss_death_cry.trim().replace(/%a/g, primaryChar.name || 'a hero');
+          }
+
+          // ── Broadcast to party (so party-mates at other nodes get the message + UI refresh) ──
+          if (partyIdForCreature && recipients.length > 1) {
+            try {
+              const partyChannel = db.channel(`party-broadcast-${partyIdForCreature}`);
+              const xpPart = primaryUncapped ? `+${xpForDisplay} XP` : 'Your power transcends experience.';
+              const goldPart = goldEach > 0 ? `, +${goldEach} gold` : '';
+              const salvagePart = salvageEach > 0 ? `, +${salvageEach} salvage` : '';
+              const bhpPart = bhpEach > 0 ? `, +${bhpEach} 🏋️ BHP` : '';
+              const summary = `☠️ ${creature.name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`;
+
+              // Combat log line for non-source party-mates
+              await partyChannel.send({
+                type: 'broadcast',
+                event: 'party_combat_msg',
+                payload: {
+                  id: `${creatureId}:catchup`,
+                  message: summary,
+                  node_id: null,
+                  character_name: primaryChar.name || null,
+                },
+              });
+
+              // Per-recipient party_reward to trigger UI refetch on each non-source member
+              for (const recipient of recipients) {
+                if (recipient.id === primarySourceId) continue;
+                const recipUncapped = recipient.level < 42;
+                const recipXp = recipUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(recipient.level, creature.level) * xpMult) / splitCount) : 0;
+                await partyChannel.send({
+                  type: 'broadcast',
+                  event: 'party_reward',
+                  payload: {
+                    character_id: recipient.id,
+                    xp: recipXp,
+                    gold: goldEach,
+                    source: 'catchup',
+                  },
+                });
+              }
+            } catch (broadcastErr) {
+              console.error('[combat-catchup] party broadcast failed', broadcastErr);
+            }
+          }
+
+          // ── World-global broadcast for boss death cry ──
+          if (bossDeathCryText) {
+            try {
+              const worldChannel = db.channel('world-global');
+              await worldChannel.send({
+                type: 'broadcast',
+                event: 'world',
+                payload: {
+                  kind: 'boss_death',
+                  icon: '🌫️',
+                  text: bossDeathCryText,
+                  actor: primaryChar.name || undefined,
+                  nonce: `${creatureId}:catchup`,
+                },
+              });
+            } catch (broadcastErr) {
+              console.error('[combat-catchup] world-global broadcast failed', broadcastErr);
+            }
+          }
+
           killRewards.push({
             creature_name: creature.name,
             creature_level: creature.level,
             creature_rarity: creature.rarity,
-            xp_each: primaryUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount) : 0,
+            xp_each: xpForDisplay,
             gold_each: goldEach,
             salvage_each: salvageEach,
             bhp_each: bhpEach,
             split_count: splitCount,
             primary_level: primaryChar.level,
+            source_character_name: primaryChar.name || null,
+            boss_death_cry_text: bossDeathCryText,
           });
         }
       }
