@@ -1,147 +1,69 @@
-# Formula Ownership Cleanup & Consolidation
+# Creature Load + Disappearance Fix
 
-Structural-only pass. No gameplay behavior changes (with one exception: a single existing **silent desync** is documented and resolved by picking one canonical version — flagged below for explicit approval).
+## Symptoms
 
----
+1. **Slow to load**: Creatures don't appear until `combat-catchup` finishes (often 200–800ms, sometimes more), and the panel is empty during that gap.
+2. **Disappears after fight → exit → re-enter**: Returning to the node shows no creature for a while.
+3. **Toggling again sometimes brings the creature back**: Confirms it's a UI/sync problem, not a real death.
 
-## Audit findings
+## Root Causes
 
-I mapped every formula across the four candidate locations:
+All in `src/features/creatures/hooks/useCreatures.ts`:
 
-| File | Lines | Role today |
-|---|---|---|
-| `src/lib/game-data.ts` | 464 | Mixed: static data (races/classes/labels/descriptions) + ~20 formulas |
-| `src/features/combat/utils/combat-math.ts` | 501 | Combat formulas + class data |
-| `supabase/functions/_shared/combat-math.ts` | 501 | **Byte-identical copy** of the client file (md5 match confirmed) |
-| `supabase/functions/_shared/reward-calculator.ts` | 143 | Reward math, imports server combat-math |
-| `public.sync_character_resources()` (SQL) | — | Mirrors `getMaxHp/Cp/Mp` in PL/pgSQL |
+### A. No cancellation of in-flight `reconcileNode` requests
+When the user moves quickly between nodes (e.g., south → north → south to recover), multiple `reconcileNode(force: true)` calls are in flight. They resolve out of order. A late response for an old node can overwrite the current node's creatures and reconcile lock, leaving the creature panel empty (or wrong) until the next event or the 30s safety refetch.
 
-**Duplicated symbols** (defined in BOTH `game-data.ts` AND `combat-math.ts`):
-`getStatModifier`, `getMaxHp`, `getMaxCp`, `getMaxMp`, `calculateAC`, `getXpPenalty`, `getXpForLevel`, `XP_RARITY_MULTIPLIER`, `getCreatureDamageDie`, `getShieldBlockChance`, `getShieldBlockAmount`, `getWisAntiCrit`, `getWisDodgeChance`, `getDexCritBonus`, `getIntHitBonus`, `getStrDamageFloor`, `getChaGoldMultiplier`, `diminishing`, `diminishingFloat`, `rollD20`, `rollDamage`, `CLASS_BASE_HP`, `CLASS_BASE_AC`, `CLASS_LEVEL_BONUSES`, `CLASS_LABELS`, `CLASS_WEAPON_AFFINITY`.
+### B. The "force catchup" path waits before showing anything
+`fetchCreatures()` clears creatures, then awaits `reconcileNode` before painting. There's no use of the prefetch cache or a quick direct DB read to show creatures immediately while reconcile runs. This is the visible "slow to load" gap.
 
-**🛑 Existing silent desync discovered (XP penalty rates):**
+### C. Reconcile lock can swallow a fresh respawn UPDATE
+The 500ms reconcile lock filters out any postgres UPDATE for a creature ID not in the catchup response. If a creature respawns (`is_alive` flips false → true) within that 500ms window, the realtime UPDATE is dropped and the creature stays invisible until the next refetch.
 
-```
-game-data.ts        →  rates 0.06 / 0.09 / 0.12  (used by client UI: useCombatActions.ts shows player tooltip)
-combat-math.ts      →  rates 0.10 / 0.15 / 0.20  (used by server: reward-calculator.ts awards XP)
-```
+### D. Channel callback timing
+`useNodeChannel` may not finish `SUBSCRIBED` before the reconcile completes. UPDATEs that arrive in the brief gap before `onCreatureUpdate.current` is wired by `useCreatures` could be missed. Smaller contributor than A/B/C, but worth tightening.
 
-The client tells the player the penalty is one number; the server pays out a different (harsher) number. This is exactly the class of bug this cleanup pass is meant to prevent.
+## Fix
 
-**Deprecated / unused:**
-- `getWisDodgeChance` — still used by `CharacterPanel.tsx` (2 calls). Cannot be removed yet; leave with a deprecation note and a TODO to migrate the panel.
-- `getBaseRegen`, `getCpRegenRate`, `CLASS_PRIMARY_STAT` (in `game-data.ts`) — zero references in repo. Safe to delete.
-- `getDexMultiAttack` (in `combat-math.ts`) — zero references. Safe to delete.
+All changes are in `src/features/creatures/hooks/useCreatures.ts`. No server changes required.
 
----
+### 1. Cancel stale `reconcileNode` calls on node change
 
-## Ownership model (target)
+Track the current request with a token (or `AbortController`-style ref). When `nodeId` changes, increment the token; ignore any response whose token doesn't match the current one. This prevents an old node's response from clobbering the new node's state.
 
-```text
-                    SHARED (zero-dep TS, imported by both sides)
-                    ────────────────────────────────────────────
-                    src/shared/formulas/
-                      ├── stats.ts          getStatModifier, diminishing, dice
-                      ├── resources.ts      getMaxHp/Cp/Mp + effective variants + regen
-                      ├── combat.ts         AC, hit/crit/anti-crit, shield block,
-                      │                     creature damage, level-gap, weapon affinity
-                      ├── xp.ts             XP_RARITY_MULTIPLIER, getXpForLevel,
-                      │                     getXpPenalty, getCreatureXp
-                      ├── items.ts          getItemStatBudget, calculateItemStatCost,
-                      │                     getItemStatCap, suggestItemGoldValue,
-                      │                     calculateRepairCost, ITEM_RARITY_*, ITEM_STAT_*
-                      ├── creatures.ts      generateCreatureStats, calculateHumanoidGold,
-                      │                     getCreatureDamageDie, RARITY_MULTIPLIER
-                      ├── economy.ts        getChaSell/Buy/Gold multipliers, teleport CP
-                      └── classes.ts        CLASS_BASE_HP/AC, CLASS_LEVEL_BONUSES,
-                                            CLASS_COMBAT_PROFILES, CLASS_WEAPON_AFFINITY,
-                                            OFFHAND_*, SHIELD_*, TWO_HANDED_*
+### 2. Optimistic display while reconcile is in flight
 
-   CLIENT (re-exports + UI-only data)            SERVER (re-exports + server-only)
-   ──────────────────────────────────             ────────────────────────────────
-   src/lib/game-data.ts                           supabase/functions/_shared/
-     - barrel re-export from shared                  combat-math.ts
-     - keeps RACE_*, *_LABELS,                         - barrel re-export from shared
-       *_DESCRIPTIONS, STAT_LABELS,                    - keeps server-only attack
-       MILESTONE_TITLES (UI data)                       resolution helpers
-     - keeps calculateStats (uses                       (resolveAttackRoll,
-       RACE_STATS + CLASS_STATS)                         applyOffensiveBuffs,
-                                                         applyDefensiveBuffs,
-   src/features/combat/utils/combat-math.ts             rollCreatureDamage,
-     - re-export from shared (for                        calculateKillRewards)
-       existing test imports)
-```
+Two-phase load on node entry:
 
-**Why a `src/shared/formulas/` folder rather than putting it under `supabase/functions/_shared/`?** Vite bundling can't reliably import from `supabase/functions/_shared/` into the React app, but Deno can import from anywhere via relative paths. The convention in this repo is already to keep one canonical TS file and copy-mirror it to the Deno side — this pass keeps that convention but reduces it from 1 monolithic file copy to 8 small file copies, AND makes `game-data.ts` re-export the same source instead of holding its own divergent copy.
+- **Phase 1 (immediate, ~0ms)**: If `prefetchCache` has fresh data for this node, render it right away. Otherwise issue a fast `select * from creatures where node_id = ? and is_alive = true` and render that. This gives the user *something* to interact with within ~100ms.
+- **Phase 2 (~200–800ms)**: `reconcileNode(force: true)` resolves and replaces the optimistic list with the authoritative one. Reconcile lock is set as today.
 
----
+Both phases respect the cancellation token from fix #1.
 
-## Steps
+### 3. Tighten the reconcile lock
 
-### 1. Create `src/shared/formulas/` modules
-Move (don't rewrite) formula functions from `game-data.ts` into the 8 modules above. Each module has zero React/Vite/Deno deps. Each function gets a single JSDoc comment naming its canonical owner — no more "if you change this, also update X, Y, Z" hand-sync notes.
+- Shorten the lock window from 500ms to ~150ms. The lock exists to suppress a brief window of stale realtime echoes; 150ms is enough for that.
+- Allow UPDATE events through if they represent a *new* alive creature (`is_alive === true` and not in `prev`) **as long as** the creature's `node_id` matches the current `nodeId`. This ensures respawns are never swallowed.
+- Keep the lock's job of filtering re-adds during the catchup→state-set transition.
 
-### 2. Resolve the `getXpPenalty` desync 🛑 needs decision
-The two versions disagree. Picking one preserves "no behavior change" for one side and changes it for the other. Recommended: **keep the server numbers (0.10 / 0.15 / 0.20)** because that is what players are actually receiving today — changing the server would alter real reward payouts. The client UI tooltip will then show the true penalty. (If you'd rather change the server to match the lenient client display, say so before approval.)
+### 4. Subscribe before reconcile (small ordering fix)
 
-### 3. Mirror `src/shared/formulas/*` into `supabase/functions/_shared/formulas/`
-Byte-copy mirror, same as today's pattern. Add `supabase/functions/_shared/combat-math.ts` as a re-export barrel from the mirror + the server-only attack-resolution helpers.
+Make `useCreatures` start its postgres-changes subscription wiring before invoking the first `reconcileNode`, so any UPDATE that lands during the catchup window is captured rather than missed.
 
-### 4. Convert `game-data.ts` and client `combat-math.ts` to barrels
-- `src/lib/game-data.ts` becomes: re-export everything from `src/shared/formulas/*` + keep `RACE_STATS`, `RACE_LABELS`, `CLASS_LABELS`, `RACE_DESCRIPTIONS`, `CLASS_DESCRIPTIONS`, `STAT_LABELS`, `WEAPON_TAGS`, `WEAPON_TAG_LABELS`, `MILESTONE_TITLES`, `getCharacterTitle`, `calculateStats`, `getCarryCapacity`, `getBagWeight`, `getMoveCost`, `CONSUMABLE_ALLOWED_STATS`, `CLASS_PRIMARY_STAT`-removal.
-- `src/features/combat/utils/combat-math.ts` becomes: re-export from `src/shared/formulas/*`. (Keeps the existing test import working without touching 30+ files.)
+## Out of scope
 
-No import-site code changes required anywhere else — every existing `import { foo } from '@/lib/game-data'` and `from '@/features/combat/utils/combat-math'` still resolves identically.
+- No formula or combat-tick changes.
+- No changes to `combat-catchup` server logic.
+- No change to the 1-hour boss respawn window.
 
-### 5. Delete unused legacy aliases
-Remove (zero references): `getBaseRegen`, `getCpRegenRate`, `CLASS_PRIMARY_STAT`, `getDexMultiAttack`.
-Keep with `/** @deprecated */` + 1-line migration note: `getWisDodgeChance` (still called by `CharacterPanel.tsx`).
+## Verification
 
-### 6. Add a formula-parity safeguard test
-New file `src/shared/formulas/__tests__/parity.test.ts` that asserts fixed numeric snapshots for each canonical formula at representative inputs:
-- `getMaxHp`, `getMaxCp`, `getMaxMp` (3 classes × 3 levels)
-- `calculateAC`, `getEffectiveAC`
-- `getWisAntiCrit`, `getShieldBlockChance`, `getShieldBlockAmount`
-- `getXpPenalty` (4 level/creature pairs)
-- `getItemStatBudget` (4 rarity/level pairs)
-- `generateCreatureStats` (3 rarities at L10)
+After the fix:
 
-This is in addition to the existing `effective-caps.test.ts` (which compares the two TS files — that test stays, but its purpose narrows to "the barrel re-exports resolve to the same source").
+1. Walk into a node with creatures: list should appear within ~100ms (optimistic), then settle to the authoritative list ~200–800ms later with no flicker.
+2. Engage a creature, walk one node away to recover, walk back: the creature should be visible immediately on return; if it died offscreen to DoTs, the kill toast appears and the slot stays empty until respawn.
+3. Rapid back-and-forth between two nodes: only the current node's creatures are ever shown; stale responses are discarded.
+4. Trigger a respawn while standing on the node (wait out a 5-min creature): the respawn appears within ~1s of the DB update.
 
-The SQL `sync_character_resources` mirror is left as-is (out of scope per "no DB changes"); the comment above it gets a one-line update pointing to the new shared module so future SQL edits can find the canonical TS source.
+## Files Touched
 
-### 7. Verify
-- `bunx tsc --noEmit` (type check)
-- `bunx vitest run` (existing tests + new parity test)
-- Spot-check a few touch points: `useCombatActions.ts`, `CharacterPanel.tsx`, `StatPlannerDialog.tsx`, `combat-tick/index.ts`.
-
----
-
-## Files touched (count)
-
-| Change | File count |
-|---|---|
-| New shared modules | 8 |
-| New parity test | 1 |
-| `game-data.ts` shrink + barrel | 1 |
-| Client `combat-math.ts` → barrel | 1 |
-| Server `combat-math.ts` → barrel + server helpers | 1 |
-| New mirrored shared modules under `supabase/functions/_shared/formulas/` | 8 |
-| `useCombatActions.ts` (only if step 2 keeps server numbers — UI shows live value, no edit needed) | 0 |
-| Comment update in `sync_character_resources` (next migration) | 0 (deferred) |
-
-No production import site changes. No gameplay logic changes (except the documented `getXpPenalty` reconciliation in step 2, pending your choice).
-
----
-
-## Out of scope (explicitly NOT changed)
-
-- Combat balance, stat scaling, durability, reward amounts, cooldowns, gameplay outcomes
-- SQL `sync_character_resources()` numbers — only its comment header is updated
-- Edge function deployment changes beyond the file-shape refactor
-
----
-
-## Decision needed before implementation
-
-**`getXpPenalty` reconciliation:** keep server values (0.10/0.15/0.20, harsher — what players actually get today) or adopt client values (0.06/0.09/0.12, more lenient — what the UI currently implies)? Default recommendation: **keep server**.
+- `src/features/creatures/hooks/useCreatures.ts` (only file modified)
