@@ -65,9 +65,12 @@ interface Props {
   startingNodeId?: string;
   onSwitchCharacter?: () => void;
   refetchCharacters?: () => void;
+  /** True once `sync_character_resources` has resolved on entry. The regen
+   *  loop waits on this so it doesn't write against pre-sync `max_*`. */
+  resourcesSynced?: boolean;
 }
 
-export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters }: Props) {
+export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
   
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
