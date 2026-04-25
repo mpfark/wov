@@ -188,12 +188,22 @@ export function calculateAC(charClass: string, dex: number): number {
 }
 
 // ── Max HP formula ───────────────────────────────────────────────
+//
+// ⚠️ FORMULA SYNC: This is the SHARED definition used by both the client
+// (via `combat-math.ts`) and server (via `supabase/functions/_shared/combat-math.ts`,
+// which is a byte-mirror of this file). The same formula is *also* defined in:
+//   - src/lib/game-data.ts                (canonical client formula)
+//   - supabase/functions/_shared/combat-math.ts (Deno mirror)
+//   - supabase/functions/combat-tick/index.ts  (imports the Deno mirror)
+//   - public.sync_character_resources()        (PL/pgSQL mirror)
+// If you change the numbers here, update ALL of the above.
 
 const CLASS_BASE_HP: Record<string, number> = {
   warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
 };
 
-/** Max HP = base class HP + CON modifier + (level-1)*5 */
+/** Max HP = base class HP + CON modifier + (level-1)*5
+ *  ⚠️ Keep in sync with `getMaxHp` in `src/lib/game-data.ts` and the SQL RPC `sync_character_resources`. */
 export function getMaxHp(charClass: string, con: number, level: number): number {
   const baseHP = CLASS_BASE_HP[charClass] || 18;
   return baseHP + getStatModifier(con) + (level - 1) * 5;
@@ -245,6 +255,7 @@ export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
   bard:    ['sword', 'wand'],
 };
 
+/** Returns hit bonus and damage multiplier when class matches weapon tag */
 export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | null): { hitBonus: number; damageMult: number } {
   if (!weaponTag) return { hitBonus: 0, damageMult: 1 };
   const tags = CLASS_WEAPON_AFFINITY[classKey];
@@ -254,12 +265,16 @@ export function getWeaponAffinityBonus(classKey: string, weaponTag?: string | nu
 
 // ── Dual wield (off-hand bonus attack) ───────────────────────────
 
+/** Weapon tags that grant an off-hand bonus attack (shields do NOT) */
 export const OFFHAND_WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand'];
+
+/** Off-hand damage multiplier (30% of main-hand base damage) */
 export const OFFHAND_DAMAGE_MULT = 0.30;
 
 // ── Two-handed weapon bonus ──────────────────────────────────────
 export const TWO_HANDED_DAMAGE_MULT = 1.25;
 
+/** Check whether the off-hand item is a weapon (not a shield) and thus grants a bonus attack */
 export function isOffhandWeapon(offhandTag?: string | null): boolean {
   return !!offhandTag && OFFHAND_WEAPON_TAGS.includes(offhandTag);
 }
@@ -277,13 +292,15 @@ export function isShield(tag?: string | null): boolean {
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {
-  attackerStat: number;
-  int: number;
-  dex: number;
-  str: number;
+  attackerStat: number;     // effective stat value (base + equipment)
+  int: number;              // effective INT (base + equipment)
+  dex: number;              // effective DEX (base + equipment)
+  str: number;              // effective STR (base + equipment)
   level: number;
   classKey: string;
+  /** Extra crit range bonus from buffs (Eagle Eye) */
   critBuffBonus?: number;
+  /** Weapon tag of main-hand weapon for affinity bonuses */
   weaponTag?: string | null;
 }
 
@@ -307,7 +324,8 @@ export function resolveAttackRoll(ctx: AttackContext, creatureAC: number, sunder
   const sMod = getStatModifier(ctx.attackerStat);
   const ihb = getIntHitBonus(ctx.int);
   const dcb = getDexCritBonus(ctx.dex);
-  const effCrit = profile.critRange - dcb - (ctx.critBuffBonus || 0);
+  const mileCrit = ctx.level >= 28 ? 1 : 0;
+  const effCrit = profile.critRange - dcb - mileCrit - (ctx.critBuffBonus || 0);
   const sdf = getStrDamageFloor(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
 
