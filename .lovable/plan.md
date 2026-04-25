@@ -1,65 +1,115 @@
-Yes — making the gear-adjusted resource caps the persisted baseline is the right direction here. The current issue is that the client calculates effective gear caps, but the database trigger still clamps `hp/cp/mp` to the persisted `max_hp/max_cp/max_mp`. So even if the regen loop sends `effectiveCaps`, the database can still silently reduce the saved values back to the pre-gear caps.
+## Goal
 
-## Plan
+Make HP/CP/MP completely consistent across:
+1. UI display (status bars, planner, character sheet)
+2. Regen loop (client)
+3. Combat tick (server edge function)
+4. Level-up (client + server)
+5. Stat allocation / respec
+6. Login / refresh / world-entry (no magical gain or snap-back)
 
-1. Add a backend recalculation function for character resources
-   - Create a dedicated migration with a trusted backend function like `sync_character_resources(character_id)`.
-   - It will:
-     - Verify the caller owns the character.
-     - Read the character’s current base stats and equipped, non-broken gear.
-     - Recalculate effective `max_hp`, `max_cp`, and `max_mp` using the same formulas as the app.
-     - Persist those effective maxima into the character row.
-     - Clamp current `hp/cp/mp` down only if they are above the new effective maxima.
-   - This makes the database row itself match the gear state, so normal updates and realtime echoes no longer fight the UI.
+The numbers a player sees should be the numbers persisted, regardless of whether they re-log, swap gear, or get hit by a realtime echo.
 
-2. Trigger this sync when entering the world
-   - Add a small “preparing your character” step in `GameRoute` before rendering `GamePage`.
-   - On world entry, call the backend sync function for the selected character, then refetch character data.
-   - This ensures login/reload starts from the correct gear-adjusted baseline.
+---
 
-3. Trigger this sync after gear changes
-   - Update inventory actions that can change effective caps:
-     - Equip item
-     - Unequip item
-     - Broken equipment being unequipped/deleted
-     - Dropped/destroyed equipped gear, if applicable
-   - After the inventory mutation, run the resource sync and refetch both inventory/character data.
-   - This keeps relog behavior correct after gear changes, not just initial login.
+## What I found in the audit
 
-4. Stop using temporary effective caps as the long-term persistence fix
-   - Keep UI calculations where needed, but rely on persisted `max_hp/max_cp/max_mp` as the stable baseline after sync.
-   - Update regen/heal/consumable/party-regen calls so any `hp/cp/mp` writes use the synced caps and do not get clamped differently by the database.
-   - Fix currently missed paths, especially party regen/self heal and consumable healing, which compute gear maxes but call `updateCharacter` without effective caps.
+### Formula sources (3 places, mostly aligned but duplicated)
 
-5. Add regression tests
-   - Add tests for the resource-cap calculation helper so gear bonuses produce the expected persisted max HP/CP/MP.
-   - Add/update tests for `clampResourceUpdates` to confirm it uses persisted synced caps correctly.
-   - Add a route/hook-level test for “enter world” flow: sync runs before `GamePage` renders with the selected character.
+| Source | HP | CP | MP |
+|---|---|---|---|
+| `src/lib/game-data.ts` | `getMaxHp` | `getMaxCp` | `getMaxMp` |
+| `src/features/combat/utils/combat-math.ts` | `getMaxHp` (duplicate) | — | — |
+| `supabase/functions/combat-tick/index.ts` | `calcMaxHp` (re-import) | `calcMaxCp` | `calcMaxMp` |
+| `sync_character_resources` SQL RPC | inline formula | inline formula | inline formula |
 
-6. Verify
-   - Run the relevant Vitest tests.
-   - Run TypeScript/build checks if available.
-   - Confirm no direct edits are made to generated backend client/type files.
+All four currently compute the same numbers, but the formula is written four times. Drift is just one edit away.
 
-## Technical notes
+### "Effective" (gear-adjusted) caps
 
-The important change is not simply “top up on login.” It is to make the persisted character row reflect the equipped gear state:
+`getEffectiveMaxHp/Cp/Mp` in `game-data.ts` add equipment bonuses on top. These are used by:
+- `StatusBarsStrip` (display)
+- `useGameLoop` (regen cap)
+- `useCombatActions` (heal cap)
+- `StatPlannerDialog` (preview)
 
-```text
-Character enters world
-  -> backend reads equipped gear
-  -> calculates effective max_hp/max_cp/max_mp
-  -> writes those maxes to characters row
-  -> hp/cp/mp are clamped against those maxes
-  -> GamePage renders and regen uses the same baseline
-```
+But the **persisted** `max_hp/max_cp/max_mp` columns store only the **base** (no gear). That mismatch is the root cause of every "snap back on login" symptom.
 
-This avoids the current mismatch:
+### Current state of fixes already in place
 
-```text
-UI/regen sees gear max: 250
-Database row max_hp: 233
-Database trigger clamps hp back to 233
-Realtime/refetch returns 233
-UI appears to snap back
-```
+- `sync_character_resources` RPC writes gear-adjusted maxes to the DB (uses `app.trusted_rpc` to bypass the `restrict_party_leader_updates` lockdown).
+- `GameRoute` calls it once on world entry.
+- `useInventory.equipItem/unequipItem` call it after every gear change.
+- `clampResourceUpdates` clamps regen writes to the supplied effective cap.
+- `combat-tick` adds `+ eb.hp` on level-up.
+
+### Remaining gaps / risks
+
+1. **`useStatAllocation`** writes `max_hp/max_cp/max_mp` based on **base** stats only (no gear), then the DB trigger (`restrict_party_leader_updates`) silently reverts them because the call is not "trusted". Result: after spending a stat point, the persisted max may not include the bonus until the next sync, and the client's optimistic update temporarily shows a wrong number.
+2. **Level-up in `useCombatActions` (client-side path)** at line ~126 also computes `newMaxHp = getMaxHp(...)` **without gear bonuses**. If this path is ever taken (looks like solo level-up before combat-tick takes over), it persists a base value and triggers a snap-back on next refresh until the next gear-change sync.
+3. **Character creation** does not set `mp/max_mp` (DB defaults to 100/100), and does not call `sync_character_resources`. New character → first regen tick recomputes effective cap from gear → tries to write gear-boosted hp → trigger trims it. Brand-new characters may see one snap-back before the world-entry sync runs (the sync now exists, so this is mostly OK, but worth verifying).
+4. **`updateCharacter` in `useCharacter`** clamps `hp/cp/mp` against `effectiveCaps` when supplied, but if any caller passes raw `max_hp` etc. in `updates`, those go to the DB directly. The trigger silently rewinds them unless `app.trusted_rpc` is set (which only happens inside RPCs). So any client-side write to `max_*` is discarded — confirming all `max_*` mutation must go through `sync_character_resources` or the combat-tick edge function.
+5. **Duplicate `getMaxHp`** in `combat-math.ts` vs `game-data.ts` — risk of future drift.
+6. **Stale memory** `mem://game/combat-system/resource-synchronization` still says "client-side effective caps are removed" — directly contradicts current architecture.
+
+---
+
+## Proposed work
+
+### 1. Unify the formula into one place
+
+- Delete the duplicate `getMaxHp` from `src/features/combat/utils/combat-math.ts`; re-export from `@/lib/game-data`.
+- Document `getMaxHp / getMaxCp / getMaxMp` (base) and `getEffectiveMaxHp / getEffectiveMaxCp / getEffectiveMaxMp` (gear-adjusted) as the **only** sanctioned client-side formulas.
+- Add a one-line JSDoc on each: "If you change this, also update `combat-tick/index.ts` and `sync_character_resources()` in SQL."
+
+### 2. Make `sync_character_resources` the single source of truth for persisted maxes
+
+Audit every place that writes `max_hp / max_cp / max_mp` directly and route them through a sync instead:
+
+- **`useStatAllocation.allocateStatPoint` / `respec`**: stop writing `max_hp/max_cp/max_mp` (the trigger discards them anyway). After the stat write succeeds, call `sync_character_resources` and refetch. Keep the optimistic UI by computing the new effective max with gear bonuses for the local state only.
+- **`useCombatActions` solo level-up branch (~line 126)**: include equipment bonuses in `newMaxHp` (mirror the combat-tick behavior), OR call `sync_character_resources` after the level-up commits.
+- **`combat-tick` level-up**: already adds `+ eb.hp`. Also fold in `+ eb.con` for HP (already does), `+ eb.int/wis` for CP, `+ eb.dex` for MP — already correct. Verify and leave.
+
+### 3. Lock down login/refresh behavior
+
+- `GameRoute` already syncs once per character on entry — keep, but also call sync **after** `refetchCharacters` so the freshly-loaded row is the synced one (current order is sync → refetch, which is correct; verify no race).
+- Consider syncing on `visibilitychange` (returning to tab) or after a long network gap to defend against drift in long-lived sessions. Optional.
+
+### 4. Tests
+
+Add unit tests for:
+- `getEffectiveMaxHp/Cp/Mp` against fixtures (warrior L10 with +2 con +5 hp gear, etc.).
+- `clampResourceUpdates` already covered.
+- A new test asserting the formulas in `game-data.ts` match the formulas in `combat-tick/index.ts` (snapshot-style) so future drift fails CI.
+
+Add a Deno test for `sync_character_resources` covering:
+- Equipping +5 HP gear raises `max_hp` by 5 and clamps current `hp` to new max.
+- Unequipping gear lowers `max_hp` and trims current `hp` if it exceeded the new cap.
+- Broken (durability 0) gear is excluded.
+
+### 5. Memory hygiene
+
+- Update `mem://game/combat-system/resource-synchronization` to reflect today's reality: persisted `max_*` columns now include gear bonuses (kept in sync by `sync_character_resources` on world entry + every gear change), and the client uses these as the canonical caps.
+
+---
+
+## Files touched
+
+- `src/lib/game-data.ts` — JSDoc + (optional) consolidate formula
+- `src/features/combat/utils/combat-math.ts` — remove duplicate `getMaxHp`
+- `src/features/character/hooks/useStatAllocation.ts` — stop writing `max_*`, call sync RPC instead
+- `src/features/combat/hooks/useCombatActions.ts` — include gear in solo level-up max calc OR call sync
+- `src/features/character/utils/clampResources.test.ts` — add cases (already has some)
+- `src/lib/__tests__/effective-caps.test.ts` — new
+- `supabase/functions/sync-character-resources-test/` (Deno) — new edge-function-style test, OR a simple psql-driven assertion in a migration smoke test
+- `mem://game/combat-system/resource-synchronization` — rewrite
+
+No new migrations needed (the SQL RPC + trigger are already correct).
+
+---
+
+## Out of scope
+
+- Changing the actual HP/CP/MP formulas (this is purely a consistency / persistence fix).
+- Touching combat damage math.
+- Reworking the realtime-echo merge in `useCharacter` (already handles `max_*` via pendingWritesRef).
