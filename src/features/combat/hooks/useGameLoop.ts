@@ -71,6 +71,11 @@ export interface UseGameLoopParams {
   partyMembers: any[];
   /** Optional event bus — when provided, fires 'player:death' on death */
   bus?: GameEventBus;
+  /** When false, the regen interval is suppressed. Used to wait until the
+   *  server-side `sync_character_resources` RPC has resolved on entry so we
+   *  don't write against pre-sync `max_*` (which the row-level trigger would
+   *  silently clamp). Defaults to true for backward compatibility. */
+  enabled?: boolean;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
