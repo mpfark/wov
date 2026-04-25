@@ -53,6 +53,7 @@ export default function GameRoute() {
       onOpenAdmin={() => window.open('/admin', '_blank')}
       startingNodeId={startingNode?.id ?? nodes[0]?.id}
       onSwitchCharacter={() => { clearSelectedCharacter(); navigate('/'); }}
+      refetchCharacters={refetchCharacters}
     />
   );
 }
