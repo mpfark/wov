@@ -93,7 +93,9 @@ export function useCharacter(user: User | null) {
       setCharacters([]);
       setSelectedCharacterId(null);
       // Drop all pending masks on sign-out so a future login starts clean.
-      pendingWritesRef.current.clear();
+      // Reassign instead of .clear() to be robust against HMR-preserved refs
+      // that may have been initialized as a non-Map in a prior code version.
+      pendingWritesRef.current = new Map();
       setLoading(false);
       return;
     }
