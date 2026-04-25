@@ -246,6 +246,10 @@ export interface UseCombatActionsParams {
   buffState: BuffState;
   buffSetters: BuffSetters;
   notifyCreatureKilled?: (creatureId: string) => void;
+  /** Optional: called after sync_character_resources runs (e.g. on level-up)
+   *  so the new max_hp/max_cp/max_mp lands in local state without waiting
+   *  for the realtime echo. */
+  onResourcesSynced?: () => void;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
