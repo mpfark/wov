@@ -985,6 +985,7 @@ Deno.serve(async (req) => {
     const memberUpdatePromises: PromiseLike<any>[] = [];
     for (const m of members) {
       const c = m.c;
+      const eb = eq[m.id] || {};
       const updates: Record<string, any> = {};
 
       if (mHp[m.id] !== c.hp) updates.hp = mHp[m.id];
@@ -1020,12 +1021,12 @@ Deno.serve(async (req) => {
             events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
           }
 
-          const fInt = updates.int ?? c.int;
-          const fWis = updates.wis ?? c.wis;
-          const fCha = updates.cha ?? c.cha;
-          const fDex = updates.dex ?? c.dex;
-          const fCon = updates.con ?? c.con;
-          newMaxHp = calcMaxHp(c.class, fCon, newLevel);
+          const fInt = (updates.int ?? c.int) + (eb.int || 0);
+          const fWis = (updates.wis ?? c.wis) + (eb.wis || 0);
+          const fCha = (updates.cha ?? c.cha) + (eb.cha || 0);
+          const fDex = (updates.dex ?? c.dex) + (eb.dex || 0);
+          const fCon = (updates.con ?? c.con) + (eb.con || 0);
+          newMaxHp = calcMaxHp(c.class, fCon, newLevel) + (eb.hp || 0);
           updates.max_hp = newMaxHp;
           updates.hp = newMaxHp;
           updates.max_cp = calcMaxCp(newLevel, fInt, fWis, fCha);
