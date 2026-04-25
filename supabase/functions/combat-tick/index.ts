@@ -1,4 +1,4 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { calculateCreatureRewards } from "../_shared/reward-calculator.ts";
 import {
   resolveEffectTicks,

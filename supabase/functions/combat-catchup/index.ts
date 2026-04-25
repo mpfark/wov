@@ -22,7 +22,7 @@
  * - If triggered, returns { partial: true } so clients can retry
  * - Under normal gameplay this should never fire — logged aggressively as a warning
  */
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   resolveEffectTicks,
   processLootDrops,
