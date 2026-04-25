@@ -175,7 +175,11 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
 
       if (Object.keys(updates).length > 0) {
-        updateCharRegenRef.current(updates);
+        updateCharRegenRef.current(updates, {
+          maxHp: effectiveMaxHp,
+          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.int, cpCharRef.current.wis, cpCharRef.current.cha, eqB),
+          maxMp: effectiveMaxMp,
+        });
       }
     }, 4000);
     return () => clearInterval(interval);
