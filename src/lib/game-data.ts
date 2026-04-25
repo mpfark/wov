@@ -40,7 +40,7 @@ export function getWisDodgeChance(wis: number): number {
 
 // ── Static data: races / classes ────────────────────────────────
 
-import { CLASS_BASE_HP, CLASS_BASE_AC } from '@/shared/formulas/classes';
+import { CLASS_BASE_HP } from '@/shared/formulas/classes';
 import { getStatModifier } from '@/shared/formulas/stats';
 
 /** D&D-style stat modifiers by race */
