@@ -103,8 +103,20 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
   const reconcileLockRef = useRef<Set<string> | null>(null);
   const reconcileLockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Cancellation token: bumped on every node change so stale async responses
+  // from a previous node don't overwrite the current node's state.
+  const fetchTokenRef = useRef(0);
+  // Mirror of current nodeId for callbacks that fire after async work
+  const currentNodeIdRef = useRef<string | null>(nodeId);
+  useEffect(() => { currentNodeIdRef.current = nodeId; }, [nodeId]);
+
   const fetchCreatures = useCallback(async (skipCatchup = false) => {
     if (!nodeId) { setCreatures([]); setCreaturesLoading(false); return; }
+
+    // Capture this fetch's token; if nodeId changes mid-flight, bail out.
+    const myToken = ++fetchTokenRef.current;
+    const myNodeId = nodeId;
+    const isStale = () => fetchTokenRef.current !== myToken || currentNodeIdRef.current !== myNodeId;
 
     setCreaturesLoading(true);
 
@@ -115,16 +127,43 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
     }
 
     if (!skipCatchup) {
-      const t0 = performance.now();
-      const result = await reconcileNode(nodeId, { force: true });
-      const elapsed = performance.now() - t0;
-      console.log(`[creatures] catchup for ${nodeId}: ${elapsed.toFixed(0)}ms, ${result.creatures.length} creatures`);
+      // ── Phase 1: Optimistic display ────────────────────────────
+      // Show something within ~100ms instead of waiting for the full reconcile.
+      // Prefer the prefetch cache; otherwise fire a fast direct DB read.
+      if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
+        if (!isStale()) setCreatures(cached.data);
+      } else {
+        // Fast direct read (no await blocking phase 2 — they race; phase 2 wins)
+        supabase
+          .from('creatures')
+          .select('*')
+          .eq('node_id', myNodeId)
+          .eq('is_alive', true)
+          .then(({ data }) => {
+            if (isStale() || !data) return;
+            // Only paint if reconcile hasn't already filled in.
+            setCreatures(prev => (prev.length === 0 ? (data as Creature[]) : prev));
+          });
+      }
 
-      // Set reconcile lock: only these creature IDs are valid for 500ms
+      // ── Phase 2: Authoritative reconcile ───────────────────────
+      const t0 = performance.now();
+      const result = await reconcileNode(myNodeId, { force: true });
+      if (isStale()) {
+        // Node changed while we waited — discard.
+        return;
+      }
+      const elapsed = performance.now() - t0;
+      console.log(`[creatures] catchup for ${myNodeId}: ${elapsed.toFixed(0)}ms, ${result.creatures.length} creatures`);
+
+      // Set reconcile lock: only these creature IDs are valid for 150ms.
+      // Short window — just enough to swallow stale realtime echoes from before
+      // the catchup landed. Respawns are still allowed via the node_id check
+      // in onCreatureUpdate (see below).
       const validIds = new Set(result.creatures.map(c => c.id));
       reconcileLockRef.current = validIds;
       if (reconcileLockTimerRef.current) clearTimeout(reconcileLockTimerRef.current);
-      reconcileLockTimerRef.current = setTimeout(() => { reconcileLockRef.current = null; }, 500);
+      reconcileLockTimerRef.current = setTimeout(() => { reconcileLockRef.current = null; }, 150);
 
       setCreatures(result.creatures);
 
@@ -132,15 +171,15 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
       if (result.kill_rewards && result.kill_rewards.length > 0 && onCatchupRewards) {
         onCatchupRewards(result.kill_rewards);
       }
-      prefetchCache.delete(nodeId);
+      prefetchCache.delete(myNodeId);
       setCreaturesLoading(false);
       return;
     }
 
     // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
     if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-      setCreatures(cached.data);
-      prefetchCache.delete(nodeId);
+      if (!isStale()) setCreatures(cached.data);
+      prefetchCache.delete(myNodeId);
       setCreaturesLoading(false);
       return;
     }
@@ -149,8 +188,9 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
     const { data } = await supabase
       .from('creatures')
       .select('*')
-      .eq('node_id', nodeId)
+      .eq('node_id', myNodeId)
       .eq('is_alive', true);
+    if (isStale()) return;
     if (data) setCreatures(data as Creature[]);
     setCreaturesLoading(false);
   }, [nodeId, onCatchupRewards]);
@@ -171,22 +211,31 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
 
     handle.onCreatureUpdate.current = (payload) => {
       const updated = payload.new as Creature;
-      if (updated) {
-        setCreatures(prev => {
-          if (!updated.is_alive) {
-            return prev.filter(c => c.id !== updated.id);
-          }
-          const exists = prev.some(c => c.id === updated.id);
-          if (exists) {
-            return prev.map(c => c.id === updated.id ? updated : c);
-          }
-          // During reconcile lock, don't add creatures not in the valid set
-          if (reconcileLockRef.current && !reconcileLockRef.current.has(updated.id)) {
-            return prev;
-          }
-          return [...prev, updated];
-        });
+      if (!updated) return;
+      // Drop updates for creatures not at the current node (defense against
+      // late events after a node change).
+      if (updated.node_id && currentNodeIdRef.current && updated.node_id !== currentNodeIdRef.current) {
+        return;
       }
+      setCreatures(prev => {
+        if (!updated.is_alive) {
+          return prev.filter(c => c.id !== updated.id);
+        }
+        const exists = prev.some(c => c.id === updated.id);
+        if (exists) {
+          return prev.map(c => c.id === updated.id ? updated : c);
+        }
+        // During reconcile lock, suppress unknown IDs UNLESS the update
+        // describes a freshly-respawned creature at the current node — those
+        // should always be shown so respawns aren't swallowed.
+        if (reconcileLockRef.current && !reconcileLockRef.current.has(updated.id)) {
+          if (updated.is_alive && updated.node_id === currentNodeIdRef.current) {
+            return [...prev, updated];
+          }
+          return prev;
+        }
+        return [...prev, updated];
+      });
     };
 
     handle.onCreatureInsert.current = () => { debouncedFetch(); };
