@@ -30,7 +30,7 @@ import {
   cleanupEffects,
 } from "../_shared/combat-resolver.ts";
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
-import { getXpForLevel as xpForLevel } from "../_shared/combat-math.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
