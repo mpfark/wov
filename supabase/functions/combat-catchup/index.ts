@@ -265,8 +265,8 @@ Deno.serve(async (req) => {
       if (sourceCharIds.size > 0) {
         // Fetch source characters, party memberships, and XP boost in parallel
         const [{ data: sourceChars }, { data: partyMembers }, { data: xpB }] = await Promise.all([
-          db.from('characters').select('id, level, cha, user_id').in('id', Array.from(sourceCharIds)),
-          db.from('party_members').select('character_id, party_id, character:characters(id, level, cha)').in('character_id', Array.from(sourceCharIds)).eq('status', 'accepted'),
+          db.from('characters').select('id, name, level, cha, user_id').in('id', Array.from(sourceCharIds)),
+          db.from('party_members').select('character_id, party_id, character:characters(id, name, level, cha)').in('character_id', Array.from(sourceCharIds)).eq('status', 'accepted'),
           db.from('xp_boost').select('multiplier, expires_at').limit(1).single(),
         ]);
 
