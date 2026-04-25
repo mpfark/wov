@@ -214,7 +214,7 @@ export function useCharacter(user: User | null) {
     try {
       const { error } = await supabase
         .from('characters')
-        .update(dbUpdates)
+        .update(dbUpdates as any)
         .eq('id', charId);
       if (error) throw error;
     } finally {
