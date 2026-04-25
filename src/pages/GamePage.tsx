@@ -64,9 +64,10 @@ interface Props {
   onOpenAdmin?: () => void;
   startingNodeId?: string;
   onSwitchCharacter?: () => void;
+  refetchCharacters?: () => void;
 }
 
-export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
+export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters }: Props) {
   
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
