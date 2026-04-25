@@ -18,17 +18,21 @@ interface UseStatAllocationArgs {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   addLog: (msg: string) => void;
+  /** Optional: called after sync_character_resources runs so callers can
+   *  refetch the character row immediately instead of waiting for realtime. */
+  onResourcesSynced?: () => void;
 }
 
-async function syncResources(characterId: string) {
+async function syncResources(characterId: string, onSynced?: () => void) {
   try {
     await supabase.rpc('sync_character_resources' as any, { p_character_id: characterId });
+    onSynced?.();
   } catch (e) {
     console.error('Failed to sync character resources after stat change:', e);
   }
 }
 
-export function useStatAllocation({ character, updateCharacter, addLog }: UseStatAllocationArgs) {
+export function useStatAllocation({ character, updateCharacter, addLog, onResourcesSynced }: UseStatAllocationArgs) {
   const handleAllocateStat = useCallback(async (stat: string) => {
     if (character.unspent_stat_points <= 0) return;
     const currentVal = (character as any)[stat] ?? 10;
@@ -37,9 +41,9 @@ export function useStatAllocation({ character, updateCharacter, addLog }: UseSta
       unspent_stat_points: character.unspent_stat_points - 1,
     };
     await updateCharacter(updates);
-    await syncResources(character.id);
+    await syncResources(character.id, onResourcesSynced);
     addLog(`📊 +1 ${stat.toUpperCase()}! (${character.unspent_stat_points - 1} points remaining)`);
-  }, [character, updateCharacter, addLog]);
+  }, [character, updateCharacter, addLog, onResourcesSynced]);
 
   const handleFullRespec = useCallback(async () => {
     if ((character.respec_points || 0) <= 0) return;
@@ -60,9 +64,9 @@ export function useStatAllocation({ character, updateCharacter, addLog }: UseSta
     }
     updates.unspent_stat_points = character.unspent_stat_points + totalRefunded;
     await updateCharacter(updates);
-    await syncResources(character.id);
+    await syncResources(character.id, onResourcesSynced);
     addLog(`🔄 Full respec! ${totalRefunded} stat point${totalRefunded !== 1 ? 's' : ''} refunded.`);
-  }, [character, updateCharacter, addLog]);
+  }, [character, updateCharacter, addLog, onResourcesSynced]);
 
   const handleBatchAllocateStats = useCallback(async (allocations: Record<string, number>) => {
     const totalPoints = Object.values(allocations).reduce((s, v) => s + v, 0);
@@ -75,10 +79,10 @@ export function useStatAllocation({ character, updateCharacter, addLog }: UseSta
       (updates as any)[stat] = currentVal + amount;
     }
     await updateCharacter(updates);
-    await syncResources(character.id);
+    await syncResources(character.id, onResourcesSynced);
     const statList = Object.entries(allocations).map(([s, v]) => `+${v} ${s.toUpperCase()}`).join(', ');
     addLog(`📊 Batch allocation: ${statList} (${character.unspent_stat_points - totalPoints} points remaining)`);
-  }, [character, updateCharacter, addLog]);
+  }, [character, updateCharacter, addLog, onResourcesSynced]);
 
   return { handleAllocateStat, handleFullRespec, handleBatchAllocateStats };
 }

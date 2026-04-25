@@ -64,9 +64,10 @@ interface Props {
   onOpenAdmin?: () => void;
   startingNodeId?: string;
   onSwitchCharacter?: () => void;
+  refetchCharacters?: () => void;
 }
 
-export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter }: Props) {
+export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters }: Props) {
   
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
@@ -142,7 +143,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
@@ -591,6 +592,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     fetchInventory, fetchGroundLoot,
     buffState, buffSetters,
     notifyCreatureKilled: gameLoop.notifyCreatureKilled,
+    onResourcesSynced: refetchCharacters,
   });
 
   const movementActions = useMovementActions({
@@ -631,6 +633,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleAllocateStat, handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
     character, updateCharacter, addLog,
+    onResourcesSynced: refetchCharacters,
   });
 
   // ── Keyboard + chat ────────────────────────────────────────────
