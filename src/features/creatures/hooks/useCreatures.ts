@@ -69,7 +69,7 @@ export async function reconcileNode(
 
   lastReconcileMap.set(nodeId, Date.now());
 
-  const { data, error } = await invokeWithRetry('combat-catchup', {
+  const { data, error } = await invokeWithRetry<any>('combat-catchup', {
     body: { node_id: nodeId, force, ...(reason ? { reason } : {}) },
   });
 
