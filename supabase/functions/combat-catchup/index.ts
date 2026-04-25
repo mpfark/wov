@@ -252,12 +252,35 @@ Deno.serve(async (req) => {
     const lootEvents = await processLootDrops(db, result.lootQueue);
 
     // ── Award rewards for offscreen kills ────────────────────────
-    const killRewards: any[] = [];
+    // IDEMPOTENCY: atomically claim the right to award rewards on each killed
+    // creature by setting `rewards_awarded_at` only if it is NULL. Any retry of
+    // combat-catchup (e.g. on 503 cold-starts) will see the marker set and
+    // skip awarding/broadcasting for that creature. The marker is cleared by
+    // `respawn_creatures()` so future kills award normally.
+    const claimedKills = new Set<string>();
     if (cKilled.size > 0) {
-      // Collect unique source character IDs from effects that targeted killed creatures
+      const { data: claimed } = await db
+        .from('creatures')
+        .update({ rewards_awarded_at: new Date().toISOString() })
+        .in('id', Array.from(cKilled))
+        .is('rewards_awarded_at', null)
+        .select('id');
+      for (const row of (claimed || [])) claimedKills.add((row as any).id);
+
+      if (claimedKills.size < cKilled.size) {
+        console.log(JSON.stringify({
+          fn: 'combat-catchup', node_id, idempotency_skipped: cKilled.size - claimedKills.size,
+          note: 'rewards already awarded by prior catchup invocation',
+        }));
+      }
+    }
+
+    const killRewards: any[] = [];
+    if (claimedKills.size > 0) {
+      // Collect unique source character IDs from effects that targeted claimed kills
       const sourceCharIds = new Set<string>();
       for (const eff of effects) {
-        if (cKilled.has(eff.target_id) && eff.source_id) {
+        if (claimedKills.has(eff.target_id) && eff.source_id) {
           sourceCharIds.add(eff.source_id);
         }
       }
