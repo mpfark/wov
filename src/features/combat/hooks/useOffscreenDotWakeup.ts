@@ -317,6 +317,11 @@ function scheduleWakeup(
           eventBus.emit('log', {
             message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`,
           });
+
+          // Boss world emote — show locally for the source player too
+          if (reward.boss_death_cry_text) {
+            eventBus.emit('log', { message: `🌫️ ${reward.boss_death_cry_text}` });
+          }
         }
       }
 
