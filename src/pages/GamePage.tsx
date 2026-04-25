@@ -633,6 +633,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleAllocateStat, handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
     character, updateCharacter, addLog,
+    onResourcesSynced: refetchCharacters,
   });
 
   // ── Keyboard + chat ────────────────────────────────────────────
