@@ -60,7 +60,7 @@ interface EquippedItem {
 // ─── Params ───────────────────────────────────────────────────────
 export interface UseGameLoopParams {
   character: Character;
-  updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  updateCharacter: (updates: Partial<Character>, effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }) => Promise<void>;
   equipped: EquippedItem[];
   equipmentBonuses: Record<string, number>;
   getNode: (id: string) => any;
