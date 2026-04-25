@@ -111,13 +111,13 @@ describe('XP — fixed snapshots', () => {
     // playerLevel 6–10 → 9%
     expect(getXpPenaltySolo(8, 5)).toBeCloseTo(1 - 3 * 0.09, 5);
     // playerLevel 11+ → 12%
-    expect(getXpPenaltySolo(20, 10)).toBeCloseTo(1 - 10 * 0.12, 5);
+    expect(getXpPenaltySolo(15, 12)).toBeCloseTo(1 - 3 * 0.12, 5);
     expect(getXpPenaltySolo(42, 1)).toBe(0.10); // floor
   });
   it('Party penalty (harsher)', () => {
     expect(getXpPenaltyParty(3, 1)).toBeCloseTo(1 - 2 * 0.10, 5);
     expect(getXpPenaltyParty(8, 5)).toBeCloseTo(1 - 3 * 0.15, 5);
-    expect(getXpPenaltyParty(20, 10)).toBeCloseTo(1 - 10 * 0.20, 5);
+    expect(getXpPenaltyParty(13, 11)).toBeCloseTo(1 - 2 * 0.20, 5);
     expect(getXpPenaltyParty(42, 1)).toBe(0.10);
   });
   it('Legacy alias = solo', () => {
