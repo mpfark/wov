@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     if (party_id) {
       const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
       if (!party) throw new Error('Party not found');
-      const { data: userChars } = await db.from('characters').select('id').eq('user_id', user.id);
+      const { data: userChars } = await db.from('characters').select('id').eq('user_id', userId);
       if (!userChars?.some(c => c.id === party.leader_id)) throw new Error('Not the party leader');
 
       const { data: membersRaw } = await db
