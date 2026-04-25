@@ -20,10 +20,10 @@
  *   → finalAppliedDamage
  */
 
-import { getStatModifier, rollD20, rollDamage, diminishing, diminishingFloat } from './stats';
+import { getStatModifier, rollD20, rollDamage, diminishing, diminishingFloat } from './stats.ts';
 import {
   CLASS_BASE_AC, CLASS_COMBAT_PROFILES, getWeaponAffinityBonus,
-} from './classes';
+} from './classes.ts';
 
 // ── Cross-stat bonuses ───────────────────────────────────────────
 

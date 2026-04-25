@@ -5,7 +5,7 @@
  * carry capacity / bag weight / move cost, teleport CP cost.
  */
 
-import { getStatModifier, diminishingFloat } from './stats';
+import { getStatModifier, diminishingFloat } from './stats.ts';
 
 // ── CHA → vendor & gold ─────────────────────────────────────────
 

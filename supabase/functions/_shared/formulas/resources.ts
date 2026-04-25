@@ -7,8 +7,8 @@
  * in PL/pgSQL. If you change the numbers here, also update that RPC.
  */
 
-import { getStatModifier } from './stats';
-import { CLASS_BASE_HP } from './classes';
+import { getStatModifier } from './stats.ts';
+import { CLASS_BASE_HP } from './classes.ts';
 
 /** Max HP = base class HP + CON modifier + (level-1)*5
  *  Returns the BASE max — gear bonuses are layered on by `getEffectiveMaxHp`. */
