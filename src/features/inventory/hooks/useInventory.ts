@@ -61,10 +61,13 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
     if (!characterId) return;
     try {
       await supabase.rpc('sync_character_resources' as any, { p_character_id: characterId });
+      // Pull the freshly-synced max_hp/max_cp/max_mp into local state right
+      // away — don't wait for the realtime echo (which can be delayed).
+      onResourcesSynced?.();
     } catch (e) {
       console.error('Failed to sync character resources after gear change:', e);
     }
-  }, [characterId]);
+  }, [characterId, onResourcesSynced]);
 
   const equipItem = useCallback(async (inventoryId: string, slot: string) => {
     if (!characterId) return;
