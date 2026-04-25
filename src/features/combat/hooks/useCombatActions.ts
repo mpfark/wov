@@ -376,7 +376,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
   }, [p.isDead, p.startCombat]);
 
   return {
-    degradeEquipment, rollLoot, awardKillRewards,
+    degradeEquipment,
     handleUseAbility, handleAttack,
     lastUsedAbilityCost,
   };
