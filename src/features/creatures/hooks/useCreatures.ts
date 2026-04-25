@@ -211,22 +211,31 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
 
     handle.onCreatureUpdate.current = (payload) => {
       const updated = payload.new as Creature;
-      if (updated) {
-        setCreatures(prev => {
-          if (!updated.is_alive) {
-            return prev.filter(c => c.id !== updated.id);
-          }
-          const exists = prev.some(c => c.id === updated.id);
-          if (exists) {
-            return prev.map(c => c.id === updated.id ? updated : c);
-          }
-          // During reconcile lock, don't add creatures not in the valid set
-          if (reconcileLockRef.current && !reconcileLockRef.current.has(updated.id)) {
-            return prev;
-          }
-          return [...prev, updated];
-        });
+      if (!updated) return;
+      // Drop updates for creatures not at the current node (defense against
+      // late events after a node change).
+      if (updated.node_id && currentNodeIdRef.current && updated.node_id !== currentNodeIdRef.current) {
+        return;
       }
+      setCreatures(prev => {
+        if (!updated.is_alive) {
+          return prev.filter(c => c.id !== updated.id);
+        }
+        const exists = prev.some(c => c.id === updated.id);
+        if (exists) {
+          return prev.map(c => c.id === updated.id ? updated : c);
+        }
+        // During reconcile lock, suppress unknown IDs UNLESS the update
+        // describes a freshly-respawned creature at the current node — those
+        // should always be shown so respawns aren't swallowed.
+        if (reconcileLockRef.current && !reconcileLockRef.current.has(updated.id)) {
+          if (updated.is_alive && updated.node_id === currentNodeIdRef.current) {
+            return [...prev, updated];
+          }
+          return prev;
+        }
+        return [...prev, updated];
+      });
     };
 
     handle.onCreatureInsert.current = () => { debouncedFetch(); };
