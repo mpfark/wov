@@ -143,7 +143,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id);
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
