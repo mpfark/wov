@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        for (const creatureId of cKilled) {
+        for (const creatureId of claimedKills) {
           const creature = creatures.find(cr => cr.id === creatureId);
           if (!creature) continue;
 
