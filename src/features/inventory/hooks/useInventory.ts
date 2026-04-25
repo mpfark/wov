@@ -48,6 +48,15 @@ export function useInventory(characterId: string | null) {
     // No realtime subscription — every inventory mutation already calls fetchInventory()
   }, [characterId, fetchInventory]);
 
+  const syncResources = useCallback(async () => {
+    if (!characterId) return;
+    try {
+      await supabase.rpc('sync_character_resources' as any, { p_character_id: characterId });
+    } catch (e) {
+      console.error('Failed to sync character resources after gear change:', e);
+    }
+  }, [characterId]);
+
   const equipItem = useCallback(async (inventoryId: string, slot: string) => {
     if (!characterId) return;
     const itemToEquip = inventory.find(i => i.id === inventoryId);
@@ -72,8 +81,9 @@ export function useInventory(characterId: string | null) {
       await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', existing.id);
     }
     await supabase.from('character_inventory').update({ equipped_slot: slot as any }).eq('id', inventoryId);
+    await syncResources();
     fetchInventory();
-  }, [characterId, inventory, fetchInventory]);
+  }, [characterId, inventory, fetchInventory, syncResources]);
 
   const unequipItem = useCallback(async (inventoryId: string) => {
     // If unequipping a belt, clear all belt_slot assignments
@@ -87,8 +97,9 @@ export function useInventory(characterId: string | null) {
       }
     }
     await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', inventoryId);
+    await syncResources();
     fetchInventory();
-  }, [inventory, fetchInventory]);
+  }, [inventory, fetchInventory, syncResources]);
 
   const dropItem = useCallback(async (inventoryId: string) => {
     const item = inventory.find(i => i.id === inventoryId);

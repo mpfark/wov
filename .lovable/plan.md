@@ -1,79 +1,65 @@
-## Goal
+Yes — making the gear-adjusted resource caps the persisted baseline is the right direction here. The current issue is that the client calculates effective gear caps, but the database trigger still clamps `hp/cp/mp` to the persisted `max_hp/max_cp/max_mp`. So even if the regen loop sends `effectiveCaps`, the database can still silently reduce the saved values back to the pre-gear caps.
 
-Add automated tests proving:
-1. `updateCharacter` clamps `hp/cp/mp` to caller-supplied `effectiveCaps` when present (regen loop case — no snap-back to base `max_hp`).
-2. When `effectiveCaps` is absent, the legacy clamp to base `max_hp/max_cp/max_mp` still applies.
-3. The HP display on login never shows a max lower than current HP (the "233/233 flash" can't recur in a way that would clip a 250 HP value to 233).
+## Plan
 
-## Approach
+1. Add a backend recalculation function for character resources
+   - Create a dedicated migration with a trusted backend function like `sync_character_resources(character_id)`.
+   - It will:
+     - Verify the caller owns the character.
+     - Read the character’s current base stats and equipped, non-broken gear.
+     - Recalculate effective `max_hp`, `max_cp`, and `max_mp` using the same formulas as the app.
+     - Persist those effective maxima into the character row.
+     - Clamp current `hp/cp/mp` down only if they are above the new effective maxima.
+   - This makes the database row itself match the gear state, so normal updates and realtime echoes no longer fight the UI.
 
-`updateCharacter` lives inside the `useCharacter` hook and is closure-bound to React state and Supabase calls. Testing it through the full hook would require mocking Supabase + realtime channels — high cost, low signal for what we actually want to verify (a 6-line clamp).
+2. Trigger this sync when entering the world
+   - Add a small “preparing your character” step in `GameRoute` before rendering `GamePage`.
+   - On world entry, call the backend sync function for the selected character, then refetch character data.
+   - This ensures login/reload starts from the correct gear-adjusted baseline.
 
-Cleanest fix: **extract the clamp into a pure helper** and call it from `updateCharacter`. Then unit-test the helper directly. Behavior is unchanged.
+3. Trigger this sync after gear changes
+   - Update inventory actions that can change effective caps:
+     - Equip item
+     - Unequip item
+     - Broken equipment being unequipped/deleted
+     - Dropped/destroyed equipped gear, if applicable
+   - After the inventory mutation, run the resource sync and refetch both inventory/character data.
+   - This keeps relog behavior correct after gear changes, not just initial login.
 
-## Changes
+4. Stop using temporary effective caps as the long-term persistence fix
+   - Keep UI calculations where needed, but rely on persisted `max_hp/max_cp/max_mp` as the stable baseline after sync.
+   - Update regen/heal/consumable/party-regen calls so any `hp/cp/mp` writes use the synced caps and do not get clamped differently by the database.
+   - Fix currently missed paths, especially party regen/self heal and consumable healing, which compute gear maxes but call `updateCharacter` without effective caps.
 
-### 1. New pure helper — `src/features/character/utils/clampResources.ts`
+5. Add regression tests
+   - Add tests for the resource-cap calculation helper so gear bonuses produce the expected persisted max HP/CP/MP.
+   - Add/update tests for `clampResourceUpdates` to confirm it uses persisted synced caps correctly.
+   - Add a route/hook-level test for “enter world” flow: sync runs before `GamePage` renders with the selected character.
 
-```ts
-import type { Character } from '../hooks/useCharacter';
+6. Verify
+   - Run the relevant Vitest tests.
+   - Run TypeScript/build checks if available.
+   - Confirm no direct edits are made to generated backend client/type files.
 
-export interface EffectiveCaps {
-  maxHp?: number;
-  maxCp?: number;
-  maxMp?: number;
-}
+## Technical notes
 
-/** Clamp hp/cp/mp in `updates` to effective caps (gear-boosted) when supplied,
- *  otherwise fall back to the base maxes on the character row. */
-export function clampResourceUpdates(
-  updates: Partial<Character>,
-  base: Pick<Character, 'max_hp' | 'max_cp' | 'max_mp'>,
-  caps?: EffectiveCaps,
-): Partial<Character> {
-  const out = { ...updates } as any;
-  const hpCap = caps?.maxHp ?? base.max_hp;
-  const cpCap = caps?.maxCp ?? base.max_cp;
-  const mpCap = caps?.maxMp ?? base.max_mp;
-  if (out.hp != null) out.hp = Math.min(out.hp, hpCap);
-  if (out.cp != null) out.cp = Math.min(out.cp, cpCap);
-  if (out.mp != null) out.mp = Math.min(out.mp, mpCap);
-  return out;
-}
+The important change is not simply “top up on login.” It is to make the persisted character row reflect the equipped gear state:
+
+```text
+Character enters world
+  -> backend reads equipped gear
+  -> calculates effective max_hp/max_cp/max_mp
+  -> writes those maxes to characters row
+  -> hp/cp/mp are clamped against those maxes
+  -> GamePage renders and regen uses the same baseline
 ```
 
-### 2. Refactor `useCharacter.ts`
+This avoids the current mismatch:
 
-Replace the inline clamp block in `updateCharacter` with a call to `clampResourceUpdates(updates, charForCaps, effectiveCaps)`. No behavior change.
-
-### 3. New test — `src/features/character/utils/clampResources.test.ts`
-
-Cases:
-- **Regen above base, with caps** — `hp: 250`, base `max_hp: 233`, caps `{ maxHp: 250 }` → result `hp: 250` (no snap-back).
-- **Regen above base, no caps** — same input without caps → result `hp: 233` (legacy behavior preserved).
-- **CP/MP clamped to caps independently** — verify all three resources use their respective caps.
-- **No clamp when field absent** — `updates` without `hp` field is untouched.
-- **Over-cap value still clamped to cap** — `hp: 999` with cap `250` → `250`.
-- **Other fields pass through** — `gold`, `xp`, `name` unchanged.
-
-### 4. New test — `src/features/character/components/StatusBarsStrip.login-display.test.tsx`
-
-Renders `StatusBarsStrip` with a character at `hp: 250, max_hp: 233` and `equipmentBonuses: { hp: 17 }` (the Cithrawiel scenario). Asserts the HP readout shows `250/250` — i.e. the bar uses `getEffectiveMaxHp` and never displays `233` as the max while HP is 250. Then re-renders with empty bonuses (the brief login frame before inventory loads) and asserts the bar doesn't crash and the percentage stays sensible (`hp/effectiveMax` ≤ 1 because `effectiveMax >= max_hp >= hp` post-clamp).
-
-This second test requires mocking nothing — `StatusBarsStrip` is a pure component that takes `character` and `equipmentBonuses` as props.
-
-## Files
-
-- **New:** `src/features/character/utils/clampResources.ts`
-- **New:** `src/features/character/utils/clampResources.test.ts`
-- **New:** `src/features/character/components/StatusBarsStrip.login-display.test.tsx`
-- **Edit:** `src/features/character/hooks/useCharacter.ts` — replace inline clamp with `clampResourceUpdates(...)` call (one import, ~6 lines replaced with 1).
-
-## Verification
-
-Run `bunx vitest run src/features/character` — all new tests pass; existing combat tests untouched.
-
-## Out of scope
-
-- Full integration test of the regen loop driving Supabase. The hook-level wiring (passing `effectiveCaps` from `useGameLoop` into `updateCharacter`) is already done; the risk surface is the clamp math, which these tests cover.
-- Changing the StatusBars to default `max = Math.max(max_hp, hp)` — already noted as optional polish in the plan; not needed if the clamp is correct.
+```text
+UI/regen sees gear max: 250
+Database row max_hp: 233
+Database trigger clamps hp back to 233
+Realtime/refetch returns 233
+UI appears to snap back
+```
