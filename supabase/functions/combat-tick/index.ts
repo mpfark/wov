@@ -116,6 +116,21 @@ function json(data: unknown) {
   });
 }
 
+// Decode user id from JWT locally — avoids per-tick GoTrue round-trip that was
+// returning intermittent (then persistent) Unauthorized errors and stalling combat.
+function getUserIdFromJwt(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 const TICK_RATE = 2000;
 const TICK_CAP = 3; // Defensive safeguard — sessions end on node change, so large backlogs should not occur
 

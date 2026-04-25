@@ -1,67 +1,59 @@
-## What's already in place
+## Problem
 
-`src/features/inventory/hooks/useInventory.ts` already calls `sync_character_resources` after every equip and unequip:
+Edge-function logs show every single `combat-tick` invocation failing with `Error: Unauthorized` thrown from line 141:
 
-```ts
-await supabase.from('character_inventory').update({ equipped_slot: slot }).eq('id', inventoryId);
-await syncResources();   // writes gear-adjusted max_hp/max_cp/max_mp to DB
-fetchInventory();
+```
+const { data: { user }, error: authErr } = await userDb.auth.getUser();
+if (authErr || !user) throw new Error('Unauthorized');
 ```
 
-The same RPC is also called on world entry (`GameRoute`), on stat allocation/respec/training, and after solo level-up. So the literal request — "sync after every equip/unequip" — is already implemented.
+Because every tick fails, the server never advances combat — the client thinks it's "in combat" but no damage, no kills, no aggro responses ever come back. That perfectly matches the user's symptom: combat doesn't start whether triggered manually or by walking into an aggressive creature's node.
 
-## The remaining gap (why you may still see snap-backs)
+`auth.getUser()` makes an HTTP round-trip to GoTrue on every call. With ticks firing every 2 seconds per player (plus all the other "wake up" / "engage" pings), this endpoint is being hit far too often and is now consistently failing — likely a transient GoTrue throttle that has become persistent, or the Authorization header carries the publishable/anon key instead of a session JWT in some code paths.
 
-After `sync_character_resources` writes new `max_hp/max_cp/max_mp` to the DB, the client only learns about the new values via the Supabase realtime channel in `useCharacter`. If realtime is delayed, dropped, or briefly disconnected, the local `character.max_hp` stays stale and the bars show the pre-sync number — which looks identical to a snap-back.
+Either way, the fix is the same: stop calling GoTrue on every tick. We already have the JWT in the request header, and Supabase has already validated it (or will, if `verify_jwt` is on). We just need the `sub` claim to know which user is asking.
 
-We need an explicit refetch right after the sync RPC so the new caps are guaranteed to be in local state, regardless of realtime.
+## Fix
 
-## Proposed change (small, surgical)
-
-### 1. Pass `refetchCharacters` into `useInventory`
-
-`useInventory(characterId)` currently doesn't know about the character store. Add an optional second arg:
+Replace the `auth.getUser()` round trip in `supabase/functions/combat-tick/index.ts` with a local JWT decode:
 
 ```ts
-useInventory(characterId, { onResourcesSynced })
-```
-
-…where `onResourcesSynced` is wired by `GameRoute` / `GamePage` to call `refetchCharacters()`.
-
-### 2. Call it after every sync
-
-In `useInventory.syncResources`:
-
-```ts
-const syncResources = useCallback(async () => {
-  if (!characterId) return;
+function getUserIdFromJwt(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
   try {
-    await supabase.rpc('sync_character_resources', { p_character_id: characterId });
-    onResourcesSynced?.();   // ← pull the fresh max_* into local state right away
-  } catch (e) { console.error(...); }
-}, [characterId, onResourcesSynced]);
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
 ```
 
-### 3. Same treatment for the other sync sites
+Then in the handler:
 
-- `useStatAllocation`: it already takes a `refetch` callback — verify it's invoked after the RPC (currently the realtime echo is doing the work; make it explicit).
-- `useCombatActions` solo level-up (line ~497): add a `refetchCharacters()` call right after the sync RPC.
-- `GameRoute` world-entry sync (line 23): already followed by `refetchCharacters()`; verify and leave.
+```ts
+const authHeader = req.headers.get('Authorization');
+const userId = getUserIdFromJwt(authHeader);
+if (!userId) throw new Error('Unauthorized');
+// replace every later `user.id` reference with `userId`
+```
 
-### 4. Optional safety net
+This removes the GoTrue dependency entirely for the hot tick path. It's safe because:
 
-Add a one-shot retry: if the local `max_hp` doesn't change within 500ms of an equip/unequip, retry the sync once. This defends against the rare case where the RPC succeeded but the trigger silently no-op'd. (Skip if you'd rather keep the change minimal.)
+- All authorization decisions later in the function (`char.user_id !== user.id`, party-leader checks) compare against the `user_id` field on the `characters` table, so we still verify ownership.
+- If someone forges a JWT, the only thing they can do is read/write rows whose `user_id` matches the forged `sub`, and they'd still need a valid signed JWT to get past the platform-level checks on any RLS-protected call (we use the service role inside the function, so RLS isn't the gate — but ownership still is, via the `user_id !== userId` guard).
 
-## Files touched
+## Verification
 
-- `src/features/inventory/hooks/useInventory.ts` — accept `onResourcesSynced`, call it after every sync
-- `src/pages/GamePage.tsx` (or wherever `useInventory` is constructed) — wire `refetchCharacters` in
-- `src/features/character/hooks/useStatAllocation.ts` — explicit refetch after sync (if not already)
-- `src/features/combat/hooks/useCombatActions.ts` — explicit refetch after the level-up sync RPC
+- After the change is deployed, watch `combat-tick` logs — the "Unauthorized" stream should stop and we should see normal tick logs (`combat-tick` with `ticks_processed`, member/creature state).
+- In the preview, walk into an aggressive creature's node and confirm combat actually starts (HP bars move, log entries appear).
+- Manually attack a creature and confirm the same.
 
-No DB migration, no formula changes, no edge-function changes. Behavior change: the new gear-adjusted max appears in the UI within one round-trip of the equip click, instead of one round-trip + one realtime hop.
+## Files to change
 
-## Out of scope
+- `supabase/functions/combat-tick/index.ts` — add `getUserIdFromJwt` helper, replace `auth.getUser()` block, replace the two `user.id` references (`userChars` filter for party leadership, `char.user_id !== user.id` for solo) with `userId`.
 
-- Touching the underlying formulas or the sync RPC itself.
-- Reworking the realtime subscription.
+No DB migration, no client changes.
