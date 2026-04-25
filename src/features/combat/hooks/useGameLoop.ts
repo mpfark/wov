@@ -83,7 +83,13 @@ export function useGameLoop(params: UseGameLoopParams) {
   const {
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures, party, partyMembers, bus,
+    enabled = true,
   } = params;
+
+  // Keep a ref so the long-lived interval below can read the latest value
+  // without being re-created.
+  const enabledRef = useRef(enabled);
+  useEffect(() => { enabledRef.current = enabled; }, [enabled]);
 
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
