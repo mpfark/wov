@@ -79,7 +79,6 @@ function resolveCreatureTarget(
 export interface UseCombatActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
-  updateCharacterLocal: (updates: Partial<Character>) => void;
   addLog: (msg: string) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   equipmentBonuses: Record<string, number>;
@@ -93,17 +92,16 @@ export interface UseCombatActionsParams {
   stopCombat: () => void;
   queueAbility: (index: number, targetId?: string) => void;
   isDead: boolean;
-  xpMultiplier: number;
   fetchInventory: () => void;
-  fetchGroundLoot: () => void;
   buffState: BuffState;
   buffSetters: BuffSetters;
-  notifyCreatureKilled?: (creatureId: string) => void;
-  /** Optional: called after sync_character_resources runs (e.g. on level-up)
-   *  so the new max_hp/max_cp/max_mp lands in local state without waiting
-   *  for the realtime echo. */
-  onResourcesSynced?: () => void;
 }
+// NOTE: Params trimmed after server became sole writer of kill rewards:
+//   - `xpMultiplier`, `notifyCreatureKilled`, `fetchGroundLoot` were used by
+//     the removed client-side `awardKillRewards` / `rollLoot`.
+//   - `updateCharacterLocal`, `onResourcesSynced` were used by the removed
+//     client-side level-up bookkeeping. Resource sync now flows through
+//     `interpretCombatTickResult` from the server response.
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Hook

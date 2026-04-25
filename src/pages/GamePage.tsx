@@ -584,17 +584,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Feature-specific action hooks ──────────────────────────────
   const combatActions = useCombatActions({
-    character, updateCharacter, updateCharacterLocal, addLog,
+    character, updateCharacter, addLog,
     equipped, equipmentBonuses,
     creatures, creatureHpOverrides,
     party, partyMembers,
     inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
     queueAbility,
-    isDead, xpMultiplier,
-    fetchInventory, fetchGroundLoot,
+    isDead,
+    fetchInventory,
     buffState, buffSetters,
-    notifyCreatureKilled: gameLoop.notifyCreatureKilled,
-    onResourcesSynced: refetchCharacters,
   });
 
   const movementActions = useMovementActions({
