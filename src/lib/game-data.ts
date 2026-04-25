@@ -158,6 +158,7 @@ export const CLASS_PRIMARY_STAT: Record<string, string> = {
 };
 
 // CP (Concentration Points) system — scales with INT + WIS
+/** ⚠️ Sync with `sync_character_resources()` SQL and `combat-tick` edge function. */
 export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
   const intMod = Math.max(Math.floor((int - 10) / 2), 0);
   const wisMod = Math.max(Math.floor((wis - 10) / 2), 0);
@@ -165,6 +166,10 @@ export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha
 }
 
 // ── Effective max helpers (gear-adjusted caps) ──────────────
+//
+// These are the values shown in the UI and used as caps for regen/healing.
+// They MATCH the formulas inside `sync_character_resources()` so that the
+// persisted `characters.max_*` columns and the on-screen numbers stay equal.
 export function getEffectiveMaxHp(charClass: string, baseCon: number, level: number, equipmentBonuses: Record<string, number>): number {
   return getMaxHp(charClass, baseCon + (equipmentBonuses.con || 0), level) + (equipmentBonuses.hp || 0);
 }
