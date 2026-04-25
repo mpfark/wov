@@ -490,6 +490,14 @@ export function useCombatActions(params: UseCombatActionsParams) {
       levelUpUpdates.xp = newXp - xpForNext;
       levelUpUpdates.gold = newGold;
       await p.updateCharacter(levelUpUpdates);
+      // Persist the new gear-effective max_hp/max_cp/max_mp so refresh/login
+      // doesn't snap them back to base values. The trigger discards client
+      // writes to max_*, so this RPC is the only sanctioned write path.
+      try {
+        await supabase.rpc('sync_character_resources' as any, { p_character_id: p.character.id });
+      } catch (e) {
+        console.error('Failed to sync resources after level-up:', e);
+      }
     } else {
       await p.updateCharacter({ xp: newXp, gold: newGold });
     }
