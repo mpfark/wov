@@ -524,6 +524,7 @@ export type Database = {
           node_id: string | null
           rarity: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds: number
+          rewards_awarded_at: string | null
           stats: Json
         }
         Insert: {
@@ -549,6 +550,7 @@ export type Database = {
           node_id?: string | null
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds?: number
+          rewards_awarded_at?: string | null
           stats?: Json
         }
         Update: {
@@ -574,6 +576,7 @@ export type Database = {
           node_id?: string | null
           rarity?: Database["public"]["Enums"]["creature_rarity"]
           respawn_seconds?: number
+          rewards_awarded_at?: string | null
           stats?: Json
         }
         Relationships: [
