@@ -27,7 +27,16 @@ export interface InventoryItem {
   };
 }
 
-export function useInventory(characterId: string | null) {
+interface UseInventoryOptions {
+  /** Called after sync_character_resources runs (equip / unequip).
+   *  Wire this to refetchCharacters() so the new gear-adjusted
+   *  max_hp/max_cp/max_mp lands in local state immediately, without
+   *  waiting for the realtime echo. */
+  onResourcesSynced?: () => void;
+}
+
+export function useInventory(characterId: string | null, options: UseInventoryOptions = {}) {
+  const { onResourcesSynced } = options;
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
