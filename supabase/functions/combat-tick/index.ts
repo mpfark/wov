@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
       sessionKey = { party_id };
     } else {
       const { data: char } = await db.from('characters').select('*').eq('id', character_id).single();
-      if (!char || char.user_id !== user.id) throw new Error('Not authorized');
+      if (!char || char.user_id !== userId) throw new Error('Not authorized');
       if (char.hp <= 0) {
         return json({ events: [], creature_states: [], member_states: [], ticks_processed: 0 });
       }
