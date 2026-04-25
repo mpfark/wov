@@ -278,7 +278,7 @@ function scheduleWakeup(
     console.log(`[offscreen-dot] wake-up triggered for node=${snapshot.nodeId}`);
 
     try {
-      const { data, error } = await supabase.functions.invoke('combat-catchup', {
+      const { data, error } = await invokeWithRetry<any>('combat-catchup', {
         body: { node_id: snapshot.nodeId, force: true, reason: 'predicted_lethal_effect' },
       });
 
