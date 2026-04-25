@@ -982,7 +982,7 @@ Deno.serve(async (req) => {
 
     // ── Prepare member state updates ──────────────────────────────
     const memberStates: any[] = [];
-    const memberUpdatePromises: Promise<any>[] = [];
+    const memberUpdatePromises: PromiseLike<any>[] = [];
     for (const m of members) {
       const c = m.c;
       const updates: Record<string, any> = {};
