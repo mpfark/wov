@@ -15,6 +15,7 @@
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/features/combat/utils/invokeWithRetry';
 import type { GameEventBus } from '@/hooks/useGameEvents';
 
 // ── Types ────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ export function useOffscreenDotWakeup({
         try {
           // First try a full catchup (not snapshot-only) to resolve any remaining effects
           // and capture kill_rewards from DOT kills that happened during the delay
-          const { data: catchupData, error: catchupErr } = await supabase.functions.invoke('combat-catchup', {
+          const { data: catchupData, error: catchupErr } = await invokeWithRetry<any>('combat-catchup', {
             body: { node_id: departedNodeId, force: true, reason: 'departure_delayed_check' },
           });
 
@@ -169,7 +170,7 @@ export function useOffscreenDotWakeup({
           }
 
           // Now check if there are still remaining effects that need prediction tracking
-          const { data: snapData, error: snapErr } = await supabase.functions.invoke('combat-catchup', {
+          const { data: snapData, error: snapErr } = await invokeWithRetry<any>('combat-catchup', {
             body: { node_id: departedNodeId, snapshot_only: true },
           });
 
@@ -277,7 +278,7 @@ function scheduleWakeup(
     console.log(`[offscreen-dot] wake-up triggered for node=${snapshot.nodeId}`);
 
     try {
-      const { data, error } = await supabase.functions.invoke('combat-catchup', {
+      const { data, error } = await invokeWithRetry<any>('combat-catchup', {
         body: { node_id: snapshot.nodeId, force: true, reason: 'predicted_lethal_effect' },
       });
 

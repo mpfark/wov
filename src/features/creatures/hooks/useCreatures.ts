@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/features/combat/utils/invokeWithRetry';
 import type { NodeChannelHandle } from '@/features/world';
 import type { GameNode } from '@/features/world';
 
@@ -68,7 +69,7 @@ export async function reconcileNode(
 
   lastReconcileMap.set(nodeId, Date.now());
 
-  const { data, error } = await supabase.functions.invoke('combat-catchup', {
+  const { data, error } = await invokeWithRetry<any>('combat-catchup', {
     body: { node_id: nodeId, force, ...(reason ? { reason } : {}) },
   });
 
