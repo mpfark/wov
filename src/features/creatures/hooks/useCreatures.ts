@@ -68,7 +68,7 @@ export async function reconcileNode(
 
   lastReconcileMap.set(nodeId, Date.now());
 
-  const { data, error } = await supabase.functions.invoke('combat-catchup', {
+  const { data, error } = await invokeWithRetry('combat-catchup', {
     body: { node_id: nodeId, force, ...(reason ? { reason } : {}) },
   });
 
