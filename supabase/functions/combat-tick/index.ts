@@ -147,13 +147,11 @@ Deno.serve(async (req) => {
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const db = createClient(url, srvKey);
 
-    // Auth — verify JWT and extract user
+    // Auth — extract user id from JWT (no network round-trip; getUser() was
+    // returning intermittent 401s under tick load and stalling combat entirely).
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) throw new Error('Unauthorized');
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const userDb = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user }, error: authErr } = await userDb.auth.getUser();
-    if (authErr || !user) throw new Error('Unauthorized');
+    const userId = getUserIdFromJwt(authHeader);
+    if (!userId) throw new Error('Unauthorized');
 
     const {
       party_id, character_id, node_id, member_buffs,
