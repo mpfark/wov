@@ -310,9 +310,12 @@ Deno.serve(async (req) => {
           const primarySourceId = crSourceIds.values().next().value;
           if (!primarySourceId) continue;
 
-          // Determine reward recipients (party or solo)
-          const recipients = partyGroupMap.get(primarySourceId)
-            || (sourceChars || []).filter(c => c.id === primarySourceId).map(c => ({ id: c.id, level: c.level, cha: c.cha }));
+          // Determine reward recipients (party or solo) and party_id (if any)
+          const partyGroup = partyGroupMap.get(primarySourceId);
+          const recipients: { id: string; name: string; level: number; cha: number }[] = partyGroup
+            ? partyGroup.members
+            : (sourceChars || []).filter(c => c.id === primarySourceId).map(c => ({ id: c.id, name: (c as any).name ?? '', level: c.level, cha: c.cha }));
+          const partyIdForCreature = partyGroup?.partyId ?? null;
 
           if (recipients.length === 0) continue;
 
@@ -369,16 +372,89 @@ Deno.serve(async (req) => {
           }
 
           const primaryUncapped = primaryChar.level < 42;
+          const xpForDisplay = primaryUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount) : 0;
+
+          // ── Boss death cry (admin-authored) ──
+          let bossDeathCryText: string | null = null;
+          if (creature.rarity === 'boss' && typeof creature.boss_death_cry === 'string' && creature.boss_death_cry.trim().length > 0) {
+            bossDeathCryText = creature.boss_death_cry.trim().replace(/%a/g, primaryChar.name || 'a hero');
+          }
+
+          // ── Broadcast to party (so party-mates at other nodes get the message + UI refresh) ──
+          if (partyIdForCreature && recipients.length > 1) {
+            try {
+              const partyChannel = db.channel(`party-broadcast-${partyIdForCreature}`);
+              const xpPart = primaryUncapped ? `+${xpForDisplay} XP` : 'Your power transcends experience.';
+              const goldPart = goldEach > 0 ? `, +${goldEach} gold` : '';
+              const salvagePart = salvageEach > 0 ? `, +${salvageEach} salvage` : '';
+              const bhpPart = bhpEach > 0 ? `, +${bhpEach} 🏋️ BHP` : '';
+              const summary = `☠️ ${creature.name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`;
+
+              // Combat log line for non-source party-mates
+              await partyChannel.send({
+                type: 'broadcast',
+                event: 'party_combat_msg',
+                payload: {
+                  id: `${creatureId}:catchup`,
+                  message: summary,
+                  node_id: null,
+                  character_name: primaryChar.name || null,
+                },
+              });
+
+              // Per-recipient party_reward to trigger UI refetch on each non-source member
+              for (const recipient of recipients) {
+                if (recipient.id === primarySourceId) continue;
+                const recipUncapped = recipient.level < 42;
+                const recipXp = recipUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(recipient.level, creature.level) * xpMult) / splitCount) : 0;
+                await partyChannel.send({
+                  type: 'broadcast',
+                  event: 'party_reward',
+                  payload: {
+                    character_id: recipient.id,
+                    xp: recipXp,
+                    gold: goldEach,
+                    source: 'catchup',
+                  },
+                });
+              }
+            } catch (broadcastErr) {
+              console.error('[combat-catchup] party broadcast failed', broadcastErr);
+            }
+          }
+
+          // ── World-global broadcast for boss death cry ──
+          if (bossDeathCryText) {
+            try {
+              const worldChannel = db.channel('world-global');
+              await worldChannel.send({
+                type: 'broadcast',
+                event: 'world',
+                payload: {
+                  kind: 'boss_death',
+                  icon: '🌫️',
+                  text: bossDeathCryText,
+                  actor: primaryChar.name || undefined,
+                  nonce: `${creatureId}:catchup`,
+                },
+              });
+            } catch (broadcastErr) {
+              console.error('[combat-catchup] world-global broadcast failed', broadcastErr);
+            }
+          }
+
           killRewards.push({
             creature_name: creature.name,
             creature_level: creature.level,
             creature_rarity: creature.rarity,
-            xp_each: primaryUncapped ? Math.floor(Math.floor(baseXp * xpPenalty(primaryChar.level, creature.level) * xpMult) / splitCount) : 0,
+            xp_each: xpForDisplay,
             gold_each: goldEach,
             salvage_each: salvageEach,
             bhp_each: bhpEach,
             split_count: splitCount,
             primary_level: primaryChar.level,
+            source_character_name: primaryChar.name || null,
+            boss_death_cry_text: bossDeathCryText,
           });
         }
       }
