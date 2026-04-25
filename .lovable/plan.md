@@ -1,60 +1,79 @@
-## Diagnosis
+## Goal
 
-Your read of the situation is exactly right. Cithrawiel has a base `max_hp` of 233 stored in the database, plus +17 HP from gear (CON bonus / flat HP) bringing the **effective** max to 250.
+Add automated tests proving:
+1. `updateCharacter` clamps `hp/cp/mp` to caller-supplied `effectiveCaps` when present (regen loop case — no snap-back to base `max_hp`).
+2. When `effectiveCaps` is absent, the legacy clamp to base `max_hp/max_cp/max_mp` still applies.
+3. The HP display on login never shows a max lower than current HP (the "233/233 flash" can't recur in a way that would clip a 250 HP value to 233).
 
-Two things conspire to make HP visibly bounce 250 → 233 → regen → 250 → 233:
+## Approach
 
-### 1. Stale base `max_hp` shown briefly on login
+`updateCharacter` lives inside the `useCharacter` hook and is closure-bound to React state and Supabase calls. Testing it through the full hook would require mocking Supabase + realtime channels — high cost, low signal for what we actually want to verify (a 6-line clamp).
 
-On login the character row is fetched directly. Its `hp` and `max_hp` come back as the last persisted base values (e.g. 233/233). Equipped items load a moment later, and only after `equipmentBonuses` is computed does `getEffectiveMaxHp(...)` return 250. So the bar reads "233/233" for a frame before settling to "x/250".
+Cleanest fix: **extract the clamp into a pure helper** and call it from `updateCharacter`. Then unit-test the helper directly. Behavior is unchanged.
 
-This is cosmetic and self-corrects. Nothing in the DB is wrong.
+## Changes
 
-### 2. Snap-back from 250 → 233 (the real bug)
-
-In `src/features/character/hooks/useCharacter.ts` (`updateCharacter`), every write to the DB clamps `hp` to the **base** `max_hp`, not the effective max:
+### 1. New pure helper — `src/features/character/utils/clampResources.ts`
 
 ```ts
-if (dbUpdates.hp != null) dbUpdates.hp = Math.min(dbUpdates.hp, charForCaps.max_hp); // 233
+import type { Character } from '../hooks/useCharacter';
+
+export interface EffectiveCaps {
+  maxHp?: number;
+  maxCp?: number;
+  maxMp?: number;
+}
+
+/** Clamp hp/cp/mp in `updates` to effective caps (gear-boosted) when supplied,
+ *  otherwise fall back to the base maxes on the character row. */
+export function clampResourceUpdates(
+  updates: Partial<Character>,
+  base: Pick<Character, 'max_hp' | 'max_cp' | 'max_mp'>,
+  caps?: EffectiveCaps,
+): Partial<Character> {
+  const out = { ...updates } as any;
+  const hpCap = caps?.maxHp ?? base.max_hp;
+  const cpCap = caps?.maxCp ?? base.max_cp;
+  const mpCap = caps?.maxMp ?? base.max_mp;
+  if (out.hp != null) out.hp = Math.min(out.hp, hpCap);
+  if (out.cp != null) out.cp = Math.min(out.cp, cpCap);
+  if (out.mp != null) out.mp = Math.min(out.mp, mpCap);
+  return out;
+}
 ```
 
-Meanwhile `useGameLoop` regens HP up to `effectiveMaxHp` (250) and persists it via `updateCharacter`. The clamp silently writes `hp = 233` to the DB. The realtime echo then arrives and overwrites the optimistic local `hp = 250` with `233`, the regen tick fires again, repeat. Switching tabs paused the worker-timer regen, which is why the loop stopped.
+### 2. Refactor `useCharacter.ts`
 
-The comment in that block ("gear bonuses are display-only on the client") is the root cause — it's no longer true now that effective max HP/CP/MP are the real cap used everywhere else.
+Replace the inline clamp block in `updateCharacter` with a call to `clampResourceUpdates(updates, charForCaps, effectiveCaps)`. No behavior change.
 
-## Fix
+### 3. New test — `src/features/character/utils/clampResources.test.ts`
 
-### `src/features/character/hooks/useCharacter.ts`
+Cases:
+- **Regen above base, with caps** — `hp: 250`, base `max_hp: 233`, caps `{ maxHp: 250 }` → result `hp: 250` (no snap-back).
+- **Regen above base, no caps** — same input without caps → result `hp: 233` (legacy behavior preserved).
+- **CP/MP clamped to caps independently** — verify all three resources use their respective caps.
+- **No clamp when field absent** — `updates` without `hp` field is untouched.
+- **Over-cap value still clamped to cap** — `hp: 999` with cap `250` → `250`.
+- **Other fields pass through** — `gold`, `xp`, `name` unchanged.
 
-In `updateCharacter`, compute the effective caps using the same helpers the regen loop uses, and clamp DB writes to those instead of the base maxes:
+### 4. New test — `src/features/character/components/StatusBarsStrip.login-display.test.tsx`
 
-- Import `getEffectiveMaxHp`, `getEffectiveMaxCp`, `getEffectiveMaxMp` from `@/lib/game-data`.
-- Compute current `equipmentBonuses` for the character being updated (sum of equipped item `stats`, same shape used in `useGameLoop`/`StatusBarsStrip`). Easiest: lift the small bonus aggregator into a shared util, or accept that `updateCharacter` already has access to `selectedCharacter` and re-derive bonuses from `useInventory` results — but to avoid coupling the hook to inventory, add an optional `effectiveCaps` parameter:
+Renders `StatusBarsStrip` with a character at `hp: 250, max_hp: 233` and `equipmentBonuses: { hp: 17 }` (the Cithrawiel scenario). Asserts the HP readout shows `250/250` — i.e. the bar uses `getEffectiveMaxHp` and never displays `233` as the max while HP is 250. Then re-renders with empty bonuses (the brief login frame before inventory loads) and asserts the bar doesn't crash and the percentage stays sensible (`hp/effectiveMax` ≤ 1 because `effectiveMax >= max_hp >= hp` post-clamp).
 
-  ```ts
-  updateCharacter(updates, { maxHp?, maxCp?, maxMp? })
-  ```
+This second test requires mocking nothing — `StatusBarsStrip` is a pure component that takes `character` and `equipmentBonuses` as props.
 
-- The single caller that needs this is the regen loop in `useGameLoop` — it already computes `effectiveMaxHp`, `effectiveMaxCp`, `effectiveMaxMp`. Pass them through.
-- Default behavior (no caps passed) keeps clamping to base, preserving safety for any other caller.
+## Files
 
-### `src/features/combat/hooks/useGameLoop.ts`
+- **New:** `src/features/character/utils/clampResources.ts`
+- **New:** `src/features/character/utils/clampResources.test.ts`
+- **New:** `src/features/character/components/StatusBarsStrip.login-display.test.tsx`
+- **Edit:** `src/features/character/hooks/useCharacter.ts` — replace inline clamp with `clampResourceUpdates(...)` call (one import, ~6 lines replaced with 1).
 
-When the regen interval calls `updateCharRegenRef.current(updates)`, also pass the three effective maxes it just computed. No other logic changes.
+## Verification
 
-### Optional polish: avoid the brief "233/233" flash on login
+Run `bunx vitest run src/features/character` — all new tests pass; existing combat tests untouched.
 
-Once the fix above lands, the bar still shows base max for ~1 frame until inventory loads. Acceptable as-is, but if you want it cleaner, gate the StatusBars render on `inventoryLoaded` or default the displayed max to `Math.max(character.max_hp, character.hp)` so it never displays a max lower than current HP.
+## Out of scope
 
-## Technical Details
-
-- Files touched: `src/features/character/hooks/useCharacter.ts`, `src/features/combat/hooks/useGameLoop.ts`.
-- No DB migration. No schema change. The server-side trigger already locks `max_hp` so it cannot be tampered with — we're only changing the client clamp on `hp` writes.
-- `heal_party_member` RPC already accepts an `_effective_max_hp` arg, so this aligns the solo path with the party path.
-
-## Acceptance
-
-- Logging in with Cithrawiel shows 250/250 (or whatever current HP / 250) and stays there.
-- HP no longer drops from 250 to 233 every few seconds.
-- CP and MP behave the same way (no snap-back to base max when gear pushes effective max above base).
-- After a server restart / refetch, the persisted `hp` value can equal the effective max (e.g. 250) without the trigger reverting it.
+- Full integration test of the regen loop driving Supabase. The hook-level wiring (passing `effectiveCaps` from `useGameLoop` into `updateCharacter`) is already done; the risk surface is the clamp math, which these tests cover.
+- Changing the StatusBars to default `max = Math.max(max_hp, hp)` — already noted as optional polish in the plan; not needed if the clamp is correct.
