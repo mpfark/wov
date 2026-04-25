@@ -438,6 +438,7 @@ Deno.serve(async (req) => {
                     xp: recipXp,
                     gold: goldEach,
                     source: 'catchup',
+                    nonce: `${creatureId}:catchup:${recipient.id}`,
                   },
                 });
               }
