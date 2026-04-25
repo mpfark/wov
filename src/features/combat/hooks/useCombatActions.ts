@@ -139,104 +139,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
   // the sole authority for ground-loot drops on kill.
 
 
-  // ── Kill rewards (orchestration — delegates to extracted helpers) ──
-  const awardKillRewards = useCallback(async (creature: any, opts?: { stopCombat?: boolean }) => {
-    p.notifyCreatureKilled?.(creature.id);
+  // NOTE: `awardKillRewards` removed — `combat-tick` is the sole authority
+  // for kill rewards (XP/gold/BHP/salvage), level-ups, and loot resolution.
+  // Local state lands via `interpretCombatTickResult` from the tick response.
 
-    const baseXp = Math.floor(creature.level * 10 * (XP_RARITY_MULTIPLIER[creature.rarity] || 1));
-    const xpPenalty = getXpPenalty(p.character.level, creature.level);
-    const totalXp = Math.floor(baseXp * xpPenalty * p.xpMultiplier);
-    const lootTableData = creature.loot_table as any[];
-    const goldEntry = lootTableData?.find((e: any) => e.type === 'gold');
-    let totalGold = 0;
-    if (goldEntry && Math.random() <= (goldEntry.chance || 0.5)) {
-      totalGold = Math.floor(goldEntry.min + Math.random() * (goldEntry.max - goldEntry.min + 1));
-      if (creature.is_humanoid) {
-        const effectiveCha = p.character.cha + (p.equipmentBonuses.cha || 0);
-        totalGold = Math.floor(totalGold * getChaGoldMultiplier(effectiveCha));
-      }
-    }
-
-    // Determine split counts
-    let goldSplitCount = 1;
-    let xpSplitCount = 1;
-    if (p.party?.id) {
-      const { data: freshMembers } = await supabase
-        .from('party_members')
-        .select('character_id, character:characters(current_node_id, level)')
-        .eq('party_id', p.party.id)
-        .eq('status', 'accepted');
-      const membersHere = (freshMembers || []).filter(
-        (m: any) => m.character?.current_node_id === p.character.current_node_id
-      );
-      goldSplitCount = membersHere.length > 1 ? membersHere.length : 1;
-      const uncappedHere = membersHere.filter((m: any) => (m.character?.level || 0) < 42);
-      xpSplitCount = uncappedHere.length > 0 ? uncappedHere.length : 1;
-    }
-
-    // Award party members (other than self)
-    if (p.party?.id) {
-      await awardPartyXpGold(p.party.id, p.character.id, p.character.current_node_id!, totalXp, totalGold, xpSplitCount, goldSplitCount);
-    }
-
-    // Award self
-    const xpShare = p.character.level >= 42 ? 0 : Math.floor(totalXp / xpSplitCount);
-    const goldShare = Math.floor(totalGold / goldSplitCount);
-    const penaltyNote = xpPenalty < 1 ? ` (${Math.round(xpPenalty * 100)}% XP — level penalty)` : '';
-    const boostNote = p.xpMultiplier > 1 ? ` ⚡${p.xpMultiplier}x` : '';
-    const goldNote = goldShare > 0 ? `, +${goldShare} gold` : '';
-    if (p.character.level >= 42) {
-      const maxGoldNote = goldShare > 0 ? ` +${goldShare} gold.` : '';
-      p.addLog(`☠️ ${creature.name} has been slain!${maxGoldNote} Your power transcends experience.`);
-    } else {
-      p.addLog(`☠️ ${creature.name} has been slain! (+${xpShare} XP${goldNote})${penaltyNote}${boostNote}`);
-    }
-
-    const newXp = p.character.xp + xpShare;
-    const newGold = p.character.gold + goldShare;
-    const xpForNext = getXpForLevel(p.character.level);
-
-    if (newXp >= xpForNext && p.character.level < 42) {
-      const newLevel = Math.min(p.character.level + 1, 42);
-      const levelUpUpdates = buildLevelUpUpdates(p.character, newLevel, p.equipmentBonuses, p.addLog);
-      levelUpUpdates.xp = newXp - xpForNext;
-      levelUpUpdates.gold = newGold;
-      await p.updateCharacter(levelUpUpdates);
-      // Persist the new gear-effective max_hp/max_cp/max_mp so refresh/login
-      // doesn't snap them back to base values. The trigger discards client
-      // writes to max_*, so this RPC is the only sanctioned write path.
-      try {
-        await supabase.rpc('sync_character_resources' as any, { p_character_id: p.character.id });
-        // Pull the freshly-synced max_* into local state immediately.
-        p.onResourcesSynced?.();
-      } catch (e) {
-        console.error('Failed to sync resources after level-up:', e);
-      }
-    } else {
-      await p.updateCharacter({ xp: newXp, gold: newGold });
-    }
-
-    // BHP for boss kills
-    if (creature.rarity === 'boss') {
-      const bhpReward = Math.floor(creature.level * 0.5);
-      if (bhpReward > 0) {
-        const bhpShare = Math.floor(bhpReward / goldSplitCount);
-        if (bhpShare > 0) {
-          const newBhp = (p.character.bhp || 0) + bhpShare;
-          await p.updateCharacter({ bhp: newBhp });
-          p.addLog(`🏋️ +${bhpShare} Boss Hunter Points!`);
-        }
-      }
-    }
-
-    // Salvage for non-humanoid kills
-    if (!creature.is_humanoid) {
-      await awardPartySalvage(p.character, creature, goldSplitCount, p.party?.id ?? null, p.updateCharacterLocal, p.addLog);
-    }
-
-    await rollLoot(creature.loot_table as any[], creature.name, creature.loot_table_id, creature.drop_chance, creature.node_id, creature.loot_mode, creature.level);
-    if (opts?.stopCombat) p.stopCombat();
-  }, [p.character, p.party, p.addLog, p.updateCharacter, p.updateCharacterLocal, rollLoot, p.stopCombat, p.xpMultiplier, p.equipmentBonuses, p.notifyCreatureKilled, p.fetchGroundLoot]);
 
   // ── Use Ability ────────────────────────────────────────────────
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
