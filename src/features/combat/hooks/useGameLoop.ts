@@ -162,13 +162,20 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       const effectiveMaxHp = getEffectiveMaxHp(charClass, con, charLevel, eqB);
 
+      // Inspire (Bard) — flat additive HP & CP regen for the duration.
+      // Like all other client regen sources, it is suppressed during combat.
+      const insp = inspireBuffRef.current;
+      const inspireActive = !!(insp && Date.now() < insp.expiresAt);
+      const inspireHp = inspireActive ? insp!.hpPerTick : 0;
+      const inspireCp = inspireActive ? insp!.cpPerTick : 0;
+
       if (!inCombatRegenRef.current && hp < effectiveMaxHp && hp > 0) {
         const conRegen = getStatRegen(con + (eqB.con || 0));
         const eqItemRegen = eqB.hp_regen || 0;
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
         const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
-        const regenAmount = Math.max(Math.floor(conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat), 1);
+        const regenAmount = Math.max(Math.floor(conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat + inspireHp), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
           updates.hp = newHp;
@@ -187,7 +194,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
           const food = foodBuffRef.current;
           const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-          const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat)), 1);
+          const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat + inspireCp)), 1);
           const newCp = Math.min(cp + regenAmount, effectiveMaxCp);
           if (newCp > cp) {
             updates.cp = newCp;
