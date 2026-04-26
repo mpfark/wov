@@ -16,6 +16,7 @@ import { getNodeDisplayName } from '@/features/world';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { getCachedItemAsync } from '@/features/inventory';
+import { preheatNode } from '@/features/creatures/hooks/useCreatures';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -257,6 +258,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
     // ── Region level check ──
     const targetNode = p.getNode(nodeId);
     if (!targetNode) return;
+    // Preheat creature cache for the destination (cheap, async, never throws).
+    preheatNode(nodeId);
     const targetRegion = p.getRegion(targetNode.region_id);
     const currentRegion = p.character.current_node_id ? p.getRegion(p.getNode(p.character.current_node_id)?.region_id || '') : null;
     if (targetRegion && currentRegion && targetRegion.id !== currentRegion.id && p.character.level < targetRegion.min_level) {
@@ -340,6 +343,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to teleport.'); return; }
     const targetNode = p.getNode(nodeId);
     if (!targetNode) return;
+    preheatNode(nodeId);
     const currentNodeObj = p.getNode(p.character.current_node_id!);
     if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 22) {
       setWaymarkNodeId(p.character.current_node_id!);
@@ -370,6 +374,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (p.isDead) return;
     if (p.inCombat) { p.addLog('⚠️ You cannot teleport while in combat!'); return; }
     if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to return to waymark.'); return; }
+    preheatNode(waymarkNodeId);
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId, prevNodeId);

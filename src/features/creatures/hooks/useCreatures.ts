@@ -1,4 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * useCreatures — node creature state with hybrid client-assist / server-authoritative model.
+ *
+ * State priority (highest wins):
+ *   1. Server-authoritative — combat-catchup result + postgres_changes UPDATE/DELETE
+ *   2. Broadcast hints      — softDeadIds (kill hints), broadcastOverrides (HP).
+ *                              Expire in seconds; never grant rewards or persist.
+ *   3. prefetchCache        — last-known snapshot, ≤ PREFETCH_TTL old. Painted on
+ *                              entry only, then immediately overwritten by phase-2 reconcile.
+ */
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/features/combat/utils/invokeWithRetry';
 import type { NodeChannelHandle } from '@/features/world';
@@ -26,7 +36,31 @@ export interface Creature {
 
 // Module-level prefetch cache: nodeId → creatures[]
 const prefetchCache = new Map<string, { data: Creature[]; ts: number }>();
-const PREFETCH_TTL = 30_000; // 30s
+const PREFETCH_TTL = 15_000; // 15s — short enough to avoid stale paints, long enough to beat RTT
+const PREHEAT_REFRESH_MS = 5_000; // skip preheat if cache is fresher than this
+
+const isFresh = (entry: { ts: number } | undefined) =>
+  !!entry && Date.now() - entry.ts < PREFETCH_TTL;
+
+/**
+ * Preheat the prefetch cache for a node we're about to enter.
+ * Cheap direct DB read, runs in the background. No-op if cache is already fresh.
+ * Safe to call from movement handlers — never throws.
+ */
+export function preheatNode(nodeId: string | null | undefined): void {
+  if (!nodeId) return;
+  const cached = prefetchCache.get(nodeId);
+  if (cached && Date.now() - cached.ts < PREHEAT_REFRESH_MS) return;
+  supabase
+    .from('creatures')
+    .select('*')
+    .eq('node_id', nodeId)
+    .eq('is_alive', true)
+    .then(({ data }) => {
+      if (!data) return;
+      prefetchCache.set(nodeId, { data: data as Creature[], ts: Date.now() });
+    });
+}
 
 // ── Client-side reconciliation throttle (10s per node) ────────────
 const lastReconcileMap = new Map<string, number>();
@@ -94,7 +128,13 @@ export async function reconcileNode(
   };
 }
 
-export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null, onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void) {
+export function useCreatures(
+  nodeId: string | null,
+  handle?: NodeChannelHandle,
+  currentNode?: GameNode | null,
+  onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void,
+  softDeadIds?: Set<string>,
+) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [creaturesLoading, setCreaturesLoading] = useState(false);
   const [prefetchedCreatureCount, setPrefetchedCreatureCount] = useState(0);
@@ -122,16 +162,16 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
 
     // Set prefetched count hint for skeleton rows
     const cached = prefetchCache.get(nodeId);
-    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-      setPrefetchedCreatureCount(cached.data.length);
+    if (isFresh(cached)) {
+      setPrefetchedCreatureCount(cached!.data.length);
     }
 
     if (!skipCatchup) {
       // ── Phase 1: Optimistic display ────────────────────────────
       // Show something within ~100ms instead of waiting for the full reconcile.
       // Prefer the prefetch cache; otherwise fire a fast direct DB read.
-      if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-        if (!isStale()) setCreatures(cached.data);
+      if (isFresh(cached)) {
+        if (!isStale()) setCreatures(cached!.data);
       } else {
         // Fast direct read (no await blocking phase 2 — they race; phase 2 wins)
         supabase
@@ -177,8 +217,8 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
     }
 
     // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
-    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-      if (!isStale()) setCreatures(cached.data);
+    if (isFresh(cached)) {
+      if (!isStale()) setCreatures(cached!.data);
       prefetchCache.delete(myNodeId);
       setCreaturesLoading(false);
       return;
@@ -265,8 +305,8 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
     // Set prefetch count hint before async fetch
     if (nodeId) {
       const cached = prefetchCache.get(nodeId);
-      if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-        setPrefetchedCreatureCount(cached.data.length);
+      if (isFresh(cached)) {
+        setPrefetchedCreatureCount(cached!.data.length);
       }
     }
 
@@ -315,10 +355,7 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
         }
 
         // Cheap prefetch for nodes without effects (no reconciliation needed)
-        const staleIds = nodesWithoutEffects.filter(id => {
-          const cached = prefetchCache.get(id);
-          return !cached || Date.now() - cached.ts >= PREFETCH_TTL;
-        });
+        const staleIds = nodesWithoutEffects.filter(id => !isFresh(prefetchCache.get(id)));
 
         if (staleIds.length === 0) return;
 
@@ -343,5 +380,12 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
       });
   }, [currentNode?.id]); // re-run when node changes
 
-  return { creatures, creaturesLoading, prefetchedCreatureCount };
+  // Apply soft-dead broadcast hints: hide creatures other players reported as killed,
+  // until either the server confirms or the hint expires (~8s).
+  const visibleCreatures = useMemo(() => {
+    if (!softDeadIds || softDeadIds.size === 0) return creatures;
+    return creatures.filter(c => !softDeadIds.has(c.id));
+  }, [creatures, softDeadIds]);
+
+  return { creatures: visibleCreatures, creaturesLoading, prefetchedCreatureCount };
 }

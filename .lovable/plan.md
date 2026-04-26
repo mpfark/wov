@@ -1,69 +1,82 @@
-# Creature Load + Disappearance Fix
+## Goal
 
-## Symptoms
+Reduce perceived latency when entering nodes and during shared combat, while keeping the server fully authoritative. Build on the existing `useCreatures` prefetch cache and `useCreatureBroadcast` channel rather than introducing parallel systems.
 
-1. **Slow to load**: Creatures don't appear until `combat-catchup` finishes (often 200–800ms, sometimes more), and the panel is empty during that gap.
-2. **Disappears after fight → exit → re-enter**: Returning to the node shows no creature for a while.
-3. **Toggling again sometimes brings the creature back**: Confirms it's a UI/sync problem, not a real death.
+## What's already in place (don't rebuild)
 
-## Root Causes
+- **Adjacent-node prefetch + 30s `prefetchCache`** in `useCreatures.ts` — already populates from connections and selectively reconciles nodes with active effects.
+- **Two-phase load on node entry** — Phase 1 paints from cache or a fast direct DB read; Phase 2 overwrites with the authoritative `combat-catchup` reconcile.
+- **Stale-fetch cancellation** via `fetchTokenRef` and `currentNodeIdRef`.
+- **150ms reconcile lock** that swallows stale realtime echoes but still lets fresh respawns through.
+- **`creature_damage` broadcast** with a `killed: boolean` flag, wired through `useNodeChannel` → `useCreatureBroadcast`. Currently it only updates HP overlays, not visibility.
 
-All in `src/features/creatures/hooks/useCreatures.ts`:
+The remaining gaps are: kills aren't visually applied from broadcasts, there's no soft-state safety net, and movement doesn't preheat the *destination* node before arrival.
 
-### A. No cancellation of in-flight `reconcileNode` requests
-When the user moves quickly between nodes (e.g., south → north → south to recover), multiple `reconcileNode(force: true)` calls are in flight. They resolve out of order. A late response for an old node can overwrite the current node's creatures and reconcile lock, leaving the creature panel empty (or wrong) until the next event or the 30s safety refetch.
+## Changes
 
-### B. The "force catchup" path waits before showing anything
-`fetchCreatures()` clears creatures, then awaits `reconcileNode` before painting. There's no use of the prefetch cache or a quick direct DB read to show creatures immediately while reconcile runs. This is the visible "slow to load" gap.
+### 1. Apply kill hints from broadcasts (soft-dead layer)
 
-### C. Reconcile lock can swallow a fresh respawn UPDATE
-The 500ms reconcile lock filters out any postgres UPDATE for a creature ID not in the catchup response. If a creature respawns (`is_alive` flips false → true) within that 500ms window, the realtime UPDATE is dropped and the creature stays invisible until the next refetch.
+In `useCreatureBroadcast.ts`, when a `creature_damage` event arrives with `killed: true`:
 
-### D. Channel callback timing
-`useNodeChannel` may not finish `SUBSCRIBED` before the reconcile completes. UPDATEs that arrive in the brief gap before `onCreatureUpdate.current` is wired by `useCreatures` could be missed. Smaller contributor than A/B/C, but worth tightening.
+- Add the creature id to a new `softDeadIds: Set<string>` with `softDeadUntil = now + 8s`.
+- Expose `softDeadIds` from the hook alongside `broadcastOverrides`.
 
-## Fix
+In `useCreatures.ts`, accept an optional `softDeadIds` set and filter the rendered `creatures` array through it (creatures in the set are hidden).
 
-All changes are in `src/features/creatures/hooks/useCreatures.ts`. No server changes required.
+Behavior:
+- If the server confirms (DELETE / UPDATE with `is_alive=false` arrives via `onCreatureUpdate`), the creature is removed normally and the soft entry becomes a no-op.
+- If 8s passes with no server confirmation, the soft entry expires (timer-driven cleanup) and the creature reappears — server truth wins.
+- Self-filter is preserved: the killer's own broadcast doesn't echo back.
 
-### 1. Cancel stale `reconcileNode` calls on node change
+### 2. Movement-time destination preheat
 
-Track the current request with a token (or `AbortController`-style ref). When `nodeId` changes, increment the token; ignore any response whose token doesn't match the current one. This prevents an old node's response from clobbering the new node's state.
+In `useMovementActions.ts`, at the moment a move is committed to a target `node_id`:
 
-### 2. Optimistic display while reconcile is in flight
+- Call a new `preheatNode(targetNodeId)` helper exported from `useCreatures.ts` (module scope, no hook).
+- `preheatNode` does a fast direct `creatures` SELECT (alive-only, current node filter) and writes into the existing `prefetchCache` with a fresh timestamp — only if the cache entry is missing or older than ~5s.
 
-Two-phase load on node entry:
+This gives Phase 1 a near-100% cache hit on arrival without any new bookkeeping.
 
-- **Phase 1 (immediate, ~0ms)**: If `prefetchCache` has fresh data for this node, render it right away. Otherwise issue a fast `select * from creatures where node_id = ? and is_alive = true` and render that. This gives the user *something* to interact with within ~100ms.
-- **Phase 2 (~200–800ms)**: `reconcileNode(force: true)` resolves and replaces the optimistic list with the authoritative one. Reconcile lock is set as today.
+### 3. Tighten the cache freshness model
 
-Both phases respect the cancellation token from fix #1.
+- Lower `PREFETCH_TTL` from 30s to 15s (the spec's upper bound) so we don't paint very stale state on entry, while still beating the round-trip.
+- Add a tiny "is fresh" helper instead of repeating `Date.now() - cached.ts < PREFETCH_TTL` inline.
 
-### 3. Tighten the reconcile lock
+No change to reconcile throttling (`RECONCILE_THROTTLE_MS = 10s`) — it already plays well with 15s freshness.
 
-- Shorten the lock window from 500ms to ~150ms. The lock exists to suppress a brief window of stale realtime echoes; 150ms is enough for that.
-- Allow UPDATE events through if they represent a *new* alive creature (`is_alive === true` and not in `prev`) **as long as** the creature's `node_id` matches the current `nodeId`. This ensures respawns are never swallowed.
-- Keep the lock's job of filtering re-adds during the catchup→state-set transition.
+### 4. Soft-dead expiry & cleanup
 
-### 4. Subscribe before reconcile (small ordering fix)
+- A single `setTimeout` per soft entry, plus a sweep when any new event comes in, keeps the set small.
+- On `nodeId` change, clear `softDeadIds` (same pattern as `broadcastOverrides`).
+- `cleanupOverrides(activeCreatureIds)` is extended to also drop soft entries for ids no longer present.
 
-Make `useCreatures` start its postgres-changes subscription wiring before invoking the first `reconcileNode`, so any UPDATE that lands during the catchup window is captured rather than missed.
+### 5. State-priority documentation
 
-## Out of scope
+Add a short comment block at the top of `useCreatures.ts` documenting the priority order so future edits don't invert it:
 
-- No formula or combat-tick changes.
-- No changes to `combat-catchup` server logic.
-- No change to the 1-hour boss respawn window.
+```text
+1. Server-authoritative (combat-catchup result, postgres_changes UPDATE/DELETE)
+2. Broadcast hints (softDeadIds, broadcastOverrides) — expire in seconds
+3. prefetchCache — last-known snapshot, ≤15s old
+```
 
-## Verification
+## Files touched
 
-After the fix:
+- `src/features/combat/hooks/useCreatureBroadcast.ts` — emit + track `softDeadIds`, return from hook.
+- `src/features/creatures/hooks/useCreatures.ts` — accept `softDeadIds`, filter render output, export `preheatNode`, lower TTL, add header doc.
+- `src/features/world/hooks/useMovementActions.ts` — call `preheatNode(targetId)` on move commit.
+- `src/pages/GamePage.tsx` — thread `softDeadIds` from `useCreatureBroadcast` into `useCreatures`.
 
-1. Walk into a node with creatures: list should appear within ~100ms (optimistic), then settle to the authoritative list ~200–800ms later with no flicker.
-2. Engage a creature, walk one node away to recover, walk back: the creature should be visible immediately on return; if it died offscreen to DoTs, the kill toast appears and the slot stays empty until respawn.
-3. Rapid back-and-forth between two nodes: only the current node's creatures are ever shown; stale responses are discarded.
-4. Trigger a respawn while standing on the node (wait out a 5-min creature): the respawn appears within ~1s of the DB update.
+## What is explicitly NOT changed
 
-## Files Touched
+- No edits to `combat-tick`, `combat-catchup`, `kill-resolver`, reward math, loot tables, respawn SQL, or any RLS/RPC.
+- No new broadcast event types — reuses existing `creature_damage` with `killed: true`.
+- No client-side reward grants or DB writes.
+- No changes to `useMergedCreatureHpOverrides` priority (combat-tick still wins over broadcast).
 
-- `src/features/creatures/hooks/useCreatures.ts` (only file modified)
+## Success checks (manual)
+
+- Walk fast across 4–5 nodes: creatures visible immediately on every arrival.
+- Two players at the same node, one kills a creature: the other sees it disappear within ~100ms instead of waiting for the postgres change.
+- Disconnect briefly during a kill broadcast: creature reappears after ~8s if the kill never actually committed (server truth restores it).
+- Solo play: behavior unchanged (no broadcasts to apply).
