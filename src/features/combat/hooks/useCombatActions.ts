@@ -216,9 +216,22 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (restored > 0) { await p.updateCharacter({ hp: newHp }); p.addLog(`${ability.emoji} You use Second Wind and recover ${restored} HP!`); }
       else p.addLog(`${ability.emoji} You use Second Wind but you're already at full health.`);
     } else if (ability.type === 'regen_buff') {
-      // Inspire no longer grants a regen multiplier (removed in regen overhaul)
-      const inspireMsg = `${ability.emoji} ${p.character.name} plays an inspiring song!`;
-      p.addLog(inspireMsg);
+      // Inspire — additive flat HP/CP regen.
+      // Magnitude scales with CHA (Bard's primary stat); duration scales with INT.
+      // Refreshes if already active (does not stack).
+      const chaMod = Math.max(0, getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0)));
+      const intMod = Math.max(0, getStatModifier(p.character.int + (p.equipmentBonuses.int || 0)));
+      const hpPerTick = Math.max(2, chaMod + 2);
+      const cpPerTick = Math.max(1, Math.ceil(chaMod / 2) + 1);
+      const durationMs = Math.min(180_000, Math.max(60_000, 60_000 + intMod * 8_000));
+      p.buffSetters.setInspireBuff({
+        hpPerTick, cpPerTick,
+        expiresAt: Date.now() + durationMs,
+        durationMs,
+        casterId: p.character.id,
+      });
+      const durSec = Math.round(durationMs / 1000);
+      p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song! (+${hpPerTick} HP & +${cpPerTick} CP regen for ${durSec}s)`);
     } else if (ability.type === 'crit_buff') {
       const dexMod = getStatModifier(p.character.dex);
       const critBonus = Math.max(1, Math.min(dexMod, 5));
