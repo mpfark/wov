@@ -104,8 +104,8 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
-  const { partyRegenBuff } = buff.buffState;
-  const { setPartyRegenBuff } = buff.buffSetters;
+  const { partyRegenBuff, inspireBuff } = buff.buffState;
+  const { setPartyRegenBuff, setInspireBuff } = buff.buffSetters;
   const { foodBuff } = buff.buffState;
 
   // ── Local state ────────────────────────────────────────────
@@ -117,6 +117,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── Regen refs (avoid stale closures in intervals) ─────────
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class });
   const foodBuffRef = useRef(foodBuff);
+  const inspireBuffRef = useRef(inspireBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
   const equippedRef = useRef(equipped);
@@ -125,6 +126,7 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex, character.class]);
   useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
+  useEffect(() => { inspireBuffRef.current = inspireBuff; }, [inspireBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
   useEffect(() => { equippedRef.current = equipped; }, [equipped]);
