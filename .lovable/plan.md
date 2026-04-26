@@ -1,82 +1,89 @@
-## Goal
+## Audit findings — Bard's Inspire
 
-Reduce perceived latency when entering nodes and during shared combat, while keeping the server fully authoritative. Build on the existing `useCreatures` prefetch cache and `useCreatureBroadcast` channel rather than introducing parallel systems.
+Inspire is currently dead code:
+- `useCombatActions.ts` (line 218–221) — the `regen_buff` branch only logs `"plays an inspiring song!"` and the comment explicitly says "Inspire no longer grants a regen multiplier (removed in regen overhaul)".
+- No state is set, no buff is gathered, no icon is rendered, no party broadcast is sent. The CP cost is not even charged because the function returns before the cost block (need to verify, but effectively the player gets nothing).
+- `GameManual.tsx` and `class-abilities.ts` still describe it as "2× HP & CP regen for 90s" — stale.
+- Regen itself is fully client-side in `useGameLoop.ts` (skipped while `inCombatRegenRef` is true). HP regen formula is `Math.floor(conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat)`. CP regen is `Math.floor(intRegen + foodCpRegen + milestoneCpFlat + innFlat)`. Combat-tick (server) does not touch regen.
 
-## What's already in place (don't rebuild)
+So an Inspire buff is naturally a non-combat regen booster — meaningful between fights, while exploring, and during downtime.
 
-- **Adjacent-node prefetch + 30s `prefetchCache`** in `useCreatures.ts` — already populates from connections and selectively reconciles nodes with active effects.
-- **Two-phase load on node entry** — Phase 1 paints from cache or a fast direct DB read; Phase 2 overwrites with the authoritative `combat-catchup` reconcile.
-- **Stale-fetch cancellation** via `fetchTokenRef` and `currentNodeIdRef`.
-- **150ms reconcile lock** that swallows stale realtime echoes but still lets fresh respawns through.
-- **`creature_damage` broadcast** with a `killed: boolean` flag, wired through `useNodeChannel` → `useCreatureBroadcast`. Currently it only updates HP overlays, not visibility.
+## Proposal
 
-The remaining gaps are: kills aren't visually applied from broadcasts, there's no soft-state safety net, and movement doesn't preheat the *destination* node before arrival.
+Yes, scaling duration with INT (Bard's other primary stat alongside CHA) makes sense and is consistent with how other classes' buffs use a primary stat for magnitude and a secondary stat for duration (e.g. Wizard's Arcane Surge uses INT for duration; Battle Cry uses DEX for duration).
 
-## Changes
+### New Inspire mechanics
 
-### 1. Apply kill hints from broadcasts (soft-dead layer)
+- **Magnitude (CHA-based, additive flat regen):**
+  - `chaMod = max(0, statModifier(cha + gear cha))`
+  - `bonusHpRegen = max(2, chaMod + 2)` — added flat to the HP regen tick
+  - `bonusCpRegen = max(1, ceil(chaMod / 2) + 1)` — added flat to the CP regen tick
+  - Applied on top of existing food/inn/milestone bonuses (additive, not multiplicative).
+- **Duration (INT-based):**
+  - `intMod = max(0, statModifier(int + gear int))`
+  - `durationMs = clamp(60_000 + intMod * 8_000, 60_000, 180_000)` — 60s floor, 3 min cap.
+  - Examples: INT 10 → 60s, INT 14 → 76s, INT 18 → 92s, INT 22 → 108s.
+- **Cost:** 15 CP (unchanged).
+- **Targets:** self + same-node party members (mirrors Crescendo wiring — broadcast over `party_regen_buff`-style channel to a new event, OR reuse a generic buff channel — see below).
 
-In `useCreatureBroadcast.ts`, when a `creature_damage` event arrives with `killed: true`:
+### Buff icon
 
-- Add the creature id to a new `softDeadIds: Set<string>` with `softDeadUntil = now + 8s`.
-- Expose `softDeadIds` from the hook alongside `broadcastOverrides`.
+Add an "Inspire" entry to the buff strip in `StatusBarsStrip.tsx` (and the larger Character Panel `ActiveBuffs`):
+- Emoji: 🎶
+- Color: `text-elvish` (matches party/song aesthetic), bg `bg-elvish/15`.
+- Detail: `+{bonusHpRegen} HP/4s, +{bonusCpRegen} CP/4s`.
+- Progress bar pct from `(expiresAt - now) / actualDurationMs` — store `durationMs` on the buff so the bar fills correctly when INT-scaled.
 
-In `useCreatures.ts`, accept an optional `softDeadIds` set and filter the rendered `creatures` array through it (creatures in the set are hidden).
+### Party visibility
 
-Behavior:
-- If the server confirms (DELETE / UPDATE with `is_alive=false` arrives via `onCreatureUpdate`), the creature is removed normally and the soft entry becomes a no-op.
-- If 8s passes with no server confirmation, the soft entry expires (timer-driven cleanup) and the creature reappears — server truth wins.
-- Self-filter is preserved: the killer's own broadcast doesn't echo back.
+Broadcast Inspire to same-node party members so allies also receive the regen and see the icon. Add a new broadcast event `party_inspire_buff` on the party channel (parallel to `party_regen_buff`) with payload `{ hp_per_tick, cp_per_tick, expires_at, duration_ms, caster_id }`. Wired the same way Crescendo is in `usePartyBroadcast.ts` and `GamePage.tsx`.
 
-### 2. Movement-time destination preheat
+## Technical changes
 
-In `useMovementActions.ts`, at the moment a move is committed to a target `node_id`:
+1. **`src/features/combat/hooks/useGameLoop.ts`**
+   - Add `InspireBuff` interface: `{ hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string }`.
+   - Add `inspireBuff` state + setter via `useBuffState`.
+   - In the unified regen `setInterval`, when an active Inspire is present add `inspireBuff.hpPerTick` to HP regen and `inspireBuff.cpPerTick` to CP regen (still gated by `!inCombatRegenRef.current`, matching existing regen behavior).
+   - Use a ref to avoid stale closure (same pattern as `foodBuffRef`).
 
-- Call a new `preheatNode(targetNodeId)` helper exported from `useCreatures.ts` (module scope, no hook).
-- `preheatNode` does a fast direct `creatures` SELECT (alive-only, current node filter) and writes into the existing `prefetchCache` with a fresh timestamp — only if the cache entry is missing or older than ~5s.
+2. **`src/features/combat/hooks/useBuffState.ts`**
+   - Add `inspireBuff` to `BuffState` / `BuffSetters` and `useState<InspireBuff | null>(null)`.
 
-This gives Phase 1 a near-100% cache hit on arrival without any new bookkeeping.
+3. **`src/features/combat/hooks/useCombatActions.ts`** (lines 218–221)
+   - Replace the no-op `regen_buff` branch with:
+     - Compute `chaMod`, `intMod`, `bonusHpRegen`, `bonusCpRegen`, `durationMs`.
+     - `setInspireBuff({ hpPerTick, cpPerTick, expiresAt: now + durationMs, durationMs, casterId: character.id })`.
+     - Log `"🎶 {name} plays an inspiring song! (+X HP/+Y CP regen for Zs)"`.
+   - Note: CP cost deduction must happen for this branch — verify the existing cost-deduction path covers `regen_buff` (looks like the early-return at line 220 may have been bypassing it; will fix if needed).
 
-### 3. Tighten the cache freshness model
+4. **`src/features/character/components/StatusBarsStrip.tsx`**
+   - Add `inspireBuff?` prop.
+   - Add buff card in `ActiveBuffs` using stored `durationMs` for the progress bar.
 
-- Lower `PREFETCH_TTL` from 30s to 15s (the spec's upper bound) so we don't paint very stale state on entry, while still beating the round-trip.
-- Add a tiny "is fresh" helper instead of repeating `Date.now() - cached.ts < PREFETCH_TTL` inline.
+5. **`src/features/character/components/CharacterPanel.tsx`**
+   - Add `inspireBuff` to the `ActiveBuffs` larger view (mirrors Crescendo entry).
+   - Show Inspire contribution in the HP Regen / CP Regen tooltip breakdown (`+X Inspire`).
 
-No change to reconcile throttling (`RECONCILE_THROTTLE_MS = 10s`) — it already plays well with 15s freshness.
+6. **`src/features/party/hooks/usePartyBroadcast.ts`**
+   - Add `party_inspire_buff` event handler + `broadcastInspireBuff` sender (mirrors `broadcastPartyRegenBuff`).
+   - Skip self-echo via `caster_id === characterId`.
 
-### 4. Soft-dead expiry & cleanup
+7. **`src/pages/GamePage.tsx`**
+   - Wire `incomingInspireBuff` → `setInspireBuff` (filtered to same-node members, like Crescendo broadcast does implicitly via the party channel scope).
+   - Send `broadcastInspireBuff` when local Inspire buff is set (mirror of Crescendo broadcaster around line 508–513).
+   - Pass `inspireBuff` into `StatusBarsStrip` and `CharacterPanel`.
 
-- A single `setTimeout` per soft entry, plus a sweep when any new event comes in, keeps the set small.
-- On `nodeId` change, clear `softDeadIds` (same pattern as `broadcastOverrides`).
-- `cleanupOverrides(activeCreatureIds)` is extended to also drop soft entries for ids no longer present.
+8. **`src/features/combat/utils/class-abilities.ts`**
+   - Update Inspire description to reflect new behavior: `"Inspires you and your party — boosts HP/CP regen by an amount based on your Charisma, for a duration scaling with Intelligence"`.
 
-### 5. State-priority documentation
+9. **`src/components/admin/GameManual.tsx`** (line 734)
+   - Update copy: `"Inspire (T1, 15 CP): +CHA-scaling flat HP & CP regen, duration scales with INT (60–180s)"`.
 
-Add a short comment block at the top of `useCreatures.ts` documenting the priority order so future edits don't invert it:
+10. **`mem://game/class-abilities/`**
+    - Add a small `bard.md` memory documenting Inspire's stat scaling so future sessions don't drift back to the doubled-regen model.
 
-```text
-1. Server-authoritative (combat-catchup result, postgres_changes UPDATE/DELETE)
-2. Broadcast hints (softDeadIds, broadcastOverrides) — expire in seconds
-3. prefetchCache — last-known snapshot, ≤15s old
-```
+## What this does NOT change
 
-## Files touched
-
-- `src/features/combat/hooks/useCreatureBroadcast.ts` — emit + track `softDeadIds`, return from hook.
-- `src/features/creatures/hooks/useCreatures.ts` — accept `softDeadIds`, filter render output, export `preheatNode`, lower TTL, add header doc.
-- `src/features/world/hooks/useMovementActions.ts` — call `preheatNode(targetId)` on move commit.
-- `src/pages/GamePage.tsx` — thread `softDeadIds` from `useCreatureBroadcast` into `useCreatures`.
-
-## What is explicitly NOT changed
-
-- No edits to `combat-tick`, `combat-catchup`, `kill-resolver`, reward math, loot tables, respawn SQL, or any RLS/RPC.
-- No new broadcast event types — reuses existing `creature_damage` with `killed: true`.
-- No client-side reward grants or DB writes.
-- No changes to `useMergedCreatureHpOverrides` priority (combat-tick still wins over broadcast).
-
-## Success checks (manual)
-
-- Walk fast across 4–5 nodes: creatures visible immediately on every arrival.
-- Two players at the same node, one kills a creature: the other sees it disappear within ~100ms instead of waiting for the postgres change.
-- Disconnect briefly during a kill broadcast: creature reappears after ~8s if the kill never actually committed (server truth restores it).
-- Solo play: behavior unchanged (no broadcasts to apply).
+- Combat-tick / server regen authority (still no server regen — remains client-side, gated by `inCombatRegenRef`).
+- Inspire still does nothing during active combat (HP/CP regen is suppressed during combat by design — `combat-tick` is sole HP writer). The buff icon and timer keep ticking, so it remains useful immediately after combat ends.
+- Other Bard abilities (Dissonance, Crescendo, Grand Finale).

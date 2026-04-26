@@ -52,7 +52,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
     { label: 'Disengage', emoji: '🦘', description: 'Leap backward — dodge all attacks briefly and deal 50% bonus damage on your next strike', cpCost: 60, type: 'disengage_buff', tier: 4, levelRequired: 20 },
   ],
   bard: [
-    { label: 'Inspire', emoji: '🎶', description: 'A song that doubles HP and CP regeneration for 90 seconds', cpCost: 15, type: 'regen_buff', tier: 1, levelRequired: 5 },
+    { label: 'Inspire', emoji: '🎶', description: 'A song that grants you and your party flat HP & CP regen, scaling with your Charisma. Duration scales with Intelligence (60–180s).', cpCost: 15, type: 'regen_buff', tier: 1, levelRequired: 5 },
     { label: 'Dissonance', emoji: '🎵💢', description: "A discordant note that reduces your target's damage by 30%", cpCost: 25, type: 'root_debuff', tier: 2, levelRequired: 10 },
     { label: 'Crescendo', emoji: '🎶✨', description: 'A rising melody that heals all nearby allies over time, scaling with CHA', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
     { label: 'Grand Finale', emoji: '🎵💥', description: 'Unleash a devastating crescendo of sound, dealing massive CHA-scaling damage to your target', cpCost: 60, type: 'burst_damage', tier: 4, levelRequired: 20 },

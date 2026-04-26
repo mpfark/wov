@@ -3,7 +3,9 @@ import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 
-// Duration constants for buff background calculation (in ms)
+// Duration constants for buff background calculation (in ms).
+// `Inspire` is intentionally absent — its duration is variable (INT-scaled), so
+// the buff itself carries `durationMs` and the bar uses that.
 const BUFF_DURATIONS: Record<string, number> = {
   Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000, 'Purifying Light': 25_000,
 };
@@ -28,9 +30,10 @@ export interface StatusBarsStripProps {
   partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' } | null;
   focusStrikeBuff?: { bonusDmg: number } | null;
   stealthBuff?: { expiresAt: number } | null;
+  inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
 }
 
-function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
+function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff, inspireBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
   const [now, setNow] = useState(Date.now());
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
@@ -42,12 +45,13 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   const absorbActive = absorbBuff && now < absorbBuff.expiresAt;
   const partyRegenActive = partyRegenBuff && now < partyRegenBuff.expiresAt;
   const stealthActive = stealthBuff && now < stealthBuff.expiresAt;
+  const inspireActive = inspireBuff && now < inspireBuff.expiresAt;
 
   useEffect(() => {
-    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive) return;
+    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive && !inspireActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive]);
+  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive, inspireActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
@@ -109,6 +113,19 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     buffs.push({ emoji: isHealer ? '✨💚' : '🎶✨', label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
+  if (inspireActive) {
+    const dur = inspireBuff!.durationMs || 90_000;
+    const pct = Math.max(0, Math.min(100, ((inspireBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({
+      emoji: '🎶',
+      label: 'Inspire',
+      detail: `+${inspireBuff!.hpPerTick} HP & +${inspireBuff!.cpPerTick} CP regen`,
+      color: 'text-elvish',
+      bgColor: 'bg-elvish/15',
+      pct,
+    });
+  }
+
   if (focusStrikeBuff) {
     buffs.push({ emoji: '🎯', label: 'Focus Strike', detail: `+${focusStrikeBuff.bonusDmg} dmg`, color: 'text-primary', bgColor: 'bg-primary/15', pct: 100 });
   }
@@ -141,7 +158,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
-  foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
+  foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff, inspireBuff,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
@@ -229,7 +246,7 @@ export default function StatusBarsStrip({
         isAtInn={isAtInn} foodBuff={foodBuff} critBuff={critBuff}
         battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
         igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff} focusStrikeBuff={focusStrikeBuff}
-        stealthBuff={stealthBuff}
+        stealthBuff={stealthBuff} inspireBuff={inspireBuff}
       />
     </div>
   );

@@ -48,6 +48,17 @@ export interface IgniteStack {
 }
 export interface AbsorbBuff { shieldHp: number; expiresAt: number }
 export interface PartyRegenBuff { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' }
+/** Bard "Inspire" — flat additive HP/CP regen for caster + same-node party.
+ *  Magnitude scales with caster CHA, duration scales with caster INT.
+ *  Stored `durationMs` so the buff icon's progress bar fills correctly even
+ *  though the duration is variable. */
+export interface InspireBuff {
+  hpPerTick: number;
+  cpPerTick: number;
+  expiresAt: number;
+  durationMs: number;
+  casterId: string;
+}
 export interface SunderDebuff { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }
 export interface FocusStrikeBuff { bonusDmg: number }
 
@@ -93,7 +104,7 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
-  const { partyRegenBuff } = buff.buffState;
+  const { partyRegenBuff, inspireBuff } = buff.buffState;
   const { setPartyRegenBuff } = buff.buffSetters;
   const { foodBuff } = buff.buffState;
 
@@ -106,6 +117,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── Regen refs (avoid stale closures in intervals) ─────────
   const regenCharRef = useRef({ hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class });
   const foodBuffRef = useRef(foodBuff);
+  const inspireBuffRef = useRef(inspireBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
   const equippedRef = useRef(equipped);
@@ -114,6 +126,7 @@ export function useGameLoop(params: UseGameLoopParams) {
 
   useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex, character.class]);
   useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
+  useEffect(() => { inspireBuffRef.current = inspireBuff; }, [inspireBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
   useEffect(() => { equippedRef.current = equipped; }, [equipped]);
@@ -149,13 +162,20 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       const effectiveMaxHp = getEffectiveMaxHp(charClass, con, charLevel, eqB);
 
+      // Inspire (Bard) — flat additive HP & CP regen for the duration.
+      // Like all other client regen sources, it is suppressed during combat.
+      const insp = inspireBuffRef.current;
+      const inspireActive = !!(insp && Date.now() < insp.expiresAt);
+      const inspireHp = inspireActive ? insp!.hpPerTick : 0;
+      const inspireCp = inspireActive ? insp!.cpPerTick : 0;
+
       if (!inCombatRegenRef.current && hp < effectiveMaxHp && hp > 0) {
         const conRegen = getStatRegen(con + (eqB.con || 0));
         const eqItemRegen = eqB.hp_regen || 0;
         const food = foodBuffRef.current;
         const foodRegen = Date.now() < food.expiresAt ? food.flatRegen : 0;
         const milestoneHpFlat = getMilestoneHpRegen(regenCharRef.current.level);
-        const regenAmount = Math.max(Math.floor(conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat), 1);
+        const regenAmount = Math.max(Math.floor(conRegen + eqItemRegen + foodRegen + milestoneHpFlat + innFlat + inspireHp), 1);
         const newHp = Math.min(hp + regenAmount, effectiveMaxHp);
         if (newHp !== hp) {
           updates.hp = newHp;
@@ -174,7 +194,7 @@ export function useGameLoop(params: UseGameLoopParams) {
           const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
           const food = foodBuffRef.current;
           const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
-          const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat)), 1);
+          const regenAmount = Math.max(Math.floor((intRegen + foodCpRegen + milestoneCpFlat + innFlat + inspireCp)), 1);
           const newCp = Math.min(cp + regenAmount, effectiveMaxCp);
           if (newCp > cp) {
             updates.cp = newCp;

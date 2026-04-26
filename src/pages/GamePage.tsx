@@ -161,8 +161,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const {
     hpOverrides: partyHpOverrides, moveEvents: partyMoveEvents,
     broadcastLogEntries, rewardEvents: partyRewardEvents,
-    incomingPartyRegenBuff,
-    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastPartyRegenBuff,
+    incomingPartyRegenBuff, incomingInspireBuff,
+    broadcastHp, broadcastMove, broadcastCombatMsg, broadcastPartyRegenBuff, broadcastInspireBuff,
   } = usePartyBroadcast(party?.id ?? null, character.id);
 
   // Broadcast own HP whenever it changes (use effective max HP including gear bonuses)
@@ -493,6 +493,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff, bleedStacks,
+    inspireBuff,
   } = buffState;
 
   // Apply incoming party regen buff from another party member
@@ -500,6 +501,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (!incomingPartyRegenBuff) return;
     buffSetters.setPartyRegenBuff(incomingPartyRegenBuff);
   }, [incomingPartyRegenBuff, buffSetters]);
+
+  // Apply incoming Inspire buff from a party Bard (same party channel — listener
+  // already filters caster self-echo).
+  useEffect(() => {
+    if (!incomingInspireBuff) return;
+    buffSetters.setInspireBuff(incomingInspireBuff);
+  }, [incomingInspireBuff, buffSetters]);
 
   // Follower movement is handled server-side by leader's moveFollowers() —
   // no duplicate broadcast-based movement needed here.
@@ -511,6 +519,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     prevPartyRegenBuffRef.current = partyRegenBuff;
     broadcastPartyRegenBuff(partyRegenBuff.healPerTick, partyRegenBuff.expiresAt, partyRegenBuff.source || 'bard', character.id);
   }, [party, partyRegenBuff, broadcastPartyRegenBuff, character.id]);
+
+  // Broadcast Inspire when this character casts it (only the caster's
+  // setInspireBuff produces a buff with `casterId === character.id`; allies
+  // receive the buff via the broadcast listener above and won't re-broadcast).
+  const prevInspireBuffRef = useRef<typeof inspireBuff>(null);
+  useEffect(() => {
+    if (!party || !inspireBuff || inspireBuff === prevInspireBuffRef.current) return;
+    prevInspireBuffRef.current = inspireBuff;
+    if (inspireBuff.casterId !== character.id) return;
+    broadcastInspireBuff(
+      inspireBuff.hpPerTick,
+      inspireBuff.cpPerTick,
+      inspireBuff.expiresAt,
+      inspireBuff.durationMs,
+      character.id,
+    );
+  }, [party, inspireBuff, broadcastInspireBuff, character.id]);
 
   // effectiveAC — recalculate from class + effective DEX (base + gear) to match server logic
   const effectiveAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, false);
@@ -853,6 +878,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     damageBuff,
     partyRegenBuff,
     focusStrikeBuff,
+    inspireBuff,
     onAllocateStat: handleAllocateStat,
     onFullRespec: handleFullRespec,
     onBatchAllocateStats: handleBatchAllocateStats,
@@ -862,7 +888,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
-    damageBuff, partyRegenBuff, focusStrikeBuff,
+    damageBuff, partyRegenBuff, focusStrikeBuff, inspireBuff,
     handleAllocateStat, handleFullRespec, handleBatchAllocateStats,
   ]);
 
@@ -1053,6 +1079,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 isAtInn: currentNode?.is_inn ?? false,
                 regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
+                inspireBuff,
               }}
             />
           </div>

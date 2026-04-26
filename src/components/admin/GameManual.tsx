@@ -731,7 +731,7 @@ export default function GameManual() {
                   <p><strong className="text-foreground">🛡️💚 Divine Aegis (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> Shield HP = <code className="text-primary">WIS_mod × 2 + floor(level × 0.7)</code>, Duration = <code className="text-primary">min(18s, 10s + WIS_mod × 1s)</code></p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Bard —</p>
-                  <p><strong className="text-foreground">🎶 Inspire (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> 2× HP & CP regen for 90s</p>
+                  <p><strong className="text-foreground">🎶 Inspire (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> Flat HP & CP regen for self + party, magnitude scales with CHA, duration scales with INT (60–180s)</p>
                   <p><strong className="text-foreground">🎵💢 Dissonance (T2, 25 CP):</strong> <span className="text-elvish">⚡</span> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🎶✨ Crescendo (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Party heal = <code className="text-primary">max(1, CHA_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + CHA_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🎵💥 Grand Finale (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">max(8, CHA_mod × 4 + floor(level × 1.5)) + 1d(CHA_mod × 2)</code></p>
