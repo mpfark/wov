@@ -878,6 +878,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     damageBuff,
     partyRegenBuff,
     focusStrikeBuff,
+    inspireBuff,
     onAllocateStat: handleAllocateStat,
     onFullRespec: handleFullRespec,
     onBatchAllocateStats: handleBatchAllocateStats,
@@ -887,7 +888,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
-    damageBuff, partyRegenBuff, focusStrikeBuff,
+    damageBuff, partyRegenBuff, focusStrikeBuff, inspireBuff,
     handleAllocateStat, handleFullRespec, handleBatchAllocateStats,
   ]);
 
@@ -1078,6 +1079,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 isAtInn: currentNode?.is_inn ?? false,
                 regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
+                inspireBuff,
               }}
             />
           </div>
