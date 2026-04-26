@@ -380,5 +380,12 @@ export function useCreatures(
       });
   }, [currentNode?.id]); // re-run when node changes
 
-  return { creatures, creaturesLoading, prefetchedCreatureCount };
+  // Apply soft-dead broadcast hints: hide creatures other players reported as killed,
+  // until either the server confirms or the hint expires (~8s).
+  const visibleCreatures = useMemo(() => {
+    if (!softDeadIds || softDeadIds.size === 0) return creatures;
+    return creatures.filter(c => !softDeadIds.has(c.id));
+  }, [creatures, softDeadIds]);
+
+  return { creatures: visibleCreatures, creaturesLoading, prefetchedCreatureCount };
 }
