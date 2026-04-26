@@ -113,6 +113,19 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     buffs.push({ emoji: isHealer ? '✨💚' : '🎶✨', label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
+  if (inspireActive) {
+    const dur = inspireBuff!.durationMs || 90_000;
+    const pct = Math.max(0, Math.min(100, ((inspireBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({
+      emoji: '🎶',
+      label: 'Inspire',
+      detail: `+${inspireBuff!.hpPerTick} HP & +${inspireBuff!.cpPerTick} CP regen`,
+      color: 'text-elvish',
+      bgColor: 'bg-elvish/15',
+      pct,
+    });
+  }
+
   if (focusStrikeBuff) {
     buffs.push({ emoji: '🎯', label: 'Focus Strike', detail: `+${focusStrikeBuff.bonusDmg} dmg`, color: 'text-primary', bgColor: 'bg-primary/15', pct: 100 });
   }
@@ -145,7 +158,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
-  foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
+  foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff, inspireBuff,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
