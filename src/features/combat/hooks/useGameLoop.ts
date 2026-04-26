@@ -48,6 +48,17 @@ export interface IgniteStack {
 }
 export interface AbsorbBuff { shieldHp: number; expiresAt: number }
 export interface PartyRegenBuff { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' }
+/** Bard "Inspire" — flat additive HP/CP regen for caster + same-node party.
+ *  Magnitude scales with caster CHA, duration scales with caster INT.
+ *  Stored `durationMs` so the buff icon's progress bar fills correctly even
+ *  though the duration is variable. */
+export interface InspireBuff {
+  hpPerTick: number;
+  cpPerTick: number;
+  expiresAt: number;
+  durationMs: number;
+  casterId: string;
+}
 export interface SunderDebuff { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }
 export interface FocusStrikeBuff { bonusDmg: number }
 
