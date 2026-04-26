@@ -16,6 +16,7 @@ import { getNodeDisplayName } from '@/features/world';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { getCachedItemAsync } from '@/features/inventory';
+import { preheatNode } from '@/features/creatures/hooks/useCreatures';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
