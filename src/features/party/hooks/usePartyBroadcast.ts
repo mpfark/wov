@@ -41,6 +41,14 @@ interface PartyRegenBuffEvent {
   caster_id: string;
 }
 
+interface PartyInspireBuffEvent {
+  hpPerTick: number;
+  cpPerTick: number;
+  expiresAt: number;
+  durationMs: number;
+  caster_id: string;
+}
+
 /**
  * Hybrid Broadcast channels for party-level events.
  */
@@ -50,6 +58,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
   const [broadcastLogEntries, setBroadcastLogEntries] = useState<PartyCombatMsgEvent[]>([]);
   const [rewardEvents, setRewardEvents] = useState<PartyRewardEvent[]>([]);
   const [incomingPartyRegenBuff, setIncomingPartyRegenBuff] = useState<{ healPerTick: number; expiresAt: number; source: 'healer' | 'bard' } | null>(null);
+  const [incomingInspireBuff, setIncomingInspireBuff] = useState<{ hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
@@ -58,6 +67,7 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     setBroadcastLogEntries([]);
     setRewardEvents([]);
     setIncomingPartyRegenBuff(null);
+    setIncomingInspireBuff(null);
   }, [partyId]);
 
   useEffect(() => {
