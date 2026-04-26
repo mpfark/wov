@@ -13,7 +13,7 @@ import { mapServerEffectsToStacks, type ServerDotState } from '../utils/mapServe
 import type {
   FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, PoisonStack, EvasionBuff, DisengageNextHit, IgniteBuff,
-  IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, FocusStrikeBuff,
+  IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, FocusStrikeBuff, InspireBuff,
 } from './useGameLoop';
 
 // ─── Typed interfaces for bundled state ────────────────────────
@@ -35,6 +35,7 @@ export interface BuffState {
   partyRegenBuff: PartyRegenBuff | null;
   sunderDebuff: Record<string, SunderDebuff>;
   focusStrikeBuff: FocusStrikeBuff | null;
+  inspireBuff: InspireBuff | null;
 }
 
 export interface BuffSetters {
@@ -55,6 +56,7 @@ export interface BuffSetters {
   setPartyRegenBuff: React.Dispatch<React.SetStateAction<PartyRegenBuff | null>>;
   setSunderDebuff: React.Dispatch<React.SetStateAction<Record<string, SunderDebuff>>>;
   setFocusStrikeBuff: React.Dispatch<React.SetStateAction<FocusStrikeBuff | null>>;
+  setInspireBuff: React.Dispatch<React.SetStateAction<InspireBuff | null>>;
 }
 
 // ─── Params ───────────────────────────────────────────────────
@@ -86,6 +88,7 @@ export function useBuffState(params: UseBuffStateParams) {
   const [partyRegenBuff, setPartyRegenBuff] = useState<PartyRegenBuff | null>(null);
   const [sunderDebuff, setSunderDebuff] = useState<Record<string, SunderDebuff>>({});
   const [focusStrikeBuff, setFocusStrikeBuff] = useState<FocusStrikeBuff | null>(null);
+  const [inspireBuff, setInspireBuff] = useState<InspireBuff | null>(null);
 
   // ── Purge all DoT stacks targeting a killed creature (UI cleanup) ──
   const notifyCreatureKilled = useCallback((creatureId: string) => {
@@ -246,6 +249,7 @@ export function useBuffState(params: UseBuffStateParams) {
     foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     bleedStacks, poisonBuff, poisonStacks, evasionBuff, disengageNextHit,
     igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
+    inspireBuff,
   };
 
   const buffSetters: BuffSetters = {
@@ -253,6 +257,7 @@ export function useBuffState(params: UseBuffStateParams) {
     setRootDebuff, setBattleCryBuff, setBleedStacks, setPoisonBuff, setPoisonStacks,
     setEvasionBuff, setDisengageNextHit, setIgniteBuff, setIgniteStacks,
     setAbsorbBuff, setPartyRegenBuff, setSunderDebuff, setFocusStrikeBuff,
+    setInspireBuff,
   };
 
   return {
