@@ -998,14 +998,15 @@ export default function CharacterPanel({
 
                   const poolRows: DerivedRow[] = [
                     (() => { const effMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses); return { label: 'Max HP', value: `${effMaxHp}${absorbActive ? ` (+${absorbBuff!.shieldHp})` : ''}`, tip: `Base ${character.max_hp} + gear bonuses${absorbActive ? ` + ${absorbBuff!.shieldHp} Force Shield` : ''}`, buffed: !!absorbActive, buffColor: 'text-primary' }; })(),
-                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneHpFlat > 0 ? ` + ${milestoneHpFlat} milestone` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''} (every 4s)`, buffed: hpRegenBuffed, buffColor: 'text-elvish' },
+                    { label: 'HP Regen', value: `${effectiveHpRegen}/tick`, tip: `Base ${hpRegen}${foodBuffActive ? ` + ${foodBuff!.flatRegen} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneHpFlat > 0 ? ` + ${milestoneHpFlat} milestone` : ''}${partyRegenActive ? ` + ${partyRegenBuff!.healPerTick} Crescendo` : ''}${inspireActive ? ` + ${inspireBuff!.hpPerTick} Inspire` : ''} (every 4s)`, buffed: hpRegenBuffed || inspireActive, buffColor: 'text-elvish' },
                      { label: 'Max CP', value: `${maxCp}`, tip: `30 + (level-1)×3 + (INT_mod + WIS_mod)×3` },
                      (() => {
                        const foodCpBonus = foodBuffActive ? foodBuff!.flatRegen : 0;
                        const milestoneCpFlat = (() => { const l = character.level; if (l >= 40) return 5; if (l >= 35) return 4; if (l >= 30) return 3; if (l >= 25) return 2; if (l >= 20) return 1; return 0; })();
-                       const effectiveCpRegen = Math.max(Math.floor(baseCpRegen + foodCpBonus + innFlat + milestoneCpFlat), 1);
-                       const cpRegenBuffed = foodBuffActive || isAtInn;
-                       return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen}${foodBuffActive ? ` + ${foodCpBonus} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneCpFlat > 0 ? ` + ${milestoneCpFlat} milestone` : ''} (every 4s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
+                       const inspireCpBonus = inspireActive ? inspireBuff!.cpPerTick : 0;
+                       const effectiveCpRegen = Math.max(Math.floor(baseCpRegen + foodCpBonus + innFlat + milestoneCpFlat + inspireCpBonus), 1);
+                       const cpRegenBuffed = foodBuffActive || isAtInn || inspireActive;
+                       return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen}${foodBuffActive ? ` + ${foodCpBonus} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneCpFlat > 0 ? ` + ${milestoneCpFlat} milestone` : ''}${inspireActive ? ` + ${inspireCpBonus} Inspire` : ''} (every 4s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
                      })(),
                     { label: 'Max Stamina', value: `${maxMp}`, tip: `100 + DEX mod×10 + (level-1)×2` },
                     { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 4s)` },
