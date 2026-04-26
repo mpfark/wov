@@ -128,7 +128,13 @@ export async function reconcileNode(
   };
 }
 
-export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, currentNode?: GameNode | null, onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void) {
+export function useCreatures(
+  nodeId: string | null,
+  handle?: NodeChannelHandle,
+  currentNode?: GameNode | null,
+  onCatchupRewards?: (rewards: ReconcileResult['kill_rewards']) => void,
+  softDeadIds?: Set<string>,
+) {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [creaturesLoading, setCreaturesLoading] = useState(false);
   const [prefetchedCreatureCount, setPrefetchedCreatureCount] = useState(0);
@@ -156,16 +162,16 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
 
     // Set prefetched count hint for skeleton rows
     const cached = prefetchCache.get(nodeId);
-    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-      setPrefetchedCreatureCount(cached.data.length);
+    if (isFresh(cached)) {
+      setPrefetchedCreatureCount(cached!.data.length);
     }
 
     if (!skipCatchup) {
       // ── Phase 1: Optimistic display ────────────────────────────
       // Show something within ~100ms instead of waiting for the full reconcile.
       // Prefer the prefetch cache; otherwise fire a fast direct DB read.
-      if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-        if (!isStale()) setCreatures(cached.data);
+      if (isFresh(cached)) {
+        if (!isStale()) setCreatures(cached!.data);
       } else {
         // Fast direct read (no await blocking phase 2 — they race; phase 2 wins)
         supabase
@@ -211,8 +217,8 @@ export function useCreatures(nodeId: string | null, handle?: NodeChannelHandle, 
     }
 
     // Prefetch cache only used for skipCatchup (respawn interval) or catchup failure
-    if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-      if (!isStale()) setCreatures(cached.data);
+    if (isFresh(cached)) {
+      if (!isStale()) setCreatures(cached!.data);
       prefetchCache.delete(myNodeId);
       setCreaturesLoading(false);
       return;
