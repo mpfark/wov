@@ -343,6 +343,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if ((p.character.cp ?? 0) < cpCost) { p.addLog('⚠️ Not enough CP to teleport.'); return; }
     const targetNode = p.getNode(nodeId);
     if (!targetNode) return;
+    preheatNode(nodeId);
     const currentNodeObj = p.getNode(p.character.current_node_id!);
     if (currentNodeObj && !currentNodeObj.is_teleport && p.character.level >= 22) {
       setWaymarkNodeId(p.character.current_node_id!);
