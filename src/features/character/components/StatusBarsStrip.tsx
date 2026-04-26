@@ -246,7 +246,7 @@ export default function StatusBarsStrip({
         isAtInn={isAtInn} foodBuff={foodBuff} critBuff={critBuff}
         battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
         igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff} focusStrikeBuff={focusStrikeBuff}
-        stealthBuff={stealthBuff}
+        stealthBuff={stealthBuff} inspireBuff={inspireBuff}
       />
     </div>
   );
