@@ -1,4 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * useCreatures — node creature state with hybrid client-assist / server-authoritative model.
+ *
+ * State priority (highest wins):
+ *   1. Server-authoritative — combat-catchup result + postgres_changes UPDATE/DELETE
+ *   2. Broadcast hints      — softDeadIds (kill hints), broadcastOverrides (HP).
+ *                              Expire in seconds; never grant rewards or persist.
+ *   3. prefetchCache        — last-known snapshot, ≤ PREFETCH_TTL old. Painted on
+ *                              entry only, then immediately overwritten by phase-2 reconcile.
+ */
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/features/combat/utils/invokeWithRetry';
 import type { NodeChannelHandle } from '@/features/world';
@@ -26,7 +36,31 @@ export interface Creature {
 
 // Module-level prefetch cache: nodeId → creatures[]
 const prefetchCache = new Map<string, { data: Creature[]; ts: number }>();
-const PREFETCH_TTL = 30_000; // 30s
+const PREFETCH_TTL = 15_000; // 15s — short enough to avoid stale paints, long enough to beat RTT
+const PREHEAT_REFRESH_MS = 5_000; // skip preheat if cache is fresher than this
+
+const isFresh = (entry: { ts: number } | undefined) =>
+  !!entry && Date.now() - entry.ts < PREFETCH_TTL;
+
+/**
+ * Preheat the prefetch cache for a node we're about to enter.
+ * Cheap direct DB read, runs in the background. No-op if cache is already fresh.
+ * Safe to call from movement handlers — never throws.
+ */
+export function preheatNode(nodeId: string | null | undefined): void {
+  if (!nodeId) return;
+  const cached = prefetchCache.get(nodeId);
+  if (cached && Date.now() - cached.ts < PREHEAT_REFRESH_MS) return;
+  supabase
+    .from('creatures')
+    .select('*')
+    .eq('node_id', nodeId)
+    .eq('is_alive', true)
+    .then(({ data }) => {
+      if (!data) return;
+      prefetchCache.set(nodeId, { data: data as Creature[], ts: Date.now() });
+    });
+}
 
 // ── Client-side reconciliation throttle (10s per node) ────────────
 const lastReconcileMap = new Map<string, number>();
