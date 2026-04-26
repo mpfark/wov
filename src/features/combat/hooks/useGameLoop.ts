@@ -105,7 +105,7 @@ export function useGameLoop(params: UseGameLoopParams) {
   // ── Buff state (delegated to useBuffState) ─────────────────
   const buff = useBuffState({ characterDex: character.dex, characterInt: character.int, creatures });
   const { partyRegenBuff, inspireBuff } = buff.buffState;
-  const { setPartyRegenBuff, setInspireBuff } = buff.buffSetters;
+  const { setPartyRegenBuff } = buff.buffSetters;
   const { foodBuff } = buff.buffState;
 
   // ── Local state ────────────────────────────────────────────
