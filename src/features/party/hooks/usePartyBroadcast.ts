@@ -113,6 +113,18 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
         logBroadcast('in', `party`, 'party_regen_buff');
         setIncomingPartyRegenBuff({ healPerTick: data.healPerTick, expiresAt: data.expiresAt, source: data.source });
       })
+      .on('broadcast', { event: 'party_inspire_buff' }, (payload) => {
+        const data = payload.payload as PartyInspireBuffEvent;
+        if (!data || data.caster_id === characterId) return;
+        logBroadcast('in', `party`, 'party_inspire_buff');
+        setIncomingInspireBuff({
+          hpPerTick: data.hpPerTick,
+          cpPerTick: data.cpPerTick,
+          expiresAt: data.expiresAt,
+          durationMs: data.durationMs,
+          casterId: data.caster_id,
+        });
+      })
       .subscribe();
 
     return () => {
@@ -161,6 +173,16 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     });
   }, []);
 
+  const broadcastInspireBuff = useCallback((hpPerTick: number, cpPerTick: number, expiresAt: number, durationMs: number, casterId: string) => {
+    if (!channelRef.current) return;
+    logBroadcast('out', `party`, 'party_inspire_buff');
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'party_inspire_buff',
+      payload: { hpPerTick, cpPerTick, expiresAt, durationMs, caster_id: casterId } satisfies PartyInspireBuffEvent,
+    });
+  }, []);
+
   // NOTE: party_reward events are server-originated (combat-tick edge function).
   // No client-side broadcastReward sender is needed.
 
@@ -170,9 +192,11 @@ export function usePartyBroadcast(partyId: string | null, characterId: string | 
     broadcastLogEntries,
     rewardEvents,
     incomingPartyRegenBuff,
+    incomingInspireBuff,
     broadcastHp,
     broadcastMove,
     broadcastCombatMsg,
     broadcastPartyRegenBuff,
+    broadcastInspireBuff,
   };
 }
