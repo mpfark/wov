@@ -132,12 +132,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       bhp: character.bhp + totalBhp,
     });
   }, [bus, updateCharacterLocal]);
-  const { creatures, creaturesLoading } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards);
+  // Resolver uses a ref so we can wire broadcast (which needs name lookup) BEFORE
+  // useCreatures (which needs softDeadIds from broadcast). Avoids TDZ on `creatures`.
+  const creaturesRef = useRef<{ id: string; name: string }[]>([]);
   const creatureNameResolver = useCallback((creatureId: string) => {
-    return creatures.find(c => c.id === creatureId)?.name;
-  }, [creatures]);
+    return creaturesRef.current.find(c => c.id === creatureId)?.name;
+  }, []);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
-  const { broadcastOverrides, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
+  const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
+  const { creatures, creaturesLoading } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards, softDeadIds);
+  useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
 
   useEffect(() => {
     cleanupOverrides(creatures.map(c => c.id));
