@@ -305,8 +305,8 @@ export function useCreatures(
     // Set prefetch count hint before async fetch
     if (nodeId) {
       const cached = prefetchCache.get(nodeId);
-      if (cached && Date.now() - cached.ts < PREFETCH_TTL) {
-        setPrefetchedCreatureCount(cached.data.length);
+      if (isFresh(cached)) {
+        setPrefetchedCreatureCount(cached!.data.length);
       }
     }
 
@@ -355,10 +355,7 @@ export function useCreatures(
         }
 
         // Cheap prefetch for nodes without effects (no reconciliation needed)
-        const staleIds = nodesWithoutEffects.filter(id => {
-          const cached = prefetchCache.get(id);
-          return !cached || Date.now() - cached.ts >= PREFETCH_TTL;
-        });
+        const staleIds = nodesWithoutEffects.filter(id => !isFresh(prefetchCache.get(id)));
 
         if (staleIds.length === 0) return;
 
