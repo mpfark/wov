@@ -249,7 +249,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const viewBoxWidth = Math.max(svgWidth, 280);
   const viewBoxHeight = Math.max(svgHeight, 200);
 
-  const allDisplayNodes = [currentNode, ...neighbors, ...visitedSecondDegree];
+  const allDisplayNodes = [currentNode, ...neighbors, ...visibleSecondDegree];
   
   const displayedIds = new Set(allDisplayNodes.map(n => n.id));
 
