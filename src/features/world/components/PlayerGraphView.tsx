@@ -138,7 +138,24 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     };
   }, [positions]);
 
-  const secondDegIds = useMemo(() => new Set(visitedSecondDegree.map(n => n.id)), [visitedSecondDegree]);
+  // Filter ghost nodes to only those that fit inside the viewBox — otherwise their
+  // edges/hulls get clipped at the SVG edge and appear as floating dashed segments
+  // disconnected from any visible node.
+  const visibleSecondDegree = useMemo(() => {
+    const GHOST_MARGIN = PLAYER_NODE_RADIUS;
+    return visitedSecondDegree.filter(n => {
+      const pos = nodePositions.get(n.id);
+      if (!pos) return false;
+      return (
+        pos.px >= GHOST_MARGIN &&
+        pos.px <= svgWidth - GHOST_MARGIN &&
+        pos.py >= GHOST_MARGIN &&
+        pos.py <= svgHeight - GHOST_MARGIN
+      );
+    });
+  }, [visitedSecondDegree, nodePositions, svgWidth, svgHeight]);
+
+  const secondDegIds = useMemo(() => new Set(visibleSecondDegree.map(n => n.id)), [visibleSecondDegree]);
 
   // Collect edges (including edges from neighbors to 2nd-degree visited nodes)
   const edges = useMemo(() => {
