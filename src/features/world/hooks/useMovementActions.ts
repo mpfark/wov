@@ -258,6 +258,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
     // ── Region level check ──
     const targetNode = p.getNode(nodeId);
     if (!targetNode) return;
+    // Preheat creature cache for the destination (cheap, async, never throws).
+    preheatNode(nodeId);
     const targetRegion = p.getRegion(targetNode.region_id);
     const currentRegion = p.character.current_node_id ? p.getRegion(p.getNode(p.character.current_node_id)?.region_id || '') : null;
     if (targetRegion && currentRegion && targetRegion.id !== currentRegion.id && p.character.level < targetRegion.min_level) {
