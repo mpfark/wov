@@ -218,20 +218,32 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'regen_buff') {
       // Inspire — additive flat HP/CP regen.
       // Magnitude scales with CHA (Bard's primary stat); duration scales with INT.
-      // Refreshes if already active (does not stack).
+      // Recast policy: refresh the timer to the new duration; keep the
+      // best-of HP/CP regen across the prior and new cast (never weakens an
+      // active buff). Does not stack.
       const chaMod = Math.max(0, getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0)));
       const intMod = Math.max(0, getStatModifier(p.character.int + (p.equipmentBonuses.int || 0)));
-      const hpPerTick = Math.max(2, chaMod + 2);
-      const cpPerTick = Math.max(1, Math.ceil(chaMod / 2) + 1);
+      const newHp = Math.max(2, chaMod + 2);
+      const newCp = Math.max(1, Math.ceil(chaMod / 2) + 1);
       const durationMs = Math.min(180_000, Math.max(60_000, 60_000 + intMod * 8_000));
+      const now = Date.now();
+      const prev = p.buffState.inspireBuff;
+      const wasActive = !!(prev && prev.expiresAt > now);
+      const mergedHp = wasActive ? Math.max(prev!.hpPerTick, newHp) : newHp;
+      const mergedCp = wasActive ? Math.max(prev!.cpPerTick, newCp) : newCp;
       p.buffSetters.setInspireBuff({
-        hpPerTick, cpPerTick,
-        expiresAt: Date.now() + durationMs,
+        hpPerTick: mergedHp,
+        cpPerTick: mergedCp,
+        expiresAt: now + durationMs,
         durationMs,
         casterId: p.character.id,
       });
       const durSec = Math.round(durationMs / 1000);
-      p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song! (+${hpPerTick} HP & +${cpPerTick} CP regen for ${durSec}s)`);
+      if (wasActive) {
+        p.addLog(`${ability.emoji} ${p.character.name} renews the inspiring song! (+${mergedHp} HP & +${mergedCp} CP regen, ${durSec}s remaining)`);
+      } else {
+        p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song! (+${mergedHp} HP & +${mergedCp} CP regen for ${durSec}s)`);
+      }
     } else if (ability.type === 'crit_buff') {
       const dexMod = getStatModifier(p.character.dex);
       const critBonus = Math.max(1, Math.min(dexMod, 5));
