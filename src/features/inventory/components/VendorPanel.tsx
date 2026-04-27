@@ -60,7 +60,7 @@ function statSummary(stats?: Record<string, number>): string {
   return parts.join(', ');
 }
 
-export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog }: Props) {
+export default function VendorPanel({ open, onClose, nodeId, characterId, gold, cha, equipmentBonuses = {}, inventory, onGoldChange, onInventoryChange, addLog, npcName, npcFlavor }: Props) {
   const effectiveCha = cha + (equipmentBonuses.cha || 0);
   const buyDiscount = getChaBuyDiscount(effectiveCha);
   const sellMultiplier = getChaSellMultiplier(effectiveCha);
@@ -276,14 +276,22 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   // ── Render ────────────────────────────────────────────────────
 
   const subtitle = (
-    <span className="inline-flex items-center gap-2">
-      <Coins className="w-3 h-3 text-primary" />
-      <span className="font-display text-primary">{gold} Gold</span>
-      {chaMod > 0 && (
-        <span className="text-[10px] text-muted-foreground">
-          (CHA: Buy −{Math.round(buyDiscount * 100)}%, Sell {Math.round(sellMultiplier * 100)}%)
+    <span className="inline-flex flex-col items-center gap-0.5">
+      {npcName && (
+        <span className="font-display text-elvish">
+          💬 {npcName}
+          {npcFlavor && <span className="text-muted-foreground italic"> — {npcFlavor}</span>}
         </span>
       )}
+      <span className="inline-flex items-center gap-2">
+        <Coins className="w-3 h-3 text-primary" />
+        <span className="font-display text-primary">{gold} Gold</span>
+        {chaMod > 0 && (
+          <span className="text-[10px] text-muted-foreground">
+            (CHA: Buy −{Math.round(buyDiscount * 100)}%, Sell {Math.round(sellMultiplier * 100)}%)
+          </span>
+        )}
+      </span>
     </span>
   );
 
