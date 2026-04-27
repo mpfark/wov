@@ -1008,11 +1008,22 @@ export default function NodeEditorPanel({
                     onChange={e => setForm(f => ({ ...f, is_marketplace: e.target.checked }))} />
                   🏛️ Is Marketplace (player marketplace for unique items)
                 </label>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <label className={`flex items-center gap-2 text-xs ${form.is_blacksmith ? 'text-muted-foreground' : 'text-muted-foreground/50 cursor-not-allowed'}`}>
                   <input type="checkbox" checked={form.is_soulforge}
+                    disabled={!form.is_blacksmith}
                     onChange={e => setForm(f => ({ ...f, is_soulforge: e.target.checked }))} />
                   ⚒️ Soulforge-Capable (adds Soulforge tab at this blacksmith)
                 </label>
+                {!form.is_blacksmith && form.is_soulforge && (
+                  <p className="text-[10px] text-destructive pl-6">
+                    ⚠️ Soulforge requires a Blacksmith node. Enable Blacksmith above or this flag will be ignored.
+                  </p>
+                )}
+                {!form.is_blacksmith && !form.is_soulforge && (
+                  <p className="text-[10px] text-muted-foreground/70 pl-6 italic">
+                    Enable Blacksmith above to allow Soulforge.
+                  </p>
+                )}
               </div>
 
               <IllustrationEditor
