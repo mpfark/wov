@@ -816,7 +816,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, connections, searchable_items,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
