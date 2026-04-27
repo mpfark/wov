@@ -5,6 +5,10 @@ import { Character } from '@/features/character';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { getMaxHp, getMaxCp, getMaxMp } from '@/lib/game-data';
 
+// NOTE: `character.bhp` is legacy storage for the current Renown balance.
+// `character.bhp_trained` is legacy storage for Renown training ranks.
+// Only the player-facing name changed; columns kept their original names.
+
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const STAT_LABELS: Record<string, string> = {
   str: 'Strength', dex: 'Dexterity', con: 'Constitution',
@@ -27,7 +31,7 @@ interface Props {
   addLog: (msg: string) => void;
 }
 
-export default function BossTrainerPanel({ open, onClose, character, updateCharacter, addLog }: Props) {
+export default function RenownTrainerPanel({ open, onClose, character, updateCharacter, addLog }: Props) {
   const [training, setTraining] = useState(false);
   const trained = (character.bhp_trained || {}) as Record<string, number>;
 
@@ -42,14 +46,14 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
     const roll = Math.random() * 100;
     const success = roll < chance;
 
-    const newBhp = character.bhp - cost;
+    const newRp = character.bhp - cost;
     const newTrained = { ...trained };
 
     if (success) {
       newTrained[stat] = rank + 1;
       const newStatVal = (character as any)[stat] + 1;
       const updates: Partial<Character> = {
-        bhp: newBhp,
+        bhp: newRp,
         bhp_trained: newTrained,
         [stat]: newStatVal,
       };
@@ -70,10 +74,10 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
       }
 
       await updateCharacter(updates);
-      addLog(`🏋️ Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${cost} BHP spent.`);
+      addLog(`🏛️ Training SUCCESS! +1 ${STAT_LABELS[stat]} (rank ${rank + 1}, ${chance}% chance) — ${cost} RP spent.`);
     } else {
-      await updateCharacter({ bhp: newBhp, bhp_trained: newTrained });
-      addLog(`🏋️ Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${cost} BHP spent.`);
+      await updateCharacter({ bhp: newRp, bhp_trained: newTrained });
+      addLog(`🏛️ Training FAILED. ${STAT_LABELS[stat]} remains unchanged (${chance}% chance) — ${cost} RP spent.`);
     }
 
     setTraining(false);
@@ -85,13 +89,13 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-md bg-card border-border">
         <DialogHeader>
-          <DialogTitle className="font-display text-primary text-glow">🏋️ Boss Hunter Trainer</DialogTitle>
+          <DialogTitle className="font-display text-primary text-glow">🏛️ Renown Trainer</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Boss Hunter Points</span>
-            <span className="font-display text-primary text-lg">{character.bhp} BHP</span>
+            <span className="text-muted-foreground">Available Renown</span>
+            <span className="font-display text-primary text-lg">{character.bhp} RP</span>
           </div>
 
           {character.level < 30 ? (
@@ -124,7 +128,7 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
                         </TooltipTrigger>
                         <TooltipContent side="left" className="text-xs max-w-[180px]">
                           <p>Current: {(character as any)[stat]}</p>
-                          <p>BHP trained: +{rank}</p>
+                          <p>Renown trained: +{rank}</p>
                         </TooltipContent>
                       </Tooltip>
                       <span className="text-center text-xs text-muted-foreground tabular-nums">
@@ -154,13 +158,13 @@ export default function BossTrainerPanel({ open, onClose, character, updateChara
 
           {totalTrained > 0 && (
             <p className="text-[10px] text-muted-foreground text-center">
-              Total BHP ranks trained: {totalTrained}
+              Total Renown ranks trained: {totalTrained}
             </p>
           )}
 
           <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-            Cost per attempt: 20 × (rank + 1) BHP. Success chance decreases with each rank.
-            Earn BHP by slaying boss creatures.
+            Cost per attempt: 20 × (rank + 1) RP. Success chance decreases with each rank.
+            Earn Renown by slaying rare and boss creatures.
           </p>
         </div>
       </DialogContent>
