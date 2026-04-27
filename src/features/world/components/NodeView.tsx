@@ -138,7 +138,8 @@ export default function NodeView({
     if (creaturesLoading) creaturesVisibleRef.current = false;
   }, [creaturesLoading, creatures.length]);
 
-  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0;
+  const showSoulforgeAction = !!onOpenSoulforge && node.is_blacksmith && (node as any).is_soulforge === true;
+  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0 || showSoulforgeAction;
 
   return (
     <TooltipProvider delayDuration={300}>
