@@ -990,7 +990,7 @@ export default function NodeEditorPanel({
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_blacksmith}
-                    onChange={e => setForm(f => ({ ...f, is_blacksmith: e.target.checked }))} />
+                    onChange={e => setForm(f => ({ ...f, is_blacksmith: e.target.checked, is_soulforge: e.target.checked ? f.is_soulforge : false }))} />
                   🔨 Is Blacksmith (repair items)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
