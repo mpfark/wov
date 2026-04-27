@@ -512,11 +512,12 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection, nodePositions,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false,
+    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
     illustration_url: '', illustration_metadata: {} as Record<string, string>,
   });
+  const [generatingNpc, setGeneratingNpc] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
   const { areaTypes, emojiMap: _areaTypeEmoji, refetch: _refetchAreaTypes } = useAreaTypes();
   const [creatures, setCreatures] = useState<any[]>([]);
