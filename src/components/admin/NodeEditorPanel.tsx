@@ -512,11 +512,12 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection, nodePositions,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false,
+    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
     illustration_url: '', illustration_metadata: {} as Record<string, string>,
   });
+  const [generatingNpc, setGeneratingNpc] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
   const { areaTypes, emojiMap: _areaTypeEmoji, refetch: _refetchAreaTypes } = useAreaTypes();
   const [creatures, setCreatures] = useState<any[]>([]);
@@ -605,7 +606,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -625,6 +626,7 @@ export default function NodeEditorPanel({
         is_teleport: (data as any).is_teleport ?? false,
         is_trainer: (data as any).is_trainer ?? false,
         is_marketplace: (data as any).is_marketplace ?? false,
+        is_soulforge: (data as any).is_soulforge ?? false,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
         area_id: (data as any).area_id || '',
@@ -698,6 +700,30 @@ export default function NodeEditorPanel({
     if (activeNodeId) loadNpcs(activeNodeId);
     const { data } = await supabase.from('npcs').select('id, name, description, dialogue, node_id').order('name');
     if (data) setAllNpcs(data);
+  };
+
+  /* ── Generate AI service NPC ── */
+  const generateServiceNpc = async () => {
+    if (!activeNodeId) return;
+    if (!form.is_vendor && !form.is_blacksmith) {
+      toast.error('Node must be a vendor or blacksmith');
+      return;
+    }
+    setGeneratingNpc(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-service-npc', {
+        body: { node_id: activeNodeId },
+      });
+      if (error) throw error;
+      toast.success(`Generated ${(data as any)?.npc?.name || 'service NPC'}`);
+      loadNpcs(activeNodeId);
+      const { data: all } = await supabase.from('npcs').select('id, name, description, dialogue, node_id').order('name');
+      if (all) setAllNpcs(all);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to generate NPC');
+    } finally {
+      setGeneratingNpc(false);
+    }
   };
 
   /* ── Vendor ── */
@@ -787,7 +813,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, connections, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, connections, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -814,7 +840,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, connections, searchable_items,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -982,6 +1008,11 @@ export default function NodeEditorPanel({
                     onChange={e => setForm(f => ({ ...f, is_marketplace: e.target.checked }))} />
                   🏛️ Is Marketplace (player marketplace for unique items)
                 </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_soulforge}
+                    onChange={e => setForm(f => ({ ...f, is_soulforge: e.target.checked }))} />
+                  ⚒️ Soulforge-Capable (adds Soulforge tab at this blacksmith)
+                </label>
               </div>
 
               <IllustrationEditor
@@ -1124,6 +1155,25 @@ export default function NodeEditorPanel({
             {/* ── NPCs ── */}
             {activeNodeId && (
               <TabsContent value="npcs" className="space-y-3">
+                {/* Generate AI service NPC */}
+                {(form.is_vendor || form.is_blacksmith) && (
+                  <div className="rounded border border-primary/30 bg-primary/5 p-2.5 space-y-2">
+                    <p className="font-display text-xs text-primary">AI Service NPC</p>
+                    <p className="text-[10px] text-muted-foreground leading-snug">
+                      Generates a named {form.is_vendor && form.is_blacksmith ? 'shopkeeper or smith' : form.is_vendor ? 'shopkeeper' : 'smith'} that fits this node's tone. Talking to them opens the service panel directly.
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={generateServiceNpc}
+                      disabled={generatingNpc}
+                      className="font-display text-xs h-8 w-full"
+                    >
+                      {generatingNpc
+                        ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating…</>
+                        : <><Sparkles className="w-3 h-3 mr-1" /> Generate Service NPC</>}
+                    </Button>
+                  </div>
+                )}
                 {/* Assigned NPCs list */}
                 <div className="space-y-2">
                   {npcs.length === 0 && (
