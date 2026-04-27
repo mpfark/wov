@@ -1,12 +1,11 @@
 /**
- * SoulforgeTabContent — soulforge UI designed for embedding inside a
- * ServicePanelShell tab (e.g. inside BlacksmithPanel). Mirrors the logic
- * of SoulforgeDialog but exposes its body, preview and action button via
- * the `left`, `right`, `footer` render props so the parent shell handles
- * layout.
+ * useSoulforgeForge — hook providing the Soulforge UI as slot nodes
+ * (left/right/footer + titles) for embedding inside a persistent
+ * ServicePanelShell. State persists across tab switches because the hook
+ * lives in the parent component.
  *
  * Server enforcement (level gates, ownership, "already forged" guards) lives
- * in the `soulforge-item` edge function — this component is purely UI.
+ * in the `soulforge-item` edge function — this hook is purely UI.
  */
 import { useMemo, useState, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
@@ -42,14 +41,20 @@ const STAT_LABELS: Record<string, string> = {
 };
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen', 'potion_slots'];
 
-interface Props {
+interface UseSoulforgeForgeOptions {
   character: Character;
   onForged: () => void;
-  /** Render-prop sink: receives left/right/footer nodes for parent shell. */
-  render: (parts: { left: ReactNode; right: ReactNode; footer: ReactNode }) => ReactNode;
 }
 
-export default function SoulforgeTabContent({ character, onForged, render }: Props) {
+export interface SoulforgeSlots {
+  left: ReactNode;
+  right: ReactNode;
+  footer: ReactNode;
+  leftTitle?: ReactNode;
+  rightTitle?: ReactNode;
+}
+
+export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOptions): SoulforgeSlots {
   const [mode, setMode] = useState<ForgeMode | null>(null);
   const [itemName, setItemName] = useState('');
   const [slot, setSlot] = useState('');
@@ -169,7 +174,7 @@ export default function SoulforgeTabContent({ character, onForged, render }: Pro
         <p className="text-xs text-muted-foreground">(Reach level 40 to forge your Crown.)</p>
       </div>
     );
-    return <>{render({ left: empty, right: null, footer: null })}</>;
+    return { left: empty, right: null, footer: null, leftTitle: 'The Soulwright\'s Anvil' };
   }
   if (allDone) {
     const done = (
@@ -179,7 +184,7 @@ export default function SoulforgeTabContent({ character, onForged, render }: Pro
         </p>
       </div>
     );
-    return <>{render({ left: done, right: null, footer: null })}</>;
+    return { left: done, right: null, footer: null, leftTitle: 'The Soulwright\'s Anvil' };
   }
 
   // ── Mode selection ────────────────────────────────────────────────
@@ -226,7 +231,7 @@ export default function SoulforgeTabContent({ character, onForged, render }: Pro
         <p className="text-soulforged">Forged items cannot be dropped, sold, or traded.</p>
       </div>
     );
-    return <>{render({ left: modePick, right: intro, footer: null })}</>;
+    return { left: modePick, right: intro, footer: null, leftTitle: 'The Soulwright\'s Anvil', rightTitle: 'About the Soulforge' };
   }
 
   // ── Active forge flow ────────────────────────────────────────────
@@ -379,5 +384,7 @@ export default function SoulforgeTabContent({ character, onForged, render }: Pro
     </div>
   );
 
-  return <>{render({ left, right, footer })}</>;
+  return { left, right, footer, leftTitle: 'The Soulwright\'s Anvil', rightTitle: 'Stat Allocation' };
 }
+
+export default useSoulforgeForge;

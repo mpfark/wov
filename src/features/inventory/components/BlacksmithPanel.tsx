@@ -10,7 +10,7 @@ import { Coins, Hammer } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
 import { calculateRepairCost } from '@/lib/game-data';
 import { Character } from '@/features/character';
-import SoulforgeTabContent from './SoulforgeTabContent';
+import { useSoulforgeForge } from './SoulforgeTabContent';
 
 type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
 
@@ -473,29 +473,38 @@ export default function BlacksmithPanel({
     </Tabs>
   );
 
-  // Soulforge tab uses its own render-prop layout — render via shell.
+  // Soulforge slots — hook always called (state persists across tabs).
+  // When the node has no soulforge or no character, we pass a stub character
+  // path: the hook needs a real character, so guard with a placeholder.
+  const sf = useSoulforgeForge({
+    character: (character ?? ({ id: '', level: 0, gender: 'male' } as Character)),
+    onForged: () => { onInventoryChange(); },
+  });
+
+  let activeLeft: typeof repairLeft;
+  let activeRight: typeof repairRight | null;
+  let activeFooter: typeof repairFooter | null;
+  let activeLeftTitle: string | undefined;
+  let activeRightTitle: string | undefined;
+
   if (tab === 'soulforge' && showSoulforge && character) {
-    return (
-      <SoulforgeTabContent
-        character={character}
-        onForged={() => { onInventoryChange(); }}
-        render={({ left, right, footer }) => (
-          <ServicePanelShell
-            open={open}
-            onClose={onClose}
-            icon="🔨"
-            title="Blacksmith"
-            subtitle={subtitle}
-            tabs={tabs}
-            leftTitle="The Soulwright's Anvil"
-            rightTitle={right ? 'Stat Allocation' : undefined}
-            left={left}
-            right={right ?? <ServicePanelEmpty>Awaiting your choice…</ServicePanelEmpty>}
-            footer={footer ?? undefined}
-          />
-        )}
-      />
-    );
+    activeLeft = sf.left as typeof repairLeft;
+    activeRight = (sf.right ?? <ServicePanelEmpty>Awaiting your choice…</ServicePanelEmpty>) as typeof repairRight;
+    activeFooter = (sf.footer ?? null) as typeof repairFooter | null;
+    activeLeftTitle = (sf.leftTitle as string | undefined) ?? "The Soulwright's Anvil";
+    activeRightTitle = sf.rightTitle as string | undefined;
+  } else if (tab === 'forge') {
+    activeLeft = forgeLeft;
+    activeRight = forgeRight;
+    activeFooter = forgeFooter;
+    activeLeftTitle = 'Forge Options';
+    activeRightTitle = 'Available Items';
+  } else {
+    activeLeft = repairLeft;
+    activeRight = repairRight;
+    activeFooter = repairFooter;
+    activeLeftTitle = 'Damaged Items';
+    activeRightTitle = 'How Repair Works';
   }
 
   return (
@@ -506,11 +515,11 @@ export default function BlacksmithPanel({
       title="Blacksmith"
       subtitle={subtitle}
       tabs={tabs}
-      leftTitle={tab === 'repair' ? 'Damaged Items' : 'Forge Options'}
-      rightTitle={tab === 'repair' ? 'How Repair Works' : 'Available Items'}
-      left={tab === 'repair' ? repairLeft : forgeLeft}
-      right={tab === 'repair' ? repairRight : forgeRight}
-      footer={tab === 'repair' ? repairFooter : forgeFooter}
+      leftTitle={activeLeftTitle}
+      rightTitle={activeRightTitle}
+      left={activeLeft}
+      right={activeRight ?? undefined}
+      footer={activeFooter ?? undefined}
     />
   );
 }
