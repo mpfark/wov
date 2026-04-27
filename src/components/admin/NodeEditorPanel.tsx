@@ -626,7 +626,7 @@ export default function NodeEditorPanel({
         is_teleport: (data as any).is_teleport ?? false,
         is_trainer: (data as any).is_trainer ?? false,
         is_marketplace: (data as any).is_marketplace ?? false,
-        connections: JSON.stringify(data.connections, null, 2),
+        is_soulforge: (data as any).is_soulforge ?? false,
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
         area_id: (data as any).area_id || '',
         illustration_url: (data as any).illustration_url || '',
