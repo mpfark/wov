@@ -249,6 +249,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  const [blacksmithInitialTab, setBlacksmithInitialTab] = useState<'repair' | 'forge' | 'soulforge' | undefined>(undefined);
   /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
   const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
 
