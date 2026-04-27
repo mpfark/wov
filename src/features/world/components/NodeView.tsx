@@ -340,6 +340,21 @@ export default function NodeView({
                       </div>
                     );
                   })}
+                  {showSoulforgeAction && (
+                    <div className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-soulforged/40">
+                      <span className="text-xs font-display text-soulforged text-glow-soulforged min-w-0 truncate">
+                        ⚒️ Soulforge
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onOpenSoulforge?.()}
+                        className="font-display text-[10px] h-5 px-1.5 border-soulforged/50 text-soulforged ml-1 shrink-0"
+                      >
+                        Forge
+                      </Button>
+                    </div>
+                  )}
                   {otherPlayers.map(p => {
                     const isPartyMate = partyMemberIds?.has(p.id);
                     const hpData = partyMemberHp?.get(p.id);
