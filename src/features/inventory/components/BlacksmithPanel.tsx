@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
@@ -9,6 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Coins, Hammer } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
 import { calculateRepairCost } from '@/lib/game-data';
+import { Character } from '@/features/character';
+import SoulforgeTabContent from './SoulforgeTabContent';
+
+type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
 
 interface Props {
   open: boolean;
@@ -22,6 +26,13 @@ interface Props {
   onSalvageChange: (newSalvage: number) => void;
   onInventoryChange: () => void;
   addLog: (msg: string) => void;
+  /** Whether the current node has the soulforge flag — adds a 3rd tab. */
+  isSoulforgeNode?: boolean;
+  /** Full character (only required when isSoulforgeNode). */
+  character?: Character;
+  /** Optional subtitle name + flavor for service-NPC framing. */
+  npcName?: string;
+  npcFlavor?: string;
 }
 
 const RARITY_COLORS: Record<string, string> = {
