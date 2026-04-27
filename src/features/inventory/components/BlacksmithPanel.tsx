@@ -33,6 +33,8 @@ interface Props {
   /** Optional subtitle name + flavor for service-NPC framing. */
   npcName?: string;
   npcFlavor?: string;
+  /** Tab to focus when the panel opens. Defaults to 'repair'. */
+  initialTab?: BlacksmithTab;
 }
 
 const RARITY_COLORS: Record<string, string> = {
