@@ -606,7 +606,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
