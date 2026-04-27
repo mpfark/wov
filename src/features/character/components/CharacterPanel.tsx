@@ -894,7 +894,7 @@ export default function CharacterPanel({
                           )}
                           {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
                           {((character.bhp_trained || {}) as Record<string, number>)[stat] > 0 && (
-                            <p className="text-[10px] text-elvish mt-0.5">🏋️ +{((character.bhp_trained || {}) as Record<string, number>)[stat]} BHP trained</p>
+                            <p className="text-[10px] text-elvish mt-0.5">🏛️ +{((character.bhp_trained || {}) as Record<string, number>)[stat]} Renown trained</p>
                           )}
                         </TooltipContent>
                       </Tooltip>
@@ -902,11 +902,17 @@ export default function CharacterPanel({
                   })}
                 </div>
 
-                {/* BHP Balance */}
-                {(character.bhp > 0 || character.level >= 30) && (
-                  <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/10 rounded border border-elvish/20">
-                    <span className="font-display text-elvish">🏋️ Boss Hunter Points</span>
-                    <span className="font-display text-elvish tabular-nums">{character.bhp || 0}</span>
+                {/* Renown Balance + Lifetime */}
+                {(character.bhp > 0 || (character.rp_total_earned || 0) > 0 || character.level >= 30) && (
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/10 rounded border border-elvish/20">
+                      <span className="font-display text-elvish">🏛️ Available Renown</span>
+                      <span className="font-display text-elvish tabular-nums">{character.bhp || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/5 rounded border border-elvish/10">
+                      <span className="font-display text-elvish/80">Lifetime Renown</span>
+                      <span className="font-display text-elvish/80 tabular-nums">{character.rp_total_earned || 0}</span>
+                    </div>
                   </div>
                 )}
 

@@ -185,7 +185,7 @@ export default function NodeView({
                       </span>
                     )}
                     {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
-                    {node.is_trainer && <span className="text-[10px]" title="Boss Trainer">🏋️</span>}
+                    {node.is_trainer && <span className="text-[10px]" title="Renown Trainer">🏛️</span>}
                   </>
                 );
               })()}

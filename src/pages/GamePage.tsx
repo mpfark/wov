@@ -6,7 +6,7 @@ import NodeView from '@/features/world/components/NodeView';
 import MapPanel from '@/features/world/components/MapPanel';
 import VendorPanel from '@/features/inventory/components/VendorPanel';
 import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
-import BossTrainerPanel from '@/features/character/components/BossTrainerPanel';
+import RenownTrainerPanel from '@/features/character/components/RenownTrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
 import { Character } from '@/features/character';
@@ -112,24 +112,26 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const currentNodeForPrefetch = getNode(character.current_node_id || '');
   const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
     if (!rewards || rewards.length === 0) return;
-    let totalXp = 0, totalGold = 0, totalSalvage = 0, totalBhp = 0;
+    // `bhp_each` from the server is legacy storage for Renown awarded per recipient.
+    let totalXp = 0, totalGold = 0, totalSalvage = 0, totalRenown = 0;
     for (const r of rewards) {
       totalXp += r.xp_each;
       totalGold += r.gold_each;
       totalSalvage += r.salvage_each;
-      totalBhp += r.bhp_each;
+      totalRenown += r.bhp_each;
       const parts: string[] = [];
       if (r.xp_each > 0) parts.push(`${r.xp_each} XP`);
       if (r.gold_each > 0) parts.push(`${r.gold_each} gold`);
       if (r.salvage_each > 0) parts.push(`${r.salvage_each} 🔩`);
-      if (r.bhp_each > 0) parts.push(`${r.bhp_each} BHP`);
+      if (r.bhp_each > 0) parts.push(`${r.bhp_each} 🏛️ Renown`);
       bus.emit('log:local', { message: `☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.` });
     }
     updateCharacterLocal({
       xp: character.xp + totalXp,
       gold: character.gold + totalGold,
       salvage: character.salvage + totalSalvage,
-      bhp: character.bhp + totalBhp,
+      bhp: character.bhp + totalRenown,
+      rp_total_earned: (character.rp_total_earned || 0) + totalRenown,
     });
   }, [bus, updateCharacterLocal]);
   // Resolver uses a ref so we can wire broadcast (which needs name lookup) BEFORE
@@ -1228,9 +1230,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
       )}
 
-      {/* Boss Trainer Dialog */}
+      {/* Renown Trainer Dialog */}
       {currentNode.is_trainer && character.level >= 30 && (
-        <BossTrainerPanel
+        <RenownTrainerPanel
           open={trainerOpen}
           onClose={() => setTrainerOpen(false)}
           character={character}

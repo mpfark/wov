@@ -161,10 +161,10 @@ export function useOffscreenDotWakeup({
                 : `+${reward.xp_each} XP`;
               const goldPart = reward.gold_each > 0 ? `, +${reward.gold_each} gold` : '';
               const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
-              const bhpPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏋️ BHP` : '';
+              const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏛️ Renown` : '';
 
               eventBus.emit('log', {
-                message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`,
+                message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`,
               });
 
               // Boss world emote — show locally for the source player too
@@ -312,10 +312,10 @@ function scheduleWakeup(
             : `+${reward.xp_each} XP`;
           const goldPart = reward.gold_each > 0 ? `, +${reward.gold_each} gold` : '';
           const salvagePart = reward.salvage_each > 0 ? `, +${reward.salvage_each} salvage` : '';
-          const bhpPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏋️ BHP` : '';
+          const renownPart = reward.bhp_each > 0 ? `, +${reward.bhp_each} 🏛️ Renown` : '';
 
           eventBus.emit('log', {
-            message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${bhpPart}.`,
+            message: `☠️ ${reward.creature_name} has been slain by DoT! ${xpPart}${goldPart}${salvagePart}${renownPart}.`,
           });
 
           // Boss world emote — show locally for the source player too

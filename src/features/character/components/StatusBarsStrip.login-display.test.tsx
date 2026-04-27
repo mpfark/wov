@@ -38,6 +38,7 @@ function makeCithrawielLike(): Character {
     salvage: 0,
     bhp: 0,
     bhp_trained: {},
+    rp_total_earned: 0,
   };
 }
 

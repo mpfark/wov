@@ -1096,20 +1096,23 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
 
-          {/* Boss Hunter Points */}
-          <AccordionItem value="bhp" className="border border-border rounded-lg bg-card/50">
+          {/* Renown */}
+          <AccordionItem value="renown" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
-              🏋️ Boss Hunter Points (BHP)
+              🏛️ Renown
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <div className="space-y-3 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Unlock:</strong> Level 30+</p>
-                <p><strong className="text-foreground">Earning BHP:</strong> Kill <Badge variant="outline" className="text-xs">boss</Badge> rarity creatures. Award = <code className="text-primary">floor(creatureLevel × 0.5)</code> BHP. Split among party members.</p>
+                <p><strong className="text-foreground">Earning Renown:</strong> Available from level 1.</p>
+                <p>Kill <Badge variant="outline" className="text-xs">rare</Badge> creatures: <code className="text-primary">max(1, floor(creatureLevel × 0.10))</code> Renown.</p>
+                <p>Kill <Badge variant="outline" className="text-xs">boss</Badge> creatures: <code className="text-primary">floor(creatureLevel × 0.50)</code> Renown.</p>
+                <p>Renown is split among party members at the same node.</p>
+                <p><strong className="text-foreground">Lifetime Renown</strong> is tracked separately from your spendable balance — it never decreases and will be used for the upcoming <strong className="text-foreground">Renown Board</strong>.</p>
 
                 <div>
-                  <p className="font-display text-foreground mb-1">Training</p>
-                  <p>Visit a <strong className="text-foreground">🏋️ Boss Trainer</strong> node to spend BHP on permanent attribute ranks beyond the level cap.</p>
-                  <p><strong className="text-foreground">Cost:</strong> <code className="text-primary">20 × (rank + 1)</code> BHP per attempt (success or fail).</p>
+                  <p className="font-display text-foreground mb-1">Training (Level 30+)</p>
+                  <p>Visit a <strong className="text-foreground">🏛️ Renown Trainer</strong> node to spend Renown on permanent attribute ranks beyond the level cap.</p>
+                  <p><strong className="text-foreground">Cost:</strong> <code className="text-primary">20 × (rank + 1)</code> RP per attempt (success or fail).</p>
                   <Table>
                     <TableHeader>
                       <TableRow>

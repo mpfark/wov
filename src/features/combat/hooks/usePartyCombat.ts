@@ -512,7 +512,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           if (staleResult?.events?.length) {
             const killEvents = staleResult.events.filter(ev =>
               ev.type === 'creature_death' || ev.type === 'xp_reward' || ev.type === 'gold_reward' ||
-              ev.type === 'salvage_reward' || ev.type === 'bhp_reward' || ev.type === 'loot_drop'
+              ev.type === 'salvage_reward' || ev.type === 'renown_award' || ev.type === 'loot_drop'
             );
             if (killEvents.length > 0) {
               console.log(`[combat] processing ${killEvents.length} kill-related events from stale tick`);
@@ -527,6 +527,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
                 if (myState.gold !== undefined) updates.gold = myState.gold;
                 if (myState.salvage !== undefined) updates.salvage = myState.salvage;
                 if (myState.bhp !== undefined) updates.bhp = myState.bhp;
+                if (myState.rp_total_earned !== undefined) updates.rp_total_earned = myState.rp_total_earned;
                 if (myState.level !== undefined) updates.level = myState.level;
                 if (Object.keys(updates).length > 0) ext.current.updateCharacterLocal(updates);
               }

@@ -1038,7 +1038,10 @@ Deno.serve(async (req) => {
       }
 
       if (mBhp[m.id] > 0) {
+        // `bhp` is legacy storage for current Renown balance.
+        // Mirror the same delta into the lifetime counter for the Renown Board.
         updates.bhp = (c.bhp || 0) + mBhp[m.id];
+        updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
       }
       if (mSalvage[m.id] > 0) {
         updates.salvage = (c.salvage || 0) + mSalvage[m.id];
@@ -1056,6 +1059,7 @@ Deno.serve(async (req) => {
         level: newLevel,
         max_hp: newMaxHp,
         bhp: updates.bhp ?? (c.bhp || 0),
+        rp_total_earned: updates.rp_total_earned ?? (c.rp_total_earned || 0),
         unspent_stat_points: updates.unspent_stat_points ?? c.unspent_stat_points ?? 0,
         max_cp: updates.max_cp ?? c.max_cp,
         max_mp: updates.max_mp ?? c.max_mp,

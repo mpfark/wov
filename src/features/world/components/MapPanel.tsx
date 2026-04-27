@@ -463,10 +463,10 @@ export default function MapPanel({
                         onClick={onOpenTrainer}
                         className="h-5 w-5 flex items-center justify-center rounded bg-elvish/15 border border-elvish/40 shadow-[0_0_6px_hsl(var(--elvish)/0.3)] hover:bg-elvish/25 transition-colors"
                       >
-                        <span className="text-[10px]">🏋️</span>
+                        <span className="text-[10px]">🏛️</span>
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">Boss Trainer</TooltipContent>
+                    <TooltipContent side="top" className="text-xs">Renown Trainer</TooltipContent>
                   </Tooltip>
                 )}
                 {onOpenMarketplace && (
