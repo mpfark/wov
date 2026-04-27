@@ -230,8 +230,8 @@ export default function StatusBarsStrip({
             {(character.salvage ?? 0) > 0 && (
               <span className="text-dwarvish tabular-nums">🔩 {character.salvage}</span>
             )}
-            {character.level >= 30 && (
-              <span className="text-gold tabular-nums">🏋️ {character.bhp || 0} BHP</span>
+            {((character.rp_total_earned || 0) > 0 || character.level >= 30) && (
+              <span className="text-gold tabular-nums">🏛️ {character.bhp || 0} RP</span>
             )}
             <span className="text-primary tabular-nums">{character.xp}/{xpForNext}</span>
           </div>

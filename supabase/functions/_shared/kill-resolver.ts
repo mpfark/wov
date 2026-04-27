@@ -150,9 +150,10 @@ export function resolveCreatureKill(
   }
 
   if (displayReward.bhp > 0) {
+    // `displayReward.bhp` is legacy storage for the Renown award value.
     events.push({
-      type: 'bhp_award',
-      message: `🏋️ +${displayReward.bhp} Boss Hunter Points${recipients.length > 1 ? ' each' : ''}!`,
+      type: 'renown_award',
+      message: `🏛️ +${displayReward.bhp} Renown${recipients.length > 1 ? ' each' : ''}!`,
     });
   }
   if (displayReward.salvage > 0) {

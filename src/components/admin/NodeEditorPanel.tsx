@@ -1001,7 +1001,7 @@ export default function NodeEditorPanel({
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_trainer}
                     onChange={e => setForm(f => ({ ...f, is_trainer: e.target.checked }))} />
-                  🏋️ Is Boss Trainer (BHP attribute training, Lv30+)
+                  🏛️ Is Renown Trainer (Renown attribute training, Lv30+)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_marketplace}

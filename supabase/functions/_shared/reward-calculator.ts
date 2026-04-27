@@ -113,9 +113,15 @@ export function calculateCreatureRewards(
   const uncappedCount = members.filter((m) => m.isUncapped).length || 1;
   const goldEach = Math.floor(totalGoldRolled / members.length);
 
-  // BHP (boss only)
-  const bhpTotal = isBoss ? Math.floor(level * 0.5) : 0;
-  const bhpEach = bhpTotal > 0 ? Math.floor(bhpTotal / partySize) : 0;
+  // Renown (RP) — boss is the main source, rare gives a small but meaningful taste.
+  // NOTE: the `bhp` field name on MemberReward is legacy storage for Renown.
+  //   rare:   max(1, floor(level * 0.10))
+  //   boss:   floor(level * 0.50)
+  //   others: 0
+  const rpTotal = isBoss
+    ? Math.floor(level * 0.5)
+    : (rarity === 'rare' ? Math.max(1, Math.floor(level * 0.10)) : 0);
+  const rpEach = rpTotal > 0 ? Math.max(1, Math.floor(rpTotal / partySize)) : 0;
 
   // Salvage (non-humanoid only)
   const salvageRarityMult = SALVAGE_RARITY[rarity] || 1;
@@ -132,7 +138,8 @@ export function calculateCreatureRewards(
       memberId: mm.id,
       xp,
       gold: goldEach,
-      bhp: bhpEach,
+      // `bhp` is legacy storage for current Renown balance reward.
+      bhp: rpEach,
       salvage: salvageEach,
       xpPenaltyApplied: penalty,
       partyBonusApplied: partyBonus,

@@ -18,7 +18,10 @@ export interface CombatTickResponse {
   creature_states: { id: string; hp: number; alive: boolean }[];
   member_states: {
     character_id: string; hp: number; xp: number; gold: number; level: number; max_hp: number;
-    bhp?: number; unspent_stat_points?: number; max_cp?: number; max_mp?: number;
+    // `bhp` here is the current Renown balance (legacy storage name).
+    // `rp_total_earned` is the lifetime counter (Renown Board source).
+    bhp?: number; rp_total_earned?: number;
+    unspent_stat_points?: number; max_cp?: number; max_mp?: number;
     respec_points?: number; salvage?: number; cp?: number;
   }[];
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
@@ -156,6 +159,7 @@ export function interpretCombatTickResult(
       max_hp: myState.max_hp,
     };
     if (myState.bhp !== undefined) characterUpdates.bhp = myState.bhp;
+    if (myState.rp_total_earned !== undefined) characterUpdates.rp_total_earned = myState.rp_total_earned;
     if (myState.unspent_stat_points !== undefined) characterUpdates.unspent_stat_points = myState.unspent_stat_points;
     if (myState.max_cp !== undefined) characterUpdates.max_cp = myState.max_cp;
     if (myState.max_mp !== undefined) characterUpdates.max_mp = myState.max_mp;

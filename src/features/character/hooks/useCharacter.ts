@@ -30,8 +30,14 @@ export interface Character {
   max_mp: number;
   respec_points: number;
   salvage: number;
+  // `bhp` is legacy storage for the current Renown balance.
+  // `bhp_trained` is legacy storage for Renown training ranks.
+  // Only the player-facing name changed; the columns kept their original names
+  // to avoid a wide rename across types.ts and edge functions.
   bhp: number;
   bhp_trained: Record<string, number>;
+  /** Lifetime Renown earned (never decreases). Used by the Renown Board. */
+  rp_total_earned: number;
   soulforged_item_created?: boolean;
   crown_item_created?: boolean;
 }

@@ -484,7 +484,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               )}
               {(node as any).is_trainer && (
                 <text x={pos.px} y={pos.py + 34} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
-                  🏋️
+                  🏛️
                 </text>
               )}
               {(node as any).is_marketplace && (
