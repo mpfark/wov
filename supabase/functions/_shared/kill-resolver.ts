@@ -123,44 +123,55 @@ export function resolveCreatureKill(
       ? ` (🤝 +${Math.round((result.partyBonus - 1) * 100)}% party bonus)`
       : '';
   const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
+  const renownEachSuffix = recipients.length > 1 ? ' each' : '';
+  // `displayReward.bhp` is legacy storage for the Renown award value.
+  const renownNote = displayReward.bhp > 0 ? `, +${displayReward.bhp} 🏛️ Renown${renownEachSuffix}` : '';
   const killerSuffix = ctx.killerLabel ? ` by ${ctx.killerLabel}` : '';
 
   if (allCapped) {
     const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${recipients.length > 1 ? ' each' : ''}.` : '';
+    const cappedRenownNote = displayReward.bhp > 0 ? ` +${displayReward.bhp} 🏛️ Renown${renownEachSuffix}.` : '';
     events.push({
       type: 'creature_kill',
-      message: `☠️ ${creature.name} has been slain${killerSuffix}!${cappedGoldNote} Your power transcends experience.`,
+      message: `☠️ ${creature.name} has been slain${killerSuffix}!${cappedGoldNote}${cappedRenownNote} Your power transcends experience.`,
       creature_id: creature.id,
       creature_name: creature.name,
     });
   } else if (recipients.length > 1) {
     events.push({
       type: 'creature_kill',
-      message: `☠️ ${creature.name} has been slain${killerSuffix}! Rewards split ${uncapped.length} ways: +${displayReward.xp} XP${goldNote} each.${penaltyNote}${xpBoostNote}${partyBonusNote}`,
+      message: `☠️ ${creature.name} has been slain${killerSuffix}! Rewards split ${uncapped.length} ways: +${displayReward.xp} XP${goldNote}${renownNote} each.${penaltyNote}${xpBoostNote}${partyBonusNote}`,
       creature_id: creature.id,
       creature_name: creature.name,
     });
   } else {
     events.push({
       type: 'creature_kill',
-      message: `☠️ ${creature.name} has been slain${killerSuffix}! +${displayReward.xp} XP${goldNote}.${penaltyNote}${xpBoostNote}`,
+      message: `☠️ ${creature.name} has been slain${killerSuffix}! +${displayReward.xp} XP${goldNote}${renownNote}.${penaltyNote}${xpBoostNote}`,
       creature_id: creature.id,
       creature_name: creature.name,
     });
   }
 
-  if (displayReward.bhp > 0) {
-    // `displayReward.bhp` is legacy storage for the Renown award value.
-    events.push({
-      type: 'renown_award',
-      message: `🏛️ +${displayReward.bhp} Renown${recipients.length > 1 ? ' each' : ''}!`,
-    });
-  }
   if (displayReward.salvage > 0) {
     events.push({
       type: 'salvage',
       message: `🔩 +${displayReward.salvage} salvage${recipients.length > 1 ? ' each' : ''} from ${creature.name}.`,
     });
+  }
+
+  // Diagnostic: log every Renown-bearing kill for future audit
+  if (displayReward.bhp > 0) {
+    console.log(JSON.stringify({
+      fn: 'kill-resolver',
+      event: 'renown_award',
+      creature_id: creature.id,
+      creature_name: creature.name,
+      creature_level: creature.level,
+      creature_rarity: creature.rarity,
+      renown_each: displayReward.bhp,
+      recipients: recipients.length,
+    }));
   }
 
   // ── 4. Boss death cry ───────────────────────────────────────────
