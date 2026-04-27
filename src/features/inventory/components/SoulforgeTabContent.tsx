@@ -42,7 +42,7 @@ const STAT_LABELS: Record<string, string> = {
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen', 'potion_slots'];
 
 interface UseSoulforgeForgeOptions {
-  character: Character;
+  character: Character | null;
   onForged: () => void;
 }
 
@@ -65,10 +65,11 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
 
-  const canCrown = character.level >= 40 && !character.crown_item_created;
-  const canSoulforge = character.level >= 42 && !character.soulforged_item_created;
-  const isNotWorthy = character.level < 40;
-  const allDone = !canCrown && !canSoulforge && !isNotWorthy;
+  // Guard against placeholder / unloaded character. All hooks above must
+  // run unconditionally; this early return lives strictly after them and
+  // before any branch that reads character fields, so we never compute
+  // the misleading "not worthy" branch for a phantom level-0 character.
+  const hasCharacter = !!character && !!character.id && (character.level ?? 0) > 0;
 
   const activeSlot = mode === 'crown' ? 'head' : slot;
   const activeLevel = mode === 'crown' ? 40 : 42;
@@ -80,6 +81,21 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   const cost = useMemo(() => calculateItemStatCost(stats), [stats]);
   const remaining = budget - cost;
   const statCount = Object.keys(stats).filter(k => stats[k] > 0).length;
+
+  // Placeholder / unloaded character — return a stable neutral slot tree so
+  // the persistent ServicePanelShell can swap content in place without
+  // exposing the misleading "not worthy" branch for a phantom level-0 char.
+  if (!hasCharacter) {
+    const loading = (
+      <ServicePanelEmpty>Awaiting the wayfarer's arrival…</ServicePanelEmpty>
+    );
+    return { left: loading, right: null, footer: null, leftTitle: "The Soulwright's Anvil" };
+  }
+
+  const canCrown = character!.level >= 40 && !character!.crown_item_created;
+  const canSoulforge = character!.level >= 42 && !character!.soulforged_item_created;
+  const isNotWorthy = character!.level < 40;
+  const allDone = !canCrown && !canSoulforge && !isNotWorthy;
 
   const canForge = !!mode && !!activeSlot && statCount >= 2 && remaining >= 0 && !forging &&
     (mode === 'crown' || (itemName.trim().length >= 1 && itemName.trim().length <= 30 && /^[\x20-\x7E]+$/.test(itemName)));

@@ -474,10 +474,11 @@ export default function BlacksmithPanel({
   );
 
   // Soulforge slots — hook always called (state persists across tabs).
-  // When the node has no soulforge or no character, we pass a stub character
-  // path: the hook needs a real character, so guard with a placeholder.
+  // Pass the real character or null; the hook returns a stable "loading"
+  // slot tree when no character is present, so we never render the
+  // placeholder's misleading "not worthy" branch.
   const sf = useSoulforgeForge({
-    character: (character ?? ({ id: '', level: 0, gender: 'male' } as Character)),
+    character: character ?? null,
     onForged: () => { onInventoryChange(); },
   });
 
@@ -487,7 +488,7 @@ export default function BlacksmithPanel({
   let activeLeftTitle: string | undefined;
   let activeRightTitle: string | undefined;
 
-  if (tab === 'soulforge' && showSoulforge && character) {
+  if (tab === 'soulforge' && showSoulforge) {
     activeLeft = sf.left as typeof repairLeft;
     activeRight = (sf.right ?? <ServicePanelEmpty>Awaiting your choice…</ServicePanelEmpty>) as typeof repairRight;
     activeFooter = (sf.footer ?? null) as typeof repairFooter | null;
