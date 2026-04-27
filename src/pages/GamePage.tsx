@@ -249,6 +249,27 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
+  const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
+
+  /**
+   * Talk routing: service-role NPCs (vendor/blacksmith) open the matching
+   * service panel directly with the NPC's name + flavor as subtitle. All
+   * other NPCs fall through to the standard dialog.
+   */
+  const handleTalkToNPC = (npc: NPC) => {
+    if (npc.service_role === 'vendor' && currentNode?.is_vendor) {
+      setActiveServiceNpc(npc);
+      setVendorOpen(true);
+      return;
+    }
+    if (npc.service_role === 'blacksmith' && currentNode?.is_blacksmith) {
+      setActiveServiceNpc(npc);
+      setBlacksmithOpen(true);
+      return;
+    }
+    setTalkingToNPC(npc);
+  };
   const [trainerOpen, setTrainerOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
@@ -1060,7 +1081,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               character={character}
               eventLog={eventLog}
               onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
-              onTalkToNPC={npc => setTalkingToNPC(npc)}
+              onTalkToNPC={handleTalkToNPC}
               inCombat={inCombat}
               lastTickTime={lastTickTime}
                activeCombatCreatureId={activeCombatCreatureId}
@@ -1156,7 +1177,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {currentNode.is_vendor && (
         <VendorPanel
           open={vendorOpen}
-          onClose={() => setVendorOpen(false)}
+          onClose={() => { setVendorOpen(false); setActiveServiceNpc(null); }}
           nodeId={currentNode.id}
           characterId={character.id}
           gold={character.gold}
@@ -1166,6 +1187,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
+          npcName={activeServiceNpc?.service_role === 'vendor' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'vendor' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
 
@@ -1173,7 +1196,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {currentNode.is_blacksmith && (
         <BlacksmithPanel
           open={blacksmithOpen}
-          onClose={() => setBlacksmithOpen(false)}
+          onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); }}
           characterId={character.id}
           gold={character.gold}
           salvage={character.salvage ?? 0}
@@ -1183,6 +1206,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
+          isSoulforgeNode={(currentNode as any).is_soulforge === true}
+          character={character}
+          npcName={activeServiceNpc?.service_role === 'blacksmith' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'blacksmith' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
 
