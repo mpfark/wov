@@ -1177,7 +1177,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {currentNode.is_vendor && (
         <VendorPanel
           open={vendorOpen}
-          onClose={() => setVendorOpen(false)}
+          onClose={() => { setVendorOpen(false); setActiveServiceNpc(null); }}
           nodeId={currentNode.id}
           characterId={character.id}
           gold={character.gold}
@@ -1187,6 +1187,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
+          npcName={activeServiceNpc?.service_role === 'vendor' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'vendor' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
 
@@ -1194,7 +1196,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {currentNode.is_blacksmith && (
         <BlacksmithPanel
           open={blacksmithOpen}
-          onClose={() => setBlacksmithOpen(false)}
+          onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); }}
           characterId={character.id}
           gold={character.gold}
           salvage={character.salvage ?? 0}
@@ -1204,6 +1206,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
+          isSoulforgeNode={(currentNode as any).is_soulforge === true}
+          character={character}
+          npcName={activeServiceNpc?.service_role === 'blacksmith' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'blacksmith' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
 
