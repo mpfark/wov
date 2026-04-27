@@ -78,8 +78,12 @@ interface ForgePoolItem {
   weapon_tag: string | null;
 }
 
-export default function BlacksmithPanel({ open, onClose, characterId, gold, salvage, level, inventory, onGoldChange, onSalvageChange, onInventoryChange, addLog }: Props) {
-  const [tab, setTab] = useState<'repair' | 'forge'>('repair');
+export default function BlacksmithPanel({
+  open, onClose, characterId, gold, salvage, level, inventory,
+  onGoldChange, onSalvageChange, onInventoryChange, addLog,
+  isSoulforgeNode = false, character, npcName, npcFlavor,
+}: Props) {
+  const [tab, setTab] = useState<BlacksmithTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [forgeSlot, setForgeSlot] = useState<string>('');
   const [forging, setForging] = useState(false);
