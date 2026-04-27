@@ -1202,7 +1202,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {currentNode.is_blacksmith && (
         <BlacksmithPanel
           open={blacksmithOpen}
-          onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); }}
+          onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); setBlacksmithInitialTab(undefined); }}
+          initialTab={blacksmithInitialTab}
           characterId={character.id}
           gold={character.gold}
           salvage={character.salvage ?? 0}
