@@ -989,6 +989,7 @@ export default function NodeEditorPanel({
                     onChange={e => setForm(f => ({ ...f, is_soulforge: e.target.checked }))} />
                   ⚒️ Soulforge-Capable (adds Soulforge tab at this blacksmith)
                 </label>
+              </div>
 
               <IllustrationEditor
                 illustrationUrl={form.illustration_url}
