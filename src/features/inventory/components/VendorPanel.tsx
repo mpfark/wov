@@ -37,6 +37,9 @@ interface Props {
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
   addLog: (msg: string) => void;
+  /** Optional shopkeeper framing. */
+  npcName?: string;
+  npcFlavor?: string;
 }
 
 const RARITY_COLORS: Record<string, string> = {
