@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+export type NPCServiceRole = 'vendor' | 'blacksmith';
+
 export interface NPC {
   id: string;
   name: string;
@@ -8,6 +10,8 @@ export interface NPC {
   dialogue: string;
   node_id: string | null;
   created_at: string;
+  /** When set, talking to this NPC opens the matching service panel directly. */
+  service_role: NPCServiceRole | null;
 }
 
 export function useNPCs(nodeId: string | null) {
