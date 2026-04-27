@@ -249,7 +249,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
-  const [blacksmithInitialTab, setBlacksmithInitialTab] = useState<'repair' | 'forge' | 'soulforge' | undefined>(undefined);
   /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
   const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
 
@@ -1083,11 +1082,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               eventLog={eventLog}
               onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
               onTalkToNPC={handleTalkToNPC}
-              onOpenSoulforge={
-                currentNode.is_blacksmith && (currentNode as any).is_soulforge === true
-                  ? () => { setBlacksmithInitialTab('soulforge'); setActiveServiceNpc(null); setBlacksmithOpen(true); }
-                  : undefined
-              }
               inCombat={inCombat}
               lastTickTime={lastTickTime}
                activeCombatCreatureId={activeCombatCreatureId}
@@ -1202,8 +1196,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {currentNode.is_blacksmith && (
         <BlacksmithPanel
           open={blacksmithOpen}
-          onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); setBlacksmithInitialTab(undefined); }}
-          initialTab={blacksmithInitialTab}
+          onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); }}
           characterId={character.id}
           gold={character.gold}
           salvage={character.salvage ?? 0}
