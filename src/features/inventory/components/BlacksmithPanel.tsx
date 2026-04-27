@@ -83,9 +83,15 @@ interface ForgePoolItem {
 export default function BlacksmithPanel({
   open, onClose, characterId, gold, salvage, level, inventory,
   onGoldChange, onSalvageChange, onInventoryChange, addLog,
-  isSoulforgeNode = false, character, npcName, npcFlavor,
+  isSoulforgeNode = false, character, npcName, npcFlavor, initialTab,
 }: Props) {
-  const [tab, setTab] = useState<BlacksmithTab>('repair');
+  const [tab, setTab] = useState<BlacksmithTab>(initialTab ?? 'repair');
+
+  // Sync tab to requested initialTab when (re)opened.
+  useEffect(() => {
+    if (open && initialTab) setTab(initialTab);
+  }, [open, initialTab]);
+
   const [repairing, setRepairing] = useState(false);
   const [forgeSlot, setForgeSlot] = useState<string>('');
   const [forging, setForging] = useState(false);
