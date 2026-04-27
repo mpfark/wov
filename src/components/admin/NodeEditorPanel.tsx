@@ -1153,19 +1153,27 @@ export default function NodeEditorPanel({
             )}
 
             {/* ── NPCs ── */}
-            {activeNodeId && (
+            {activeNodeId && (() => {
+              const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
+              const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
+              const needsVendor = form.is_vendor && !hasVendorNpc;
+              const needsBlacksmith = form.is_blacksmith && !hasBlacksmithNpc;
+              const allRolesFilled = (form.is_vendor || form.is_blacksmith) && !needsVendor && !needsBlacksmith;
+              return (
               <TabsContent value="npcs" className="space-y-3">
                 {/* Generate AI service NPC */}
                 {(form.is_vendor || form.is_blacksmith) && (
                   <div className="rounded border border-primary/30 bg-primary/5 p-2.5 space-y-2">
                     <p className="font-display text-xs text-primary">AI Service NPC</p>
                     <p className="text-[10px] text-muted-foreground leading-snug">
-                      Generates a named {form.is_vendor && form.is_blacksmith ? 'shopkeeper or smith' : form.is_vendor ? 'shopkeeper' : 'smith'} that fits this node's tone. Talking to them opens the service panel directly.
+                      {allRolesFilled
+                        ? `This node already has ${form.is_vendor && form.is_blacksmith ? 'both a shopkeeper and a smith' : form.is_vendor ? 'a shopkeeper' : 'a smith'} assigned. Remove the existing NPC below to generate a replacement.`
+                        : `Generates a named ${needsVendor && needsBlacksmith ? 'shopkeeper or smith' : needsVendor ? 'shopkeeper' : 'smith'} that fits this node's tone. Talking to them opens the service panel directly.`}
                     </p>
                     <Button
                       size="sm"
                       onClick={generateServiceNpc}
-                      disabled={generatingNpc}
+                      disabled={generatingNpc || allRolesFilled}
                       className="font-display text-xs h-8 w-full"
                     >
                       {generatingNpc
@@ -1238,7 +1246,8 @@ export default function NodeEditorPanel({
                   </div>
                 </div>
               </TabsContent>
-            )}
+              );
+            })()}
 
             {/* ── Vendor Stock ── */}
             {activeNodeId && form.is_vendor && (
