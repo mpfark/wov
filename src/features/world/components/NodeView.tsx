@@ -31,6 +31,7 @@ interface Props {
   eventLog: string[];
   onAttack: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;
+  onOpenSoulforge?: () => void;
   inCombat?: boolean;
   lastTickTime?: number | null;
   activeCombatCreatureId?: string | null;
@@ -55,7 +56,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onTalkToNPC,
+  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onTalkToNPC, onOpenSoulforge,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   actionBindings,
   poisonStacks = {},
@@ -137,7 +138,8 @@ export default function NodeView({
     if (creaturesLoading) creaturesVisibleRef.current = false;
   }, [creaturesLoading, creatures.length]);
 
-  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0;
+  const showSoulforgeAction = !!onOpenSoulforge && node.is_blacksmith && (node as any).is_soulforge === true;
+  const hasAreaContent = creatures.length > 0 || npcs.length > 0 || otherPlayers.length > 0 || showSoulforgeAction;
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -338,6 +340,21 @@ export default function NodeView({
                       </div>
                     );
                   })}
+                  {showSoulforgeAction && (
+                    <div className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-soulforged/40">
+                      <span className="text-xs font-display text-soulforged text-glow-soulforged min-w-0 truncate">
+                        ⚒️ Soulforge
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onOpenSoulforge?.()}
+                        className="font-display text-[10px] h-5 px-1.5 border-soulforged/50 text-soulforged ml-1 shrink-0"
+                      >
+                        Forge
+                      </Button>
+                    </div>
+                  )}
                   {otherPlayers.map(p => {
                     const isPartyMate = partyMemberIds?.has(p.id);
                     const hpData = partyMemberHp?.get(p.id);
