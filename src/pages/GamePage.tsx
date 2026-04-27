@@ -1083,6 +1083,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               eventLog={eventLog}
               onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
               onTalkToNPC={handleTalkToNPC}
+              onOpenSoulforge={
+                currentNode.is_blacksmith && (currentNode as any).is_soulforge === true
+                  ? () => { setBlacksmithInitialTab('soulforge'); setActiveServiceNpc(null); setBlacksmithOpen(true); }
+                  : undefined
+              }
               inCombat={inCombat}
               lastTickTime={lastTickTime}
                activeCombatCreatureId={activeCombatCreatureId}
