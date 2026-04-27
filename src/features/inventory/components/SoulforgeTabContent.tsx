@@ -42,7 +42,7 @@ const STAT_LABELS: Record<string, string> = {
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen', 'potion_slots'];
 
 interface UseSoulforgeForgeOptions {
-  character: Character;
+  character: Character | null;
   onForged: () => void;
 }
 
@@ -65,10 +65,11 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
 
-  const canCrown = character.level >= 40 && !character.crown_item_created;
-  const canSoulforge = character.level >= 42 && !character.soulforged_item_created;
-  const isNotWorthy = character.level < 40;
-  const allDone = !canCrown && !canSoulforge && !isNotWorthy;
+  // Guard against placeholder / unloaded character. All hooks above must
+  // run unconditionally; this early return lives strictly after them and
+  // before any branch that reads character fields, so we never compute
+  // the misleading "not worthy" branch for a phantom level-0 character.
+  const hasCharacter = !!character && !!character.id && (character.level ?? 0) > 0;
 
   const activeSlot = mode === 'crown' ? 'head' : slot;
   const activeLevel = mode === 'crown' ? 40 : 42;
