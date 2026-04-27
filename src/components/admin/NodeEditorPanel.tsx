@@ -1246,7 +1246,8 @@ export default function NodeEditorPanel({
                   </div>
                 </div>
               </TabsContent>
-            )}
+              );
+            })()}
 
             {/* ── Vendor Stock ── */}
             {activeNodeId && form.is_vendor && (
