@@ -249,6 +249,27 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
+  const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
+
+  /**
+   * Talk routing: service-role NPCs (vendor/blacksmith) open the matching
+   * service panel directly with the NPC's name + flavor as subtitle. All
+   * other NPCs fall through to the standard dialog.
+   */
+  const handleTalkToNPC = (npc: NPC) => {
+    if (npc.service_role === 'vendor' && currentNode?.is_vendor) {
+      setActiveServiceNpc(npc);
+      setVendorOpen(true);
+      return;
+    }
+    if (npc.service_role === 'blacksmith' && currentNode?.is_blacksmith) {
+      setActiveServiceNpc(npc);
+      setBlacksmithOpen(true);
+      return;
+    }
+    setTalkingToNPC(npc);
+  };
   const [trainerOpen, setTrainerOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
