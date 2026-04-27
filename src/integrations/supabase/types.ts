@@ -324,6 +324,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           respec_points: number
+          rp_total_earned: number
           salvage: number
           soulforged_item_created: boolean
           str: number
@@ -359,6 +360,7 @@ export type Database = {
           name: string
           race: Database["public"]["Enums"]["character_race"]
           respec_points?: number
+          rp_total_earned?: number
           salvage?: number
           soulforged_item_created?: boolean
           str?: number
@@ -394,6 +396,7 @@ export type Database = {
           name?: string
           race?: Database["public"]["Enums"]["character_race"]
           respec_points?: number
+          rp_total_earned?: number
           salvage?: number
           soulforged_item_created?: boolean
           str?: number

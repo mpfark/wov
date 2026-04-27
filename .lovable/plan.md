@@ -1,63 +1,128 @@
-## Problem
+# Refactor: Boss Hunter Points → Renown
 
-`BlacksmithPanel` always calls `useSoulforgeForge` (hooks must be unconditional) and, when `character` is missing, passes a placeholder:
+Rename the existing `bhp` system to **Renown** (shorthand **RP**), expand it so **rare** creatures also award Renown (in addition to bosses), and add a lifetime-earned counter so a future **Renown Board** can rank characters by total Renown gained.
+
+## Naming conventions (player-facing)
+
+- UI name: **Renown**
+- Shorthand: **RP** (only in tight spaces — status bars, table headers, variable names)
+- Trainer node: **Renown Trainer**
+- Future leaderboard: **Renown Board**
+- Reward message: `🏛️ +N Renown`
+- Use `Available Renown` and `Lifetime Renown` (not "Renown Points")
+- Avoid repeated "Renown Points (RP)" in normal UI text
+
+## Data model
+
+Keep the existing `characters.bhp` (current spendable balance) and `characters.bhp_trained` (per-stat ranks already trained) **physically named the same in the database** to avoid a wide rename migration and a regenerated `types.ts`. Throughout the UI we expose them as Renown / `renown_trained`. Internally the storage column stays `bhp`.
+
+Add **one new column**:
+
+- `characters.rp_total_earned integer not null default 0` — lifetime sum of Renown gained. Never decreases. This is what the future Renown Board will rank on.
+
+Available Renown to spend = `characters.bhp` (existing column, relabeled in UI).
+Lifetime Renown = new `rp_total_earned`.
+Total spent = `rp_total_earned - bhp` (derived; no column needed).
+
+A short code comment is added near the `Character` type (and any equivalent server-side mapping) so future edits aren't confused:
 
 ```ts
-character: (character ?? ({ id: '', level: 0, gender: 'male' } as Character))
+// `bhp` is legacy storage for current Renown balance.
+// `bhp_trained` is legacy storage for Renown training ranks.
+// Only the player-facing name changed; the columns kept their original names
+// to avoid a wide rename across types.ts and edge functions.
 ```
 
-With `level: 0`, the hook evaluates `isNotWorthy = level < 40` → true and returns the "not worthy" branch. Today the parent gates display with `tab === 'soulforge' && showSoulforge && character`, so the placeholder output is never rendered — but the hook still:
+Migration steps:
+1. `alter table characters add column rp_total_earned integer not null default 0;`
+2. Backfill: `update characters set rp_total_earned = bhp;` (lifetime ≥ current balance; safe lower bound for existing players).
 
-1. Builds a full "not worthy" slot tree for a fake character.
-2. The instant a real `character` arrives, the hook switches branch (not worthy → mode pick / active forge), changing slot identity. Combined with the gate flipping from `!character` to `character`, the Soulforge tab can briefly render nothing then snap into the real UI → flicker.
-3. If `isSoulforgeNode` is true while `character` is momentarily undefined, the Soulforge tab is selectable but yields a blank panel (the gate falls through to the Repair branch), which can also flicker when the character arrives.
+No rename of `bhp` / `bhp_trained` columns. (Optional cleanup pass later — not in this change.)
 
-## Fix
+## Reward formula (tuned)
 
-Make the hook explicitly aware that it may be called with no real character, and have it return a stable "loading" slot tree in that case. Then have the parent always trust `sf.*` for the Soulforge tab without a separate `character` gate.
+In `supabase/functions/_shared/reward-calculator.ts`:
 
-### Changes
+```
+rare:    max(1, floor(level × 0.10))   (new — small but meaningful)
+boss:    floor(level × 0.50)           (existing — remains the main source)
+others:  0
+```
 
-**1. `src/features/inventory/components/SoulforgeTabContent.tsx`**
+Reference values:
+- Lv 10 rare → 1 Renown
+- Lv 20 rare → 2 Renown
+- Lv 40 rare → 4 Renown
+- Lv 60 rare → 6 Renown
 
-- Change the option type to allow `character: Character | null`.
-- At the top of the hook (before any branch logic, after all hooks are declared), add:
-  ```ts
-  if (!character || !character.id || character.level <= 0) {
-    const loading = (
-      <ServicePanelEmpty>Awaiting the wayfarer's arrival…</ServicePanelEmpty>
-    );
-    return { left: loading, right: null, footer: null, leftTitle: "The Soulwright's Anvil" };
-  }
-  ```
-  This branch is taken only for the placeholder/unloaded case and produces a stable, neutral UI — never the misleading "not worthy" message.
-- Keep all `useState` / `useMemo` calls above this guard so hook order stays stable.
-- Derived booleans (`canCrown`, `canSoulforge`, `isNotWorthy`, `allDone`) and the rest of the existing branches are unchanged for real characters.
+Internally we keep the field on `MemberReward` named `bhp` to minimize churn across `kill-resolver`, `combat-tick`, `combat-catchup`, `usePartyCombat`, `interpretCombatTickResult`, etc. A code comment marks it as legacy storage for Renown.
 
-**2. `src/features/inventory/components/BlacksmithPanel.tsx`**
+## Server-side awarding
 
-- Pass `character ?? null` to the hook instead of constructing a fake `{ id: '', level: 0 }` object:
-  ```ts
-  const sf = useSoulforgeForge({
-    character: character ?? null,
-    onForged: () => { onInventoryChange(); },
-  });
-  ```
-- Drop the `&& character` part of the Soulforge tab gate so the hook's own loading slot is shown when needed:
-  ```ts
-  if (tab === 'soulforge' && showSoulforge) { ... use sf.* ... }
-  ```
-- Keep `showSoulforge` (driven by `isSoulforgeNode`) as the single source of truth for whether the Soulforge tab is visible at all.
+In `combat-tick/index.ts` and `combat-catchup/index.ts`, wherever `updates.bhp = ... + mr.bhp` is written:
+- Also increment `updates.rp_total_earned = (c.rp_total_earned || 0) + mr.bhp`.
+- Mirror in the `member_states` payload so the client can update local state.
 
-### Why this prevents flicker / wrong UI
+`interpretCombatTickResult.ts` adds `rp_total_earned` to the typed `myState` and forwards it into `characterUpdates`.
 
-- The hook never returns the "not worthy" branch for a phantom level-0 placeholder.
-- The Soulforge tab always has a stable slot tree (loading → real UI), so the persistent `ServicePanelShell` swaps its `left/right/footer` content in place without any hidden gate toggling on/off.
-- Hook order remains stable because the new guard runs after all `useState` / `useMemo` calls.
+`usePartyCombat.ts` adds the same field when ingesting party reward broadcasts.
 
-### Files touched
+`useOffscreenDotWakeup.ts` and `GamePage.handleCatchupRewards` add a matching `rp_total_earned` increment alongside the existing `bhp` increment.
 
-- `src/features/inventory/components/SoulforgeTabContent.tsx` — accept nullable character, add early "loading" return guard.
-- `src/features/inventory/components/BlacksmithPanel.tsx` — pass real-or-null character, simplify Soulforge tab gate.
+## Trigger guard
 
-No DB, edge function, or auth changes.
+`restrict_party_leader_updates()` currently caps `bhp` so the client cannot raise it on its own. Extend the same protection to `rp_total_earned`:
+
+```
+if NEW.rp_total_earned > OLD.rp_total_earned then
+  NEW.rp_total_earned := OLD.rp_total_earned;
+end if;
+```
+
+so only trusted RPCs / server functions can grow it.
+
+The existing `award_party_member` RPC (overload with `_bhp`) also needs to bump `rp_total_earned` by the same `_bhp` amount in the same `update characters set ...` statement. Done in the same migration.
+
+## UI relabel
+
+- `BossTrainerPanel.tsx` → renamed to `RenownTrainerPanel.tsx`. Title: **🏛️ Renown Trainer**. Replace "BHP" with "RP" only where compact (chips, table cells); use "Renown" everywhere else. Tooltip: `🏛️ +N Renown trained`. Footer note: *"Earn Renown by slaying rare and boss creatures."*
+- `CharacterPanel.tsx` — relabel the BHP balance row. Show **Available Renown** (= `character.bhp`) and **Lifetime Renown** (= `rp_total_earned`). Visible whenever lifetime > 0 or level ≥ 30.
+- `StatusBarsStrip.tsx` — change `🏋️ N BHP` to `🏛️ N RP` (compact slot, RP shorthand allowed).
+- `kill-resolver.ts` event message: `🏛️ +N Renown` (was `🏋️ +N Boss Hunter Points`). Event type renamed to `renown_award` (update the one consumer in `usePartyCombat.ts` filter list — `bhp_reward` → `renown_award`).
+- `useOffscreenDotWakeup.ts` and `GamePage.tsx` catchup summaries: replace `BHP` text with `Renown` (e.g. `+4 Renown`).
+- `GameManual.tsx` — rewrite the BHP accordion as **🏛️ Renown**. Training unlocks at Lv 30+, but Renown is **earned from level 1**. Reward formula: `max(1, floor(level × 0.10))` for rare, `floor(level × 0.50)` for boss; split among party.
+- `NodeEditorPanel.tsx` checkbox label and `MapPanel.tsx` / `NodeView.tsx` / `PlayerGraphView.tsx` tooltips: **Renown Trainer** instead of "Boss Trainer". (Underlying flag stays `is_trainer`.)
+- Replace 🏋️ icon with 🏛️ wherever it referenced BHP.
+
+## Out of scope (future work)
+
+- The actual Renown Board UI/page.
+- Renaming the physical `bhp` / `bhp_trained` columns and the `_bhp` RPC parameter — left as-is to avoid touching `types.ts` and every server function in one go.
+
+## Files touched
+
+Migration:
+- `supabase/migrations/<new>.sql` — add `rp_total_earned`, backfill, extend `restrict_party_leader_updates`, update `award_party_member(_bhp)`.
+
+Server:
+- `supabase/functions/_shared/reward-calculator.ts` (new rare formula + legacy-name comment)
+- `supabase/functions/_shared/kill-resolver.ts` (message + event type)
+- `supabase/functions/combat-tick/index.ts` (write `rp_total_earned`)
+- `supabase/functions/combat-catchup/index.ts` (write `rp_total_earned`)
+
+Client:
+- `src/features/character/hooks/useCharacter.ts` — `Character` type adds `rp_total_earned`; legacy-storage comment on `bhp` / `bhp_trained`
+- `src/features/combat/utils/interpretCombatTickResult.ts`
+- `src/features/combat/hooks/usePartyCombat.ts`
+- `src/features/combat/hooks/useOffscreenDotWakeup.ts`
+- `src/features/creatures/hooks/useCreatures.ts` (catchup payload type)
+- `src/pages/GamePage.tsx` (handleCatchupRewards + import rename)
+- `src/features/character/components/BossTrainerPanel.tsx` → renamed to `RenownTrainerPanel.tsx`
+- `src/features/character/components/CharacterPanel.tsx`
+- `src/features/character/components/StatusBarsStrip.tsx`
+- `src/features/character/components/StatusBarsStrip.login-display.test.tsx` (add `rp_total_earned: 0`)
+- `src/components/admin/GameManual.tsx`
+- `src/components/admin/NodeEditorPanel.tsx`
+- `src/features/world/components/MapPanel.tsx`
+- `src/features/world/components/NodeView.tsx`
+- `src/features/world/components/PlayerGraphView.tsx`
