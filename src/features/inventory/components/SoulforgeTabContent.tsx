@@ -82,6 +82,21 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   const remaining = budget - cost;
   const statCount = Object.keys(stats).filter(k => stats[k] > 0).length;
 
+  // Placeholder / unloaded character — return a stable neutral slot tree so
+  // the persistent ServicePanelShell can swap content in place without
+  // exposing the misleading "not worthy" branch for a phantom level-0 char.
+  if (!hasCharacter) {
+    const loading = (
+      <ServicePanelEmpty>Awaiting the wayfarer's arrival…</ServicePanelEmpty>
+    );
+    return { left: loading, right: null, footer: null, leftTitle: "The Soulwright's Anvil" };
+  }
+
+  const canCrown = character!.level >= 40 && !character!.crown_item_created;
+  const canSoulforge = character!.level >= 42 && !character!.soulforged_item_created;
+  const isNotWorthy = character!.level < 40;
+  const allDone = !canCrown && !canSoulforge && !isNotWorthy;
+
   const canForge = !!mode && !!activeSlot && statCount >= 2 && remaining >= 0 && !forging &&
     (mode === 'crown' || (itemName.trim().length >= 1 && itemName.trim().length <= 30 && /^[\x20-\x7E]+$/.test(itemName)));
 
