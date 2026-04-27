@@ -702,6 +702,30 @@ export default function NodeEditorPanel({
     if (data) setAllNpcs(data);
   };
 
+  /* ── Generate AI service NPC ── */
+  const generateServiceNpc = async () => {
+    if (!activeNodeId) return;
+    if (!form.is_vendor && !form.is_blacksmith) {
+      toast.error('Node must be a vendor or blacksmith');
+      return;
+    }
+    setGeneratingNpc(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-generate-service-npc', {
+        body: { node_id: activeNodeId },
+      });
+      if (error) throw error;
+      toast.success(`Generated ${(data as any)?.npc?.name || 'service NPC'}`);
+      loadNpcs(activeNodeId);
+      const { data: all } = await supabase.from('npcs').select('id, name, description, dialogue, node_id').order('name');
+      if (all) setAllNpcs(all);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to generate NPC');
+    } finally {
+      setGeneratingNpc(false);
+    }
+  };
+
   /* ── Vendor ── */
   const loadVendorInventory = async (id: string) => {
     const { data } = await supabase
