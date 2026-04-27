@@ -503,10 +503,22 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [incomingPartyRegenBuff, buffSetters]);
 
   // Apply incoming Inspire buff from a party Bard (same party channel — listener
-  // already filters caster self-echo).
+  // already filters caster self-echo). Recast policy mirrors the caster path:
+  // refresh the timer to the new caster's duration; keep the best-of HP/CP regen.
   useEffect(() => {
     if (!incomingInspireBuff) return;
-    buffSetters.setInspireBuff(incomingInspireBuff);
+    buffSetters.setInspireBuff(prev => {
+      const now = Date.now();
+      const stillActive = !!(prev && prev.expiresAt > now);
+      if (!stillActive) return incomingInspireBuff;
+      return {
+        hpPerTick: Math.max(prev!.hpPerTick, incomingInspireBuff.hpPerTick),
+        cpPerTick: Math.max(prev!.cpPerTick, incomingInspireBuff.cpPerTick),
+        expiresAt: incomingInspireBuff.expiresAt,
+        durationMs: incomingInspireBuff.durationMs,
+        casterId: incomingInspireBuff.casterId,
+      };
+    });
   }, [incomingInspireBuff, buffSetters]);
 
   // Follower movement is handled server-side by leader's moveFollowers() —
