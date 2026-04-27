@@ -1155,6 +1155,25 @@ export default function NodeEditorPanel({
             {/* ── NPCs ── */}
             {activeNodeId && (
               <TabsContent value="npcs" className="space-y-3">
+                {/* Generate AI service NPC */}
+                {(form.is_vendor || form.is_blacksmith) && (
+                  <div className="rounded border border-primary/30 bg-primary/5 p-2.5 space-y-2">
+                    <p className="font-display text-xs text-primary">AI Service NPC</p>
+                    <p className="text-[10px] text-muted-foreground leading-snug">
+                      Generates a named {form.is_vendor && form.is_blacksmith ? 'shopkeeper or smith' : form.is_vendor ? 'shopkeeper' : 'smith'} that fits this node's tone. Talking to them opens the service panel directly.
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={generateServiceNpc}
+                      disabled={generatingNpc}
+                      className="font-display text-xs h-8 w-full"
+                    >
+                      {generatingNpc
+                        ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating…</>
+                        : <><Sparkles className="w-3 h-3 mr-1" /> Generate Service NPC</>}
+                    </Button>
+                  </div>
+                )}
                 {/* Assigned NPCs list */}
                 <div className="space-y-2">
                   {npcs.length === 0 && (
