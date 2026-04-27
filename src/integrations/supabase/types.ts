@@ -1051,6 +1051,7 @@ export type Database = {
           is_blacksmith: boolean
           is_inn: boolean
           is_marketplace: boolean
+          is_soulforge: boolean
           is_teleport: boolean
           is_trainer: boolean
           is_vendor: boolean
@@ -1071,6 +1072,7 @@ export type Database = {
           is_blacksmith?: boolean
           is_inn?: boolean
           is_marketplace?: boolean
+          is_soulforge?: boolean
           is_teleport?: boolean
           is_trainer?: boolean
           is_vendor?: boolean
@@ -1091,6 +1093,7 @@ export type Database = {
           is_blacksmith?: boolean
           is_inn?: boolean
           is_marketplace?: boolean
+          is_soulforge?: boolean
           is_teleport?: boolean
           is_trainer?: boolean
           is_vendor?: boolean
@@ -1118,6 +1121,7 @@ export type Database = {
           id: string
           name: string
           node_id: string | null
+          service_role: string | null
         }
         Insert: {
           created_at?: string
@@ -1126,6 +1130,7 @@ export type Database = {
           id?: string
           name: string
           node_id?: string | null
+          service_role?: string | null
         }
         Update: {
           created_at?: string
@@ -1134,6 +1139,7 @@ export type Database = {
           id?: string
           name?: string
           node_id?: string | null
+          service_role?: string | null
         }
         Relationships: [
           {
