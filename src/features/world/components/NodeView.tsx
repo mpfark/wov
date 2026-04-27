@@ -31,6 +31,7 @@ interface Props {
   eventLog: string[];
   onAttack: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;
+  onOpenSoulforge?: () => void;
   inCombat?: boolean;
   lastTickTime?: number | null;
   activeCombatCreatureId?: string | null;
