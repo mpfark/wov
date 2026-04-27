@@ -984,7 +984,11 @@ export default function NodeEditorPanel({
                     onChange={e => setForm(f => ({ ...f, is_marketplace: e.target.checked }))} />
                   🏛️ Is Marketplace (player marketplace for unique items)
                 </label>
-              </div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_soulforge}
+                    onChange={e => setForm(f => ({ ...f, is_soulforge: e.target.checked }))} />
+                  ⚒️ Soulforge-Capable (adds Soulforge tab at this blacksmith)
+                </label>
 
               <IllustrationEditor
                 illustrationUrl={form.illustration_url}
