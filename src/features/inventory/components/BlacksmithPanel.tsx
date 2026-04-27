@@ -436,28 +436,67 @@ export default function BlacksmithPanel({
   // ── Render ────────────────────────────────────────────────────
 
   const subtitle = (
-    <span className="inline-flex items-center gap-3">
-      <span className="inline-flex items-center gap-1">
-        <Coins className="w-3 h-3 text-primary" />
-        <span className="font-display text-primary">{gold}</span>
-      </span>
-      <span className="inline-flex items-center gap-1">
-        <span>🔩</span>
-        <span className="font-display text-dwarvish">{salvage}</span>
+    <span className="inline-flex flex-col items-center gap-0.5">
+      {npcName && (
+        <span className="font-display text-elvish">
+          💬 {npcName}
+          {npcFlavor && <span className="text-muted-foreground italic"> — {npcFlavor}</span>}
+        </span>
+      )}
+      <span className="inline-flex items-center gap-3">
+        <span className="inline-flex items-center gap-1">
+          <Coins className="w-3 h-3 text-primary" />
+          <span className="font-display text-primary">{gold}</span>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span>🔩</span>
+          <span className="font-display text-dwarvish">{salvage}</span>
+        </span>
       </span>
     </span>
   );
 
+  const showSoulforge = isSoulforgeNode && !!character;
+
   const tabs = (
-    <Tabs value={tab} onValueChange={v => setTab(v as 'repair' | 'forge')} className="w-full">
-      <TabsList className="w-full grid grid-cols-2">
+    <Tabs value={tab} onValueChange={v => setTab(v as BlacksmithTab)} className="w-full">
+      <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <TabsTrigger value="repair" className="font-display text-xs">🔧 Repair</TabsTrigger>
         <TabsTrigger value="forge" className="font-display text-xs">⚒️ Forge</TabsTrigger>
+        {showSoulforge && (
+          <TabsTrigger value="soulforge" className="font-display text-xs text-soulforged">⚒️ Soulforge</TabsTrigger>
+        )}
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
+      {showSoulforge && <TabsContent value="soulforge" className="hidden" />}
     </Tabs>
   );
+
+  // Soulforge tab uses its own render-prop layout — render via shell.
+  if (tab === 'soulforge' && showSoulforge && character) {
+    return (
+      <SoulforgeTabContent
+        character={character}
+        onForged={() => { onInventoryChange(); }}
+        render={({ left, right, footer }) => (
+          <ServicePanelShell
+            open={open}
+            onClose={onClose}
+            icon="🔨"
+            title="Blacksmith"
+            subtitle={subtitle}
+            tabs={tabs}
+            leftTitle="The Soulwright's Anvil"
+            rightTitle={right ? 'Stat Allocation' : undefined}
+            left={left}
+            right={right ?? <ServicePanelEmpty>Awaiting your choice…</ServicePanelEmpty>}
+            footer={footer ?? undefined}
+          />
+        )}
+      />
+    );
+  }
 
   return (
     <ServicePanelShell
