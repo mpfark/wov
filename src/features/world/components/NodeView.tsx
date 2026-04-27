@@ -159,11 +159,36 @@ export default function NodeView({
               </p>
             )}
             <div className="flex items-center justify-center gap-1.5 mt-0.5 flex-wrap">
-              {node.is_inn && <span className="text-[10px]" title="Inn">🏨</span>}
-              {node.is_blacksmith && <span className="text-[10px]" title="Blacksmith">🔨</span>}
-              {node.is_vendor && <span className="text-[10px]" title="Vendor">🪙</span>}
-              {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
-              {node.is_trainer && <span className="text-[10px]" title="Boss Trainer">🏋️</span>}
+              {(() => {
+                const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
+                const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
+                return (
+                  <>
+                    {node.is_inn && <span className="text-[10px]" title="Inn">🏨</span>}
+                    {node.is_blacksmith && (
+                      <span
+                        className={`text-[10px] ${hasBlacksmithNpc ? 'text-glow' : 'opacity-70'}`}
+                        title={hasBlacksmithNpc ? 'Blacksmith — staffed' : 'Blacksmith (no smith on duty)'}
+                      >
+                        🔨
+                      </span>
+                    )}
+                    {(node as any).is_soulforge && (
+                      <span className="text-[10px] text-soulforged text-glow-soulforged" title="Soulforge-capable forge">⚒️</span>
+                    )}
+                    {node.is_vendor && (
+                      <span
+                        className={`text-[10px] ${hasVendorNpc ? 'text-glow' : 'opacity-70'}`}
+                        title={hasVendorNpc ? 'Vendor — shopkeeper present' : 'Vendor (no shopkeeper)'}
+                      >
+                        🪙
+                      </span>
+                    )}
+                    {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
+                    {node.is_trainer && <span className="text-[10px]" title="Boss Trainer">🏋️</span>}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -297,14 +322,22 @@ export default function NodeView({
                       </div>
                     );
                   })}
-                  {npcs.map(npc => (
-                    <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
-                      <span className="text-xs font-display text-elvish min-w-0 truncate">💬 {npc.name}</span>
-                      <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-[10px] h-5 px-1.5 border-elvish/50 text-elvish ml-1 shrink-0">
-                        Talk
-                      </Button>
-                    </div>
-                  ))}
+                  {npcs.map(npc => {
+                    const roleIcon = npc.service_role === 'vendor' ? '🪙'
+                      : npc.service_role === 'blacksmith' ? '🔨'
+                      : '💬';
+                    const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
+                      : npc.service_role === 'blacksmith' ? 'Forge'
+                      : 'Talk';
+                    return (
+                      <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
+                        <span className="text-xs font-display text-elvish min-w-0 truncate">{roleIcon} {npc.name}</span>
+                        <Button size="sm" variant="outline" onClick={() => onTalkToNPC?.(npc)} className="font-display text-[10px] h-5 px-1.5 border-elvish/50 text-elvish ml-1 shrink-0">
+                          {buttonLabel}
+                        </Button>
+                      </div>
+                    );
+                  })}
                   {otherPlayers.map(p => {
                     const isPartyMate = partyMemberIds?.has(p.id);
                     const hpData = partyMemberHp?.get(p.id);
