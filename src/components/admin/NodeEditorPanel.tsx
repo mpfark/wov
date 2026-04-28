@@ -1167,30 +1167,38 @@ export default function NodeEditorPanel({
             {activeNodeId && (() => {
               const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
               const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
-              const needsVendor = form.is_vendor && !hasVendorNpc;
-              const needsBlacksmith = form.is_blacksmith && !hasBlacksmithNpc;
-              const allRolesFilled = (form.is_vendor || form.is_blacksmith) && !needsVendor && !needsBlacksmith;
+              const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
+              const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'trainer'; enabled: boolean; has: boolean; label: string; desc: string }> = [
+                { key: 'vendor', enabled: form.is_vendor, has: hasVendorNpc, label: 'Shopkeeper', desc: 'Generates a named shopkeeper that fits this node\u2019s tone.' },
+                { key: 'blacksmith', enabled: form.is_blacksmith, has: hasBlacksmithNpc, label: 'Smith', desc: 'Generates a named smith that fits this node\u2019s tone.' },
+                { key: 'trainer', enabled: form.is_trainer, has: hasTrainerNpc, label: 'Renown Trainer', desc: 'Generates a hardened mentor who trains heroes\u2019 attributes for Renown.' },
+              ];
+              const anyEnabled = roleConfigs.some(r => r.enabled);
               return (
               <TabsContent value="npcs" className="space-y-3">
                 {/* Generate AI service NPC */}
-                {(form.is_vendor || form.is_blacksmith) && (
+                {anyEnabled && (
                   <div className="rounded border border-primary/30 bg-primary/5 p-2.5 space-y-2">
                     <p className="font-display text-xs text-primary">AI Service NPC</p>
                     <p className="text-[10px] text-muted-foreground leading-snug">
-                      {allRolesFilled
-                        ? `This node already has ${form.is_vendor && form.is_blacksmith ? 'both a shopkeeper and a smith' : form.is_vendor ? 'a shopkeeper' : 'a smith'} assigned. Remove the existing NPC below to generate a replacement.`
-                        : `Generates a named ${needsVendor && needsBlacksmith ? 'shopkeeper or smith' : needsVendor ? 'shopkeeper' : 'smith'} that fits this node's tone. Talking to them opens the service panel directly.`}
+                      Generate a named service NPC that fits this node. Talking to them opens the matching service panel directly.
                     </p>
-                    <Button
-                      size="sm"
-                      onClick={generateServiceNpc}
-                      disabled={generatingNpc || allRolesFilled}
-                      className="font-display text-xs h-8 w-full"
-                    >
-                      {generatingNpc
-                        ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating…</>
-                        : <><Sparkles className="w-3 h-3 mr-1" /> Generate Service NPC</>}
-                    </Button>
+                    <div className="space-y-1.5">
+                      {roleConfigs.filter(r => r.enabled).map(r => (
+                        <Button
+                          key={r.key}
+                          size="sm"
+                          onClick={() => generateServiceNpc(r.key)}
+                          disabled={generatingNpc || r.has}
+                          className="font-display text-xs h-8 w-full justify-start"
+                          title={r.has ? `A ${r.label.toLowerCase()} is already assigned. Remove it first to regenerate.` : r.desc}
+                        >
+                          {generatingNpc
+                            ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Generating…</>
+                            : <><Sparkles className="w-3 h-3 mr-1" /> {r.has ? `${r.label} already assigned` : `Generate ${r.label}`}</>}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {/* Assigned NPCs list */}
