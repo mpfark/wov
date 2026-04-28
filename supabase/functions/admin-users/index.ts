@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getMaxHp, getMaxCp, getMaxMp } from "../_shared/formulas/resources.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -235,20 +236,12 @@ Deno.serve(async (req) => {
         updates.respec_points = Math.max(0, (char.respec_points || 0) + respecDiff);
       }
 
-      // HP: base class HP + 5 per level after 1 + con modifier
-      const baseHP = CLASS_BASE_HP[char.class] || 18;
-      const conMod = Math.floor((updates.con - 10) / 2);
-      const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
-      updates.max_hp = newMaxHp;
-      updates.hp = newMaxHp;
-      // Calculate max_cp with WIS-only scaling (canonical formula)
-      const wisMod = Math.max(Math.floor((updates.wis - 10) / 2), 0);
-      updates.max_cp = 30 + (new_level - 1) * 3 + wisMod * 6;
+      // HP/CP/MP caps via canonical shared helpers (mirror SQL sync_character_resources).
+      updates.max_hp = getMaxHp(char.class, updates.con, new_level);
+      updates.hp = updates.max_hp;
+      updates.max_cp = getMaxCp(new_level, updates.wis);
       updates.cp = updates.max_cp;
-
-      // MP: 100 + dexMod * 10 + (level-1) * 2
-      const dexMod = Math.max(Math.floor((updates.dex - 10) / 2), 0);
-      updates.max_mp = 100 + dexMod * 10 + Math.floor((new_level - 1) * 2);
+      updates.max_mp = getMaxMp(new_level, updates.dex);
       updates.mp = updates.max_mp;
 
       // Reset XP when setting level directly
@@ -377,14 +370,11 @@ Deno.serve(async (req) => {
         xpForNext = newLevel * 100;
       }
 
-      // Calculate max_cp with WIS-only scaling using final stats after level-ups
+      // CP/MP caps via canonical shared helpers, using final stats after level-ups.
       const grantFinalWis = (char as any).wis + (statIncreases.wis || 0);
-      const grantWisMod = Math.max(Math.floor((grantFinalWis - 10) / 2), 0);
-      const grantMaxCp = 30 + (newLevel - 1) * 3 + grantWisMod * 6;
-      // MP: 100 + dexMod * 10 + (level-1) * 2
       const grantFinalDex = (char as any).dex + (statIncreases.dex || 0);
-      const grantDexMod = Math.max(Math.floor((grantFinalDex - 10) / 2), 0);
-      const grantMaxMp = 100 + grantDexMod * 10 + Math.floor((newLevel - 1) * 2);
+      const grantMaxCp = getMaxCp(newLevel, grantFinalWis);
+      const grantMaxMp = getMaxMp(newLevel, grantFinalDex);
       const updates: Record<string, any> = {
         xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
         max_cp: grantMaxCp, cp: grantMaxCp,
@@ -477,9 +467,8 @@ Deno.serve(async (req) => {
       // Total unspent = current unspent + spent points (refunded)
       const newUnspent = char.unspent_stat_points + Math.max(totalSpentPoints, 0);
 
-      // Calculate max_cp with WIS-only scaling
-      const resetWisMod = Math.max(Math.floor(((baseStats.wis || 10) - 10) / 2), 0);
-      const newMaxCp = 30 + (char.level - 1) * 3 + resetWisMod * 6;
+      // CP cap via canonical shared helper.
+      const newMaxCp = getMaxCp(char.level, baseStats.wis ?? 10);
       const { error } = await adminClient.from("characters").update({
         ...baseStats,
         unspent_stat_points: newUnspent,

@@ -1,130 +1,82 @@
-# CP Pool & Regeneration — Unified WIS/INT Model
+## Refactor: admin-users → use shared HP/CP/MP helpers
 
-Locked decisions (your "defaults"):
-1. **Pool multiplier:** WIS only, `wisMod * 6` (small net nerf vs the current INT+WIS dual-stat pool — fixes the double-dip).
-2. **In-combat CP regen:** stays at **0% (skipped)**, matching live behavior; Game Manual is corrected to say so.
-3. **Drop the vestigial `cha` parameter** from `getMaxCp` / `getEffectiveMaxCp` and update all call sites in the same change.
+### Goal
+Replace all three inlined resource-cap formulas (HP, CP, MP) in `supabase/functions/admin-users/index.ts` with the canonical helpers from `supabase/functions/_shared/formulas/resources.ts`. Eliminates drift risk if any cap formula changes.
 
----
+### Changes (one file)
 
-## Part 1 — Audit Summary (current behavior)
+**`supabase/functions/admin-users/index.ts`**
 
-**Max CP** is computed identically in three places:
-- TS: `src/shared/formulas/resources.ts → getMaxCp(level, int, wis, _cha)`
-  `30 + (level-1)*3 + (max(0,intMod) + max(0,wisMod)) * 3`
-- Deno mirror: `supabase/functions/_shared/formulas/resources.ts` (byte-mirror).
-- SQL: `public.sync_character_resources()` uses the exact same arithmetic.
-- Plus three **inlined copies** of the formula in `supabase/functions/admin-users/index.ts` (level set / grant / sync paths).
-- `restrict_party_leader_updates` trigger clamps `max_cp` to `[0, 5000]` and forbids non-trusted client writes.
+1. Add import at top:
+   ```ts
+   import { getMaxHp, getMaxCp, getMaxMp } from "../_shared/formulas/resources.ts";
+   ```
+   (Helpers already exist and are the canonical owners; SQL `sync_character_resources()` mirrors them.)
 
-**CP Regen** uses the shared `getStatRegen(stat) = 2 + floor(sqrt(max(0, stat-10)))`:
-- Out of combat: client `useGameLoop.ts` regenerates every 4s with `getStatRegen(int + gear.int) + 0.5*foodRegen + getMilestoneCpRegen(level) + innFlat + inspireCp`, floor 1.
-- **In combat: CP regen is completely skipped** by the client. `combat-tick`/`combat-catchup` do **no** CP regen either — they only write ability costs and clamp to `max_cp`.
+2. **Set-level path (around lines 240–252)** — replace the inlined HP/CP/MP block:
+   ```ts
+   const conMod = Math.floor((updates.con - 10) / 2);
+   const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
+   updates.max_hp = newMaxHp;
+   updates.hp = newMaxHp;
+   const wisMod = Math.max(Math.floor((updates.wis - 10) / 2), 0);
+   updates.max_cp = 30 + (new_level - 1) * 3 + wisMod * 6;
+   updates.cp = updates.max_cp;
+   const dexMod = Math.max(Math.floor((updates.dex - 10) / 2), 0);
+   updates.max_mp = 100 + dexMod * 10 + Math.floor((new_level - 1) * 2);
+   updates.mp = updates.max_mp;
+   ```
+   with:
+   ```ts
+   updates.max_hp = getMaxHp(char.class, updates.con, new_level);
+   updates.hp = updates.max_hp;
+   updates.max_cp = getMaxCp(new_level, updates.wis);
+   updates.cp = updates.max_cp;
+   updates.max_mp = getMaxMp(new_level, updates.dex);
+   updates.mp = updates.max_mp;
+   ```
+   (Drops the now-unused local `baseHP`/`conMod`/`wisMod`/`dexMod`. The existing `char.class` lookup that fed `baseHP` is what `getMaxHp` reads via `CLASS_BASE_HP`.)
 
-**Class influence on CP today:** none in formulas. Class only affects starting INT/WIS via `CLASS_STATS` and the every-3-levels `CLASS_LEVEL_BONUSES`.
+3. **Grant-XP path (around lines 380–391)** — replace the `grantFinal*` / `grant*Mod` / `grantMaxCp` / `grantMaxMp` inlines (and the matching HP block just above) with:
+   ```ts
+   const grantFinalCon = (char as any).con + (statIncreases.con || 0);
+   const grantFinalWis = (char as any).wis + (statIncreases.wis || 0);
+   const grantFinalDex = (char as any).dex + (statIncreases.dex || 0);
+   const grantMaxHp = getMaxHp((char as any).class, grantFinalCon, newLevel);
+   const grantMaxCp = getMaxCp(newLevel, grantFinalWis);
+   const grantMaxMp = getMaxMp(newLevel, grantFinalDex);
+   const updates: Record<string, any> = {
+     xp: newXp, level: newLevel,
+     max_hp: grantMaxHp, hp: grantMaxHp,
+     max_cp: grantMaxCp, cp: grantMaxCp,
+     max_mp: grantMaxMp, mp: grantMaxMp,
+     unspent_stat_points: (char as any).unspent_stat_points + statPoints,
+   };
+   ```
 
-**Real mismatches found:**
-| Topic | Code reality | Game Manual today |
-|---|---|---|
-| Pool stat | INT + WIS (joint) | "INT + WIS scaling" ✓ |
-| Regen stat | INT only | "scales with INT" ✓ |
-| In-combat CP regen | 0% (skipped) | "reduced to 10%" ✗ |
-| `cha` arg on `getMaxCp` | accepted but ignored | n/a |
-| `admin-users` edge fn | inlines pool formula 3× | n/a (drift risk) |
+4. **Reset/respec path (around lines 480–488)** — replace the inlined `resetWisMod` / `newMaxCp` (plus any sibling HP/MP recompute on this path) with:
+   ```ts
+   const newMaxHp = getMaxHp(char.class, baseStats.con ?? 10, char.level);
+   const newMaxCp = getMaxCp(char.level, baseStats.wis ?? 10);
+   const newMaxMp = getMaxMp(char.level, baseStats.dex ?? 10);
+   const { error } = await adminClient.from("characters").update({
+     ...baseStats,
+     unspent_stat_points: newUnspent,
+     max_hp: newMaxHp, hp: newMaxHp,
+     max_cp: newMaxCp, cp: newMaxCp,
+     max_mp: newMaxMp, mp: newMaxMp,
+   }).eq("id", character_id);
+   ```
+   (If reset currently only touches CP, I'll keep it CP-only to avoid scope creep — confirmed during implementation by re-reading the surrounding block.)
 
----
+### Behavior change
+None. The shared helpers are numerically identical to the inlined math today. This is a pure de-duplication so the next formula change touches one file (+ SQL mirror) instead of four.
 
-## Part 2 — Issues Worth Fixing
+### Out of scope
+- No DB migration.
+- No UI / client changes.
+- HP/MP/CP regen logic (separate path, lives in combat-tick / useGameLoop).
 
-- **Double-dip on INT.** INT today drives both pool size and regen rate, while WIS only contributes to the pool. That makes balance levers tangled — raise INT regen and you also enlarge the pool.
-- **Inlined SQL/JS pool formula** in `admin-users` will silently desync the next time the canonical formula moves.
-- **Manual lies about combat CP regen** (says 10%; truth is 0%).
-- `getStatRegen` is shared between HP (CON) and CP (INT). Splitting names lets future balance changes diverge safely without surprise.
-- `cha` parameter is dead surface area on `getMaxCp` / `getEffectiveMaxCp`.
-
----
-
-## Part 3 — Proposed Unified Model (locked)
-
-### Pool — WIS only
-
-```
-getMaxCp(level, wis) =
-  30 + (level - 1) * 3 + max(0, wisMod) * 6
-```
-
-- Class-agnostic.
-- Hard cap stays at 5000 server-side.
-- Examples (vs today, INT==WIS comparison so today's max is at its highest):
-
-| Level | WIS | New max | Today (INT=WIS) |
-|---|---|---|---|
-| 1  | 10 | 30  | 30 |
-| 10 | 14 | 39 + 12 = **51** | 27 + 12 = **69** |
-| 20 | 16 | 57 + 18 = **75** | 57 + 18 = **87** |
-
-Net: balanced casters lose ~15-20% pool. Pure-INT builds lose more pool but keep regen — pushes them to invest a little WIS for headroom. Pure-WIS builds gain pool but drip slowly.
-
-### Regen — INT only (numerically identical)
-
-```
-getCpRegen(int) = 2 + floor(sqrt(max(0, int - 10)))   // same shape as today
-```
-
-- Renamed out of `getStatRegen` for HP-vs-CP independence going forward.
-- Out-of-combat tick = 4s (unchanged). Floor of 1 CP/tick (unchanged).
-- Additive layers preserved: gear `int_regen` if any, food (×0.5), inn (+10), Inspire flat, milestone (`getMilestoneCpRegen`).
-- **In combat: 0%** (current skip preserved, manual updated).
-
----
-
-## Part 4 — Migration
-
-**Replaced / removed:**
-- `(intMod + wisMod) * 3` → `wisMod * 6` everywhere (TS, Deno mirror, SQL `sync_character_resources`, three `admin-users` inlines).
-- `cha` parameter dropped from `getMaxCp` / `getEffectiveMaxCp` and ~6 call sites.
-- `getStatRegen(int)` for CP usage replaced by `getCpRegen(int)` (HP path keeps `getStatRegen(con)`).
-
-**Preserved:** CLASS_STATS, CLASS_LEVEL_BONUSES, milestone CP regen, all buffs (Inspire/food/inn), ability costs.
-
-**Backfill:** the same migration that updates `sync_character_resources()` runs a one-shot `PERFORM sync_character_resources(id) FROM characters` (with the trusted-rpc bypass) so every existing character row settles to the new pool and `cp` re-clamps. No XP/level/stat changes.
-
-**Manual:** rewrite the §"Max CP by Level" table and pool-formula prose; replace the in-combat "10%" line with "0% (regen pauses while in combat)"; tables otherwise unchanged.
-
----
-
-## Part 5 — Implementation Plan (files only, no edits yet)
-
-**Canonical formula (source of truth):**
-- `src/shared/formulas/resources.ts` — change `getMaxCp` signature/body, drop `cha` from `getEffectiveMaxCp`, add `getCpRegen` export.
-- `supabase/functions/_shared/formulas/resources.ts` — byte-mirror.
-
-**SQL mirror + backfill (one new migration):**
-- Replace `public.sync_character_resources()` body with the new `30 + (level-1)*3 + wisMod*6` line.
-- Trailing `DO $$ ... PERFORM sync_character_resources(id) ... $$` to backfill all rows.
-
-**De-duplication:**
-- `supabase/functions/admin-users/index.ts` — collapse the three inline pool computations into a single helper imported from `_shared/formulas/resources.ts` (or call the SQL `sync_character_resources` after the level/grant write).
-
-**Compile-only consumer updates (drop `cha` arg, switch CP regen helper):**
-- `src/features/combat/hooks/useGameLoop.ts` (CP regen branch + `getEffectiveMaxCp` call sites).
-- `src/features/character/components/CharacterPanel.tsx`
-- `src/features/character/components/StatPlannerDialog.tsx`
-- `src/features/character/components/RenownTrainerPanel.tsx`
-- `src/components/admin/users/AdminCharacterSheet.tsx` (`getStatRegen(int)` → `getCpRegen(int)`)
-- `src/pages/CharacterCreation.tsx`
-- `src/components/admin/GameManual.tsx` — copy + tables + combat-rule line.
-
-**Tests to update:**
-- `src/lib/__tests__/effective-caps.test.ts` — new expected values.
-- `src/shared/formulas/__tests__/formula-parity.test.ts` — new expected values + parity guard still passes.
-
-**Client/server parity guarantee:** all TS call sites import from `@/shared/formulas/resources` (or its barrels), Deno paths import from `_shared/formulas/resources.ts`, SQL is the third copy and is touched in the same migration. Backfill ensures existing rows match on day 1.
-
-**Memory updates after implementation:**
-- Update `mem://game/combat-system/resource-synchronization` to reflect WIS-pool / INT-regen split and "0% in combat" rule.
-- Update `mem://tech/formula-ownership` if the `getCpRegen` split warrants a note.
-
----
-
-Approve this plan and I'll switch to default mode and implement in the order: (1) canonical TS + Deno mirror, (2) SQL migration with backfill, (3) admin-users de-dupe, (4) consumer compile fixes, (5) tests, (6) Game Manual copy, (7) memory refresh.
+### Verification
+- Edge function auto-deploys.
+- Spot-check at L10 / WIS 14 / DEX 14 / CON 14: `max_cp = 69`, `max_mp = 138`, `max_hp = base + 2 + 45` — same as before.
