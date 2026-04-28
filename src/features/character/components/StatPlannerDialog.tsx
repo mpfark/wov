@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Character } from '@/features/character';
 import {
   getStatModifier, getMpRegenRate,
-  getStatRegen,
+  getStatRegen, getCpRegen,
   getIntHitBonus, getDexCritBonus, getWisAntiCrit,
   getStrDamageFloor, getChaBuyDiscount, getChaSellMultiplier,
   getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC,
@@ -78,10 +78,10 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
 
       const maxHp = getEffectiveMaxHp(character.class, stats.con, character.level, equipmentBonuses);
       const ac = getEffectiveAC(character.class, stats.dex, equipmentBonuses, false);
-      const maxCp = getEffectiveMaxCp(character.level, stats.int, stats.wis, stats.cha, equipmentBonuses);
+      const maxCp = getEffectiveMaxCp(character.level, stats.wis, equipmentBonuses);
       const maxMp = getEffectiveMaxMp(character.level, stats.dex, equipmentBonuses);
       const hpRegen = getStatRegen(eCon) + (equipmentBonuses.hp_regen || 0);
-      const cpRegen = getStatRegen(eInt);
+      const cpRegen = getCpRegen(eInt);
       const mpRegen = getMpRegenRate(eDex);
 
       const combat = CLASS_COMBAT[character.class];
