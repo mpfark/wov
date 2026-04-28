@@ -12,6 +12,7 @@ import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, P
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 import StatPlannerDialog from '@/features/character/components/StatPlannerDialog';
 import ItemIllustration from '@/components/items/ItemIllustration';
+import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 
 interface Props {
   character: Character;
@@ -64,17 +65,13 @@ const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
   item.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[item.rarity] || '');
 
 const STAT_FULL_NAMES: Record<string, string> = {
-  str: 'Strength', dex: 'Dexterity', con: 'Constitution',
-  int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
+  str: STAT_CONTRIBUTIONS.str.full, dex: STAT_CONTRIBUTIONS.dex.full, con: STAT_CONTRIBUTIONS.con.full,
+  int: STAT_CONTRIBUTIONS.int.full, wis: STAT_CONTRIBUTIONS.wis.full, cha: STAT_CONTRIBUTIONS.cha.full,
 };
 
 const STAT_DESCRIPTIONS: Record<string, string> = {
-  str: 'Melee attack, carry capacity, +min damage floor on all attacks',
-  dex: 'Ranged attack, AC bonus, max Stamina, crit chance',
-  con: 'Hit points and physical resilience',
-  int: 'Arcane power, CP pool, improves hit chance',
-  wis: 'Perception, healing, reduces incoming crit chance',
-  cha: 'Persuasion, bardic abilities, better vendor prices & humanoid gold',
+  str: STAT_CONTRIBUTIONS.str.short, dex: STAT_CONTRIBUTIONS.dex.short, con: STAT_CONTRIBUTIONS.con.short,
+  int: STAT_CONTRIBUTIONS.int.short, wis: STAT_CONTRIBUTIONS.wis.short, cha: STAT_CONTRIBUTIONS.cha.short,
 };
 
 const SLOT_LABELS: Record<string, string> = {
@@ -829,36 +826,9 @@ export default function CharacterPanel({
                     const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
                     const manualPoints = base - nonManualBase;
                     
-                    // Calculate derived bonuses for each stat
-                    let derivedBonus = '';
-                    if (stat === 'str') {
-                      const dmgFloor = getStrDamageFloor(effective);
-                      derivedBonus = dmgFloor > 0 
-                        ? `+${dmgFloor} Min Damage (cap: +5)` 
-                        : 'Min Damage at 14+ (cap: +5)';
-                    } else if (stat === 'dex') {
-                      const critBonus = getDexCritBonus(effective);
-                      derivedBonus = critBonus > 0 
-                        ? `+${critBonus} Crit Range (cap: +5)` 
-                        : 'Crit Range at 14+ (cap: +5)';
-                    } else if (stat === 'int') {
-                      const hitBonus = getIntHitBonus(effective);
-                      derivedBonus = hitBonus > 0 
-                        ? `+${hitBonus} Hit Chance (cap: +5)` 
-                        : 'Hit Chance at 12+ (cap: +5)';
-                    } else if (stat === 'wis') {
-                      const antiCrit = getWisDodgeChance(effective);
-                      derivedBonus = antiCrit > 0 
-                        ? `${Math.round(antiCrit * 100)}% Crit Resistance (cap: 20%)` 
-                        : 'Crit Resistance at 12+ (cap: 20%)';
-                    } else if (stat === 'cha') {
-                      const buyDiscount = getChaBuyDiscount(effective);
-                      const sellMult = getChaSellMultiplier(effective);
-                      const goldMult = Math.round(((sellMult - 1) / 0.05) * 5); // Convert back to percentage
-                      derivedBonus = buyDiscount > 0 
-                        ? `−${Math.round(buyDiscount * 100)}% buy / +${goldMult}% gold (cap: 10% / +35%)` 
-                        : 'Vendor bonus at 12+ (cap: 10% / +35%)';
-                    }
+                    // Derive contributions live from formula functions (single source of truth)
+                    const contributions = STAT_CONTRIBUTIONS[stat as StatKey]?.effects ?? [];
+                    const derivedLines = contributions.map(eff => `${eff.label}: ${eff.value(effective, character.level)}`);
                     
                     return (
                       <Tooltip key={stat}>
@@ -887,10 +857,12 @@ export default function CharacterPanel({
                           <p className="font-display text-sm">{STAT_FULL_NAMES[stat]}</p>
                           <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[stat]}</p>
                           <p className="text-[10px] text-muted-foreground">Modifier: {mod >= 0 ? '+' : ''}{mod}</p>
-                          {derivedBonus && (
-                            <p className="text-[10px] text-chart-2 mt-0.5 border-t border-border/50 pt-0.5">
-                              {derivedBonus}
-                            </p>
+                          {derivedLines.length > 0 && (
+                            <div className="mt-0.5 border-t border-border/50 pt-0.5 space-y-0">
+                              {derivedLines.map((line, i) => (
+                                <p key={i} className="text-[10px] text-chart-2">{line}</p>
+                              ))}
+                            </div>
                           )}
                           {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
                           {((character.bhp_trained || {}) as Record<string, number>)[stat] > 0 && (
