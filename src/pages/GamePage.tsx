@@ -270,6 +270,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       setBlacksmithOpen(true);
       return;
     }
+    if (npc.service_role === 'trainer' && currentNode?.is_trainer && character.level >= 30) {
+      setActiveServiceNpc(npc);
+      setTrainerOpen(true);
+      return;
+    }
     setTalkingToNPC(npc);
   };
   const [trainerOpen, setTrainerOpen] = useState(false);
@@ -1234,10 +1239,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       {currentNode.is_trainer && character.level >= 30 && (
         <RenownTrainerPanel
           open={trainerOpen}
-          onClose={() => setTrainerOpen(false)}
+          onClose={() => { setTrainerOpen(false); setActiveServiceNpc(null); }}
           character={character}
           updateCharacter={updateCharacter}
           addLog={addLog}
+          npcName={activeServiceNpc?.service_role === 'trainer' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'trainer' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
 
