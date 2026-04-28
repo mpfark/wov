@@ -12,6 +12,7 @@ import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, P
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 import StatPlannerDialog from '@/features/character/components/StatPlannerDialog';
 import ItemIllustration from '@/components/items/ItemIllustration';
+import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 
 interface Props {
   character: Character;
