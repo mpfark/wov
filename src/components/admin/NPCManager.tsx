@@ -10,6 +10,8 @@ import { Plus, Trash2, MessageCircle } from 'lucide-react';
 import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
 import NodePicker from './NodePicker';
 
+type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer';
+
 interface NPC {
   id: string;
   name: string;
@@ -17,6 +19,7 @@ interface NPC {
   dialogue: string;
   node_id: string | null;
   created_at: string;
+  service_role: NPCServiceRole | null;
 }
 
 interface NodeOption {
@@ -47,6 +50,7 @@ const defaultForm = () => ({
   description: '',
   dialogue: '',
   node_id: '' as string | null,
+  service_role: 'none' as 'none' | NPCServiceRole,
 });
 
 export default function NPCManager() {
@@ -109,6 +113,7 @@ export default function NPCManager() {
       description: npc.description,
       dialogue: npc.dialogue,
       node_id: npc.node_id,
+      service_role: (npc.service_role ?? 'none') as 'none' | NPCServiceRole,
     });
   };
 
@@ -126,6 +131,7 @@ export default function NPCManager() {
       description: form.description.trim(),
       dialogue: form.dialogue.trim(),
       node_id: form.node_id || null,
+      service_role: form.service_role === 'none' ? null : form.service_role,
     };
 
     let savedId = selectedId;
@@ -242,6 +248,24 @@ export default function NPCManager() {
                   <Textarea placeholder="What does this NPC say when talked to?" value={form.dialogue} maxLength={2000}
                     onChange={e => setForm(f => ({ ...f, dialogue: e.target.value }))} rows={4} className="text-xs" />
                 </div>
+
+                <AdminFormSection title="Service Role">
+                  <Select
+                    value={form.service_role}
+                    onValueChange={(v) => setForm(f => ({ ...f, service_role: v as 'none' | NPCServiceRole }))}
+                  >
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50">
+                      <SelectItem value="none" className="text-xs">None (regular NPC)</SelectItem>
+                      <SelectItem value="vendor" className="text-xs">🪙 Vendor</SelectItem>
+                      <SelectItem value="blacksmith" className="text-xs">🔨 Blacksmith</SelectItem>
+                      <SelectItem value="trainer" className="text-xs">🏛️ Renown Trainer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Service-role NPCs open the matching service panel when talked to (only at nodes with the matching flag).
+                  </p>
+                </AdminFormSection>
 
                 <AdminFormSection title="Location">
                   <NodePicker
