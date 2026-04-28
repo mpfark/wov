@@ -152,7 +152,9 @@ export default function RenownTrainerPanel({
 
       {character.level < 30 ? (
         <ServicePanelEmpty>
-          You must be level 30 or higher to train here.
+          <p className="font-display text-foreground mb-1">The trainer eyes you up and down.</p>
+          <p>"Come back when you've proven yourself, wayfarer — reach <span className="text-primary font-display">level 30</span> and I'll teach you to forge Renown into raw might."</p>
+          <p className="mt-2 text-[10px] italic">You are level {character.level}. {30 - character.level} more {30 - character.level === 1 ? 'level' : 'levels'} until training unlocks.</p>
         </ServicePanelEmpty>
       ) : (
         <TooltipProvider delayDuration={200}>
