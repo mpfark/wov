@@ -826,36 +826,9 @@ export default function CharacterPanel({
                     const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal;
                     const manualPoints = base - nonManualBase;
                     
-                    // Calculate derived bonuses for each stat
-                    let derivedBonus = '';
-                    if (stat === 'str') {
-                      const dmgFloor = getStrDamageFloor(effective);
-                      derivedBonus = dmgFloor > 0 
-                        ? `+${dmgFloor} Min Damage (cap: +5)` 
-                        : 'Min Damage at 14+ (cap: +5)';
-                    } else if (stat === 'dex') {
-                      const critBonus = getDexCritBonus(effective);
-                      derivedBonus = critBonus > 0 
-                        ? `+${critBonus} Crit Range (cap: +5)` 
-                        : 'Crit Range at 14+ (cap: +5)';
-                    } else if (stat === 'int') {
-                      const hitBonus = getIntHitBonus(effective);
-                      derivedBonus = hitBonus > 0 
-                        ? `+${hitBonus} Hit Chance (cap: +5)` 
-                        : 'Hit Chance at 12+ (cap: +5)';
-                    } else if (stat === 'wis') {
-                      const antiCrit = getWisDodgeChance(effective);
-                      derivedBonus = antiCrit > 0 
-                        ? `${Math.round(antiCrit * 100)}% Crit Resistance (cap: 20%)` 
-                        : 'Crit Resistance at 12+ (cap: 20%)';
-                    } else if (stat === 'cha') {
-                      const buyDiscount = getChaBuyDiscount(effective);
-                      const sellMult = getChaSellMultiplier(effective);
-                      const goldMult = Math.round(((sellMult - 1) / 0.05) * 5); // Convert back to percentage
-                      derivedBonus = buyDiscount > 0 
-                        ? `−${Math.round(buyDiscount * 100)}% buy / +${goldMult}% gold (cap: 10% / +35%)` 
-                        : 'Vendor bonus at 12+ (cap: 10% / +35%)';
-                    }
+                    // Derive contributions live from formula functions (single source of truth)
+                    const contributions = STAT_CONTRIBUTIONS[stat as StatKey]?.effects ?? [];
+                    const derivedLines = contributions.map(eff => `${eff.label}: ${eff.value(effective, character.level)}`);
                     
                     return (
                       <Tooltip key={stat}>
