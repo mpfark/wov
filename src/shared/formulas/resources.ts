@@ -17,11 +17,11 @@ export function getMaxHp(charClass: string, con: number, level: number): number 
   return baseHP + getStatModifier(con) + (level - 1) * 5;
 }
 
-/** Max Concentration Points — scales with INT + WIS */
-export function getMaxCp(level: number, int: number = 10, wis: number = 10, _cha: number = 10): number {
-  const intMod = Math.max(getStatModifier(int), 0);
+/** Max Concentration Points — scales with WIS only.
+ *  Pool is the "headroom" for casting; INT governs regen rate (see getCpRegen). */
+export function getMaxCp(level: number, wis: number = 10): number {
   const wisMod = Math.max(getStatModifier(wis), 0);
-  return 30 + (level - 1) * 3 + (intMod + wisMod) * 3;
+  return 30 + (level - 1) * 3 + wisMod * 6;
 }
 
 /** Max Movement Points (stamina) */
@@ -40,28 +40,29 @@ export function getEffectiveMaxHp(
   return getMaxHp(charClass, baseCon + (equipmentBonuses.con || 0), level) + (equipmentBonuses.hp || 0);
 }
 
+/** Gear-effective max CP: WIS + gear WIS only (INT/CHA do not contribute to pool). */
 export function getEffectiveMaxCp(
   level: number,
-  int: number,
   wis: number,
-  cha: number,
   equipmentBonuses: Record<string, number>,
 ): number {
-  return getMaxCp(
-    level,
-    int + (equipmentBonuses.int || 0),
-    wis + (equipmentBonuses.wis || 0),
-    cha + (equipmentBonuses.cha || 0),
-  );
+  return getMaxCp(level, wis + (equipmentBonuses.wis || 0));
 }
 
 export function getEffectiveMaxMp(level: number, dex: number, equipmentBonuses: Record<string, number>): number {
   return getMaxMp(level, dex + (equipmentBonuses.dex || 0));
 }
 
-/** Unified regen base: same formula for HP (CON) and CP (INT). */
+/** Generic stat → per-tick regen amount. Used for HP regen via CON. */
 export function getStatRegen(stat: number): number {
   return 2 + Math.floor(Math.sqrt(Math.max(0, stat - 10)));
+}
+
+/** CP regen per tick — scales with INT only.
+ *  Numerically identical to `getStatRegen(int)` today, exposed under a
+ *  dedicated name so HP-vs-CP balance can diverge later without surprise. */
+export function getCpRegen(int: number): number {
+  return 2 + Math.floor(Math.sqrt(Math.max(0, int - 10)));
 }
 
 export function getMpRegenRate(dex: number = 10): number {
