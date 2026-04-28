@@ -191,7 +191,7 @@ export default function GameManual() {
                             const s = calculateStats(race, cls);
                             const hp = calculateHP(cls, s.con);
                             const ac = calculateAC(cls, s.dex);
-                            const cp = getMaxCp(1, s.int, s.wis, s.cha);
+                            const cp = getMaxCp(1, s.wis);
                             return { race, cls, s, hp, ac, cp };
                           })
                         );
@@ -314,7 +314,7 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Max HP</strong> = Base Class HP + floor((CON − 10) / 2) + (level − 1) × 5</p>
                 <p><strong className="text-foreground">AC</strong> = Base Class AC + floor((DEX − 10) / 2)</p>
                 <p><strong className="text-foreground">Passive HP Regen</strong> (every 4s) = 2 + floor(√(CON − 10)) + gear + food + milestone + inn</p>
-                <p className="text-amber-400 mt-1">⚔️ <strong>In Combat:</strong> Regen is reduced to 10% of its normal value.</p>
+                <p className="text-amber-400 mt-1">⚔️ <strong>In Combat:</strong> All passive regen (HP, CP, Stamina) is paused. Server-driven heals (potions, abilities) still apply.</p>
                 <p className="mt-1">🏨 <strong>Inn Rest:</strong> +10 flat regen to HP, CP, and Stamina per tick.</p>
                 <p className="mt-1">Example: CON 14 → base regen = <code className="text-primary">{getStatRegen(14)}</code> HP/tick, CON 20 → <code className="text-primary">{getStatRegen(20)}</code> HP/tick</p>
               </div>
@@ -418,7 +418,7 @@ export default function GameManual() {
                         const allCp = Object.keys(RACE_STATS).flatMap(race =>
                           Object.keys(CLASS_STATS).map(cls => {
                             const s = calculateStats(race, cls);
-                            return getMaxCp(1, s.int, s.wis, s.cha);
+                            return getMaxCp(1, s.wis);
                           })
                         );
                         const maxCp = Math.max(...allCp);
@@ -428,7 +428,7 @@ export default function GameManual() {
                             <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
                             {Object.keys(CLASS_STATS).map(cls => {
                               const s = calculateStats(race, cls);
-                              const cp = getMaxCp(1, s.int, s.wis, s.cha);
+                              const cp = getMaxCp(1, s.wis);
                               return (
                                 <TableCell key={cls} className={`text-xs ${cp >= maxCp - 5 ? 'text-blue-400 font-bold' : cp <= minCp + 5 ? 'text-orange-400' : ''}`}>
                                   {cp}
@@ -476,11 +476,11 @@ export default function GameManual() {
               </div>
 
               <div>
-                <p className="text-xs font-display text-primary mb-1">Max CP by Level (base, no mental bonus)</p>
+                <p className="text-xs font-display text-primary mb-1">Max CP by Level (base, no WIS bonus)</p>
                 <div className="grid grid-cols-4 gap-1 text-xs text-muted-foreground">
                   {[1, 5, 10, 15, 20, 25, 30, 40].map(lv => (
                     <div key={lv}>
-                      Lv {lv}: <span className="text-primary">{getMaxCp(lv, 10, 10, 10)} CP</span>
+                      Lv {lv}: <span className="text-primary">{getMaxCp(lv, 10)} CP</span>
                     </div>
                   ))}
                 </div>
@@ -506,15 +506,15 @@ export default function GameManual() {
                   </TableBody>
                 </Table>
               </div>
-              <p className="text-amber-400 mt-2 text-xs">⚔️ <strong>In Combat:</strong> CP regen is reduced to 10% of its normal value.</p>
+              <p className="text-amber-400 mt-2 text-xs">⚔️ <strong>In Combat:</strong> CP regen is paused entirely. Pool size depends on <strong>WIS</strong> only; INT drives the regen rate out of combat.</p>
 
               <Card className="bg-card/30">
                 <CardContent className="p-3">
                   <p className="text-xs font-display text-primary mb-1">Tactical Example (Level 20 Wizard, ~87 max CP)</p>
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     <p>• T4 ability (60 CP) + T1 ability (15 CP) = 75 CP spent → 12 CP remaining</p>
-                    <p>• A Warrior at level 20 would have ~87 max CP — same base, but less INT/WIS investment</p>
-                    <p>• INT + WIS scaling rewards casters who invest in both mental stats</p>
+                    <p>• A Warrior at level 20 would have ~75 max CP if WIS 10 — CP pool is purely WIS-driven now</p>
+                    <p>• WIS pool + INT regen split rewards casters who invest in both — WIS for headroom, INT for sustain</p>
                     <p>• Bard's "Grand Finale" deals massive CHA-scaling burst damage to a single target</p>
                   </div>
                 </CardContent>

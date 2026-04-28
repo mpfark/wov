@@ -163,7 +163,7 @@ export default function StatusBarsStrip({
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const cp = character.cp ?? 100;
-  const maxCp = getEffectiveMaxCp(character.level, character.int, character.wis, character.cha, equipmentBonuses);
+  const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
   const cpPercent = Math.round((cp / maxCp) * 100);
   const mp = character.mp ?? 100;
   const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);

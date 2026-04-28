@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pencil, Save, X } from 'lucide-react';
-import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, getStatRegen, getCharacterTitle } from '@/lib/game-data';
+import { CLASS_LABELS, RACE_LABELS, STAT_LABELS, getXpForLevel, getCpRegen, getCharacterTitle } from '@/lib/game-data';
 import AdminEquipSlot from './AdminEquipSlot';
 import ItemIllustration from '@/components/items/ItemIllustration';
 import { RARITY_COLORS, STAT_FULL_NAMES, STAT_DESCRIPTIONS, SLOT_LABELS } from './constants';
@@ -125,11 +125,10 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
         const cp = c.cp ?? 30;
         const maxCp = c.max_cp ?? 30;
         const cpPercent = Math.round((cp / maxCp) * 100);
-        const cpRegen = getStatRegen(c.int ?? 10);
-        const intMod = Math.max(Math.floor((c.int - 10) / 2), 0);
+        const cpRegen = getCpRegen(c.int ?? 10);
         const wisMod = Math.max(Math.floor((c.wis - 10) / 2), 0);
         const levelPart = (c.level - 1) * 3;
-        const mentalPart = (intMod + wisMod) * 3;
+        const wisPart = wisMod * 6;
         return (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -151,7 +150,7 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
             </TooltipTrigger>
             <TooltipContent className="bg-popover border-border z-50 space-y-1">
               <p className="font-display text-sm">Concentration Points</p>
-              <p className="text-xs text-muted-foreground">Max: <span className="text-primary">30</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{mentalPart}</span> (INT+WIS)</p>
+              <p className="text-xs text-muted-foreground">Max: <span className="text-primary">30</span> base + <span className="text-primary">{levelPart}</span> level + <span className="text-primary">{wisPart}</span> WIS</p>
               <p className="text-xs text-muted-foreground">Base regen: <span className="text-primary">{cpRegen} CP</span> / <span className="text-foreground">4s</span></p>
               <p className="text-xs text-muted-foreground">Regen stat: INT</p>
             </TooltipContent>

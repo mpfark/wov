@@ -62,12 +62,8 @@ export default function RenownTrainerPanel({ open, onClose, character, updateCha
       if (stat === 'con') {
         updates.max_hp = getMaxHp(character.class, newStatVal, character.level);
       }
-      if (stat === 'int' || stat === 'wis' || stat === 'cha') {
-        updates.max_cp = getMaxCp(character.level,
-          stat === 'int' ? newStatVal : character.int,
-          stat === 'wis' ? newStatVal : character.wis,
-          stat === 'cha' ? newStatVal : character.cha,
-        );
+      if (stat === 'wis') {
+        updates.max_cp = getMaxCp(character.level, newStatVal);
       }
       if (stat === 'dex') {
         updates.max_mp = getMaxMp(character.level, newStatVal);

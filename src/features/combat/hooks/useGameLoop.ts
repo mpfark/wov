@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
-import { getStatRegen, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
+import { getStatRegen, getCpRegen, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import type { GameEventBus } from '@/hooks/useGameEvents';
@@ -186,11 +186,11 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       // ── CP Regen (skipped during combat to avoid stale-ref race with ability costs) ──
       if (!inCombatRegenRef.current) {
-        const { cp, level: cpLevel, int, wis, cha } = cpCharRef.current;
-        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, int, wis, cha, eqB);
+        const { cp, level: cpLevel, int, wis } = cpCharRef.current;
+        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, wis, eqB);
         if (cp < effectiveMaxCp) {
           const intWithGear = int + (eqB.int || 0);
-          const intRegen = getStatRegen(intWithGear);
+          const intRegen = getCpRegen(intWithGear);
           const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
           const food = foodBuffRef.current;
           const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
@@ -217,7 +217,7 @@ export function useGameLoop(params: UseGameLoopParams) {
       if (Object.keys(updates).length > 0) {
         updateCharRegenRef.current(updates, {
           maxHp: effectiveMaxHp,
-          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.int, cpCharRef.current.wis, cpCharRef.current.cha, eqB),
+          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.wis, eqB),
           maxMp: effectiveMaxMp,
         });
       }

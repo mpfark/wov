@@ -10,6 +10,9 @@
  * If you change a formula in any of those files, this test must continue to pass
  * for the canonical formula in `game-data.ts` AND a matching update is required
  * in every mirror.
+ *
+ * NOTE: As of the WIS-only CP refactor, getMaxCp(level, wis) ignores INT/CHA.
+ * Pool scales with WIS only; INT now drives regen via getCpRegen.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -28,11 +31,11 @@ describe('Base max formulas — fixed snapshots (drift guard)', () => {
   it('wizard L20 con=10 → 16 + 0 + 95 = 111 HP', () => {
     expect(getMaxHp('wizard', 10, 20)).toBe(111);
   });
-  it('CP L1 int=10 wis=10 → 30', () => {
-    expect(getMaxCp(1, 10, 10, 10)).toBe(30);
+  it('CP L1 wis=10 → 30', () => {
+    expect(getMaxCp(1, 10)).toBe(30);
   });
-  it('CP L10 int=14 wis=14 → 30 + 27 + 12 = 69', () => {
-    expect(getMaxCp(10, 14, 14, 10)).toBe(69);
+  it('CP L10 wis=14 → 30 + 27 + 12 = 69 (wisMod=2 ×6)', () => {
+    expect(getMaxCp(10, 14)).toBe(69);
   });
   it('MP L1 dex=10 → 100', () => {
     expect(getMaxMp(1, 10)).toBe(100);
@@ -64,9 +67,13 @@ describe('Gear-effective caps add bonuses correctly', () => {
     const eff = getEffectiveMaxHp('warrior', 10, 5, { con: 4 });
     expect(eff).toBe(base + 2);
   });
-  it('+4 int / +4 wis raises CP by (2+2)*3 = 12', () => {
-    const base = getMaxCp(5, 10, 10, 10);
-    expect(getEffectiveMaxCp(5, 10, 10, 10, { int: 4, wis: 4 })).toBe(base + 12);
+  it('+4 wis raises CP by wisMod_delta * 6 = 12', () => {
+    const base = getMaxCp(5, 10);
+    expect(getEffectiveMaxCp(5, 10, { wis: 4 })).toBe(base + 12);
+  });
+  it('INT/CHA gear no longer affect CP pool', () => {
+    const base = getMaxCp(5, 10);
+    expect(getEffectiveMaxCp(5, 10, { int: 4, cha: 4 })).toBe(base);
   });
   it('+4 dex raises MP by 20', () => {
     const base = getMaxMp(5, 10);
@@ -74,7 +81,7 @@ describe('Gear-effective caps add bonuses correctly', () => {
   });
   it('empty bonuses returns base value', () => {
     expect(getEffectiveMaxHp('rogue', 12, 8, {})).toBe(getMaxHp('rogue', 12, 8));
-    expect(getEffectiveMaxCp(8, 12, 12, 10, {})).toBe(getMaxCp(8, 12, 12, 10));
+    expect(getEffectiveMaxCp(8, 12, {})).toBe(getMaxCp(8, 12));
     expect(getEffectiveMaxMp(8, 14, {})).toBe(getMaxMp(8, 14));
   });
 });

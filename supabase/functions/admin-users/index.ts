@@ -241,10 +241,9 @@ Deno.serve(async (req) => {
       const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
       updates.max_hp = newMaxHp;
       updates.hp = newMaxHp;
-      // Calculate max_cp with INT + WIS scaling
-      const intMod = Math.max(Math.floor((updates.int - 10) / 2), 0);
+      // Calculate max_cp with WIS-only scaling (canonical formula)
       const wisMod = Math.max(Math.floor((updates.wis - 10) / 2), 0);
-      updates.max_cp = 30 + (new_level - 1) * 3 + (intMod + wisMod) * 3;
+      updates.max_cp = 30 + (new_level - 1) * 3 + wisMod * 6;
       updates.cp = updates.max_cp;
 
       // MP: 100 + dexMod * 10 + (level-1) * 2
@@ -378,12 +377,10 @@ Deno.serve(async (req) => {
         xpForNext = newLevel * 100;
       }
 
-      // Calculate max_cp with INT + WIS scaling using final stats after level-ups
-      const grantFinalInt = (char as any).int + (statIncreases.int || 0);
+      // Calculate max_cp with WIS-only scaling using final stats after level-ups
       const grantFinalWis = (char as any).wis + (statIncreases.wis || 0);
-      const grantIntMod = Math.max(Math.floor((grantFinalInt - 10) / 2), 0);
       const grantWisMod = Math.max(Math.floor((grantFinalWis - 10) / 2), 0);
-      const grantMaxCp = 30 + (newLevel - 1) * 3 + (grantIntMod + grantWisMod) * 3;
+      const grantMaxCp = 30 + (newLevel - 1) * 3 + grantWisMod * 6;
       // MP: 100 + dexMod * 10 + (level-1) * 2
       const grantFinalDex = (char as any).dex + (statIncreases.dex || 0);
       const grantDexMod = Math.max(Math.floor((grantFinalDex - 10) / 2), 0);
@@ -480,10 +477,9 @@ Deno.serve(async (req) => {
       // Total unspent = current unspent + spent points (refunded)
       const newUnspent = char.unspent_stat_points + Math.max(totalSpentPoints, 0);
 
-      // Calculate max_cp with INT + WIS scaling
-      const resetIntMod = Math.max(Math.floor(((baseStats.int || 10) - 10) / 2), 0);
+      // Calculate max_cp with WIS-only scaling
       const resetWisMod = Math.max(Math.floor(((baseStats.wis || 10) - 10) / 2), 0);
-      const newMaxCp = 30 + (char.level - 1) * 3 + (resetIntMod + resetWisMod) * 3;
+      const newMaxCp = 30 + (char.level - 1) * 3 + resetWisMod * 6;
       const { error } = await adminClient.from("characters").update({
         ...baseStats,
         unspent_stat_points: newUnspent,
