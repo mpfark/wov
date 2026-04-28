@@ -261,6 +261,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     const pos = nodePositions.get(neighbor.id);
     if (!pos) continue;
     for (const conn of neighbor.connections) {
+      if (conn.hidden) continue;
       if (displayedIds.has(conn.node_id)) continue;
       const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
       const len = Math.sqrt(offset[0] ** 2 + offset[1] ** 2) || 1;
