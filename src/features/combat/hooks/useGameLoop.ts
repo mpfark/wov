@@ -186,11 +186,11 @@ export function useGameLoop(params: UseGameLoopParams) {
 
       // ── CP Regen (skipped during combat to avoid stale-ref race with ability costs) ──
       if (!inCombatRegenRef.current) {
-        const { cp, level: cpLevel, int, wis, cha } = cpCharRef.current;
-        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, int, wis, cha, eqB);
+        const { cp, level: cpLevel, int, wis } = cpCharRef.current;
+        const effectiveMaxCp = getEffectiveMaxCp(cpLevel, wis, eqB);
         if (cp < effectiveMaxCp) {
           const intWithGear = int + (eqB.int || 0);
-          const intRegen = getStatRegen(intWithGear);
+          const intRegen = getCpRegen(intWithGear);
           const milestoneCpFlat = getMilestoneCpRegen(cpCharRef.current.level);
           const food = foodBuffRef.current;
           const foodCpRegen = Date.now() < food.expiresAt ? food.flatRegen * 0.5 : 0;
