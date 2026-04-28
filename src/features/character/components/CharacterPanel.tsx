@@ -65,17 +65,13 @@ const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
   item.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[item.rarity] || '');
 
 const STAT_FULL_NAMES: Record<string, string> = {
-  str: 'Strength', dex: 'Dexterity', con: 'Constitution',
-  int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
+  str: STAT_CONTRIBUTIONS.str.full, dex: STAT_CONTRIBUTIONS.dex.full, con: STAT_CONTRIBUTIONS.con.full,
+  int: STAT_CONTRIBUTIONS.int.full, wis: STAT_CONTRIBUTIONS.wis.full, cha: STAT_CONTRIBUTIONS.cha.full,
 };
 
 const STAT_DESCRIPTIONS: Record<string, string> = {
-  str: 'Melee attack, carry capacity, +min damage floor on all attacks',
-  dex: 'Ranged attack, AC bonus, max Stamina, crit chance',
-  con: 'Hit points and physical resilience',
-  int: 'Arcane power, CP pool, improves hit chance',
-  wis: 'Perception, healing, reduces incoming crit chance',
-  cha: 'Persuasion, bardic abilities, better vendor prices & humanoid gold',
+  str: STAT_CONTRIBUTIONS.str.short, dex: STAT_CONTRIBUTIONS.dex.short, con: STAT_CONTRIBUTIONS.con.short,
+  int: STAT_CONTRIBUTIONS.int.short, wis: STAT_CONTRIBUTIONS.wis.short, cha: STAT_CONTRIBUTIONS.cha.short,
 };
 
 const SLOT_LABELS: Record<string, string> = {
