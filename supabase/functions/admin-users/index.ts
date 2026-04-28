@@ -467,9 +467,8 @@ Deno.serve(async (req) => {
       // Total unspent = current unspent + spent points (refunded)
       const newUnspent = char.unspent_stat_points + Math.max(totalSpentPoints, 0);
 
-      // Calculate max_cp with WIS-only scaling
-      const resetWisMod = Math.max(Math.floor(((baseStats.wis || 10) - 10) / 2), 0);
-      const newMaxCp = 30 + (char.level - 1) * 3 + resetWisMod * 6;
+      // CP cap via canonical shared helper.
+      const newMaxCp = getMaxCp(char.level, baseStats.wis ?? 10);
       const { error } = await adminClient.from("characters").update({
         ...baseStats,
         unspent_stat_points: newUnspent,
