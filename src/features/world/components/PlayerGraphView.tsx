@@ -254,6 +254,10 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const displayedIds = new Set(allDisplayNodes.map(n => n.id));
 
   // Compute exit stubs for neighbor nodes (connections leading to nodes not displayed)
+  // IMPORTANT: only render stubs whose destination node is actually loaded/visible to
+  // this character (i.e. exists in `nodes`). Connections to nodes filtered out by
+  // tier gating, RLS, or out-of-bounds must NOT produce ghost stubs.
+  const loadedNodeIds = useMemo(() => new Set(nodes.map(n => n.id)), [nodes]);
   const exitStubs: Array<{ fromPx: number; fromPy: number; toPx: number; toPy: number }> = [];
   const STUB_LEN = 22;
   const NODE_RADIUS = 28;
@@ -263,6 +267,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     for (const conn of neighbor.connections) {
       if (conn.hidden) continue;
       if (displayedIds.has(conn.node_id)) continue;
+      if (!loadedNodeIds.has(conn.node_id)) continue;
       const offset = DIRECTION_OFFSETS[conn.direction] || [1, 0];
       const len = Math.sqrt(offset[0] ** 2 + offset[1] ** 2) || 1;
       const dx = offset[0] / len;
