@@ -83,10 +83,13 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
+    // Optional explicit role override from caller
+    const requestedRole: string | undefined = body.service_role;
+
     // Fetch node + area + region context
     const { data: node, error: nodeErr } = await admin
       .from("nodes")
-      .select("id, name, description, is_vendor, is_blacksmith, area_id, region_id")
+      .select("id, name, description, is_vendor, is_blacksmith, is_trainer, area_id, region_id")
       .eq("id", nodeId)
       .single();
     if (nodeErr || !node) {
@@ -95,14 +98,24 @@ serve(async (req) => {
       });
     }
 
-    if (!node.is_vendor && !node.is_blacksmith) {
-      return new Response(JSON.stringify({ error: "Node is not a vendor or blacksmith" }), {
+    if (!node.is_vendor && !node.is_blacksmith && !node.is_trainer) {
+      return new Response(JSON.stringify({ error: "Node is not a vendor, blacksmith, or trainer" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const serviceRole: "vendor" | "blacksmith" = node.is_blacksmith ? "blacksmith" : "vendor";
-    const roleLabel = serviceRole === "vendor" ? "shopkeeper / merchant" : "blacksmith / smith";
+    let serviceRole: "vendor" | "blacksmith" | "trainer";
+    if (requestedRole === "vendor" && node.is_vendor) serviceRole = "vendor";
+    else if (requestedRole === "blacksmith" && node.is_blacksmith) serviceRole = "blacksmith";
+    else if (requestedRole === "trainer" && node.is_trainer) serviceRole = "trainer";
+    else if (node.is_trainer) serviceRole = "trainer";
+    else if (node.is_blacksmith) serviceRole = "blacksmith";
+    else serviceRole = "vendor";
+
+    const roleLabel =
+      serviceRole === "vendor" ? "shopkeeper / merchant"
+      : serviceRole === "blacksmith" ? "blacksmith / smith"
+      : "renown trainer / master-at-arms (a hardened mentor who trains heroes' core attributes for Renown)";
 
     const [areaRes, regionRes] = await Promise.all([
       node.area_id
