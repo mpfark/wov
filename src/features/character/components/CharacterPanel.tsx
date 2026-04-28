@@ -857,10 +857,12 @@ export default function CharacterPanel({
                           <p className="font-display text-sm">{STAT_FULL_NAMES[stat]}</p>
                           <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[stat]}</p>
                           <p className="text-[10px] text-muted-foreground">Modifier: {mod >= 0 ? '+' : ''}{mod}</p>
-                          {derivedBonus && (
-                            <p className="text-[10px] text-chart-2 mt-0.5 border-t border-border/50 pt-0.5">
-                              {derivedBonus}
-                            </p>
+                          {derivedLines.length > 0 && (
+                            <div className="mt-0.5 border-t border-border/50 pt-0.5 space-y-0">
+                              {derivedLines.map((line, i) => (
+                                <p key={i} className="text-[10px] text-chart-2">{line}</p>
+                              ))}
+                            </div>
                           )}
                           {manualPoints > 0 && <p className="text-[10px] text-chart-5 mt-0.5">{manualPoints} manually allocated</p>}
                           {((character.bhp_trained || {}) as Record<string, number>)[stat] > 0 && (
