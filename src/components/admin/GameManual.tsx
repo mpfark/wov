@@ -191,7 +191,7 @@ export default function GameManual() {
                             const s = calculateStats(race, cls);
                             const hp = calculateHP(cls, s.con);
                             const ac = calculateAC(cls, s.dex);
-                            const cp = getMaxCp(1, s.int, s.wis, s.cha);
+                            const cp = getMaxCp(1, s.wis);
                             return { race, cls, s, hp, ac, cp };
                           })
                         );
@@ -418,7 +418,7 @@ export default function GameManual() {
                         const allCp = Object.keys(RACE_STATS).flatMap(race =>
                           Object.keys(CLASS_STATS).map(cls => {
                             const s = calculateStats(race, cls);
-                            return getMaxCp(1, s.int, s.wis, s.cha);
+                            return getMaxCp(1, s.wis);
                           })
                         );
                         const maxCp = Math.max(...allCp);
@@ -428,7 +428,7 @@ export default function GameManual() {
                             <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
                             {Object.keys(CLASS_STATS).map(cls => {
                               const s = calculateStats(race, cls);
-                              const cp = getMaxCp(1, s.int, s.wis, s.cha);
+                              const cp = getMaxCp(1, s.wis);
                               return (
                                 <TableCell key={cls} className={`text-xs ${cp >= maxCp - 5 ? 'text-blue-400 font-bold' : cp <= minCp + 5 ? 'text-orange-400' : ''}`}>
                                   {cp}
@@ -476,11 +476,11 @@ export default function GameManual() {
               </div>
 
               <div>
-                <p className="text-xs font-display text-primary mb-1">Max CP by Level (base, no mental bonus)</p>
+                <p className="text-xs font-display text-primary mb-1">Max CP by Level (base, no WIS bonus)</p>
                 <div className="grid grid-cols-4 gap-1 text-xs text-muted-foreground">
                   {[1, 5, 10, 15, 20, 25, 30, 40].map(lv => (
                     <div key={lv}>
-                      Lv {lv}: <span className="text-primary">{getMaxCp(lv, 10, 10, 10)} CP</span>
+                      Lv {lv}: <span className="text-primary">{getMaxCp(lv, 10)} CP</span>
                     </div>
                   ))}
                 </div>
