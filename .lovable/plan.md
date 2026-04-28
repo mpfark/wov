@@ -1,58 +1,92 @@
-# Renown Trainer → Service Panel + Leaderboard
+# Unify kill-reward log into a single line
 
-Bring the Renown Trainer in line with the other service hubs (Vendor, Blacksmith, Teleport, Marketplace): a unified `ServicePanelShell` window with tabs, an NPC service-role for proper "Talk to" framing, and a new **Renown Leaderboard** tab listing top wayfarers by lifetime Renown.
+## Problem (observed)
 
-## What the player sees
+In `supabase/functions/_shared/kill-resolver.ts`, kill resolution currently emits **two separate events** when a creature drops salvage:
 
-1. Walking into a `is_trainer` node, the trainer NPC appears in the "In the Area" list with a 🏛️ icon and a **Train** button (just like Vendor/Blacksmith).
-2. Clicking **Train** (or the existing 🏛️ shortcut on the action bar) opens a parchment-style window with two tabs:
-   - **Train** — current trainer UI (stat list, ranks, costs, success chance, Train buttons), framed by the NPC's name and dialogue as the subtitle.
-   - **Leaderboard** — a ranked list of the top 25 characters by lifetime Renown (`rp_total_earned`), showing rank, name, level, class, and total RP. The viewer's own row is highlighted; if they're outside the top 25, their own rank is appended at the bottom.
-3. Layout matches the other service panels (fixed shell size, sticky tabs, scrollable body, parchment styling, wax-seal close).
+1. The `creature_kill` line — XP + gold + Renown
+2. A second `salvage` line — `🔩 +N salvage…`
 
-## Backend changes
+This is why:
+- **Regular non-humanoid** = 2 lines (kill line + salvage line; no gold usually).
+- **Rare/Boss humanoid** = 1 line (no salvage, gold/RP fit on kill line).
+- **Rare/Boss non-humanoid** would also be 2 lines, but they tend to drop gold so visually feel "richer" on line one.
 
-1. **Migration** — extend `npcs.service_role` check constraint from `('vendor', 'blacksmith')` to `('vendor', 'blacksmith', 'trainer')`. Existing rows untouched.
-2. **`useNPCs` hook** — extend `NPCServiceRole` type to include `'trainer'`.
-3. **Admin NPCManager** — add `service_role` field (already missing for vendor/blacksmith too — out of scope; only add `trainer` to whatever options exist). On inspection the manager doesn't currently surface `service_role` editing, so we add a small Select for `service_role` with options None / Vendor / Blacksmith / Trainer so admins can mark a trainer NPC.
+Additionally:
+- When **all recipients are level 42** ("allCapped" branch), the kill line says *"Your power transcends experience."* and gold/Renown get appended, but **salvage is still pushed as a separate line** — inconsistent.
+- In a **mixed party** (one capped, one uncapped), the code falls into the `recipients.length > 1` branch and uses `displayReward` from the first uncapped member. That is correct for XP, but the message reads *"Rewards split N ways: +X XP each"* which is misleading because the level-42 member actually gets 0 XP. Salvage/gold/RP **are** shared evenly — only XP is excluded for capped members.
 
-## Frontend changes
+## Goal
 
-### `RenownTrainerPanel.tsx` (rewrite)
-- Replace the raw `Dialog` with `ServicePanelShell`:
-  - `icon="🏛️"`, `title="Renown Trainer"`, `subtitle` = NPC name + flavor when provided (else default flavor).
-  - `tabs` slot = `Tabs` with `Train` and `Leaderboard` triggers.
-  - `singleColumn` body — render the active tab's content in the `left` slot.
-- Accept new props: `npcName?: string`, `npcFlavor?: string`.
-- **Train tab** — keep existing stat grid, Renown counter, level-30 gate, and `handleTrain` logic exactly as today (using the shared `getMaxHp/getMaxCp/getMaxMp` helpers already in place).
-- **Leaderboard tab** — new component logic:
-  - On open / tab switch, query `characters` for top 25: `select('id, name, level, class, rp_total_earned').order('rp_total_earned', { ascending: false }).limit(25)`.
-  - Render as a numbered list with rank #, name, `Lv{level}` `{class}`, and RP total (right-aligned, dwarvish color).
-  - Highlight the viewer's own row (`character.id === row.id`) with `border-primary bg-primary/10`.
-  - If viewer not in top 25, run a second query to fetch their rank: count of characters with `rp_total_earned > viewer.rp_total_earned`, then append their row at the bottom under a divider.
-  - Empty state via `ServicePanelEmpty` if no rows.
+One consolidated kill line per creature death, regardless of rarity, humanoid flag, party size, or level-42 mix. Format:
 
-### `GamePage.tsx`
-- Extend `handleTalkToNPC` to route `service_role === 'trainer'` (when `currentNode?.is_trainer`) to open the trainer panel and set `activeServiceNpc`.
-- Pass `npcName` / `npcFlavor` into `<RenownTrainerPanel>` from `activeServiceNpc` when `service_role === 'trainer'`.
-- Clear `activeServiceNpc` in trainer `onClose`, mirroring vendor/blacksmith.
-- Keep the existing 🏛️ action-bar shortcut working (no NPC framing in that path).
+```text
+☠️ <Creature> has been slain by <Killer>! +<XP> XP, +<Gold> gold, +<RP> 🏛️ Renown, +<Salvage> 🔩 salvage each. (modifiers…)
+```
 
-### `NodeView.tsx`
-- In the NPCs list, add `'trainer'` to the role icon/label switch: icon `🏛️`, button label `Train`.
-- In the location header flag row, dim/highlight 🏛️ based on whether a `service_role === 'trainer'` NPC is present at the node (mirroring the vendor/blacksmith staffed-vs-unstaffed treatment).
+Rules:
+- Omit any reward token whose value is 0 (e.g. no salvage clause for humanoids; no gold clause if gold roll failed).
+- Append `each` only when `recipients.length > 1`.
+- Modifier suffixes (level penalty, ⚡ XP boost, 🤝 party bonus) stay in parentheses at the end of the same line.
+- For the level-42 case, replace the XP token with `experience transcended` (or simply omit XP and append `(XP capped)`) so the line is still single.
+- Mixed party (some capped, some uncapped): keep the single line using uncapped XP value, and append `(N of M share XP)` so the message is honest about who gets XP.
+
+## Changes
+
+### `supabase/functions/_shared/kill-resolver.ts`
+
+Replace the three-branch event composition (lines ~113–161) with a single builder:
+
+```text
+1. Build tokens array:
+     xpToken      = uncappedCount > 0 ? `+${displayReward.xp} XP` : null
+     goldToken    = goldEach > 0      ? `+${goldEach} gold`        : null
+     renownToken  = rpEach > 0        ? `+${rpEach} 🏛️ Renown`     : null
+     salvageToken = salvageEach > 0   ? `+${salvageEach} 🔩 salvage`: null
+2. Join non-null tokens with `, `, append ` each` if recipients.length > 1.
+3. Build modifier suffix:
+     - level penalty %   (when xpPenaltyApplied < 1 AND uncappedCount > 0)
+     - ⚡ Nx XP boost     (when xpBoostMultiplier > 1 AND uncappedCount > 0)
+     - 🤝 +N% party bonus (when partyBonus > 1)
+     - capped-share note  (when uncappedCount > 0 AND uncappedCount < recipients.length)
+       e.g. `(XP shared by ${uncappedCount}/${recipients.length})`
+     - all-capped note    (when uncappedCount === 0)
+       prepend ` Power transcends experience.` before tokens, omit XP token
+4. Push ONE event:
+     { type: 'creature_kill',
+       message: `☠️ ${name} has been slain${killerSuffix}! ${tokens}.${suffix}` }
+5. DO NOT push a separate `salvage` event.
+```
+
+Keep the `renown_award` diagnostic console.log unchanged. Keep boss death-cry handling unchanged. Keep loot queue handling unchanged.
+
+### Frontend log rendering
+
+Search for any client code that specifically styles `type: 'salvage'` events and verify removing the standalone salvage event doesn't leave a dead branch:
+- `src/features/combat/components/EventLogPanel.tsx`
+- `src/features/combat/utils/combat-log-utils.ts`
+- `src/features/combat/utils/combat-text.ts`
+
+If `'salvage'` event styling exists, leave the type definition but note it is no longer emitted by `kill-resolver`. (Other code paths — e.g. salvage-only consumables — may still emit it.)
+
+### Tests
+
+- `src/test/combat/combat-resolver.test.ts` — no change (this tests DoT tick resolver, not kill resolver).
+- If there are kill-resolver / reward-formatting tests, update expected strings. (None currently in repo per file listing.)
 
 ## Out of scope
 
-- No changes to training math, Renown award logic, or the `bhp` / `rp_total_earned` columns.
-- No global RLS changes — the existing `characters` SELECT policy already lets any authenticated user read minimal fields needed for the leaderboard via party/admin paths; if it doesn't, we add a narrow leaderboard view RPC instead. We confirm during implementation; if blocked, fall back to a `SECURITY DEFINER` SQL function `get_renown_leaderboard(_limit int)` returning only `id, name, level, class, rp_total_earned`.
-- No redesign of the trainer math UI.
+- No change to reward **math** (XP/gold/RP/salvage values stay identical).
+- No change to party split rules.
+- No change to the loot-drop queue or boss death-cry broadcast.
+- No change to client-side reward state application (`interpretCombatTickResult`).
 
-## Files touched
+## Example outcomes after change
 
-- `supabase/migrations/<new>.sql` — relax `npcs_service_role_check`
-- `src/features/creatures/hooks/useNPCs.ts` — extend `NPCServiceRole`
-- `src/features/character/components/RenownTrainerPanel.tsx` — rewrite around `ServicePanelShell`, add Leaderboard tab
-- `src/pages/GamePage.tsx` — route `trainer` service NPC, pass NPC framing props
-- `src/features/world/components/NodeView.tsx` — NPC row icon/label + staffed flag
-- `src/components/admin/NPCManager.tsx` — add `service_role` selector including `trainer`
+| Scenario | Line |
+|---|---|
+| Solo, regular wolf (non-humanoid) | `☠️ Wolf has been slain by Aria! +12 XP, +2 🔩 salvage.` |
+| Solo, rare bandit (humanoid) | `☠️ Bandit Captain has been slain by Aria! +45 XP, +18 gold, +1 🏛️ Renown.` |
+| Party of 3, boss drake | `☠️ Ancient Drake has been slain by Aria! +210 XP, +40 gold, +15 🏛️ Renown, +12 🔩 salvage each. (🤝 +30% party bonus)` |
+| Party of 2 (one L42), regular bear | `☠️ Cave Bear has been slain by Aria! +35 XP, +3 🔩 salvage each. (XP shared by 1/2) (🤝 +15% party bonus)` |
+| Solo L42, rare elemental | `☠️ Flame Elemental has been slain by Aria! Power transcends experience. +8 gold, +1 🏛️ Renown, +6 🔩 salvage.` |

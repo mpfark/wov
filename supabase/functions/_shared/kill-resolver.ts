@@ -110,55 +110,49 @@ export function resolveCreatureKill(
     result.memberRewards.find(r => r.memberId === displayRecipient.id)!;
   const allCapped = uncapped.length === 0;
 
-  // ── 3. Compose log lines ────────────────────────────────────────
+  // ── 3. Compose single-line log ──────────────────────────────────
   const events: KillOutcome['events'] = [];
   const goldEach = displayReward.gold;
-  const xpBoostNote = ctx.xpBoostMultiplier > 1 ? ` ⚡${ctx.xpBoostMultiplier}x` : '';
-  const penaltyNote =
-    displayReward.xpPenaltyApplied < 1
-      ? ` (${Math.round(displayReward.xpPenaltyApplied * 100)}% XP — level penalty)`
-      : '';
-  const partyBonusNote =
-    result.partyBonus > 1
-      ? ` (🤝 +${Math.round((result.partyBonus - 1) * 100)}% party bonus)`
-      : '';
-  const goldNote = goldEach > 0 ? `, +${goldEach} gold` : '';
-  const renownEachSuffix = recipients.length > 1 ? ' each' : '';
-  // `displayReward.bhp` is legacy storage for the Renown award value.
-  const renownNote = displayReward.bhp > 0 ? `, +${displayReward.bhp} 🏛️ Renown${renownEachSuffix}` : '';
+  const renownEach = displayReward.bhp; // legacy field name for Renown
+  const salvageEach = displayReward.salvage;
   const killerSuffix = ctx.killerLabel ? ` by ${ctx.killerLabel}` : '';
+  const eachSuffix = recipients.length > 1 ? ' each' : '';
 
-  if (allCapped) {
-    const cappedGoldNote = goldEach > 0 ? ` +${goldEach} gold${recipients.length > 1 ? ' each' : ''}.` : '';
-    const cappedRenownNote = displayReward.bhp > 0 ? ` +${displayReward.bhp} 🏛️ Renown${renownEachSuffix}.` : '';
-    events.push({
-      type: 'creature_kill',
-      message: `☠️ ${creature.name} has been slain${killerSuffix}!${cappedGoldNote}${cappedRenownNote} Your power transcends experience.`,
-      creature_id: creature.id,
-      creature_name: creature.name,
-    });
-  } else if (recipients.length > 1) {
-    events.push({
-      type: 'creature_kill',
-      message: `☠️ ${creature.name} has been slain${killerSuffix}! Rewards split ${uncapped.length} ways: +${displayReward.xp} XP${goldNote}${renownNote} each.${penaltyNote}${xpBoostNote}${partyBonusNote}`,
-      creature_id: creature.id,
-      creature_name: creature.name,
-    });
-  } else {
-    events.push({
-      type: 'creature_kill',
-      message: `☠️ ${creature.name} has been slain${killerSuffix}! +${displayReward.xp} XP${goldNote}${renownNote}.${penaltyNote}${xpBoostNote}`,
-      creature_id: creature.id,
-      creature_name: creature.name,
-    });
-  }
+  // Build reward tokens (omit any that are 0)
+  const tokens: string[] = [];
+  if (!allCapped && displayReward.xp > 0) tokens.push(`+${displayReward.xp} XP`);
+  if (goldEach > 0) tokens.push(`+${goldEach} gold`);
+  if (renownEach > 0) tokens.push(`+${renownEach} 🏛️ Renown`);
+  if (salvageEach > 0) tokens.push(`+${salvageEach} 🔩 salvage`);
 
-  if (displayReward.salvage > 0) {
-    events.push({
-      type: 'salvage',
-      message: `🔩 +${displayReward.salvage} salvage${recipients.length > 1 ? ' each' : ''} from ${creature.name}.`,
-    });
+  // Build modifier suffixes (parenthesized, joined with spaces)
+  const modifiers: string[] = [];
+  if (!allCapped && displayReward.xpPenaltyApplied < 1) {
+    modifiers.push(`${Math.round(displayReward.xpPenaltyApplied * 100)}% XP — level penalty`);
   }
+  if (!allCapped && ctx.xpBoostMultiplier > 1) {
+    modifiers.push(`⚡${ctx.xpBoostMultiplier}x XP boost`);
+  }
+  if (result.partyBonus > 1) {
+    modifiers.push(`🤝 +${Math.round((result.partyBonus - 1) * 100)}% party bonus`);
+  }
+  if (!allCapped && uncapped.length < recipients.length) {
+    modifiers.push(`XP shared by ${uncapped.length}/${recipients.length}`);
+  }
+  const modifierSuffix = modifiers.length > 0 ? ` (${modifiers.join(' · ')})` : '';
+
+  // Assemble the line
+  const transcendsNote = allCapped ? ' Power transcends experience.' : '';
+  const rewardsBody = tokens.length > 0
+    ? ` ${tokens.join(', ')}${eachSuffix}.`
+    : '';
+
+  events.push({
+    type: 'creature_kill',
+    message: `☠️ ${creature.name} has been slain${killerSuffix}!${transcendsNote}${rewardsBody}${modifierSuffix}`,
+    creature_id: creature.id,
+    creature_name: creature.name,
+  });
 
   // Diagnostic: log every Renown-bearing kill for future audit
   if (displayReward.bhp > 0) {
