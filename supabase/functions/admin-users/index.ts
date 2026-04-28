@@ -370,14 +370,11 @@ Deno.serve(async (req) => {
         xpForNext = newLevel * 100;
       }
 
-      // Calculate max_cp with WIS-only scaling using final stats after level-ups
+      // CP/MP caps via canonical shared helpers, using final stats after level-ups.
       const grantFinalWis = (char as any).wis + (statIncreases.wis || 0);
-      const grantWisMod = Math.max(Math.floor((grantFinalWis - 10) / 2), 0);
-      const grantMaxCp = 30 + (newLevel - 1) * 3 + grantWisMod * 6;
-      // MP: 100 + dexMod * 10 + (level-1) * 2
       const grantFinalDex = (char as any).dex + (statIncreases.dex || 0);
-      const grantDexMod = Math.max(Math.floor((grantFinalDex - 10) / 2), 0);
-      const grantMaxMp = 100 + grantDexMod * 10 + Math.floor((newLevel - 1) * 2);
+      const grantMaxCp = getMaxCp(newLevel, grantFinalWis);
+      const grantMaxMp = getMaxMp(newLevel, grantFinalDex);
       const updates: Record<string, any> = {
         xp: newXp, level: newLevel, max_hp: newMaxHp, hp: newHp,
         max_cp: grantMaxCp, cp: grantMaxCp,
