@@ -1658,6 +1658,17 @@ export type Database = {
       expire_marketplace_listings: { Args: never; Returns: number }
       find_character_id_by_name: { Args: { _name: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
+      get_renown_leaderboard: {
+        Args: { _limit?: number }
+        Returns: {
+          class: string
+          id: string
+          level: number
+          name: string
+          rp_total_earned: number
+        }[]
+      }
+      get_renown_rank: { Args: { _character_id: string }; Returns: number }
       grant_starting_gear: {
         Args: { p_character_id: string }
         Returns: undefined
