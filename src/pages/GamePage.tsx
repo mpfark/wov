@@ -270,7 +270,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       setBlacksmithOpen(true);
       return;
     }
-    if (npc.service_role === 'trainer' && currentNode?.is_trainer && character.level >= 30) {
+    if (npc.service_role === 'trainer' && currentNode?.is_trainer) {
       setActiveServiceNpc(npc);
       setTrainerOpen(true);
       return;
@@ -985,7 +985,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onSearch: handleSearch,
     onOpenVendor: currentNode?.is_vendor ? () => setVendorOpen(true) : undefined,
     onOpenBlacksmith: currentNode?.is_blacksmith ? () => setBlacksmithOpen(true) : undefined,
-    onOpenTrainer: (currentNode?.is_trainer && character.level >= 30) ? () => setTrainerOpen(true) : undefined,
+    onOpenTrainer: currentNode?.is_trainer ? () => setTrainerOpen(true) : undefined,
     onOpenMarketplace: (currentNode as any)?.is_marketplace ? () => setMarketplaceOpen(true) : undefined,
     onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
       if (inCombat) { addLog('⚠️ You cannot teleport while in combat!'); return; }
@@ -1236,7 +1236,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       )}
 
       {/* Renown Trainer Dialog */}
-      {currentNode.is_trainer && character.level >= 30 && (
+      {currentNode.is_trainer && (
         <RenownTrainerPanel
           open={trainerOpen}
           onClose={() => { setTrainerOpen(false); setActiveServiceNpc(null); }}
