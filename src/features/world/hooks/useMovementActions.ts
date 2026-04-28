@@ -474,9 +474,15 @@ export function useMovementActions(params: UseMovementActionsParams) {
                 return;
               }
             } else {
-              await supabase.from('character_inventory').insert({
-                character_id: p.character.id, item_id: entry.item_id, current_durability: 100,
+              const { error: grantErr } = await supabase.rpc('grant_searched_item' as any, {
+                p_character_id: p.character.id, p_item_id: entry.item_id,
               });
+              if (grantErr) {
+                console.error('grant_searched_item failed:', grantErr);
+                p.addLog(`🔍 You spotted ${item.name}, but couldn't pick it up.`);
+                revealHints();
+                return;
+              }
             }
             p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You found ${item.name}!`);
             logActivity(p.character.user_id, p.character.id, 'item_found', `Found ${item.name} while searching`, { item_name: item.name });

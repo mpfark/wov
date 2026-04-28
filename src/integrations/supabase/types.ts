@@ -1669,6 +1669,10 @@ export type Database = {
         }[]
       }
       get_renown_rank: { Args: { _character_id: string }; Returns: number }
+      grant_searched_item: {
+        Args: { p_character_id: string; p_item_id: string }
+        Returns: boolean
+      }
       grant_starting_gear: {
         Args: { p_character_id: string }
         Returns: undefined
