@@ -236,20 +236,12 @@ Deno.serve(async (req) => {
         updates.respec_points = Math.max(0, (char.respec_points || 0) + respecDiff);
       }
 
-      // HP: base class HP + 5 per level after 1 + con modifier
-      const baseHP = CLASS_BASE_HP[char.class] || 18;
-      const conMod = Math.floor((updates.con - 10) / 2);
-      const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
-      updates.max_hp = newMaxHp;
-      updates.hp = newMaxHp;
-      // Calculate max_cp with WIS-only scaling (canonical formula)
-      const wisMod = Math.max(Math.floor((updates.wis - 10) / 2), 0);
-      updates.max_cp = 30 + (new_level - 1) * 3 + wisMod * 6;
+      // HP/CP/MP caps via canonical shared helpers (mirror SQL sync_character_resources).
+      updates.max_hp = getMaxHp(char.class, updates.con, new_level);
+      updates.hp = updates.max_hp;
+      updates.max_cp = getMaxCp(new_level, updates.wis);
       updates.cp = updates.max_cp;
-
-      // MP: 100 + dexMod * 10 + (level-1) * 2
-      const dexMod = Math.max(Math.floor((updates.dex - 10) / 2), 0);
-      updates.max_mp = 100 + dexMod * 10 + Math.floor((new_level - 1) * 2);
+      updates.max_mp = getMaxMp(new_level, updates.dex);
       updates.mp = updates.max_mp;
 
       // Reset XP when setting level directly
