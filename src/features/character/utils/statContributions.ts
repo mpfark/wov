@@ -35,6 +35,16 @@ interface StatEffect {
   value: (effective: number, level: number) => string;
 }
 
+// ── Display helpers (match conventions used in derived stat rows) ─
+const dash = '–';
+const fmtPlus = (n: number) => (n > 0 ? `+${n}` : dash);
+const fmtPct = (n: number) => (n > 0 ? `${Math.round(n * 100)}%` : dash);
+const fmtRegen = (n: number) => `+${n}/tick`;
+const fmtCritRange = (bonus: number) => {
+  const lo = 20 - bonus;
+  return bonus > 0 ? `${lo}–20` : '20';
+};
+
 /** What each attribute contributes, derived from formulas (not hand-typed). */
 export const STAT_CONTRIBUTIONS: Record<StatKey, {
   full: string;
@@ -45,7 +55,7 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
     full: 'Strength',
     short: 'Melee attack, carry capacity, minimum damage floor',
     effects: [
-      { label: 'Min damage floor', value: e => `+${getStrDamageFloor(e)}` },
+      { label: 'Min Damage', value: e => fmtPlus(getStrDamageFloor(e)) },
     ],
   },
   dex: {
@@ -53,23 +63,23 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
     short: 'Ranged attack, AC bonus, Stamina pool & regen, crit chance',
     effects: [
       { label: 'Max Stamina', value: (e, lvl) => `${getMaxMp(lvl, e)}` },
-      { label: 'Stamina regen', value: e => `+${getMpRegenRate(e)}/tick` },
-      { label: 'Crit range', value: e => `+${getDexCritBonus(e)}` },
+      { label: 'Stamina Regen', value: e => fmtRegen(getMpRegenRate(e)) },
+      { label: 'Crit Range', value: e => fmtCritRange(getDexCritBonus(e)) },
     ],
   },
   con: {
     full: 'Constitution',
     short: 'Hit points and HP regeneration',
     effects: [
-      { label: 'HP regen', value: e => `+${getStatRegen(e)}/tick` },
+      { label: 'HP Regen', value: e => fmtRegen(getStatRegen(e)) },
     ],
   },
   int: {
     full: 'Intelligence',
     short: 'Arcane power, CP regen, improves hit chance',
     effects: [
-      { label: 'CP regen', value: e => `+${getCpRegen(e)}/tick` },
-      { label: 'Hit chance', value: e => `+${getIntHitBonus(e)}` },
+      { label: 'CP Regen', value: e => fmtRegen(getCpRegen(e)) },
+      { label: 'Hit Chance', value: e => fmtPlus(getIntHitBonus(e)) },
     ],
   },
   wis: {
@@ -77,15 +87,21 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
     short: 'Perception, CP pool, reduces incoming crit chance',
     effects: [
       { label: 'Max CP', value: (e, lvl) => `${getMaxCp(lvl, e)}` },
-      { label: 'Crit resistance', value: e => `${Math.round(getWisDodgeChance(e) * 100)}%` },
+      { label: 'Crit Resistance', value: e => fmtPct(getWisDodgeChance(e)) },
     ],
   },
   cha: {
     full: 'Charisma',
     short: 'Persuasion, bardic abilities, vendor prices & humanoid gold',
     effects: [
-      { label: 'Buy discount', value: e => `−${Math.round(getChaBuyDiscount(e) * 100)}%` },
-      { label: 'Sell bonus', value: e => `+${Math.round(((getChaSellMultiplier(e) - 1) / 0.05) * 5)}%` },
+      { label: 'Buy Discount', value: e => {
+        const v = getChaBuyDiscount(e);
+        return v > 0 ? `−${Math.round(v * 100)}%` : dash;
+      } },
+      { label: 'Sell Bonus', value: e => {
+        const pct = Math.round(((getChaSellMultiplier(e) - 1) / 0.05) * 5);
+        return pct > 0 ? `+${pct}%` : dash;
+      } },
     ],
   },
 };
