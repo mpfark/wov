@@ -703,16 +703,16 @@ export default function NodeEditorPanel({
   };
 
   /* ── Generate AI service NPC ── */
-  const generateServiceNpc = async () => {
+  const generateServiceNpc = async (role?: 'vendor' | 'blacksmith' | 'trainer') => {
     if (!activeNodeId) return;
-    if (!form.is_vendor && !form.is_blacksmith) {
-      toast.error('Node must be a vendor or blacksmith');
+    if (!form.is_vendor && !form.is_blacksmith && !form.is_trainer) {
+      toast.error('Node must be a vendor, blacksmith, or trainer');
       return;
     }
     setGeneratingNpc(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-generate-service-npc', {
-        body: { node_id: activeNodeId },
+        body: { node_id: activeNodeId, ...(role ? { service_role: role } : {}) },
       });
       if (error) throw error;
       toast.success(`Generated ${(data as any)?.npc?.name || 'service NPC'}`);
