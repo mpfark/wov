@@ -1026,7 +1026,7 @@ Deno.serve(async (req) => {
           newMaxHp = calcMaxHp(c.class, fCon, newLevel) + (eb.hp || 0);
           updates.max_hp = newMaxHp;
           updates.hp = newMaxHp;
-          updates.max_cp = calcMaxCp(newLevel, fInt, fWis, fCha);
+          updates.max_cp = calcMaxCp(newLevel, fWis);
           updates.max_mp = calcMaxMp(newLevel, fDex);
 
           events.push({ type: 'level_up', character_id: m.id, message: `🎉 Level Up! ${c.name} is now level ${newLevel}!` });
