@@ -162,6 +162,7 @@ export default function NodeView({
               {(() => {
                 const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
                 const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
+                const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
                 return (
                   <>
                     {node.is_inn && <span className="text-[10px]" title="Inn">🏨</span>}
@@ -185,7 +186,14 @@ export default function NodeView({
                       </span>
                     )}
                     {node.is_teleport && <span className="text-[10px]" title="Teleport">🌀</span>}
-                    {node.is_trainer && <span className="text-[10px]" title="Renown Trainer">🏛️</span>}
+                    {node.is_trainer && (
+                      <span
+                        className={`text-[10px] ${hasTrainerNpc ? 'text-glow' : 'opacity-70'}`}
+                        title={hasTrainerNpc ? 'Renown Trainer — staffed' : 'Renown Trainer (no trainer on duty)'}
+                      >
+                        🏛️
+                      </span>
+                    )}
                   </>
                 );
               })()}
@@ -325,9 +333,11 @@ export default function NodeView({
                   {npcs.map(npc => {
                     const roleIcon = npc.service_role === 'vendor' ? '🪙'
                       : npc.service_role === 'blacksmith' ? '🔨'
+                      : npc.service_role === 'trainer' ? '🏛️'
                       : '💬';
                     const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
                       : npc.service_role === 'blacksmith' ? 'Forge'
+                      : npc.service_role === 'trainer' ? 'Train'
                       : 'Talk';
                     return (
                       <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
