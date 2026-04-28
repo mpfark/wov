@@ -1,82 +1,58 @@
-## Refactor: admin-users → use shared HP/CP/MP helpers
+# Renown Trainer → Service Panel + Leaderboard
 
-### Goal
-Replace all three inlined resource-cap formulas (HP, CP, MP) in `supabase/functions/admin-users/index.ts` with the canonical helpers from `supabase/functions/_shared/formulas/resources.ts`. Eliminates drift risk if any cap formula changes.
+Bring the Renown Trainer in line with the other service hubs (Vendor, Blacksmith, Teleport, Marketplace): a unified `ServicePanelShell` window with tabs, an NPC service-role for proper "Talk to" framing, and a new **Renown Leaderboard** tab listing top wayfarers by lifetime Renown.
 
-### Changes (one file)
+## What the player sees
 
-**`supabase/functions/admin-users/index.ts`**
+1. Walking into a `is_trainer` node, the trainer NPC appears in the "In the Area" list with a 🏛️ icon and a **Train** button (just like Vendor/Blacksmith).
+2. Clicking **Train** (or the existing 🏛️ shortcut on the action bar) opens a parchment-style window with two tabs:
+   - **Train** — current trainer UI (stat list, ranks, costs, success chance, Train buttons), framed by the NPC's name and dialogue as the subtitle.
+   - **Leaderboard** — a ranked list of the top 25 characters by lifetime Renown (`rp_total_earned`), showing rank, name, level, class, and total RP. The viewer's own row is highlighted; if they're outside the top 25, their own rank is appended at the bottom.
+3. Layout matches the other service panels (fixed shell size, sticky tabs, scrollable body, parchment styling, wax-seal close).
 
-1. Add import at top:
-   ```ts
-   import { getMaxHp, getMaxCp, getMaxMp } from "../_shared/formulas/resources.ts";
-   ```
-   (Helpers already exist and are the canonical owners; SQL `sync_character_resources()` mirrors them.)
+## Backend changes
 
-2. **Set-level path (around lines 240–252)** — replace the inlined HP/CP/MP block:
-   ```ts
-   const conMod = Math.floor((updates.con - 10) / 2);
-   const newMaxHp = baseHP + conMod + (new_level - 1) * 5;
-   updates.max_hp = newMaxHp;
-   updates.hp = newMaxHp;
-   const wisMod = Math.max(Math.floor((updates.wis - 10) / 2), 0);
-   updates.max_cp = 30 + (new_level - 1) * 3 + wisMod * 6;
-   updates.cp = updates.max_cp;
-   const dexMod = Math.max(Math.floor((updates.dex - 10) / 2), 0);
-   updates.max_mp = 100 + dexMod * 10 + Math.floor((new_level - 1) * 2);
-   updates.mp = updates.max_mp;
-   ```
-   with:
-   ```ts
-   updates.max_hp = getMaxHp(char.class, updates.con, new_level);
-   updates.hp = updates.max_hp;
-   updates.max_cp = getMaxCp(new_level, updates.wis);
-   updates.cp = updates.max_cp;
-   updates.max_mp = getMaxMp(new_level, updates.dex);
-   updates.mp = updates.max_mp;
-   ```
-   (Drops the now-unused local `baseHP`/`conMod`/`wisMod`/`dexMod`. The existing `char.class` lookup that fed `baseHP` is what `getMaxHp` reads via `CLASS_BASE_HP`.)
+1. **Migration** — extend `npcs.service_role` check constraint from `('vendor', 'blacksmith')` to `('vendor', 'blacksmith', 'trainer')`. Existing rows untouched.
+2. **`useNPCs` hook** — extend `NPCServiceRole` type to include `'trainer'`.
+3. **Admin NPCManager** — add `service_role` field (already missing for vendor/blacksmith too — out of scope; only add `trainer` to whatever options exist). On inspection the manager doesn't currently surface `service_role` editing, so we add a small Select for `service_role` with options None / Vendor / Blacksmith / Trainer so admins can mark a trainer NPC.
 
-3. **Grant-XP path (around lines 380–391)** — replace the `grantFinal*` / `grant*Mod` / `grantMaxCp` / `grantMaxMp` inlines (and the matching HP block just above) with:
-   ```ts
-   const grantFinalCon = (char as any).con + (statIncreases.con || 0);
-   const grantFinalWis = (char as any).wis + (statIncreases.wis || 0);
-   const grantFinalDex = (char as any).dex + (statIncreases.dex || 0);
-   const grantMaxHp = getMaxHp((char as any).class, grantFinalCon, newLevel);
-   const grantMaxCp = getMaxCp(newLevel, grantFinalWis);
-   const grantMaxMp = getMaxMp(newLevel, grantFinalDex);
-   const updates: Record<string, any> = {
-     xp: newXp, level: newLevel,
-     max_hp: grantMaxHp, hp: grantMaxHp,
-     max_cp: grantMaxCp, cp: grantMaxCp,
-     max_mp: grantMaxMp, mp: grantMaxMp,
-     unspent_stat_points: (char as any).unspent_stat_points + statPoints,
-   };
-   ```
+## Frontend changes
 
-4. **Reset/respec path (around lines 480–488)** — replace the inlined `resetWisMod` / `newMaxCp` (plus any sibling HP/MP recompute on this path) with:
-   ```ts
-   const newMaxHp = getMaxHp(char.class, baseStats.con ?? 10, char.level);
-   const newMaxCp = getMaxCp(char.level, baseStats.wis ?? 10);
-   const newMaxMp = getMaxMp(char.level, baseStats.dex ?? 10);
-   const { error } = await adminClient.from("characters").update({
-     ...baseStats,
-     unspent_stat_points: newUnspent,
-     max_hp: newMaxHp, hp: newMaxHp,
-     max_cp: newMaxCp, cp: newMaxCp,
-     max_mp: newMaxMp, mp: newMaxMp,
-   }).eq("id", character_id);
-   ```
-   (If reset currently only touches CP, I'll keep it CP-only to avoid scope creep — confirmed during implementation by re-reading the surrounding block.)
+### `RenownTrainerPanel.tsx` (rewrite)
+- Replace the raw `Dialog` with `ServicePanelShell`:
+  - `icon="🏛️"`, `title="Renown Trainer"`, `subtitle` = NPC name + flavor when provided (else default flavor).
+  - `tabs` slot = `Tabs` with `Train` and `Leaderboard` triggers.
+  - `singleColumn` body — render the active tab's content in the `left` slot.
+- Accept new props: `npcName?: string`, `npcFlavor?: string`.
+- **Train tab** — keep existing stat grid, Renown counter, level-30 gate, and `handleTrain` logic exactly as today (using the shared `getMaxHp/getMaxCp/getMaxMp` helpers already in place).
+- **Leaderboard tab** — new component logic:
+  - On open / tab switch, query `characters` for top 25: `select('id, name, level, class, rp_total_earned').order('rp_total_earned', { ascending: false }).limit(25)`.
+  - Render as a numbered list with rank #, name, `Lv{level}` `{class}`, and RP total (right-aligned, dwarvish color).
+  - Highlight the viewer's own row (`character.id === row.id`) with `border-primary bg-primary/10`.
+  - If viewer not in top 25, run a second query to fetch their rank: count of characters with `rp_total_earned > viewer.rp_total_earned`, then append their row at the bottom under a divider.
+  - Empty state via `ServicePanelEmpty` if no rows.
 
-### Behavior change
-None. The shared helpers are numerically identical to the inlined math today. This is a pure de-duplication so the next formula change touches one file (+ SQL mirror) instead of four.
+### `GamePage.tsx`
+- Extend `handleTalkToNPC` to route `service_role === 'trainer'` (when `currentNode?.is_trainer`) to open the trainer panel and set `activeServiceNpc`.
+- Pass `npcName` / `npcFlavor` into `<RenownTrainerPanel>` from `activeServiceNpc` when `service_role === 'trainer'`.
+- Clear `activeServiceNpc` in trainer `onClose`, mirroring vendor/blacksmith.
+- Keep the existing 🏛️ action-bar shortcut working (no NPC framing in that path).
 
-### Out of scope
-- No DB migration.
-- No UI / client changes.
-- HP/MP/CP regen logic (separate path, lives in combat-tick / useGameLoop).
+### `NodeView.tsx`
+- In the NPCs list, add `'trainer'` to the role icon/label switch: icon `🏛️`, button label `Train`.
+- In the location header flag row, dim/highlight 🏛️ based on whether a `service_role === 'trainer'` NPC is present at the node (mirroring the vendor/blacksmith staffed-vs-unstaffed treatment).
 
-### Verification
-- Edge function auto-deploys.
-- Spot-check at L10 / WIS 14 / DEX 14 / CON 14: `max_cp = 69`, `max_mp = 138`, `max_hp = base + 2 + 45` — same as before.
+## Out of scope
+
+- No changes to training math, Renown award logic, or the `bhp` / `rp_total_earned` columns.
+- No global RLS changes — the existing `characters` SELECT policy already lets any authenticated user read minimal fields needed for the leaderboard via party/admin paths; if it doesn't, we add a narrow leaderboard view RPC instead. We confirm during implementation; if blocked, fall back to a `SECURITY DEFINER` SQL function `get_renown_leaderboard(_limit int)` returning only `id, name, level, class, rp_total_earned`.
+- No redesign of the trainer math UI.
+
+## Files touched
+
+- `supabase/migrations/<new>.sql` — relax `npcs_service_role_check`
+- `src/features/creatures/hooks/useNPCs.ts` — extend `NPCServiceRole`
+- `src/features/character/components/RenownTrainerPanel.tsx` — rewrite around `ServicePanelShell`, add Leaderboard tab
+- `src/pages/GamePage.tsx` — route `trainer` service NPC, pass NPC framing props
+- `src/features/world/components/NodeView.tsx` — NPC row icon/label + staffed flag
+- `src/components/admin/NPCManager.tsx` — add `service_role` selector including `trainer`
