@@ -3,8 +3,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
 import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
-import { CLASS_COMBAT } from '@/features/combat';
 import { SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount } from '@/features/combat';
+import { getWeaponDie } from '@/shared/formulas/combat';
+import { getClassCritRange } from '@/shared/formulas/classes';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -909,12 +910,14 @@ export default function CharacterPanel({
                   const effectiveHpRegen = Math.max(Math.floor(hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat + (partyRegenActive ? partyRegenBuff!.healPerTick : 0) + (inspireActive ? inspireBuff!.hpPerTick : 0)), 1);
                   const hpRegenBuffed = foodBuffActive || partyRegenActive || milestoneHpFlat > 0 || isAtInn;
 
-                  const combat = CLASS_COMBAT[character.class];
-                  const atkStat = combat?.stat || 'str';
-                  const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
+                  // Autoattack is weapon-based: 1d{weaponDie} + STR mod.
+                  // Class no longer determines basic attack dice — class identity lives in T0 abilities.
+                  const weaponDie = getWeaponDie(mainHandTag ?? null, isTwoHanded ? 2 : 1);
+                  const atkStat = 'str';
+                  const atkMod = getStatModifier(character.str + (equipmentBonuses.str || 0));
                   const intHit = getIntHitBonus(eInt);
                   const dexCrit = getDexCritBonus(eDex);
-                  const baseCritRange = (combat?.critRange || 20) - dexCrit;
+                  const baseCritRange = getClassCritRange(character.class) - dexCrit;
                   const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
                   const wisAntiCritChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
@@ -979,7 +982,7 @@ export default function CharacterPanel({
                   ];
 
                   const offenseRows: DerivedRow[] = [
-                    { label: `${combat?.label || 'Attack'}`, value: `${combat?.diceMin || 1}d${combat?.diceMax || 6} ${atkMod >= 0 ? '+' : ''}${atkMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `${atkStat.toUpperCase()} modifier applied to hit & damage${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
+                    { label: 'Attack', value: `1d${weaponDie} ${atkMod >= 0 ? '+' : ''}${atkMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `Autoattack: 1d${weaponDie} weapon die + STR modifier${isTwoHanded ? ' (two-handed)' : ''}${mainHandTag ? '' : ' (unarmed)'}${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
                     { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
