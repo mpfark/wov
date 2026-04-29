@@ -18,7 +18,7 @@ const STAT_LABELS: Record<string, string> = {
 };
 
 function getTrainingCost(rank: number): number {
-  return 20 * (rank + 1);
+  return 10 * (rank + 1);
 }
 
 function getSuccessChance(rank: number): number {
@@ -217,7 +217,7 @@ export default function RenownTrainerPanel({
       )}
 
       <p className="text-[10px] text-muted-foreground italic leading-relaxed">
-        Cost per attempt: 20 × (rank + 1) RP. Success chance decreases with each rank.
+        Cost per attempt: 10 × (rank + 1) RP. Success chance decreases with each rank.
         Earn Renown by slaying rare and boss creatures.
       </p>
     </div>
