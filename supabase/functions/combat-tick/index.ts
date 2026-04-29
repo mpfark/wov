@@ -475,6 +475,10 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Any ability landing on a creature engages it for the rest of the session
+      // (so T0 openers transition out-of-combat → in-combat correctly).
+      sessionEngaged.add(target.id);
+
       // Class abilities use ability-specific stat-scaling formulas (NOT the
       // weapon-die autoattack path). Each ability's identity is tied to its
       // class's primary stat and is independent of equipped weapon.
