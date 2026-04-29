@@ -5,7 +5,7 @@ import { NPC } from '@/features/creatures';
 import { Character } from '@/features/character';
 import { GroundLootItem } from '@/features/inventory';
 import { getCharacterTitle } from '@/lib/game-data';
-import { CLASS_COMBAT, ClassAbility } from '@/features/combat';
+import { ClassAbility } from '@/features/combat';
 import { getKeyLabel, type ActionBindings } from '@/features/world';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
@@ -322,7 +322,7 @@ export default function NodeView({
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                             {!isActiveTarget && !isEngaged && !isSelected && (
                               <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
-                                {CLASS_COMBAT[character.class]?.label || 'Atk'}
+                                Attack
                               </Button>
                             )}
                           </div>
