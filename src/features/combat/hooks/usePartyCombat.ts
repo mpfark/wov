@@ -146,8 +146,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
+    // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
+    const fizzling = pendingAbilityRef.current;
+    if (fizzling) {
+      ext.current.addLocalLog(`⚠️ ${fizzling.emoji} Your ${fizzling.label} fizzles as you move away.`);
+    }
     pendingAbilityRef.current = null;
     setPendingAbility(null);
+    setPendingCpCost(0);
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
@@ -157,8 +163,15 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Queue ability for next tick ────────────────────────────────
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
-    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000 };
+    const p = ext.current;
+    const allAbilities = CLASS_ABILITIES[p.character.class] || [];
+    const ability = allAbilities[index];
+    const cpCost = ability?.cpCost ?? 0;
+    const label = ability?.label ?? 'ability';
+    const emoji = ability?.emoji ?? '⭐';
+    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000, cpCost, label, emoji };
     setPendingAbility({ index, targetId });
+    setPendingCpCost(cpCost);
     idleCountRef.current = 0;
     if (!intervalRef.current) {
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
