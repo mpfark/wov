@@ -446,7 +446,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Push canonical event lines (kill / BHP / salvage)
+      // Push canonical event lines (kill / Renown / salvage)
       for (const ev of outcome.events) events.push(ev);
 
       // Queue loot drops

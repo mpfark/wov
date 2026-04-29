@@ -370,7 +370,7 @@ Deno.serve(async (req) => {
 
           // Apply per-recipient rewards. We can't run the full level-up logic
           // here (that lives in combat-tick), but `award_party_member` updates
-          // XP/gold/salvage/BHP atomically and the next combat-tick / refetch
+          // XP/gold/salvage/Renown atomically and the next combat-tick / refetch
           // will reconcile derived values (level, max_hp, etc.) when the
           // player engages again.
           for (const mr of outcome.memberRewards) {
