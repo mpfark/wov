@@ -177,10 +177,25 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
     }
 
+    // T0 opener: requires a valid creature target on the node, but does NOT
+    // require existing combat. Resolves Tab target → active target → first alive.
+    let resolvedT0TargetId: string | undefined = targetId;
+    if (!isInstantBuff && !_fromTick && T0_OPENER_TYPES.has(ability.type)) {
+      const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId)
+        ?? p.creatures.find((c: any) => c.is_alive && c.hp > 0)?.id
+        ?? null;
+      if (!cTargetId) {
+        p.addLog(`${ability.emoji} No target for ${ability.label}!`);
+        return;
+      }
+      resolvedT0TargetId = cTargetId;
+    }
+
     // Damage/heal abilities must be queued for the heartbeat tick
     if (!isInstantBuff && !_fromTick) {
-      p.queueAbility(abilityIndex, targetId);
-      const cTarget = targetId ? p.creatures?.find(c => c.id === targetId)
+      const queueTargetId = resolvedT0TargetId ?? targetId;
+      p.queueAbility(abilityIndex, queueTargetId);
+      const cTarget = queueTargetId ? p.creatures?.find(c => c.id === queueTargetId)
         : p.activeCombatCreatureId ? p.creatures?.find(c => c.id === p.activeCombatCreatureId) : undefined;
       p.addLog(getQueueFlavour(ability, cTarget?.name));
       return;
