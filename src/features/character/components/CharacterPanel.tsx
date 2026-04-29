@@ -910,11 +910,11 @@ export default function CharacterPanel({
                   const effectiveHpRegen = Math.max(Math.floor(hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat + (partyRegenActive ? partyRegenBuff!.healPerTick : 0) + (inspireActive ? inspireBuff!.hpPerTick : 0)), 1);
                   const hpRegenBuffed = foodBuffActive || partyRegenActive || milestoneHpFlat > 0 || isAtInn;
 
-                  // Autoattack is weapon-based: 1d{weaponDie} + STR mod.
-                  // Class no longer determines basic attack dice — class identity lives in T0 abilities.
+                  // Autoattack: to-hit uses DEX, damage uses STR.
+                  // (Class identity lives in T0 abilities, not in basic-attack stats.)
                   const weaponDie = getWeaponDie(mainHandTag ?? null, isTwoHanded ? 2 : 1);
-                  const atkStat = 'str';
-                  const atkMod = getStatModifier(character.str + (equipmentBonuses.str || 0));
+                  const dmgMod = getStatModifier(character.str + (equipmentBonuses.str || 0));   // STR — damage
+                  const hitMod = getStatModifier(character.dex + (equipmentBonuses.dex || 0));   // DEX — to-hit
                   const intHit = getIntHitBonus(eInt);
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = getClassCritRange(character.class) - dexCrit;
@@ -927,7 +927,7 @@ export default function CharacterPanel({
                   const totalAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, offHandIsShield);
 
                    const affinityHit = isProficient ? 1 : 0;
-                   const totalHitBonus = atkMod + intHit + affinityHit;
+                   const totalHitBonus = hitMod + intHit + affinityHit;
                    const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
                    // Player hit chance vs same-level regular creature
                    const playerCritThreshold = 20 - dexCrit;
