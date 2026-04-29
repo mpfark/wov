@@ -53,6 +53,12 @@ function getQueueFlavour(ability: { label: string; emoji: string; type: string }
     case 'ignite_consume': return `⏳ ${ability.emoji} You gather the flames building on ${target}...`;
     case 'hp_transfer': return `⏳ ${ability.emoji} You begin channeling your life force...`;
     case 'burst_damage': return `⏳ ${ability.emoji} You draw breath for a devastating crescendo...`;
+    case 'fireball': return `⏳ ${ability.emoji} You begin shaping a ball of arcane flame at ${target}...`;
+    case 'power_strike': return `⏳ ${ability.emoji} You wind up a heavy strike at ${target}...`;
+    case 'aimed_shot': return `⏳ ${ability.emoji} You take careful aim at ${target}...`;
+    case 'backstab': return `⏳ ${ability.emoji} You slip into the shadows behind ${target}...`;
+    case 'smite': return `⏳ ${ability.emoji} You call down divine light upon ${target}...`;
+    case 'cutting_words': return `⏳ ${ability.emoji} You ready a barbed insult for ${target}...`;
     default: return `⏳ ${ability.emoji} ${ability.label}...`;
   }
 }
