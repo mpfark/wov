@@ -454,6 +454,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
           const cpCost = ability.cpCost;
 
+          // Remember the opener target so processTickResult engages only this
+          // creature (not other aggressive bystanders on the node).
+          if (!inCombatRef.current && targetId) {
+            lastDispatchedOpenerTargetRef.current = targetId;
+          }
+
           const abilityPayload = {
             character_id: p.character.id,
             ability_type: ability.type,
