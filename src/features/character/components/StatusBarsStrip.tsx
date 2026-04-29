@@ -157,12 +157,15 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff,
+  reservedCp = 0,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
-  const cp = character.cp ?? 100;
+  const rawCp = character.cp ?? 100;
   const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
+  const cp = Math.max(0, rawCp - reservedCp);
   const cpPercent = Math.round((cp / maxCp) * 100);
+  const reservedPercent = Math.max(0, Math.min(100, Math.round((Math.min(reservedCp, rawCp) / maxCp) * 100)));
   const mp = character.mp ?? 100;
   const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
   const mpPercent = Math.round((mp / maxMp) * 100);
