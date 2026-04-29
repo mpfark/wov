@@ -198,16 +198,16 @@ export const GLANCING_WEAK_CAP = 3;
 
 export interface AttackContext {
   /**
-   * Effective STR (base + equipment). Autoattacks always scale from STR
-   * regardless of class — class identity lives in abilities, not in basic
-   * autoattack damage.
+   * Effective DEX (base + equipment) — drives the autoattack to-hit roll.
+   * (Renamed from STR: hit is now DEX-based for both melee and ranged.
+   * Damage continues to scale from STR via the `str` field.)
    */
   attackerStat: number;
-  int: number;              // effective INT (base + equipment)
-  dex: number;              // effective DEX (base + equipment)
-  str: number;              // effective STR (base + equipment) — also used for damage floor
+  int: number;              // effective INT (base + equipment) — secondary hit bonus
+  dex: number;              // effective DEX (base + equipment) — also crit-range reduction
+  str: number;              // effective STR (base + equipment) — damage scaling + damage floor
   level: number;
-  classKey: string;         // retained for crit threshold + weapon affinity only
+  classKey: string;         // crit threshold + weapon affinity only
   /** Extra crit range bonus from buffs (Eagle Eye) */
   critBuffBonus?: number;
   /** Weapon tag of main-hand weapon for affinity bonuses + die selection */
@@ -230,7 +230,10 @@ export interface AttackResult {
 /**
  * Resolve a single autoattack roll against a creature.
  *
- * Damage is weapon-based: 1d{weaponDie} + STR. The class only influences:
+ *   To-hit:  d20 + DEX mod + INT hit bonus + weapon affinity bonus
+ *   Damage:  1d{weaponDie} + STR mod        (STR damage floor on non-crits)
+ *
+ * Class only influences:
  *   - crit threshold (rogue 19 vs 20 for everyone else)
  *   - weapon affinity (matching class+weapon = +1 hit, x1.10 damage)
  */
@@ -239,7 +242,8 @@ export function resolveAttackRoll(
   creatureAC: number,
   sunderReduction: number = 0,
 ): AttackResult {
-  const sMod = getStatModifier(ctx.attackerStat);
+  const dexHitMod = getStatModifier(ctx.attackerStat); // attackerStat now = DEX
+  const strDmgMod = getStatModifier(ctx.str);
   const ihb = getIntHitBonus(ctx.int);
   const dcb = getDexCritBonus(ctx.dex);
   const mileCrit = ctx.level >= 28 ? 1 : 0;
@@ -251,7 +255,7 @@ export function resolveAttackRoll(
   const die = getWeaponDie(ctx.weaponTag, hands);
 
   const roll = rollD20();
-  const totalAtk = roll + sMod + ihb + affinity.hitBonus;
+  const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;
   const effectiveAC = Math.max(creatureAC - sunderReduction, 0);
 
   const hit = roll >= effCrit || (roll !== 1 && totalAtk >= effectiveAC);
@@ -259,7 +263,7 @@ export function resolveAttackRoll(
 
   let baseDamage = 0;
   if (hit) {
-    const rawDmg = rollDamage(1, die) + sMod;
+    const rawDmg = rollDamage(1, die) + strDmgMod;
     const preBuff = isCrit ? Math.max(Math.floor(rawDmg * 1.5), 1) : Math.max(rawDmg, 1 + sdf);
     baseDamage = Math.max(Math.floor(preBuff * affinity.damageMult), 1);
   }

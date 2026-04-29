@@ -910,11 +910,11 @@ export default function CharacterPanel({
                   const effectiveHpRegen = Math.max(Math.floor(hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat + (partyRegenActive ? partyRegenBuff!.healPerTick : 0) + (inspireActive ? inspireBuff!.hpPerTick : 0)), 1);
                   const hpRegenBuffed = foodBuffActive || partyRegenActive || milestoneHpFlat > 0 || isAtInn;
 
-                  // Autoattack is weapon-based: 1d{weaponDie} + STR mod.
-                  // Class no longer determines basic attack dice — class identity lives in T0 abilities.
+                  // Autoattack: to-hit uses DEX, damage uses STR.
+                  // (Class identity lives in T0 abilities, not in basic-attack stats.)
                   const weaponDie = getWeaponDie(mainHandTag ?? null, isTwoHanded ? 2 : 1);
-                  const atkStat = 'str';
-                  const atkMod = getStatModifier(character.str + (equipmentBonuses.str || 0));
+                  const dmgMod = getStatModifier(character.str + (equipmentBonuses.str || 0));   // STR — damage
+                  const hitMod = getStatModifier(character.dex + (equipmentBonuses.dex || 0));   // DEX — to-hit
                   const intHit = getIntHitBonus(eInt);
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = getClassCritRange(character.class) - dexCrit;
@@ -927,7 +927,7 @@ export default function CharacterPanel({
                   const totalAC = getEffectiveAC(character.class, character.dex, equipmentBonuses, offHandIsShield);
 
                    const affinityHit = isProficient ? 1 : 0;
-                   const totalHitBonus = atkMod + intHit + affinityHit;
+                   const totalHitBonus = hitMod + intHit + affinityHit;
                    const sameLevelAC = Math.round(10 + character.level * 0.575 + 2);
                    // Player hit chance vs same-level regular creature
                    const playerCritThreshold = 20 - dexCrit;
@@ -982,9 +982,9 @@ export default function CharacterPanel({
                   ];
 
                   const offenseRows: DerivedRow[] = [
-                    { label: 'Attack', value: `1d${weaponDie} ${atkMod >= 0 ? '+' : ''}${atkMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `Autoattack: 1d${weaponDie} weapon die + STR modifier${isTwoHanded ? ' (two-handed)' : ''}${mainHandTag ? '' : ' (unarmed)'}${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
+                    { label: 'Attack', value: `1d${weaponDie} ${dmgMod >= 0 ? '+' : ''}${dmgMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `Autoattack damage: 1d${weaponDie} weapon die + STR modifier${isTwoHanded ? ' (two-handed)' : ''}${mainHandTag ? '' : ' (unarmed)'}\nTo-hit uses DEX (separate from damage).${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
-                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${atkMod} ${atkStat.toUpperCase()} + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})` },
+                    { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${hitMod} DEX + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})\n(Damage scales from STR; accuracy from DEX.)` },
                     { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
                     { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];

@@ -757,7 +757,9 @@ Deno.serve(async (req) => {
         const wHands: 1 | 2 = isTwoHanded[m.id] ? 2 : 1;
         const weaponDie = getWeaponDie(wTag, wHands);
         const effStr = (c.str || 10) + (eb.str || 0);
-        const sMod = sm(effStr);
+        const effDex = (c.dex || 10) + (eb.dex || 0);
+        const sMod = sm(effStr);   // STR modifier — drives damage + STR floor
+        const dMod = sm(effDex);   // DEX modifier — drives autoattack to-hit
         const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
         const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
         const critBonusFromBuff = mb.crit_buff?.bonus || 0;
@@ -778,7 +780,7 @@ Deno.serve(async (req) => {
         }
 
         const roll = rollD20();
-        const total = roll + sMod + ihb + affinity.hitBonus;
+        const total = roll + dMod + ihb + affinity.hitBonus;
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
         const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
         const dieLabel = `1d${weaponDie}`;
@@ -820,7 +822,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! Rolled ${roll} + ${sMod} STR${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage (${dieLabel}).`,
+            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! Rolled ${roll} + ${dMod} DEX${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage (${dieLabel} + ${sMod} STR).`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -883,7 +885,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `⚔️ ${c.name} attacks ${target.name} — miss! Rolled ${roll} + ${sMod} STR${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
+            message: `⚔️ ${c.name} attacks ${target.name} — miss! Rolled ${roll} + ${dMod} DEX${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -908,7 +910,9 @@ Deno.serve(async (req) => {
         const eb = eq[m.id] || {};
         const ohDie = getWeaponDie(ohTag, 1);
         const effStr2 = (c.str || 10) + (eb.str || 0);
-        const sMod2 = sm(effStr2);
+        const effDex2 = (c.dex || 10) + (eb.dex || 0);
+        const sMod2 = sm(effStr2);   // STR — drives offhand damage
+        const dMod2 = sm(effDex2);   // DEX — drives offhand to-hit
         const ihb2 = intHitBonus((c.int || 10) + (eb.int || 0));
         const dcb2 = dexCritBonus((c.dex || 10) + (eb.dex || 0));
         const mb2 = buffs[m.id] || {};
@@ -925,7 +929,7 @@ Deno.serve(async (req) => {
         }
 
         const roll2 = rollD20();
-        const total2 = roll2 + sMod2 + ihb2;
+        const total2 = roll2 + dMod2 + ihb2;
 
         // ── Hit quality (graded system) ──
         const margin2 = total2 - creatureAc2;
@@ -949,7 +953,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
             type: 'offhand_hit',
-            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (1d${ohDie}, 30%).`,
+            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${dMod2} DEX${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (1d${ohDie} + ${sMod2} STR, 30%).`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -972,7 +976,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'offhand_miss',
-            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
+            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${dMod2} DEX${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
