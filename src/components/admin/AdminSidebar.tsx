@@ -28,6 +28,7 @@ import {
   BookOpen,
   BookText,
   Store,
+  Crown,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -71,6 +72,7 @@ const NAV_GROUPS = [
     items: [
       { key: 'issues', label: 'Issues', icon: Bug },
       { key: 'marketplace', label: 'Marketplace', icon: Store },
+      { key: 'unique-reclaim', label: 'Unique Reclaim', icon: Crown },
       { key: 'roadmap', label: 'Roadmap', icon: MapPin },
     ],
   },
