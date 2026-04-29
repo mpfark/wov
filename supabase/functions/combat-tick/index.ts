@@ -24,7 +24,7 @@ import {
   getMaxMp as calcMaxMp,
   getMaxHp as calcMaxHp,
   calculateAC as calcAC,
-  CLASS_COMBAT_PROFILES,
+  
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
   getWeaponAffinityBonus as weaponAffinity,
