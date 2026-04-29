@@ -885,7 +885,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `⚔️ ${c.name} attacks ${target.name} — miss! Rolled ${roll} + ${sMod} STR${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
+            message: `⚔️ ${c.name} attacks ${target.name} — miss! Rolled ${roll} + ${dMod} DEX${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
