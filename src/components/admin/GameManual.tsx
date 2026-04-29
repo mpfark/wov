@@ -530,13 +530,16 @@ export default function GameManual() {
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
                 <p><strong className="text-foreground">Attack Speed:</strong> Fixed <code className="text-primary">2.0s</code> heartbeat for all classes. One attack per tick.</p>
-                <p><strong className="text-foreground">Attack Roll:</strong> d20 + stat modifier ≥ target AC → hit</p>
-                <p><strong className="text-foreground">Damage:</strong> class dice (min–max) + stat modifier</p>
-                <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All attacks deal at least <code className="text-primary">min(3, floor(√STR_mod))</code> damage (even spells)</p>
+                <p><strong className="text-foreground">Autoattack Damage:</strong> Weapon-based — <code className="text-primary">1d{'{'}weaponDie{'}'} + STR mod</code>. Class no longer affects autoattack dice; class identity comes from <strong className="text-foreground">abilities</strong> (Fireball, Power Strike, Aimed Shot, etc.).</p>
+                <p><strong className="text-foreground">Two-Handed Weapons:</strong> Benefit is expressed entirely through a larger weapon die — there is no separate damage multiplier.</p>
+                <p><strong className="text-foreground">Unarmed:</strong> Falls back to <code className="text-primary">1d3 + STR mod</code> when no weapon is equipped.</p>
+                <p><strong className="text-foreground">Weapon Affinity:</strong> When your class matches the equipped weapon, gain <code className="text-primary">+1 hit</code> and <code className="text-primary">×1.10 damage</code>.</p>
+                <p><strong className="text-foreground">Attack Roll:</strong> d20 + STR mod + INT hit bonus + affinity ≥ target AC → hit</p>
+                <p><strong className="text-foreground">Min Damage Floor (STR):</strong> All non-crit autoattacks deal at least <code className="text-primary">1 + min(3, floor(√STR_mod))</code> damage</p>
                 <p><strong className="text-foreground">Hit Bonus (INT):</strong> <code className="text-primary">min(5, floor(√INT_mod))</code> bonus to attack rolls — diminishing returns</p>
-                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → double damage. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> — max crit on 16-20</p>
+                <p><strong className="text-foreground">Critical Hit:</strong> roll ≥ crit range → <code className="text-primary">×1.5</code> damage. Most classes crit on natural 20; <strong className="text-foreground">rogue</strong> crits on 19-20. <strong>DEX bonus:</strong> <code className="text-primary">min(4, floor(√DEX_mod))</code> widens the range — max crit on 16-20.</p>
                 <p><strong className="text-foreground">Crit Resistance (WIS):</strong> <code className="text-primary">min(15%, √WIS_mod × 3%)</code> chance to downgrade an incoming crit to a normal hit. Shield adds +5%.</p>
-                <p><strong className="text-foreground">Shield Block:</strong> When a shield is equipped, <code className="text-primary">5% + √DEX_mod × 4.5%</code> chance to block (uncapped), reducing damage by <code className="text-primary">round(11 + 2.5 × √STR_mod)</code> flat.</p>
+                <p><strong className="text-foreground">Shield Block:</strong> When a shield is equipped, <code className="text-primary">5% + √DEX_mod × 4.5%</code> chance to block, reducing damage by <code className="text-primary">round(11 + 2.5 × √STR_mod)</code> flat.</p>
                 <p><strong className="text-foreground">Creature Counterattack:</strong> d20 + STR mod + <code className="text-primary">floor(level × 0.4)</code> attack bonus vs player AC</p>
                 <p><strong className="text-foreground">Creature Damage:</strong> 1d(base_die + floor(level × 0.7)) + STR mod, ×(1 + level_gap × 0.08) if creature out-levels player</p>
                 <p><strong className="text-foreground">Party Combat:</strong> Tank absorbs all hits; single counterattack per round</p>
@@ -545,28 +548,6 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Durability:</strong> Each hit degrades 1 random equipped item by 1 durability</p>
                 <p><strong className="text-foreground">XP Penalty:</strong> Graduated: −10%/lvl (Lv1-5), −15%/lvl (Lv6-10), −20%/lvl (Lv11+). Min 10% reward.</p>
               </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Class</TableHead>
-                    <TableHead className="text-xs">Attack</TableHead>
-                    <TableHead className="text-xs">Stat</TableHead>
-                    <TableHead className="text-xs">Dice</TableHead>
-                    <TableHead className="text-xs">Crit</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Object.entries(CLASS_COMBAT).map(([cls, c]) => (
-                    <TableRow key={cls}>
-                      <TableCell className="text-xs font-display">{CLASS_LABELS[cls]}</TableCell>
-                      <TableCell className="text-xs">{c.emoji} {c.label}</TableCell>
-                      <TableCell className="text-xs">{STAT_LABELS[c.stat]}</TableCell>
-                      <TableCell className="text-xs">{c.diceMin}–{c.diceMax}</TableCell>
-                      <TableCell className="text-xs">{c.critRange}+</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
             </AccordionContent>
           </AccordionItem>
 
