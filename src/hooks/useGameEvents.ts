@@ -57,7 +57,7 @@ export interface GameEvents {
   'loot:drop': { itemName: string; creatureName: string };
 
   // Buff management (consumed by GamePage state setters)
-  'buff:clear': { buff: 'stealth' | 'disengage' | 'focusStrike' };
+  'buff:clear': { buff: 'stealth' | 'disengage' };
   'dot:add': { type: 'poison' | 'ignite'; creatureId: string };
   'absorb:hit': { remaining: number };
 }

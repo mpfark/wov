@@ -6,7 +6,7 @@ export { useGameLoop } from './hooks/useGameLoop';
 export type {
   RegenBuff, FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, EvasionBuff, DisengageNextHit, IgniteBuff, AbsorbBuff,
-  PartyRegenBuff, SunderDebuff, FocusStrikeBuff, PoisonStack, IgniteStack,
+  PartyRegenBuff, SunderDebuff, PoisonStack, IgniteStack,
 } from './hooks/useGameLoop';
 export { useCreatureBroadcast } from './hooks/useCreatureBroadcast';
 export { useBuffState } from './hooks/useBuffState';
