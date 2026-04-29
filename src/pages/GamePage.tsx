@@ -27,7 +27,7 @@ import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import { usePartyCombat } from '@/features/combat';
 import { getBagWeight, getEffectiveMaxHp, getEffectiveAC } from '@/lib/game-data';
-import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
+import { CLASS_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -948,7 +948,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }), [stealthBuff, damageBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff, focusStrikeBuff]);
 
   const showTargetSelector = useMemo(() =>
-    [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb'),
+    (CLASS_ABILITIES[character.class] || []).some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb'),
     [character.class]
   );
 

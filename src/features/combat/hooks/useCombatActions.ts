@@ -145,7 +145,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
   // ── Use Ability ────────────────────────────────────────────────
   const handleUseAbility = useCallback(async (abilityIndex: number, targetId?: string, _fromTick = false) => {
     if (p.isDead || p.character.hp <= 0) return;
-    const allAbilities = [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[p.character.class] || [])];
+    const allAbilities = CLASS_ABILITIES[p.character.class] || [];
     if (!allAbilities[abilityIndex]) return;
     const ability = allAbilities[abilityIndex];
 
@@ -377,12 +377,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
-    } else if (ability.type === 'focus_strike') {
-      const baseMod = getStatModifier(p.character.str) + getStatModifier(p.character.dex) + getStatModifier(p.character.int);
-      const bonusDmg = Math.max(1, Math.floor(baseMod * 0.5) + Math.floor(p.character.level / 3));
-      p.buffSetters.setFocusStrikeBuff({ bonusDmg });
-      p.addLog(`${ability.emoji} Focus Strike! Your next attack deals +${bonusDmg} bonus damage.`);
     }
+    // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
+    // smite / cutting_words) are resolved entirely server-side by combat-tick
+    // via the queued pending_action above. No client branch needed.
 
     // Deduct CP — Envenom/Ignite drain all current CP
     const isAllCpAbility = ability.type === 'poison_buff' || ability.type === 'ignite_buff';
