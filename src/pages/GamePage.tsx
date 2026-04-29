@@ -627,7 +627,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     lastTickTime, startCombat, stopCombat: stopCombatFn,
-    fleeStopCombat, queueAbility } = combat;
+    fleeStopCombat, queueAbility, pendingCpCost } = combat;
 
   // Merge creature HP from all sources: combat-tick > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
@@ -659,6 +659,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     party, partyMembers,
     inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
     queueAbility,
+    pendingCpCost,
     isDead,
     fetchInventory,
     buffState, buffSetters,
@@ -1118,6 +1119,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff,
                 inspireBuff,
+                reservedCp: pendingCpCost,
               }}
             />
           </div>

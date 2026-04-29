@@ -28,7 +28,11 @@ import { useCombatAggroEffects } from './useCombatAggroEffects';
 import { useCombatLifecycle } from './useCombatLifecycle';
 
 /** Ability types that are processed server-side in the combat-tick */
-const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff']);
+const SERVER_ABILITY_TYPES = new Set([
+  'multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff',
+  // T0 openers — resolved server-side; can also initiate combat against a Tab target
+  'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+]);
 
 
 
@@ -109,7 +113,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
-  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
+  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number; cpCost: number; label: string; emoji: string } | null>(null);
+  const [pendingCpCost, setPendingCpCost] = useState<number>(0);
   const idleCountRef = useRef(0);
 
    // Prediction removed — creature HP only updates from server responses
@@ -141,8 +146,14 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     creatureHpOverridesRef.current = {};
     memberBuffsRef.current = {};
     memberAbilitiesRef.current = [];
+    // If a T0/queued ability was mid-cast, fizzle it (no CP charged — server never saw it).
+    const fizzling = pendingAbilityRef.current;
+    if (fizzling) {
+      ext.current.addLocalLog(`⚠️ ${fizzling.emoji} Your ${fizzling.label} fizzles as you move away.`);
+    }
     pendingAbilityRef.current = null;
     setPendingAbility(null);
+    setPendingCpCost(0);
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
@@ -152,8 +163,15 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Queue ability for next tick ────────────────────────────────
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
-    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000 };
+    const p = ext.current;
+    const allAbilities = CLASS_ABILITIES[p.character.class] || [];
+    const ability = allAbilities[index];
+    const cpCost = ability?.cpCost ?? 0;
+    const label = ability?.label ?? 'ability';
+    const emoji = ability?.emoji ?? '⭐';
+    pendingAbilityRef.current = { index, targetId, readyAt: Date.now() + 2000, cpCost, label, emoji };
     setPendingAbility({ index, targetId });
+    setPendingCpCost(cpCost);
     idleCountRef.current = 0;
     if (!intervalRef.current) {
       intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
@@ -413,6 +431,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
         setPendingAbility(null);
+        setPendingCpCost(0);
 
         const allAbilities = CLASS_ABILITIES[p.character.class] || [];
         const ability = allAbilities[pending.index];
@@ -610,6 +629,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     stopCombat,
     fleeStopCombat,
     pendingAbility,
+    pendingCpCost,
     queueAbility,
   };
 }

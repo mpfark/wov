@@ -35,6 +35,12 @@ const COMBAT_REQUIRED_TYPES = new Set([
   'burst_damage', 'hp_transfer',
 ]);
 
+/** T0 damage abilities — usable as combat openers against a Tab-targeted creature.
+ *  Resolved server-side by combat-tick; CP is reserved client-side and deducted by the server. */
+const T0_OPENER_TYPES = new Set([
+  'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+]);
+
 /** Flavour text for queued abilities */
 function getQueueFlavour(ability: { label: string; emoji: string; type: string }, creatureName?: string): string {
   const target = creatureName || 'your target';
@@ -91,6 +97,8 @@ export interface UseCombatActionsParams {
   startCombat: (id: string) => void;
   stopCombat: () => void;
   queueAbility: (index: number, targetId?: string) => void;
+  /** CP reserved by an in-flight queued server ability — subtracted from affordability checks. */
+  pendingCpCost?: number;
   isDead: boolean;
   fetchInventory: () => void;
   buffState: BuffState;
@@ -155,8 +163,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       return;
     }
     const effectiveCpCost = ability.cpCost;
-    if ((p.character.cp ?? 0) < effectiveCpCost) {
-      p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${p.character.cp ?? 0} available)`);
+    const availableCp = Math.max(0, (p.character.cp ?? 0) - (p.pendingCpCost ?? 0));
+    if (availableCp < effectiveCpCost) {
+      p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${availableCp} available)`);
       return;
     }
 
@@ -171,10 +180,25 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
     }
 
+    // T0 opener: requires a valid creature target on the node, but does NOT
+    // require existing combat. Resolves Tab target → active target → first alive.
+    let resolvedT0TargetId: string | undefined = targetId;
+    if (!isInstantBuff && !_fromTick && T0_OPENER_TYPES.has(ability.type)) {
+      const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId)
+        ?? p.creatures.find((c: any) => c.is_alive && c.hp > 0)?.id
+        ?? null;
+      if (!cTargetId) {
+        p.addLog(`${ability.emoji} No target for ${ability.label}!`);
+        return;
+      }
+      resolvedT0TargetId = cTargetId;
+    }
+
     // Damage/heal abilities must be queued for the heartbeat tick
     if (!isInstantBuff && !_fromTick) {
-      p.queueAbility(abilityIndex, targetId);
-      const cTarget = targetId ? p.creatures?.find(c => c.id === targetId)
+      const queueTargetId = resolvedT0TargetId ?? targetId;
+      p.queueAbility(abilityIndex, queueTargetId);
+      const cTarget = queueTargetId ? p.creatures?.find(c => c.id === queueTargetId)
         : p.activeCombatCreatureId ? p.creatures?.find(c => c.id === p.activeCombatCreatureId) : undefined;
       p.addLog(getQueueFlavour(ability, cTarget?.name));
       return;

@@ -30,6 +30,8 @@ export interface StatusBarsStripProps {
   partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' } | null;
   stealthBuff?: { expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
+  /** CP currently reserved by an in-flight queued ability (display-only; server is authoritative). */
+  reservedCp?: number;
 }
 
 function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
@@ -155,12 +157,15 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff,
+  reservedCp = 0,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
-  const cp = character.cp ?? 100;
+  const rawCp = character.cp ?? 100;
   const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
+  const cp = Math.max(0, rawCp - reservedCp);
   const cpPercent = Math.round((cp / maxCp) * 100);
+  const reservedPercent = Math.max(0, Math.min(100, Math.round((Math.min(reservedCp, rawCp) / maxCp) * 100)));
   const mp = character.mp ?? 100;
   const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
   const mpPercent = Math.round((mp / maxMp) * 100);
@@ -193,13 +198,26 @@ export default function StatusBarsStrip({
         <div>
           <div className="flex justify-between text-[10px] mb-0.5">
             <span className="text-muted-foreground">CP</span>
-            <span className="text-[hsl(var(--primary))] tabular-nums">{cp}/{maxCp}</span>
+            <span className="text-[hsl(var(--primary))] tabular-nums">
+              {cp}/{maxCp}
+              {reservedPercent > 0 && (
+                <span className="ml-1 text-[hsl(var(--primary)/0.5)]">(-{Math.min(reservedCp, rawCp)})</span>
+              )}
+            </span>
           </div>
-          <div className="h-1.5 bg-background rounded-full overflow-hidden border border-border">
+          <div className="relative h-1.5 bg-background rounded-full overflow-hidden border border-border">
             <div className="h-full transition-all duration-500 rounded-full" style={{
               width: `${cpPercent}%`,
               background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
             }} />
+            {reservedPercent > 0 && (
+              <div className="absolute top-0 h-full transition-all duration-300" style={{
+                left: `${cpPercent}%`,
+                width: `${reservedPercent}%`,
+                background: 'hsl(var(--primary) / 0.25)',
+                borderLeft: '1px dashed hsl(var(--primary) / 0.6)',
+              }} />
+            )}
           </div>
         </div>
 
