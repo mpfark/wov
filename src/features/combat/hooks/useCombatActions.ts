@@ -13,7 +13,7 @@ import {
   getStatModifier,
   getEffectiveMaxHp,
 } from '@/lib/game-data';
-import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
+import { CLASS_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
@@ -24,7 +24,7 @@ import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffStat
 
 /** Ability types that resolve instantly client-side (buffs only — heals stay queued for rate-limiting) */
 const INSTANT_BUFF_TYPES = new Set([
-  'focus_strike', 'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
+  'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
   'regen_buff', 'poison_buff', 'evasion_buff', 'disengage_buff', 'ignite_buff',
   'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
 ]);
