@@ -659,6 +659,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     party, partyMembers,
     inCombat, activeCombatCreatureId, startCombat, stopCombat: stopCombatFn,
     queueAbility,
+    pendingCpCost,
     isDead,
     fetchInventory,
     buffState, buffSetters,
