@@ -24,7 +24,7 @@ import {
   getMaxMp as calcMaxMp,
   getMaxHp as calcMaxHp,
   calculateAC as calcAC,
-  CLASS_COMBAT_PROFILES,
+  
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
   getWeaponAffinityBonus as weaponAffinity,
@@ -106,16 +106,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2):
-// Basic autoattacks no longer read from CLASS_ATK — they use weapon dice
-// (getWeaponDie) + STR. This table is retained ONLY for the three legacy
-// ability handlers (multi_attack, execute_attack, ignite_consume) that
-// still roll class-based dice pending the T0 ability rewrite. Do not add
-// new usages.
-const CLASS_ATK: Record<string, { stat: string; min: number; max: number; crit: number; emoji: string; verb: string }> = {};
-for (const [k, v] of Object.entries(CLASS_COMBAT_PROFILES)) {
-  CLASS_ATK[k] = { stat: v.stat, min: v.diceMin, max: v.diceMax, crit: v.critRange, emoji: v.emoji, verb: v.verb };
-}
+// Basic autoattacks use weapon dice + STR (see resolveAttackRoll).
+// Class abilities (Barrage, Eviscerate, Conflagrate) use ability-specific
+// stat-scaling formulas defined inline in their handlers below — they do
+// NOT share the autoattack weapon-die path. CLASS_COMBAT_PROFILES is no
+// longer referenced here; CLASS_CRIT_RANGE / WEAPON_EMOJI carry the
+// remaining class flavor.
 
 function json(data: unknown) {
   return new Response(JSON.stringify(data), {
@@ -479,16 +475,17 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2):
-      // Basic autoattacks are now WEAPON-BASED (1d{weaponDie} + STR).
-      // The 'multi_attack' (Barrage) handler below still uses CLASS_ATK.ranger
-      // dice + DEX. This is intentional for this pass and will be migrated in
-      // the T0 ability rewrite. Do NOT copy this CLASS_ATK pattern for new
-      // abilities — use stat-scaling formulas instead.
+      // Class abilities use ability-specific stat-scaling formulas (NOT the
+      // weapon-die autoattack path). Each ability's identity is tied to its
+      // class's primary stat and is independent of equipped weapon.
       if (pa.ability_type === 'multi_attack') {
+        // Barrage (Ranger / DEX): per-arrow base = 2 + dexMod + floor(level/4).
+        // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
         const arrowCount = dexMod >= 3 ? 3 : 2;
+        const perArrowBase = Math.max(2 + dexMod + Math.floor((c.level || 1) / 4), 1);
+        const critRange = getClassCritRange(c.class);
         let totalDmg = 0;
         for (let i = 0; i < arrowCount; i++) {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
@@ -496,11 +493,12 @@ Deno.serve(async (req) => {
           const roll = rollD20();
           const totalAtk = roll + dexMod;
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
-            const rawDmg = rollDmg(CLASS_ATK.ranger.min, CLASS_ATK.ranger.max) + dexMod;
-            const arrowDmg = Math.max(Math.floor(rawDmg * 0.7), 1);
+            const isCrit = roll >= critRange;
+            const arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
             totalDmg += arrowDmg;
             cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
-            events.push({ type: 'ability_hit', message: `🏹🏹 Arrow ${i + 1}: ${c.name} hits ${t.name}! Rolled ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — ${arrowDmg} damage.`, character_id: member.id });
+            const critTag = isCrit ? ' CRIT!' : '';
+            events.push({ type: 'ability_hit', message: `🏹🏹 Arrow ${i + 1}: ${c.name} hits ${t.name}!${critTag} Rolled ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — ${arrowDmg} damage.`, character_id: member.id });
           } else {
             events.push({ type: 'ability_miss', message: `🏹🏹 Arrow ${i + 1}: ${c.name} misses ${t.name}! Rolled ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac}.`, character_id: member.id });
           }
@@ -511,14 +509,13 @@ Deno.serve(async (req) => {
         if (totalDmg > 0) {
           events.push({ type: 'ability_hit', message: `🏹🏹 Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`, character_id: member.id });
         }
-      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2): see note above.
-      // 'execute_attack' (Eviscerate) still uses CLASS_ATK.rogue + DEX.
-      // Migrate in the T0 ability rewrite.
       } else if (pa.ability_type === 'execute_attack') {
+        // Eviscerate (Rogue / DEX finisher): base = 4 + 2*dexMod + floor(level/3).
+        // Guaranteed hit, no crit roll. Multiplier from poison stacks (0–5).
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
-        const baseDmg = rollDmg(CLASS_ATK.rogue.min, CLASS_ATK.rogue.max) + dexMod;
+        const baseDmg = 4 + 2 * dexMod + Math.floor((c.level || 1) / 3);
         const multiplier = 1 + 0.5 * stacks;
         const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
@@ -531,14 +528,14 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
-      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2): see note above.
-      // 'ignite_consume' (Conflagrate) still uses CLASS_ATK.wizard + INT.
-      // Migrate in the T0 ability rewrite.
       } else if (pa.ability_type === 'ignite_consume') {
+        // Conflagrate (Wizard / INT detonator): base = 4 + 2*intMod + floor(level/3).
+        // Guaranteed hit, no crit roll. Multiplier from burn stacks (0–5).
+        // INT-scaling preserved so wizards aren't punished for not equipping a melee weapon.
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
-        const baseDmg = rollDmg(CLASS_ATK.wizard.min, CLASS_ATK.wizard.max) + intMod;
+        const baseDmg = 4 + 2 * intMod + Math.floor((c.level || 1) / 3);
         const multiplier = 1 + 0.5 * stacks;
         const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
