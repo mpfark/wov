@@ -233,17 +233,27 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   // ── Process tick result (thin wrapper around pure interpreter) ──
 
   const processTickResult = useCallback((data: CombatTickResponse) => {
-    // Non-leader: enter combat state when receiving broadcast tick results
-    if (!inCombatRef.current && ext.current.party && !ext.current.isLeader) {
-      inCombatRef.current = true;
-      setInCombat(true);
-      idleCountRef.current = 0;
-      // Populate engaged creatures from server data
-      const serverCreatureIds = data.creature_states.map(cs => cs.id);
-      if (serverCreatureIds.length > 0) {
-        setEngagedCreatureIds(serverCreatureIds);
-        engagedCreatureIdsRef.current = serverCreatureIds;
-        setActiveCombatCreatureId(serverCreatureIds[0]);
+    // Enter combat state when a tick arrives while we're idle and the server
+    // reports live creatures. This covers two cases:
+    //   1. Non-leader party member receiving a broadcast tick result.
+    //   2. Solo player / leader who fired a T0 opener out of combat — the
+    //      server engaged the creature in response to the queued ability,
+    //      so we must adopt that engagement here or no heartbeat continues.
+    if (!inCombatRef.current) {
+      const aliveServerCreatures = data.creature_states.filter(cs => cs.alive).map(cs => cs.id);
+      if (aliveServerCreatures.length > 0) {
+        inCombatRef.current = true;
+        setInCombat(true);
+        idleCountRef.current = 0;
+        setEngagedCreatureIds(aliveServerCreatures);
+        engagedCreatureIdsRef.current = aliveServerCreatures;
+        setActiveCombatCreatureId(aliveServerCreatures[0]);
+        // Ensure the recurring tick heartbeat is running for the driver.
+        const solo = !ext.current.party;
+        const driver = solo || ext.current.isLeader;
+        if (driver && !intervalRef.current) {
+          intervalRef.current = setWorkerInterval(() => doTickRef.current(), 2000);
+        }
       }
     }
     if (!inCombatRef.current) return;
