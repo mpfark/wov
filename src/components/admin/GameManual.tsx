@@ -14,7 +14,7 @@ import {
   getMaxMp, getMpRegenRate,
   CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS,
 } from '@/lib/game-data';
-import { CLASS_COMBAT, CLASS_ABILITIES } from '@/features/combat';
+import { CLASS_ABILITIES } from '@/features/combat';
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const MAX_LEVEL = 42;
