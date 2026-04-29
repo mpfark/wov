@@ -123,6 +123,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberAbilitiesRef = useRef<any[]>([]);
   const doTickRef = useRef<() => void>(() => {});
+  // Tracks the target of the most recent dispatched opener ability so we can
+  // engage only that creature (not other aggressive bystanders the server
+  // happens to report state for) when transitioning idle → in-combat.
+  const lastDispatchedOpenerTargetRef = useRef<string | null>(null);
 
   // ── Helpers ────────────────────────────────────────────────────
 
