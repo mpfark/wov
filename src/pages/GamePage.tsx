@@ -627,7 +627,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     lastTickTime, startCombat, stopCombat: stopCombatFn,
-    fleeStopCombat, queueAbility } = combat;
+    fleeStopCombat, queueAbility, pendingCpCost } = combat;
 
   // Merge creature HP from all sources: combat-tick > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
