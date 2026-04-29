@@ -113,7 +113,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
   // Ability queue state
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
-  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number } | null>(null);
+  const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number; cpCost: number; label: string; emoji: string } | null>(null);
+  const [pendingCpCost, setPendingCpCost] = useState<number>(0);
   const idleCountRef = useRef(0);
 
    // Prediction removed — creature HP only updates from server responses
