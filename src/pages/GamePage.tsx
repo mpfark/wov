@@ -1119,6 +1119,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff,
                 inspireBuff,
+                reservedCp: pendingCpCost,
               }}
             />
           </div>
