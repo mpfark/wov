@@ -97,6 +97,8 @@ export interface UseCombatActionsParams {
   startCombat: (id: string) => void;
   stopCombat: () => void;
   queueAbility: (index: number, targetId?: string) => void;
+  /** CP reserved by an in-flight queued server ability — subtracted from affordability checks. */
+  pendingCpCost?: number;
   isDead: boolean;
   fetchInventory: () => void;
   buffState: BuffState;
