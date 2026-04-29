@@ -780,7 +780,7 @@ Deno.serve(async (req) => {
         }
 
         const roll = rollD20();
-        const total = roll + sMod + ihb + affinity.hitBonus;
+        const total = roll + dMod + ihb + affinity.hitBonus;
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
         const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
         const dieLabel = `1d${weaponDie}`;
