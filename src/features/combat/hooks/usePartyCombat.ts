@@ -431,6 +431,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
         setPendingAbility(null);
+        setPendingCpCost(0);
 
         const allAbilities = CLASS_ABILITIES[p.character.class] || [];
         const ability = allAbilities[pending.index];
