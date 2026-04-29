@@ -885,7 +885,7 @@ export default function CharacterPanel({
                   const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
                   const dmgBuffActive = damageBuff && now < damageBuff.expiresAt;
                   const absorbActive = absorbBuff && now < absorbBuff.expiresAt;
-                  const focusActive = false;
+                  
                   const poisonActive = poisonBuff && now < poisonBuff.expiresAt;
                   const igniteActive = igniteBuff && now < igniteBuff.expiresAt;
 
