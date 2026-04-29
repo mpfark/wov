@@ -22,8 +22,53 @@
 
 import { getStatModifier, rollD20, rollDamage, diminishing, diminishingFloat } from './stats.ts';
 import {
-  CLASS_BASE_AC, CLASS_COMBAT_PROFILES, getWeaponAffinityBonus,
+  CLASS_BASE_AC, getWeaponAffinityBonus, getClassCritRange,
 } from './classes.ts';
+
+// ── Weapon-based autoattack dice ─────────────────────────────────
+//
+// Basic autoattacks are weapon-based. The weapon's die + STR modifier is
+// the entire damage formula — class no longer determines dice. The two-
+// handed benefit lives entirely in the larger die (no separate multiplier).
+//
+// Tuning dial: if 2H weapons feel weak in playtest, bump the `twoHand`
+// values here rather than re-introducing a damage multiplier.
+export const WEAPON_DAMAGE_DIE: Record<string, { oneHand?: number; twoHand?: number }> = {
+  dagger: { oneHand: 4 },
+  wand:   { oneHand: 4 },
+  sword:  { oneHand: 6, twoHand: 10 },
+  axe:    { oneHand: 6, twoHand: 10 },
+  mace:   { oneHand: 6, twoHand: 10 },
+  staff:  { oneHand: 6, twoHand: 8  },
+  bow:    {              twoHand: 8  },
+};
+
+/** Damage die used when no weapon is equipped (unarmed strike). */
+export const UNARMED_DIE = 3;
+
+/**
+ * Resolve the autoattack damage die for a weapon at a given hand count.
+ * Falls back to UNARMED_DIE when the weapon tag is missing or unknown.
+ * If a weapon's hand-variant is missing (e.g. 2H value missing), falls
+ * back to the other hand value rather than unarmed.
+ */
+export function getWeaponDie(weaponTag: string | null | undefined, hands: 1 | 2): number {
+  if (!weaponTag) return UNARMED_DIE;
+  const entry = WEAPON_DAMAGE_DIE[weaponTag];
+  if (!entry) return UNARMED_DIE;
+  if (hands === 2) return entry.twoHand ?? entry.oneHand ?? UNARMED_DIE;
+  return entry.oneHand ?? entry.twoHand ?? UNARMED_DIE;
+}
+
+/** Roll one weapon attack: 1d{weaponDie} + STR modifier. */
+export function rollWeaponAttackDamage(
+  weaponTag: string | null | undefined,
+  hands: 1 | 2,
+  str: number,
+): number {
+  const die = getWeaponDie(weaponTag, hands);
+  return rollDamage(1, die) + getStatModifier(str);
+}
 
 // ── Cross-stat bonuses ───────────────────────────────────────────
 
