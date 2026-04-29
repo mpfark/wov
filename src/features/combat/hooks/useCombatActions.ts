@@ -288,7 +288,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const intMod = getStatModifier(p.character.int);
       const durationMs = Math.min(25, 15 + intMod) * 1000;
       p.buffSetters.setDamageBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Arcane Surge! Your spell damage is amplified for ${Math.round(durationMs / 1000)}s.`);
+      p.addLog(`${ability.emoji} Arcane Surge! All your damage is amplified (+50%) and your strikes gain INT bonus damage for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'root_debuff') {
@@ -363,7 +363,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
       const durationMs = 300_000; // 5 minutes
       p.buffSetters.setIgniteBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
+      p.addLog(`${ability.emoji} Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb has a 40% chance to strike your target. Lasts 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'absorb_buff') {

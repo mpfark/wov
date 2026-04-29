@@ -541,7 +541,9 @@ Deno.serve(async (req) => {
         const stacks = Math.min(pa.consume_stacks || 0, 5);
         const baseDmg = 4 + 2 * intMod + Math.floor((c.level || 1) / 3);
         const multiplier = 1 + 0.5 * stacks;
-        const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+        let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+        // Arcane Surge empowers all wizard damage
+        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * 1.5), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name} for ${finalDmg} damage!`, character_id: member.id });
@@ -579,7 +581,11 @@ Deno.serve(async (req) => {
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        const dmg = Math.max(1, 5 + 2 * mod + Math.floor((c.level || 1) / 3));
+        let dmg = Math.max(1, 5 + 2 * mod + Math.floor((c.level || 1) / 3));
+        // Arcane Surge empowers all wizard damage (only fireball benefits, but
+        // gating purely on damage_buff keeps the rule consistent for any class
+        // that ever picks it up).
+        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * 1.5), 1);
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         const { emoji, verb } = T0_LABEL[pa.ability_type];
         events.push({
@@ -799,7 +805,11 @@ Deno.serve(async (req) => {
           // → 3. hit-quality mult → 4. crit mult → 5. affinity → 6. buffs → 7. clamp → 8. caps
           // NOTE: Two-handed weapons benefit from a larger weapon die (step 1) only;
           // there is no separate 2H damage multiplier in the autoattack pipeline.
-          let raw = rollDmg(1, weaponDie) + sMod;
+          // Arcane Surge (damage_buff) augments wizard weapon strikes:
+          //   • +intMod flat damage on the raw weapon roll (STR remains primary mod)
+          //   • final damage is multiplied by 1.5x further down
+          const intModForBuff = isDmgBuff ? sm((c.int || 10) + (eb.int || 0)) : 0;
+          let raw = rollDmg(1, weaponDie) + sMod + intModForBuff;
           if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
           let dmg = Math.max(Math.floor(raw * HIT_QUALITY_MULT[quality]), 1);
           if (isCrit) dmg = Math.max(dmg * 2, 1);
@@ -857,26 +867,10 @@ Deno.serve(async (req) => {
             }
             events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
           }
-          if (mb.ignite_buff && Math.random() < 0.4) {
-            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
-            const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-            const intMod = sm((c.int || 10) + (eb.int || 0));
-            const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
-            const duration = Math.min(45000, 30000 + intMod * 1000);
-            const effData = {
-              node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: null, effect_type: 'ignite',
-              stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
-              tick_rate_ms: TICK_RATE,
-            };
-            if (existing) {
-              Object.assign(existing, effData);
-            } else {
-              activeEffects.push({ id: crypto.randomUUID(), ...effData });
-            }
-            events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
-          }
+          // (Ignite no longer procs from autoattacks — it now pulses
+          // independently each heartbeat as a "shield of fireballs". See the
+          // dedicated Ignite-pulse phase below.)
+
 
           // ── Proc-on-hit (main hand) ──
           if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
@@ -941,12 +935,16 @@ Deno.serve(async (req) => {
         const quality2 = getHitQuality(margin2, roll2 === 1, isCrit2);
 
         if (quality2 !== 'miss') {
-          // Pipeline: 1. base damage (offhand die + STR) → 2. hit-quality mult
-          // → 3. crit mult → 4. off-hand 30% reduction → 5. clamp → 6. caps
-          const raw2 = rollDmg(1, ohDie) + sMod2;
+          // Pipeline: 1. base damage (offhand die + STR + Arcane Surge INT)
+          // → 2. hit-quality mult → 3. crit mult → 4. off-hand 30% reduction
+          // → 5. Arcane Surge 1.5x → 6. clamp → 7. caps
+          const isDmgBuff2 = !!mb2.damage_buff;
+          const intModForBuff2 = isDmgBuff2 ? sm((c.int || 10) + (eb.int || 0)) : 0;
+          const raw2 = rollDmg(1, ohDie) + sMod2 + intModForBuff2;
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
+          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * 1.5), 1);
 
           // Clamp minimum 1
           dmg2 = Math.max(dmg2, 1);
@@ -991,6 +989,73 @@ Deno.serve(async (req) => {
             is_offhand: true,
             hit_quality: 'miss' as HitQuality,
           });
+        }
+      }
+
+      // ── Ignite "shield of fireballs" pulse phase ────────────────
+      // While Ignite is active, an orb of flame circles the wizard and
+      // pulses every heartbeat at the current target with a 40% chance to
+      // strike. Decoupled from autoattacks so it works for caster wizards
+      // who never swing a weapon. Each successful pulse deals a small
+      // INT-scaled hit AND applies/refreshes a burn stack (max 5).
+      for (const m of members) {
+        if (mHp[m.id] <= 0) continue;
+        const mb = buffs[m.id] || {};
+        if (!mb.ignite_buff) continue;
+        const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+        if (!target) continue;
+        if (Math.random() >= 0.4) continue;
+
+        const c = m.c;
+        const eb = eq[m.id] || {};
+        const intMod = sm((c.int || 10) + (eb.int || 0));
+        let pulseDmg = Math.max(1, 2 + intMod);
+        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * 1.5), 1);
+
+        cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
+
+        // Upsert burn DoT (mirrors prior autoattack-proc formula for parity)
+        const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
+        const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
+        const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
+        const duration = Math.min(45000, 30000 + intMod * 1000);
+        const effData = {
+          node_id: combatNodeId, target_id: target.id, source_id: m.id,
+          session_id: null, effect_type: 'ignite',
+          stacks: newStacks, damage_per_tick: dmgPerTick,
+          next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
+          tick_rate_ms: TICK_RATE,
+        };
+        if (existing) {
+          Object.assign(existing, effData);
+        } else {
+          activeEffects.push({ id: crypto.randomUUID(), ...effData });
+        }
+
+        // Engage so the pulse can also start combat on a passive target
+        sessionEngaged.add(target.id);
+
+        events.push({
+          type: 'ignite_pulse',
+          character_id: m.id,
+          creature_id: target.id,
+          attacker_name: c.name,
+          target_name: target.name,
+          damage: pulseDmg,
+          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} for ${pulseDmg} damage! (burn x${newStacks})`,
+        });
+        // Re-emit the legacy ignite_proc event so the existing client wiring
+        // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)
+        // updates the burn-stack badge without any new plumbing.
+        events.push({
+          type: 'ignite_proc',
+          character_id: m.id,
+          creature_id: target.id,
+          message: `🔥 ${c.name}'s ignite seared ${target.name}.`,
+        });
+
+        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
       }
 
