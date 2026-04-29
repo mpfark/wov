@@ -479,6 +479,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2):
+      // Basic autoattacks are now WEAPON-BASED (1d{weaponDie} + STR).
+      // The 'multi_attack' (Barrage) handler below still uses CLASS_ATK.ranger
+      // dice + DEX. This is intentional for this pass and will be migrated in
+      // the T0 ability rewrite. Do NOT copy this CLASS_ATK pattern for new
+      // abilities — use stat-scaling formulas instead.
       if (pa.ability_type === 'multi_attack') {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
@@ -505,6 +511,9 @@ Deno.serve(async (req) => {
         if (totalDmg > 0) {
           events.push({ type: 'ability_hit', message: `🏹🏹 Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`, character_id: member.id });
         }
+      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2): see note above.
+      // 'execute_attack' (Eviscerate) still uses CLASS_ATK.rogue + DEX.
+      // Migrate in the T0 ability rewrite.
       } else if (pa.ability_type === 'execute_attack') {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
@@ -522,6 +531,9 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
+      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2): see note above.
+      // 'ignite_consume' (Conflagrate) still uses CLASS_ATK.wizard + INT.
+      // Migrate in the T0 ability rewrite.
       } else if (pa.ability_type === 'ignite_consume') {
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
