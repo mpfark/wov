@@ -106,6 +106,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2):
+// Basic autoattacks no longer read from CLASS_ATK — they use weapon dice
+// (getWeaponDie) + STR. This table is retained ONLY for the three legacy
+// ability handlers (multi_attack, execute_attack, ignite_consume) that
+// still roll class-based dice pending the T0 ability rewrite. Do not add
+// new usages.
 const CLASS_ATK: Record<string, { stat: string; min: number; max: number; crit: number; emoji: string; verb: string }> = {};
 for (const [k, v] of Object.entries(CLASS_COMBAT_PROFILES)) {
   CLASS_ATK[k] = { stat: v.stat, min: v.diceMin, max: v.diceMax, crit: v.critRange, emoji: v.emoji, verb: v.verb };
