@@ -123,6 +123,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const memberBuffsRef = useRef<Record<string, MemberBuffState>>({});
   const memberAbilitiesRef = useRef<any[]>([]);
   const doTickRef = useRef<() => void>(() => {});
+  // Tracks the target of the most recent dispatched opener ability so we can
+  // engage only that creature (not other aggressive bystanders the server
+  // happens to report state for) when transitioning idle → in-combat.
+  const lastDispatchedOpenerTargetRef = useRef<string | null>(null);
 
   // ── Helpers ────────────────────────────────────────────────────
 
@@ -241,13 +245,23 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     //      so we must adopt that engagement here or no heartbeat continues.
     if (!inCombatRef.current) {
       const aliveServerCreatures = data.creature_states.filter(cs => cs.alive).map(cs => cs.id);
-      if (aliveServerCreatures.length > 0) {
+      // For a solo/leader T0 opener, engage only the targeted creature so we
+      // don't drag in other aggressive bystanders the server happens to
+      // include in its tick state. Non-leader broadcast path keeps full set.
+      const openerTarget = lastDispatchedOpenerTargetRef.current;
+      lastDispatchedOpenerTargetRef.current = null;
+      const isBroadcastEntry = !!ext.current.party && !ext.current.isLeader;
+      let toEngage: string[] = aliveServerCreatures;
+      if (!isBroadcastEntry && openerTarget && aliveServerCreatures.includes(openerTarget)) {
+        toEngage = [openerTarget];
+      }
+      if (toEngage.length > 0) {
         inCombatRef.current = true;
         setInCombat(true);
         idleCountRef.current = 0;
-        setEngagedCreatureIds(aliveServerCreatures);
-        engagedCreatureIdsRef.current = aliveServerCreatures;
-        setActiveCombatCreatureId(aliveServerCreatures[0]);
+        setEngagedCreatureIds(toEngage);
+        engagedCreatureIdsRef.current = toEngage;
+        setActiveCombatCreatureId(toEngage[0]);
         // Ensure the recurring tick heartbeat is running for the driver.
         const solo = !ext.current.party;
         const driver = solo || ext.current.isLeader;
@@ -449,6 +463,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
           const targetId = pending.targetId || engagedCreatureIdsRef.current[0];
           const cpCost = ability.cpCost;
+
+          // Remember the opener target so processTickResult engages only this
+          // creature (not other aggressive bystanders on the node).
+          if (!inCombatRef.current && targetId) {
+            lastDispatchedOpenerTargetRef.current = targetId;
+          }
 
           const abilityPayload = {
             character_id: p.character.id,
