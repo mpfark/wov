@@ -857,19 +857,24 @@ Deno.serve(async (req) => {
       }
 
       // ── Off-hand bonus attack ────────────────────────────────
+      // Weapon-based: rolls the OFF-HAND weapon's own die (always 1H) +
+      // STR, then applies OFFHAND_DAMAGE_MULT (30%). No weapon affinity is
+      // applied to off-hand attacks (preserves prior behavior).
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
-        if (!isOffhandWeapon(offHandTag[m.id])) continue;
+        const ohTag = offHandTag[m.id];
+        if (!isOffhandWeapon(ohTag)) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
-        const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
-        const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
-        const sMod2 = sm(effStat);
+        const ohDie = getWeaponDie(ohTag, 1);
+        const effStr2 = (c.str || 10) + (eb.str || 0);
+        const sMod2 = sm(effStr2);
         const ihb2 = intHitBonus((c.int || 10) + (eb.int || 0));
         const dcb2 = dexCritBonus((c.dex || 10) + (eb.dex || 0));
         const mb2 = buffs[m.id] || {};
         const critBuff2 = mb2.crit_buff?.bonus || 0;
-        const effCrit2 = atk.crit - dcb2 - critBuff2;
+        const baseCrit2 = getClassCritRange(c.class);
+        const effCrit2 = baseCrit2 - dcb2 - critBuff2;
 
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;
@@ -888,8 +893,9 @@ Deno.serve(async (req) => {
         const quality2 = getHitQuality(margin2, roll2 === 1, isCrit2);
 
         if (quality2 !== 'miss') {
-          // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. off-hand reduction → 5. clamp → 6. caps
-          const raw2 = rollDmg(atk.min, atk.max) + sMod2;
+          // Pipeline: 1. base damage (offhand die + STR) → 2. hit-quality mult
+          // → 3. crit mult → 4. off-hand 30% reduction → 5. clamp → 6. caps
+          const raw2 = rollDmg(1, ohDie) + sMod2;
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
@@ -903,11 +909,11 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
             type: 'offhand_hit',
-            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2}${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (30%).`,
+            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (1d${ohDie}, 30%).`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
-            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            weapon_tag: ohTag || mainHandTag[m.id] || null,
             damage: dmg2,
             is_crit: isCrit2,
             character_id: m.id,
@@ -926,11 +932,11 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'offhand_miss',
-            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2}${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
+            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
-            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            weapon_tag: ohTag || mainHandTag[m.id] || null,
             damage: 0,
             is_crit: false,
             character_id: m.id,
