@@ -27,7 +27,7 @@ import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
 import { usePartyCombat } from '@/features/combat';
 import { getBagWeight, getEffectiveMaxHp, getEffectiveAC } from '@/lib/game-data';
-import { CLASS_ABILITIES, UNIVERSAL_ABILITIES } from '@/features/combat';
+import { CLASS_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -520,7 +520,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const {
     foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
-    absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff, bleedStacks,
+    absorbBuff, partyRegenBuff, sunderDebuff, bleedStacks,
     inspireBuff,
   } = buffState;
 
@@ -917,7 +917,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     absorbBuff,
     damageBuff,
     partyRegenBuff,
-    focusStrikeBuff,
     inspireBuff,
     onAllocateStat: handleAllocateStat,
     onFullRespec: handleFullRespec,
@@ -928,7 +927,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
-    damageBuff, partyRegenBuff, focusStrikeBuff, inspireBuff,
+    damageBuff, partyRegenBuff, inspireBuff,
     handleAllocateStat, handleFullRespec, handleBatchAllocateStats,
   ]);
 
@@ -944,11 +943,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     absorbHp: absorbBuff && Date.now() < absorbBuff.expiresAt ? absorbBuff.shieldHp : 0,
     root: !!(rootDebuff && Date.now() < rootDebuff.expiresAt),
     sunder: Object.values(sunderDebuff).some(s => Date.now() < s.expiresAt),
-    focusStrike: !!focusStrikeBuff,
-  }), [stealthBuff, damageBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff, focusStrikeBuff]);
+  }), [stealthBuff, damageBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, rootDebuff, sunderDebuff]);
 
   const showTargetSelector = useMemo(() =>
-    [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])].some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb'),
+    (CLASS_ABILITIES[character.class] || []).some(a => a.type === 'hp_transfer' || a.type === 'ally_absorb'),
     [character.class]
   );
 
@@ -1095,7 +1093,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={mergedCreatureHpOverrides}
-              classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
+              classAbilities={CLASS_ABILITIES[character.class] || []}
               onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
               actionBindings={keyboardMovement.actionBindings}
@@ -1118,7 +1116,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 inventoryCount: getBagWeight(unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined)),
                 isAtInn: currentNode?.is_inn ?? false,
                 regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
-                poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff,
+                poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff,
                 inspireBuff,
               }}
             />

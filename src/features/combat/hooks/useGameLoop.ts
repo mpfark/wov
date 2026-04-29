@@ -60,7 +60,6 @@ export interface InspireBuff {
   casterId: string;
 }
 export interface SunderDebuff { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }
-export interface FocusStrikeBuff { bonusDmg: number }
 
 // ─── Local type aliases ───────────────────────────────────────────
 interface EquippedItem {

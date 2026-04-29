@@ -275,7 +275,6 @@ export function applyOffensiveBuffs(
   opts: {
     isStealth?: boolean;
     isDamageBuff?: boolean;
-    focusStrikeDmg?: number;
     disengageMult?: number;
   },
 ): { finalDamage: number; consumed: string[] } {
@@ -284,7 +283,6 @@ export function applyOffensiveBuffs(
 
   if (opts.isStealth) { dmg *= 2; consumed.push('stealth'); }
   if (opts.isDamageBuff) { dmg = Math.floor(dmg * 1.5); }
-  if (opts.focusStrikeDmg) { dmg += opts.focusStrikeDmg; consumed.push('focus_strike'); }
   if (opts.disengageMult) { dmg = Math.floor(dmg * (1 + opts.disengageMult)); consumed.push('disengage'); }
 
   return { finalDamage: Math.max(dmg, 1), consumed };

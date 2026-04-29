@@ -13,7 +13,7 @@ import { mapServerEffectsToStacks, type ServerDotState } from '../utils/mapServe
 import type {
   FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, PoisonStack, EvasionBuff, DisengageNextHit, IgniteBuff,
-  IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, FocusStrikeBuff, InspireBuff,
+  IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, InspireBuff,
 } from './useGameLoop';
 
 // ─── Typed interfaces for bundled state ────────────────────────
@@ -34,7 +34,6 @@ export interface BuffState {
   absorbBuff: AbsorbBuff | null;
   partyRegenBuff: PartyRegenBuff | null;
   sunderDebuff: Record<string, SunderDebuff>;
-  focusStrikeBuff: FocusStrikeBuff | null;
   inspireBuff: InspireBuff | null;
 }
 
@@ -55,7 +54,6 @@ export interface BuffSetters {
   setAbsorbBuff: React.Dispatch<React.SetStateAction<AbsorbBuff | null>>;
   setPartyRegenBuff: React.Dispatch<React.SetStateAction<PartyRegenBuff | null>>;
   setSunderDebuff: React.Dispatch<React.SetStateAction<Record<string, SunderDebuff>>>;
-  setFocusStrikeBuff: React.Dispatch<React.SetStateAction<FocusStrikeBuff | null>>;
   setInspireBuff: React.Dispatch<React.SetStateAction<InspireBuff | null>>;
 }
 
@@ -87,7 +85,6 @@ export function useBuffState(params: UseBuffStateParams) {
   const [absorbBuff, setAbsorbBuff] = useState<AbsorbBuff | null>(null);
   const [partyRegenBuff, setPartyRegenBuff] = useState<PartyRegenBuff | null>(null);
   const [sunderDebuff, setSunderDebuff] = useState<Record<string, SunderDebuff>>({});
-  const [focusStrikeBuff, setFocusStrikeBuff] = useState<FocusStrikeBuff | null>(null);
   const [inspireBuff, setInspireBuff] = useState<InspireBuff | null>(null);
 
   // ── Purge all DoT stacks targeting a killed creature (UI cleanup) ──
@@ -190,15 +187,13 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.sunder_reduction = activeSunder.acReduction;
     }
     if (disengageNextHit) buffs.disengage_next_hit = { bonus_mult: disengageNextHit.bonusMult };
-    if (focusStrikeBuff) buffs.focus_strike = { bonus_dmg: focusStrikeBuff.bonusDmg };
     return buffs;
-  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, focusStrikeBuff]);
+  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit]);
 
   // ── Handle consumed one-shot buffs after server tick ──
   const handleConsumedBuffs = useCallback((consumed: { buff: string; character_id: string }[]) => {
     for (const c of consumed) {
       if (c.buff === 'stealth') setStealthBuff(null);
-      if (c.buff === 'focus_strike') setFocusStrikeBuff(null);
       if (c.buff === 'disengage') setDisengageNextHit(null);
     }
   }, []);
@@ -248,7 +243,7 @@ export function useBuffState(params: UseBuffStateParams) {
   const buffState: BuffState = {
     foodBuff, critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff,
     bleedStacks, poisonBuff, poisonStacks, evasionBuff, disengageNextHit,
-    igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff, focusStrikeBuff,
+    igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff,
     inspireBuff,
   };
 
@@ -256,7 +251,7 @@ export function useBuffState(params: UseBuffStateParams) {
     setFoodBuff, setCritBuff, setStealthBuff, setDamageBuff,
     setRootDebuff, setBattleCryBuff, setBleedStacks, setPoisonBuff, setPoisonStacks,
     setEvasionBuff, setDisengageNextHit, setIgniteBuff, setIgniteStacks,
-    setAbsorbBuff, setPartyRegenBuff, setSunderDebuff, setFocusStrikeBuff,
+    setAbsorbBuff, setPartyRegenBuff, setSunderDebuff,
     setInspireBuff,
   };
 

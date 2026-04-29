@@ -28,12 +28,11 @@ export interface StatusBarsStripProps {
   igniteBuff?: { expiresAt: number } | null;
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' } | null;
-  focusStrikeBuff?: { bonusDmg: number } | null;
   stealthBuff?: { expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
 }
 
-function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff, inspireBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
+function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
   const [now, setNow] = useState(Date.now());
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
@@ -126,9 +125,6 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     });
   }
 
-  if (focusStrikeBuff) {
-    buffs.push({ emoji: '🎯', label: 'Focus Strike', detail: `+${focusStrikeBuff.bonusDmg} dmg`, color: 'text-primary', bgColor: 'bg-primary/15', pct: 100 });
-  }
 
   if (stealthActive) {
     const dur = 20_000; // max ~20s duration for Shadowstep
@@ -158,7 +154,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
-  foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, stealthBuff, inspireBuff,
+  foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
@@ -245,7 +241,7 @@ export default function StatusBarsStrip({
       <ActiveBuffs
         isAtInn={isAtInn} foodBuff={foodBuff} critBuff={critBuff}
         battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
-        igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff} focusStrikeBuff={focusStrikeBuff}
+        igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff}
         stealthBuff={stealthBuff} inspireBuff={inspireBuff}
       />
     </div>

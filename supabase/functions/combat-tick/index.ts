@@ -548,6 +548,44 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
+      } else if (
+        pa.ability_type === 'fireball' ||
+        pa.ability_type === 'power_strike' ||
+        pa.ability_type === 'aimed_shot' ||
+        pa.ability_type === 'backstab' ||
+        pa.ability_type === 'smite' ||
+        pa.ability_type === 'cutting_words'
+      ) {
+        // Phase 1 T0 class identity abilities. All share one formula:
+        //   damage = max(1, 5 + 2*statMod + floor(level/3))
+        // Guaranteed hit, no crit roll, no weapon interaction. CP already
+        // deducted above. Stat is per-class.
+        const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
+          fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
+          backstab: 'dex', smite: 'wis', cutting_words: 'cha',
+        };
+        const T0_LABEL: Record<string, { emoji: string; verb: string }> = {
+          fireball:      { emoji: '🔥',  verb: 'hurls a fireball at' },
+          power_strike:  { emoji: '⚔️',  verb: 'delivers a crushing blow to' },
+          aimed_shot:    { emoji: '🎯',  verb: 'looses an aimed shot at' },
+          backstab:      { emoji: '🗡️', verb: 'backstabs' },
+          smite:         { emoji: '⭐',  verb: 'smites' },
+          cutting_words: { emoji: '🎵',  verb: 'mocks' },
+        };
+        const stat = T0_STAT[pa.ability_type];
+        const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
+        const mod = sm(eff);
+        const dmg = Math.max(1, 5 + 2 * mod + Math.floor((c.level || 1) / 3));
+        cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
+        const { emoji, verb } = T0_LABEL[pa.ability_type];
+        events.push({
+          type: 'ability_hit',
+          message: `${emoji} ${c.name} ${verb} ${target.name} for ${dmg} damage.`,
+          character_id: member.id,
+        });
+        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+        }
       } else if (pa.ability_type === 'burst_damage') {
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const chaMod = sm(effCha);
@@ -728,7 +766,6 @@ Deno.serve(async (req) => {
         const sdf = strDmgFloor(effStr);
         const isStealth = !!mb.stealth_buff;
         const isDmgBuff = !!mb.damage_buff;
-        const hasFocusStrike = !!mb.focus_strike;
         const hasDisengage = !!mb.disengage_next_hit;
         const affinity = weaponAffinity(c.class, wTag);
 
@@ -768,12 +805,6 @@ Deno.serve(async (req) => {
             events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
           }
           if (isDmgBuff) dmg = Math.floor(dmg * 1.5);
-          if (hasFocusStrike) {
-            dmg += mb.focus_strike.bonus_dmg;
-            if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
-            consumedBuffs[m.id].push('focus_strike');
-            events.push({ type: 'buff_consumed', message: `🎯 ${c.name}'s Focus Strike adds ${mb.focus_strike.bonus_dmg} bonus damage!`, character_id: m.id });
-          }
           if (hasDisengage) {
             dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];

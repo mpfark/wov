@@ -20,7 +20,7 @@ import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
-import { UNIVERSAL_ABILITIES, CLASS_ABILITIES } from '@/features/combat';
+import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
 import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
 import { getStoredDisplayMode } from '../utils/combat-text';
@@ -52,7 +52,6 @@ export interface MemberBuffState {
   sunder_target?: string;
   sunder_reduction?: number;
   disengage_next_hit?: { bonus_mult: number };
-  focus_strike?: { bonus_dmg: number };
 }
 
 export interface UsePartyCombatParams {
@@ -415,7 +414,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
         pendingAbilityRef.current = null;
         setPendingAbility(null);
 
-        const allAbilities = [...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[p.character.class] || [])];
+        const allAbilities = CLASS_ABILITIES[p.character.class] || [];
         const ability = allAbilities[pending.index];
 
         if (ability && SERVER_ABILITY_TYPES.has(ability.type)) {
