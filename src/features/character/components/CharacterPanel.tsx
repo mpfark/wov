@@ -910,12 +910,14 @@ export default function CharacterPanel({
                   const effectiveHpRegen = Math.max(Math.floor(hpRegen + milestoneHpFlat + (foodBuffActive ? foodBuff!.flatRegen : 0) + innFlat + (partyRegenActive ? partyRegenBuff!.healPerTick : 0) + (inspireActive ? inspireBuff!.hpPerTick : 0)), 1);
                   const hpRegenBuffed = foodBuffActive || partyRegenActive || milestoneHpFlat > 0 || isAtInn;
 
-                  const combat = CLASS_COMBAT[character.class];
-                  const atkStat = combat?.stat || 'str';
-                  const atkMod = getStatModifier((character as any)[atkStat] + (equipmentBonuses[atkStat] || 0));
+                  // Autoattack is weapon-based: 1d{weaponDie} + STR mod.
+                  // Class no longer determines basic attack dice — class identity lives in T0 abilities.
+                  const weaponDie = getWeaponDie(mainHandTag ?? null, isTwoHanded ? 2 : 1);
+                  const atkStat = 'str';
+                  const atkMod = getStatModifier(character.str + (equipmentBonuses.str || 0));
                   const intHit = getIntHitBonus(eInt);
                   const dexCrit = getDexCritBonus(eDex);
-                  const baseCritRange = (combat?.critRange || 20) - dexCrit;
+                  const baseCritRange = getClassCritRange(character.class) - dexCrit;
                   const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
                   const wisAntiCritChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
