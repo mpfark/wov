@@ -363,7 +363,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
       const durationMs = 300_000; // 5 minutes
       p.buffSetters.setIgniteBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Ignite! Your spells burn with fire for 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
+      p.addLog(`${ability.emoji} Ignite! A shield of fireballs orbits you — each heartbeat in combat, an orb has a 40% chance to strike your target. Lasts 5 minutes. (${p.character.cp ?? 0} CP consumed)`);
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'absorb_buff') {
