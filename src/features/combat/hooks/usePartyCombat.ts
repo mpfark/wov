@@ -28,7 +28,11 @@ import { useCombatAggroEffects } from './useCombatAggroEffects';
 import { useCombatLifecycle } from './useCombatLifecycle';
 
 /** Ability types that are processed server-side in the combat-tick */
-const SERVER_ABILITY_TYPES = new Set(['multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff']);
+const SERVER_ABILITY_TYPES = new Set([
+  'multi_attack', 'execute_attack', 'ignite_consume', 'burst_damage', 'dot_debuff',
+  // T0 openers — resolved server-side; can also initiate combat against a Tab target
+  'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+]);
 
 
 
