@@ -929,7 +929,7 @@ Deno.serve(async (req) => {
         }
 
         const roll2 = rollD20();
-        const total2 = roll2 + sMod2 + ihb2;
+        const total2 = roll2 + dMod2 + ihb2;
 
         // ── Hit quality (graded system) ──
         const margin2 = total2 - creatureAc2;
