@@ -28,6 +28,7 @@ import {
   BookOpen,
   BookText,
   Store,
+  Crown,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
