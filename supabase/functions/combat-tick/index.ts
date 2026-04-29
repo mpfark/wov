@@ -976,7 +976,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'offhand_miss',
-            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
+            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${dMod2} DEX${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
