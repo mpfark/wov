@@ -953,7 +953,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
             type: 'offhand_hit',
-            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (1d${ohDie}, 30%).`,
+            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${dMod2} DEX${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (1d${ohDie} + ${sMod2} STR, 30%).`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
