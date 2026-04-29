@@ -197,16 +197,23 @@ export const GLANCING_WEAK_CAP = 3;
 // ── Attack resolution helpers ────────────────────────────────────
 
 export interface AttackContext {
-  attackerStat: number;     // effective stat value (base + equipment)
+  /**
+   * Effective STR (base + equipment). Autoattacks always scale from STR
+   * regardless of class — class identity lives in abilities, not in basic
+   * autoattack damage.
+   */
+  attackerStat: number;
   int: number;              // effective INT (base + equipment)
   dex: number;              // effective DEX (base + equipment)
-  str: number;              // effective STR (base + equipment)
+  str: number;              // effective STR (base + equipment) — also used for damage floor
   level: number;
-  classKey: string;
+  classKey: string;         // retained for crit threshold + weapon affinity only
   /** Extra crit range bonus from buffs (Eagle Eye) */
   critBuffBonus?: number;
-  /** Weapon tag of main-hand weapon for affinity bonuses */
+  /** Weapon tag of main-hand weapon for affinity bonuses + die selection */
   weaponTag?: string | null;
+  /** Hands the main-hand weapon is wielded with (1 or 2). Defaults to 1. */
+  weaponHands?: 1 | 2;
 }
 
 export interface AttackResult {
@@ -221,22 +228,27 @@ export interface AttackResult {
 }
 
 /**
- * Resolve a single attack roll against a creature.
- * Returns whether it hit, crit, and the base damage (before stealth/surge/etc multipliers).
+ * Resolve a single autoattack roll against a creature.
+ *
+ * Damage is weapon-based: 1d{weaponDie} + STR. The class only influences:
+ *   - crit threshold (rogue 19 vs 20 for everyone else)
+ *   - weapon affinity (matching class+weapon = +1 hit, x1.10 damage)
  */
 export function resolveAttackRoll(
   ctx: AttackContext,
   creatureAC: number,
   sunderReduction: number = 0,
 ): AttackResult {
-  const profile = CLASS_COMBAT_PROFILES[ctx.classKey] || CLASS_COMBAT_PROFILES.warrior;
   const sMod = getStatModifier(ctx.attackerStat);
   const ihb = getIntHitBonus(ctx.int);
   const dcb = getDexCritBonus(ctx.dex);
   const mileCrit = ctx.level >= 28 ? 1 : 0;
-  const effCrit = profile.critRange - dcb - mileCrit - (ctx.critBuffBonus || 0);
+  const baseCrit = getClassCritRange(ctx.classKey);
+  const effCrit = baseCrit - dcb - mileCrit - (ctx.critBuffBonus || 0);
   const sdf = getStrDamageFloor(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
+  const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
+  const die = getWeaponDie(ctx.weaponTag, hands);
 
   const roll = rollD20();
   const totalAtk = roll + sMod + ihb + affinity.hitBonus;
@@ -247,7 +259,7 @@ export function resolveAttackRoll(
 
   let baseDamage = 0;
   if (hit) {
-    const rawDmg = rollDamage(profile.diceMin, profile.diceMax) + sMod;
+    const rawDmg = rollDamage(1, die) + sMod;
     const preBuff = isCrit ? Math.max(Math.floor(rawDmg * 1.5), 1) : Math.max(rawDmg, 1 + sdf);
     baseDamage = Math.max(Math.floor(preBuff * affinity.damageMult), 1);
   }
