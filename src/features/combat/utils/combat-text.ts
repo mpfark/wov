@@ -233,13 +233,19 @@ export function formatCombatEvent(
   return event.message;
 }
 
-function getEventEmoji(event: StructuredAttackEvent): string {
-  const classCombat = event.attacker_class ? CLASS_COMBAT[event.attacker_class] : null;
+const WEAPON_EMOJI: Record<string, string> = {
+  sword: '⚔️', axe: '🪓', mace: '🔨', dagger: '🗡️',
+  bow: '🏹', staff: '🪄', wand: '✨',
+};
 
+function getEventEmoji(event: StructuredAttackEvent): string {
   if (event.type === 'creature_hit' || event.type === 'creature_crit' || event.type === 'creature_miss') {
     return '';
   }
   if (event.is_offhand) return '🗡️';
+  if (event.weapon_tag && WEAPON_EMOJI[event.weapon_tag]) return WEAPON_EMOJI[event.weapon_tag];
+  // Fallback to legacy class emoji if weapon tag unknown (older events).
+  const classCombat = event.attacker_class ? CLASS_COMBAT[event.attacker_class] : null;
   if (classCombat) return classCombat.emoji;
   return '⚔️';
 }
