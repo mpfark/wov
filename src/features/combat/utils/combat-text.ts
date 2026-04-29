@@ -235,7 +235,7 @@ export function formatCombatEvent(
 
 const WEAPON_EMOJI: Record<string, string> = {
   sword: '⚔️', axe: '🪓', mace: '🔨', dagger: '🗡️',
-  bow: '🏹', staff: '🪄', wand: '✨',
+  bow: '🏹', staff: '🪄', wand: '🪄',
 };
 
 function getEventEmoji(event: StructuredAttackEvent): string {
