@@ -35,6 +35,12 @@ const COMBAT_REQUIRED_TYPES = new Set([
   'burst_damage', 'hp_transfer',
 ]);
 
+/** T0 damage abilities — usable as combat openers against a Tab-targeted creature.
+ *  Resolved server-side by combat-tick; CP is reserved client-side and deducted by the server. */
+const T0_OPENER_TYPES = new Set([
+  'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
+]);
+
 /** Flavour text for queued abilities */
 function getQueueFlavour(ability: { label: string; emoji: string; type: string }, creatureName?: string): string {
   const target = creatureName || 'your target';
