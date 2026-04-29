@@ -1095,7 +1095,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                selectedTargetId={selectedTargetId}
                engagedCreatureIds={engagedCreatureIds}
               creatureHpOverrides={mergedCreatureHpOverrides}
-              classAbilities={[...UNIVERSAL_ABILITIES, ...(CLASS_ABILITIES[character.class] || [])]}
+              classAbilities={CLASS_ABILITIES[character.class] || []}
               onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
               actionBindings={keyboardMovement.actionBindings}
