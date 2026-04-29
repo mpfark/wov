@@ -822,7 +822,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! Rolled ${roll} + ${sMod} STR${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage (${dieLabel}).`,
+            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! Rolled ${roll} + ${dMod} DEX${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage (${dieLabel} + ${sMod} STR).`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
