@@ -629,6 +629,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     stopCombat,
     fleeStopCombat,
     pendingAbility,
+    pendingCpCost,
     queueAbility,
   };
 }
