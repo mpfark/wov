@@ -198,13 +198,26 @@ export default function StatusBarsStrip({
         <div>
           <div className="flex justify-between text-[10px] mb-0.5">
             <span className="text-muted-foreground">CP</span>
-            <span className="text-[hsl(var(--primary))] tabular-nums">{cp}/{maxCp}</span>
+            <span className="text-[hsl(var(--primary))] tabular-nums">
+              {cp}/{maxCp}
+              {reservedPercent > 0 && (
+                <span className="ml-1 text-[hsl(var(--primary)/0.5)]">(-{Math.min(reservedCp, rawCp)})</span>
+              )}
+            </span>
           </div>
-          <div className="h-1.5 bg-background rounded-full overflow-hidden border border-border">
+          <div className="relative h-1.5 bg-background rounded-full overflow-hidden border border-border">
             <div className="h-full transition-all duration-500 rounded-full" style={{
               width: `${cpPercent}%`,
               background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
             }} />
+            {reservedPercent > 0 && (
+              <div className="absolute top-0 h-full transition-all duration-300" style={{
+                left: `${cpPercent}%`,
+                width: `${reservedPercent}%`,
+                background: 'hsl(var(--primary) / 0.25)',
+                borderLeft: '1px dashed hsl(var(--primary) / 0.6)',
+              }} />
+            )}
           </div>
         </div>
 
