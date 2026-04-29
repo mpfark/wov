@@ -10,20 +10,23 @@
  */
 
 import {
-  CLASS_COMBAT_PROFILES,
   getStatModifier,
   getIntHitBonus,
   getWeaponAffinityBonus,
+  getWeaponDie,
 } from './combat-math';
 
 export interface PredictionContext {
   classKey: string;
+  /** Effective STR (autoattacks scale from STR regardless of class). */
   attackerStat: number;
   int: number;
   str: number;
   creatureAC: number;
   sunderReduction?: number;
   weaponTag?: string | null;
+  /** Hands the main-hand weapon is wielded with (1 or 2). Defaults to 1. */
+  weaponHands?: 1 | 2;
 }
 
 export interface PredictionResult {
@@ -32,18 +35,18 @@ export interface PredictionResult {
 }
 
 /**
- * Estimate average damage conservatively.
+ * Estimate average damage conservatively (weapon-die based).
  * Returns { shouldPredict: false } if hit chance is too uncertain.
  */
 export function predictConservativeDamage(ctx: PredictionContext): PredictionResult {
-  const profile = CLASS_COMBAT_PROFILES[ctx.classKey] || CLASS_COMBAT_PROFILES.warrior;
   const sMod = getStatModifier(ctx.attackerStat);
   const ihb = getIntHitBonus(ctx.int);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const effectiveAC = Math.max(ctx.creatureAC - (ctx.sunderReduction || 0), 0);
+  const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
+  const die = getWeaponDie(ctx.weaponTag, hands);
 
   // Estimate hit chance: need roll + sMod + ihb + affinity >= effectiveAC
-  // On a d20 (1-20), P(roll >= threshold) = (21 - threshold) / 20
   const threshold = Math.max(effectiveAC - sMod - ihb - affinity.hitBonus, 1);
   const hitChance = Math.min((21 - threshold) / 20, 1);
 
@@ -51,8 +54,8 @@ export function predictConservativeDamage(ctx: PredictionContext): PredictionRes
     return { predictedDamage: 0, shouldPredict: false };
   }
 
-  // Average damage: floor((min + max) / 2) + stat mod, no crits
-  const avgRoll = Math.floor((profile.diceMin + profile.diceMax) / 2);
+  // Average roll on 1d{die} is (1 + die) / 2
+  const avgRoll = Math.floor((1 + die) / 2);
   const rawDmg = Math.max(avgRoll + sMod, 1);
   const finalDmg = Math.max(Math.floor(rawDmg * affinity.damageMult), 1);
 

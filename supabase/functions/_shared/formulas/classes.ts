@@ -52,6 +52,18 @@ export interface ClassAttackProfile {
   verb: string;
 }
 
+/**
+ * @deprecated LEGACY (basic-combat-rework v2): Autoattacks no longer read
+ * `stat`/`diceMin`/`diceMax`/`verb`/`emoji` from this table. Damage is now
+ * weapon-based (see `WEAPON_DAMAGE_DIE` in `combat.ts`) with STR scaling.
+ *
+ * Kept exported because:
+ *   1. Three ability handlers (multi_attack, execute_attack, ignite_consume)
+ *      still read dice from here pending the T0 ability rewrite.
+ *   2. Some UI/admin screens still display class profile info.
+ *
+ * Class crit edge (rogue 19) now lives in `CLASS_CRIT_RANGE` below.
+ */
 export const CLASS_COMBAT_PROFILES: Record<string, ClassAttackProfile> = {
   warrior: { stat: 'str', diceMin: 1, diceMax: 10, critRange: 20, emoji: '⚔️', verb: 'swings at' },
   wizard:  { stat: 'int', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '🔥', verb: 'hurls flame at' },
@@ -61,11 +73,29 @@ export const CLASS_COMBAT_PROFILES: Record<string, ClassAttackProfile> = {
   bard:    { stat: 'cha', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '🎵', verb: 'mocks' },
 };
 
+/**
+ * Per-class natural-d20 crit threshold. A roll >= this number crits before
+ * DEX/buff reductions are applied. Most classes crit on natural 20; rogue
+ * keeps a slightly wider crit range (19-20) as a class identity perk.
+ */
+export const CLASS_CRIT_RANGE: Record<string, number> = {
+  warrior: 20, wizard: 20, ranger: 20, rogue: 19, healer: 20, bard: 20,
+};
+
+export function getClassCritRange(classKey: string): number {
+  return CLASS_CRIT_RANGE[classKey] ?? 20;
+}
+
 /** Weapon tags that grant an off-hand bonus attack (shields do NOT) */
 export const OFFHAND_WEAPON_TAGS = ['sword', 'axe', 'mace', 'dagger', 'bow', 'staff', 'wand'];
 /** Off-hand damage multiplier (30% of main-hand base damage) */
 export const OFFHAND_DAMAGE_MULT = 0.30;
-/** Two-handed weapon damage multiplier */
+/**
+ * @deprecated Autoattacks no longer apply this multiplier. The two-handed
+ * damage benefit is now expressed entirely through a larger weapon die in
+ * `WEAPON_DAMAGE_DIE` (see `combat.ts`). Kept exported only to avoid breaking
+ * legacy imports; do not use in new code.
+ */
 export const TWO_HANDED_DAMAGE_MULT = 1.25;
 
 export const SHIELD_AC_BONUS = 1;

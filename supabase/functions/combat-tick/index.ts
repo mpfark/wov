@@ -33,7 +33,8 @@ import {
   SHIELD_AC_BONUS,
   SHIELD_ANTI_CRIT_BONUS,
   isShield,
-  TWO_HANDED_DAMAGE_MULT,
+  getClassCritRange,
+  getWeaponDie,
   getHitQuality,
   HIT_QUALITY_MULT,
   GLANCING_WEAK_CAP,
@@ -105,6 +106,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2):
+// Basic autoattacks no longer read from CLASS_ATK — they use weapon dice
+// (getWeaponDie) + STR. This table is retained ONLY for the three legacy
+// ability handlers (multi_attack, execute_attack, ignite_consume) that
+// still roll class-based dice pending the T0 ability rewrite. Do not add
+// new usages.
 const CLASS_ATK: Record<string, { stat: string; min: number; max: number; crit: number; emoji: string; verb: string }> = {};
 for (const [k, v] of Object.entries(CLASS_COMBAT_PROFILES)) {
   CLASS_ATK[k] = { stat: v.stat, min: v.diceMin, max: v.diceMax, crit: v.critRange, emoji: v.emoji, verb: v.verb };
@@ -472,6 +479,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2):
+      // Basic autoattacks are now WEAPON-BASED (1d{weaponDie} + STR).
+      // The 'multi_attack' (Barrage) handler below still uses CLASS_ATK.ranger
+      // dice + DEX. This is intentional for this pass and will be migrated in
+      // the T0 ability rewrite. Do NOT copy this CLASS_ATK pattern for new
+      // abilities — use stat-scaling formulas instead.
       if (pa.ability_type === 'multi_attack') {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
@@ -498,6 +511,9 @@ Deno.serve(async (req) => {
         if (totalDmg > 0) {
           events.push({ type: 'ability_hit', message: `🏹🏹 Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`, character_id: member.id });
         }
+      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2): see note above.
+      // 'execute_attack' (Eviscerate) still uses CLASS_ATK.rogue + DEX.
+      // Migrate in the T0 ability rewrite.
       } else if (pa.ability_type === 'execute_attack') {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
@@ -515,6 +531,9 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
+      // ⚠️ TRANSITIONAL LEGACY (basic-combat-rework v2): see note above.
+      // 'ignite_consume' (Conflagrate) still uses CLASS_ATK.wizard + INT.
+      // Migrate in the T0 ability rewrite.
       } else if (pa.ability_type === 'ignite_consume') {
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
@@ -691,24 +710,30 @@ Deno.serve(async (req) => {
       }
 
       // ── Member auto-attacks (skip in DoT-only mode) ──────────
+      // Weapon-based: damage = 1d{weaponDie} + STR. Class only affects crit
+      // threshold (rogue 19) and weapon affinity. The 2H damage benefit is
+      // baked into the weapon die — there is no longer a separate multiplier.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
         const mb = buffs[m.id] || {};
-        const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
-        const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
-        const sMod = sm(effStat);
+        const wTag = mainHandTag[m.id];
+        const wHands: 1 | 2 = isTwoHanded[m.id] ? 2 : 1;
+        const weaponDie = getWeaponDie(wTag, wHands);
+        const effStr = (c.str || 10) + (eb.str || 0);
+        const sMod = sm(effStr);
         const ihb = intHitBonus((c.int || 10) + (eb.int || 0));
         const dcb = dexCritBonus((c.dex || 10) + (eb.dex || 0));
         const critBonusFromBuff = mb.crit_buff?.bonus || 0;
-        const effCrit = atk.crit - dcb - critBonusFromBuff;
-        const sdf = strDmgFloor((c.str || 10) + (eb.str || 0));
+        const baseCrit = getClassCritRange(c.class);
+        const effCrit = baseCrit - dcb - critBonusFromBuff;
+        const sdf = strDmgFloor(effStr);
         const isStealth = !!mb.stealth_buff;
         const isDmgBuff = !!mb.damage_buff;
         const hasFocusStrike = !!mb.focus_strike;
         const hasDisengage = !!mb.disengage_next_hit;
-        const affinity = weaponAffinity(c.class, mainHandTag[m.id]);
+        const affinity = weaponAffinity(c.class, wTag);
 
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) break;
@@ -722,6 +747,7 @@ Deno.serve(async (req) => {
         const total = roll + sMod + ihb + affinity.hitBonus;
         const intLabel = ihb > 0 ? ` + ${ihb} INT` : '';
         const affLabel = affinity.hitBonus > 0 ? ' + 1 Prof' : '';
+        const dieLabel = `1d${weaponDie}`;
 
         // ── Hit quality (graded system) ──
         const margin = total - creatureAc;
@@ -729,13 +755,15 @@ Deno.serve(async (req) => {
         const quality = getHitQuality(margin, roll === 1, isCrit);
 
         if (quality !== 'miss') {
-          // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. STR floor (pre-quality, embedded in step 1) → 5. affinity → 6. 2H → 7. buffs → 8. clamp → 9. caps
-          let raw = rollDmg(atk.min, atk.max) + sMod;
+          // Pipeline: 1. base damage (weapon die + STR) → 2. STR floor (non-crit)
+          // → 3. hit-quality mult → 4. crit mult → 5. affinity → 6. buffs → 7. clamp → 8. caps
+          // NOTE: Two-handed weapons benefit from a larger weapon die (step 1) only;
+          // there is no separate 2H damage multiplier in the autoattack pipeline.
+          let raw = rollDmg(1, weaponDie) + sMod;
           if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
           let dmg = Math.max(Math.floor(raw * HIT_QUALITY_MULT[quality]), 1);
           if (isCrit) dmg = Math.max(dmg * 2, 1);
           if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
-          if (isTwoHanded[m.id]) dmg = Math.floor(dmg * TWO_HANDED_DAMAGE_MULT);
           if (isStealth) {
             dmg = dmg * 2;
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
@@ -764,11 +792,11 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? `${atk.emoji} CRITICAL! ` : atk.emoji + ' '}${c.name} ${atk.verb} ${target.name}! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage.`,
+            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! Rolled ${roll} + ${sMod} STR${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage (${dieLabel}).`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
-            weapon_tag: mainHandTag[m.id] || null,
+            weapon_tag: wTag || null,
             damage: dmg,
             is_crit: isCrit,
             character_id: m.id,
@@ -827,11 +855,11 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `${atk.emoji} ${c.name} ${atk.verb} ${target.name} — miss! Rolled ${roll} + ${sMod} ${atk.stat.toUpperCase()}${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
+            message: `⚔️ ${c.name} attacks ${target.name} — miss! Rolled ${roll} + ${sMod} STR${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
-            weapon_tag: mainHandTag[m.id] || null,
+            weapon_tag: wTag || null,
             damage: 0,
             is_crit: false,
             character_id: m.id,
@@ -841,19 +869,24 @@ Deno.serve(async (req) => {
       }
 
       // ── Off-hand bonus attack ────────────────────────────────
+      // Weapon-based: rolls the OFF-HAND weapon's own die (always 1H) +
+      // STR, then applies OFFHAND_DAMAGE_MULT (30%). No weapon affinity is
+      // applied to off-hand attacks (preserves prior behavior).
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
-        if (!isOffhandWeapon(offHandTag[m.id])) continue;
+        const ohTag = offHandTag[m.id];
+        if (!isOffhandWeapon(ohTag)) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
-        const atk = CLASS_ATK[c.class] || CLASS_ATK.warrior;
-        const effStat = (c[atk.stat] || 10) + (eb[atk.stat] || 0);
-        const sMod2 = sm(effStat);
+        const ohDie = getWeaponDie(ohTag, 1);
+        const effStr2 = (c.str || 10) + (eb.str || 0);
+        const sMod2 = sm(effStr2);
         const ihb2 = intHitBonus((c.int || 10) + (eb.int || 0));
         const dcb2 = dexCritBonus((c.dex || 10) + (eb.dex || 0));
         const mb2 = buffs[m.id] || {};
         const critBuff2 = mb2.crit_buff?.bonus || 0;
-        const effCrit2 = atk.crit - dcb2 - critBuff2;
+        const baseCrit2 = getClassCritRange(c.class);
+        const effCrit2 = baseCrit2 - dcb2 - critBuff2;
 
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;
@@ -872,8 +905,9 @@ Deno.serve(async (req) => {
         const quality2 = getHitQuality(margin2, roll2 === 1, isCrit2);
 
         if (quality2 !== 'miss') {
-          // Pipeline: 1. base damage → 2. hit-quality mult → 3. crit mult → 4. off-hand reduction → 5. clamp → 6. caps
-          const raw2 = rollDmg(atk.min, atk.max) + sMod2;
+          // Pipeline: 1. base damage (offhand die + STR) → 2. hit-quality mult
+          // → 3. crit mult → 4. off-hand 30% reduction → 5. clamp → 6. caps
+          const raw2 = rollDmg(1, ohDie) + sMod2;
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
@@ -887,11 +921,11 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
             type: 'offhand_hit',
-            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2}${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (30%).`,
+            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (1d${ohDie}, 30%).`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
-            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            weapon_tag: ohTag || mainHandTag[m.id] || null,
             damage: dmg2,
             is_crit: isCrit2,
             character_id: m.id,
@@ -910,11 +944,11 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'offhand_miss',
-            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2}${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
+            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${sMod2} STR${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
-            weapon_tag: offHandTag[m.id] || mainHandTag[m.id] || null,
+            weapon_tag: ohTag || mainHandTag[m.id] || null,
             damage: 0,
             is_crit: false,
             character_id: m.id,
