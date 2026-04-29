@@ -992,7 +992,73 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── Server-side DoT ticking via shared resolver (active_effects rows) ─────
+      // ── Ignite "shield of fireballs" pulse phase ────────────────
+      // While Ignite is active, an orb of flame circles the wizard and
+      // pulses every heartbeat at the current target with a 40% chance to
+      // strike. Decoupled from autoattacks so it works for caster wizards
+      // who never swing a weapon. Each successful pulse deals a small
+      // INT-scaled hit AND applies/refreshes a burn stack (max 5).
+      for (const m of members) {
+        if (mHp[m.id] <= 0) continue;
+        const mb = buffs[m.id] || {};
+        if (!mb.ignite_buff) continue;
+        const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
+        if (!target) continue;
+        if (Math.random() >= 0.4) continue;
+
+        const c = m.c;
+        const eb = eq[m.id] || {};
+        const intMod = sm((c.int || 10) + (eb.int || 0));
+        let pulseDmg = Math.max(1, 2 + intMod);
+        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * 1.5), 1);
+
+        cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
+
+        // Upsert burn DoT (mirrors prior autoattack-proc formula for parity)
+        const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
+        const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
+        const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
+        const duration = Math.min(45000, 30000 + intMod * 1000);
+        const effData = {
+          node_id: combatNodeId, target_id: target.id, source_id: m.id,
+          session_id: null, effect_type: 'ignite',
+          stacks: newStacks, damage_per_tick: dmgPerTick,
+          next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
+          tick_rate_ms: TICK_RATE,
+        };
+        if (existing) {
+          Object.assign(existing, effData);
+        } else {
+          activeEffects.push({ id: crypto.randomUUID(), ...effData });
+        }
+
+        // Engage so the pulse can also start combat on a passive target
+        sessionEngaged.add(target.id);
+
+        events.push({
+          type: 'ignite_pulse',
+          character_id: m.id,
+          creature_id: target.id,
+          attacker_name: c.name,
+          target_name: target.name,
+          damage: pulseDmg,
+          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} for ${pulseDmg} damage! (burn x${newStacks})`,
+        });
+        // Re-emit the legacy ignite_proc event so the existing client wiring
+        // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)
+        // updates the burn-stack badge without any new plumbing.
+        events.push({
+          type: 'ignite_proc',
+          character_id: m.id,
+          creature_id: target.id,
+          message: `🔥 ${c.name}'s ignite seared ${target.name}.`,
+        });
+
+        if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+        }
+      }
+
       {
         const memberNameMap: Record<string, string> = {};
         for (const m of members) memberNameMap[m.id] = m.c.name;
