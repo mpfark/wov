@@ -635,8 +635,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                All classes have access to <strong>Focus Strike</strong> (Tier 0, 10 CP) from level 1 — channels every ounce of your being to add bonus damage (scaling with the average of all six <em>base</em> stats, unaffected by gear) to your next attack.
-                Class abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
+                Each class gets a <strong>Tier 0</strong> class-identity ability from level 1 (Wizard Fireball, Warrior Power Strike, Ranger Aimed Shot, Rogue Backstab, Healer Smite, Bard Cutting Words). Higher-tier abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
               </p>
               <Accordion type="multiple">
                 {Object.entries(CLASS_ABILITIES).map(([cls, abilities]) => (
@@ -678,8 +677,7 @@ export default function GameManual() {
                   <p className="text-[10px] text-muted-foreground"><span className="text-elvish font-display">⚡ Instant</span> — resolves immediately on button press (buffs, auras). <span className="text-dwarvish font-display">⏳ Heartbeat</span> — queued and executes on the next 2s server tick (heals, attacks, DoTs). Heartbeat abilities cannot be spammed — only one can be queued at a time.</p>
                 </div>
                 <div className="space-y-1 text-xs text-muted-foreground">
-                  <p className="text-[10px] font-semibold text-primary/70 mt-1">— Universal —</p>
-                  <p><strong className="text-foreground">🎯 Focus Strike (T0, 10 CP):</strong> <span className="text-elvish">⚡</span> Bonus Dmg = <code className="text-primary">max(3, floor(avg_base_mod × 2) + floor(level / 2))</code> on next hit (base stats only, no gear)</p>
+                  <p className="text-[10px] text-muted-foreground/80 mt-1">T0 abilities scale from each class's primary stat: <code className="text-primary">max(1, 5 + 2 × statMod + floor(level / 3))</code>.</p>
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Warrior —</p>
                   <p><strong className="text-foreground">💪 Second Wind (T1, 15 CP):</strong> <span className="text-dwarvish">⏳</span> Heal = <code className="text-primary">max(3, CON_mod × 3 + level)</code></p>
