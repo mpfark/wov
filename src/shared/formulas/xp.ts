@@ -5,7 +5,7 @@
  * and the XP penalty curve.
  *
  * ── XP penalty: single curve, server-authoritative ───────────────
- * Kill rewards (XP, gold, BHP, salvage, loot) are written exclusively by
+ * Kill rewards (XP, gold, Renown, salvage, loot) are written exclusively by
  * the `combat-tick` / `combat-catchup` Edge Functions via
  * `_shared/reward-calculator.ts`. The client no longer computes its own
  * solo XP — it just applies what the server returns.

@@ -64,7 +64,7 @@ function resolveCreatureTarget(
   return activeCombatCreatureId;
 }
 
-// NOTE: Kill rewards (XP, gold, BHP, salvage), level-up bookkeeping, and loot
+// NOTE: Kill rewards (XP, gold, Renown, salvage), level-up bookkeeping, and loot
 // rolling all live server-side in `combat-tick` (see `_shared/kill-resolver.ts`
 // + `_shared/reward-calculator.ts`). The server is the SOLE writer for those
 // fields; results land in `member_states` and are applied to local state by
@@ -138,7 +138,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
 
 
   // NOTE: `awardKillRewards` removed — `combat-tick` is the sole authority
-  // for kill rewards (XP/gold/BHP/salvage), level-ups, and loot resolution.
+  // for kill rewards (XP/gold/Renown/salvage), level-ups, and loot resolution.
   // Local state lands via `interpretCombatTickResult` from the tick response.
 
 

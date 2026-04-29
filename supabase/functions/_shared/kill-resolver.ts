@@ -8,7 +8,7 @@
  *
  * RESPONSIBILITIES (pure / no DB):
  *   1. Compute per-recipient rewards via `calculateCreatureRewards`
- *   2. Format the canonical kill log line, BHP line, salvage line
+ *   2. Format the canonical kill log line, Renown line, salvage line
  *   3. Compute the boss death cry text (if any)
  *   4. Build the loot-queue entries for any loot mode (item_pool / legacy_table /
  *      legacy entries / salvage_only)
@@ -79,7 +79,7 @@ export interface KillOutcome {
  * Caller must:
  *   - have already determined the creature is dead and that this resolution is
  *     permitted (idempotency claim, kill dedup, etc.)
- *   - apply `memberRewards` to characters (XP/gold/salvage/BHP + level-up)
+ *   - apply `memberRewards` to characters (XP/gold/salvage/Renown + level-up)
  *   - push `events` to its event stream
  *   - push `lootQueue` entries through `processLootDrops`
  *   - broadcast `bossDeathCryText` to the world channel if non-null

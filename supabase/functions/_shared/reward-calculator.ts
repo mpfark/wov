@@ -6,7 +6,7 @@
  *   2. Gold     = roll from loot table gold entry, CHA multiplier for humanoids
  *   3. Per-member XP = floor(floor(baseXp * levelPenalty * xpBoost * partyBonus) / uncappedSplit)
  *   4. Gold split evenly among all members
- *   5. BHP      = floor(creatureLevel * 0.5) / partySize  (boss only)
+ *   5. Renown   = floor(creatureLevel * 0.5) / partySize  (boss only)
  *   6. Salvage  = (1 + floor(level/5)) * rarityMult / partySize  (non-humanoid only)
  *
  * This file has NO database access and NO event formatting.
