@@ -42,7 +42,7 @@ export default function PartyPanel({
   );
 
   const BUFF_ICONS: { key: keyof ActiveBuffs; emoji: string; label: string; color: string }[] = [
-    { key: 'focusStrike', emoji: '🎯', label: 'Focus Strike', color: 'text-primary' },
+    
     { key: 'stealth', emoji: '🌑', label: 'Shadowstep', color: 'text-primary' },
     { key: 'damageBuff', emoji: '✨', label: 'Arcane Surge', color: 'text-elvish' },
     { key: 'battleCry', emoji: '📯', label: 'Battle Cry', color: 'text-dwarvish' },

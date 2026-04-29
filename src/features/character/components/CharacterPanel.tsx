@@ -40,7 +40,6 @@ interface Props {
   igniteBuff?: { expiresAt: number } | null;
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number } | null;
-  focusStrikeBuff?: { bonusDmg: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
   // Belt potion system
   beltedPotions?: InventoryItem[];
@@ -135,7 +134,7 @@ const BUFF_DURATIONS: Record<string, number> = {
   Potion: 120_000, Inspire: 90_000, Food: 300_000, 'Eagle Eye': 30_000, 'Battle Cry': 30_000, Envenom: 30_000, 'Arcane Surge': 25_000, 'Cloak of Shadows': 15_000, Ignite: 30_000, 'Force Shield': 20_000, Crescendo: 25_000,
 };
 
-export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, inspireBuff }: { isAtInn?: boolean; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; battleCryBuff?: { damageReduction: number; critReduction: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; focusStrikeBuff?: { bonusDmg: number } | null; inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null }) {
+export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff }: { isAtInn?: boolean; foodBuff?: { flatRegen: number; expiresAt: number }; critBuff?: { bonus: number; expiresAt: number }; battleCryBuff?: { damageReduction: number; critReduction: number; expiresAt: number } | null; poisonBuff?: { expiresAt: number } | null; damageBuff?: { expiresAt: number } | null; evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null; igniteBuff?: { expiresAt: number } | null; absorbBuff?: { shieldHp: number; expiresAt: number } | null; partyRegenBuff?: { healPerTick: number; expiresAt: number } | null; inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null }) {
   const [now, setNow] = useState(Date.now());
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
@@ -291,16 +290,6 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     });
   }
 
-  if (focusStrikeBuff) {
-    buffs.push({
-      emoji: '🎯',
-      label: 'Focus Strike',
-      detail: `+${focusStrikeBuff.bonusDmg} dmg`,
-      color: 'text-primary',
-      bgColor: 'bg-primary/15',
-      pct: 100,
-    });
-  }
 
   if (buffs.length === 0) return (
     <div className="text-[9px] text-muted-foreground/40 italic">No buffs</div>
@@ -330,7 +319,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
 export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
   isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
-  poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, focusStrikeBuff, inspireBuff,
+  poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
   actionBindings, onAllocateStat, onFullRespec, onBatchAllocateStats,
 }: Props) {
@@ -896,7 +885,7 @@ export default function CharacterPanel({
                   const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
                   const dmgBuffActive = damageBuff && now < damageBuff.expiresAt;
                   const absorbActive = absorbBuff && now < absorbBuff.expiresAt;
-                  const focusActive = !!focusStrikeBuff;
+                  const focusActive = false;
                   const poisonActive = poisonBuff && now < poisonBuff.expiresAt;
                   const igniteActive = igniteBuff && now < igniteBuff.expiresAt;
 
@@ -970,7 +959,6 @@ export default function CharacterPanel({
                   // Damage multiplier text
                   const dmgMultParts: string[] = [];
                   if (dmgBuffActive) dmgMultParts.push('1.5× Arcane Surge');
-                  if (focusActive) dmgMultParts.push(`+${focusStrikeBuff!.bonusDmg} Focus Strike`);
 
                   type DerivedRow = { label: string; value: string; tip: string; buffed?: boolean; buffColor?: string };
 

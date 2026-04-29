@@ -30,7 +30,7 @@ export interface ActiveBuffs {
   absorbHp?: number;
   root?: boolean;
   sunder?: boolean;
-  focusStrike?: boolean;
+  
 }
 
 interface Props {
