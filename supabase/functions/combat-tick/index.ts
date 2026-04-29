@@ -1059,6 +1059,7 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ── Server-side DoT ticking via shared resolver (active_effects rows) ─────
       {
         const memberNameMap: Record<string, string> = {};
         for (const m of members) memberNameMap[m.id] = m.c.name;
