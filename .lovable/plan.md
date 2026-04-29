@@ -1,70 +1,80 @@
-## Wizard Rework: Ignite Shield + Empowered Arcane Surge
+# Cross-class ability audit
 
-### 1. Ignite — "Shield of Fireballs" (decoupled from autoattack)
+After the wizard rework (Ignite decoupled from autoattacks; Arcane Surge now globally empowers wizard damage with INT), I audited every other class for the same patterns: abilities that secretly piggyback on autoattacks, buffs that don't apply where they should, and stat formulas that punish certain weapon choices.
 
-**Current**: Ignite is a 5-min buff. Each autoattack hit has a 40% chance to apply a stackable burn DoT. Tied to weapon swings, so a wizard who never autoattacks generates no stacks.
+## Findings
 
-**New**: Ignite is a 5-min buff. While active and the wizard is in combat with at least one alive creature, an orb of fire pulses **every heartbeat (every tick)** at the highest-aggro / first alive target. Each pulse:
-- Rolls 40% chance to fire a small fireball at the target.
-- On a successful pulse: deals `max(1, 2 + intMod)` direct fire damage AND adds/refreshes one burn stack (max 5), exactly like the existing burn DoT used by Conflagrate.
-- Pulses are completely independent of the wizard's autoattack roll — they fire even while the wizard is stealthed, channelling, dead-targeted, or simply standing still.
-- If the wizard is dead, has no current target, or is not engaged, the orb is silent.
-- A pulse that lands emits an `ignite_pulse` event, e.g. `🔥 A flaming orb leaps from {wizard} and strikes {target}! (3 damage, burn x2)`.
+### 1. Rogue — Envenom (intentional, but the ONE remaining "proc-on-autoattack" buff)
 
-The autoattack-side `mb.ignite_buff` 40% block in `combat-tick` is removed (autoattacks no longer apply burn).
+`combat-tick` line ~850: `if (mb.poison_buff && Math.random() < 0.4)` — Envenom still applies poison **only when an autoattack lands**. This is the same shape as the old Ignite.
 
-### 2. Arcane Surge — Empowered caster buff
+**Verdict: leave as-is.** Per memory `commitment-buffs`, Envenom and Ignite were designed as a mutually-exclusive pair (5-min, all-CP cost). We deliberately split them: rogues are weapon-strikers, so coupling stack-building to weapon swings reinforces identity. Wizards needed the decoupling because caster wizards (wand/staff) shouldn't have to autoattack to use their resource. No change recommended unless you want symmetry.
 
-**Current**: 25 CP, ~15-25s buff. Grants +50% damage on autoattacks only via `isDmgBuff` flag. Spells (Fireball T0, Conflagrate, Ignite pulse) ignore it.
+### 2. Warrior — `damage_buff` blind spot
 
-**New**: Same CP cost / duration. While active:
-- **All wizard damage** is multiplied by **1.5x** — autoattacks, off-hand attacks, T0 Fireball, Conflagrate, the new Ignite pulses, and Force Shield's absorb (no, only outgoing damage; absorb stays as-is).
-- **Autoattacks additionally gain `+intMod` flat damage** (post-die roll, post-STR mod). STR remains the autoattack damage modifier; INT bonus is layered on top.
-- Updated tooltip: "Channel raw arcane energy. All your damage is increased by 50% and your weapon strikes gain bonus damage from INT."
+Warrior has no `damage_buff` ability, but the autoattack path applies the 1.5x `isDmgBuff` multiplier to **anyone** with the buff. If a future ability or an item proc grants `damage_buff`, warriors get the boost on weapon swings (good) but not on **Rend** (DoT), **Sunder** (debuff), or **Battle Cry** (DR). Rend in particular is a damage source.
 
-### 3. Server changes — `supabase/functions/combat-tick/index.ts`
+**Recommended fix:** Apply `damage_buff` 1.5x to Rend's `damage_per_tick` at apply time (so the bleed inherits the buff at the moment it's cast). Sunder/Battle Cry don't deal damage so are unaffected.
 
-1. **Remove ignite-on-autoattack block** (around lines 860-879).
-2. **Add Ignite-pulse phase** inside the per-tick loop, after autoattacks/off-hand and before DoT processing:
-   - For each living wizard with `mb.ignite_buff`, in combat (sessionEngaged has any alive target):
-     - Pick the first alive non-killed creature in `creatures` (mirrors current autoattack target selection).
-     - 40% roll: if pass, compute `intMod`, apply `1.5x` if `mb.damage_buff`, `dmg = max(1, 2 + intMod)`.
-     - Subtract from `cHp[target.id]`, push `ignite_pulse` event with target name + damage + new stack count, upsert `active_effects` row of type `ignite` (exactly like the existing autoattack proc — same stack/duration/damage_per_tick formula).
-     - If `cHp[target.id] <= 0` call `handleCreatureKill`.
-     - `sessionEngaged.add(target.id)` so the orb opens combat too.
-3. **Apply Arcane Surge globally**:
-   - In autoattack damage block: when `isDmgBuff` is true, also add `+intMod` flat damage before hit-quality scaling — `raw = rollDmg(1, weaponDie) + sMod + intMod`. The existing `dmg = Math.floor(dmg * 1.5)` line stays for the multiplier.
-   - In off-hand attack block (~line 909+): same `1.5x` and `+intMod` on the off-hand damage when `isDmgBuff`.
-   - In T0 Fireball ability handler (lines 555-592): if attacker's `mb.damage_buff` is active, multiply final `dmg` by 1.5.
-   - In Conflagrate (`ignite_consume` handler, ~535-554): if attacker's `mb.damage_buff` is active, multiply final `dmg` by 1.5.
+### 3. Ranger — Barrage ignores buffs entirely
 
-### 4. Catch-up parity — `supabase/functions/combat-catchup/index.ts`
+`multi_attack` at line ~485 has its own bespoke roll loop that does NOT consult `damage_buff`, `disengage_next_hit`, or `stealth_buff`. So a ranger who casts Disengage and follows up with Barrage gets the +50% on their next autoattack but **not** on the 2-3 arrows of Barrage — surprising.
 
-If/where catchup simulates ignite stack accrual on resumed sessions, switch from "applies on autoattack hit" to "pulses per simulated tick at 40% chance." If catchup currently has no special ignite-proc logic (only resolves the persistent `active_effects` rows), no change needed beyond removing any autoattack-tied accrual. (Inspect during implementation; mirror exactly what live combat does.)
+**Recommended fix:** Apply `damage_buff` (1.5x), `disengage_next_hit` (consume + bonus), and `stealth_buff` (consume + 2x) to Barrage's `arrowDmg` total, so Barrage behaves like an autoattack burst from a buff perspective.
 
-### 5. Client changes
+### 4. Ranger — Eagle Eye crit buff doesn't apply to Barrage
 
-**`src/features/combat/utils/class-abilities.ts`**
-- Update Ignite description: `"Conjure a shield of fireballs around you. Every heartbeat in combat, an orb has a 40% chance to strike your target — applying a burn stack. 5 minutes. Costs all your CP (minimum 50)."`
-- Update Arcane Surge description: `"Channel arcane energy. All your damage is increased by 50% and your weapon strikes gain bonus damage from INT."`
+Same root cause: Barrage's `if (roll >= critRange)` uses the unmodified class crit range. Eagle Eye (`crit_buff`) is consumed by autoattacks but ignored by Barrage's own roll.
 
-**`src/features/combat/hooks/useCombatActions.ts`**
-- Update the Arcane Surge cast log line to mention "all damage" and INT bonus.
-- Update the Ignite cast log line to mention "shield of fireballs."
+**Recommended fix:** Subtract `mb.crit_buff?.bonus || 0` from `critRange` inside the Barrage loop.
 
-**`src/features/combat/utils/combat-text.ts` / event log handlers**
-- Add formatting for the new `ignite_pulse` event type so the event log shows `🔥 {wizard}'s flaming orb sears {target} for X damage (burn x{stacks}).` Color: existing fire / red palette.
+### 5. Bard — Grand Finale ignores `damage_buff`
 
-**`src/features/combat/hooks/usePartyCombat.ts` / `useBuffState.ts`**
-- The existing `onIgniteProc` / `handleAddIgniteStack` path can be reused for `ignite_pulse` events — server emits the same effect upsert and proc event shape, so the client's burn-stack UI updates without further wiring.
+`burst_damage` at line ~599 computes CHA-scaled damage and writes `cHp` with no buff layer. If a bard ever gets a damage buff (item, future ability), Grand Finale won't benefit.
 
-### 6. Memory updates
+**Recommended fix:** Same one-liner as Conflagrate: `if (buffs[member.id]?.damage_buff) damage = Math.floor(damage * 1.5);` Cheap consistency.
 
-Update `mem://game/class-abilities/wizard` and `mem://game/class-abilities/commitment-buffs` to reflect:
-- Ignite: pulses every heartbeat, 40% per pulse, decoupled from autoattacks.
-- Arcane Surge: 1.5x to all damage; +INT mod flat to autoattacks (STR remains the modifier).
+### 6. Healer — Smite (T0) and Transfer Health unaffected by `damage_buff`
 
-### Out of scope
-- No balance pass on Conflagrate's 0.5x-per-stack multiplier.
-- No change to Force Shield, Fireball T0 cost/scaling, or weapon affinity rules.
-- No new abilities, no UI layout changes.
+T0 abilities (fireball, power_strike, smite, etc.) at line ~588 already gate on `damage_buff` for **all** classes, so Smite is fine. Transfer Health is a heal so N/A. **No action needed** — flagged for completeness.
+
+### 7. Universal — Off-hand attacks correctly inherit Arcane Surge INT
+
+Verified line ~942: off-hand also adds `intMod` when `damage_buff` is active and applies the 1.5x. Symmetric with main hand. **Good as-is.**
+
+### 8. Universal — Stealth (Shadowstep) and Disengage only consume on main-hand autoattack
+
+Off-hand attacks (line ~937) do NOT consume `stealth_buff` or `disengage_next_hit` and do NOT apply their multipliers. So a dual-wielding rogue's off-hand swing in the same tick neither benefits from nor consumes Shadowstep — the buff is preserved for the next main-hand swing.
+
+**Verdict: probably intentional** (you don't want a single tick to double-consume), but the off-hand also gets no benefit at all, which feels off. Lowest-priority — flagging for awareness, not recommending a change unless you want it.
+
+### 9. Combat-text coloring — clean
+
+Verified `src/features/combat/utils/combat-text.ts`: no remaining class-specific color overrides. The earlier wizard-green fix covered it.
+
+## Recommended changes (prioritized)
+
+| # | Class | Change | Severity |
+|---|-------|--------|----------|
+| 3 | Ranger | Barrage respects damage_buff / disengage / stealth | High (active gameplay surprise) |
+| 4 | Ranger | Barrage respects crit_buff (Eagle Eye) | High (Eagle Eye combo broken) |
+| 2 | Warrior | Rend DoT inherits damage_buff at apply | Medium (future-proofing) |
+| 5 | Bard | Grand Finale respects damage_buff | Low (no current source for bards) |
+| 8 | All | Off-hand consumes/applies stealth+disengage | Skip unless desired |
+
+## Files to modify
+
+- `supabase/functions/combat-tick/index.ts`
+  - Barrage block (~485): add buff lookup + apply damage_buff/disengage/stealth, consume them, use crit_buff bonus on critRange
+  - Rend block (~609): multiply `dmgPerTick` by 1.5 if `buffs[member.id]?.damage_buff`
+  - Grand Finale block (~599): multiply `damage` by 1.5 if `buffs[member.id]?.damage_buff`
+
+No client/UI changes needed — these are server-only damage math additions, and existing combat-log events already render the damage numbers.
+
+## Out of scope
+
+- Envenom rework (intentional design — see Finding 1)
+- Off-hand buff consumption (Finding 8 — flag only)
+- Tooltip rewrites (formulas don't change visibly enough to require it; can update later)
+
+Approve to apply changes 2–5 (skipping 1 and 8 per design intent), or pick a subset.
