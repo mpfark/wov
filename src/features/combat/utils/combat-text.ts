@@ -98,13 +98,17 @@ const WEAPON_VERBS: Record<string, string[]> = {
   wand:    ['zap', 'blast', 'channel energy at'],
 };
 
-const CLASS_ATTACK_VERBS: Record<string, { verbs: string[]; isSpell: boolean }> = {
-  wizard:  { verbs: ['scorch', 'hurl a fireball at', 'blast arcane flame at', 'incinerate'], isSpell: true },
-  healer:  { verbs: ['smite', 'channel divine light against', 'strike with holy power'], isSpell: true },
-  bard:    { verbs: ['mock', 'lash with cutting words', 'unleash a discordant note at'], isSpell: true },
-  warrior: { verbs: ['swing at', 'strike', 'cleave'], isSpell: false },
-  ranger:  { verbs: ['shoot', 'loose an arrow at', 'fire at'], isSpell: false },
-  rogue:   { verbs: ['strike from the shadows at', 'stab', 'slice'], isSpell: false },
+// NOTE (basic-combat-rework v2): basic autoattacks are now weapon-based, so
+// the previous "spell-class override" (wizard/healer/bard always cast a spell)
+// has been removed. Verbs come from the equipped weapon first, then fall back
+// to a generic class verb for narrative variety, then to a generic strike.
+const CLASS_ATTACK_VERBS: Record<string, { verbs: string[] }> = {
+  wizard:  { verbs: ['strike', 'attack'] },
+  healer:  { verbs: ['strike', 'attack'] },
+  bard:    { verbs: ['strike', 'attack'] },
+  warrior: { verbs: ['swing at', 'strike', 'cleave'] },
+  ranger:  { verbs: ['shoot', 'loose an arrow at', 'fire at'] },
+  rogue:   { verbs: ['strike from the shadows at', 'stab', 'slice'] },
 };
 
 const GENERIC_VERBS = ['strike', 'attack'];
@@ -117,10 +121,7 @@ export function resolvePlayerAttackVerb(
   attackerClass?: string,
   weaponTag?: string | null,
 ): string {
-  if (attackerClass) {
-    const classInfo = CLASS_ATTACK_VERBS[attackerClass];
-    if (classInfo?.isSpell) return pickRandom(classInfo.verbs);
-  }
+  // Weapon first — autoattack flavor follows the equipped weapon.
   if (weaponTag) {
     const wVerbs = WEAPON_VERBS[weaponTag];
     if (wVerbs) return pickRandom(wVerbs);
