@@ -163,8 +163,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       return;
     }
     const effectiveCpCost = ability.cpCost;
-    if ((p.character.cp ?? 0) < effectiveCpCost) {
-      p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${p.character.cp ?? 0} available)`);
+    const availableCp = Math.max(0, (p.character.cp ?? 0) - (p.pendingCpCost ?? 0));
+    if (availableCp < effectiveCpCost) {
+      p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${availableCp} available)`);
       return;
     }
 
