@@ -861,26 +861,10 @@ Deno.serve(async (req) => {
             }
             events.push({ type: 'poison_proc', character_id: m.id, creature_id: target.id, message: `🧪 ${c.name}'s attack poisons ${target.name}!` });
           }
-          if (mb.ignite_buff && Math.random() < 0.4) {
-            const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
-            const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-            const intMod = sm((c.int || 10) + (eb.int || 0));
-            const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
-            const duration = Math.min(45000, 30000 + intMod * 1000);
-            const effData = {
-              node_id: combatNodeId, target_id: target.id, source_id: m.id,
-              session_id: null, effect_type: 'ignite',
-              stacks: newStacks, damage_per_tick: dmgPerTick,
-              next_tick_at: tickTime + TICK_RATE, expires_at: tickTime + duration,
-              tick_rate_ms: TICK_RATE,
-            };
-            if (existing) {
-              Object.assign(existing, effData);
-            } else {
-              activeEffects.push({ id: crypto.randomUUID(), ...effData });
-            }
-            events.push({ type: 'ignite_proc', character_id: m.id, creature_id: target.id, message: `🔥 ${c.name}'s attack ignites ${target.name}!` });
-          }
+          // (Ignite no longer procs from autoattacks — it now pulses
+          // independently each heartbeat as a "shield of fireballs". See the
+          // dedicated Ignite-pulse phase below.)
+
 
           // ── Proc-on-hit (main hand) ──
           if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
