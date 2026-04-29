@@ -634,7 +634,10 @@ Deno.serve(async (req) => {
         // Server-side Rend/bleed: create persistent active_effects row
         const effStr = (c.str || 10) + (eb.str || 0);
         const strMod = sm(effStr);
-        const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+        let dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+        // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
+        // the bleed at apply time so the DoT inherits the boost for its full duration.
+        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * 1.5), 1);
         const durationMs = Math.min(30000, 20000 + strMod * 1000);
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
