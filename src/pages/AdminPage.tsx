@@ -407,6 +407,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <IssueReportManager />;
       case 'marketplace':
         return <MarketplaceManager />;
+      case 'unique-reclaim':
+        return <UniqueReclaimManager />;
       case 'roadmap':
         return <RoadmapManager />;
       case 'rulebook':
