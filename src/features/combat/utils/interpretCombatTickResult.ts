@@ -127,6 +127,12 @@ export function interpretCombatTickResult(
       if (cn && ev.message) bossDeathCries.push({ creatureName: cn, text: ev.message });
       continue;
     }
+    // ignite_proc is a pure stack-update signal that accompanies a richer
+    // ignite_pulse event in the same tick. Skip its log line to avoid
+    // duplicating the orb-strike message.
+    if (ev.type === 'ignite_proc') {
+      continue;
+    }
     // Try MUD-style formatting for structured attack events
     const structured = ev as StructuredAttackEvent;
     const hasStructuredData = structured.attacker_name && structured.target_name;
