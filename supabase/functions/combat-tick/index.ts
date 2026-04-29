@@ -485,11 +485,20 @@ Deno.serve(async (req) => {
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / DEX): per-arrow base = 2 + dexMod + floor(level/4).
         // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
+        // Buff parity with autoattacks: respects Eagle Eye (crit_buff), Arcane Surge
+        // (damage_buff), Shadowstep (stealth_buff), and Disengage (disengage_next_hit).
+        // Stealth/Disengage are consumed once for the whole Barrage volley (not per arrow).
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const dexMod = sm(effDex);
         const arrowCount = dexMod >= 3 ? 3 : 2;
         const perArrowBase = Math.max(2 + dexMod + Math.floor((c.level || 1) / 4), 1);
-        const critRange = getClassCritRange(c.class);
+        const mb = buffs[member.id] || {};
+        const critBuffBonus = mb.crit_buff?.bonus || 0;
+        const critRange = getClassCritRange(c.class) - critBuffBonus;
+        const isStealth = !!mb.stealth_buff;
+        const isDmgBuff = !!mb.damage_buff;
+        const hasDisengage = !!mb.disengage_next_hit;
+        const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
         let totalDmg = 0;
         for (let i = 0; i < arrowCount; i++) {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
@@ -498,7 +507,11 @@ Deno.serve(async (req) => {
           const totalAtk = roll + dexMod;
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
-            const arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
+            let arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
+            if (isStealth) arrowDmg = arrowDmg * 2;
+            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * 1.5);
+            if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
+            arrowDmg = Math.max(arrowDmg, 1);
             totalDmg += arrowDmg;
             cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
             const critTag = isCrit ? ' CRIT!' : '';
@@ -512,6 +525,15 @@ Deno.serve(async (req) => {
         }
         if (totalDmg > 0) {
           events.push({ type: 'ability_hit', message: `🏹🏹 Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`, character_id: member.id });
+        }
+        // Consume stealth/disengage once per Barrage cast (parity with autoattacks)
+        if (totalDmg > 0 && (isStealth || hasDisengage)) {
+          if (!consumedBuffs[member.id]) consumedBuffs[member.id] = [];
+          if (isStealth) {
+            consumedBuffs[member.id].push('stealth');
+            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush empowers the volley!`, character_id: member.id });
+          }
+          if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
       } else if (pa.ability_type === 'execute_attack') {
         // Eviscerate (Rogue / DEX finisher): base = 4 + 2*dexMod + floor(level/3).
@@ -600,7 +622,9 @@ Deno.serve(async (req) => {
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const chaMod = sm(effCha);
         const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
-        const damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
+        let damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
+        // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
+        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * 1.5), 1);
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale! ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage!`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -610,7 +634,10 @@ Deno.serve(async (req) => {
         // Server-side Rend/bleed: create persistent active_effects row
         const effStr = (c.str || 10) + (eb.str || 0);
         const strMod = sm(effStr);
-        const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+        let dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+        // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
+        // the bleed at apply time so the DoT inherits the boost for its full duration.
+        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * 1.5), 1);
         const durationMs = Math.min(30000, 20000 + strMod * 1000);
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
