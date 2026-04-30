@@ -812,15 +812,7 @@ export default function CharacterPanel({
                         <TooltipTrigger asChild>
                           <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
                             <span className="flex items-center gap-1">
-                              {hasPoints && onAllocateStat && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setPendingStat(stat); }}
-                                  className="w-4 h-4 flex items-center justify-center rounded bg-primary/20 hover:bg-primary/40 text-primary text-[10px] font-bold transition-colors"
-                                  title={`Add 1 to ${STAT_FULL_NAMES[stat]}`}
-                                >
-                                  +
-                                </button>
-                              )}
+                              {/* Stat allocation moved to Trainer panel */}
                               <span className="font-display text-foreground">{STAT_FULL_NAMES[stat]}</span>
                             </span>
                             <span className="flex gap-1.5 tabular-nums">
@@ -1042,72 +1034,7 @@ export default function CharacterPanel({
 
       </div>
 
-      {/* Stat allocation confirmation dialog */}
-      <AlertDialog open={!!pendingStat} onOpenChange={(open) => { if (!open) setPendingStat(null); }}>
-        <AlertDialogContent className="bg-card border-border max-w-xs">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-primary text-sm">Allocate Stat Point</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
-              Add +1 to <strong className="text-foreground">{pendingStat ? STAT_FULL_NAMES[pendingStat] : ''}</strong>?
-              {pendingStat && (
-                <span className="block mt-1 text-muted-foreground">
-                  {(character as any)[pendingStat]} → {(character as any)[pendingStat] + 1}
-                </span>
-              )}
-              <span className="block mt-1 text-muted-foreground/70">You can undo this with a respec point.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs h-7">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="text-xs h-7"
-              onClick={() => {
-                if (pendingStat && onAllocateStat) {
-                  onAllocateStat(pendingStat);
-                }
-                setPendingStat(null);
-              }}
-            >
-              Confirm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Full Respec confirmation dialog */}
-      <AlertDialog open={showRespecConfirm} onOpenChange={setShowRespecConfirm}>
-        <AlertDialogContent className="bg-card border-border max-w-xs">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-display text-chart-5 text-sm">Full Respec</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
-              Reset <strong className="text-foreground">all</strong> manually allocated stat points? They will be returned as unspent points for you to reallocate.
-              <span className="block mt-1 text-muted-foreground/70">Uses 1 respec point ({character.respec_points} remaining).</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs h-7">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="text-xs h-7"
-              onClick={() => {
-                if (onFullRespec) onFullRespec();
-                setShowRespecConfirm(false);
-              }}
-            >
-              Confirm Respec
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {onBatchAllocateStats && (
-        <StatPlannerDialog
-          open={statPlannerOpen}
-          onOpenChange={setStatPlannerOpen}
-          character={character}
-          equipmentBonuses={equipmentBonuses}
-          onCommit={onBatchAllocateStats}
-        />
-      )}
+      {/* Stat allocation, respec, and Renown training are handled at trainer nodes via TrainerPanel. */}
     </TooltipProvider>
   );
 }
