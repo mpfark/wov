@@ -795,7 +795,6 @@ export default function CharacterPanel({
                     const bonus = equipmentBonuses[stat] || 0;
                     const effective = base + bonus;
                     const mod = getStatModifier(effective);
-                    const hasPoints = character.unspent_stat_points > 0;
                     // Calculate non-manual base: creation stats + class level bonuses
                     const creationStats = calculateStats(character.race, character.class);
                     const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
