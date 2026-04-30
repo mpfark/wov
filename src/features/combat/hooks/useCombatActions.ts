@@ -29,6 +29,8 @@ const INSTANT_BUFF_TYPES = new Set([
   'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
   'regen_buff', 'poison_buff', 'evasion_buff', 'disengage_buff', 'ignite_buff',
   'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
+  // Templar instant buffs
+  'reactive_holy', 'block_buff', 'consecrate', 'mitigation_buff',
 ]);
 
 /** Ability types that require being in combat with a valid target */
