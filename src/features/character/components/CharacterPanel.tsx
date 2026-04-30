@@ -777,26 +777,16 @@ export default function CharacterPanel({
               <div className="space-y-2.5">
                 {/* Base stats — single column: STR, DEX, CON, INT, WIS, CHA */}
                 {(character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) && (
-                  <div className="text-[10px] font-display text-center py-0.5 bg-primary/10 rounded border border-primary/20 flex justify-center gap-3 items-center">
-                    {character.unspent_stat_points > 0 && (
-                      <span className="text-primary">{character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''}</span>
-                    )}
-                    {character.unspent_stat_points > 1 && onBatchAllocateStats && (
-                      <button
-                        onClick={() => setStatPlannerOpen(true)}
-                        className="text-chart-2 hover:text-chart-2/80 underline underline-offset-2 transition-colors"
-                      >
-                        Plan Stats
-                      </button>
-                    )}
-                    {(character.respec_points || 0) > 0 && onFullRespec && (
-                      <button
-                        onClick={() => setShowRespecConfirm(true)}
-                        className="text-chart-5 hover:text-chart-5/80 underline underline-offset-2 transition-colors"
-                      >
-                        Full Respec ({character.respec_points})
-                      </button>
-                    )}
+                  <div className="text-[10px] font-display text-center py-1 px-2 bg-primary/10 rounded border border-primary/20 space-y-0.5">
+                    <div className="flex justify-center gap-3 items-center">
+                      {character.unspent_stat_points > 0 && (
+                        <span className="text-primary">{character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''}</span>
+                      )}
+                      {(character.respec_points || 0) > 0 && (
+                        <span className="text-chart-5">{character.respec_points} respec point{(character.respec_points || 0) > 1 ? 's' : ''}</span>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground italic">Visit a Trainer to spend them.</p>
                   </div>
                 )}
                 <div className="space-y-0">
