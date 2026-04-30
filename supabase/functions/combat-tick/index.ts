@@ -848,7 +848,7 @@ Deno.serve(async (req) => {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
         const cons = mb.consecrate;
-        if (!cons || (cons.expires_at ?? 0) <= tickTime - TICK_RATE) continue;
+        if (!cons || (cons.expires_at ?? 0) <= tickTime) continue;
 
         const consWis = Math.max(0, cons.wis_mod ?? 0);
         const healAmt = Math.max(1, 2 + consWis);
