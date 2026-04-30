@@ -26,12 +26,28 @@ export default function OnboardingGatePage({ userId, onComplete }: Props) {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSaving(true);
+    // Default display_name to full_name unless the player has already set a custom one.
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const currentDisplay = existing?.display_name?.trim();
+    const payload: {
+      user_id: string;
+      full_name: string;
+      has_accepted_oath: boolean;
+      display_name?: string;
+    } = {
+      user_id: userId,
+      full_name: trimmed,
+      has_accepted_oath: true,
+    };
+    if (!currentDisplay) payload.display_name = trimmed;
+
     const { error } = await supabase
       .from('profiles')
-      .upsert(
-        { user_id: userId, full_name: trimmed, has_accepted_oath: true },
-        { onConflict: 'user_id' }
-      );
+      .upsert(payload, { onConflict: 'user_id' });
     setSaving(false);
     if (error) {
       toast.error('Something went wrong. Please try again.');
