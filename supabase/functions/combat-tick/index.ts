@@ -840,11 +840,10 @@ Deno.serve(async (req) => {
           // → 3. hit-quality mult → 4. crit mult → 5. affinity → 6. buffs → 7. clamp → 8. caps
           // NOTE: Two-handed weapons benefit from a larger weapon die (step 1) only;
           // there is no separate 2H damage multiplier in the autoattack pipeline.
-          // Arcane Surge (damage_buff) augments wizard weapon strikes:
-          //   • +intMod flat damage on the raw weapon roll (STR remains primary mod)
-          //   • final damage is multiplied by ARCANE_SURGE_DAMAGE_MULT further down
-          const intModForBuff = isDmgBuff ? sm((c.int || 10) + (eb.int || 0)) : 0;
-          let raw = rollDmg(1, weaponDie) + sMod + intModForBuff;
+          // Arcane Surge (damage_buff): final damage is multiplied by
+          // ARCANE_SURGE_DAMAGE_MULT further down. No flat INT bonus on the
+          // raw weapon roll — STR remains the sole damage stat for autoattacks.
+          let raw = rollDmg(1, weaponDie) + sMod;
           if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
           let dmg = Math.max(Math.floor(raw * HIT_QUALITY_MULT[quality]), 1);
           if (isCrit) dmg = Math.max(dmg * 2, 1);
