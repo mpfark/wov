@@ -12,11 +12,11 @@
  */
 
 export const CLASS_BASE_HP: Record<string, number> = {
-  warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
+  warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16, templar: 22,
 };
 
 export const CLASS_BASE_AC: Record<string, number> = {
-  warrior: 12, wizard: 9, ranger: 10, rogue: 10, healer: 9, bard: 9,
+  warrior: 12, wizard: 9, ranger: 10, rogue: 10, healer: 9, bard: 9, templar: 12,
 };
 
 /** Class-based stat bonuses awarded every 3 levels */
@@ -27,11 +27,12 @@ export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
   rogue:   { dex: 1, cha: 1 },
   healer:  { wis: 1, con: 1 },
   bard:    { cha: 1, int: 1 },
+  templar: { wis: 1, con: 1 },
 };
 
 export const CLASS_LABELS: Record<string, string> = {
   warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger',
-  rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
+  rogue: 'Rogue', healer: 'Healer', bard: 'Bard', templar: 'Templar',
 };
 
 export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
@@ -41,6 +42,7 @@ export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
   wizard:  ['staff', 'wand'],
   healer:  ['mace', 'staff'],
   bard:    ['sword', 'wand'],
+  templar: ['sword', 'mace'],
 };
 
 export interface ClassAttackProfile {
@@ -71,6 +73,7 @@ export const CLASS_COMBAT_PROFILES: Record<string, ClassAttackProfile> = {
   rogue:   { stat: 'dex', diceMin: 1, diceMax: 6,  critRange: 19, emoji: '🗡️', verb: 'strikes' },
   healer:  { stat: 'wis', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '⭐', verb: 'smites' },
   bard:    { stat: 'cha', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '🎵', verb: 'mocks' },
+  templar: { stat: 'wis', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '✝️', verb: 'smites with righteous steel' },
 };
 
 /**
@@ -79,7 +82,7 @@ export const CLASS_COMBAT_PROFILES: Record<string, ClassAttackProfile> = {
  * keeps a slightly wider crit range (19-20) as a class identity perk.
  */
 export const CLASS_CRIT_RANGE: Record<string, number> = {
-  warrior: 20, wizard: 20, ranger: 20, rogue: 19, healer: 20, bard: 20,
+  warrior: 20, wizard: 20, ranger: 20, rogue: 19, healer: 20, bard: 20, templar: 20,
 };
 
 export function getClassCritRange(classKey: string): number {
