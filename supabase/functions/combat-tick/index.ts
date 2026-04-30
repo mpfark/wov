@@ -665,10 +665,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Per-tick Holy Shield retaliation tracking ────────────────
+    // Keyed by templar id → Set of creature ids that have already been
+    // retaliated against this tick (caps to once per attacker per tick).
+    const holyShieldHitThisTick: Record<string, Set<string>> = {};
+
     // ── Helper to apply creature hit to a member ─────────────────
     // CANONICAL DAMAGE PIPELINE (creature → player):
     //   base damage → hit quality mult → crit mult (with anti-crit) → level gap
-    //   → shield block (flat) → absorb → Battle Cry DR → caps/clamps → finalAppliedDamage
+    //   → Shield Wall (force block) → shield block (flat) → absorb
+    //   → Battle Cry DR → Divine Challenge DR → caps/clamps → finalAppliedDamage
+    // After damage lands, Holy Shield retaliates against the attacker (once
+    // per attacker per tick).
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
