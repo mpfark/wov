@@ -6,7 +6,7 @@ import NodeView from '@/features/world/components/NodeView';
 import MapPanel from '@/features/world/components/MapPanel';
 import VendorPanel from '@/features/inventory/components/VendorPanel';
 import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
-import RenownTrainerPanel from '@/features/character/components/RenownTrainerPanel';
+import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
 import { Character } from '@/features/character';
