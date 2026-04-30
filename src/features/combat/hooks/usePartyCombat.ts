@@ -596,6 +596,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           }
         } else if (error) {
           console.error('Combat tick error:', error);
+          // Don't strand the reservation overlay if the tick failed.
+          setPendingCpCost(0);
         } else {
           const result = data as CombatTickResponse;
           console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
