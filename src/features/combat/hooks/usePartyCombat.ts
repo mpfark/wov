@@ -316,10 +316,26 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     // Character state
     if (result.characterUpdates) {
-      if (ext.current.updateCharacterLocal) {
-        ext.current.updateCharacterLocal(result.characterUpdates);
-      } else {
-        ext.current.updateCharacter(result.characterUpdates);
+      const updates = { ...result.characterUpdates };
+      // CP reconciliation: if the server agrees with the value the client
+      // already optimistically committed, drop the field so we don't repaint
+      // the bar (avoids the "CP returned then deducted" flicker).
+      if (typeof updates.cp === 'number' && optimisticCpRef.current !== null) {
+        if (updates.cp === optimisticCpRef.current) {
+          delete updates.cp;
+          optimisticCpRef.current = null;
+        } else {
+          // Server disagrees — accept the authoritative value and clear the
+          // optimistic flag so subsequent ticks behave normally.
+          optimisticCpRef.current = null;
+        }
+      }
+      if (Object.keys(updates).length > 0) {
+        if (ext.current.updateCharacterLocal) {
+          ext.current.updateCharacterLocal(updates);
+        } else {
+          ext.current.updateCharacter(updates);
+        }
       }
     }
 
