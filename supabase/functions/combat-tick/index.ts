@@ -515,7 +515,7 @@ Deno.serve(async (req) => {
             const isCrit = roll >= critRange;
             let arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
             if (isStealth) arrowDmg = arrowDmg * 2;
-            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * 1.5);
+            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * ARCANE_SURGE_DAMAGE_MULT);
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
             totalDmg += arrowDmg;
