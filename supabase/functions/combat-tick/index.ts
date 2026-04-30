@@ -1050,7 +1050,7 @@ Deno.serve(async (req) => {
         const eb = eq[m.id] || {};
         const intMod = sm((c.int || 10) + (eb.int || 0));
         let pulseDmg = Math.max(1, 2 + intMod);
-        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * 1.5), 1);
+        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * ARCANE_SURGE_DAMAGE_MULT), 1);
 
         cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
 
