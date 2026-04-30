@@ -14,6 +14,7 @@ import type {
   FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, PoisonStack, EvasionBuff, DisengageNextHit, IgniteBuff,
   IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, InspireBuff,
+  HolyShieldBuff, ShieldWallBuff, ConsecrateBuff, DivineChallengeBuff,
 } from './useGameLoop';
 
 // ─── Typed interfaces for bundled state ────────────────────────
