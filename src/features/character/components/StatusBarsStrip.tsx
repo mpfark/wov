@@ -145,6 +145,30 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     buffs.push({ emoji: '🌑', label: 'Shadowstep', detail: 'Stealth + ambush bonus', color: 'text-primary', bgColor: 'bg-primary/15', pct });
   }
 
+  if (holyShieldActive) {
+    const dur = BUFF_DURATIONS['Holy Shield'] || 30_000;
+    const pct = Math.max(0, Math.min(100, ((holyShieldBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({ emoji: '🛡️✝️', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+  }
+
+  if (shieldWallActive) {
+    const dur = BUFF_DURATIONS['Shield Wall'] || 4_000;
+    const pct = Math.max(0, Math.min(100, ((shieldWallBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({ emoji: '🛡️', label: 'Shield Wall', detail: '100% block (requires shield)', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
+  }
+
+  if (consecrateActive) {
+    const dur = consecrateBuff!.durationMs || BUFF_DURATIONS['Consecrate'] || 6_000;
+    const pct = Math.max(0, Math.min(100, ((consecrateBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({ emoji: '✨🟡', label: 'Consecrate', detail: 'Heals allies, burns enemies on this node', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+  }
+
+  if (divineChallengeActive) {
+    const dur = BUFF_DURATIONS['Divine Challenge'] || 30_000;
+    const pct = Math.max(0, Math.min(100, ((divineChallengeBuff!.expiresAt - now) / dur) * 100));
+    buffs.push({ emoji: '⚜️', label: 'Divine Challenge', detail: `${Math.round(divineChallengeBuff!.reduction * 100)}% damage reduction`, color: 'text-gold', bgColor: 'bg-gold/15', pct });
+  }
+
   return (
     <div className="flex flex-wrap gap-1 justify-center items-center min-h-[22px]">
       {buffs.length === 0 && <span className="text-[9px] text-muted-foreground/40 italic font-display tracking-wide">No active buffs</span>}
@@ -168,6 +192,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff,
+  holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
   reservedCp = 0,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
