@@ -635,7 +635,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                Each class gets a <strong>Tier 0</strong> class-identity ability from level 1 (Wizard Fireball, Warrior Power Strike, Ranger Aimed Shot, Rogue Backstab, Healer Smite, Bard Cutting Words). Higher-tier abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
+                Each class gets a <strong>Tier 0</strong> class-identity ability from level 1 (Wizard Fireball, Warrior Power Strike, Ranger Aimed Shot, Rogue Backstab, Healer Smite, Bard Cutting Words, Templar Judgment). Higher-tier abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
               </p>
               <Accordion type="multiple">
                 {Object.entries(CLASS_ABILITIES).map(([cls, abilities]) => (
