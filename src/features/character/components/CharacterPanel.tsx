@@ -218,7 +218,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     buffs.push({
       emoji: '✨',
       label: 'Arcane Surge',
-      detail: '1.5× spell dmg',
+      detail: `${ARCANE_SURGE_DAMAGE_MULT}× dmg (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%)`,
       color: 'text-elvish',
       bgColor: 'bg-elvish/15',
       pct,
