@@ -974,12 +974,11 @@ Deno.serve(async (req) => {
         const quality2 = getHitQuality(margin2, roll2 === 1, isCrit2);
 
         if (quality2 !== 'miss') {
-          // Pipeline: 1. base damage (offhand die + STR + Arcane Surge INT)
+          // Pipeline: 1. base damage (offhand die + STR)
           // → 2. hit-quality mult → 3. crit mult → 4. off-hand 30% reduction
           // → 5. Arcane Surge mult → 6. clamp → 7. caps
           const isDmgBuff2 = !!mb2.damage_buff;
-          const intModForBuff2 = isDmgBuff2 ? sm((c.int || 10) + (eb.int || 0)) : 0;
-          const raw2 = rollDmg(1, ohDie) + sMod2 + intModForBuff2;
+          const raw2 = rollDmg(1, ohDie) + sMod2;
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
