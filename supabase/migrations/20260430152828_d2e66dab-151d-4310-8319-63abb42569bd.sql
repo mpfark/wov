@@ -1,0 +1,1 @@
+ALTER TYPE public.character_class ADD VALUE IF NOT EXISTS 'templar';
