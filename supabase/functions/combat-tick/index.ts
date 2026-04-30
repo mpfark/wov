@@ -722,7 +722,16 @@ Deno.serve(async (req) => {
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
-        // 5. Shield block (flat reduction, shield only)
+        // 5a. Shield Wall (Templar) — guaranteed 100% block while active.
+        // Requires a shield equipped. Absorbs the entire incoming hit.
+        if (mb.shield_wall && hasShield && (mb.shield_wall.expires_at ?? 0) > now) {
+          const preDmg = dmg;
+          dmg = 0;
+          events.push({ type: 'shield_wall_block', message: `🛡️ ${targetName}'s Shield Wall absorbs the blow! (−${preDmg} damage)`, character_id: targetId });
+          return;
+        }
+
+        // 5b. Shield block (flat reduction, shield only)
         if (hasShield) {
           const blockChance = getShieldBlockChance(effectiveDex);
           if (Math.random() < blockChance) {
@@ -752,6 +761,14 @@ Deno.serve(async (req) => {
           events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry reduces damage! (${preDmg} → ${dmg})` });
         }
 
+        // 7b. Divine Challenge (Templar) — flat 30% damage reduction.
+        if (mb.divine_challenge && (mb.divine_challenge.expires_at ?? 0) > now) {
+          const dr = mb.divine_challenge.reduction || 0.30;
+          const preDmg = dmg;
+          dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
+          events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! (${preDmg} → ${dmg})`, character_id: targetId });
+        }
+
         // 8. Caps and clamps
         dmg = Math.max(dmg, 1);
         if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
@@ -772,6 +789,29 @@ Deno.serve(async (req) => {
         }
 
         events.push(critEvent);
+
+        // ── Holy Shield (Templar) reactive retaliation ────────────
+        // After damage lands (even partial), holy aura strikes back at the
+        // attacker. Once per attacker per tick. Scales with templar's WIS.
+        if (mb.holy_shield && (mb.holy_shield.expires_at ?? 0) > now && !cKilled.has(creature.id) && cHp[creature.id] > 0) {
+          const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
+          if (!seen.has(creature.id)) {
+            seen.add(creature.id);
+            const wisModForReturn = Math.max(0, sm(effectiveWis));
+            const returnDmg = Math.max(1, 2 + wisModForReturn + Math.floor((targetC.level || 1) / 4));
+            cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
+            events.push({
+              type: 'holy_shield_return',
+              message: `🛡️✝️ ${targetName}'s Holy Shield burns ${creature.name} for ${returnDmg} holy damage!`,
+              character_id: targetId,
+              creature_id: creature.id,
+            });
+            if (cHp[creature.id] <= 0 && !cKilled.has(creature.id)) {
+              handleCreatureKill(creature, targetName, (targetC.cha || 10) + (targetEq.cha || 0));
+            }
+          }
+        }
+
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
