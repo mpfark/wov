@@ -69,21 +69,21 @@ export const RACE_LABELS: Record<string, string> = {
 };
 
 export const RACE_DESCRIPTIONS: Record<string, string> = {
-  human: 'Versatile and adaptable, the race of Men brings balanced abilities to any endeavor.',
-  elf: 'Graceful and wise, the Elder Folk excel in dexterity and have keen minds.',
-  dwarf: 'Stout and hardy, the Mountain Clans are strong of arm and iron of constitution.',
-  halfling: 'Small but nimble, Halflings possess surprising resilience and charm.',
-  edain: 'Noble descendants of the Old Kingdom, blessed with endurance and long life.',
-  half_elf: 'Children of two worlds, Half-Elves combine elvish grace with human charisma.',
+  human: 'Versatile and balanced — a small bonus to every stat makes Men adaptable to any class.',
+  elf: 'Keen-eyed and wise. High DEX sharpens accuracy, AC and crit range; high WIS deepens the CP pool and resists incoming crits.',
+  dwarf: 'Stout and unshakeable. Towering CON gives the largest HP pool in the world, and STR fuels heavy weapons and shield blocks.',
+  halfling: 'Quick, lucky and likeable. Top-tier DEX for hits and dodging blows, with CHA boosting gold and vendor prices.',
+  edain: 'Long-lived nobles of the Old Kingdom. Strong CON for survivability with balanced bonuses across the board.',
+  half_elf: 'Diplomats and wanderers. WIS fortifies your CP pool and crit defence while CHA earns better gold and trade rates.',
 };
 
 export const CLASS_DESCRIPTIONS: Record<string, string> = {
-  warrior: 'Masters of martial combat, clad in heavy armor with devastating melee power.',
-  wizard: 'Wielders of ancient lore and arcane power drawn from the fabric of the world.',
-  ranger: 'Swift hunters and trackers of the wild, deadly with bow and blade.',
-  rogue: 'Shadow-walkers skilled in stealth, cunning strikes, and misdirection.',
-  healer: 'Servants of light who mend wounds and bolster allies through divine grace.',
-  bard: 'Loremasters whose songs inspire courage and whose words can shape fate.',
+  warrior: 'Heaviest HP and AC in the realm. STR & DEX gains every 3 levels drive autoattack damage, accuracy and shield blocks — the most forgiving path to level 42.',
+  wizard: 'Glass-cannon caster. INT & WIS scale every 3 levels for arcane hit bonus and a deep CP pool fuelling Ignite, Force Shield and burst spells.',
+  ranger: 'Bow-and-blade hunter. DEX & WIS gains sharpen accuracy, AC and CP pool; native bow + dagger affinity grants +1 hit and +10% damage.',
+  rogue: 'Shadow striker. Native crit on natural 19–20, with DEX & CHA gains powering accuracy, AC and trade. Fragile but lethal with daggers and swords.',
+  healer: 'Divine support. WIS & CON gains stack CP pool and HP, letting you sustain the party with mace or staff in hand.',
+  bard: 'Loremaster and dealmaker. CHA & INT gains boost arcane accuracy, vendor prices and gold drops — a flexible support class.',
 };
 
 export const STAT_LABELS: Record<string, string> = {

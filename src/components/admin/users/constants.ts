@@ -89,12 +89,12 @@ export const STAT_FULL_NAMES: Record<string, string> = {
 };
 
 export const STAT_DESCRIPTIONS: Record<string, string> = {
-  str: 'Melee attack and damage rolls',
-  dex: 'Ranged attack, AC bonus, initiative',
-  con: 'Hit points and physical resilience',
-  int: 'Arcane power and knowledge checks',
-  wis: 'Perception, healing power, willpower',
-  cha: 'Persuasion, bardic abilities, leadership',
+  str: 'Autoattack damage, damage floor, shield block amount',
+  dex: 'Autoattack to-hit, AC, crit range, shield block chance, MP pool',
+  con: 'Maximum HP',
+  int: 'Bonus to-hit on attacks (sqrt curve, capped at +5)',
+  wis: 'Maximum CP pool and anti-crit chance vs incoming hits',
+  cha: 'Vendor buy/sell prices and bonus gold from humanoid kills',
 };
 
 export const SLOT_LABELS: Record<string, string> = {
