@@ -114,6 +114,7 @@ export default function GameManual() {
                     Spending a respec point triggers a <strong className="text-foreground">full reset</strong> of all manually allocated stat points, returning them as unspent points to reallocate freely. 
                     Maximum of <strong className="text-foreground">4 respec points</strong> total across a character's lifetime.
                     Only manually allocated points are reset — base race, class, and level-up bonuses are permanent.
+                    Both <strong className="text-foreground">stat allocation</strong> and <strong className="text-foreground">respec</strong> are now performed at <strong className="text-foreground">🏛️ Trainer</strong> nodes.
                   </p>
                 </CardContent>
               </Card>
@@ -1097,7 +1098,7 @@ export default function GameManual() {
 
                 <div>
                   <p className="font-display text-foreground mb-1">Training (Level 30+)</p>
-                  <p>Visit a <strong className="text-foreground">🏛️ Renown Trainer</strong> node to spend Renown on permanent attribute ranks beyond the level cap.</p>
+                  <p>Visit a <strong className="text-foreground">🏛️ Trainer</strong> node to spend Renown on permanent attribute ranks beyond the level cap. The same Trainer panel also handles level-up stat allocation and respec.</p>
                   <p><strong className="text-foreground">Cost:</strong> <code className="text-primary">20 × (rank + 1)</code> RP per attempt (success or fail).</p>
                   <Table>
                     <TableHeader>
