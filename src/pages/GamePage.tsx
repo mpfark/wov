@@ -927,9 +927,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     damageBuff,
     partyRegenBuff,
     inspireBuff,
-    onAllocateStat: handleAllocateStat,
-    onFullRespec: handleFullRespec,
-    onBatchAllocateStats: handleBatchAllocateStats,
+    // Stat allocation moved to TrainerPanel; CharacterPanel only displays balances now.
   }), [
     character, equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
     handleDropItem, dropItem, togglePin, handleUseConsumable, currentNode?.is_inn,
@@ -937,7 +935,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
     damageBuff, partyRegenBuff, inspireBuff,
-    handleAllocateStat, handleFullRespec, handleBatchAllocateStats,
   ]);
 
   const activeBuffs = useMemo(() => ({
@@ -1244,14 +1241,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
       )}
 
-      {/* Renown Trainer Dialog */}
+      {/* Trainer Service Panel — allocate, respec, Renown training, leaderboard */}
       {currentNode.is_trainer && (
-        <RenownTrainerPanel
+        <TrainerPanel
           open={trainerOpen}
           onClose={() => { setTrainerOpen(false); setActiveServiceNpc(null); }}
           character={character}
+          equipmentBonuses={equipmentBonuses}
           updateCharacter={updateCharacter}
           addLog={addLog}
+          onBatchAllocateStats={handleBatchAllocateStats}
+          onFullRespec={handleFullRespec}
           npcName={activeServiceNpc?.service_role === 'trainer' ? activeServiceNpc.name : undefined}
           npcFlavor={activeServiceNpc?.service_role === 'trainer' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
