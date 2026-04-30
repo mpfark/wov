@@ -162,6 +162,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     pendingAbilityRef.current = null;
     setPendingAbility(null);
     setPendingCpCost(0);
+    optimisticCpRef.current = null;
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
