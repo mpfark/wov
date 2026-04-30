@@ -83,4 +83,11 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
     { label: 'Ignite', emoji: '🔥🔥', description: 'Conjure a shield of fireballs. While in combat, each heartbeat an orb has a 40% chance to strike your target — dealing INT-scaled fire damage and applying a stackable burn (max 5). Lasts 5 minutes. Costs all your CP (minimum 50).', cpCost: 50, type: 'ignite_buff', tier: 3, levelRequired: 15 },
     { label: 'Conflagrate', emoji: '💥', description: 'Consume all burn stacks on your target for +50% bonus damage per stack', cpCost: 60, type: 'ignite_consume', tier: 4, levelRequired: 20 },
   ],
+  templar: [
+    { label: 'Judgment',         emoji: '✝️',   description: 'Pass divine judgment, dealing holy damage scaling with WIS', cpCost: 10, type: 'smite', tier: 0, levelRequired: 1 },
+    { label: 'Holy Shield',      emoji: '🛡️✝️', description: 'For 30s, attackers who strike you take holy damage in return (scales with WIS, once per attacker per tick).', cpCost: 15, type: 'reactive_holy', tier: 1, levelRequired: 5 },
+    { label: 'Shield Wall',      emoji: '🛡️',  description: 'Brace behind your shield. Block chance is 100% for the next ~4s. Requires a shield equipped.', cpCost: 25, type: 'block_buff', tier: 2, levelRequired: 10 },
+    { label: 'Consecrate',       emoji: '✨🟡', description: 'Sanctify the ground for 3 ticks (~6s) — heals all party members on this node and burns engaged creatures with holy fire each tick. Scales with WIS.', cpCost: 40, type: 'consecrate', tier: 3, levelRequired: 15 },
+    { label: 'Divine Challenge', emoji: '⚜️',  description: 'For 30s, the Templar takes 30% less damage from all sources.', cpCost: 60, type: 'mitigation_buff', tier: 4, levelRequired: 20 },
+  ],
 };
