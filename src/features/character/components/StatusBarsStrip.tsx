@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
@@ -163,9 +163,17 @@ export default function StatusBarsStrip({
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const rawCp = character.cp ?? 100;
   const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
-  const cp = Math.max(0, rawCp - reservedCp);
+  // Track the last seen rawCp. If rawCp drops by >= reservedCp between renders,
+  // the server has already applied the debit — stop subtracting so the bar
+  // can't dip below the true value for a frame (defensive backup to flushSync
+  // in usePartyCombat).
+  const prevRawCpRef = useRef(rawCp);
+  const debitLanded = reservedCp > 0 && prevRawCpRef.current - rawCp >= reservedCp;
+  prevRawCpRef.current = rawCp;
+  const effectiveReserved = debitLanded ? 0 : reservedCp;
+  const cp = Math.max(0, rawCp - effectiveReserved);
   const cpPercent = Math.round((cp / maxCp) * 100);
-  const reservedPercent = Math.max(0, Math.min(100, Math.round((Math.min(reservedCp, rawCp) / maxCp) * 100)));
+  const reservedPercent = Math.max(0, Math.min(100, Math.round((Math.min(effectiveReserved, rawCp) / maxCp) * 100)));
   const mp = character.mp ?? 100;
   const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
   const mpPercent = Math.round((mp / maxMp) * 100);

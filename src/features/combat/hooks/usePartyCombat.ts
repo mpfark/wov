@@ -15,6 +15,7 @@
  *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
@@ -607,11 +608,17 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             if (!solo) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
-            processTickResult(result);
-            // Server has now applied any pending ability CP debit; safe to
-            // drop the reservation overlay so the bar shows the new CP value
-            // without flickering back up.
-            setPendingCpCost(0);
+            // Commit reservation-clear + server CP value in a single React
+            // paint. Without flushSync, the ~10 setStates and side effects
+            // fanned out by processTickResult (fetchGroundLoot, debuffs, etc)
+            // could split the two updates into separate paints, causing the
+            // CP bar to briefly spring back UP (reservation gone, server CP
+            // not yet applied) and then DROP again — the "CP returned then
+            // deducted" flicker.
+            flushSync(() => {
+              setPendingCpCost(0);
+              processTickResult(result);
+            });
           }
         }
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
