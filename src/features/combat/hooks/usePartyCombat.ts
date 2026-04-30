@@ -638,17 +638,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             if (!solo) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
-            // Commit reservation-clear + server CP value in a single React
-            // paint. Without flushSync, the ~10 setStates and side effects
-            // fanned out by processTickResult (fetchGroundLoot, debuffs, etc)
-            // could split the two updates into separate paints, causing the
-            // CP bar to briefly spring back UP (reservation gone, server CP
-            // not yet applied) and then DROP again — the "CP returned then
-            // deducted" flicker.
-            flushSync(() => {
-              setPendingCpCost(0);
-              processTickResult(result);
-            });
+            // Reservation was already converted to a real local CP debit
+            // at dispatch time, so we just process the tick result. CP
+            // reconciliation in processTickResult will skip the CP repaint
+            // when the server agrees with our optimistic value.
+            processTickResult(result);
           }
         }
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
