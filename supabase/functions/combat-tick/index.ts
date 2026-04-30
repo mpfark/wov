@@ -837,6 +837,57 @@ Deno.serve(async (req) => {
         events.push({ type: 'tick_separator', message: '---tick---' });
       }
 
+      // Reset per-tick Holy Shield retaliation tracking
+      for (const k of Object.keys(holyShieldHitThisTick)) delete holyShieldHitThisTick[k];
+
+      // ── Consecrate pulse phase (Templar) ────────────────────────
+      // While active, each tick the consecrated ground heals every party
+      // member at this node and burns every engaged creature for holy
+      // damage scaled to the templar's WIS at cast time.
+      for (const m of members) {
+        if (mHp[m.id] <= 0) continue;
+        const mb = buffs[m.id] || {};
+        const cons = mb.consecrate;
+        if (!cons || (cons.expires_at ?? 0) <= tickTime - TICK_RATE) continue;
+
+        const consWis = Math.max(0, cons.wis_mod ?? 0);
+        const healAmt = Math.max(1, 2 + consWis);
+        const burnAmt = Math.max(1, 2 + consWis);
+
+        // Heal all alive members on this node (members[] is already filtered)
+        for (const ally of members) {
+          if (mHp[ally.id] <= 0) continue;
+          const allyMaxHp = ally.c.max_hp || 1;
+          const before = mHp[ally.id];
+          mHp[ally.id] = Math.min(before + healAmt, allyMaxHp);
+          const restored = mHp[ally.id] - before;
+          if (restored > 0) {
+            events.push({
+              type: 'consecrate_heal',
+              message: `✨🟡 Consecrated ground restores ${restored} HP to ${ally.c.name}.`,
+              character_id: ally.id,
+            });
+          }
+        }
+
+        // Burn every engaged, alive creature
+        for (const cr of creatures) {
+          if (cKilled.has(cr.id) || cHp[cr.id] <= 0) continue;
+          cHp[cr.id] = Math.max(cHp[cr.id] - burnAmt, 0);
+          events.push({
+            type: 'consecrate_burn',
+            message: `✨🟡 Holy fire sears ${cr.name} for ${burnAmt} damage!`,
+            character_id: m.id,
+            creature_id: cr.id,
+          });
+          if (cHp[cr.id] <= 0 && !cKilled.has(cr.id)) {
+            const eb = eq[m.id] || {};
+            handleCreatureKill(cr, m.c.name, (m.c.cha || 10) + (eb.cha || 0));
+          }
+        }
+      }
+
+
       // ── Member auto-attacks (skip in DoT-only mode) ──────────
       // Weapon-based: damage = 1d{weaponDie} + STR. Class only affects crit
       // threshold (rogue 19) and weapon affinity. The 2H damage benefit is
