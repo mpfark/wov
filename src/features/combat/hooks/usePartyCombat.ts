@@ -75,6 +75,8 @@ export interface UsePartyCombatParams {
   onIgniteProc?: (creatureId: string) => void;
   onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
+  /** Resolver for stacks to consume on execute_attack/ignite_consume. Returns current stack count for the given creature. */
+  getCreatureStacks?: (creatureId: string, stackType: 'poison' | 'ignite') => number;
   /** Callback with server DoT state for UI sync */
   onActiveDots?: (dots: Record<string, any>) => void;
   /** Callback with merged creature-centric debuffs for shared party display */
