@@ -375,9 +375,14 @@ Deno.serve(async (req) => {
     for (const m of members) {
       mHp[m.id] = m.c.hp;
       mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0;
-      // Use freshest CP: max of DB value and client-reported value (solo only)
+      // Trust DB for CP, but allow client to report a LOWER value (i.e. an
+      // ability cost the server hasn't seen yet). Never adopt a higher
+      // client value — that would let stale client-side regen leak in
+      // during combat and make the CP bar visibly tick upward.
       const dbCp = m.c.cp ?? 0;
-      const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number') ? Math.min(client_cp, m.c.max_cp ?? dbCp) : dbCp;
+      const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
+        ? Math.min(client_cp, dbCp)
+        : dbCp;
       mCp[m.id] = freshCp;
     }
 
