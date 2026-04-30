@@ -15,7 +15,6 @@
  *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { flushSync } from 'react-dom';
 
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
