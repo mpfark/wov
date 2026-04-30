@@ -606,6 +606,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
             processTickResult(result);
+            // Server has now applied any pending ability CP debit; safe to
+            // drop the reservation overlay so the bar shows the new CP value
+            // without flickering back up.
+            setPendingCpCost(0);
           }
         }
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
