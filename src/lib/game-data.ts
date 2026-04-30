@@ -61,6 +61,7 @@ export const CLASS_STATS: Record<string, Record<string, number>> = {
   rogue:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
   healer:  { str: 0, dex: 0, con: 1, int: 1, wis: 3, cha: 2 },
   bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
+  templar: { str: 1, dex: 1, con: 2, int: 0, wis: 3, cha: 0 },
 };
 
 export const RACE_LABELS: Record<string, string> = {
@@ -84,6 +85,7 @@ export const CLASS_DESCRIPTIONS: Record<string, string> = {
   rogue: 'Shadow striker. Native crit on natural 19–20, with DEX & CHA gains powering accuracy, AC and trade. Fragile but lethal with daggers and swords.',
   healer: 'Divine support. WIS & CON gains stack CP pool and HP, letting you sustain the party with mace or staff in hand.',
   bard: 'Loremaster and dealmaker. CHA & INT gains boost arcane accuracy, vendor prices and gold drops — a flexible support class.',
+  templar: 'Holy defender, sword-and-shield. WIS & CON gains every 3 levels deepen the CP pool and HP. Reactive holy strikes, guaranteed blocks, consecrated ground and pure damage reduction make the Templar the realm\'s living bulwark.',
 };
 
 export const STAT_LABELS: Record<string, string> = {
