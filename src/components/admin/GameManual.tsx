@@ -687,7 +687,7 @@ export default function GameManual() {
 
                   <p className="text-[10px] font-semibold text-primary/70 mt-2">— Wizard —</p>
                   <p><strong className="text-foreground">🛡️✨ Force Shield (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> Shield HP = <code className="text-primary">INT_mod + floor(level × 0.5)</code>, Duration = <code className="text-primary">min(15s, 8s + INT_mod × 1s)</code></p>
-                  <p><strong className="text-foreground">✨ Arcane Surge (T2, 25 CP):</strong> <span className="text-elvish">⚡</span> +50% spell damage, Duration = <code className="text-primary">min(25s, 15s + INT_mod × 1s)</code></p>
+                  <p><strong className="text-foreground">✨ Arcane Surge (T2, 25 CP):</strong> <span className="text-elvish">⚡</span> +15% damage to all your attacks (autoattacks, abilities, DoTs, off-hand, Ignite pulses), Duration = <code className="text-primary">min(25s, 15s + INT_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🔥🔥 Ignite (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Burn = <code className="text-primary">floor(INT_mod × 0.7 × 0.67)</code> per stack per 2s tick (max 5 stacks), 40% apply chance, Duration = <code className="text-primary">min(45s, 30s + INT_mod × 1s)</code></p>
                   <p><strong className="text-foreground">💥 Conflagrate (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">(1d8 + INT_mod) × (1 + 0.5 × burn_stacks)</code>, consumes all burn stacks</p>
 
