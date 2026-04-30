@@ -46,6 +46,15 @@ export const WEAPON_DAMAGE_DIE: Record<string, { oneHand?: number; twoHand?: num
 /** Damage die used when no weapon is equipped (unarmed strike). */
 export const UNARMED_DIE = 3;
 
+// ── Arcane Surge (wizard damage_buff) ────────────────────────────
+//
+// Multiplier applied to all damage dealt by a member with the
+// `damage_buff` active effect (Arcane Surge). Centralized so tooltips,
+// combat-log text and the server pipeline stay in sync. Tuning dial.
+export const ARCANE_SURGE_DAMAGE_MULT = 1.15;
+/** Pretty +X% string for tooltips/UI. */
+export const ARCANE_SURGE_DAMAGE_BONUS_PCT = Math.round((ARCANE_SURGE_DAMAGE_MULT - 1) * 100);
+
 /**
  * Resolve the autoattack damage die for a weapon at a given hand count.
  * Falls back to UNARMED_DIE when the weapon tag is missing or unknown.

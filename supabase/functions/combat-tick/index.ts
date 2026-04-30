@@ -41,6 +41,7 @@ import {
   getCreatureAttackBonus as creatureAtkBonus,
   getShieldBlockChance,
   getShieldBlockAmount,
+  ARCANE_SURGE_DAMAGE_MULT,
   type HitQuality,
 } from "../_shared/combat-math.ts";
 
@@ -514,7 +515,7 @@ Deno.serve(async (req) => {
             const isCrit = roll >= critRange;
             let arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
             if (isStealth) arrowDmg = arrowDmg * 2;
-            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * 1.5);
+            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * ARCANE_SURGE_DAMAGE_MULT);
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
             totalDmg += arrowDmg;
@@ -570,7 +571,7 @@ Deno.serve(async (req) => {
         const multiplier = 1 + 0.5 * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
-        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * 1.5), 1);
+        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * ARCANE_SURGE_DAMAGE_MULT), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name} for ${finalDmg} damage!`, character_id: member.id });
@@ -612,7 +613,7 @@ Deno.serve(async (req) => {
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
-        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * 1.5), 1);
+        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT), 1);
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         const { emoji, verb } = T0_LABEL[pa.ability_type];
         events.push({
@@ -629,7 +630,7 @@ Deno.serve(async (req) => {
         const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
         let damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
-        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * 1.5), 1);
+        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * ARCANE_SURGE_DAMAGE_MULT), 1);
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale! ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage!`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -642,7 +643,7 @@ Deno.serve(async (req) => {
         let dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
-        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * 1.5), 1);
+        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * ARCANE_SURGE_DAMAGE_MULT), 1);
         const durationMs = Math.min(30000, 20000 + strMod * 1000);
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
@@ -841,7 +842,7 @@ Deno.serve(async (req) => {
           // there is no separate 2H damage multiplier in the autoattack pipeline.
           // Arcane Surge (damage_buff) augments wizard weapon strikes:
           //   • +intMod flat damage on the raw weapon roll (STR remains primary mod)
-          //   • final damage is multiplied by 1.5x further down
+          //   • final damage is multiplied by ARCANE_SURGE_DAMAGE_MULT further down
           const intModForBuff = isDmgBuff ? sm((c.int || 10) + (eb.int || 0)) : 0;
           let raw = rollDmg(1, weaponDie) + sMod + intModForBuff;
           if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
@@ -854,7 +855,7 @@ Deno.serve(async (req) => {
             consumedBuffs[m.id].push('stealth');
             events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
           }
-          if (isDmgBuff) dmg = Math.floor(dmg * 1.5);
+          if (isDmgBuff) dmg = Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT);
           if (hasDisengage) {
             dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
@@ -976,14 +977,14 @@ Deno.serve(async (req) => {
         if (quality2 !== 'miss') {
           // Pipeline: 1. base damage (offhand die + STR + Arcane Surge INT)
           // → 2. hit-quality mult → 3. crit mult → 4. off-hand 30% reduction
-          // → 5. Arcane Surge 1.5x → 6. clamp → 7. caps
+          // → 5. Arcane Surge mult → 6. clamp → 7. caps
           const isDmgBuff2 = !!mb2.damage_buff;
           const intModForBuff2 = isDmgBuff2 ? sm((c.int || 10) + (eb.int || 0)) : 0;
           const raw2 = rollDmg(1, ohDie) + sMod2 + intModForBuff2;
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
-          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * 1.5), 1);
+          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * ARCANE_SURGE_DAMAGE_MULT), 1);
 
           // Clamp minimum 1
           dmg2 = Math.max(dmg2, 1);
@@ -1049,7 +1050,7 @@ Deno.serve(async (req) => {
         const eb = eq[m.id] || {};
         const intMod = sm((c.int || 10) + (eb.int || 0));
         let pulseDmg = Math.max(1, 2 + intMod);
-        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * 1.5), 1);
+        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * ARCANE_SURGE_DAMAGE_MULT), 1);
 
         cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
 

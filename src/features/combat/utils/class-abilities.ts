@@ -76,7 +76,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   wizard: [
     { label: 'Fireball', emoji: '🔥', description: 'Hurl a ball of arcane flame at your target, scaling with INT', cpCost: 10, type: 'fireball', tier: 0, levelRequired: 1 },
     { label: 'Force Shield', emoji: '🛡️✨', description: 'Create an arcane shield that absorbs incoming damage based on INT', cpCost: 15, type: 'absorb_buff', tier: 1, levelRequired: 5 },
-    { label: 'Arcane Surge', emoji: '✨', description: 'Channel raw arcane energy. All your damage is increased by 50%, and your weapon strikes gain bonus damage from INT.', cpCost: 25, type: 'damage_buff', tier: 2, levelRequired: 10 },
+    { label: 'Arcane Surge', emoji: '✨', description: 'Channel raw arcane energy. All your damage is increased by 15%, and your weapon strikes gain bonus damage from INT.', cpCost: 25, type: 'damage_buff', tier: 2, levelRequired: 10 },
     { label: 'Ignite', emoji: '🔥🔥', description: 'Conjure a shield of fireballs. While in combat, each heartbeat an orb has a 40% chance to strike your target — dealing INT-scaled fire damage and applying a stackable burn (max 5). Lasts 5 minutes. Costs all your CP (minimum 50).', cpCost: 50, type: 'ignite_buff', tier: 3, levelRequired: 15 },
     { label: 'Conflagrate', emoji: '💥', description: 'Consume all burn stacks on your target for +50% bonus damage per stack', cpCost: 60, type: 'ignite_consume', tier: 4, levelRequired: 20 },
   ],
