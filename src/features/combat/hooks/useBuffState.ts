@@ -36,6 +36,10 @@ export interface BuffState {
   partyRegenBuff: PartyRegenBuff | null;
   sunderDebuff: Record<string, SunderDebuff>;
   inspireBuff: InspireBuff | null;
+  holyShieldBuff: HolyShieldBuff | null;
+  shieldWallBuff: ShieldWallBuff | null;
+  consecrateBuff: ConsecrateBuff | null;
+  divineChallengeBuff: DivineChallengeBuff | null;
 }
 
 export interface BuffSetters {
