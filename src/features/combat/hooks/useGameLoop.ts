@@ -61,6 +61,16 @@ export interface InspireBuff {
 }
 export interface SunderDebuff { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }
 
+// ── Templar buffs ────────────────────────────────────────────
+/** Holy Shield — reactive holy retaliation against attackers. */
+export interface HolyShieldBuff { wisMod: number; expiresAt: number }
+/** Shield Wall — guaranteed 100% block while active (requires shield). */
+export interface ShieldWallBuff { expiresAt: number }
+/** Consecrate — node-wide ground effect: heal allies, burn engaged creatures. */
+export interface ConsecrateBuff { wisMod: number; expiresAt: number; durationMs: number }
+/** Divine Challenge — flat damage reduction. */
+export interface DivineChallengeBuff { reduction: number; expiresAt: number }
+
 // ─── Local type aliases ───────────────────────────────────────────
 interface EquippedItem {
   item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any };
