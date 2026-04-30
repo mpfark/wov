@@ -20,23 +20,20 @@ const STAT_FULL_NAMES: Record<string, string> = {
   int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma',
 };
 
-interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface BodyProps {
   character: Character;
   equipmentBonuses: Record<string, number>;
   onCommit: (allocations: Record<string, number>) => void;
+  /** Fired after a successful commit so callers can dismiss outer container. */
+  onAfterCommit?: () => void;
 }
 
-export default function StatPlannerDialog({ open, onOpenChange, character, equipmentBonuses, onCommit }: Props) {
-  // How many points the user plans to add to each stat (0 = no change)
+/**
+ * Pure body of the stat planner — usable inside any container (dialog, panel,
+ * service shell). Use <StatPlannerDialog> for the standalone modal version.
+ */
+export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfterCommit }: BodyProps) {
   const [planned, setPlanned] = useState<Record<string, number>>({});
-
-  // Reset when dialog opens
-  const handleOpenChange = useCallback((v: boolean) => {
-    if (v) setPlanned({});
-    onOpenChange(v);
-  }, [onOpenChange]);
 
   const totalSpent = Object.values(planned).reduce((s, v) => s + v, 0);
   const pointsAvailable = character.unspent_stat_points;
@@ -46,27 +43,23 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
     if (pointsRemaining <= 0) return;
     setPlanned(p => ({ ...p, [stat]: (p[stat] || 0) + 1 }));
   };
-
   const removePoint = (stat: string) => {
     if ((planned[stat] || 0) <= 0) return;
     setPlanned(p => ({ ...p, [stat]: (p[stat] || 0) - 1 }));
   };
 
-  // Current stats (no equipment)
   const currentStats = useMemo(() => {
     const s: Record<string, number> = {};
     for (const stat of STAT_KEYS) s[stat] = (character as any)[stat];
     return s;
   }, [character]);
 
-  // Planned stats (no equipment)
   const plannedStats = useMemo(() => {
     const s: Record<string, number> = {};
     for (const stat of STAT_KEYS) s[stat] = currentStats[stat] + (planned[stat] || 0);
     return s;
   }, [currentStats, planned]);
 
-  // Derived stats comparison
   const derived = useMemo(() => {
     const calc = (stats: Record<string, number>) => {
       const eCon = stats.con + (equipmentBonuses.con || 0);
@@ -109,13 +102,13 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
 
   const handleCommit = () => {
     if (totalSpent === 0) return;
-    // Filter out zero allocations
     const allocations: Record<string, number> = {};
     for (const [k, v] of Object.entries(planned)) {
       if (v > 0) allocations[k] = v;
     }
     onCommit(allocations);
-    handleOpenChange(false);
+    setPlanned({});
+    onAfterCommit?.();
   };
 
   const CompRow = ({ label, currentVal, plannedVal, format, lowerIsBetter }: {
@@ -144,6 +137,111 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
   };
 
   return (
+    <div className="space-y-4">
+      {/* Points remaining */}
+      <div className="text-center font-display text-sm">
+        <span className={pointsRemaining === 0 ? 'text-muted-foreground' : 'text-primary'}>
+          {pointsRemaining}
+        </span>
+        <span className="text-muted-foreground"> / {pointsAvailable} points remaining</span>
+      </div>
+
+      {/* Stat allocation controls */}
+      <div className="space-y-1">
+        {STAT_KEYS.map(stat => {
+          const current = currentStats[stat];
+          const add = planned[stat] || 0;
+          const final = current + add;
+          const effectiveFinal = final + (equipmentBonuses[stat] || 0);
+          const mod = getStatModifier(effectiveFinal);
+
+          return (
+            <div key={stat} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-accent/30">
+              <span className="font-display text-xs w-24">{STAT_FULL_NAMES[stat]}</span>
+              <span className="text-xs tabular-nums w-6 text-right text-muted-foreground">{current}</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => removePoint(stat)}
+                  disabled={add <= 0}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-accent/50 hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+                <span className={`text-xs tabular-nums w-6 text-center font-semibold ${add > 0 ? 'text-chart-2' : 'text-muted-foreground'}`}>
+                  {add > 0 ? `+${add}` : '–'}
+                </span>
+                <button
+                  onClick={() => addPoint(stat)}
+                  disabled={pointsRemaining <= 0}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-primary/20 hover:bg-primary/40 text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
+              </div>
+              <span className="text-xs tabular-nums w-6 text-right">{final}</span>
+              <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">
+                ({mod >= 0 ? '+' : ''}{mod})
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Derived stats preview */}
+      {totalSpent > 0 && (
+        <div className="border-t border-border pt-3 space-y-2">
+          <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider">Impact Preview</h4>
+
+          <div className="space-y-0.5">
+            <CompRow label="Max HP" currentVal={derived.current.maxHp} plannedVal={derived.planned.maxHp} />
+            <CompRow label="HP Regen" currentVal={derived.current.hpRegen} plannedVal={derived.planned.hpRegen} format={v => `${v}/tick`} />
+            <CompRow label="Max CP" currentVal={derived.current.maxCp} plannedVal={derived.planned.maxCp} />
+            <CompRow label="CP Regen" currentVal={derived.current.cpRegen} plannedVal={derived.planned.cpRegen} format={v => `${v}/tick`} />
+            <CompRow label="Max Stamina" currentVal={derived.current.maxMp} plannedVal={derived.planned.maxMp} />
+            <CompRow label="Stamina Regen" currentVal={derived.current.mpRegen} plannedVal={derived.planned.mpRegen} format={v => `${v}/tick`} />
+          </div>
+
+          <div className="space-y-0.5">
+            <CompRow label="AC" currentVal={derived.current.ac} plannedVal={derived.planned.ac} />
+            <CompRow label="Hit Bonus" currentVal={derived.current.totalHit} plannedVal={derived.planned.totalHit} format={v => `+${v}`} />
+            <CompRow label="Crit Range" currentVal={derived.current.critRange} plannedVal={derived.planned.critRange} format={v => v === 20 ? '20' : `${v}–20`} lowerIsBetter />
+            <CompRow label="Atk Speed" currentVal={derived.current.atkSpeed} plannedVal={derived.planned.atkSpeed} format={v => `${v.toFixed(1)}s`} lowerIsBetter />
+            <CompRow label="Min Damage" currentVal={derived.current.strFloor} plannedVal={derived.planned.strFloor} format={v => v > 0 ? `+${v}` : '–'} />
+            <CompRow label="Crit Resistance" currentVal={derived.current.wisAntiCrit} plannedVal={derived.planned.wisAntiCrit} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
+            <CompRow label="Vendor Discount" currentVal={derived.current.buyDisc} plannedVal={derived.planned.buyDisc} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
+          </div>
+        </div>
+      )}
+
+      {/* Footer actions */}
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="ghost" size="sm" onClick={() => setPlanned({})} disabled={totalSpent === 0}>
+          <RotateCcw className="w-3 h-3 mr-1" /> Reset
+        </Button>
+        <Button size="sm" onClick={handleCommit} disabled={totalSpent === 0}>
+          <Check className="w-3 h-3 mr-1" /> Commit {totalSpent} Point{totalSpent !== 1 ? 's' : ''}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface DialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  character: Character;
+  equipmentBonuses: Record<string, number>;
+  onCommit: (allocations: Record<string, number>) => void;
+}
+
+/**
+ * Standalone modal wrapper around <StatPlannerBody>. Currently kept for any
+ * lingering callers / admin tooling; the player flow now uses the body
+ * directly inside the Trainer service panel.
+ */
+export default function StatPlannerDialog({ open, onOpenChange, character, equipmentBonuses, onCommit }: DialogProps) {
+  const handleOpenChange = useCallback((v: boolean) => onOpenChange(v), [onOpenChange]);
+  return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -152,92 +250,13 @@ export default function StatPlannerDialog({ open, onOpenChange, character, equip
             Plan your stat allocations before committing. Preview how changes affect your derived stats.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Points remaining */}
-          <div className="text-center font-display text-sm">
-            <span className={pointsRemaining === 0 ? 'text-muted-foreground' : 'text-primary'}>
-              {pointsRemaining}
-            </span>
-            <span className="text-muted-foreground"> / {pointsAvailable} points remaining</span>
-          </div>
-
-          {/* Stat allocation controls */}
-          <div className="space-y-1">
-            {STAT_KEYS.map(stat => {
-              const current = currentStats[stat];
-              const add = planned[stat] || 0;
-              const final = current + add;
-              const effectiveFinal = final + (equipmentBonuses[stat] || 0);
-              const mod = getStatModifier(effectiveFinal);
-
-              return (
-                <div key={stat} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-accent/30">
-                  <span className="font-display text-xs w-24">{STAT_FULL_NAMES[stat]}</span>
-                  <span className="text-xs tabular-nums w-6 text-right text-muted-foreground">{current}</span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => removePoint(stat)}
-                      disabled={add <= 0}
-                      className="w-5 h-5 flex items-center justify-center rounded bg-accent/50 hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <span className={`text-xs tabular-nums w-6 text-center font-semibold ${add > 0 ? 'text-chart-2' : 'text-muted-foreground'}`}>
-                      {add > 0 ? `+${add}` : '–'}
-                    </span>
-                    <button
-                      onClick={() => addPoint(stat)}
-                      disabled={pointsRemaining <= 0}
-                      className="w-5 h-5 flex items-center justify-center rounded bg-primary/20 hover:bg-primary/40 text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <span className="text-xs tabular-nums w-6 text-right">{final}</span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground w-8 text-right">
-                    ({mod >= 0 ? '+' : ''}{mod})
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Derived stats preview */}
-          {totalSpent > 0 && (
-            <div className="border-t border-border pt-3 space-y-2">
-              <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider">Impact Preview</h4>
-
-              <div className="space-y-0.5">
-                <CompRow label="Max HP" currentVal={derived.current.maxHp} plannedVal={derived.planned.maxHp} />
-                <CompRow label="HP Regen" currentVal={derived.current.hpRegen} plannedVal={derived.planned.hpRegen} format={v => `${v}/tick`} />
-                <CompRow label="Max CP" currentVal={derived.current.maxCp} plannedVal={derived.planned.maxCp} />
-                <CompRow label="CP Regen" currentVal={derived.current.cpRegen} plannedVal={derived.planned.cpRegen} format={v => `${v}/tick`} />
-                <CompRow label="Max Stamina" currentVal={derived.current.maxMp} plannedVal={derived.planned.maxMp} />
-                <CompRow label="Stamina Regen" currentVal={derived.current.mpRegen} plannedVal={derived.planned.mpRegen} format={v => `${v}/tick`} />
-              </div>
-
-              <div className="space-y-0.5">
-                <CompRow label="AC" currentVal={derived.current.ac} plannedVal={derived.planned.ac} />
-                <CompRow label="Hit Bonus" currentVal={derived.current.totalHit} plannedVal={derived.planned.totalHit} format={v => `+${v}`} />
-                <CompRow label="Crit Range" currentVal={derived.current.critRange} plannedVal={derived.planned.critRange} format={v => v === 20 ? '20' : `${v}–20`} lowerIsBetter />
-                <CompRow label="Atk Speed" currentVal={derived.current.atkSpeed} plannedVal={derived.planned.atkSpeed} format={v => `${v.toFixed(1)}s`} lowerIsBetter />
-                <CompRow label="Min Damage" currentVal={derived.current.strFloor} plannedVal={derived.planned.strFloor} format={v => v > 0 ? `+${v}` : '–'} />
-                <CompRow label="Crit Resistance" currentVal={derived.current.wisAntiCrit} plannedVal={derived.planned.wisAntiCrit} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
-                <CompRow label="Vendor Discount" currentVal={derived.current.buyDisc} plannedVal={derived.planned.buyDisc} format={v => v > 0 ? `${Math.round(v * 100)}%` : '–'} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" size="sm" onClick={() => setPlanned({})} disabled={totalSpent === 0}>
-            <RotateCcw className="w-3 h-3 mr-1" /> Reset
-          </Button>
-          <Button size="sm" onClick={handleCommit} disabled={totalSpent === 0}>
-            <Check className="w-3 h-3 mr-1" /> Commit {totalSpent} Point{totalSpent !== 1 ? 's' : ''}
-          </Button>
-        </DialogFooter>
+        <StatPlannerBody
+          character={character}
+          equipmentBonuses={equipmentBonuses}
+          onCommit={onCommit}
+          onAfterCommit={() => handleOpenChange(false)}
+        />
+        <DialogFooter />
       </DialogContent>
     </Dialog>
   );

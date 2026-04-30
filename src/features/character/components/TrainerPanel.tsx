@@ -2,14 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
 import { Character } from '@/features/character';
-import { getMaxHp, getMaxCp, getMaxMp } from '@/lib/game-data';
+import { getMaxHp, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
+import { StatPlannerBody } from '@/features/character/components/StatPlannerDialog';
 
 // NOTE: `character.bhp` is legacy storage for the current Renown balance.
 // `character.bhp_trained` is legacy storage for Renown training ranks.
-// Only the player-facing name changed; columns kept their original names.
 
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const STAT_LABELS: Record<string, string> = {
@@ -20,7 +24,6 @@ const STAT_LABELS: Record<string, string> = {
 function getTrainingCost(rank: number): number {
   return 10 * (rank + 1);
 }
-
 function getSuccessChance(rank: number): number {
   return Math.max(1, 95 - rank * 15);
 }
@@ -37,26 +40,41 @@ interface Props {
   open: boolean;
   onClose: () => void;
   character: Character;
+  equipmentBonuses: Record<string, number>;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   addLog: (msg: string) => void;
+  /** Called by allocate/respec flows to commit a batch / refund. */
+  onBatchAllocateStats: (allocations: Record<string, number>) => void;
+  onFullRespec: () => void;
   /** Optional NPC framing (when opened by talking to a service-role trainer). */
   npcName?: string;
   npcFlavor?: string;
 }
 
-type TrainerTab = 'train' | 'leaderboard';
+type TrainerTab = 'allocate' | 'respec' | 'renown' | 'leaderboard';
 
-export default function RenownTrainerPanel({
-  open, onClose, character, updateCharacter, addLog, npcName, npcFlavor,
+export default function TrainerPanel({
+  open, onClose, character, equipmentBonuses, updateCharacter, addLog,
+  onBatchAllocateStats, onFullRespec, npcName, npcFlavor,
 }: Props) {
-  const [tab, setTab] = useState<TrainerTab>('train');
+  const [tab, setTab] = useState<TrainerTab>('allocate');
   const [training, setTraining] = useState(false);
+  const [showRespecConfirm, setShowRespecConfirm] = useState(false);
   const trained = (character.bhp_trained || {}) as Record<string, number>;
 
   const [leaders, setLeaders] = useState<LeaderRow[] | null>(null);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [loadingBoard, setLoadingBoard] = useState(false);
 
+  // Default tab: prefer Allocate if points pending, else Respec if respec available, else Renown.
+  useEffect(() => {
+    if (!open) return;
+    if (character.unspent_stat_points > 0) setTab('allocate');
+    else if ((character.respec_points || 0) > 0) setTab('respec');
+    else setTab('renown');
+  }, [open, character.unspent_stat_points, character.respec_points]);
+
+  // ── Renown training ──
   const handleTrain = async (stat: typeof STAT_KEYS[number]) => {
     const rank = trained[stat] || 0;
     const cost = getTrainingCost(rank);
@@ -93,6 +111,7 @@ export default function RenownTrainerPanel({
     setTraining(false);
   };
 
+  // ── Leaderboard ──
   const fetchLeaderboard = useCallback(async () => {
     setLoadingBoard(true);
     try {
@@ -121,29 +140,116 @@ export default function RenownTrainerPanel({
     }
   }, [open, tab, leaders, fetchLeaderboard]);
 
-  // Reset cache when reopening
   useEffect(() => {
     if (!open) {
       setLeaders(null);
       setMyRank(null);
-      setTab('train');
     }
   }, [open]);
-
-  const totalTrained = Object.values(trained).reduce((sum, v) => sum + v, 0);
 
   // ── Tabs ──
   const tabsRow = (
     <Tabs value={tab} onValueChange={(v) => setTab(v as TrainerTab)} className="w-full">
-      <TabsList className="grid grid-cols-2 w-full bg-background/40">
-        <TabsTrigger value="train" className="font-display text-xs">Train</TabsTrigger>
-        <TabsTrigger value="leaderboard" className="font-display text-xs">Leaderboard</TabsTrigger>
+      <TabsList className="grid grid-cols-4 w-full bg-background/40">
+        <TabsTrigger value="allocate" className="font-display text-xs relative">
+          Allocate
+          {character.unspent_stat_points > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="respec" className="font-display text-xs relative">
+          Respec
+          {(character.respec_points || 0) > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-chart-5 animate-pulse" />
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="renown" className="font-display text-xs">Renown</TabsTrigger>
+        <TabsTrigger value="leaderboard" className="font-display text-xs">Board</TabsTrigger>
       </TabsList>
     </Tabs>
   );
 
-  // ── Train tab ──
-  const trainContent = (
+  // ── Allocate tab ──
+  const allocateContent = (
+    character.unspent_stat_points > 0 ? (
+      <StatPlannerBody
+        character={character}
+        equipmentBonuses={equipmentBonuses}
+        onCommit={onBatchAllocateStats}
+      />
+    ) : (
+      <ServicePanelEmpty>
+        <p className="font-display text-foreground mb-1">The trainer studies your form.</p>
+        <p>"You've nothing to refine just yet, wayfarer. Slay foes, gain levels, then return — and we'll forge raw experience into might."</p>
+      </ServicePanelEmpty>
+    )
+  );
+
+  // ── Respec tab ──
+  // Show per-stat manual breakdown so player understands what gets refunded.
+  const creationStats = calculateStats(character.race, character.class);
+  const levelBonuses = CLASS_LEVEL_BONUSES[character.class] || {};
+  const respecAvailable = (character.respec_points || 0) > 0;
+
+  const respecContent = (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Available Respec Points</span>
+        <span className="font-display text-chart-5 text-lg">{character.respec_points || 0}</span>
+      </div>
+
+      {!respecAvailable ? (
+        <ServicePanelEmpty>
+          <p className="font-display text-foreground mb-1">"Reshaping the soul is no small task."</p>
+          <p>You have no respec points. Earn them through milestones to undo your manual allocations.</p>
+        </ServicePanelEmpty>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground italic">
+            Resets <strong className="text-foreground">all</strong> manually allocated stat points back into your unspent pool.
+            Class level bonuses and Renown training are preserved.
+          </p>
+
+          <div className="space-y-1">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-[10px] text-muted-foreground font-display px-1">
+              <span>Attribute</span>
+              <span className="text-right">Current</span>
+              <span className="text-right">Manual</span>
+            </div>
+            {STAT_KEYS.map(stat => {
+              const base = (character as any)[stat] as number;
+              const levelBonusTotal = Math.floor((character.level - 1) / 3) * (levelBonuses[stat] || 0);
+              const renownRank = trained[stat] || 0;
+              const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal + renownRank;
+              const manualPoints = Math.max(base - nonManualBase, 0);
+              return (
+                <div key={stat} className="grid grid-cols-[1fr_auto_auto] gap-3 items-center px-1.5 py-1 bg-background/40 rounded border border-border text-xs">
+                  <span className="font-display text-foreground">{STAT_LABELS[stat]}</span>
+                  <span className="text-right tabular-nums text-muted-foreground">{base}</span>
+                  <span className={`text-right tabular-nums w-10 ${manualPoints > 0 ? 'text-chart-5' : 'text-muted-foreground/50'}`}>
+                    {manualPoints > 0 ? `+${manualPoints}` : '–'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full font-display text-chart-5 border-chart-5/40 hover:bg-chart-5/10"
+            onClick={() => setShowRespecConfirm(true)}
+          >
+            Spend 1 Respec Point — Refund All Manual Allocations
+          </Button>
+        </>
+      )}
+    </div>
+  );
+
+  // ── Renown tab ──
+  const totalTrained = Object.values(trained).reduce((sum, v) => sum + v, 0);
+  const renownContent = (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Available Renown</span>
@@ -176,9 +282,7 @@ export default function RenownTrainerPanel({
                 <div key={stat} className="grid grid-cols-[1fr_50px_60px_60px_auto] gap-1 items-center p-1.5 bg-background/50 rounded border border-border">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="font-display text-xs text-foreground cursor-default">
-                        {STAT_LABELS[stat]}
-                      </span>
+                      <span className="font-display text-xs text-foreground cursor-default">{STAT_LABELS[stat]}</span>
                     </TooltipTrigger>
                     <TooltipContent side="left" className="text-xs max-w-[180px]">
                       <p>Current: {(character as any)[stat]}</p>
@@ -191,9 +295,7 @@ export default function RenownTrainerPanel({
                   <span className={`text-center text-xs tabular-nums ${chance <= 10 ? 'text-destructive' : chance <= 35 ? 'text-dwarvish' : 'text-elvish'}`}>
                     {chance}%
                   </span>
-                  <span className="text-center text-xs text-muted-foreground tabular-nums">
-                    {cost}
-                  </span>
+                  <span className="text-center text-xs text-muted-foreground tabular-nums">{cost}</span>
                   <Button
                     size="sm"
                     variant="outline"
@@ -304,19 +406,53 @@ export default function RenownTrainerPanel({
       )}
     </>
   ) : (
-    <span className="italic">Spend Renown to permanently raise your attributes.</span>
+    <span className="italic">Refine your soul: allocate growth, undo past choices, or forge Renown into might.</span>
   );
 
+  const tabContent =
+    tab === 'allocate' ? allocateContent
+    : tab === 'respec' ? respecContent
+    : tab === 'renown' ? renownContent
+    : leaderboardContent;
+
   return (
-    <ServicePanelShell
-      open={open}
-      onClose={onClose}
-      icon="🏛️"
-      title="Renown Trainer"
-      subtitle={subtitle}
-      tabs={tabsRow}
-      singleColumn
-      left={tab === 'train' ? trainContent : leaderboardContent}
-    />
+    <>
+      <ServicePanelShell
+        open={open}
+        onClose={onClose}
+        icon="🏛️"
+        title="Trainer"
+        subtitle={subtitle}
+        tabs={tabsRow}
+        singleColumn
+        left={tabContent}
+      />
+
+      {/* Respec confirmation */}
+      <AlertDialog open={showRespecConfirm} onOpenChange={setShowRespecConfirm}>
+        <AlertDialogContent className="bg-card border-border max-w-xs">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display text-chart-5 text-sm">Full Respec</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              Reset <strong className="text-foreground">all</strong> manually allocated stat points? They will be returned as unspent points for you to reallocate here.
+              <span className="block mt-1 text-muted-foreground/70">Uses 1 respec point ({character.respec_points || 0} remaining).</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-xs h-7">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="text-xs h-7"
+              onClick={() => {
+                onFullRespec();
+                setShowRespecConfirm(false);
+                setTab('allocate');
+              }}
+            >
+              Confirm Respec
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
