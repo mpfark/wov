@@ -95,6 +95,10 @@ export function useBuffState(params: UseBuffStateParams) {
   const [partyRegenBuff, setPartyRegenBuff] = useState<PartyRegenBuff | null>(null);
   const [sunderDebuff, setSunderDebuff] = useState<Record<string, SunderDebuff>>({});
   const [inspireBuff, setInspireBuff] = useState<InspireBuff | null>(null);
+  const [holyShieldBuff, setHolyShieldBuff] = useState<HolyShieldBuff | null>(null);
+  const [shieldWallBuff, setShieldWallBuff] = useState<ShieldWallBuff | null>(null);
+  const [consecrateBuff, setConsecrateBuff] = useState<ConsecrateBuff | null>(null);
+  const [divineChallengeBuff, setDivineChallengeBuff] = useState<DivineChallengeBuff | null>(null);
 
   // ── Purge all DoT stacks targeting a killed creature (UI cleanup) ──
   const notifyCreatureKilled = useCallback((creatureId: string) => {
