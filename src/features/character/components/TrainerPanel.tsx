@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
 import { Character } from '@/features/character';
-import { getMaxHp, getMaxCp, getMaxMp, getStatModifier, calculateStats, CLASS_LEVEL_BONUSES } from '@/lib/game-data';
+import { getMaxHp, getMaxCp, getMaxMp, calculateStats, CLASS_LEVEL_BONUSES } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
 import { StatPlannerBody } from '@/features/character/components/StatPlannerDialog';
 
