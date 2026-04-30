@@ -635,7 +635,7 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4">
               <p className="text-xs text-muted-foreground mb-2">
-                Each class gets a <strong>Tier 0</strong> class-identity ability from level 1 (Wizard Fireball, Warrior Power Strike, Ranger Aimed Shot, Rogue Backstab, Healer Smite, Bard Cutting Words). Higher-tier abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
+                Each class gets a <strong>Tier 0</strong> class-identity ability from level 1 (Wizard Fireball, Warrior Power Strike, Ranger Aimed Shot, Rogue Backstab, Healer Smite, Bard Cutting Words, Templar Judgment). Higher-tier abilities unlock at Tier 1 (Lv 5), Tier 2 (Lv 10), Tier 3 (Lv 15), Tier 4 (Lv 20). Each ability costs Concentration Points (CP) to use.
               </p>
               <Accordion type="multiple">
                 {Object.entries(CLASS_ABILITIES).map(([cls, abilities]) => (
@@ -714,6 +714,13 @@ export default function GameManual() {
                   <p><strong className="text-foreground">🎵💢 Dissonance (T2, 25 CP):</strong> <span className="text-elvish">⚡</span> Target damage −30%, Duration = <code className="text-primary">min(15s, 8s + WIS_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🎶✨ Crescendo (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Party heal = <code className="text-primary">max(1, CHA_mod + 2)</code> per 2s tick, Duration = <code className="text-primary">min(25s, 15s + CHA_mod × 1s)</code></p>
                   <p><strong className="text-foreground">🎵💥 Grand Finale (T4, 60 CP):</strong> <span className="text-dwarvish">⏳</span> Dmg = <code className="text-primary">max(8, CHA_mod × 4 + floor(level × 1.5)) + 1d(CHA_mod × 2)</code></p>
+
+                  <p className="text-[10px] font-semibold text-primary/70 mt-2">— Templar —</p>
+                  <p><strong className="text-foreground">✝️ Judgment (T0, 10 CP):</strong> <span className="text-dwarvish">⏳</span> Holy damage = <code className="text-primary">1d8 + WIS_mod + floor(level × 0.5)</code> (crit on 20)</p>
+                  <p><strong className="text-foreground">🛡️✝️ Holy Shield (T1, 15 CP):</strong> <span className="text-elvish">⚡</span> 30s reactive buff. Each attacker that strikes you takes <code className="text-primary">max(1, WIS_mod + 1)</code> holy damage in return (max once per attacker per 2s tick).</p>
+                  <p><strong className="text-foreground">🛡️ Shield Wall (T2, 25 CP):</strong> <span className="text-elvish">⚡</span> 100% block chance for ~4s. <strong>Requires a shield equipped.</strong> All physical hits absorbed entirely.</p>
+                  <p><strong className="text-foreground">✨🟡 Consecrate (T3, 40 CP):</strong> <span className="text-elvish">⚡</span> Sanctifies your node for ~6s. Each tick: party allies on this node heal <code className="text-primary">max(1, WIS_mod + 1)</code>, engaged creatures take <code className="text-primary">max(1, WIS_mod + 1)</code> holy damage.</p>
+                  <p><strong className="text-foreground">⚜️ Divine Challenge (T4, 60 CP):</strong> <span className="text-elvish">⚡</span> 30% flat damage reduction from all sources for 30s. Stacks multiplicatively with Battle Cry / WIS dampen.</p>
 
                   <p className="ml-4 text-[10px] mt-2">All modifiers include equipment bonuses unless noted. modifier = floor((stat − 10) / 2). INT hit bonus capped at +5. Lv 39+ milestone: all CP costs −10%.</p>
                 </div>
