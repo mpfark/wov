@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { getAvailableCp } from '@/features/combat/utils/cp-display';
+import { ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers (module-level, outside hook)
