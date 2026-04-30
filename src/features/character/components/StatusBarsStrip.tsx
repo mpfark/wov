@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
@@ -165,8 +165,9 @@ export default function StatusBarsStrip({
   const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
   // Track the last seen rawCp. If rawCp drops by >= reservedCp between renders,
   // the server has already applied the debit — stop subtracting so the bar
-  // can't dip below the true value for a frame.
-  const prevRawCpRef = (StatusBarsStrip as any)._prevRawCpRef ||= { current: rawCp };
+  // can't dip below the true value for a frame (defensive backup to flushSync
+  // in usePartyCombat).
+  const prevRawCpRef = useRef(rawCp);
   const debitLanded = reservedCp > 0 && prevRawCpRef.current - rawCp >= reservedCp;
   prevRawCpRef.current = rawCp;
   const effectiveReserved = debitLanded ? 0 : reservedCp;
