@@ -474,12 +474,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             lastDispatchedOpenerTargetRef.current = targetId;
           }
 
+          const expectedCpAfter = Math.max(0, (p.character.cp ?? 0) - cpCost);
+
           const abilityPayload = {
             character_id: p.character.id,
             ability_type: ability.type,
             target_creature_id: targetId,
             consume_stacks: 0,
             cp_cost: cpCost,
+            client_cp_before: p.character.cp ?? 0,
+            client_expected_cp_after: expectedCpAfter,
           };
 
           if (p.party && !p.isLeader) {
@@ -488,15 +492,21 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               event: 'member_pending_ability',
               payload: { ability: abilityPayload },
             });
-            // Follower: server (leader) is authoritative; clear reservation now.
+            // Follower: convert reservation into a real local CP debit so the
+            // bar doesn't snap back up before the leader's broadcast confirms.
+            optimisticCpRef.current = expectedCpAfter;
+            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
             setPendingCpCost(0);
           } else {
             pendingAbilitiesForServer.push(abilityPayload);
-            // Solo / leader: KEEP the reservation displayed until the tick
-            // response actually applies the CP debit. Otherwise the bar
-            // briefly snaps back to full (regaining the reserved CP) and
-            // then drops again, which looks like CP regen during combat.
-            // Cleared after `processTickResult(result)` below.
+            // Solo / leader: commit the debit locally NOW. The reservation
+            // shading goes away, but the filled CP amount stays at the same
+            // visual position (raw - reserved == new raw, reserved 0). When
+            // the tick response comes back, processTickResult will see the
+            // server agrees and skip the CP repaint.
+            optimisticCpRef.current = expectedCpAfter;
+            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
+            setPendingCpCost(0);
           }
         } else {
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
