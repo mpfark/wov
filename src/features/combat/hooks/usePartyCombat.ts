@@ -455,7 +455,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
         setPendingAbility(null);
-        setPendingCpCost(0);
 
         const allAbilities = CLASS_ABILITIES[p.character.class] || [];
         const ability = allAbilities[pending.index];
@@ -484,13 +483,23 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               event: 'member_pending_ability',
               payload: { ability: abilityPayload },
             });
+            // Follower: server (leader) is authoritative; clear reservation now.
+            setPendingCpCost(0);
           } else {
             pendingAbilitiesForServer.push(abilityPayload);
+            // Solo / leader: KEEP the reservation displayed until the tick
+            // response actually applies the CP debit. Otherwise the bar
+            // briefly snaps back to full (regaining the reserved CP) and
+            // then drops again, which looks like CP regen during combat.
+            // Cleared after `processTickResult(result)` below.
           }
         } else {
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
             await p.onAbilityExecute(pending.index, pending.targetId);
           }
+          // Non-server abilities debit CP synchronously via onAbilityExecute,
+          // so the reservation can be cleared immediately.
+          setPendingCpCost(0);
         }
       }
 
