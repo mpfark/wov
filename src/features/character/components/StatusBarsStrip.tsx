@@ -80,7 +80,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (poisonActive) {
     const dur = BUFF_DURATIONS['Envenom'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((poisonBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🧪', label: 'Envenom', detail: '40% poison proc', color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ emoji: '🐍', label: 'Envenom', detail: '40% poison proc', color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (dmgBuffActive) {
