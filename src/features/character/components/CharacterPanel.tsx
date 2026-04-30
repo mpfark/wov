@@ -961,7 +961,7 @@ export default function CharacterPanel({
 
                   // Damage multiplier text
                   const dmgMultParts: string[] = [];
-                  if (dmgBuffActive) dmgMultParts.push('1.5× Arcane Surge');
+                  if (dmgBuffActive) dmgMultParts.push(`${ARCANE_SURGE_DAMAGE_MULT}× Arcane Surge (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%)`);
 
                   type DerivedRow = { label: string; value: string; tip: string; buffed?: boolean; buffColor?: string };
 
