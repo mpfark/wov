@@ -15,7 +15,6 @@
  *   - combat-predictor helpers (prediction state)
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { flushSync } from 'react-dom';
 
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
@@ -116,6 +115,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
   const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number; cpCost: number; label: string; emoji: string } | null>(null);
   const [pendingCpCost, setPendingCpCost] = useState<number>(0);
+  // Last CP value the client optimistically committed for the in-flight ability.
+  // When the server's tick response echoes this exact value, we suppress the
+  // CP repaint so the bar doesn't briefly snap up and back down.
+  const optimisticCpRef = useRef<number | null>(null);
   const idleCountRef = useRef(0);
 
    // Prediction removed — creature HP only updates from server responses
@@ -159,6 +162,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     pendingAbilityRef.current = null;
     setPendingAbility(null);
     setPendingCpCost(0);
+    optimisticCpRef.current = null;
     if (intervalRef.current) {
       clearWorkerInterval(intervalRef.current);
       intervalRef.current = null;
@@ -312,10 +316,26 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     // Character state
     if (result.characterUpdates) {
-      if (ext.current.updateCharacterLocal) {
-        ext.current.updateCharacterLocal(result.characterUpdates);
-      } else {
-        ext.current.updateCharacter(result.characterUpdates);
+      const updates = { ...result.characterUpdates };
+      // CP reconciliation: if the server agrees with the value the client
+      // already optimistically committed, drop the field so we don't repaint
+      // the bar (avoids the "CP returned then deducted" flicker).
+      if (typeof updates.cp === 'number' && optimisticCpRef.current !== null) {
+        if (updates.cp === optimisticCpRef.current) {
+          delete updates.cp;
+          optimisticCpRef.current = null;
+        } else {
+          // Server disagrees — accept the authoritative value and clear the
+          // optimistic flag so subsequent ticks behave normally.
+          optimisticCpRef.current = null;
+        }
+      }
+      if (Object.keys(updates).length > 0) {
+        if (ext.current.updateCharacterLocal) {
+          ext.current.updateCharacterLocal(updates);
+        } else {
+          ext.current.updateCharacter(updates);
+        }
       }
     }
 
@@ -470,12 +490,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             lastDispatchedOpenerTargetRef.current = targetId;
           }
 
+          const expectedCpAfter = Math.max(0, (p.character.cp ?? 0) - cpCost);
+
           const abilityPayload = {
             character_id: p.character.id,
             ability_type: ability.type,
             target_creature_id: targetId,
             consume_stacks: 0,
             cp_cost: cpCost,
+            client_cp_before: p.character.cp ?? 0,
+            client_expected_cp_after: expectedCpAfter,
           };
 
           if (p.party && !p.isLeader) {
@@ -484,15 +508,21 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               event: 'member_pending_ability',
               payload: { ability: abilityPayload },
             });
-            // Follower: server (leader) is authoritative; clear reservation now.
+            // Follower: convert reservation into a real local CP debit so the
+            // bar doesn't snap back up before the leader's broadcast confirms.
+            optimisticCpRef.current = expectedCpAfter;
+            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
             setPendingCpCost(0);
           } else {
             pendingAbilitiesForServer.push(abilityPayload);
-            // Solo / leader: KEEP the reservation displayed until the tick
-            // response actually applies the CP debit. Otherwise the bar
-            // briefly snaps back to full (regaining the reserved CP) and
-            // then drops again, which looks like CP regen during combat.
-            // Cleared after `processTickResult(result)` below.
+            // Solo / leader: commit the debit locally NOW. The reservation
+            // shading goes away, but the filled CP amount stays at the same
+            // visual position (raw - reserved == new raw, reserved 0). When
+            // the tick response comes back, processTickResult will see the
+            // server agrees and skip the CP repaint.
+            optimisticCpRef.current = expectedCpAfter;
+            ext.current.updateCharacterLocal?.({ cp: expectedCpAfter });
+            setPendingCpCost(0);
           }
         } else {
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
@@ -608,17 +638,11 @@ export function usePartyCombat(params: UsePartyCombatParams) {
             if (!solo) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
-            // Commit reservation-clear + server CP value in a single React
-            // paint. Without flushSync, the ~10 setStates and side effects
-            // fanned out by processTickResult (fetchGroundLoot, debuffs, etc)
-            // could split the two updates into separate paints, causing the
-            // CP bar to briefly spring back UP (reservation gone, server CP
-            // not yet applied) and then DROP again — the "CP returned then
-            // deducted" flicker.
-            flushSync(() => {
-              setPendingCpCost(0);
-              processTickResult(result);
-            });
+            // Reservation was already converted to a real local CP debit
+            // at dispatch time, so we just process the tick result. CP
+            // reconciliation in processTickResult will skip the CP repaint
+            // when the server agrees with our optimistic value.
+            processTickResult(result);
           }
         }
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
+import { getCpDisplay } from '@/features/combat/utils/cp-display';
 
 // Duration constants for buff background calculation (in ms).
 // `Inspire` is intentionally absent — its duration is variable (INT-scaled), so
@@ -163,17 +164,10 @@ export default function StatusBarsStrip({
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const rawCp = character.cp ?? 100;
   const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
-  // Track the last seen rawCp. If rawCp drops by >= reservedCp between renders,
-  // the server has already applied the debit — stop subtracting so the bar
-  // can't dip below the true value for a frame (defensive backup to flushSync
-  // in usePartyCombat).
-  const prevRawCpRef = useRef(rawCp);
-  const debitLanded = reservedCp > 0 && prevRawCpRef.current - rawCp >= reservedCp;
-  prevRawCpRef.current = rawCp;
-  const effectiveReserved = debitLanded ? 0 : reservedCp;
-  const cp = Math.max(0, rawCp - effectiveReserved);
-  const cpPercent = Math.round((cp / maxCp) * 100);
-  const reservedPercent = Math.max(0, Math.min(100, Math.round((Math.min(effectiveReserved, rawCp) / maxCp) * 100)));
+  const cpView = getCpDisplay(rawCp, maxCp, reservedCp);
+  const cp = cpView.displayedCp;
+  const cpPercent = cpView.cpPercent;
+  const reservedPercent = cpView.reservedPercent;
   const mp = character.mp ?? 100;
   const maxMp = getEffectiveMaxMp(character.level, character.dex, equipmentBonuses);
   const mpPercent = Math.round((mp / maxMp) * 100);
@@ -209,7 +203,7 @@ export default function StatusBarsStrip({
             <span className="text-[hsl(var(--primary))] tabular-nums">
               {cp}/{maxCp}
               {reservedPercent > 0 && (
-                <span className="ml-1 text-[hsl(var(--primary)/0.5)]">(-{Math.min(reservedCp, rawCp)})</span>
+                <span className="ml-1 text-[hsl(var(--primary)/0.5)]">(-{cpView.reservedShown})</span>
               )}
             </span>
           </div>

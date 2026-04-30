@@ -17,6 +17,7 @@ import { CLASS_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
+import { getAvailableCp } from '@/features/combat/utils/cp-display';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers (module-level, outside hook)
@@ -169,7 +170,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       return;
     }
     const effectiveCpCost = ability.cpCost;
-    const availableCp = Math.max(0, (p.character.cp ?? 0) - (p.pendingCpCost ?? 0));
+    const availableCp = getAvailableCp(p.character.cp ?? 0, p.pendingCpCost ?? 0);
     if (availableCp < effectiveCpCost) {
       p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${availableCp} available)`);
       return;
