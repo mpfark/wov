@@ -842,7 +842,7 @@ Deno.serve(async (req) => {
           // there is no separate 2H damage multiplier in the autoattack pipeline.
           // Arcane Surge (damage_buff) augments wizard weapon strikes:
           //   • +intMod flat damage on the raw weapon roll (STR remains primary mod)
-          //   • final damage is multiplied by 1.5x further down
+          //   • final damage is multiplied by ARCANE_SURGE_DAMAGE_MULT further down
           const intModForBuff = isDmgBuff ? sm((c.int || 10) + (eb.int || 0)) : 0;
           let raw = rollDmg(1, weaponDie) + sMod + intModForBuff;
           if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
@@ -855,7 +855,7 @@ Deno.serve(async (req) => {
             consumedBuffs[m.id].push('stealth');
             events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
           }
-          if (isDmgBuff) dmg = Math.floor(dmg * 1.5);
+          if (isDmgBuff) dmg = Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT);
           if (hasDisengage) {
             dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
