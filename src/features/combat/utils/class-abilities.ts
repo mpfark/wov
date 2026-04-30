@@ -15,6 +15,7 @@ export const CLASS_COMBAT: Record<string, ClassCombat> = {
   rogue:   { label: 'Backstab',      stat: 'dex', diceMin: 1, diceMax: 6,  critRange: 19, emoji: '🗡️', verb: 'strike from the shadows at' },
   healer:  { label: 'Smite',         stat: 'wis', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '⭐', verb: 'channel divine light against' },
   bard:    { label: 'Mock',          stat: 'cha', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '🎵', verb: 'unleash cutting words upon' },
+  templar: { label: 'Judgment',      stat: 'wis', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '✝️', verb: 'pass divine judgment upon' },
 };
 
 export interface ClassAbility {
@@ -28,6 +29,8 @@ export interface ClassAbility {
     | 'poison_buff' | 'execute_attack' | 'evasion_buff' | 'ignite_buff' | 'ignite_consume'
     | 'absorb_buff' | 'party_regen' | 'ally_absorb' | 'sunder_debuff' | 'disengage_buff'
     | 'burst_damage'
+    // Templar abilities (sword-and-shield holy defender)
+    | 'reactive_holy' | 'block_buff' | 'consecrate' | 'mitigation_buff'
     // Phase 1 T0 class identity abilities (in-combat only, single-target damage)
     | 'fireball' | 'power_strike' | 'aimed_shot' | 'backstab' | 'smite' | 'cutting_words';
   tier: number;
