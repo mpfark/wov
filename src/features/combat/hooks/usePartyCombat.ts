@@ -455,7 +455,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (pending && Date.now() >= pending.readyAt) {
         pendingAbilityRef.current = null;
         setPendingAbility(null);
-        setPendingCpCost(0);
 
         const allAbilities = CLASS_ABILITIES[p.character.class] || [];
         const ability = allAbilities[pending.index];
@@ -484,13 +483,23 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               event: 'member_pending_ability',
               payload: { ability: abilityPayload },
             });
+            // Follower: server (leader) is authoritative; clear reservation now.
+            setPendingCpCost(0);
           } else {
             pendingAbilitiesForServer.push(abilityPayload);
+            // Solo / leader: KEEP the reservation displayed until the tick
+            // response actually applies the CP debit. Otherwise the bar
+            // briefly snaps back to full (regaining the reserved CP) and
+            // then drops again, which looks like CP regen during combat.
+            // Cleared after `processTickResult(result)` below.
           }
         } else {
           if (p.onAbilityExecute && !p.isDead && p.character.hp > 0) {
             await p.onAbilityExecute(pending.index, pending.targetId);
           }
+          // Non-server abilities debit CP synchronously via onAbilityExecute,
+          // so the reservation can be cleared immediately.
+          setPendingCpCost(0);
         }
       }
 
@@ -587,6 +596,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           }
         } else if (error) {
           console.error('Combat tick error:', error);
+          // Don't strand the reservation overlay if the tick failed.
+          setPendingCpCost(0);
         } else {
           const result = data as CombatTickResponse;
           console.log(`[combat] tick #${seq} response (latency: ${tickLatency}ms, ticks_processed: ${result?.ticks_processed})`);
@@ -597,6 +608,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
               channelRef.current?.send({ type: 'broadcast', event: 'combat_tick_result', payload: result });
             }
             processTickResult(result);
+            // Server has now applied any pending ability CP debit; safe to
+            // drop the reservation overlay so the bar shows the new CP value
+            // without flickering back up.
+            setPendingCpCost(0);
           }
         }
       } else if (driver && (p.isDead || p.character.hp <= 0) && inCombatRef.current) {
