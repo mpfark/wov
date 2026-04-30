@@ -613,7 +613,7 @@ Deno.serve(async (req) => {
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
-        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * 1.5), 1);
+        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT), 1);
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         const { emoji, verb } = T0_LABEL[pa.ability_type];
         events.push({
