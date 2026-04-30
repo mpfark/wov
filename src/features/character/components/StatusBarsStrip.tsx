@@ -87,7 +87,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (dmgBuffActive) {
     const dur = BUFF_DURATIONS['Arcane Surge'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((damageBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '✨', label: 'Arcane Surge', detail: '1.5× spell dmg', color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ emoji: '✨', label: 'Arcane Surge', detail: `${ARCANE_SURGE_DAMAGE_MULT}× dmg (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%)`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (evasionActive) {
