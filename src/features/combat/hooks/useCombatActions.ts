@@ -29,6 +29,8 @@ const INSTANT_BUFF_TYPES = new Set([
   'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
   'regen_buff', 'poison_buff', 'evasion_buff', 'disengage_buff', 'ignite_buff',
   'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
+  // Templar instant buffs
+  'reactive_holy', 'block_buff', 'consecrate', 'mitigation_buff',
 ]);
 
 /** Ability types that require being in combat with a valid target */
@@ -409,6 +411,33 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
       // Processed server-side via combat-tick heartbeat
+    } else if (ability.type === 'reactive_holy') {
+      // Templar — Holy Shield: 30s reactive holy retaliation.
+      const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
+      const durationMs = 30_000;
+      p.buffSetters.setHolyShieldBuff({ wisMod, expiresAt: Date.now() + durationMs });
+      p.addLog(`${ability.emoji} Holy Shield! Attackers will be burned by holy light for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'block_buff') {
+      // Templar — Shield Wall: 100% block for ~4s. Requires shield.
+      const hasShield = p.equipped.some((e: any) => e.item?.weapon_tag === 'shield');
+      if (!hasShield) {
+        p.addLog(`${ability.emoji} Shield Wall requires a shield equipped!`);
+        return;
+      }
+      const durationMs = 4_000;
+      p.buffSetters.setShieldWallBuff({ expiresAt: Date.now() + durationMs });
+      p.addLog(`${ability.emoji} Shield Wall! You brace behind your shield — all incoming attacks blocked for ${Math.round(durationMs / 1000)}s.`);
+    } else if (ability.type === 'consecrate') {
+      // Templar — Consecrate: 3 ticks (~6s) of node heal + creature burn.
+      const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
+      const durationMs = 6_000;
+      p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
+      p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${Math.round(durationMs / 1000)}s — allies healed, enemies burned.`);
+    } else if (ability.type === 'mitigation_buff') {
+      // Templar — Divine Challenge: 30s flat 30% damage reduction.
+      const durationMs = 30_000;
+      p.buffSetters.setDivineChallengeBuff({ reduction: 0.30, expiresAt: Date.now() + durationMs });
+      p.addLog(`${ability.emoji} Divine Challenge! You take 30% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // smite / cutting_words) are resolved entirely server-side by combat-tick

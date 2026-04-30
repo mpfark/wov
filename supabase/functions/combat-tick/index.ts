@@ -665,10 +665,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Per-tick Holy Shield retaliation tracking ────────────────
+    // Keyed by templar id → Set of creature ids that have already been
+    // retaliated against this tick (caps to once per attacker per tick).
+    const holyShieldHitThisTick: Record<string, Set<string>> = {};
+
     // ── Helper to apply creature hit to a member ─────────────────
     // CANONICAL DAMAGE PIPELINE (creature → player):
     //   base damage → hit quality mult → crit mult (with anti-crit) → level gap
-    //   → shield block (flat) → absorb → Battle Cry DR → caps/clamps → finalAppliedDamage
+    //   → Shield Wall (force block) → shield block (flat) → absorb
+    //   → Battle Cry DR → Divine Challenge DR → caps/clamps → finalAppliedDamage
+    // After damage lands, Holy Shield retaliates against the attacker (once
+    // per attacker per tick).
     const applyCreatureHit = (targetId: string, targetName: string, targetC: any, targetEq: Record<string, number>, creature: any, cStr: number, dmgDie: number, tankLabel: string) => {
       const mb = buffs[targetId] || {};
       const effectiveDex = (targetC.dex || 10) + (targetEq.dex || 0);
@@ -714,7 +722,16 @@ Deno.serve(async (req) => {
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
-        // 5. Shield block (flat reduction, shield only)
+        // 5a. Shield Wall (Templar) — guaranteed 100% block while active.
+        // Requires a shield equipped. Absorbs the entire incoming hit.
+        if (mb.shield_wall && hasShield && (mb.shield_wall.expires_at ?? 0) > now) {
+          const preDmg = dmg;
+          dmg = 0;
+          events.push({ type: 'shield_wall_block', message: `🛡️ ${targetName}'s Shield Wall absorbs the blow! (−${preDmg} damage)`, character_id: targetId });
+          return;
+        }
+
+        // 5b. Shield block (flat reduction, shield only)
         if (hasShield) {
           const blockChance = getShieldBlockChance(effectiveDex);
           if (Math.random() < blockChance) {
@@ -744,6 +761,14 @@ Deno.serve(async (req) => {
           events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry reduces damage! (${preDmg} → ${dmg})` });
         }
 
+        // 7b. Divine Challenge (Templar) — flat 30% damage reduction.
+        if (mb.divine_challenge && (mb.divine_challenge.expires_at ?? 0) > now) {
+          const dr = mb.divine_challenge.reduction || 0.30;
+          const preDmg = dmg;
+          dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
+          events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! (${preDmg} → ${dmg})`, character_id: targetId });
+        }
+
         // 8. Caps and clamps
         dmg = Math.max(dmg, 1);
         if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
@@ -764,6 +789,29 @@ Deno.serve(async (req) => {
         }
 
         events.push(critEvent);
+
+        // ── Holy Shield (Templar) reactive retaliation ────────────
+        // After damage lands (even partial), holy aura strikes back at the
+        // attacker. Once per attacker per tick. Scales with templar's WIS.
+        if (mb.holy_shield && (mb.holy_shield.expires_at ?? 0) > now && !cKilled.has(creature.id) && cHp[creature.id] > 0) {
+          const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
+          if (!seen.has(creature.id)) {
+            seen.add(creature.id);
+            const wisModForReturn = Math.max(0, sm(effectiveWis));
+            const returnDmg = Math.max(1, 2 + wisModForReturn + Math.floor((targetC.level || 1) / 4));
+            cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
+            events.push({
+              type: 'holy_shield_return',
+              message: `🛡️✝️ ${targetName}'s Holy Shield burns ${creature.name} for ${returnDmg} holy damage!`,
+              character_id: targetId,
+              creature_id: creature.id,
+            });
+            if (cHp[creature.id] <= 0 && !cKilled.has(creature.id)) {
+              handleCreatureKill(creature, targetName, (targetC.cha || 10) + (targetEq.cha || 0));
+            }
+          }
+        }
+
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
@@ -788,6 +836,57 @@ Deno.serve(async (req) => {
       if (t > 0 || pendingAbilities.length > 0) {
         events.push({ type: 'tick_separator', message: '---tick---' });
       }
+
+      // Reset per-tick Holy Shield retaliation tracking
+      for (const k of Object.keys(holyShieldHitThisTick)) delete holyShieldHitThisTick[k];
+
+      // ── Consecrate pulse phase (Templar) ────────────────────────
+      // While active, each tick the consecrated ground heals every party
+      // member at this node and burns every engaged creature for holy
+      // damage scaled to the templar's WIS at cast time.
+      for (const m of members) {
+        if (mHp[m.id] <= 0) continue;
+        const mb = buffs[m.id] || {};
+        const cons = mb.consecrate;
+        if (!cons || (cons.expires_at ?? 0) <= tickTime) continue;
+
+        const consWis = Math.max(0, cons.wis_mod ?? 0);
+        const healAmt = Math.max(1, 2 + consWis);
+        const burnAmt = Math.max(1, 2 + consWis);
+
+        // Heal all alive members on this node (members[] is already filtered)
+        for (const ally of members) {
+          if (mHp[ally.id] <= 0) continue;
+          const allyMaxHp = ally.c.max_hp || 1;
+          const before = mHp[ally.id];
+          mHp[ally.id] = Math.min(before + healAmt, allyMaxHp);
+          const restored = mHp[ally.id] - before;
+          if (restored > 0) {
+            events.push({
+              type: 'consecrate_heal',
+              message: `✨🟡 Consecrated ground restores ${restored} HP to ${ally.c.name}.`,
+              character_id: ally.id,
+            });
+          }
+        }
+
+        // Burn every engaged, alive creature
+        for (const cr of creatures) {
+          if (cKilled.has(cr.id) || cHp[cr.id] <= 0) continue;
+          cHp[cr.id] = Math.max(cHp[cr.id] - burnAmt, 0);
+          events.push({
+            type: 'consecrate_burn',
+            message: `✨🟡 Holy fire sears ${cr.name} for ${burnAmt} damage!`,
+            character_id: m.id,
+            creature_id: cr.id,
+          });
+          if (cHp[cr.id] <= 0 && !cKilled.has(cr.id)) {
+            const eb = eq[m.id] || {};
+            handleCreatureKill(cr, m.c.name, (m.c.cha || 10) + (eb.cha || 0));
+          }
+        }
+      }
+
 
       // ── Member auto-attacks (skip in DoT-only mode) ──────────
       // Weapon-based: damage = 1d{weaponDie} + STR. Class only affects crit

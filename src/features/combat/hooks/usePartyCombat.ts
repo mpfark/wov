@@ -56,6 +56,10 @@ export interface MemberBuffState {
   sunder_target?: string;
   sunder_reduction?: number;
   disengage_next_hit?: { bonus_mult: number };
+  holy_shield?: { wis_mod: number; expires_at: number };
+  shield_wall?: { expires_at: number };
+  consecrate?: { wis_mod: number; expires_at: number };
+  divine_challenge?: { reduction: number; expires_at: number };
 }
 
 export interface UsePartyCombatParams {
