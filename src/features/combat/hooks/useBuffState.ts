@@ -200,8 +200,20 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.sunder_reduction = activeSunder.acReduction;
     }
     if (disengageNextHit) buffs.disengage_next_hit = { bonus_mult: disengageNextHit.bonusMult };
+    if (holyShieldBuff && now < holyShieldBuff.expiresAt) {
+      buffs.holy_shield = { wis_mod: holyShieldBuff.wisMod, expires_at: holyShieldBuff.expiresAt };
+    }
+    if (shieldWallBuff && now < shieldWallBuff.expiresAt) {
+      buffs.shield_wall = { expires_at: shieldWallBuff.expiresAt };
+    }
+    if (consecrateBuff && now < consecrateBuff.expiresAt) {
+      buffs.consecrate = { wis_mod: consecrateBuff.wisMod, expires_at: consecrateBuff.expiresAt };
+    }
+    if (divineChallengeBuff && now < divineChallengeBuff.expiresAt) {
+      buffs.divine_challenge = { reduction: divineChallengeBuff.reduction, expires_at: divineChallengeBuff.expiresAt };
+    }
     return buffs;
-  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit]);
+  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff]);
 
   // ── Handle consumed one-shot buffs after server tick ──
   const handleConsumedBuffs = useCallback((consumed: { buff: string; character_id: string }[]) => {
