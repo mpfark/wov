@@ -116,6 +116,10 @@ export function usePartyCombat(params: UsePartyCombatParams) {
   const [pendingAbility, setPendingAbility] = useState<{ index: number; targetId?: string } | null>(null);
   const pendingAbilityRef = useRef<{ index: number; targetId?: string; readyAt: number; cpCost: number; label: string; emoji: string } | null>(null);
   const [pendingCpCost, setPendingCpCost] = useState<number>(0);
+  // Last CP value the client optimistically committed for the in-flight ability.
+  // When the server's tick response echoes this exact value, we suppress the
+  // CP repaint so the bar doesn't briefly snap up and back down.
+  const optimisticCpRef = useRef<number | null>(null);
   const idleCountRef = useRef(0);
 
    // Prediction removed — creature HP only updates from server responses
