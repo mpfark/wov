@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
-import StatPlannerDialog from '@/features/character/components/StatPlannerDialog';
+// StatPlannerDialog has moved into the Trainer service panel.
 import ItemIllustration from '@/components/items/ItemIllustration';
 import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 
@@ -49,9 +49,9 @@ interface Props {
   onUnbeltPotion?: (inventoryId: string) => void;
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
-  onAllocateStat?: (stat: string) => void;
-  onFullRespec?: () => void;
-  onBatchAllocateStats?: (allocations: Record<string, number>) => void;
+  // Stat allocation, respec, and Renown training are now handled exclusively
+  // at trainer nodes via TrainerPanel. CharacterPanel only displays balances.
+
 }
 
 const RARITY_COLORS: Record<string, string> = {
@@ -322,12 +322,9 @@ export default function CharacterPanel({
   isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
   beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
-  actionBindings, onAllocateStat, onFullRespec, onBatchAllocateStats,
+  actionBindings,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
-  const [pendingStat, setPendingStat] = useState<string | null>(null);
-  const [showRespecConfirm, setShowRespecConfirm] = useState(false);
-  const [statPlannerOpen, setStatPlannerOpen] = useState(false);
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
