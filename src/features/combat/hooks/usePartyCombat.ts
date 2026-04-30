@@ -75,6 +75,8 @@ export interface UsePartyCombatParams {
   onIgniteProc?: (creatureId: string) => void;
   onAbilityExecute?: (abilityIndex: number, targetId?: string) => Promise<void>;
   onConsumedAbilityStacks?: (stacks: { character_id: string; creature_id: string; stack_type: string }[]) => void;
+  /** Resolver for stacks to consume on execute_attack/ignite_consume. Returns current stack count for the given creature. */
+  getCreatureStacks?: (creatureId: string, stackType: 'poison' | 'ignite') => number;
   /** Callback with server DoT state for UI sync */
   onActiveDots?: (dots: Record<string, any>) => void;
   /** Callback with merged creature-centric debuffs for shared party display */
@@ -492,11 +494,21 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
           const expectedCpAfter = Math.max(0, (p.character.cp ?? 0) - cpCost);
 
+          // Resolve stacks for finishers (Eviscerate / Conflagrate).
+          let consumeStacks = 0;
+          if (targetId && p.getCreatureStacks) {
+            if (ability.type === 'execute_attack') {
+              consumeStacks = p.getCreatureStacks(targetId, 'poison');
+            } else if (ability.type === 'ignite_consume') {
+              consumeStacks = p.getCreatureStacks(targetId, 'ignite');
+            }
+          }
+
           const abilityPayload = {
             character_id: p.character.id,
             ability_type: ability.type,
             target_creature_id: targetId,
-            consume_stacks: 0,
+            consume_stacks: consumeStacks,
             cp_cost: cpCost,
             client_cp_before: p.character.cp ?? 0,
             client_expected_cp_after: expectedCpAfter,
