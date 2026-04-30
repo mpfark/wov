@@ -707,7 +707,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseAbility, handleAttack } = combatActions;
 
   // ── Stat allocation (extracted hook) ───────────────────────────
-  const { handleAllocateStat, handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
+  const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
     character, updateCharacter, addLog,
     onResourcesSynced: refetchCharacters,
   });
