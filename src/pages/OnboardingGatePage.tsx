@@ -33,7 +33,12 @@ export default function OnboardingGatePage({ userId, onComplete }: Props) {
       .eq('user_id', userId)
       .maybeSingle();
     const currentDisplay = existing?.display_name?.trim();
-    const payload: Record<string, unknown> = {
+    const payload: {
+      user_id: string;
+      full_name: string;
+      has_accepted_oath: boolean;
+      display_name?: string;
+    } = {
       user_id: userId,
       full_name: trimmed,
       has_accepted_oath: true,
