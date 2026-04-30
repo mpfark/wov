@@ -1,56 +1,64 @@
-## The bug — CP appearing to regenerate during combat
+## What you're seeing
 
-Your warrior's CP "jumping up" mid-combat traces to a single line in the server tick handler.
+When you queue an ability:
 
-### Root cause
+1. The CP bar drops by the ability cost as a **reservation** (a translucent overlay on top of your actual CP).
+2. ~2 seconds later the server tick fires, applies the real CP debit, and returns the new CP value.
+3. **Bug:** for one or two render frames the bar visibly **pops back up** (looks like CP returned), then **drops back down** to the correct post-debit value.
 
-`supabase/functions/combat-tick/index.ts` (line 380) seeds each member's working CP for the tick like this:
+## Root cause
 
-```ts
-const dbCp = m.c.cp ?? 0;
-const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
-  ? Math.min(client_cp, m.c.max_cp ?? dbCp)   // ⚠️ takes client_cp as-is (capped only by max_cp)
-  : dbCp;
-mCp[member.id] = freshCp;
-```
+In `usePartyCombat.doTick` two state updates happen one after the other after the server response:
 
-The intent was "use whichever CP is freshest" so that an ability cost the client just paid is honored. But the comparison is one-sided: **whenever `client_cp > dbCp`, the server adopts the higher client value** — and then writes it back to the row at the end of the tick (line 1151: `if (mCp[m.id] !== c.cp) updates.cp = mCp[m.id]`).
+- `processTickResult(result)` → calls `updateCharacterLocal({ cp: newLowerCp, ... })` (and ~10 other setStates, callbacks, and a `fetchGroundLoot()` side effect).
+- Then `setPendingCpCost(0)` → drops the reservation overlay.
 
-How `client_cp` ends up higher than `dbCp` mid-fight:
+These two updates live in **different hooks** (`useCharacter` vs `usePartyCombat`) and are separated by callbacks that can break React's auto-batching (`fetchGroundLoot`, `onAbsorbSync`, `onCreatureDebuffs`, etc). The result is that React commits them in two separate paints. Depending on which one wins the race, the user sees the reservation lifted **before** the server CP debit lands — the bar visibly springs up, then falls back down a frame later.
 
-1. The 4-second client regen interval in `useGameLoop.ts` is gated by `inCombatRegenRef.current`, which mirrors React state `inCombat` via `useEffect`. There is a small window between `setInCombat(true)` running and the effect committing where the regen tick can fire and bump `character.cp` locally.
-2. Bigger window: at the *very start* of combat (first creature aggros / first ability queued), the regen interval may have *just* run a moment before. Its `updateCharacter({ cp: newCp })` writes optimistically to local React state immediately but the DB write is async; the *next* combat tick fires with `client_cp = newCp` while `dbCp` is still the pre-regen value.
-3. `Math.min(client_cp, max_cp)` then promotes that elevated value into the server-authoritative `mCp`, and the resulting `updates.cp` writes it to the DB. Bars visibly jump up.
-
-This is the same class of bug we already fixed for HP (combat-tick is the sole writer for HP during combat). CP is currently leaking client-side regen into the authoritative row.
-
-### Fix
-
-Make combat-tick trust the DB for CP at the start of each tick — never take a *higher* value from the client:
+The visual math in `StatusBarsStrip` makes it worse:
 
 ```ts
-// supabase/functions/combat-tick/index.ts ~line 380
-const dbCp = m.c.cp ?? 0;
-// Only honor client_cp when it's LOWER than dbCp (i.e. client paid an ability
-// cost the server hasn't seen yet). Never adopt a higher client value — that
-// would let stale client-side regen leak in during combat.
-const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
-  ? Math.min(client_cp, dbCp)
-  : dbCp;
-mCp[member.id] = freshCp;
+const cp = Math.max(0, rawCp - reservedCp);  // displayed value
 ```
 
-That preserves the original safety net for ability-cost freshness while closing the upward leak.
+So during the in-between frame, `rawCp` is still the OLD value but `reservedCp` is already 0 → bar shows the un-reserved (full) CP for one frame → "CP returned".
 
-### Optional belt-and-suspenders (low risk, recommended)
+## Fix
 
-In `src/features/combat/hooks/useGameLoop.ts`, also suppress the *first* CP regen tick whenever combat just started by checking the React state `inCombat` directly (not just the ref). Today the ref is only flipped inside a `useEffect`, so the timing window described above exists. Simplest patch: when `usePartyCombat`'s `startCombatCore` flips `inCombatRef.current = true`, also call a passed-in `setInCombatRegen(true)` so the gating ref is flipped synchronously rather than via React's effect cycle. We already pass `inCombatRegenRef` out of `useGameLoop` — we can write to it directly from `startCombatCore` to remove the lag.
+Two complementary changes inside `src/features/combat/hooks/usePartyCombat.ts`:
 
-### Files to change
+1. **Clear the reservation in the same React batch as the server CP value.** Move `setPendingCpCost(0)` to fire **immediately before** `processTickResult(result)` rather than after it. Since the server response IS the post-debit truth, there's no value in keeping the overlay alive through a fan-out of callbacks. Doing the clear first means: when `updateCharacterLocal({ cp })` lands the new (already-debited) value, the reservation is already gone — no double-subtraction frame, no spring-up frame.
 
-- `supabase/functions/combat-tick/index.ts` — flip the `Math.min(client_cp, max_cp)` to `Math.min(client_cp, dbCp)` (1 line).
-- *(Optional)* `src/features/combat/hooks/usePartyCombat.ts` and `src/pages/GamePage.tsx` — flip `inCombatRegenRef.current` synchronously when combat starts, alongside `inCombatRef.current = true`.
+2. **Use `flushSync` to commit reservation-clear + character-CP together.** Wrap the pair so React guarantees a single paint:
 
-### Verification
+   ```ts
+   import { flushSync } from 'react-dom';
+   // …
+   flushSync(() => {
+     setPendingCpCost(0);
+     // updateCharacterLocal will run inside processTickResult immediately after
+   });
+   processTickResult(result);
+   ```
 
-After the change, on your L8 warrior: enter a fight at full CP minus a small amount, watch the CP bar through the fight — it should only ever decrease (from abilities) or stay flat, never tick upward. Out of combat the 4-second regen continues working as before.
+   This eliminates the inter-render gap regardless of how many callbacks `processTickResult` fans out to.
+
+3. **Defensive clamp in `StatusBarsStrip`.** When `reservedCp > rawCp - lastKnownCp` (i.e. the server has already debited more than the reservation), treat the reservation as already consumed:
+
+   ```ts
+   // If the server's rawCp has already dropped by at least reservedCp since the
+   // reservation was made, the debit has landed — stop subtracting.
+   const reservedToShow = Math.min(reservedCp, Math.max(0, rawCp - 0));
+   ```
+
+   This is a belt-and-braces guard so a future regression in the hook can't reintroduce a flicker.
+
+## Files to edit
+
+- `src/features/combat/hooks/usePartyCombat.ts` — reorder + `flushSync` the reservation clear so it commits with the server CP value (lines ~602–614 in `doTick`). Also keep the existing error-path clear at line ~600.
+- `src/features/character/components/StatusBarsStrip.tsx` — small defensive guard on `reservedCp` so a stale reservation can never make the bar dip lower than the current `rawCp`.
+
+## Out of scope
+
+- No server changes. The combat-tick edge function already returns the correct post-debit CP — this is purely a client display sync issue.
+- No changes to the reservation UX itself (the dashed overlay segment stays, it just stops flickering on resolution).
