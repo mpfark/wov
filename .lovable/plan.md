@@ -1,64 +1,78 @@
-## What you're seeing
+## Plan to fix the CP flicker properly
 
-When you queue an ability:
+The current fix still allows the CP bar to see two different truths briefly: display-only reserved CP and then server-returned CP. I’ll change this to a transaction model so the visual bar never has to “give CP back” while waiting for the server.
 
-1. The CP bar drops by the ability cost as a **reservation** (a translucent overlay on top of your actual CP).
-2. ~2 seconds later the server tick fires, applies the real CP debit, and returns the new CP value.
-3. **Bug:** for one or two render frames the bar visibly **pops back up** (looks like CP returned), then **drops back down** to the correct post-debit value.
+## What will change
 
-## Root cause
+1. Centralize CP math
+   - Add a small shared frontend utility for CP calculations:
+     - available CP = raw CP minus reserved CP
+     - displayed CP while reserved
+     - reserved segment width/text
+     - safe clamping to 0/max CP
+   - Use it from both:
+     - the ability affordability check
+     - `StatusBarsStrip`
+   - Remove the ad-hoc `useRef` “debit landed” guard from the CP bar, since the bar should not need to infer server timing.
 
-In `usePartyCombat.doTick` two state updates happen one after the other after the server response:
+2. Convert reservation into a local committed debit at dispatch time
+   - When the player queues an ability, the reserved part of the bar remains as-is.
+   - When the ability is actually sent to `combat-tick`, the client immediately converts:
 
-- `processTickResult(result)` → calls `updateCharacterLocal({ cp: newLowerCp, ... })` (and ~10 other setStates, callbacks, and a `fetchGroundLoot()` side effect).
-- Then `setPendingCpCost(0)` → drops the reservation overlay.
-
-These two updates live in **different hooks** (`useCharacter` vs `usePartyCombat`) and are separated by callbacks that can break React's auto-batching (`fetchGroundLoot`, `onAbsorbSync`, `onCreatureDebuffs`, etc). The result is that React commits them in two separate paints. Depending on which one wins the race, the user sees the reservation lifted **before** the server CP debit lands — the bar visibly springs up, then falls back down a frame later.
-
-The visual math in `StatusBarsStrip` makes it worse:
-
-```ts
-const cp = Math.max(0, rawCp - reservedCp);  // displayed value
+```text
+Before dispatch: raw CP 100, reserved 10, displayed 90
+After dispatch:  raw CP 90,  reserved 0,  displayed 90
 ```
 
-So during the in-between frame, `rawCp` is still the OLD value but `reservedCp` is already 0 → bar shows the un-reserved (full) CP for one frame → "CP returned".
+   - This keeps the bar visually stable: the reserved shaded area disappears, but the filled CP amount does not jump up.
 
-## Fix
+3. Add explicit server CP acknowledgement/reconciliation
+   - Extend the combat ability payload with CP transaction details such as:
 
-Two complementary changes inside `src/features/combat/hooks/usePartyCombat.ts`:
+```text
+cp_cost
+client_cp_before
+client_expected_cp_after
+```
 
-1. **Clear the reservation in the same React batch as the server CP value.** Move `setPendingCpCost(0)` to fire **immediately before** `processTickResult(result)` rather than after it. Since the server response IS the post-debit truth, there's no value in keeping the overlay alive through a fan-out of callbacks. Doing the clear first means: when `updateCharacterLocal({ cp })` lands the new (already-debited) value, the reservation is already gone — no double-subtraction frame, no spring-up frame.
+   - The server still remains authoritative and still writes the real CP value to the database.
+   - The server response will include whether the client’s expected CP after the ability matches the authoritative result.
+   - If the server agrees, the client will not re-apply/overwrite CP with the same value.
+   - If the server disagrees, failed to apply the ability, or detects stale CP, the client will apply the authoritative CP correction.
 
-2. **Use `flushSync` to commit reservation-clear + character-CP together.** Wrap the pair so React guarantees a single paint:
+4. Stop routine tick responses from unnecessarily repainting CP
+   - `interpretCombatTickResult` currently applies `member_states.cp` whenever it is present.
+   - I’ll adjust this so CP only updates the local character when the server says a correction is needed, or when CP genuinely changed for reasons outside the optimistic transaction.
+   - This follows your suggestion: the server can agree with the client’s current CP without overriding it.
 
-   ```ts
-   import { flushSync } from 'react-dom';
-   // …
-   flushSync(() => {
-     setPendingCpCost(0);
-     // updateCharacterLocal will run inside processTickResult immediately after
-   });
-   processTickResult(result);
-   ```
+5. Make party combat follow the same path
+   - Non-leader party members currently send pending abilities to the leader and clear the reservation immediately.
+   - I’ll make them also convert the reserved CP to a local committed debit before broadcasting the pending ability.
+   - The leader/server response will reconcile the member’s CP only if needed.
 
-   This eliminates the inter-render gap regardless of how many callbacks `processTickResult` fans out to.
+6. Add focused tests where practical
+   - Test the CP display helper so reserved CP math lives in one place and stays stable.
+   - Test the combat response interpreter behavior so matching server CP acknowledgements do not cause redundant client CP updates, while mismatches do.
 
-3. **Defensive clamp in `StatusBarsStrip`.** When `reservedCp > rawCp - lastKnownCp` (i.e. the server has already debited more than the reservation), treat the reservation as already consumed:
+## Files likely affected
 
-   ```ts
-   // If the server's rawCp has already dropped by at least reservedCp since the
-   // reservation was made, the debit has landed — stop subtracting.
-   const reservedToShow = Math.min(reservedCp, Math.max(0, rawCp - 0));
-   ```
+- `src/features/combat/hooks/usePartyCombat.ts`
+- `src/features/combat/utils/interpretCombatTickResult.ts`
+- New utility, likely under `src/features/combat/utils/` or `src/features/character/utils/`
+- `src/features/combat/hooks/useCombatActions.ts`
+- `src/features/character/components/StatusBarsStrip.tsx`
+- `supabase/functions/combat-tick/index.ts`
+- Focused test files for the new helper/interpreter behavior
 
-   This is a belt-and-braces guard so a future regression in the hook can't reintroduce a flicker.
+## Expected result
 
-## Files to edit
+The CP bar should behave like this:
 
-- `src/features/combat/hooks/usePartyCombat.ts` — reorder + `flushSync` the reservation clear so it commits with the server CP value (lines ~602–614 in `doTick`). Also keep the existing error-path clear at line ~600.
-- `src/features/character/components/StatusBarsStrip.tsx` — small defensive guard on `reservedCp` so a stale reservation can never make the bar dip lower than the current `rawCp`.
+```text
+Ability queued:      CP visually reserved/shaded
+Ability dispatched:  reservation becomes real local CP spend, no visual jump
+Server agrees:       no CP repaint/override
+Server disagrees:    CP corrects once to server truth
+```
 
-## Out of scope
-
-- No server changes. The combat-tick edge function already returns the correct post-debit CP — this is purely a client display sync issue.
-- No changes to the reservation UX itself (the dashed overlay segment stays, it just stops flickering on resolution).
+This keeps the reserved part you like, removes the “CP returned then deducted” animation, and prevents CP calculations from being duplicated across the UI and combat logic.
