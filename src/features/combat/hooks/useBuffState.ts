@@ -270,6 +270,7 @@ export function useBuffState(params: UseBuffStateParams) {
     bleedStacks, poisonBuff, poisonStacks, evasionBuff, disengageNextHit,
     igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff,
     inspireBuff,
+    holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
   };
 
   const buffSetters: BuffSetters = {
@@ -278,6 +279,7 @@ export function useBuffState(params: UseBuffStateParams) {
     setEvasionBuff, setDisengageNextHit, setIgniteBuff, setIgniteStacks,
     setAbsorbBuff, setPartyRegenBuff, setSunderDebuff,
     setInspireBuff,
+    setHolyShieldBuff, setShieldWallBuff, setConsecrateBuff, setDivineChallengeBuff,
   };
 
   return {
