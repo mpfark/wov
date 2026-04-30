@@ -494,11 +494,21 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
           const expectedCpAfter = Math.max(0, (p.character.cp ?? 0) - cpCost);
 
+          // Resolve stacks for finishers (Eviscerate / Conflagrate).
+          let consumeStacks = 0;
+          if (targetId && p.getCreatureStacks) {
+            if (ability.type === 'execute_attack') {
+              consumeStacks = p.getCreatureStacks(targetId, 'poison');
+            } else if (ability.type === 'ignite_consume') {
+              consumeStacks = p.getCreatureStacks(targetId, 'ignite');
+            }
+          }
+
           const abilityPayload = {
             character_id: p.character.id,
             ability_type: ability.type,
             target_creature_id: targetId,
-            consume_stacks: 0,
+            consume_stacks: consumeStacks,
             cp_cost: cpCost,
             client_cp_before: p.character.cp ?? 0,
             client_expected_cp_after: expectedCpAfter,
