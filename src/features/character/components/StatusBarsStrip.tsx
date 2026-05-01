@@ -223,6 +223,27 @@ export default function StatusBarsStrip({
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
 
+  // ── Force Shield stance shield (persistent ward) ─────────────────
+  // While the Force Shield stance is reserved, derive the bar from the
+  // server-persisted ward HP on `characters.stance_state.force_shield_hp`
+  // (capped by INT_mod + floor(level/2)). This lets the bar render and
+  // visibly fill back up while OOC, instead of being driven by a timed
+  // local absorb buff.
+  const forceShieldStance: { shieldHp: number; shieldCap: number; inCombat: boolean } | null = (() => {
+    if (!reservedBuffs || !reservedBuffs.force_shield) return null;
+    const intTotal = (character.int ?? 10) + (equipmentBonuses.int ?? 0);
+    const intMod = Math.max(0, Math.floor((intTotal - 10) / 2));
+    const shieldCap = Math.max(1, intMod + Math.floor((character.level ?? 1) * 0.5));
+    const persisted = ((character as any).stance_state && typeof (character as any).stance_state === 'object')
+      ? Number((character as any).stance_state.force_shield_hp)
+      : NaN;
+    // In combat, prefer the live local buff (combat-tick syncs it via buff_sync);
+    // OOC, fall back to the persisted value (which the server's regen RPC ticks up).
+    const inCombat = !!(absorbBuff && Date.now() < absorbBuff.expiresAt);
+    const liveHp = inCombat ? absorbBuff!.shieldHp : (Number.isFinite(persisted) ? persisted : shieldCap);
+    return { shieldHp: Math.max(0, Math.min(shieldCap, Math.floor(liveHp))), shieldCap, inCombat };
+  })();
+
 
   return (
     <div className="space-y-1">
