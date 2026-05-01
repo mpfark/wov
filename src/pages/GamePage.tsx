@@ -1131,6 +1131,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 inspireBuff,
                 holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
                 reservedCp: pendingCpCost,
+                stanceReservedCp: (() => {
+                  const rb = (character as any).reserved_buffs as Record<string, { reserved: number }> | null;
+                  if (!rb) return 0;
+                  return Object.values(rb).reduce((s, e) => s + (Number(e?.reserved) || 0), 0);
+                })(),
+                reservedBuffs: (character as any).reserved_buffs ?? null,
               }}
             />
           </div>
