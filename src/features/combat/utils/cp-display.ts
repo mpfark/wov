@@ -34,8 +34,12 @@ export interface CpDisplay {
   displayedCp: number;
   /** Filled CP percentage (0-100) */
   cpPercent: number;
-  /** Stance overlay percentage (0-100) */
+  /** Stance overlay percentage (0-100) — pinned-right reserved tail width */
   stancePercent: number;
+  /** Effective max CP after subtracting stance reservation */
+  usableMaxCp: number;
+  /** Percentage of max that is usable (0-100) = 100 - stancePercent (approx) */
+  usableMaxPercent: number;
   /** Queued overlay percentage (0-100) */
   queuedPercent: number;
   /** Legacy alias for queuedPercent (kept for back-compat) */
