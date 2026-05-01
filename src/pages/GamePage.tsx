@@ -622,6 +622,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         text,
       });
     },
+    onCreaturesKilled: (ids) => {
+      // Optimistic local hide via the existing soft-dead system. The realtime
+      // UPDATE (is_alive=false) will land shortly after and replace this.
+      for (const id of ids) markSoftDead(id);
+    },
     setPoisonBuff: buffSetters.setPoisonBuff,
     setIgniteBuff: buffSetters.setIgniteBuff,
     getCreatureStacks: (creatureId, stackType) => {
