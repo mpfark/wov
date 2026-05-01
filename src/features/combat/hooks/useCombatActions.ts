@@ -19,6 +19,15 @@ import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { getAvailableCp } from '@/features/combat/utils/cp-display';
 import { ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
+import {
+  getStanceForAbility,
+  isStanceActive,
+  isMutuallyExcluded,
+  sumStanceReserved,
+  getStanceReserveCost,
+  type ReservedBuffsMap,
+} from '@/features/combat/utils/stances';
+import { getEffectiveMaxCp } from '@/lib/game-data';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers (module-level, outside hook)
