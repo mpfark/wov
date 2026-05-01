@@ -414,14 +414,22 @@ Deno.serve(async (req) => {
           mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
         }
         if (reserved.force_shield) {
-          // Force Shield: ward only regenerates OUT OF COMBAT.
-          // Seed at full cap on the first tick of a fresh combat session
-          // (member_buffs is reset to {} when a new session starts, so this
-          // naturally restores the shield between fights). During combat we
-          // preserve whatever value is left — no in-combat recharge.
+          // Force Shield: ward only regenerates OUT OF COMBAT (handled by
+          // apply_force_shield_regen + cron). During combat we never refill;
+          // we only seed the live combat-session value from the persisted
+          // characters.stance_state.force_shield_hp on the first tick of a
+          // new session, then preserve it for the rest of the fight.
           const shieldCap = Math.max(1, intMod + Math.floor((m.c.level || 1) * 0.5));
-          const current = mb.absorb_buff?.shield_hp;
-          mb.absorb_buff = { shield_hp: current ?? shieldCap };
+          let current = mb.absorb_buff?.shield_hp;
+          if (current === undefined) {
+            const persisted = (m.c.stance_state && typeof m.c.stance_state === 'object')
+              ? Number((m.c.stance_state as any).force_shield_hp)
+              : NaN;
+            current = Number.isFinite(persisted)
+              ? Math.max(0, Math.min(shieldCap, persisted))
+              : shieldCap; // first activation ever → start full
+          }
+          mb.absorb_buff = { shield_hp: current };
         }
       }
     }
