@@ -183,7 +183,8 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                   onClick={() => setRace(key)}
                   onMouseEnter={() => setHoverRace(key)}
                   onMouseLeave={() => setHoverRace(prev => (prev === key ? null : prev))}
-                  className={`p-3 rounded-md border text-left transition-all hover:border-primary ${
+                  disabled={rolling}
+                  className={`p-3 rounded-md border text-left transition-all hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border ${
                     race === key ? 'border-primary bg-primary/10' : 'border-border bg-card'
                   }`}
                 >
@@ -220,7 +221,8 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                     onClick={() => setCharClass(key)}
                     onMouseEnter={() => setHoverClass(key)}
                     onMouseLeave={() => setHoverClass(prev => (prev === key ? null : prev))}
-                    className={`p-3 rounded-md border text-left transition-all hover:border-primary ${
+                    disabled={rolling}
+                    className={`p-3 rounded-md border text-left transition-all hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border ${
                       isSelected ? 'border-primary bg-primary/10' : 'border-border bg-card'
                     } ${isRecommended && !isSelected ? 'ring-1 ring-primary/40' : ''}`}
                   >
