@@ -309,6 +309,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     // Track killed creatures
     for (const id of result.killedCreatureIds) recentlyKilledRef.current.add(id);
+    // Optimistic UI removal — don't wait for the realtime UPDATE round-trip.
+    // Important when a kill coincides with a level-up: the heavy character
+    // re-render can otherwise delay the dead-creature DOM removal noticeably.
+    if (result.killedCreatureIds.length && ext.current.onCreaturesKilled) {
+      ext.current.onCreaturesKilled(result.killedCreatureIds);
+    }
 
     // Apply creature HP overrides
     for (const [id, hp] of Object.entries(result.creatureHpUpdates)) {
