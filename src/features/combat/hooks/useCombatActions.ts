@@ -181,8 +181,64 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.addLog(`⚠️ ${ability.emoji} ${ability.label} unlocks at level ${ability.levelRequired}.`);
       return;
     }
+
+    // ── Stance toggle interception ──────────────────────────────
+    // Stance abilities (Eagle Eye, Force Shield, Holy Shield, Arcane Surge,
+    // Battle Cry, Ignite, Envenom) do not behave like normal abilities. They
+    // toggle on/off, reserve a percentage of max CP for as long as they are
+    // active, and persist across combat / movement until the player drops
+    // them or logs out. The server (`activate_stance` / `drop_stance` RPCs)
+    // is authoritative; this branch never deducts CP locally — `combat-tick`
+    // and the next character refresh will reconcile the canonical state.
+    const stanceDef = getStanceForAbility(ability.type);
+    if (stanceDef) {
+      const reservedBuffs: ReservedBuffsMap = (p.character as any).reserved_buffs ?? {};
+      const alreadyActive = isStanceActive(reservedBuffs, stanceDef.key);
+
+      if (alreadyActive) {
+        const { error } = await supabase.rpc('drop_stance', {
+          p_character_id: p.character.id,
+          p_stance_key: stanceDef.key,
+        });
+        if (error) {
+          p.addLog(`⚠️ ${ability.emoji} Failed to drop ${stanceDef.label}: ${error.message}`);
+          return;
+        }
+        p.addLog(`${ability.emoji} You drop ${stanceDef.label}. The reserved CP is not refunded — you must regenerate it.`);
+        return;
+      }
+
+      if (isMutuallyExcluded(reservedBuffs, stanceDef.key)) {
+        p.addLog(`⚠️ ${ability.emoji} You cannot maintain Ignite and Envenom at the same time.`);
+        return;
+      }
+
+      const maxCp = getEffectiveMaxCp(p.character.level, p.character.wis, p.equipmentBonuses);
+      const cost = getStanceReserveCost(stanceDef.tier, maxCp);
+      const stanceReservedNow = sumStanceReserved(reservedBuffs);
+      const usable = getAvailableCp(p.character.cp ?? 0, p.pendingCpCost ?? 0, stanceReservedNow);
+      if (usable < cost) {
+        p.addLog(`⚠️ Not enough usable CP to maintain ${stanceDef.label}! (${cost} CP needed, ${usable} available)`);
+        return;
+      }
+
+      const { error } = await supabase.rpc('activate_stance', {
+        p_character_id: p.character.id,
+        p_stance_key: stanceDef.key,
+        p_tier: stanceDef.tier,
+        p_max_cp: maxCp,
+      });
+      if (error) {
+        p.addLog(`⚠️ ${ability.emoji} Failed to activate ${stanceDef.label}: ${error.message}`);
+        return;
+      }
+      p.addLog(`${ability.emoji} ${stanceDef.label} activated! Reserves ${cost} CP until you drop it.`);
+      return;
+    }
+
     const effectiveCpCost = ability.cpCost;
-    const availableCp = getAvailableCp(p.character.cp ?? 0, p.pendingCpCost ?? 0);
+    const stanceReserved = sumStanceReserved((p.character as any).reserved_buffs);
+    const availableCp = getAvailableCp(p.character.cp ?? 0, p.pendingCpCost ?? 0, stanceReserved);
     if (availableCp < effectiveCpCost) {
       p.addLog(`⚠️ Not enough CP for ${ability.label}! (${effectiveCpCost} CP needed, ${availableCp} available)`);
       return;
