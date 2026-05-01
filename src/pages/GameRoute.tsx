@@ -20,6 +20,9 @@ export default function GameRoute() {
     setSyncing(true);
     (async () => {
       try {
+        // Wipe any leftover stance reservations from a previous session, then
+        // recompute gear-adjusted resources. Stances never persist offline.
+        await supabase.rpc('clear_stances' as any, { p_character_id: character.id });
         await supabase.rpc('sync_character_resources' as any, { p_character_id: character.id });
         refetchCharacters();
       } catch (e) {
