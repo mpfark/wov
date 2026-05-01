@@ -69,6 +69,8 @@ export function getCpDisplay(
   const cpPercent = Math.round((displayedCp / safeMax) * 100);
   const stancePercent = Math.max(0, Math.min(100, Math.round((stanceShown / safeMax) * 100)));
   const queuedPercent = Math.max(0, Math.min(100, Math.round((queuedShown / safeMax) * 100)));
+  const usableMaxCp = Math.max(0, safeMax - safeStance);
+  const usableMaxPercent = Math.max(0, Math.min(100, Math.round((usableMaxCp / safeMax) * 100)));
   return {
     rawCp: safeRaw,
     maxCp: safeMax,
@@ -79,6 +81,8 @@ export function getCpDisplay(
     displayedCp,
     cpPercent,
     stancePercent,
+    usableMaxCp,
+    usableMaxPercent,
     queuedPercent,
     reservedPercent: queuedPercent,
     stanceShown,
