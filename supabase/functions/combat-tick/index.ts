@@ -505,7 +505,11 @@ Deno.serve(async (req) => {
       const eb = eq[member.id] || {};
 
       const cpCost = pa.cp_cost || 0;
-      if (mCp[member.id] < cpCost) {
+      // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
+      const memberReserved: Record<string, any> = (member.c.reserved_buffs && typeof member.c.reserved_buffs === 'object') ? member.c.reserved_buffs : {};
+      let reservedTotal = 0;
+      for (const k of Object.keys(memberReserved)) reservedTotal += (memberReserved[k]?.reserved || 0);
+      if ((mCp[member.id] - reservedTotal) < cpCost) {
         events.push({ type: 'ability_fail', message: `⚠️ ${c.name} doesn't have enough CP!`, character_id: member.id });
         continue;
       }
