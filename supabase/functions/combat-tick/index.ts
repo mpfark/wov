@@ -414,14 +414,22 @@ Deno.serve(async (req) => {
           mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
         }
         if (reserved.force_shield) {
-          // Force Shield: ward only regenerates OUT OF COMBAT.
-          // Seed at full cap on the first tick of a fresh combat session
-          // (member_buffs is reset to {} when a new session starts, so this
-          // naturally restores the shield between fights). During combat we
-          // preserve whatever value is left — no in-combat recharge.
+          // Force Shield: ward only regenerates OUT OF COMBAT (handled by
+          // apply_force_shield_regen + cron). During combat we never refill;
+          // we only seed the live combat-session value from the persisted
+          // characters.stance_state.force_shield_hp on the first tick of a
+          // new session, then preserve it for the rest of the fight.
           const shieldCap = Math.max(1, intMod + Math.floor((m.c.level || 1) * 0.5));
-          const current = mb.absorb_buff?.shield_hp;
-          mb.absorb_buff = { shield_hp: current ?? shieldCap };
+          let current = mb.absorb_buff?.shield_hp;
+          if (current === undefined) {
+            const persisted = (m.c.stance_state && typeof m.c.stance_state === 'object')
+              ? Number((m.c.stance_state as any).force_shield_hp)
+              : NaN;
+            current = Number.isFinite(persisted)
+              ? Math.max(0, Math.min(shieldCap, persisted))
+              : shieldCap; // first activation ever → start full
+          }
+          mb.absorb_buff = { shield_hp: current };
         }
       }
     }
@@ -1371,6 +1379,24 @@ Deno.serve(async (req) => {
       }
       if (mSalvage[m.id] > 0) {
         updates.salvage = (c.salvage || 0) + mSalvage[m.id];
+      }
+
+      // ── Persist Force Shield ward HP across combats ───────────────
+      // The OOC regen RPC reads characters.stance_state.force_shield_hp.
+      // Mirror the live combat value here every tick so a depleted shield
+      // stays depleted when the fight ends and the OOC regen picks up
+      // from there instead of resetting to full.
+      const reservedNow: Record<string, unknown> = (c.reserved_buffs && typeof c.reserved_buffs === 'object') ? c.reserved_buffs : {};
+      if (reservedNow.force_shield) {
+        const liveShield = buffs[m.id]?.absorb_buff?.shield_hp;
+        if (typeof liveShield === 'number' && Number.isFinite(liveShield)) {
+          const prevState = (c.stance_state && typeof c.stance_state === 'object') ? c.stance_state : {};
+          updates.stance_state = {
+            ...prevState,
+            force_shield_hp: Math.max(0, Math.floor(liveShield)),
+            force_shield_updated_at: new Date().toISOString(),
+          };
+        }
       }
 
       if (Object.keys(updates).length > 0) {

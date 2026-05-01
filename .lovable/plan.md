@@ -1,72 +1,63 @@
-## Goal
+## Problem
 
-Make the CP bar mimic Path of Exile's reservation visual: the reserved portion stays pinned to the **right end** of the bar as a static, dimmed/hatched segment, and the usable CP fills/drains only inside the remaining left portion. Reserved CP no longer "floats" between the fill and the queued segment — it visually shrinks the bar from the right, exactly like PoE's mana orb.
+Force Shield currently does not regen during combat (good), but it instantly snaps to full when the next combat starts because the combat session resets `member_buffs` to `{}` and reseeds the shield at cap. The user wants the opposite: depleted shield should **stay depleted when combat ends**, then **gradually regenerate while out of combat**, so jumping into the next fight too soon means a partially-charged ward.
 
-## Visual Model (PoE-style)
+## Approach
 
-```text
-Before any stance:
-[██████████░░░░░░░░░░]   100/100 usable, 0 reserved
+Persist the Force Shield's current HP on the character row (not just in the transient combat session) so it survives between fights, and tick it up gradually while the player is out of combat.
 
-Tier-2 stance active (15% of 200 max = 30 CP reserved):
-[████████████░░░░▓▓▓▓]   170 usable / 200 max ⚓30
-                  └── pinned reserved segment on the right (hatched soulforged)
+### Storage
 
-Same stance, after spending some CP:
-[██████░░░░░░░░░░▓▓▓▓]   80 / 200  ⚓30
-                  └── reserved stays pinned regardless of usable level
+Add a small JSONB field on `characters` to hold the live shield value for stance-based wards:
 
-Queued ability cost (in-flight, 20 CP) + stance reserved:
-[████░░▒▒░░░░░░░░▓▓▓▓]
- fill │queued│ empty │ reserved (pinned right)
+```
+characters.stance_state jsonb default '{}'::jsonb
+  -> { force_shield_hp: number, force_shield_updated_at: timestamptz }
 ```
 
-Key properties:
-- The reserved segment sits flush against the right edge and never moves.
-- The "effective max" the fill bar can grow into = `maxCp - stanceReserved`.
-- Queued ability segment renders just to the right of the fill, still inside the usable area (never overlapping the reserved tail).
-- An empty (unfilled) gap is allowed between the queued segment and the reserved tail when CP is low.
+This avoids polluting `reserved_buffs` (which is keyed by stance metadata) and gives us a clean place for future stance-persistent values.
 
-## Changes
+### Server logic
 
-### 1. `src/features/character/components/StatusBarsStrip.tsx` — CP bar markup
+1. **`combat-tick`** (in-combat behavior):
+   - On the first tick where `mb.absorb_buff` is undefined, hydrate it from `characters.stance_state.force_shield_hp` (clamped to current cap), instead of seeding to full cap. If no persisted value exists, seed to cap (first-time activation).
+   - No regen during combat (already correct).
+   - When combat ends / session is wiped, persist the final `mb.absorb_buff.shield_hp` back to `characters.stance_state.force_shield_hp` so OOC regen has a starting point.
+   - Also persist on every tick (cheap, single column update piggy-backed on existing character writes) so disconnects mid-fight are not free full-shield resets.
 
-Rewrite the CP bar block so positioning is computed against the full `maxCp` width but the fill only paints the usable region:
+2. **OOC regen** — add a Postgres function + cron, no new edge function needed:
+   - Create `public.regen_force_shield()` SECURITY DEFINER (search_path=public) that:
+     - Finds characters with `reserved_buffs ? 'force_shield'` AND no active combat session containing them.
+     - For each, computes `cap = INT_mod + floor(level * 0.5)` and `regen = 1 + floor(INT_mod / 2)`.
+     - Updates `stance_state.force_shield_hp = least(cap, coalesce(current, 0) + regen)` and stamps `force_shield_updated_at = now()`.
+   - Schedule via `pg_cron` every 2 seconds (matches the in-combat tick cadence the user is already used to).
+   - If pg_cron at 2s granularity is not available on the instance, fall back to computing elapsed seconds since `force_shield_updated_at` and applying the proportional regen lazily on read (in `combat-tick` hydration and in the new RPC the client polls). Prefer the cron path; lazy compute is the fallback.
 
-- Container stays `width: 100%` representing `maxCp`.
-- **Reserved tail (right-pinned)**: absolute, `right: 0`, `width: stancePercent%`, hatched soulforged (same gradient as today). Always rendered when `stancePercent > 0`. Add a left border to mark the boundary.
-- **Usable fill**: absolute, `left: 0`, `width: (cpPercent_of_max)%`. The fill width is computed as `displayedCp / maxCp * 100` — same as today — so it naturally never crosses into the reserved tail because `displayedCp ≤ maxCp - stanceReserved`.
-- **Queued overlay**: absolute, `left: cpPercent%`, `width: queuedPercent%`. Already correct relative to max; will sit between the fill and the reserved tail.
-- Remove the current "stance segment in the middle" rendering.
+### Client logic
 
-The numeric label keeps the existing `cp/maxCp ⚓N (-queued)` format. No change to the tooltip.
+3. **Display the persisted shield value out of combat**:
+   - Extend the character payload (or add a lightweight `get_my_stance_state` RPC) to include `stance_state.force_shield_hp` so `StatusBarsStrip` / `CharacterPanel` can render the current shield HP and a fill bar (current / cap) even when the player is idle.
+   - In `useCombatActions` for `absorb_buff` activation: instead of seeding `shieldHp = intMod + floor(level/2)` (full), seed from the persisted value so toggling the stance off and back on does not bypass the regen rule.
+   - The existing `buff_sync` path keeps the bar live during combat; OOC the value updates from periodic character refresh (every few seconds, same channel that already updates HP/CP/MP).
 
-### 2. `src/features/combat/utils/cp-display.ts` — minor additions
+### UX detail
 
-The math is already correct (percentages are all relative to `maxCp`). Add two derived fields used by the new layout for clarity, without breaking back-compat:
+- When the shield is at 0/cap and the player is OOC, show the bar empty (not hidden) so the regen progress is visible.
+- Tooltip on the shield buff shows `current / cap` and a hint: "Regenerates 1 + INT_mod/2 HP every 2s while out of combat."
 
-- `usableMaxCp = maxCp - stanceReservedCp` (informational; not required for rendering but useful for the upcoming label tweak and for tests).
-- `usableMaxPercent = round(usableMaxCp / maxCp * 100)` (so the boundary of the reserved tail can be expressed as `100 - stancePercent` consistently across rounding edges — we'll use `100 - stancePercent` directly in the component to avoid drift).
+## Game Manual update
 
-No change to `getAvailableCp` or affordability semantics.
+Replace the current Force Shield manual entry with text describing the new model: no in-combat regen, gradual OOC regen at `1 + floor(INT_mod / 2)` per ~2s up to `INT_mod + floor(level × 0.5)`, persisted across fights (no instant refill on next pull).
 
-### 3. Tests
+## Files touched
 
-Update `src/features/combat/utils/__tests__/cp-display.test.ts` if it asserts the old segment ordering. Add cases for:
-- Stance reserved with low CP (fill shrinks but reserved tail stays at full reserved width).
-- Stance + queued together (queued sits left of reserved tail, never overlaps).
-- 100% reserved edge (entire bar is the reserved tail; fill = 0).
+- `supabase/migrations/<new>.sql` — add `characters.stance_state` column, `regen_force_shield()` function, pg_cron schedule.
+- `supabase/functions/combat-tick/index.ts` — hydrate `mb.absorb_buff` from `stance_state` on first tick of a session; persist back to `stance_state.force_shield_hp` on tick writes and at session wipe.
+- `src/features/combat/hooks/useCombatActions.ts` — seed `setAbsorbBuff` from persisted value (not full cap) when activating the stance.
+- `src/features/character/components/StatusBarsStrip.tsx` and `CharacterPanel.tsx` — render shield bar OOC from persisted value; show cap and "regenerating" hint.
+- `src/integrations/supabase/types.ts` — auto-regenerated after migration.
+- `src/components/admin/GameManual.tsx` — update Force Shield description.
 
-`StatusBarsStrip.login-display.test.tsx` only asserts numbers — should remain green; re-check to confirm.
+## Memory updates
 
-## Out of scope
-
-- No backend changes. Stance reservation amounts, RPCs, and combat-tick logic stay as-is.
-- Tooltip wording, stance pip row, and the `⚓N` inline indicator next to the number stay unchanged.
-- No change to MP/HP/XP bars.
-
-## Files Touched
-
-- `src/features/character/components/StatusBarsStrip.tsx` — CP bar JSX rewrite.
-- `src/features/combat/utils/cp-display.ts` — add `usableMaxCp`, `usableMaxPercent` (additive, non-breaking).
-- `src/features/combat/utils/__tests__/cp-display.test.ts` — add reservation-tail cases.
+- Update the Wizard Abilities memory entry (or add a Force Shield sub-entry) to record the persistent OOC-regen model: cap formula, regen formula, no in-combat regen, persisted across fights.

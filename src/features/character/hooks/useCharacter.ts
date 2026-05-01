@@ -42,6 +42,8 @@ export interface Character {
   crown_item_created?: boolean;
   /** Active CP-reservation stances (key → entry). Wiped on character load + death. */
   reserved_buffs?: any;
+  /** Persistent stance values (e.g. Force Shield ward HP across combats). */
+  stance_state?: { force_shield_hp?: number; force_shield_updated_at?: string } | null;
 }
 
 export function useCharacter(user: User | null) {
@@ -274,6 +276,28 @@ export function useCharacter(user: User | null) {
       }
     }, 3000);
   }, [selectedCharacterId]);
+
+  // ── Force Shield: out-of-combat ward regen ──────────────────────
+  // While the Force Shield stance is reserved, periodically nudge the
+  // server's lazy-regen RPC so `stance_state.force_shield_hp` ticks back
+  // up over time. The RPC is a no-op while the player is in combat
+  // (combat-tick owns the value during fights), so this is safe to call
+  // unconditionally on a slow cadence.
+  const forceShieldActive = !!(selectedCharacter?.reserved_buffs && (selectedCharacter.reserved_buffs as any).force_shield);
+  useEffect(() => {
+    if (!forceShieldActive || !selectedCharacterId) return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const { data } = await supabase.rpc('apply_force_shield_regen' as any, { _character_id: selectedCharacterId });
+        if (cancelled || !data) return;
+        setCharacters(prev => prev.map(c => c.id === selectedCharacterId ? { ...c, stance_state: data as any } : c));
+      } catch { /* ignore — next tick will retry */ }
+    };
+    tick();
+    const id = setInterval(tick, 4000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [forceShieldActive, selectedCharacterId]);
 
   return {
     characters,

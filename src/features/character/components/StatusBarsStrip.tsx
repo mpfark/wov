@@ -45,7 +45,7 @@ export interface StatusBarsStripProps {
   reservedBuffs?: Record<string, { tier: number; reserved: number; activated_at?: number }> | null;
 }
 
-function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
+function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff, forceShieldStance }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'> & { forceShieldStance?: { shieldHp: number; shieldCap: number; inCombat: boolean } | null }) {
   const [now, setNow] = useState(Date.now());
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
@@ -116,7 +116,15 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     buffs.push({ emoji: '🔥🔥', label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
   }
 
-  if (absorbActive) {
+  // Force Shield: stance takes precedence over the legacy timed absorb buff so
+  // the bar reflects current/cap and the OOC regen is visible.
+  if (forceShieldStance) {
+    const pct = Math.max(0, Math.min(100, (forceShieldStance.shieldHp / Math.max(1, forceShieldStance.shieldCap)) * 100));
+    const detail = forceShieldStance.inCombat
+      ? `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP`
+      : `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP · regenerating`;
+    buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
+  } else if (absorbActive) {
     const dur = BUFF_DURATIONS['Force Shield'] || 20_000;
     const pct = Math.max(0, Math.min(100, ((absorbBuff!.expiresAt - now) / dur) * 100));
     buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-primary', bgColor: 'bg-primary/15', pct });
@@ -214,6 +222,27 @@ export default function StatusBarsStrip({
   const mpPercent = Math.round((mp / maxMp) * 100);
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
+
+  // ── Force Shield stance shield (persistent ward) ─────────────────
+  // While the Force Shield stance is reserved, derive the bar from the
+  // server-persisted ward HP on `characters.stance_state.force_shield_hp`
+  // (capped by INT_mod + floor(level/2)). This lets the bar render and
+  // visibly fill back up while OOC, instead of being driven by a timed
+  // local absorb buff.
+  const forceShieldStance: { shieldHp: number; shieldCap: number; inCombat: boolean } | null = (() => {
+    if (!reservedBuffs || !reservedBuffs.force_shield) return null;
+    const intTotal = (character.int ?? 10) + (equipmentBonuses.int ?? 0);
+    const intMod = Math.max(0, Math.floor((intTotal - 10) / 2));
+    const shieldCap = Math.max(1, intMod + Math.floor((character.level ?? 1) * 0.5));
+    const persisted = ((character as any).stance_state && typeof (character as any).stance_state === 'object')
+      ? Number((character as any).stance_state.force_shield_hp)
+      : NaN;
+    // In combat, prefer the live local buff (combat-tick syncs it via buff_sync);
+    // OOC, fall back to the persisted value (which the server's regen RPC ticks up).
+    const inCombat = !!(absorbBuff && Date.now() < absorbBuff.expiresAt);
+    const liveHp = inCombat ? absorbBuff!.shieldHp : (Number.isFinite(persisted) ? persisted : shieldCap);
+    return { shieldHp: Math.max(0, Math.min(shieldCap, Math.floor(liveHp))), shieldCap, inCombat };
+  })();
 
 
   return (
@@ -349,6 +378,7 @@ export default function StatusBarsStrip({
           stealthBuff={stealthBuff} inspireBuff={inspireBuff}
           holyShieldBuff={holyShieldBuff} shieldWallBuff={shieldWallBuff}
           consecrateBuff={consecrateBuff} divineChallengeBuff={divineChallengeBuff}
+          forceShieldStance={forceShieldStance}
         />
       </div>
     </div>

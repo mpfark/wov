@@ -328,6 +328,7 @@ export type Database = {
           rp_total_earned: number
           salvage: number
           soulforged_item_created: boolean
+          stance_state: Json
           str: number
           unspent_stat_points: number
           updated_at: string
@@ -365,6 +366,7 @@ export type Database = {
           rp_total_earned?: number
           salvage?: number
           soulforged_item_created?: boolean
+          stance_state?: Json
           str?: number
           unspent_stat_points?: number
           updated_at?: string
@@ -402,6 +404,7 @@ export type Database = {
           rp_total_earned?: number
           salvage?: number
           soulforged_item_created?: boolean
+          stance_state?: Json
           str?: number
           unspent_stat_points?: number
           updated_at?: string
@@ -1586,6 +1589,10 @@ export type Database = {
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
+      }
+      apply_force_shield_regen: {
+        Args: { _character_id: string }
+        Returns: Json
       }
       award_party_member:
         | {
