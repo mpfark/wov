@@ -1306,6 +1306,10 @@ Deno.serve(async (req) => {
 
       if (mHp[m.id] !== c.hp) updates.hp = mHp[m.id];
       if (mCp[m.id] !== (c.cp ?? 0)) updates.cp = mCp[m.id];
+      // Death wipes all stance reservations
+      if (mHp[m.id] <= 0 && c.reserved_buffs && Object.keys(c.reserved_buffs).length > 0) {
+        updates.reserved_buffs = {};
+      }
 
       let newXp = c.xp + mXp[m.id];
       let newGold = c.gold + mGold[m.id];
