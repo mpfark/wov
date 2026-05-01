@@ -1,16 +1,20 @@
 /**
  * Centralized CP math for the UI and ability affordability.
  *
- * The "raw" CP is the locally-known authoritative value (from `character.cp`).
- * The "reserved" CP is an in-flight queued ability cost the player has
- * committed to spend, but which the server may not yet have processed.
+ * Three CP "segments" can occupy the bar:
+ *   - Usable: what the player can spend right now.
+ *   - Stance reservation: locked by active CP-reservation stances. Cannot be
+ *     spent. Released only by dropping the stance (and is NOT refunded).
+ *   - Queued ability cost: an in-flight ability the server hasn't processed
+ *     yet. Will be deducted shortly.
  *
  * Display rule:
- *   - The filled portion of the bar shows: max(0, raw - reserved)
- *   - A separate shaded segment shows the reserved amount, clamped to raw
+ *   - Filled (usable) portion: max(0, raw - stanceReserved - queuedReserved)
+ *   - Stance overlay segment: clamped so it can't exceed (raw - queued)
+ *   - Queued overlay segment: clamped so it can't exceed raw
  *
  * Affordability rule:
- *   - A new ability is only affordable if its cost <= (raw - reserved)
+ *   - A new ability is affordable iff cost <= (raw - stanceReserved - queued)
  */
 
 export interface CpDisplay {
@@ -18,42 +22,68 @@ export interface CpDisplay {
   rawCp: number;
   /** Effective max CP (gear-adjusted) */
   maxCp: number;
-  /** Currently reserved (display-only) cost from any in-flight queued ability */
+  /** Locked by active stances */
+  stanceReservedCp: number;
+  /** In-flight queued ability cost */
+  queuedReservedCp: number;
+  /** Legacy alias for queuedReservedCp (kept for back-compat) */
   reservedCp: number;
   /** What the player can still spend on a new ability */
   availableCp: number;
-  /** What the filled portion of the bar shows (max(0, raw - reserved)) */
+  /** What the filled portion of the bar shows */
   displayedCp: number;
   /** Filled CP percentage (0-100) */
   cpPercent: number;
-  /** Reserved overlay percentage (0-100), clamped so it can't exceed raw */
+  /** Stance overlay percentage (0-100) */
+  stancePercent: number;
+  /** Queued overlay percentage (0-100) */
+  queuedPercent: number;
+  /** Legacy alias for queuedPercent (kept for back-compat) */
   reservedPercent: number;
-  /** Reserved amount actually shown next to the number, clamped to raw */
+  /** Stance reserved amount actually shown next to the number */
+  stanceShown: number;
+  /** Queued reserved amount actually shown next to the number */
+  queuedShown: number;
+  /** Legacy alias for queuedShown (kept for back-compat) */
   reservedShown: number;
 }
 
-export function getCpDisplay(rawCp: number, maxCp: number, reservedCp: number): CpDisplay {
+export function getCpDisplay(
+  rawCp: number,
+  maxCp: number,
+  queuedReservedCp: number,
+  stanceReservedCp = 0,
+): CpDisplay {
   const safeMax = Math.max(1, maxCp);
   const safeRaw = Math.max(0, rawCp);
-  const safeReserved = Math.max(0, reservedCp);
-  const reservedShown = Math.min(safeReserved, safeRaw);
-  const displayedCp = Math.max(0, safeRaw - safeReserved);
+  const safeQueued = Math.max(0, queuedReservedCp);
+  const safeStance = Math.max(0, stanceReservedCp);
+  const queuedShown = Math.min(safeQueued, safeRaw);
+  const stanceShown = Math.min(safeStance, Math.max(0, safeRaw - queuedShown));
+  const displayedCp = Math.max(0, safeRaw - safeQueued - safeStance);
   const availableCp = displayedCp;
   const cpPercent = Math.round((displayedCp / safeMax) * 100);
-  const reservedPercent = Math.max(0, Math.min(100, Math.round((reservedShown / safeMax) * 100)));
+  const stancePercent = Math.max(0, Math.min(100, Math.round((stanceShown / safeMax) * 100)));
+  const queuedPercent = Math.max(0, Math.min(100, Math.round((queuedShown / safeMax) * 100)));
   return {
     rawCp: safeRaw,
     maxCp: safeMax,
-    reservedCp: safeReserved,
+    stanceReservedCp: safeStance,
+    queuedReservedCp: safeQueued,
+    reservedCp: safeQueued,
     availableCp,
     displayedCp,
     cpPercent,
-    reservedPercent,
-    reservedShown,
+    stancePercent,
+    queuedPercent,
+    reservedPercent: queuedPercent,
+    stanceShown,
+    queuedShown,
+    reservedShown: queuedShown,
   };
 }
 
-/** Convenience for affordability checks. */
-export function getAvailableCp(rawCp: number, reservedCp: number): number {
-  return Math.max(0, (rawCp ?? 0) - (reservedCp ?? 0));
+/** Convenience for affordability checks. Includes both queued + stance reservations. */
+export function getAvailableCp(rawCp: number, queuedReservedCp: number, stanceReservedCp = 0): number {
+  return Math.max(0, (rawCp ?? 0) - (queuedReservedCp ?? 0) - (stanceReservedCp ?? 0));
 }
