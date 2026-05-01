@@ -42,6 +42,8 @@ export interface Character {
   crown_item_created?: boolean;
   /** Active CP-reservation stances (key → entry). Wiped on character load + death. */
   reserved_buffs?: any;
+  /** Persistent stance values (e.g. Force Shield ward HP across combats). */
+  stance_state?: { force_shield_hp?: number; force_shield_updated_at?: string } | null;
 }
 
 export function useCharacter(user: User | null) {
