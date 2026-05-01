@@ -385,6 +385,42 @@ Deno.serve(async (req) => {
         ? Math.min(client_cp, dbCp)
         : dbCp;
       mCp[m.id] = freshCp;
+
+      // ── Hydrate stance buffs from reserved_buffs ─────────────────
+      // Stances (Ignite, Envenom, Holy Shield, Force Shield, Eagle Eye,
+      // Arcane Surge, Battle Cry) are stored on the character row and seed
+      // member_buffs each tick so the existing engines treat them as active
+      // without any expires_at check.
+      const reserved: Record<string, { tier: number; reserved: number; activated_at: number }> =
+        (m.c.reserved_buffs && typeof m.c.reserved_buffs === 'object') ? m.c.reserved_buffs : {};
+      const mb = (buffs[m.id] = buffs[m.id] || {});
+      if (Object.keys(reserved).length > 0) {
+        const farFuture = Date.now() + 60_000; // re-seeded every tick anyway
+        const cInt = (m.c.int || 10) + ((eq[m.id] as any)?.int || 0);
+        const cWis = (m.c.wis || 10) + ((eq[m.id] as any)?.wis || 0);
+        const cDex = (m.c.dex || 10) + ((eq[m.id] as any)?.dex || 0);
+        const intMod = Math.max(0, Math.floor((cInt - 10) / 2));
+        const wisMod = Math.max(0, Math.floor((cWis - 10) / 2));
+        const dexMod = Math.max(0, Math.floor((cDex - 10) / 2));
+        if (reserved.ignite)       mb.ignite_buff = true;
+        if (reserved.envenom)      mb.poison_buff = true;
+        if (reserved.eagle_eye)    mb.crit_buff = { bonus: Math.max(1, Math.floor(dexMod / 2) + 1) };
+        if (reserved.arcane_surge) mb.damage_buff = true;
+        if (reserved.battle_cry) {
+          // Match useCombatActions: 15% reduction (20% with shield), small crit reduction
+          mb.battle_cry_dr = { reduction: 0.15, crit_reduction: 0.10 };
+        }
+        if (reserved.holy_shield) {
+          mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
+        }
+        if (reserved.force_shield) {
+          // Re-seed a full shield each tick so it functions as a permanent stance
+          const shieldHp = intMod + Math.floor((m.c.level || 1) * 0.5);
+          if (!mb.absorb_buff || (mb.absorb_buff.shield_hp ?? 0) < shieldHp) {
+            mb.absorb_buff = { shield_hp: Math.max(1, shieldHp) };
+          }
+        }
+      }
     }
 
     // ── Unified creature kill handler ────────────────────────────
@@ -469,7 +505,11 @@ Deno.serve(async (req) => {
       const eb = eq[member.id] || {};
 
       const cpCost = pa.cp_cost || 0;
-      if (mCp[member.id] < cpCost) {
+      // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
+      const memberReserved: Record<string, any> = (member.c.reserved_buffs && typeof member.c.reserved_buffs === 'object') ? member.c.reserved_buffs : {};
+      let reservedTotal = 0;
+      for (const k of Object.keys(memberReserved)) reservedTotal += (memberReserved[k]?.reserved || 0);
+      if ((mCp[member.id] - reservedTotal) < cpCost) {
         events.push({ type: 'ability_fail', message: `⚠️ ${c.name} doesn't have enough CP!`, character_id: member.id });
         continue;
       }
@@ -1266,6 +1306,10 @@ Deno.serve(async (req) => {
 
       if (mHp[m.id] !== c.hp) updates.hp = mHp[m.id];
       if (mCp[m.id] !== (c.cp ?? 0)) updates.cp = mCp[m.id];
+      // Death wipes all stance reservations
+      if (mHp[m.id] <= 0 && c.reserved_buffs && Object.keys(c.reserved_buffs).length > 0) {
+        updates.reserved_buffs = {};
+      }
 
       let newXp = c.xp + mXp[m.id];
       let newGold = c.gold + mGold[m.id];

@@ -323,6 +323,7 @@ export type Database = {
           mp: number
           name: string
           race: Database["public"]["Enums"]["character_race"]
+          reserved_buffs: Json
           respec_points: number
           rp_total_earned: number
           salvage: number
@@ -359,6 +360,7 @@ export type Database = {
           mp?: number
           name: string
           race: Database["public"]["Enums"]["character_race"]
+          reserved_buffs?: Json
           respec_points?: number
           rp_total_earned?: number
           salvage?: number
@@ -395,6 +397,7 @@ export type Database = {
           mp?: number
           name?: string
           race?: Database["public"]["Enums"]["character_race"]
+          reserved_buffs?: Json
           respec_points?: number
           rp_total_earned?: number
           salvage?: number
@@ -1575,6 +1578,10 @@ export type Database = {
         Returns: undefined
       }
       accept_summon: { Args: { _request_id: string }; Returns: undefined }
+      activate_stance: {
+        Args: { p_character_id: string; p_stance_key: string; p_tier: number }
+        Returns: Json
+      }
       admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
@@ -1626,6 +1633,7 @@ export type Database = {
         Returns: boolean
       }
       cleanup_ground_loot: { Args: never; Returns: undefined }
+      clear_stances: { Args: { p_character_id: string }; Returns: Json }
       collect_marketplace_payouts: {
         Args: { p_character_id: string }
         Returns: Json
@@ -1650,6 +1658,10 @@ export type Database = {
       drop_item_to_ground: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: boolean
+      }
+      drop_stance: {
+        Args: { p_character_id: string; p_stance_key: string }
+        Returns: Json
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }

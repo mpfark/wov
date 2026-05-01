@@ -40,6 +40,8 @@ export interface Character {
   rp_total_earned: number;
   soulforged_item_created?: boolean;
   crown_item_created?: boolean;
+  /** Active CP-reservation stances (key → entry). Wiped on character load + death. */
+  reserved_buffs?: any;
 }
 
 export function useCharacter(user: User | null) {

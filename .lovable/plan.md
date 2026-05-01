@@ -1,84 +1,151 @@
-# Single-Page Character Creation + 4 Enhancements
+## Concept
 
-Replace the 5-step wizard in `src/pages/CharacterCreation.tsx` with a single scrollable page, plus all four extras (hover preview, AI name reroll, recommended-class hints, sticky summary bar).
+Stance-like self buffs become **CP-reservation stances**: activating one locks part of your max CP. The buff stays up indefinitely (no timer, no rebuffing) for as long as you are online. Dropping the stance frees the reservation slot but does **not** refund the CP — it has to regen back naturally. Stances do **not** survive offline/logout.
 
-## Layout
+Short tactical buffs (Shield Wall, Disengage, Consecrate, Divine Aegis, party heals/regens, Sunder, Rend bleed, root debuffs, **Cloak of Shadows**) are unchanged — they keep their current duration/cooldown model.
+
+## Stance list (final)
+
+| Tier | Reserve % of max CP | Stances |
+|------|---------------------|---------|
+| T1 | 10% | Eagle Eye, Force Shield, Holy Shield |
+| T2 | 15% | Arcane Surge, Battle Cry |
+| T3 | 20% | Ignite, Envenom |
+
+Cloak of Shadows is **not** a stance — it stays as the existing 50% dodge timed buff.
+
+Reservation amount is computed at activation against current effective max CP, rounded up, minimum 5 CP. It is locked at the value paid — gear/level changes after activation do not retune it.
+
+## Player-facing rules
+
+- **Stack freely** as long as you have CP headroom: activation is blocked if `available CP (raw − total stance reservation − any queued ability reservation) < 0` would result.
+- **Mutual exclusion stays**: Ignite and Envenom remain mutually exclusive (existing commitment-buff rule). All other stances can coexist.
+- **Toggle to drop**: clicking an active stance button drops it. Reservation slot frees, **CP stays spent** until natural regen refills it.
+- **Persists across**: combats, node movement, travel, panels — the entire online session.
+- **Cleared on**: logout, going offline, character load/login, death, class change, respec, stat reset.
+- **Out-of-combat regen** continues, regenerating against your shrunken usable pool. Reserved CP is not regenerated "into" because it's locked.
+
+## Cleanup model (no offline persistence)
+
+Single authoritative rule: **`reserved_buffs` is wiped to `{}` on character load.**
+
+- On every character fetch at login / character-select → game-entry, the `load_character` path clears `reserved_buffs` server-side before returning the row. This handles logout, browser close, network drop, crashes, and any "did they really log out" ambiguity in one place.
+- On `death` resolution in combat-tick / kill-resolver → also wipe `reserved_buffs`.
+- On `respec`, `class change`, `stat reset` RPCs → also wipe.
+
+There is no separate "presence-based" cleanup; the load-time wipe is the safety net.
+
+## UI
+
+The CP bar already supports a `reservedCp` overlay (used today for in-flight queued ability cost). We extend it with a **second** overlay segment so the player can distinguish:
 
 ```text
-┌────────────────────────────────────────────────────────┐
-│ ← Back     Forge Your Hero                             │
-├────────────────────────────────────────────────────────┤
-│ Name [_________] [🎲 Reroll]   Gender (♂ Male)(♀ Fem)  │
-├────────────────────────────────────────────────────────┤
-│ Race  (3-col grid; selected = primary border)          │
-│ ┌Human─┐ ┌Elf───┐ ┌Dwarf─┐                             │
-│ │+stats│ │+stats│ │+stats│   (hover → preview at btm)  │
-│ │Best: │ │Best: │ │Best: │                             │
-│ │Any   │ │Wiz/  │ │War/  │                             │
-│ │      │ │Rgr   │ │Tmpl  │                             │
-│ └──────┘ └──────┘ └──────┘                             │
-├────────────────────────────────────────────────────────┤
-│ Class  (3-col grid)                                    │
-│ ┌Warrior┐ ┌Wizard─┐ ...                                │
-│ └───────┘ └───────┘                                    │
-├────────────────────────────────────────────────────────┤
-│ (scroll spacer for sticky bar)                         │
-└────────────────────────────────────────────────────────┘
-─── sticky bottom (always visible) ──────────────────────
-│ STR 10 DEX 12 CON 14 INT 8 WIS 11 CHA 9                │
-│ HP 26  AC 13  Gold 10  •  [ Create Character ]         │
-─────────────────────────────────────────────────────────
+[████████░░░▓▓▒░░░]  35 / 60   (15 reserved by stances, 3 queued)
+ usable    stance queued empty
 ```
 
-## Implementation
+- `displayedCp` = `raw − stanceReserved − queuedReserved`
+- Stance segment: subtle gold/parchment shade
+- Queued segment: existing in-flight shade
+- Hover tooltip on the CP bar lists each active stance + its reserved amount.
 
-### 1. Single-page rewrite — `src/pages/CharacterCreation.tsx`
-- Drop `step` state. Keep `name`, `gender`, `race`, `charClass`, `loading`.
-- Add `hoverRace`, `hoverClass` state for the hover-preview.
-- Computed values use `hoverRace ?? race` and `hoverClass ?? charClass` for the live stats panel — so hovering temporarily previews without committing.
-- Card grids reuse current visual style (border highlight, stat chips, descriptions). Wrap in `max-w-4xl`, keep `parchment-bg` + `ornate-border`.
-- Sticky summary bar: a `<div class="sticky bottom-0 ...">` inside the card, with backdrop blur, divider, all six stats + HP/AC/Gold + Create button. Disabled until `name && gender && race && charClass`. Shows a muted "Choose a race and class" hint when stats aren't computable.
-- `handleCreate` body kept identical.
+Stance ability buttons:
+- **Inactive**: shows "Reserves X CP while active." Disabled if activation would push usable CP below zero, with tooltip "Need Y more available CP".
+- **Active**: highlighted with a glow + tooltip **"Drop stance. Reserved CP is not refunded."**
+- Confirm-on-click is not required, but the destructive tooltip must be present so players understand the cost.
 
-### 2. AI name reroll button
-- New edge function `supabase/functions/ai-suggest-character-name/index.ts`:
-  - Auth-gated to any signed-in user (no role check).
-  - In-memory rate limit: 10 / 60 s per user.
-  - Inputs: `{ race, gender }` (optional; falls back to generic fantasy).
-  - Calls Lovable AI Gateway (`google/gemini-3-flash-preview`) with a tool-call schema returning `{ name: string }`.
-  - System prompt: "Generate a single-word fantasy first name appropriate for a {gender} {race} adventurer in a high-fantasy MUD. ASCII only. 2–12 letters. Output only the JSON tool call." Non-deterministic via temperature default.
-  - Server strips whitespace and non-letters before returning.
-- No `supabase/config.toml` block needed — defaults (verify_jwt = true) are correct.
-- Frontend: small dice button next to the name input. Disabled while loading; shows spinner. On success sets `name` to the returned value. Tolerates failure with a toast.
+Combat log:
+- Activation: `🔥 Ignite stance held — 12 CP reserved.`
+- Drop: `🔥 Ignite dropped — 12 CP forfeit.`
+- Login wipe: `Your stances faded while you were away.` (only if any were cleared)
 
-### 3. Recommended-class hint
-- Add a static map in the same file:
-  ```ts
-  const RACE_RECOMMENDED_CLASSES: Record<string, string[]> = {
-    human:    ['warrior','wizard','ranger','rogue','healer','bard','templar'], // shows "Any"
-    elf:      ['wizard','ranger'],
-    dwarf:    ['warrior','templar'],
-    halfling: ['rogue','ranger'],
-    edain:    ['warrior','templar','healer'],
-    half_elf: ['bard','healer'],
-  };
-  ```
-- Render under each race card as a small italic "Best: Wizard, Ranger" line (or "Best: Any" for human).
-- Optional small visual cue: when a race is selected, the matching class cards get a subtle ring/dot to draw the eye — pure CSS (`ring-1 ring-primary/30`).
+## Server authority
 
-### 4. Hover preview (already covered by state model in step 1)
-- `onMouseEnter` / `onMouseLeave` on each race + class card sets `hoverRace`/`hoverClass`. Sticky stat bar reads the hovered values when present, the committed values otherwise.
+Server is the sole owner of `reserved_buffs`. Client only previews. All affordability checks (abilities, CP-cost autoattacks, server regen clamps) compare against `cp − sum(reserved_buffs)`.
 
-### 5. Sticky summary bar (covered in step 1)
-- Implemented as a `sticky bottom-0` flex strip inside the `Card`. The page's outer container becomes scrollable on smaller screens.
+New character column:
+
+```sql
+alter table public.characters
+  add column reserved_buffs jsonb not null default '{}'::jsonb;
+```
+
+Shape:
+
+```json
+{
+  "ignite":      { "tier": 3, "reserved": 12, "activated_at": 1714560000000 },
+  "holy_shield": { "tier": 1, "reserved": 6,  "activated_at": 1714560050000 }
+}
+```
+
+Two RPCs (both `SECURITY DEFINER`, `set search_path = public`):
+
+- `activate_stance(character_id, stance_key, tier)` — validates ownership, mutual-exclusion (ignite/envenom), affordability against `cp − current reserved`, computes reservation, writes to `reserved_buffs`. Returns updated character row.
+- `drop_stance(character_id, stance_key)` — removes the entry. Does **not** refund CP. Returns updated character row.
+
+Both broadcast a `buff_sync` event over the existing channel so other tabs and party members refresh.
+
+A third helper (or extension of the existing character-load path) ensures the **login wipe**:
+- Update the existing `load_character` / character-select fetch path to set `reserved_buffs = '{}'::jsonb` and return the cleaned row in one statement.
+- If no centralized RPC exists today, add `clear_stances_on_load(character_id)` and call it from the client immediately on character load before the game initializes.
+
+## combat-tick integration
+
+At member-state hydration, `combat-tick` reads `characters.reserved_buffs` and seeds `member_buffs` so the existing engines keep working unchanged:
+
+| `reserved_buffs` key | Seeds in `mb` |
+|----------------------|---------------|
+| `eagle_eye` | `crit_buff = { bonus: <stat-derived> }` |
+| `force_shield` | `absorb_buff = { shield_hp: <stat-derived> }` (re-seeded each tick to its full value while held) |
+| `holy_shield` | `holy_shield = { wis_mod, expires_at: now+1tick }` |
+| `arcane_surge` | `damage_buff = true` |
+| `battle_cry` | `battle_cry_dr = { reduction, crit_reduction }` |
+| `ignite` | `ignite_buff = true` |
+| `envenom` | `poison_buff = true` |
+
+For these specific keys, the existing `expires_at` short-circuits in combat-tick are bypassed — presence in `reserved_buffs` means "active." Force Shield's per-tick re-seed becomes an effectively permanent shield while reserved, which matches the stance fantasy.
+
+CP spending in combat-tick switches all `mCp[id] >= cost` checks to `(mCp[id] - sumReserved(id)) >= cost`. Server-side regen clamps clamp against `max_cp` as before — the reservation is a *spend* limit, not a *cap* limit, so natural regen continues to fill up to `max_cp`.
 
 ## Files touched
 
-- **rewrite**: `src/pages/CharacterCreation.tsx`
-- **new**: `supabase/functions/ai-suggest-character-name/index.ts` (auto-deployed)
-- No DB migration. No changes to `Index.tsx` or other call sites.
+- `supabase/migrations/<new>.sql` — add `reserved_buffs` column, two RPCs, optional `clear_stances_on_load`.
+- `supabase/functions/_shared/formulas/resources.ts` — add `sumReservedCp(reservedBuffs)` and `getAvailableCp(rawCp, reservedTotal, queued?)`.
+- `supabase/functions/combat-tick/index.ts` — hydrate `member_buffs` from `reserved_buffs`; switch CP checks to use available CP; clear `reserved_buffs` on death.
+- `supabase/functions/combat-catchup/index.ts` — same hydration so offline-catchup math is consistent.
+- `supabase/functions/_shared/kill-resolver.ts` — wipe `reserved_buffs` on player death.
+- `src/features/character/hooks/useCharacter.ts` — on first character load after login, call the clear RPC (or rely on the cleaned row from `load_character`).
+- `src/features/combat/utils/cp-display.ts` — extend `CpDisplay` with `stanceReservedCp` separate from `queuedReservedCp`; add second overlay segment.
+- `src/features/combat/hooks/useCombatActions.ts` — replace timed-buff branches for the six stance abilities with `activate_stance`/`drop_stance` calls. Re-click toggles. Remove the per-cast `cpCost` deduction for stances (cost = reservation, applied by RPC).
+- `src/features/combat/utils/class-abilities.ts` — add `stance: true` and `tierReservePct` to the six entries; rewrite descriptions.
+- `src/features/combat/hooks/useBuffState.ts` — derive ignite/poison/absorb/holyShield/critBuff/damageBuff/battleCry "active" flags from `character.reserved_buffs` rather than local `expiresAt`. Remove client expiry timers for those.
+- `src/features/character/components/StatusBarsStrip.tsx` — render the stance segment of the CP bar and tooltip.
+- `src/features/combat/components/EventLogPanel.tsx` — log activation/drop/login-wipe lines.
+- `src/components/admin/GameManual.tsx` — rewrite the buff section: stances vs tactical buffs, reservation rules, no-refund warning, no-offline-persistence note.
+- Tests:
+  - `src/features/combat/utils/__tests__/cp-display.test.ts` — extend for stance + queued overlays.
+  - New `src/features/combat/utils/__tests__/stance-affordability.test.ts` — stack/unstack stances, blocked activation, drop forfeits CP, ignite/envenom mutual exclusion.
+  - `src/shared/formulas/__tests__/formula-parity.test.ts` — `sumReservedCp` / `getAvailableCp` parity with the server copy.
+- Memory:
+  - Update `mem://game/class-abilities/commitment-buffs` (Ignite/Envenom are now stances, not 5-min timed buffs).
+  - Add new `mem://game/class-abilities/stance-system` describing the full stance table, no-refund rule, and login-wipe rule.
 
-## Out of scope
+## What this plan does NOT change
 
-- Race/class data, formulas, and starting-gear RPC remain unchanged.
-- No new memory file needed; the layout choice is local to one page.
+- Combat formulas, damage pipeline, hit-quality bands, autoattack math.
+- Short tactical buff durations and cooldowns.
+- Cloak of Shadows — stays as the existing 50% dodge timed buff.
+- Ability damage formulas.
+- CP regen rules (rate, in-combat reduction, max cap).
+- Death penalties, respawn behavior.
+- Movement, party, teleport systems.
+- HP authority — combat-tick remains the sole writer of HP/CP/MP during combat.
+
+## Success criteria
+
+- A player can hold meaningful long-term stances during an online session without rebuffing.
+- A player cannot drop-and-rebuy a stance to magic CP back into existence.
+- Logging out and back in reliably ends with `reserved_buffs = {}` and full available CP up to `max_cp`.
+- Cloak of Shadows still feels like a tactical rogue cooldown, not a tank stance.
+- Stacking two T2/T3 stances visibly reduces the usable bar by ~30–35% with both segments shown distinctly.
