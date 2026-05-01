@@ -89,6 +89,8 @@ export interface UsePartyCombatParams {
   onAbsorbSync?: (remaining: number) => void;
   /** Callback when a boss creature dies with an admin-authored death cry */
   onBossDeathCry?: (entry: { creatureName: string; text: string }) => void;
+  /** Callback fired with creature IDs the server confirmed dead in this tick (for optimistic UI removal) */
+  onCreaturesKilled?: (creatureIds: string[]) => void;
   /** Buff setters for death cleanup (Envenom/Ignite) */
   setPoisonBuff?: React.Dispatch<React.SetStateAction<any>>;
   setIgniteBuff?: React.Dispatch<React.SetStateAction<any>>;
