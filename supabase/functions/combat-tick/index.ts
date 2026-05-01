@@ -414,11 +414,14 @@ Deno.serve(async (req) => {
           mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
         }
         if (reserved.force_shield) {
-          // Re-seed a full shield each tick so it functions as a permanent stance
-          const shieldHp = intMod + Math.floor((m.c.level || 1) * 0.5);
-          if (!mb.absorb_buff || (mb.absorb_buff.shield_hp ?? 0) < shieldHp) {
-            mb.absorb_buff = { shield_hp: Math.max(1, shieldHp) };
-          }
+          // Force Shield: gradual regen ward (PoE Energy Shield style).
+          // Cap = intMod + floor(level/2). Regen per tick = 1 + floor(intMod/2).
+          // Once depleted, slowly recharges instead of instantly refilling.
+          const shieldCap = Math.max(1, intMod + Math.floor((m.c.level || 1) * 0.5));
+          const regenPerTick = 1 + Math.floor(intMod / 2);
+          const current = mb.absorb_buff?.shield_hp ?? shieldCap;
+          const next = Math.min(shieldCap, current + regenPerTick);
+          mb.absorb_buff = { shield_hp: next };
         }
       }
     }
