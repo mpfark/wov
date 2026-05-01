@@ -956,7 +956,11 @@ export default function CharacterPanel({
                        return { label: 'CP Regen', value: `${effectiveCpRegen}/tick`, tip: `Base ${baseCpRegen}${foodBuffActive ? ` + ${foodCpBonus} food` : ''}${isAtInn ? ' + 10 inn' : ''}${milestoneCpFlat > 0 ? ` + ${milestoneCpFlat} milestone` : ''}${inspireActive ? ` + ${inspireCpBonus} Inspire` : ''} (every 4s)`, buffed: cpRegenBuffed, buffColor: 'text-elvish' } as DerivedRow;
                      })(),
                     { label: 'Max Stamina', value: `${maxMp}`, tip: `100 + DEX mod×10 + (level-1)×2` },
-                    { label: 'Stamina Regen', value: `${mpRegen}/tick`, tip: `5 + DEX modifier (every 4s)` },
+                    (() => {
+                      const baseMpPerTick = mpRegen * 2; // game loop applies ×2 per 4s tick
+                      const effectiveMpRegen = baseMpPerTick + innFlat;
+                      return { label: 'Stamina Regen', value: `${effectiveMpRegen}/tick`, tip: `${baseMpPerTick} from DEX${isAtInn ? ' + 10 inn' : ''} (every 4s)`, buffed: isAtInn, buffColor: 'text-elvish' } as DerivedRow;
+                    })(),
                   ];
 
                   const offenseRows: DerivedRow[] = [
