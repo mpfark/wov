@@ -378,6 +378,7 @@ export default function StatusBarsStrip({
           stealthBuff={stealthBuff} inspireBuff={inspireBuff}
           holyShieldBuff={holyShieldBuff} shieldWallBuff={shieldWallBuff}
           consecrateBuff={consecrateBuff} divineChallengeBuff={divineChallengeBuff}
+          forceShieldStance={forceShieldStance}
         />
       </div>
     </div>
