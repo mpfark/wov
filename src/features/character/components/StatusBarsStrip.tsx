@@ -116,7 +116,15 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     buffs.push({ emoji: '🔥🔥', label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
   }
 
-  if (absorbActive) {
+  // Force Shield: stance takes precedence over the legacy timed absorb buff so
+  // the bar reflects current/cap and the OOC regen is visible.
+  if (forceShieldStance) {
+    const pct = Math.max(0, Math.min(100, (forceShieldStance.shieldHp / Math.max(1, forceShieldStance.shieldCap)) * 100));
+    const detail = forceShieldStance.inCombat
+      ? `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP`
+      : `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP · regenerating`;
+    buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
+  } else if (absorbActive) {
     const dur = BUFF_DURATIONS['Force Shield'] || 20_000;
     const pct = Math.max(0, Math.min(100, ((absorbBuff!.expiresAt - now) / dur) * 100));
     buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-primary', bgColor: 'bg-primary/15', pct });
