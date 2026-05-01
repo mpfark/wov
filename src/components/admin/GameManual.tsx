@@ -677,6 +677,9 @@ export default function GameManual() {
                 <div className="p-2 bg-muted/30 rounded border border-border mb-2">
                   <p className="text-[10px] text-muted-foreground"><span className="text-elvish font-display">⚡ Instant</span> — resolves immediately on button press (buffs, auras). <span className="text-dwarvish font-display">⏳ Heartbeat</span> — queued and executes on the next 2s server tick (heals, attacks, DoTs). Heartbeat abilities cannot be spammed — only one can be queued at a time.</p>
                 </div>
+                <div className="p-2 bg-soulforged/10 rounded border border-soulforged/40 mb-2">
+                  <p className="text-[10px] text-foreground"><span className="text-soulforged font-display">⚓ Stance</span> — toggle on/off. Locks a percentage of your max CP for as long as it is active and persists across combat / movement until you drop it or log out. Reservation cost: <strong>T1 = 10%</strong>, <strong>T2 = 15%</strong>, <strong>T3 = 20%</strong> of max CP (min 5). Dropping a stance frees the slot but <strong>does NOT refund the CP</strong> — you must regenerate it. Ignite and Envenom are mutually exclusive. Stances clear on logout, character load, death, and respec. Stances: 🦅 Eagle Eye, 🛡️✨ Force Shield, 🛡️✝️ Holy Shield (T1) · ✨ Arcane Surge, 📯 Battle Cry (T2) · 🔥🔥 Ignite, 🐍 Envenom (T3).</p>
+                </div>
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <p className="text-[10px] text-muted-foreground/80 mt-1">T0 abilities scale from each class's primary stat: <code className="text-primary">max(1, 5 + 2 × statMod + floor(level / 3))</code>.</p>
 
