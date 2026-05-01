@@ -327,6 +327,26 @@ export default function StatusBarsStrip({
         </div>
       </div>
 
+      {/* Active stance pips — always visible while reserved (no timer) */}
+      {reservedBuffs && Object.keys(reservedBuffs).length > 0 && (
+        <div className="flex flex-wrap gap-1 justify-center items-center min-h-[18px]">
+          {Object.entries(reservedBuffs).map(([key, entry]) => (
+            <Tooltip key={key}>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-soulforged/60 bg-soulforged/10 text-[11px] font-display text-soulforged cursor-help">
+                  <span>⚓</span>
+                  <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                  <span className="opacity-70">−{entry.reserved}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                <span className="font-display">Stance · T{entry.tier}</span> — Reserves {entry.reserved} CP. Click the ability again to drop (CP not refunded).
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+      )}
+
       {/* Buffs */}
       <ActiveBuffs
         isAtInn={isAtInn} foodBuff={foodBuff} critBuff={critBuff}
