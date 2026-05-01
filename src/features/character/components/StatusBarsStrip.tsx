@@ -39,6 +39,10 @@ export interface StatusBarsStripProps {
   divineChallengeBuff?: { reduction: number; expiresAt: number } | null;
   /** CP currently reserved by an in-flight queued ability (display-only; server is authoritative). */
   reservedCp?: number;
+  /** CP currently locked by active CP-reservation stances (display-only). */
+  stanceReservedCp?: number;
+  /** Active stance map keyed by stance key. Used to render stance pips. */
+  reservedBuffs?: Record<string, { tier: number; reserved: number; activated_at?: number }> | null;
 }
 
 function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'>) {
@@ -194,12 +198,14 @@ export default function StatusBarsStrip({
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff,
   holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
   reservedCp = 0,
+  stanceReservedCp = 0,
+  reservedBuffs = null,
 }: StatusBarsStripProps) {
   const effectiveMaxHp = getEffectiveMaxHp(character.class, character.con, character.level, equipmentBonuses);
   const hpPercent = Math.round((character.hp / effectiveMaxHp) * 100);
   const rawCp = character.cp ?? 100;
   const maxCp = getEffectiveMaxCp(character.level, character.wis, equipmentBonuses);
-  const cpView = getCpDisplay(rawCp, maxCp, reservedCp);
+  const cpView = getCpDisplay(rawCp, maxCp, reservedCp, stanceReservedCp);
   const cp = cpView.displayedCp;
   const cpPercent = cpView.cpPercent;
   const reservedPercent = cpView.reservedPercent;
