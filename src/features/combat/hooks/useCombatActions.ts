@@ -226,7 +226,6 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p_character_id: p.character.id,
         p_stance_key: stanceDef.key,
         p_tier: stanceDef.tier,
-        p_max_cp: maxCp,
       });
       if (error) {
         p.addLog(`⚠️ ${ability.emoji} Failed to activate ${stanceDef.label}: ${error.message}`);
