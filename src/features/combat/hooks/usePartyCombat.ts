@@ -89,6 +89,8 @@ export interface UsePartyCombatParams {
   onAbsorbSync?: (remaining: number) => void;
   /** Callback when a boss creature dies with an admin-authored death cry */
   onBossDeathCry?: (entry: { creatureName: string; text: string }) => void;
+  /** Callback fired with creature IDs the server confirmed dead in this tick (for optimistic UI removal) */
+  onCreaturesKilled?: (creatureIds: string[]) => void;
   /** Buff setters for death cleanup (Envenom/Ignite) */
   setPoisonBuff?: React.Dispatch<React.SetStateAction<any>>;
   setIgniteBuff?: React.Dispatch<React.SetStateAction<any>>;
@@ -307,6 +309,12 @@ export function usePartyCombat(params: UsePartyCombatParams) {
 
     // Track killed creatures
     for (const id of result.killedCreatureIds) recentlyKilledRef.current.add(id);
+    // Optimistic UI removal — don't wait for the realtime UPDATE round-trip.
+    // Important when a kill coincides with a level-up: the heavy character
+    // re-render can otherwise delay the dead-creature DOM removal noticeably.
+    if (result.killedCreatureIds.length && ext.current.onCreaturesKilled) {
+      ext.current.onCreaturesKilled(result.killedCreatureIds);
+    }
 
     // Apply creature HP overrides
     for (const [id, hp] of Object.entries(result.creatureHpUpdates)) {
