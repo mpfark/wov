@@ -615,7 +615,12 @@ Deno.serve(async (req) => {
         // that ever picks it up).
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT), 1);
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
-        const { emoji, verb } = T0_LABEL[pa.ability_type];
+        let { emoji, verb } = T0_LABEL[pa.ability_type];
+        // Templars share the 'smite' handler with healers but flavor it as Judgment.
+        if (pa.ability_type === 'smite' && c.class === 'templar') {
+          emoji = '✝️';
+          verb = 'passes divine judgment upon';
+        }
         events.push({
           type: 'ability_hit',
           message: `${emoji} ${c.name} ${verb} ${target.name} for ${dmg} damage.`,
