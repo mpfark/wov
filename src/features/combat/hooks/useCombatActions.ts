@@ -196,7 +196,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const alreadyActive = isStanceActive(reservedBuffs, stanceDef.key);
 
       if (alreadyActive) {
-        const { error } = await supabase.rpc('drop_stance', {
+        const { data, error } = await supabase.rpc('drop_stance', {
           p_character_id: p.character.id,
           p_stance_key: stanceDef.key,
         });
@@ -204,6 +204,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
           p.addLog(`⚠️ ${ability.emoji} Failed to drop ${stanceDef.label}: ${error.message}`);
           return;
         }
+        // Optimistically reflect the new reserved_buffs map immediately so the
+        // CP bar / pip row updates without waiting for a full character refetch.
+        p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
         p.addLog(`${ability.emoji} You drop ${stanceDef.label}. The reserved CP is not refunded — you must regenerate it.`);
         return;
       }
@@ -222,7 +225,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         return;
       }
 
-      const { error } = await supabase.rpc('activate_stance', {
+      const { data, error } = await supabase.rpc('activate_stance', {
         p_character_id: p.character.id,
         p_stance_key: stanceDef.key,
         p_tier: stanceDef.tier,
@@ -231,6 +234,8 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLog(`⚠️ ${ability.emoji} Failed to activate ${stanceDef.label}: ${error.message}`);
         return;
       }
+      // Optimistic reflect — RPC returns the full reserved_buffs map.
+      p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
       p.addLog(`${ability.emoji} ${stanceDef.label} activated! Reserves ${cost} CP until you drop it.`);
       return;
     }
