@@ -267,27 +267,26 @@ export default function StatusBarsStrip({
             </span>
           </div>
           <div className="relative h-1.5 bg-background rounded-full overflow-hidden border border-border">
-            {/* Filled / usable */}
-            <div className="h-full transition-all duration-500 rounded-full" style={{
+            {/* Usable fill — left-aligned, scales against full max */}
+            <div className="absolute top-0 left-0 h-full transition-all duration-500" style={{
               width: `${cpPercent}%`,
               background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
             }} />
-            {/* Stance reserved segment (soulforged hatched) — sits to the right of usable */}
-            {cpView.stancePercent > 0 && (
-              <div className="absolute top-0 h-full transition-all duration-300" style={{
-                left: `${cpPercent}%`,
-                width: `${cpView.stancePercent}%`,
-                background: 'repeating-linear-gradient(45deg, hsl(var(--soulforged) / 0.55) 0 3px, hsl(var(--soulforged) / 0.25) 3px 6px)',
-                borderLeft: '1px solid hsl(var(--soulforged) / 0.7)',
-              }} />
-            )}
-            {/* Queued ability segment — to the right of stance */}
+            {/* Queued ability segment — sits just to the right of fill, inside usable area */}
             {reservedPercent > 0 && (
               <div className="absolute top-0 h-full transition-all duration-300" style={{
-                left: `${cpPercent + cpView.stancePercent}%`,
+                left: `${cpPercent}%`,
                 width: `${reservedPercent}%`,
                 background: 'hsl(var(--primary) / 0.25)',
                 borderLeft: '1px dashed hsl(var(--primary) / 0.6)',
+              }} />
+            )}
+            {/* Reserved tail — pinned to the RIGHT edge (PoE-style) */}
+            {cpView.stancePercent > 0 && (
+              <div className="absolute top-0 right-0 h-full transition-all duration-300" style={{
+                width: `${cpView.stancePercent}%`,
+                background: 'repeating-linear-gradient(45deg, hsl(var(--soulforged) / 0.55) 0 3px, hsl(var(--soulforged) / 0.25) 3px 6px)',
+                borderLeft: '1px solid hsl(var(--soulforged) / 0.7)',
               }} />
             )}
           </div>
