@@ -243,19 +243,48 @@ export default function StatusBarsStrip({
             <span className="text-muted-foreground">CP</span>
             <span className="text-[hsl(var(--primary))] tabular-nums">
               {cp}/{maxCp}
+              {cpView.stanceShown > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="ml-1 text-magenta cursor-help">⚓{cpView.stanceShown}</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    Stance reserved — locked while these stances are active.
+                    Dropping a stance frees the slot but does not refund the CP.
+                    {reservedBuffs && Object.keys(reservedBuffs).length > 0 && (
+                      <div className="mt-1 font-display">
+                        {Object.entries(reservedBuffs).map(([k, v]) => (
+                          <div key={k}>• {k} (T{v.tier}): -{v.reserved} CP</div>
+                        ))}
+                      </div>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               {reservedPercent > 0 && (
                 <span className="ml-1 text-[hsl(var(--primary)/0.5)]">(-{cpView.reservedShown})</span>
               )}
             </span>
           </div>
           <div className="relative h-1.5 bg-background rounded-full overflow-hidden border border-border">
+            {/* Filled / usable */}
             <div className="h-full transition-all duration-500 rounded-full" style={{
               width: `${cpPercent}%`,
               background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
             }} />
-            {reservedPercent > 0 && (
+            {/* Stance reserved segment (magenta hatched) — sits to the right of usable */}
+            {cpView.stancePercent > 0 && (
               <div className="absolute top-0 h-full transition-all duration-300" style={{
                 left: `${cpPercent}%`,
+                width: `${cpView.stancePercent}%`,
+                background: 'repeating-linear-gradient(45deg, hsl(var(--magenta) / 0.55) 0 3px, hsl(var(--magenta) / 0.25) 3px 6px)',
+                borderLeft: '1px solid hsl(var(--magenta) / 0.7)',
+              }} />
+            )}
+            {/* Queued ability segment — to the right of stance */}
+            {reservedPercent > 0 && (
+              <div className="absolute top-0 h-full transition-all duration-300" style={{
+                left: `${cpPercent + cpView.stancePercent}%`,
                 width: `${reservedPercent}%`,
                 background: 'hsl(var(--primary) / 0.25)',
                 borderLeft: '1px dashed hsl(var(--primary) / 0.6)',
