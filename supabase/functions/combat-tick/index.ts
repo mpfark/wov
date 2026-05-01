@@ -1381,6 +1381,24 @@ Deno.serve(async (req) => {
         updates.salvage = (c.salvage || 0) + mSalvage[m.id];
       }
 
+      // ── Persist Force Shield ward HP across combats ───────────────
+      // The OOC regen RPC reads characters.stance_state.force_shield_hp.
+      // Mirror the live combat value here every tick so a depleted shield
+      // stays depleted when the fight ends and the OOC regen picks up
+      // from there instead of resetting to full.
+      const reservedNow: Record<string, unknown> = (c.reserved_buffs && typeof c.reserved_buffs === 'object') ? c.reserved_buffs : {};
+      if (reservedNow.force_shield) {
+        const liveShield = buffs[m.id]?.absorb_buff?.shield_hp;
+        if (typeof liveShield === 'number' && Number.isFinite(liveShield)) {
+          const prevState = (c.stance_state && typeof c.stance_state === 'object') ? c.stance_state : {};
+          updates.stance_state = {
+            ...prevState,
+            force_shield_hp: Math.max(0, Math.floor(liveShield)),
+            force_shield_updated_at: new Date().toISOString(),
+          };
+        }
+      }
+
       if (Object.keys(updates).length > 0) {
         memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
       }
