@@ -158,5 +158,5 @@ export function useCreatureBroadcast(
     });
   }, [handle, characterId]);
 
-  return { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides };
+  return { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead };
 }
