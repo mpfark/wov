@@ -276,10 +276,10 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                 </div>
                 <Button
                   onClick={handleCreate}
-                  disabled={!canCreate || loading}
+                  disabled={!canCreate || loading || rolling}
                   className="font-display whitespace-nowrap"
                 >
-                  {loading ? 'Creating...' : 'Create Character'}
+                  {loading ? 'Creating...' : rolling ? 'Suggesting name...' : 'Create Character'}
                 </Button>
               </div>
             ) : (
