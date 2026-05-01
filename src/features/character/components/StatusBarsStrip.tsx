@@ -246,7 +246,7 @@ export default function StatusBarsStrip({
               {cpView.stanceShown > 0 && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="ml-1 text-magenta cursor-help">⚓{cpView.stanceShown}</span>
+                    <span className="ml-1 text-soulforged cursor-help">⚓{cpView.stanceShown}</span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="text-xs">
                     Stance reserved — locked while these stances are active.
@@ -272,13 +272,13 @@ export default function StatusBarsStrip({
               width: `${cpPercent}%`,
               background: 'linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)))',
             }} />
-            {/* Stance reserved segment (magenta hatched) — sits to the right of usable */}
+            {/* Stance reserved segment (soulforged hatched) — sits to the right of usable */}
             {cpView.stancePercent > 0 && (
               <div className="absolute top-0 h-full transition-all duration-300" style={{
                 left: `${cpPercent}%`,
                 width: `${cpView.stancePercent}%`,
-                background: 'repeating-linear-gradient(45deg, hsl(var(--magenta) / 0.55) 0 3px, hsl(var(--magenta) / 0.25) 3px 6px)',
-                borderLeft: '1px solid hsl(var(--magenta) / 0.7)',
+                background: 'repeating-linear-gradient(45deg, hsl(var(--soulforged) / 0.55) 0 3px, hsl(var(--soulforged) / 0.25) 3px 6px)',
+                borderLeft: '1px solid hsl(var(--soulforged) / 0.7)',
               }} />
             )}
             {/* Queued ability segment — to the right of stance */}
