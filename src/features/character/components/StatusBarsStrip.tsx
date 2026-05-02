@@ -29,7 +29,7 @@ export interface StatusBarsStripProps {
   damageBuff?: { expiresAt: number } | null;
   evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null;
   igniteBuff?: { expiresAt: number } | null;
-  absorbBuff?: { shieldHp: number; expiresAt: number } | null;
+  absorbBuff?: { shieldHp: number; shieldCap?: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' } | null;
   stealthBuff?: { expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
