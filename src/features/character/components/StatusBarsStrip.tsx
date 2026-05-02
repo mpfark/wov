@@ -125,9 +125,10 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
       : `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP · regenerating`;
     buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
   } else if (absorbActive) {
-    const dur = BUFF_DURATIONS['Force Shield'] || 20_000;
-    const pct = Math.max(0, Math.min(100, ((absorbBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-primary', bgColor: 'bg-primary/15', pct });
+    // Divine Aegis — castable absorb ward, no countdown.
+    const cap = Math.max(1, absorbBuff!.shieldCap ?? absorbBuff!.shieldHp);
+    const pct = Math.max(0, Math.min(100, (absorbBuff!.shieldHp / cap) * 100));
+    buffs.push({ emoji: '🛡️💚', label: 'Divine Aegis', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (partyRegenActive) {
