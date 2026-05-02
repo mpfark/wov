@@ -46,7 +46,7 @@ export interface IgniteStack {
   creatureNodeId: string | null;
   maxHp: number; lastKnownHp: number;
 }
-export interface AbsorbBuff { shieldHp: number; expiresAt: number }
+export interface AbsorbBuff { shieldHp: number; shieldCap?: number; expiresAt: number }
 export interface PartyRegenBuff { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' }
 /** Bard "Inspire" — flat additive HP/CP regen for caster + same-node party.
  *  Magnitude scales with caster CHA, duration scales with caster INT.

@@ -29,7 +29,7 @@ export interface StatusBarsStripProps {
   damageBuff?: { expiresAt: number } | null;
   evasionBuff?: { dodgeChance: number; expiresAt: number; source?: 'cloak' | 'disengage' } | null;
   igniteBuff?: { expiresAt: number } | null;
-  absorbBuff?: { shieldHp: number; expiresAt: number } | null;
+  absorbBuff?: { shieldHp: number; shieldCap?: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number; source?: 'healer' | 'bard' } | null;
   stealthBuff?: { expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
@@ -125,9 +125,10 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
       : `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP · regenerating`;
     buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
   } else if (absorbActive) {
-    const dur = BUFF_DURATIONS['Force Shield'] || 20_000;
-    const pct = Math.max(0, Math.min(100, ((absorbBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-primary', bgColor: 'bg-primary/15', pct });
+    // Divine Aegis — castable absorb ward, no countdown.
+    const cap = Math.max(1, absorbBuff!.shieldCap ?? absorbBuff!.shieldHp);
+    const pct = Math.max(0, Math.min(100, (absorbBuff!.shieldHp / cap) * 100));
+    buffs.push({ emoji: '🛡️💚', label: 'Divine Aegis', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (partyRegenActive) {
@@ -244,6 +245,25 @@ export default function StatusBarsStrip({
     return { shieldHp: Math.max(0, Math.min(shieldCap, Math.floor(liveHp))), shieldCap, inCombat };
   })();
 
+  // ── Divine Aegis ward overlay ─────────────────────────────────────
+  // Castable absorb shield with no timer — persists until depleted.
+  // Only render when Force Shield isn't already showing on the bar.
+  const aegisWard: { shieldHp: number; shieldCap: number } | null = (() => {
+    if (forceShieldStance) return null;
+    if (!absorbBuff || absorbBuff.shieldHp <= 0) return null;
+    if (Date.now() >= absorbBuff.expiresAt) return null;
+    const cap = Math.max(1, absorbBuff.shieldCap ?? absorbBuff.shieldHp);
+    return { shieldHp: Math.max(0, Math.min(cap, Math.floor(absorbBuff.shieldHp))), shieldCap: cap };
+  })();
+
+  // Unified ward overlay — Force Shield wins when both could apply.
+  const wardOverlay: { shieldHp: number; shieldCap: number; kind: 'force_shield' | 'aegis'; inCombat?: boolean } | null =
+    forceShieldStance
+      ? { ...forceShieldStance, kind: 'force_shield' }
+      : aegisWard
+        ? { ...aegisWard, kind: 'aegis' }
+        : null;
+
 
   return (
     <div className="space-y-1">
@@ -256,22 +276,31 @@ export default function StatusBarsStrip({
             <span className="flex items-center gap-0.5">
               {regenTick && <span className="text-[9px] text-elvish animate-fade-in font-display">+</span>}
               <span className="text-blood tabular-nums">{character.hp}/{effectiveMaxHp}</span>
-              {forceShieldStance && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="ml-1 text-[hsl(var(--primary))] tabular-nums cursor-help inline-flex items-center gap-0.5">
-                      🛡{forceShieldStance.shieldHp}/{forceShieldStance.shieldCap}
-                      {!forceShieldStance.inCombat && forceShieldStance.shieldHp < forceShieldStance.shieldCap && (
-                        <span className="text-[9px] text-[hsl(var(--primary))] animate-pulse font-display">+</span>
-                      )}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">
-                    <div><span className="font-display">Force Shield</span> — {forceShieldStance.shieldHp} / {forceShieldStance.shieldCap} ward HP</div>
-                    <div className="text-muted-foreground">Absorbs damage before HP. Regenerates 1 + INT_mod/2 every 2s while out of combat. Does not regen during combat.</div>
-                  </TooltipContent>
-                </Tooltip>
-              )}
+              {wardOverlay && (() => {
+                const isFS = wardOverlay.kind === 'force_shield';
+                const colorVar = isFS ? 'var(--primary)' : 'var(--elvish)';
+                const label = isFS ? 'Force Shield' : 'Divine Aegis';
+                const tooltipDetail = isFS
+                  ? 'Absorbs damage before HP. Regenerates 1 + INT_mod/2 every 2s while out of combat. Does not regen during combat.'
+                  : 'Absorbs damage before HP. Lasts until depleted.';
+                const showRegenPulse = isFS && !wardOverlay.inCombat && wardOverlay.shieldHp < wardOverlay.shieldCap;
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="ml-1 tabular-nums cursor-help inline-flex items-center gap-0.5" style={{ color: `hsl(${colorVar})` }}>
+                        🛡{wardOverlay.shieldHp}/{wardOverlay.shieldCap}
+                        {showRegenPulse && (
+                          <span className="text-[9px] animate-pulse font-display" style={{ color: `hsl(${colorVar})` }}>+</span>
+                        )}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      <div><span className="font-display">{label}</span> — {wardOverlay.shieldHp} / {wardOverlay.shieldCap} ward HP</div>
+                      <div className="text-muted-foreground">{tooltipDetail}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })()}
             </span>
           </div>
           <div className={`relative h-1.5 bg-background rounded-full overflow-hidden border transition-all duration-300 ${regenTick ? 'border-elvish shadow-[0_0_6px_hsl(var(--elvish)/0.5)]' : 'border-border'}`}>
@@ -279,29 +308,28 @@ export default function StatusBarsStrip({
               width: `${hpPercent}%`,
               background: hpPercent > 50 ? 'hsl(var(--elvish))' : hpPercent > 25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
             }} />
-            {/* Force Shield overlay — sits on top of HP fill, anchored to the right edge of HP */}
-            {forceShieldStance && (() => {
-              const capPct = Math.min(100, (forceShieldStance.shieldCap / Math.max(1, effectiveMaxHp)) * 100);
-              const livePct = Math.min(100, (forceShieldStance.shieldHp / Math.max(1, effectiveMaxHp)) * 100);
-              // Anchor to right edge of HP fill, but never overflow the bar
+            {/* Ward overlay (Force Shield or Divine Aegis) — anchored to right edge of HP fill */}
+            {wardOverlay && (() => {
+              const isFS = wardOverlay.kind === 'force_shield';
+              const colorVar = isFS ? 'var(--primary)' : 'var(--elvish)';
+              const capPct = Math.min(100, (wardOverlay.shieldCap / Math.max(1, effectiveMaxHp)) * 100);
+              const livePct = Math.min(100, (wardOverlay.shieldHp / Math.max(1, effectiveMaxHp)) * 100);
               const startPct = Math.min(100 - livePct, hpPercent);
               const ghostStartPct = Math.min(100 - capPct, hpPercent);
-              const regenPulse = !forceShieldStance.inCombat && forceShieldStance.shieldHp < forceShieldStance.shieldCap;
+              const regenPulse = isFS && !wardOverlay.inCombat && wardOverlay.shieldHp < wardOverlay.shieldCap;
               return (
                 <>
-                  {/* Cap ghost */}
                   <div className="absolute inset-y-0 transition-all duration-500" style={{
                     left: `${ghostStartPct}%`,
                     width: `${capPct}%`,
-                    background: 'hsl(var(--primary) / 0.12)',
-                    borderLeft: '1px dashed hsl(var(--primary) / 0.35)',
+                    background: `hsl(${colorVar} / 0.12)`,
+                    borderLeft: `1px dashed hsl(${colorVar} / 0.35)`,
                   }} />
-                  {/* Live shield */}
                   <div className={`absolute inset-y-0 transition-all duration-500 ${regenPulse ? 'animate-pulse' : ''}`} style={{
                     left: `${startPct}%`,
                     width: `${livePct}%`,
-                    background: 'hsl(var(--primary) / 0.55)',
-                    boxShadow: 'inset 0 0 4px hsl(var(--primary) / 0.6)',
+                    background: `hsl(${colorVar} / 0.55)`,
+                    boxShadow: `inset 0 0 4px hsl(${colorVar} / 0.6)`,
                   }} />
                 </>
               );
