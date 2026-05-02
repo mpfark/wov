@@ -333,7 +333,7 @@ export default function NodeView({
                             </div>
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                             {!isActiveTarget && !isEngaged && !isSelected && (
-                              <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
+                              <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); onAttack(c.id); }} className="font-display text-[10px] h-5 px-1.5">
                                 Attack
                               </Button>
                             )}
