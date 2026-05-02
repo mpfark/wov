@@ -34,12 +34,21 @@ import { getEffectiveMaxCp } from '@/lib/game-data';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /** Ability types that resolve instantly client-side (buffs only — heals stay queued for rate-limiting) */
+/** Ability types that resolve instantly client-side (buffs only — heals stay queued for rate-limiting)
+ *
+ *  IMPORTANT:
+ *  Stance-based abilities (crit_buff, absorb_buff, reactive_holy, damage_buff,
+ *  battle_cry, ignite_buff, poison_buff) MUST NOT appear in this set. They are
+ *  handled exclusively via activate_stance / drop_stance RPCs, intercepted by
+ *  the stance toggle block at the top of `handleUseAbility`. Adding them here
+ *  would reintroduce legacy timed-buff behavior alongside the stance system.
+ */
 const INSTANT_BUFF_TYPES = new Set([
-  'stealth_buff', 'crit_buff', 'damage_buff', 'battle_cry',
-  'regen_buff', 'poison_buff', 'evasion_buff', 'disengage_buff', 'ignite_buff',
-  'absorb_buff', 'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
-  // Templar instant buffs
-  'reactive_holy', 'block_buff', 'consecrate', 'mitigation_buff',
+  'stealth_buff',
+  'regen_buff', 'evasion_buff', 'disengage_buff',
+  'party_regen', 'root_debuff', 'sunder_debuff', 'ally_absorb',
+  // Templar instant buffs (non-stance)
+  'block_buff', 'consecrate', 'mitigation_buff',
 ]);
 
 /** Ability types that require being in combat with a valid target */

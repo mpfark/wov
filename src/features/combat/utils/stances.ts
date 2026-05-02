@@ -66,14 +66,17 @@ export interface ReservedBuffEntry {
 
 export type ReservedBuffsMap = Record<string, ReservedBuffEntry>;
 
-/** Sum the `reserved` values across all active stances. */
+// ── Authority ─────────────────────────────────────────────────
+// Stances reserve CP and are persisted in characters.reserved_buffs.
+// They replace timed buffs for long-term effects. Server RPCs activate_stance
+// and drop_stance are authoritative; clients only mirror the returned map.
+
+import { sumReservedCp } from '@/shared/cp/cp-math';
+
+/** Sum the `reserved` values across all active stances.
+ *  Thin alias of the canonical `sumReservedCp` (defensive against malformed maps). */
 export function sumStanceReserved(reservedBuffs: ReservedBuffsMap | null | undefined): number {
-  if (!reservedBuffs) return 0;
-  let total = 0;
-  for (const k of Object.keys(reservedBuffs)) {
-    total += Number(reservedBuffs[k]?.reserved) || 0;
-  }
-  return total;
+  return sumReservedCp(reservedBuffs as any);
 }
 
 /** True if the given stance key is currently active. */

@@ -91,7 +91,7 @@ export function getCpDisplay(
   };
 }
 
-/** Convenience for affordability checks. Includes both queued + stance reservations. */
-export function getAvailableCp(rawCp: number, queuedReservedCp: number, stanceReservedCp = 0): number {
-  return Math.max(0, (rawCp ?? 0) - (queuedReservedCp ?? 0) - (stanceReservedCp ?? 0));
-}
+// Affordability check is owned by the canonical CP-math module. Re-exported
+// here for back-compat with existing import sites; new code should import
+// directly from `@/shared/cp/cp-math`.
+export { getAvailableCp } from '@/shared/cp/cp-math';

@@ -1,20 +1,15 @@
 /**
- * combat-math.ts — Server (Deno) barrel re-export of the canonical formula
- * modules under `./formulas/`.
+ * combat-math.ts — DEPRECATED.
  *
- * Historically this file held its own copy of every combat formula and was
- * kept in sync with the client by hand. Today the canonical owners live in
- * `./formulas/*.ts` (mirrored from `src/shared/formulas/*.ts`). Edge functions
- * should import directly from `./formulas/<module>.ts` for clarity, but this
- * barrel preserves the historic import path used by `combat-tick`,
- * `reward-calculator`, and `combat-catchup`.
+ * This file is now a thin re-export of the canonical formula modules under
+ * `./formulas/`. Edge functions should import directly from
+ * `./formulas/<module>.ts` for clarity. This stub will be removed in a
+ * future cleanup pass once any external scripts have migrated.
  *
- * MIRROR RULE
- * ───────────
- * Files under `supabase/functions/_shared/formulas/` are byte-mirrored from
- * `src/shared/formulas/` with one mechanical change: relative imports are
- * suffixed with `.ts` for Deno. Edit the client copy and re-mirror; never
- * edit the Deno copy directly.
+ * Authoritative source: `src/shared/formulas/*.ts` (mirrored to
+ * `supabase/functions/_shared/formulas/*.ts`).
+ *
+ * @deprecated Import from `./formulas/<module>.ts` directly.
  */
 
 export * from "./formulas/stats.ts";
@@ -25,10 +20,6 @@ export * from "./formulas/xp.ts";
 export * from "./formulas/items.ts";
 export * from "./formulas/creatures.ts";
 export * from "./formulas/economy.ts";
-
-// ── Deprecated compatibility shims ───────────────────────────────
-// These exist purely so legacy imports keep resolving while call sites
-// migrate to the canonical names. Do not add new usages.
 
 import { getWisAntiCrit } from "./formulas/combat.ts";
 
