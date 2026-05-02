@@ -1,3 +1,15 @@
+// ─────────────────────────────────────────────────────────────────
+// combat-tick: server-authoritative combat simulation tick.
+//
+// Combat is server-authoritative.
+// Client input (target ids, queued ability, client_cp) is advisory only and
+// re-validated here. Never trust client-provided CP/HP for writes.
+//
+// DO NOT mutate reserved_buffs inside combat-tick.
+// Stance state is owned exclusively by activate_stance / drop_stance RPCs.
+// combat-tick must treat reserved_buffs as read-only — the only exception is
+// the on-death wipe below (annotated inline).
+// ─────────────────────────────────────────────────────────────────
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { resolveCreatureKill } from "../_shared/kill-resolver.ts";
 import {
@@ -8,32 +20,21 @@ import {
   type LootQueueEntry,
 } from "../_shared/combat-resolver.ts";
 import { formatProcMessage } from "../_shared/proc-log-format.ts";
+import { sumReservedCp, getAvailableCp } from "../_shared/cp/cp-math.ts";
 import {
   getStatModifier as sm,
   rollD20,
   rollDamage as rollDmg,
+} from "../_shared/formulas/stats.ts";
+import {
   getIntHitBonus as intHitBonus,
   getDexCritBonus as dexCritBonus,
   getWisAntiCrit as wisAntiCrit,
   getStrDamageFloor as strDmgFloor,
-  
   getCreatureDamageDie as creatureDmgDie,
   getCreatureLevelGapMultiplier as creatureLevelGapMult,
-  getXpForLevel as xpForLevel,
-  getMaxCp as calcMaxCp,
-  getMaxMp as calcMaxMp,
-  getMaxHp as calcMaxHp,
   calculateAC as calcAC,
-  
-  CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
-  CLASS_LABELS,
   getWeaponAffinityBonus as weaponAffinity,
-  isOffhandWeapon,
-  OFFHAND_DAMAGE_MULT,
-  SHIELD_AC_BONUS,
-  SHIELD_ANTI_CRIT_BONUS,
-  isShield,
-  getClassCritRange,
   getWeaponDie,
   getHitQuality,
   HIT_QUALITY_MULT,
@@ -43,7 +44,23 @@ import {
   getShieldBlockAmount,
   ARCANE_SURGE_DAMAGE_MULT,
   type HitQuality,
-} from "../_shared/combat-math.ts";
+} from "../_shared/formulas/combat.ts";
+import {
+  CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
+  CLASS_LABELS,
+  isOffhandWeapon,
+  OFFHAND_DAMAGE_MULT,
+  SHIELD_AC_BONUS,
+  SHIELD_ANTI_CRIT_BONUS,
+  isShield,
+  getClassCritRange,
+} from "../_shared/formulas/classes.ts";
+import {
+  getMaxCp as calcMaxCp,
+  getMaxMp as calcMaxMp,
+  getMaxHp as calcMaxHp,
+} from "../_shared/formulas/resources.ts";
+import { getXpForLevel as xpForLevel } from "../_shared/formulas/xp.ts";
 
 // ── Boss crit flavor selection (weighted random) ────────────────
 function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
@@ -381,6 +398,9 @@ Deno.serve(async (req) => {
       // client value — that would let stale client-side regen leak in
       // during combat and make the CP bar visibly tick upward.
       const dbCp = m.c.cp ?? 0;
+      // SERVER AUTHORITY: client_cp is advisory only.
+      // Math.min(client_cp, dbCp) guarantees the client can only *reduce* perceived
+      // CP (UI sync for in-flight ability cost) and can never raise server CP.
       const freshCp = (!party_id && m.id === character_id && typeof client_cp === 'number')
         ? Math.min(client_cp, dbCp)
         : dbCp;
@@ -517,10 +537,9 @@ Deno.serve(async (req) => {
 
       const cpCost = pa.cp_cost || 0;
       // Stance reservations reduce the *spendable* pool but live in mCp as part of `cp`.
-      const memberReserved: Record<string, any> = (member.c.reserved_buffs && typeof member.c.reserved_buffs === 'object') ? member.c.reserved_buffs : {};
-      let reservedTotal = 0;
-      for (const k of Object.keys(memberReserved)) reservedTotal += (memberReserved[k]?.reserved || 0);
-      if ((mCp[member.id] - reservedTotal) < cpCost) {
+      // reserved_buffs is read-only here — owned by activate_stance / drop_stance RPCs.
+      const reservedTotal = sumReservedCp(member.c.reserved_buffs);
+      if (getAvailableCp(mCp[member.id], reservedTotal) < cpCost) {
         events.push({ type: 'ability_fail', message: `⚠️ ${c.name} doesn't have enough CP!`, character_id: member.id });
         continue;
       }
@@ -1317,7 +1336,8 @@ Deno.serve(async (req) => {
 
       if (mHp[m.id] !== c.hp) updates.hp = mHp[m.id];
       if (mCp[m.id] !== (c.cp ?? 0)) updates.cp = mCp[m.id];
-      // Death wipes all stance reservations
+      // EXCEPTION: clearing stances on death is the only write combat-tick performs
+      // against reserved_buffs. All other paths must treat it as read-only.
       if (mHp[m.id] <= 0 && c.reserved_buffs && Object.keys(c.reserved_buffs).length > 0) {
         updates.reserved_buffs = {};
       }
