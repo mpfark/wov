@@ -240,7 +240,18 @@ export default function NodeView({
                     const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
                     const isFlashing = flashingIds.has(c.id);
                     return (
-                      <div key={c.id} className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
+                      <div
+                        key={c.id}
+                        onClick={() => { if (c.is_alive !== false && onSelectTarget) onSelectTarget(c.id); }}
+                        role={onSelectTarget ? 'button' : undefined}
+                        tabIndex={onSelectTarget ? 0 : undefined}
+                        onKeyDown={(e) => {
+                          if (!onSelectTarget) return;
+                          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectTarget(c.id); }
+                        }}
+                        title={onSelectTarget ? `Click to target ${c.name}` : undefined}
+                        className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in cursor-pointer hover:border-primary/40 hover:bg-background/70 transition-colors ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}
+                      >
                         <div className="flex items-center gap-1.5">
                           {/* Left: Name, level, debuffs */}
                           <span className={`text-xs font-display truncate ${
