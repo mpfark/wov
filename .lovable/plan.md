@@ -1,63 +1,49 @@
-## Problem
+## Goal
 
-Force Shield currently does not regen during combat (good), but it instantly snaps to full when the next combat starts because the combat session resets `member_buffs` to `{}` and reseeds the shield at cap. The user wants the opposite: depleted shield should **stay depleted when combat ends**, then **gradually regenerate while out of combat**, so jumping into the next fight too soon means a partially-charged ward.
+Make the player's active Force Shield (and any future absorb-style ward) visible directly on the **HP bar**, so a Wizard can see at a glance:
 
-## Approach
+1. How much damage will be absorbed before HP starts dropping.
+2. The current shield value vs. its cap.
+3. That the shield is regenerating while out of combat (and roughly how fast).
 
-Persist the Force Shield's current HP on the character row (not just in the transient combat session) so it survives between fights, and tick it up gradually while the player is out of combat.
+Today the shield only shows as a small buff pip in the buff strip. The HP bar itself gives no signal that incoming damage will hit the ward first.
 
-### Storage
+## Visual design
 
-Add a small JSONB field on `characters` to hold the live shield value for stance-based wards:
+On the HP bar in `StatusBarsStrip`:
 
+```text
+HP                                                   42 / 60   🛡 7/8
+[██████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
+[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓░░]   <- shield overlay
 ```
-characters.stance_state jsonb default '{}'::jsonb
-  -> { force_shield_hp: number, force_shield_updated_at: timestamptz }
-```
 
-This avoids polluting `reserved_buffs` (which is keyed by stance metadata) and gives us a clean place for future stance-persistent values.
+- **Shield overlay**: a translucent cyan/primary segment layered on top of the HP fill, sized as `shieldHp / effectiveMaxHp` of the bar width, anchored to the **right edge of the current HP fill**. This visually communicates "this much extra damage gets eaten before HP drops."
+- **Cap ghost**: a faint outline segment showing `shieldCap / effectiveMaxHp` worth of width behind the live overlay, so the player can see how much of the cap is currently filled.
+- **Regen pulse**: when OOC and `shieldHp < shieldCap`, the overlay gently pulses (slow opacity animation) and a small `+` icon appears next to the shield readout, mirroring the existing HP regen `+` style.
+- **Inline readout**: next to `42/60` HP we add `🛡 7/8` in primary color. Tooltip on hover shows:
+  - `Force Shield — 7 / 8 ward HP`
+  - `Absorbs damage before HP. Regenerates 1 + INT_mod/2 every 2s while out of combat. Does not regen during combat.`
 
-### Server logic
+When no shield stance is active, nothing changes on the HP bar.
 
-1. **`combat-tick`** (in-combat behavior):
-   - On the first tick where `mb.absorb_buff` is undefined, hydrate it from `characters.stance_state.force_shield_hp` (clamped to current cap), instead of seeding to full cap. If no persisted value exists, seed to cap (first-time activation).
-   - No regen during combat (already correct).
-   - When combat ends / session is wiped, persist the final `mb.absorb_buff.shield_hp` back to `characters.stance_state.force_shield_hp` so OOC regen has a starting point.
-   - Also persist on every tick (cheap, single column update piggy-backed on existing character writes) so disconnects mid-fight are not free full-shield resets.
+If the shield amount exceeds remaining HP-bar room (e.g. HP nearly full), the overlay just clamps to the bar's right edge — visually it reads as "fully buffered."
 
-2. **OOC regen** — add a Postgres function + cron, no new edge function needed:
-   - Create `public.regen_force_shield()` SECURITY DEFINER (search_path=public) that:
-     - Finds characters with `reserved_buffs ? 'force_shield'` AND no active combat session containing them.
-     - For each, computes `cap = INT_mod + floor(level * 0.5)` and `regen = 1 + floor(INT_mod / 2)`.
-     - Updates `stance_state.force_shield_hp = least(cap, coalesce(current, 0) + regen)` and stamps `force_shield_updated_at = now()`.
-   - Schedule via `pg_cron` every 2 seconds (matches the in-combat tick cadence the user is already used to).
-   - If pg_cron at 2s granularity is not available on the instance, fall back to computing elapsed seconds since `force_shield_updated_at` and applying the proportional regen lazily on read (in `combat-tick` hydration and in the new RPC the client polls). Prefer the cron path; lazy compute is the fallback.
+## Where the data comes from
 
-### Client logic
-
-3. **Display the persisted shield value out of combat**:
-   - Extend the character payload (or add a lightweight `get_my_stance_state` RPC) to include `stance_state.force_shield_hp` so `StatusBarsStrip` / `CharacterPanel` can render the current shield HP and a fill bar (current / cap) even when the player is idle.
-   - In `useCombatActions` for `absorb_buff` activation: instead of seeding `shieldHp = intMod + floor(level/2)` (full), seed from the persisted value so toggling the stance off and back on does not bypass the regen rule.
-   - The existing `buff_sync` path keeps the bar live during combat; OOC the value updates from periodic character refresh (every few seconds, same channel that already updates HP/CP/MP).
-
-### UX detail
-
-- When the shield is at 0/cap and the player is OOC, show the bar empty (not hidden) so the regen progress is visible.
-- Tooltip on the shield buff shows `current / cap` and a hint: "Regenerates 1 + INT_mod/2 HP every 2s while out of combat."
-
-## Game Manual update
-
-Replace the current Force Shield manual entry with text describing the new model: no in-combat regen, gradual OOC regen at `1 + floor(INT_mod / 2)` per ~2s up to `INT_mod + floor(level × 0.5)`, persisted across fights (no instant refill on next pull).
+`StatusBarsStrip` already computes `forceShieldStance = { shieldHp, shieldCap, inCombat }` from `reservedBuffs.force_shield` + `character.stance_state.force_shield_hp` + the live `absorbBuff` during combat. We reuse that exact value — no new data sources, no new RPCs. The OOC regen RPC `apply_force_shield_regen` is already polled every 4s by `useCharacter`, so the overlay will visibly tick up on its own.
 
 ## Files touched
 
-- `supabase/migrations/<new>.sql` — add `characters.stance_state` column, `regen_force_shield()` function, pg_cron schedule.
-- `supabase/functions/combat-tick/index.ts` — hydrate `mb.absorb_buff` from `stance_state` on first tick of a session; persist back to `stance_state.force_shield_hp` on tick writes and at session wipe.
-- `src/features/combat/hooks/useCombatActions.ts` — seed `setAbsorbBuff` from persisted value (not full cap) when activating the stance.
-- `src/features/character/components/StatusBarsStrip.tsx` and `CharacterPanel.tsx` — render shield bar OOC from persisted value; show cap and "regenerating" hint.
-- `src/integrations/supabase/types.ts` — auto-regenerated after migration.
-- `src/components/admin/GameManual.tsx` — update Force Shield description.
+- `src/features/character/components/StatusBarsStrip.tsx`
+  - Lift `forceShieldStance` calculation slightly so the HP-bar block can read it.
+  - Add the inline `🛡 x/y` readout next to `{character.hp}/{effectiveMaxHp}`.
+  - Render two extra absolutely-positioned segments inside the HP bar container (cap ghost + live overlay), styled with `hsl(var(--primary))` at low opacity, with a slow pulse animation (Tailwind `animate-pulse` gated on `!inCombat && shieldHp < shieldCap`).
+  - Keep the existing buff-pip rendering for Force Shield as-is (it stays as a redundant secondary indicator).
 
-## Memory updates
+No backend, migration, or hook changes. No changes to combat logic. Purely a presentational addition to the existing HP bar.
 
-- Update the Wizard Abilities memory entry (or add a Force Shield sub-entry) to record the persistent OOC-regen model: cap formula, regen formula, no in-combat regen, persisted across fights.
+## Out of scope
+
+- Other absorb effects (Holy Shield reflects, Shield Wall block) — those are damage-reduction, not ward HP, so they stay as buff pips.
+- Showing party members' shields on their portraits — can be a follow-up if desired.
