@@ -30,6 +30,7 @@ interface Props {
   character: Character;
   eventLog: string[];
   onAttack: (creatureId: string) => void;
+  onSelectTarget?: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;
   inCombat?: boolean;
   lastTickTime?: number | null;
@@ -55,7 +56,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onTalkToNPC,
+  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   actionBindings,
   poisonStacks = {},
