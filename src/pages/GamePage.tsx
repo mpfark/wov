@@ -1097,6 +1097,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               character={character}
               eventLog={eventLog}
               onAttack={(id) => { setSelectedTargetId(id); handleAttack(id); }}
+              onSelectTarget={(id) => setSelectedTargetId(id)}
               onTalkToNPC={handleTalkToNPC}
               inCombat={inCombat}
               lastTickTime={lastTickTime}

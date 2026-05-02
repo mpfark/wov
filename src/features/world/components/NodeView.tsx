@@ -30,6 +30,7 @@ interface Props {
   character: Character;
   eventLog: string[];
   onAttack: (creatureId: string) => void;
+  onSelectTarget?: (creatureId: string) => void;
   onTalkToNPC?: (npc: NPC) => void;
   inCombat?: boolean;
   lastTickTime?: number | null;
@@ -55,7 +56,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onTalkToNPC,
+  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   actionBindings,
   poisonStacks = {},
@@ -239,7 +240,18 @@ export default function NodeView({
                     const isBleeding = creatureBleed && Date.now() < creatureBleed.expiresAt;
                     const isFlashing = flashingIds.has(c.id);
                     return (
-                      <div key={c.id} className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}>
+                      <div
+                        key={c.id}
+                        onClick={() => { if (c.is_alive !== false && onSelectTarget) onSelectTarget(c.id); }}
+                        role={onSelectTarget ? 'button' : undefined}
+                        tabIndex={onSelectTarget ? 0 : undefined}
+                        onKeyDown={(e) => {
+                          if (!onSelectTarget) return;
+                          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectTarget(c.id); }
+                        }}
+                        title={onSelectTarget ? `Click to target ${c.name}` : undefined}
+                        className={`p-1.5 bg-background/50 rounded border animate-polish-fade-in cursor-pointer hover:border-primary/40 hover:bg-background/70 transition-colors ${isFlashing ? 'animate-aggro-flash' : ''} ${isActiveTarget ? 'border-destructive/60 ring-1 ring-destructive/30' : isEngaged ? 'border-dwarvish/50 ring-1 ring-dwarvish/20' : isSelected ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border'}`}
+                      >
                         <div className="flex items-center gap-1.5">
                           {/* Left: Name, level, debuffs */}
                           <span className={`text-xs font-display truncate ${
@@ -321,7 +333,7 @@ export default function NodeView({
                             </div>
                             <span className="text-[9px] text-muted-foreground tabular-nums whitespace-nowrap">{displayHp}/{c.max_hp}</span>
                             {!isActiveTarget && !isEngaged && !isSelected && (
-                              <Button size="sm" variant="destructive" onClick={() => onAttack(c.id)} className="font-display text-[10px] h-5 px-1.5">
+                              <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); onAttack(c.id); }} className="font-display text-[10px] h-5 px-1.5">
                                 Attack
                               </Button>
                             )}
