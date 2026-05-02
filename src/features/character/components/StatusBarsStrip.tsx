@@ -245,6 +245,25 @@ export default function StatusBarsStrip({
     return { shieldHp: Math.max(0, Math.min(shieldCap, Math.floor(liveHp))), shieldCap, inCombat };
   })();
 
+  // ── Divine Aegis ward overlay ─────────────────────────────────────
+  // Castable absorb shield with no timer — persists until depleted.
+  // Only render when Force Shield isn't already showing on the bar.
+  const aegisWard: { shieldHp: number; shieldCap: number } | null = (() => {
+    if (forceShieldStance) return null;
+    if (!absorbBuff || absorbBuff.shieldHp <= 0) return null;
+    if (Date.now() >= absorbBuff.expiresAt) return null;
+    const cap = Math.max(1, absorbBuff.shieldCap ?? absorbBuff.shieldHp);
+    return { shieldHp: Math.max(0, Math.min(cap, Math.floor(absorbBuff.shieldHp))), shieldCap: cap };
+  })();
+
+  // Unified ward overlay — Force Shield wins when both could apply.
+  const wardOverlay: { shieldHp: number; shieldCap: number; kind: 'force_shield' | 'aegis'; inCombat?: boolean } | null =
+    forceShieldStance
+      ? { ...forceShieldStance, kind: 'force_shield' }
+      : aegisWard
+        ? { ...aegisWard, kind: 'aegis' }
+        : null;
+
 
   return (
     <div className="space-y-1">
