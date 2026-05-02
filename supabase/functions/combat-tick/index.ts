@@ -53,6 +53,7 @@ import {
   SHIELD_ANTI_CRIT_BONUS,
   isShield,
   getClassCritRange,
+  getWeaponAffinityBonus as weaponAffinity,
 } from "../_shared/formulas/classes.ts";
 import {
   getMaxCp as calcMaxCp,
