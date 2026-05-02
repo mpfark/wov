@@ -34,7 +34,6 @@ import {
   getCreatureDamageDie as creatureDmgDie,
   getCreatureLevelGapMultiplier as creatureLevelGapMult,
   calculateAC as calcAC,
-  getWeaponAffinityBonus as weaponAffinity,
   getWeaponDie,
   getHitQuality,
   HIT_QUALITY_MULT,
@@ -54,6 +53,7 @@ import {
   SHIELD_ANTI_CRIT_BONUS,
   isShield,
   getClassCritRange,
+  getWeaponAffinityBonus as weaponAffinity,
 } from "../_shared/formulas/classes.ts";
 import {
   getMaxCp as calcMaxCp,
