@@ -256,13 +256,56 @@ export default function StatusBarsStrip({
             <span className="flex items-center gap-0.5">
               {regenTick && <span className="text-[9px] text-elvish animate-fade-in font-display">+</span>}
               <span className="text-blood tabular-nums">{character.hp}/{effectiveMaxHp}</span>
+              {forceShieldStance && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="ml-1 text-[hsl(var(--primary))] tabular-nums cursor-help inline-flex items-center gap-0.5">
+                      🛡{forceShieldStance.shieldHp}/{forceShieldStance.shieldCap}
+                      {!forceShieldStance.inCombat && forceShieldStance.shieldHp < forceShieldStance.shieldCap && (
+                        <span className="text-[9px] text-[hsl(var(--primary))] animate-pulse font-display">+</span>
+                      )}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">
+                    <div><span className="font-display">Force Shield</span> — {forceShieldStance.shieldHp} / {forceShieldStance.shieldCap} ward HP</div>
+                    <div className="text-muted-foreground">Absorbs damage before HP. Regenerates 1 + INT_mod/2 every 2s while out of combat. Does not regen during combat.</div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </span>
           </div>
-          <div className={`h-1.5 bg-background rounded-full overflow-hidden border transition-all duration-300 ${regenTick ? 'border-elvish shadow-[0_0_6px_hsl(var(--elvish)/0.5)]' : 'border-border'}`}>
-            <div className="h-full transition-all duration-500 rounded-full" style={{
+          <div className={`relative h-1.5 bg-background rounded-full overflow-hidden border transition-all duration-300 ${regenTick ? 'border-elvish shadow-[0_0_6px_hsl(var(--elvish)/0.5)]' : 'border-border'}`}>
+            <div className="absolute inset-y-0 left-0 transition-all duration-500 rounded-full" style={{
               width: `${hpPercent}%`,
               background: hpPercent > 50 ? 'hsl(var(--elvish))' : hpPercent > 25 ? 'hsl(var(--gold))' : 'hsl(var(--blood))',
             }} />
+            {/* Force Shield overlay — sits on top of HP fill, anchored to the right edge of HP */}
+            {forceShieldStance && (() => {
+              const capPct = Math.min(100, (forceShieldStance.shieldCap / Math.max(1, effectiveMaxHp)) * 100);
+              const livePct = Math.min(100, (forceShieldStance.shieldHp / Math.max(1, effectiveMaxHp)) * 100);
+              // Anchor to right edge of HP fill, but never overflow the bar
+              const startPct = Math.min(100 - livePct, hpPercent);
+              const ghostStartPct = Math.min(100 - capPct, hpPercent);
+              const regenPulse = !forceShieldStance.inCombat && forceShieldStance.shieldHp < forceShieldStance.shieldCap;
+              return (
+                <>
+                  {/* Cap ghost */}
+                  <div className="absolute inset-y-0 transition-all duration-500" style={{
+                    left: `${ghostStartPct}%`,
+                    width: `${capPct}%`,
+                    background: 'hsl(var(--primary) / 0.12)',
+                    borderLeft: '1px dashed hsl(var(--primary) / 0.35)',
+                  }} />
+                  {/* Live shield */}
+                  <div className={`absolute inset-y-0 transition-all duration-500 ${regenPulse ? 'animate-pulse' : ''}`} style={{
+                    left: `${startPct}%`,
+                    width: `${livePct}%`,
+                    background: 'hsl(var(--primary) / 0.55)',
+                    boxShadow: 'inset 0 0 4px hsl(var(--primary) / 0.6)',
+                  }} />
+                </>
+              );
+            })()}
           </div>
         </div>
 
