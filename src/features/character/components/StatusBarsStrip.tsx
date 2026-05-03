@@ -59,15 +59,14 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   const stealthActive = stealthBuff && now < stealthBuff.expiresAt;
   const inspireActive = inspireBuff && now < inspireBuff.expiresAt;
   const holyShieldActive = holyShieldBuff && now < holyShieldBuff.expiresAt;
-  const shieldWallActive = shieldWallBuff && now < shieldWallBuff.expiresAt;
   const consecrateActive = consecrateBuff && now < consecrateBuff.expiresAt;
   const divineChallengeActive = divineChallengeBuff && now < divineChallengeBuff.expiresAt;
 
   useEffect(() => {
-    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive && !inspireActive && !holyShieldActive && !shieldWallActive && !consecrateActive && !divineChallengeActive) return;
+    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive && !inspireActive && !holyShieldActive && !consecrateActive && !divineChallengeActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive, inspireActive, holyShieldActive, shieldWallActive, consecrateActive, divineChallengeActive]);
+  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive, inspireActive, holyShieldActive, consecrateActive, divineChallengeActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
