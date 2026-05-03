@@ -64,8 +64,6 @@ export interface SunderDebuff { acReduction: number; expiresAt: number; creature
 // ── Templar buffs ────────────────────────────────────────────
 /** Holy Shield — reactive holy retaliation against attackers. */
 export interface HolyShieldBuff { wisMod: number; expiresAt: number }
-/** @deprecated Shield Wall is now a stance — kept as an empty type for legacy import compat. */
-export interface ShieldWallBuff { expiresAt: number }
 /** Consecrate — node-wide ground effect: heal allies, burn engaged creatures. */
 export interface ConsecrateBuff { wisMod: number; expiresAt: number; durationMs: number }
 /** Divine Challenge — flat damage reduction. */
