@@ -18,7 +18,7 @@
 export type StanceKey =
   | 'ignite' | 'envenom'
   | 'holy_shield' | 'force_shield' | 'eagle_eye'
-  | 'arcane_surge' | 'battle_cry';
+  | 'arcane_surge' | 'battle_cry' | 'shield_wall';
 
 export interface StanceDef {
   key: StanceKey;
