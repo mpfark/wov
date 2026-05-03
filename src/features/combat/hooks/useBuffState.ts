@@ -61,7 +61,7 @@ export interface BuffSetters {
   setSunderDebuff: React.Dispatch<React.SetStateAction<Record<string, SunderDebuff>>>;
   setInspireBuff: React.Dispatch<React.SetStateAction<InspireBuff | null>>;
   setHolyShieldBuff: React.Dispatch<React.SetStateAction<HolyShieldBuff | null>>;
-  setShieldWallBuff: React.Dispatch<React.SetStateAction<ShieldWallBuff | null>>;
+  
   setConsecrateBuff: React.Dispatch<React.SetStateAction<ConsecrateBuff | null>>;
   setDivineChallengeBuff: React.Dispatch<React.SetStateAction<DivineChallengeBuff | null>>;
 }
