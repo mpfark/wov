@@ -496,15 +496,8 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setHolyShieldBuff({ wisMod, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Holy Shield! Attackers will be burned by holy light for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'block_buff') {
-      // Templar — Shield Wall: 100% block for ~4s. Requires shield.
-      const hasShield = p.equipped.some((e: any) => e.item?.weapon_tag === 'shield');
-      if (!hasShield) {
-        p.addLog(`${ability.emoji} Shield Wall requires a shield equipped!`);
-        return;
-      }
-      const durationMs = 4_000;
-      p.buffSetters.setShieldWallBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Shield Wall! You brace behind your shield — all incoming attacks blocked for ${Math.round(durationMs / 1000)}s.`);
+      // Shield Wall is now a stance — handled at the stance toggle block above.
+      // This branch should be unreachable; left as a no-op safety net.
     } else if (ability.type === 'consecrate') {
       // Templar — Consecrate: 3 ticks (~6s) of node heal + creature burn.
       const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
