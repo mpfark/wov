@@ -989,7 +989,7 @@ export default function CharacterPanel({
                   // Shield block stats (boosted by Shield Wall stance)
                   const shieldWallActive = !!((character as any).reserved_buffs && (character as any).reserved_buffs.shield_wall);
                   const baseBlockChance = offHandIsShield ? getShieldBlockChance(eDex) : 0;
-                  const blockChance = shieldWallActive ? Math.min(0.95, baseBlockChance * 1.5) : baseBlockChance;
+                  const blockChance = shieldWallActive ? Math.min(0.95, baseBlockChance + 0.5) : baseBlockChance;
                   const blockAmount = offHandIsShield ? getShieldBlockAmount(character.str + (equipmentBonuses.str || 0)) : 0;
 
                   const defenseRows: DerivedRow[] = [
@@ -997,7 +997,7 @@ export default function CharacterPanel({
                     ...(battleCryActive ? [{ label: 'Dmg Reduction', value: `${Math.round(battleCryBuff!.damageReduction * 100)}%`, tip: `Battle Cry reduces incoming damage by ${Math.round(battleCryBuff!.damageReduction * 100)}%. Crits reduced by additional ${Math.round(battleCryBuff!.critReduction * 100)}%.`, buffed: true, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Dodge', value: `${effectiveDodge}%${evasionActive ? ' ✦' : ''}`, tip: `Chance a same-level creature misses you (AC ${totalAC})${evasionActive ? `\n+${Math.round(evasionBuff!.dodgeChance * 100)}% ${evasionBuff!.source === 'disengage' ? 'Disengage' : 'Cloak of Shadows'}` : ''}`, buffed: !!evasionActive, buffColor: 'text-primary' },
                     { label: 'Crit Resistance', value: wisAntiCritChance > 0 ? `${Math.round(wisAntiCritChance * 100)}%` : '–', tip: wisAntiCritChance > 0 ? `WIS bonus: chance to downgrade incoming crits${offHandIsShield ? ' (incl. +5% Shield)' : ''}` : 'WIS 12+ for crit resistance' },
-                    ...(offHandIsShield ? [{ label: 'Block', value: `${Math.round(blockChance * 100)}% / ${blockAmount}${shieldWallActive ? ' ✦' : ''}`, tip: `${Math.round(blockChance * 100)}% chance to block, reducing damage by ${blockAmount} (DEX → chance, STR → amount)${shieldWallActive ? `\n⚓ Shield Wall: block chance ×1.5 (base ${Math.round(baseBlockChance * 100)}%)` : ''}`, buffed: shieldWallActive, buffColor: 'text-dwarvish' }] : []),
+                    ...(offHandIsShield ? [{ label: 'Block', value: `${Math.round(blockChance * 100)}% / ${blockAmount}${shieldWallActive ? ' ✦' : ''}`, tip: `${Math.round(blockChance * 100)}% chance to block, reducing damage by ${blockAmount} (DEX → chance, STR → amount)${shieldWallActive ? `\n⚓ Shield Wall: +50% block chance (base ${Math.round(baseBlockChance * 100)}%)` : ''}`, buffed: shieldWallActive, buffColor: 'text-dwarvish' }] : []),
                     { label: 'Vendor Bonus', value: buyDisc > 0 ? `-${Math.round(buyDisc * 100)}% / +${Math.round(sellMult * 100)}%` : '–', tip: buyDisc > 0 ? 'CHA bonus: better buy/sell prices' : 'CHA 12+ for better buy/sell prices' },
                   ];
 
