@@ -433,6 +433,12 @@ Deno.serve(async (req) => {
         if (reserved.holy_shield) {
           mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
         }
+        if (reserved.shield_wall) {
+          // Shield Wall stance: +50% block chance (multiplicative). Applied
+          // in the shield-block step below; requires a shield equipped to
+          // actually benefit.
+          mb.shield_wall_stance = true;
+        }
         if (reserved.force_shield) {
           // Force Shield: ward only regenerates OUT OF COMBAT (handled by
           // apply_force_shield_regen + cron). During combat we never refill;
