@@ -210,7 +210,7 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.divine_challenge = { reduction: divineChallengeBuff.reduction, expires_at: divineChallengeBuff.expiresAt };
     }
     return buffs;
-  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff]);
+  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, holyShieldBuff, consecrateBuff, divineChallengeBuff]);
 
   // ── Handle consumed one-shot buffs after server tick ──
   const handleConsumedBuffs = useCallback((consumed: { buff: string; character_id: string }[]) => {
