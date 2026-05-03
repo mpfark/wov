@@ -806,11 +806,12 @@ Deno.serve(async (req) => {
 
 
         // 5. Shield block (flat reduction, shield only). Shield Wall stance
-        // multiplies block chance by 1.5 (clamped to 95%).
+        // adds a flat +50% block chance on top of the player's base block chance
+        // (clamped to 95%).
         if (hasShield) {
           let blockChance = getShieldBlockChance(effectiveDex);
           if (mb.shield_wall_stance) {
-            blockChance = Math.min(0.95, blockChance * 1.5);
+            blockChance = Math.min(0.95, blockChance + 0.5);
           }
           if (Math.random() < blockChance) {
             const blockAmt = Math.min(getShieldBlockAmount(effectiveStr), dmg);
