@@ -803,14 +803,7 @@ Deno.serve(async (req) => {
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
-        // 5a. Shield Wall (Templar) — guaranteed 100% block while active.
-        // Requires a shield equipped. Absorbs the entire incoming hit.
-        if (mb.shield_wall && hasShield && (mb.shield_wall.expires_at ?? 0) > now) {
-          const preDmg = dmg;
-          dmg = 0;
-          events.push({ type: 'shield_wall_block', message: `🛡️ ${targetName}'s Shield Wall absorbs the blow! (−${preDmg} damage)`, character_id: targetId });
-          return;
-        }
+
 
         // 5. Shield block (flat reduction, shield only). Shield Wall stance
         // multiplies block chance by 1.5 (clamped to 95%).
