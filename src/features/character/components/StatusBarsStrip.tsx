@@ -198,7 +198,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff,
-  holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
+  holyShieldBuff, consecrateBuff, divineChallengeBuff,
   reservedCp = 0,
   stanceReservedCp = 0,
   reservedBuffs = null,
