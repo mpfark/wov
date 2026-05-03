@@ -433,6 +433,12 @@ Deno.serve(async (req) => {
         if (reserved.holy_shield) {
           mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
         }
+        if (reserved.shield_wall) {
+          // Shield Wall stance: +50% block chance (multiplicative). Applied
+          // in the shield-block step below; requires a shield equipped to
+          // actually benefit.
+          mb.shield_wall_stance = true;
+        }
         if (reserved.force_shield) {
           // Force Shield: ward only regenerates OUT OF COMBAT (handled by
           // apply_force_shield_regen + cron). During combat we never refill;
@@ -797,23 +803,21 @@ Deno.serve(async (req) => {
         const levelGap = creatureLevelGapMult(creature.level, targetC.level || 1);
         if (levelGap > 1) dmg = Math.max(Math.floor(dmg * levelGap), 1);
 
-        // 5a. Shield Wall (Templar) — guaranteed 100% block while active.
-        // Requires a shield equipped. Absorbs the entire incoming hit.
-        if (mb.shield_wall && hasShield && (mb.shield_wall.expires_at ?? 0) > now) {
-          const preDmg = dmg;
-          dmg = 0;
-          events.push({ type: 'shield_wall_block', message: `🛡️ ${targetName}'s Shield Wall absorbs the blow! (−${preDmg} damage)`, character_id: targetId });
-          return;
-        }
 
-        // 5b. Shield block (flat reduction, shield only)
+
+        // 5. Shield block (flat reduction, shield only). Shield Wall stance
+        // multiplies block chance by 1.5 (clamped to 95%).
         if (hasShield) {
-          const blockChance = getShieldBlockChance(effectiveDex);
+          let blockChance = getShieldBlockChance(effectiveDex);
+          if (mb.shield_wall_stance) {
+            blockChance = Math.min(0.95, blockChance * 1.5);
+          }
           if (Math.random() < blockChance) {
             const blockAmt = Math.min(getShieldBlockAmount(effectiveStr), dmg);
             const preDmg = dmg;
             dmg = Math.max(dmg - blockAmt, 0);
-            events.push({ type: 'shield_block', message: `🛡️ ${targetName} blocks with shield! (−${blockAmt} damage, ${preDmg} → ${dmg})`, character_id: targetId });
+            const stanceTag = mb.shield_wall_stance ? ' 🛡️ (Shield Wall)' : '';
+            events.push({ type: 'shield_block', message: `🛡️ ${targetName} blocks with shield!${stanceTag} (−${blockAmt} damage, ${preDmg} → ${dmg})`, character_id: targetId });
             if (dmg <= 0) return;
           }
         }

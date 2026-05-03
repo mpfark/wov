@@ -86,7 +86,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   templar: [
     { label: 'Judgment',         emoji: '✝️',   description: 'Pass divine judgment, dealing holy damage scaling with WIS', cpCost: 10, type: 'smite', tier: 0, levelRequired: 1 },
     { label: 'Holy Shield',      emoji: '🛡️✝️', description: '⚓ Stance (T1 — reserves 10% of max CP). Attackers who strike you take holy damage in return (WIS-scaled, once per attacker per tick). Click again to drop. Reserved CP is NOT refunded.', cpCost: 15, type: 'reactive_holy', tier: 1, levelRequired: 5 },
-    { label: 'Shield Wall',      emoji: '🛡️',  description: 'Brace behind your shield. Block chance is 100% for the next ~4s. Requires a shield equipped.', cpCost: 25, type: 'block_buff', tier: 2, levelRequired: 10 },
+    { label: 'Shield Wall',      emoji: '🛡️',  description: '⚓ Stance (T2 — reserves 15% of max CP). While active, your shield block chance is increased by 50%. Block amount unchanged. Requires a shield equipped to benefit. Click again to drop. Reserved CP is NOT refunded.', cpCost: 25, type: 'block_buff', tier: 2, levelRequired: 10 },
     { label: 'Consecrate',       emoji: '✨🟡', description: 'Sanctify the ground for 3 ticks (~6s) — heals all party members on this node and burns engaged creatures with holy fire each tick. Scales with WIS.', cpCost: 40, type: 'consecrate', tier: 3, levelRequired: 15 },
     { label: 'Divine Challenge', emoji: '⚜️',  description: 'For 30s, the Templar takes 30% less damage from all sources.', cpCost: 60, type: 'mitigation_buff', tier: 4, levelRequired: 20 },
   ],

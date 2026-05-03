@@ -34,7 +34,7 @@ export interface StatusBarsStripProps {
   stealthBuff?: { expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
   holyShieldBuff?: { wisMod: number; expiresAt: number } | null;
-  shieldWallBuff?: { expiresAt: number } | null;
+  
   consecrateBuff?: { wisMod: number; expiresAt: number; durationMs?: number } | null;
   divineChallengeBuff?: { reduction: number; expiresAt: number } | null;
   /** CP currently reserved by an in-flight queued ability (display-only; server is authoritative). */
@@ -45,7 +45,7 @@ export interface StatusBarsStripProps {
   reservedBuffs?: Record<string, { tier: number; reserved: number; activated_at?: number }> | null;
 }
 
-function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff, forceShieldStance }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'> & { forceShieldStance?: { shieldHp: number; shieldCap: number; inCombat: boolean } | null }) {
+function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, consecrateBuff, divineChallengeBuff, forceShieldStance }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'> & { forceShieldStance?: { shieldHp: number; shieldCap: number; inCombat: boolean } | null }) {
   const [now, setNow] = useState(Date.now());
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
@@ -59,15 +59,14 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   const stealthActive = stealthBuff && now < stealthBuff.expiresAt;
   const inspireActive = inspireBuff && now < inspireBuff.expiresAt;
   const holyShieldActive = holyShieldBuff && now < holyShieldBuff.expiresAt;
-  const shieldWallActive = shieldWallBuff && now < shieldWallBuff.expiresAt;
   const consecrateActive = consecrateBuff && now < consecrateBuff.expiresAt;
   const divineChallengeActive = divineChallengeBuff && now < divineChallengeBuff.expiresAt;
 
   useEffect(() => {
-    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive && !inspireActive && !holyShieldActive && !shieldWallActive && !consecrateActive && !divineChallengeActive) return;
+    if (!foodActive && !isAtInn && !critActive && !acActive && !poisonActive && !dmgBuffActive && !evasionActive && !igniteActive && !absorbActive && !partyRegenActive && !stealthActive && !inspireActive && !holyShieldActive && !consecrateActive && !divineChallengeActive) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive, inspireActive, holyShieldActive, shieldWallActive, consecrateActive, divineChallengeActive]);
+  }, [foodActive, isAtInn, critActive, acActive, poisonActive, dmgBuffActive, evasionActive, igniteActive, absorbActive, partyRegenActive, stealthActive, inspireActive, holyShieldActive, consecrateActive, divineChallengeActive]);
 
   const buffs: { emoji: string; label: string; detail: string; color: string; bgColor: string; pct: number }[] = [];
 
@@ -164,12 +163,6 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     buffs.push({ emoji: '🛡️✝️', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
-  if (shieldWallActive) {
-    const dur = BUFF_DURATIONS['Shield Wall'] || 4_000;
-    const pct = Math.max(0, Math.min(100, ((shieldWallBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🛡️', label: 'Shield Wall', detail: '100% block (requires shield)', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
-  }
-
   if (consecrateActive) {
     const dur = consecrateBuff!.durationMs || BUFF_DURATIONS['Consecrate'] || 6_000;
     const pct = Math.max(0, Math.min(100, ((consecrateBuff!.expiresAt - now) / dur) * 100));
@@ -205,7 +198,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
 export default function StatusBarsStrip({
   character, equipmentBonuses, inventoryCount: _inventoryCount = 0, isAtInn, regenTick, baseRegen: _baseRegen = 1, itemHpRegen: _itemHpRegen = 0,
   foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff,
-  holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
+  holyShieldBuff, consecrateBuff, divineChallengeBuff,
   reservedCp = 0,
   stanceReservedCp = 0,
   reservedBuffs = null,
@@ -447,7 +440,7 @@ export default function StatusBarsStrip({
           battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
           igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff}
           stealthBuff={stealthBuff} inspireBuff={inspireBuff}
-          holyShieldBuff={holyShieldBuff} shieldWallBuff={shieldWallBuff}
+          holyShieldBuff={holyShieldBuff}
           consecrateBuff={consecrateBuff} divineChallengeBuff={divineChallengeBuff}
           forceShieldStance={forceShieldStance}
         />

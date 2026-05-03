@@ -18,7 +18,7 @@
 export type StanceKey =
   | 'ignite' | 'envenom'
   | 'holy_shield' | 'force_shield' | 'eagle_eye'
-  | 'arcane_surge' | 'battle_cry';
+  | 'arcane_surge' | 'battle_cry' | 'shield_wall';
 
 export interface StanceDef {
   key: StanceKey;
@@ -34,6 +34,7 @@ export const STANCE_DEFS: StanceDef[] = [
   { key: 'holy_shield',  tier: 1, abilityType: 'reactive_holy', label: 'Holy Shield' },
   { key: 'arcane_surge', tier: 2, abilityType: 'damage_buff',   label: 'Arcane Surge' },
   { key: 'battle_cry',   tier: 2, abilityType: 'battle_cry',    label: 'Battle Cry' },
+  { key: 'shield_wall',  tier: 2, abilityType: 'block_buff',    label: 'Shield Wall' },
   { key: 'ignite',       tier: 3, abilityType: 'ignite_buff',   label: 'Ignite' },
   { key: 'envenom',      tier: 3, abilityType: 'poison_buff',   label: 'Envenom' },
 ];

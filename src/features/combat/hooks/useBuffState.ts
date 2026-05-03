@@ -14,7 +14,7 @@ import type {
   FoodBuff, CritBuff, StealthBuff, DamageBuff, RootDebuff, BattleCryBuff,
   DotDebuff, PoisonBuff, PoisonStack, EvasionBuff, DisengageNextHit, IgniteBuff,
   IgniteStack, AbsorbBuff, PartyRegenBuff, SunderDebuff, InspireBuff,
-  HolyShieldBuff, ShieldWallBuff, ConsecrateBuff, DivineChallengeBuff,
+  HolyShieldBuff, ConsecrateBuff, DivineChallengeBuff,
 } from './useGameLoop';
 
 // ─── Typed interfaces for bundled state ────────────────────────
@@ -37,7 +37,7 @@ export interface BuffState {
   sunderDebuff: Record<string, SunderDebuff>;
   inspireBuff: InspireBuff | null;
   holyShieldBuff: HolyShieldBuff | null;
-  shieldWallBuff: ShieldWallBuff | null;
+  
   consecrateBuff: ConsecrateBuff | null;
   divineChallengeBuff: DivineChallengeBuff | null;
 }
@@ -61,7 +61,7 @@ export interface BuffSetters {
   setSunderDebuff: React.Dispatch<React.SetStateAction<Record<string, SunderDebuff>>>;
   setInspireBuff: React.Dispatch<React.SetStateAction<InspireBuff | null>>;
   setHolyShieldBuff: React.Dispatch<React.SetStateAction<HolyShieldBuff | null>>;
-  setShieldWallBuff: React.Dispatch<React.SetStateAction<ShieldWallBuff | null>>;
+  
   setConsecrateBuff: React.Dispatch<React.SetStateAction<ConsecrateBuff | null>>;
   setDivineChallengeBuff: React.Dispatch<React.SetStateAction<DivineChallengeBuff | null>>;
 }
@@ -96,7 +96,7 @@ export function useBuffState(params: UseBuffStateParams) {
   const [sunderDebuff, setSunderDebuff] = useState<Record<string, SunderDebuff>>({});
   const [inspireBuff, setInspireBuff] = useState<InspireBuff | null>(null);
   const [holyShieldBuff, setHolyShieldBuff] = useState<HolyShieldBuff | null>(null);
-  const [shieldWallBuff, setShieldWallBuff] = useState<ShieldWallBuff | null>(null);
+  
   const [consecrateBuff, setConsecrateBuff] = useState<ConsecrateBuff | null>(null);
   const [divineChallengeBuff, setDivineChallengeBuff] = useState<DivineChallengeBuff | null>(null);
 
@@ -203,9 +203,6 @@ export function useBuffState(params: UseBuffStateParams) {
     if (holyShieldBuff && now < holyShieldBuff.expiresAt) {
       buffs.holy_shield = { wis_mod: holyShieldBuff.wisMod, expires_at: holyShieldBuff.expiresAt };
     }
-    if (shieldWallBuff && now < shieldWallBuff.expiresAt) {
-      buffs.shield_wall = { expires_at: shieldWallBuff.expiresAt };
-    }
     if (consecrateBuff && now < consecrateBuff.expiresAt) {
       buffs.consecrate = { wis_mod: consecrateBuff.wisMod, expires_at: consecrateBuff.expiresAt };
     }
@@ -213,7 +210,7 @@ export function useBuffState(params: UseBuffStateParams) {
       buffs.divine_challenge = { reduction: divineChallengeBuff.reduction, expires_at: divineChallengeBuff.expiresAt };
     }
     return buffs;
-  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff]);
+  }, [critBuff, stealthBuff, damageBuff, rootDebuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff, sunderDebuff, disengageNextHit, holyShieldBuff, consecrateBuff, divineChallengeBuff]);
 
   // ── Handle consumed one-shot buffs after server tick ──
   const handleConsumedBuffs = useCallback((consumed: { buff: string; character_id: string }[]) => {
@@ -270,7 +267,7 @@ export function useBuffState(params: UseBuffStateParams) {
     bleedStacks, poisonBuff, poisonStacks, evasionBuff, disengageNextHit,
     igniteBuff, igniteStacks, absorbBuff, partyRegenBuff, sunderDebuff,
     inspireBuff,
-    holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
+    holyShieldBuff, consecrateBuff, divineChallengeBuff,
   };
 
   const buffSetters: BuffSetters = {
@@ -279,7 +276,7 @@ export function useBuffState(params: UseBuffStateParams) {
     setEvasionBuff, setDisengageNextHit, setIgniteBuff, setIgniteStacks,
     setAbsorbBuff, setPartyRegenBuff, setSunderDebuff,
     setInspireBuff,
-    setHolyShieldBuff, setShieldWallBuff, setConsecrateBuff, setDivineChallengeBuff,
+    setHolyShieldBuff, setConsecrateBuff, setDivineChallengeBuff,
   };
 
   return {

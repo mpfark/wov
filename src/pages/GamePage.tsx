@@ -522,7 +522,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, bleedStacks,
     inspireBuff,
-    holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
+    holyShieldBuff, consecrateBuff, divineChallengeBuff,
   } = buffState;
 
   // Apply incoming party regen buff from another party member
@@ -1130,7 +1130,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
                 regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff,
                 inspireBuff,
-                holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
+                holyShieldBuff, consecrateBuff, divineChallengeBuff,
                 reservedCp: pendingCpCost,
                 stanceReservedCp: (() => {
                   const rb = (character as any).reserved_buffs as Record<string, { reserved: number }> | null;
