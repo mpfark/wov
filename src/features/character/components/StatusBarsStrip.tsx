@@ -163,12 +163,6 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     buffs.push({ emoji: '🛡️✝️', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
-  if (shieldWallActive) {
-    const dur = BUFF_DURATIONS['Shield Wall'] || 4_000;
-    const pct = Math.max(0, Math.min(100, ((shieldWallBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🛡️', label: 'Shield Wall', detail: '100% block (requires shield)', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
-  }
-
   if (consecrateActive) {
     const dur = consecrateBuff!.durationMs || BUFF_DURATIONS['Consecrate'] || 6_000;
     const pct = Math.max(0, Math.min(100, ((consecrateBuff!.expiresAt - now) / dur) * 100));
