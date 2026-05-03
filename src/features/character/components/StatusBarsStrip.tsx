@@ -440,7 +440,7 @@ export default function StatusBarsStrip({
           battleCryBuff={battleCryBuff} poisonBuff={poisonBuff} damageBuff={damageBuff} evasionBuff={evasionBuff}
           igniteBuff={igniteBuff} absorbBuff={absorbBuff} partyRegenBuff={partyRegenBuff}
           stealthBuff={stealthBuff} inspireBuff={inspireBuff}
-          holyShieldBuff={holyShieldBuff} shieldWallBuff={shieldWallBuff}
+          holyShieldBuff={holyShieldBuff}
           consecrateBuff={consecrateBuff} divineChallengeBuff={divineChallengeBuff}
           forceShieldStance={forceShieldStance}
         />
