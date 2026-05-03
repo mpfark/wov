@@ -203,9 +203,6 @@ export function useBuffState(params: UseBuffStateParams) {
     if (holyShieldBuff && now < holyShieldBuff.expiresAt) {
       buffs.holy_shield = { wis_mod: holyShieldBuff.wisMod, expires_at: holyShieldBuff.expiresAt };
     }
-    if (shieldWallBuff && now < shieldWallBuff.expiresAt) {
-      buffs.shield_wall = { expires_at: shieldWallBuff.expiresAt };
-    }
     if (consecrateBuff && now < consecrateBuff.expiresAt) {
       buffs.consecrate = { wis_mod: consecrateBuff.wisMod, expires_at: consecrateBuff.expiresAt };
     }
