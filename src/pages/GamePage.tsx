@@ -522,7 +522,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     poisonBuff, poisonStacks, evasionBuff, igniteBuff, igniteStacks,
     absorbBuff, partyRegenBuff, sunderDebuff, bleedStacks,
     inspireBuff,
-    holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff,
+    holyShieldBuff, consecrateBuff, divineChallengeBuff,
   } = buffState;
 
   // Apply incoming party regen buff from another party member
