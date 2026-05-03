@@ -812,14 +812,19 @@ Deno.serve(async (req) => {
           return;
         }
 
-        // 5b. Shield block (flat reduction, shield only)
+        // 5. Shield block (flat reduction, shield only). Shield Wall stance
+        // multiplies block chance by 1.5 (clamped to 95%).
         if (hasShield) {
-          const blockChance = getShieldBlockChance(effectiveDex);
+          let blockChance = getShieldBlockChance(effectiveDex);
+          if (mb.shield_wall_stance) {
+            blockChance = Math.min(0.95, blockChance * 1.5);
+          }
           if (Math.random() < blockChance) {
             const blockAmt = Math.min(getShieldBlockAmount(effectiveStr), dmg);
             const preDmg = dmg;
             dmg = Math.max(dmg - blockAmt, 0);
-            events.push({ type: 'shield_block', message: `🛡️ ${targetName} blocks with shield! (−${blockAmt} damage, ${preDmg} → ${dmg})`, character_id: targetId });
+            const stanceTag = mb.shield_wall_stance ? ' 🛡️ (Shield Wall)' : '';
+            events.push({ type: 'shield_block', message: `🛡️ ${targetName} blocks with shield!${stanceTag} (−${blockAmt} damage, ${preDmg} → ${dmg})`, character_id: targetId });
             if (dmg <= 0) return;
           }
         }
