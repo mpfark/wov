@@ -276,7 +276,7 @@ export function useBuffState(params: UseBuffStateParams) {
     setEvasionBuff, setDisengageNextHit, setIgniteBuff, setIgniteStacks,
     setAbsorbBuff, setPartyRegenBuff, setSunderDebuff,
     setInspireBuff,
-    setHolyShieldBuff, setShieldWallBuff, setConsecrateBuff, setDivineChallengeBuff,
+    setHolyShieldBuff, setConsecrateBuff, setDivineChallengeBuff,
   };
 
   return {
