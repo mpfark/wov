@@ -45,7 +45,7 @@ export interface StatusBarsStripProps {
   reservedBuffs?: Record<string, { tier: number; reserved: number; activated_at?: number }> | null;
 }
 
-function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, shieldWallBuff, consecrateBuff, divineChallengeBuff, forceShieldStance }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'> & { forceShieldStance?: { shieldHp: number; shieldCap: number; inCombat: boolean } | null }) {
+function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff, inspireBuff, holyShieldBuff, consecrateBuff, divineChallengeBuff, forceShieldStance }: Omit<StatusBarsStripProps, 'character' | 'equipmentBonuses' | 'regenTick' | 'baseRegen' | 'itemHpRegen'> & { forceShieldStance?: { shieldHp: number; shieldCap: number; inCombat: boolean } | null }) {
   const [now, setNow] = useState(Date.now());
   const foodActive = foodBuff && now < foodBuff.expiresAt;
   const critActive = critBuff && now < critBuff.expiresAt;
