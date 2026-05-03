@@ -34,7 +34,7 @@ export interface StatusBarsStripProps {
   stealthBuff?: { expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
   holyShieldBuff?: { wisMod: number; expiresAt: number } | null;
-  shieldWallBuff?: { expiresAt: number } | null;
+  
   consecrateBuff?: { wisMod: number; expiresAt: number; durationMs?: number } | null;
   divineChallengeBuff?: { reduction: number; expiresAt: number } | null;
   /** CP currently reserved by an in-flight queued ability (display-only; server is authoritative). */
