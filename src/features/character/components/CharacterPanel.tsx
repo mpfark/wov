@@ -986,8 +986,10 @@ export default function CharacterPanel({
                     offenseRows.push({ label: 'Procs', value: procs.join(' / '), tip: procs.join(', ') + ' on hit', buffed: true, buffColor: 'text-elvish' });
                   }
 
-                  // Shield block stats
-                  const blockChance = offHandIsShield ? getShieldBlockChance(eDex) : 0;
+                  // Shield block stats (boosted by Shield Wall stance)
+                  const shieldWallActive = !!((character as any).reserved_buffs && (character as any).reserved_buffs.shield_wall);
+                  const baseBlockChance = offHandIsShield ? getShieldBlockChance(eDex) : 0;
+                  const blockChance = shieldWallActive ? Math.min(0.95, baseBlockChance * 1.5) : baseBlockChance;
                   const blockAmount = offHandIsShield ? getShieldBlockAmount(character.str + (equipmentBonuses.str || 0)) : 0;
 
                   const defenseRows: DerivedRow[] = [
