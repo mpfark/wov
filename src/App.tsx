@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { OfflineOverlay } from "@/components/OfflineOverlay";
+import { UpdateAvailableBanner } from "@/components/UpdateAvailableBanner";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -28,6 +29,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <OfflineOverlay />
+      <UpdateAvailableBanner />
       <BrowserRouter>
         <GameProvider>
           <Suspense fallback={<LoadingFallback />}>
