@@ -139,13 +139,14 @@ function AiSuggestHintButton({ lockKey, direction, nodeName, nodeDescription, re
 }
 
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, suggestedNodes, nodeName: parentNodeName, nodeDescription, regionName }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, onConnectionsChanged, suggestedNodes, nodeName: parentNodeName, nodeDescription, regionName }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
   allAreas: any[];
   allRegions: any[];
   onUpdated: () => void;
+  onConnectionsChanged?: (connectionsJson: string) => void;
   suggestedNodes?: Array<{ id: string; direction: string; name: string }>;
   nodeName: string;
   nodeDescription: string;
