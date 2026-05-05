@@ -1,52 +1,50 @@
-# Divine Aegis — drop the timer, render on the HP bar like Force Shield
+# Fix: Hidden flag not persisting on node connections
 
-Divine Aegis stays a castable buff (not a stance — it can be applied to allies). Two changes:
+## Problem
 
-1. **No expiration timer** — the ward persists until the shielded HP is fully absorbed.
-2. **HP-bar overlay** — the caster's bar shows the absorb ward as a colored segment + numeric readout, reusing the same overlay pattern as Force Shield (cap ghost + live shield).
+When marking a path between two nodes as **Hidden** in the admin Node Editor, the flag visibly saves at first but then disappears. The root cause is a state-sync race between the **ConnectionsManager** sub-panel and the parent **NodeEditorPanel**:
 
-Cross-target shielding (casting on an ally) already works through the existing `setAbsorbBuff` setter and server `absorb_buff` consumer — no protocol changes required.
+- `ConnectionsManager` writes connection changes (including `hidden: true`) directly to the DB and then asynchronously triggers `loadNode(activeNodeId)` to refresh the parent's `form.connections` JSON string.
+- If the user makes any other edit on the node and clicks the top-level **Save Node** button before that refresh lands (or in some flows, even after — because `loadNode` isn't awaited), `saveNode()` writes the **stale** `form.connections` string back to the DB, silently dropping `hidden`.
+- The reverse side on the connected node is unaffected by the parent save, so the two ends can also drift out of sync (one hidden, one not).
 
-## Changes
+A secondary issue: in `saveEditConnection`, the **reverse-side** update only patches `direction` + `hidden`, never `label`. This isn't the reported bug but is worth fixing in the same pass.
 
-### 1. Remove the timer in `useCombatActions.ts`
-Replace the `ally_absorb` branch (~line 467):
-- Drop the `durationMs` calculation.
-- Set `expiresAt: Number.MAX_SAFE_INTEGER` so all `now < expiresAt` gates stay true forever; the ward only goes away when `handleAbsorbDamage` reduces `shieldHp` to 0 (then it's set to `null` — that path already exists).
-- Pass `shieldCap: shieldHp` so the overlay can render the cap ghost.
-- Update log lines to `"… until absorbed"`.
+## Plan
 
-### 2. Carry `shieldCap` through `AbsorbBuff`
-- `src/features/combat/hooks/useGameLoop.ts`: extend `AbsorbBuff` with optional `shieldCap?: number`.
-- `useBuffState.ts`: no logic change needed (`handleAbsorbDamage` already preserves spread fields).
+### 1. Make connection edits authoritative and atomic
 
-### 3. HP-bar overlay in `StatusBarsStrip.tsx`
-Today the bar only renders the Force Shield stance overlay. Generalize to also handle Divine Aegis from `absorbBuff`:
-- Add a derivation `aegisWard` parallel to `forceShieldStance`:
-  ```
-  aegisWard = absorbBuff && shieldHp > 0 && !forceShieldStance
-    ? { shieldHp, shieldCap: absorbBuff.shieldCap ?? shieldHp }
-    : null
-  ```
-  (Force Shield takes precedence when both are active so we don't draw two stacks of overlay.)
-- Reuse the existing JSX block that renders cap ghost + live shield + the inline `🛡 current/max` readout, but driven by either `forceShieldStance` or `aegisWard`. Use a small local `wardOverlay` variable so the markup stays a single block.
-- Tooltip text: "Divine Aegis — absorbs damage before HP. Lasts until depleted."
-- Always-on (no `inCombat` regen pulse — Aegis doesn't regenerate).
+In `src/components/admin/NodeEditorPanel.tsx` → `ConnectionsManager`:
 
-### 4. ActiveBuffs row de-duplication
-The "Force Shield" entry in `ActiveBuffs` currently falls back to `absorbActive` and labels it "Force Shield". Now that Divine Aegis is the only path producing `absorbBuff` (Force Shield is purely stance-driven), rename the fallback chip:
-- When `absorbActive` and no `forceShieldStance`, push a chip labeled `'Divine Aegis'` with detail `${shieldHp} HP` and `pct = shieldHp / shieldCap * 100` (no countdown).
+- After every connection mutation (`addConnection`, `saveEditConnection`, `removeConnection`, `quickConnect`), re-fetch the node's `connections` from the DB and pass them up to the parent so `form.connections` is updated in lock-step. Add a new prop `onConnectionsChanged(newConnectionsJson: string)` and call it with the freshly-fetched array stringified.
+- In the parent, wire `onConnectionsChanged` to `setForm(f => ({ ...f, connections: json }))` so the top-level Save Node button can never overwrite the just-saved hidden flag with stale JSON.
 
-### 5. GameManual copy
-`src/components/admin/GameManual.tsx` line 714: drop the duration formula, replace with `Lasts until absorbed`.
+### 2. Don't let `saveNode` clobber connections
 
-## Files touched
-- `src/features/combat/hooks/useGameLoop.ts` — add `shieldCap?` to `AbsorbBuff`.
-- `src/features/combat/hooks/useCombatActions.ts` — Divine Aegis branch: no timer, set `shieldCap`, updated log text.
-- `src/features/character/components/StatusBarsStrip.tsx` — add `aegisWard` derivation, share overlay JSX, rename fallback chip.
-- `src/components/admin/GameManual.tsx` — duration line.
+Still in `NodeEditorPanel.tsx`:
 
-## Out of scope
-- No server changes — `combat-tick` already consumes `absorb_buff.shield_hp` via the canonical damage pipeline.
-- No stance-system changes — Aegis remains a castable buff.
-- No DB/migration changes.
+- In `saveNode()`, when updating an existing node, **omit the `connections` field from the update payload** entirely. Connections are now owned by `ConnectionsManager` and are always written through it. This removes the entire class of "stale form string overwrites real DB state" bugs for connections (hidden, locked, lock_key, lock_hint, label, direction).
+- For **new** node creation (where `ConnectionsManager` isn't shown yet), keep the existing behavior since the initial connection list is built from `adjacentToNodeId` and is still trustworthy.
+
+### 3. Always write the `hidden` field explicitly
+
+In `ConnectionsManager`:
+
+- Replace the conditional spread `...(editHidden ? { hidden: true } : {})` with an explicit `hidden: !!editHidden` on both the from-side and reverse-side writes (and same for `addConnection`/`addHidden`). Storing `hidden: false` instead of omitting it makes the intent unambiguous and survives any future shallow-merge logic.
+- On the reverse-side update inside `saveEditConnection`, also propagate `label` so a label change on one end mirrors to the other (consistency fix).
+
+### 4. Verification
+
+After the change, repro the original flow:
+1. Open admin → World → click a node → Connections tab.
+2. Edit an existing connection, check **Hidden**, Save.
+3. Confirm the eye/Hidden badge appears on the row.
+4. Make an unrelated change (e.g. edit description) and click the top-level **Save Node**.
+5. Re-open the node — Hidden flag still present.
+6. Open the *connected* node and confirm the reverse connection also shows Hidden.
+
+## Technical notes
+
+- Files touched: `src/components/admin/NodeEditorPanel.tsx` only.
+- No DB migration needed; `connections` is already a `jsonb` column with arbitrary keys.
+- No changes required on the player side — `useMovementActions`, `MovementPad`, `PlayerGraphView`, `PlayerWorldMapDialog`, `useKeyboardMovement` all already filter on `c.hidden`, so once the flag persists correctly, hidden paths will behave as designed (discoverable only via search).

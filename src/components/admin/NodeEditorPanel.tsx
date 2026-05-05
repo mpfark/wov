@@ -139,13 +139,14 @@ function AiSuggestHintButton({ lockKey, direction, nodeName, nodeDescription, re
 }
 
 /* ─── ConnectionsManager ─────────────────────────────── */
-function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, suggestedNodes, nodeName: parentNodeName, nodeDescription, regionName }: {
+function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, allRegions, onUpdated, onConnectionsChanged, suggestedNodes, nodeName: parentNodeName, nodeDescription, regionName }: {
   nodeId: string;
   connections: string;
   allNodesGlobal: any[];
   allAreas: any[];
   allRegions: any[];
   onUpdated: () => void;
+  onConnectionsChanged?: (connectionsJson: string) => void;
   suggestedNodes?: Array<{ id: string; direction: string; name: string }>;
   nodeName: string;
   nodeDescription: string;
@@ -186,12 +187,19 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     setEditLockHint(c.lock_hint || '');
   };
 
+  const refreshFromDb = async () => {
+    const { data } = await supabase.from('nodes').select('connections').eq('id', nodeId).single();
+    if (data && onConnectionsChanged) {
+      onConnectionsChanged(JSON.stringify(data.connections ?? [], null, 2));
+    }
+  };
+
   const saveEditConnection = async () => {
     if (!editingConnId) return;
     setSaving(true);
     const newConns = parsed.map(c =>
       c.node_id === editingConnId
-        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}), ...(editLocked ? { locked: true, lock_key: editLockKey, ...(editLockHint.trim() ? { lock_hint: editLockHint.trim() } : {}) } : {}) }
+        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), hidden: !!editHidden, ...(editLocked ? { locked: true, lock_key: editLockKey, ...(editLockHint.trim() ? { lock_hint: editLockHint.trim() } : {}) } : {}) }
         : c
     );
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
@@ -200,11 +208,18 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
       const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
       const reverseIdx = targetConns.findIndex((c: any) => c.node_id === nodeId);
       if (reverseIdx >= 0) {
-        targetConns[reverseIdx] = { ...targetConns[reverseIdx], direction: REVERSE_DIR[editDir] || targetConns[reverseIdx].direction, ...(editHidden ? { hidden: true } : { hidden: undefined }) };
-        if (!targetConns[reverseIdx].hidden) delete targetConns[reverseIdx].hidden;
+        const existing = targetConns[reverseIdx];
+        targetConns[reverseIdx] = {
+          ...existing,
+          direction: REVERSE_DIR[editDir] || existing.direction,
+          hidden: !!editHidden,
+          ...(editLabel ? { label: editLabel } : {}),
+        };
+        if (!editLabel) delete targetConns[reverseIdx].label;
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', editingConnId);
       }
     }
+    await refreshFromDb();
     toast.success('Connection updated');
     setEditingConnId(null);
     setSaving(false);
@@ -215,16 +230,17 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     if (!addNodeId) return toast.error('Select a target node');
     if (parsed.some(c => c.node_id === addNodeId)) return toast.error('Already connected to that node');
     setSaving(true);
-    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}), ...(addLocked ? { locked: true, lock_key: addLockKey, ...(addLockHint.trim() ? { lock_hint: addLockHint.trim() } : {}) } : {}) }];
+    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), hidden: !!addHidden, ...(addLocked ? { locked: true, lock_key: addLockKey, ...(addLockHint.trim() ? { lock_hint: addLockHint.trim() } : {}) } : {}) }];
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
     const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
     if (targetNode) {
       const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
       if (!targetConns.some((c: any) => c.node_id === nodeId)) {
-        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S', ...(addHidden ? { hidden: true } : {}) });
+        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S', hidden: !!addHidden });
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', addNodeId);
       }
     }
+    await refreshFromDb();
     toast.success('Connection added');
     setAddNodeId('');
     setAddLabel('');
@@ -245,6 +261,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
       const targetConns: any[] = Array.isArray(targetNode.connections) ? (targetNode.connections as any[]).filter((c: any) => c.node_id !== nodeId) : [];
       await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
     }
+    await refreshFromDb();
     toast.success('Connection removed');
     setSaving(false);
     onUpdated();
@@ -268,6 +285,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
       }
     }
+    await refreshFromDb();
     toast.success('Connection added');
     setSaving(false);
     onUpdated();
@@ -813,7 +831,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, connections, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -1344,6 +1362,7 @@ export default function NodeEditorPanel({
                   allAreas={allAreas}
                   allRegions={regions}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
+                  onConnectionsChanged={(json) => setForm(f => ({ ...f, connections: json }))}
                   suggestedNodes={suggestedNodes}
                   nodeName={form.name}
                   nodeDescription={form.description}
