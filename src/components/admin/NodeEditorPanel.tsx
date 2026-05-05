@@ -1362,6 +1362,7 @@ export default function NodeEditorPanel({
                   allAreas={allAreas}
                   allRegions={regions}
                   onUpdated={() => { onSaved(); loadNode(activeNodeId); }}
+                  onConnectionsChanged={(json) => setForm(f => ({ ...f, connections: json }))}
                   suggestedNodes={suggestedNodes}
                   nodeName={form.name}
                   nodeDescription={form.description}
