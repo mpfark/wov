@@ -261,6 +261,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
       const targetConns: any[] = Array.isArray(targetNode.connections) ? (targetNode.connections as any[]).filter((c: any) => c.node_id !== nodeId) : [];
       await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
     }
+    await refreshFromDb();
     toast.success('Connection removed');
     setSaving(false);
     onUpdated();
