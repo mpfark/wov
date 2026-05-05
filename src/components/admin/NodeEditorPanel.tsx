@@ -187,12 +187,19 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     setEditLockHint(c.lock_hint || '');
   };
 
+  const refreshFromDb = async () => {
+    const { data } = await supabase.from('nodes').select('connections').eq('id', nodeId).single();
+    if (data && onConnectionsChanged) {
+      onConnectionsChanged(JSON.stringify(data.connections ?? [], null, 2));
+    }
+  };
+
   const saveEditConnection = async () => {
     if (!editingConnId) return;
     setSaving(true);
     const newConns = parsed.map(c =>
       c.node_id === editingConnId
-        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), ...(editHidden ? { hidden: true } : {}), ...(editLocked ? { locked: true, lock_key: editLockKey, ...(editLockHint.trim() ? { lock_hint: editLockHint.trim() } : {}) } : {}) }
+        ? { node_id: c.node_id, direction: editDir, ...(editLabel ? { label: editLabel } : {}), hidden: !!editHidden, ...(editLocked ? { locked: true, lock_key: editLockKey, ...(editLockHint.trim() ? { lock_hint: editLockHint.trim() } : {}) } : {}) }
         : c
     );
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
@@ -201,11 +208,18 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
       const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
       const reverseIdx = targetConns.findIndex((c: any) => c.node_id === nodeId);
       if (reverseIdx >= 0) {
-        targetConns[reverseIdx] = { ...targetConns[reverseIdx], direction: REVERSE_DIR[editDir] || targetConns[reverseIdx].direction, ...(editHidden ? { hidden: true } : { hidden: undefined }) };
-        if (!targetConns[reverseIdx].hidden) delete targetConns[reverseIdx].hidden;
+        const existing = targetConns[reverseIdx];
+        targetConns[reverseIdx] = {
+          ...existing,
+          direction: REVERSE_DIR[editDir] || existing.direction,
+          hidden: !!editHidden,
+          ...(editLabel ? { label: editLabel } : {}),
+        };
+        if (!editLabel) delete targetConns[reverseIdx].label;
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', editingConnId);
       }
     }
+    await refreshFromDb();
     toast.success('Connection updated');
     setEditingConnId(null);
     setSaving(false);
@@ -216,16 +230,17 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
     if (!addNodeId) return toast.error('Select a target node');
     if (parsed.some(c => c.node_id === addNodeId)) return toast.error('Already connected to that node');
     setSaving(true);
-    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), ...(addHidden ? { hidden: true } : {}), ...(addLocked ? { locked: true, lock_key: addLockKey, ...(addLockHint.trim() ? { lock_hint: addLockHint.trim() } : {}) } : {}) }];
+    const newConns = [...parsed, { node_id: addNodeId, direction: addDir, ...(addLabel ? { label: addLabel } : {}), hidden: !!addHidden, ...(addLocked ? { locked: true, lock_key: addLockKey, ...(addLockHint.trim() ? { lock_hint: addLockHint.trim() } : {}) } : {}) }];
     await supabase.from('nodes').update({ connections: newConns }).eq('id', nodeId);
     const { data: targetNode } = await supabase.from('nodes').select('connections').eq('id', addNodeId).single();
     if (targetNode) {
       const targetConns: any[] = Array.isArray(targetNode.connections) ? [...targetNode.connections as any[]] : [];
       if (!targetConns.some((c: any) => c.node_id === nodeId)) {
-        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S', ...(addHidden ? { hidden: true } : {}) });
+        targetConns.push({ node_id: nodeId, direction: REVERSE_DIR[addDir] || 'S', hidden: !!addHidden });
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', addNodeId);
       }
     }
+    await refreshFromDb();
     toast.success('Connection added');
     setAddNodeId('');
     setAddLabel('');
