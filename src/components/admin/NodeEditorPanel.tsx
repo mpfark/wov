@@ -285,6 +285,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
         await supabase.from('nodes').update({ connections: targetConns }).eq('id', targetId);
       }
     }
+    await refreshFromDb();
     toast.success('Connection added');
     setSaving(false);
     onUpdated();
