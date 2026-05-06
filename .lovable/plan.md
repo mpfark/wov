@@ -1,43 +1,46 @@
-## Common & Uncommon Seed Rebalance
+## Goal
+Bring the AI Item Forge (`supabase/functions/ai-item-forge/index.ts`) in sync with the deterministic seed catalog so AI-generated common/uncommon items follow the same grammar, budget floor, and rarity rules.
 
-Two real issues found, plus one design clarification:
+## Changes
 
-- **Imbalance is intentional**: the 50/74 split per band comes from 8 hybrid archetypes (chest+head+weapon = 24 extra uncommons). Per your decision, hybrids stay uncommon-only.
-- **Non-hybrid uncommons are wasted**: today they fall back to `distributeCommon` so a "Vanguard Sword" uncommon = same stats as common. We will skip generating them.
-- **Budget rounding loses points** at low levels (L1 budget=1 means 70% rounds to 1 with 0 leftover). We will raise the floor and add a spillover pass.
+### 1. Naming grammar → archetype-based
+Replace the current "boring material + slot noun" common rule and "quality adjective" uncommon rule with the seed grammar:
 
-### Changes (single file: `supabase/functions/seed-archetype-items/index.ts`)
+`[Tier Prefix] [Archetype] [Slot Noun]`
 
-**1. Raise stat budget floor**
-Update `statBudget()` so the minimum is 2 at L1 (instead of 1), keeping the same growth slope:
-```
-budget = max(2, floor(2 + (level-1) * 0.3 * rarityMult * handsMult))
-```
-Common L1 → 2pts, Uncommon L1 → 3pts, Common L8 → 4pts, etc. This guarantees a primary + minor stat at every level.
+- **Tier prefix by level band**: 1–5 Worn, 6–10 Sturdy, 11–15 Fine, 16–20 Engraved, 21–25 Runed, 26–30 High, 31–35 Mythic, 36–40 Ancient, 41–42 Astral.
+- **Common archetypes** (single primary stat): Vanguard/Iron/Brutal (STR), Shadow/Swift/Hunter (DEX), Warden/Stoneguard/Bulwark (CON), Sage/Arcane/Spellwoven (INT), Devout/Sanctified/Templar (WIS), Regal/Noble/Bardic (CHA).
+- **Uncommon archetypes** (hybrid only): Warlord (STR+CON), Raider (STR+DEX), Spellblade (DEX+INT), Guardian (WIS+CON), Mystic (INT+WIS), Prophet (CHA+WIS), Troubadour (CHA+DEX), Champion (CHA+STR), etc.
+- Slot nouns: Helm/Hood/Circlet, Plate/Robe/Vest, Gauntlets, Greaves, Sabatons, Shield/Tome/Idol, Sword/Axe/Bow/Staff/Wand…
 
-**2. Spillover pass — never waste a point**
-After the primary/secondary/tertiary allocation, run a loop that drips any leftover budget into:
-- primary (until cap), then secondary (until cap), then tertiary (hp for tank archetypes, wis otherwise) until cap.
-- Always exits with `sum(allocated) === budget` (or all caps reached, which is rare at low levels).
+Drop the "Crude/Worn/Masterwork" material-based examples entirely.
 
-**3. Skip non-hybrid uncommons**
-In `buildCatalog()`, the armor and weapon loops currently emit both `common` and `uncommon` per primary archetype. Drop the uncommon branch for primary archetypes — keep only:
-- All common armor + weapons across 6 primaries (~50/band)
-- All hybrid uncommon armor (chest, head) + weapon (~24/band)
+### 2. Rarity rules
+- **Common = primary archetype only** (single dominant stat + small minor stat).
+- **Uncommon = hybrid archetype only** (primary ~55%, secondary ~35%, tertiary spillover). The forge must NOT generate non-hybrid uncommons.
+- If user picks `rarity = uncommon`, system prompt forces a hybrid name.
 
-Result per band: ~50 common + ~24 uncommon = ~74 items × 9 bands ≈ **666 items total** (down from ~1,114).
+### 3. Stat budget alignment with seed
+- **Floor at 2 even at L1**: change `calcBudget` to `Math.max(2, Math.floor(2 + (level-1) * 0.3 * mult * handsMult))` to match the seed function.
+- **Spillover top-up**: keep the existing post-AI top-up loop but make it spend leftover budget into primary→secondary→tertiary in the item's archetype order (not random) so distributions match the seed.
+- Update the budget formula text in the system prompt accordingly.
 
-**4. Update memory**
-`mem://game/item-archetypes`:
-- Note the new minimum-budget-2 floor.
-- Note "Uncommon = hybrid-only" rule.
-- Document the spillover pass.
+### 4. Memory refresh
+Rewrite `.lovable/memory/admin/ai-item-forge.md` to document:
+- Archetype naming grammar (mirror of `item-archetypes.md`)
+- Min budget 2 floor, spillover pass
+- Common = primary, Uncommon = hybrid only
 
-### Out of scope
-- No changes to formula files (`shared/formulas/items.ts`) — only the seed function's local `statBudget` helper. If you want the global budget formula to also have the floor of 2, that's a separate decision (it would affect AI Forge, Soulforge, blacksmith, etc.).
-- No re-seed triggered automatically — you'll click **Purge & Seed Catalog** again after the deploy.
+## Out of scope
+- No changes to `shared/formulas/items.ts` (used by Soulforge / Blacksmith / etc.).
+- No changes to the seed function — it's the source of truth now.
+- Unique and Soulforged forges remain untouched (lyrical names still allowed there).
 
-### Verification after re-seed
-- Query item counts per (level, rarity) to confirm ~50 common / ~24 uncommon per band.
-- Spot-check L3 common armor → should now have 2 stats summing to budget=2.
-- Spot-check L8 uncommon hybrid chest → primary+secondary+tertiary summing to full uncommon budget.
+## Files touched
+- `supabase/functions/ai-item-forge/index.ts` — rewrite system prompt, update `calcBudget`, refine top-up to follow archetype order.
+- `.lovable/memory/admin/ai-item-forge.md` — refresh to match new rules.
+
+## Verification
+- Generate a batch of 10 common L5 → names like "Worn Vanguard Sword", "Worn Sage Robe"; each item has primary stat + minor.
+- Generate a batch of 10 uncommon L15 → names like "Fine Spellblade Dagger" with DEX+INT split.
+- Confirm no "Dawnbreaker"/"of the X" leaks and no single-stat uncommons.
