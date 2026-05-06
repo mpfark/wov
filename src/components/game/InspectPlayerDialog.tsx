@@ -16,6 +16,7 @@ const SLOT_LABELS: Record<string, string> = {
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
+  rare: 'text-blue-400',
   unique: 'text-primary text-glow',
   soulforged: 'text-soulforged text-glow-soulforged',
 };
@@ -33,6 +34,8 @@ interface EquippedItem {
   item_level: number;
   description: string;
   illustration_url?: string | null;
+  weapon_tag?: string | null;
+  is_soulbound?: boolean;
 }
 
 interface PlayerInfo {
