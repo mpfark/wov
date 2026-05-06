@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { getWeaponDieForItem, type WeaponProgressionConfig } from '@/shared/formulas/combat';
+import { isShield } from '@/shared/formulas/classes';
 import { CLASS_WEAPON_AFFINITY } from '@/lib/game-data';
 import ItemIllustration from '@/components/items/ItemIllustration';
 import { itemSubtitle, statLabel, affinityLabelFor, type DisplayItem } from '@/lib/item-display';
