@@ -94,7 +94,8 @@ export default function GameManual() {
       <ScrollArea className="h-full">
         <div className="p-4 max-w-4xl mx-auto space-y-2">
 
-        <Accordion type="single" value={activeSection} className="space-y-1 [&_[data-manual-trigger]]:hidden">
+        <Accordion type="single" value={activeSection} className="space-y-1 [&_h3:has([data-manual-trigger])]:hidden">
+          {/* Tool-column controls top-level visibility; nested accordions still work */}
           {/* 1. Level Progression */}
           <AccordionItem value="levels" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
