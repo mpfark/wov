@@ -337,26 +337,34 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
             {/* Level Range */}
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
-                <BarChart2 className="w-3 h-3" /> Level Range
+                <BarChart2 className="w-3 h-3" /> Level Range (1–42)
               </Label>
               <div className="flex items-center gap-2">
                 <Input
-                  type="number" min={1} max={99}
+                  type="number" min={1} max={42}
                   value={levelMin}
-                  onChange={e => setLevelMin(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={e => setLevelMin(Math.min(42, Math.max(1, parseInt(e.target.value) || 1)))}
                   className="h-7 text-xs text-center w-16"
                 />
                 <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
                 <Input
-                  type="number" min={1} max={99}
+                  type="number" min={1} max={42}
                   value={levelMax}
-                  onChange={e => setLevelMax(Math.max(levelMin, parseInt(e.target.value) || 1))}
+                  onChange={e => setLevelMax(Math.min(42, Math.max(levelMin, parseInt(e.target.value) || 1)))}
                   className="h-7 text-xs text-center w-16"
                 />
               </div>
               {levelMin > levelMax && (
                 <p className="text-[9px] text-destructive">Min must be ≤ max</p>
               )}
+              {/* Tier prefix preview */}
+              <div className="flex flex-wrap gap-1 pt-0.5">
+                {bandsInRange(safeMin, safeMax).map(b => (
+                  <span key={b.prefix} className="text-[9px] px-1 py-0.5 rounded bg-muted/50 text-muted-foreground font-mono">
+                    L{b.min}-{b.max} {b.prefix}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* Item Type */}
