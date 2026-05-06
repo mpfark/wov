@@ -15,7 +15,7 @@ interface ItemLike extends DisplayItem {
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
-  rare: 'text-rare',
+  rare: 'text-blue-400',
   unique: 'text-primary text-glow',
   soulforged: 'text-soulforged text-glow-soulforged',
 };
