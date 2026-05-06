@@ -891,7 +891,7 @@ export default function CharacterPanel({
 
                   // Autoattack: to-hit uses DEX, damage uses STR.
                   // (Class identity lives in T0 abilities, not in basic-attack stats.)
-                  const weaponDie = getWeaponDie(mainHandTag ?? null, isTwoHanded ? 2 : 1);
+                  const weaponDie = getWeaponDieForItem(mainHandTag ?? null, isTwoHanded ? 2 : 1, mainHandLevel ?? null);
                   const dmgMod = getStatModifier(character.str + (equipmentBonuses.str || 0));   // STR — damage
                   const hitMod = getStatModifier(character.dex + (equipmentBonuses.dex || 0));   // DEX — to-hit
                   const intHit = getIntHitBonus(eInt);
