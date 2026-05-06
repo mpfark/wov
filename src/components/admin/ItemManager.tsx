@@ -1051,6 +1051,6 @@ export default function ItemManager() {
         )}
       </div>
       </div>
-    </div>
+    </AdminPageShell>
   );
 }
