@@ -203,109 +203,6 @@ export default function GameManual() {
                 </CardContent>
               </Card>
 
-              {/* Race-Class Synergy Guide */}
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="p-3 space-y-2">
-                  <p className="text-xs font-display text-primary">⚔️ Race-Class Synergy Guide</p>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p><strong className="text-foreground">Tank Races</strong> (high CON → more HP):</p>
-                    <p className="ml-3">🛡️ <strong>Dwarf</strong> (+4 CON) — Best for Warriors, Healers who want to survive the frontline</p>
-                    <p className="ml-3">🏰 <strong>Edain</strong> (+3 CON) — Strong for any melee class, good all-rounder</p>
-                    <p className="mt-1"><strong className="text-foreground">Caster Races</strong> (high mental stats → more CP):</p>
-                    <p className="ml-3">🌿 <strong>Elf</strong> (+3 WIS, +2 INT) — Best for Wizards, Healers, Rangers who use abilities heavily</p>
-                    <p className="ml-3">✨ <strong>Half-Elf</strong> (+3 CHA, +2 WIS) — Ideal for Bards, Healers, Rogues with large CP pools</p>
-                    <p className="mt-1"><strong className="text-foreground">Balanced / Agile</strong>:</p>
-                    <p className="ml-3">🤸 <strong>Halfling</strong> (+3 DEX) — Best for Rogues, Rangers who need high accuracy/evasion</p>
-                    <p className="ml-3">⚖️ <strong>Human</strong> (+1 all) — Versatile, no weaknesses, good for any class</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* HP/CP comparison by race-class combo */}
-              <div>
-                <p className="text-xs font-display text-primary mb-1">Starting HP & CP by Race-Class Combo</p>
-                <div className="max-h-[250px] overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">Combo</TableHead>
-                        <TableHead className="text-xs">HP</TableHead>
-                        <TableHead className="text-xs">AC</TableHead>
-                        <TableHead className="text-xs">CP</TableHead>
-                        <TableHead className="text-xs">Synergy</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const combos = Object.keys(RACE_STATS).flatMap(race =>
-                          Object.keys(CLASS_STATS).map(cls => {
-                            const s = calculateStats(race, cls);
-                            const hp = calculateHP(cls, s.con);
-                            const ac = calculateAC(cls, s.dex);
-                            const cp = getMaxCp(1, s.wis);
-                            return { race, cls, s, hp, ac, cp };
-                          })
-                        );
-                        const maxHp = Math.max(...combos.map(c => c.hp));
-                        const maxCp = Math.max(...combos.map(c => c.cp));
-                        const minHp = Math.min(...combos.map(c => c.hp));
-                        const minCp = Math.min(...combos.map(c => c.cp));
-                        return combos.map(({ race, cls, hp, ac, cp }) => {
-                          let synergy = '';
-                          if (hp >= maxHp - 2 && cp >= maxCp - 5) synergy = '🌟 Excellent';
-                          else if (hp >= maxHp - 2) synergy = '🛡️ Tank';
-                          else if (cp >= maxCp - 5) synergy = '🔮 Caster';
-                          else if (hp <= minHp + 2) synergy = '⚠️ Fragile';
-                          else synergy = '⚖️ Balanced';
-                          return (
-                            <TableRow key={`${race}-${cls}`}>
-                              <TableCell className="text-xs font-display">{RACE_LABELS[race]} {CLASS_LABELS[cls]}</TableCell>
-                              <TableCell className={`text-xs ${hp >= maxHp - 2 ? 'text-green-400 font-bold' : hp <= minHp + 2 ? 'text-red-400' : ''}`}>{hp}</TableCell>
-                              <TableCell className="text-xs">{ac}</TableCell>
-                              <TableCell className={`text-xs ${cp >= maxCp - 5 ? 'text-blue-400 font-bold' : cp <= minCp + 5 ? 'text-orange-400' : ''}`}>{cp}</TableCell>
-                              <TableCell className="text-xs">{synergy}</TableCell>
-                            </TableRow>
-                          );
-                        });
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-display text-primary mb-1">Race Modifiers</p>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Race</TableHead>
-                      {STAT_KEYS.map(s => <TableHead key={s} className="text-xs">{STAT_LABELS[s]}</TableHead>)}
-                      <TableHead className="text-xs">Strength</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Object.entries(RACE_STATS).map(([race, stats]) => {
-                      const totalBonus = Object.values(stats).reduce((a, b) => a + (b as number), 0);
-                      const topStat = Object.entries(stats).sort(([,a], [,b]) => (b as number) - (a as number))[0];
-                      return (
-                        <TableRow key={race}>
-                          <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
-                          {STAT_KEYS.map(s => (
-                            <TableCell key={s} className={`text-xs ${stats[s] > 0 ? 'text-green-400' : stats[s] < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
-                              {stats[s] > 0 ? `+${stats[s]}` : stats[s] || '—'}
-                            </TableCell>
-                          ))}
-                          <TableCell className="text-xs text-muted-foreground">
-                            {STAT_LABELS[topStat[0]]} focused (+{totalBonus} total)
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              <div>
-                <p className="text-xs font-display text-primary mb-1">Class Modifiers</p>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -327,32 +224,6 @@ export default function GameManual() {
                   </TableBody>
                 </Table>
               </div>
-              {/* Example combos */}
-              <Accordion type="single" collapsible>
-                <AccordionItem value="combos" className="border-none">
-                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
-                    Example Starting Stats (all combos)
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="grid grid-cols-1 gap-1 max-h-[300px] overflow-auto">
-                      {Object.keys(RACE_STATS).map(race =>
-                        Object.keys(CLASS_STATS).map(cls => {
-                          const s = calculateStats(race, cls);
-                          return (
-                            <div key={`${race}-${cls}`} className="flex items-center gap-2 text-xs">
-                              <span className="font-display w-28 shrink-0">{RACE_LABELS[race]} {CLASS_LABELS[cls]}</span>
-                              {STAT_KEYS.map(k => (
-                                <span key={k} className="text-muted-foreground w-10 text-center">{STAT_LABELS[k]} {s[k]}</span>
-                              ))}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </AccordionContent>
           </AccordionItem>
 
           {/* 3. HP, AC & Regen */}
@@ -388,51 +259,6 @@ export default function GameManual() {
                 </TableBody>
               </Table>
 
-              <div>
-                <p className="text-xs font-display text-primary mb-1">Starting HP by Race & Class (Level 1)</p>
-                <div className="max-h-[300px] overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">Race \ Class</TableHead>
-                        {Object.keys(CLASS_STATS).map(cls => (
-                          <TableHead key={cls} className="text-xs">{CLASS_LABELS[cls]}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const allHp = Object.keys(RACE_STATS).flatMap(race =>
-                          Object.keys(CLASS_STATS).map(cls => {
-                            const s = calculateStats(race, cls);
-                            return calculateHP(cls, s.con);
-                          })
-                        );
-                        const maxHp = Math.max(...allHp);
-                        const minHp = Math.min(...allHp);
-                        return Object.keys(RACE_STATS).map(race => (
-                          <TableRow key={race}>
-                            <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
-                            {Object.keys(CLASS_STATS).map(cls => {
-                              const s = calculateStats(race, cls);
-                              const hp = calculateHP(cls, s.con);
-                              return (
-                                <TableCell key={cls} className={`text-xs ${hp >= maxHp - 2 ? 'text-green-400 font-bold' : hp <= minHp + 2 ? 'text-red-400' : ''}`}>
-                                  {hp}
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
-                        ));
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  <span className="text-green-400">■</span> High HP (tank-optimal) · <span className="text-red-400">■</span> Low HP (fragile combo)
-                </p>
-              </div>
-            </AccordionContent>
           </AccordionItem>
 
           {/* 3b. Concentration Points (CP) */}
@@ -450,51 +276,6 @@ export default function GameManual() {
                 <p><strong className="text-foreground">Regen Bonus</strong> = +0.5 CP/4s for every 2 points of primary stat modifier</p>
                 <p><strong className="text-foreground">🏨 Inn Rest</strong> = +10 flat CP regen per tick</p>
                 <p><strong className="text-foreground">🍞 Food Buff</strong> = Adds 50% of food's HP regen value as bonus CP regen for 5 minutes</p>
-              </div>
-
-              <div>
-                <p className="text-xs font-display text-primary mb-1">Starting CP by Race & Class (Level 1)</p>
-                <div className="max-h-[300px] overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">Race \ Class</TableHead>
-                        {Object.keys(CLASS_STATS).map(cls => (
-                          <TableHead key={cls} className="text-xs">{CLASS_LABELS[cls]}</TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const allCp = Object.keys(RACE_STATS).flatMap(race =>
-                          Object.keys(CLASS_STATS).map(cls => {
-                            const s = calculateStats(race, cls);
-                            return getMaxCp(1, s.wis);
-                          })
-                        );
-                        const maxCp = Math.max(...allCp);
-                        const minCp = Math.min(...allCp);
-                        return Object.keys(RACE_STATS).map(race => (
-                          <TableRow key={race}>
-                            <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
-                            {Object.keys(CLASS_STATS).map(cls => {
-                              const s = calculateStats(race, cls);
-                              const cp = getMaxCp(1, s.wis);
-                              return (
-                                <TableCell key={cls} className={`text-xs ${cp >= maxCp - 5 ? 'text-blue-400 font-bold' : cp <= minCp + 5 ? 'text-orange-400' : ''}`}>
-                                  {cp}
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
-                        ));
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  <span className="text-blue-400">■</span> High CP (caster-optimal) · <span className="text-orange-400">■</span> Low CP (tank-focused race)
-                </p>
               </div>
 
               <div>
@@ -526,51 +307,7 @@ export default function GameManual() {
                 </Table>
               </div>
 
-              <div>
-                <p className="text-xs font-display text-primary mb-1">Max CP by Level (base, no WIS bonus)</p>
-                <div className="grid grid-cols-4 gap-1 text-xs text-muted-foreground">
-                  {[1, 5, 10, 15, 20, 25, 30, 40].map(lv => (
-                    <div key={lv}>
-                      Lv {lv}: <span className="text-primary">{getMaxCp(lv, 10)} CP</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              <div>
-                <p className="text-xs font-display text-primary mb-1">CP Regen (scales with INT)</p>
-                <p className="text-xs text-muted-foreground mb-1">Uses the same formula as HP regen: 2 + floor(√(INT − 10))</p>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">INT</TableHead>
-                      <TableHead className="text-xs">Base CP/tick</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[10, 13, 16, 20, 25, 30].map(v => (
-                      <TableRow key={v}>
-                        <TableCell className="text-xs">{v}</TableCell>
-                        <TableCell className="text-xs">{getStatRegen(v)} CP/4s</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <p className="text-amber-400 mt-2 text-xs">⚔️ <strong>In Combat:</strong> CP regen is paused entirely. Pool size depends on <strong>WIS</strong> only; INT drives the regen rate out of combat.</p>
-
-              <Card className="bg-card/30">
-                <CardContent className="p-3">
-                  <p className="text-xs font-display text-primary mb-1">Tactical Example (Level 20 Wizard, ~87 max CP)</p>
-                  <div className="text-xs text-muted-foreground space-y-0.5">
-                    <p>• T4 ability (60 CP) + T1 ability (15 CP) = 75 CP spent → 12 CP remaining</p>
-                    <p>• A Warrior at level 20 would have ~75 max CP if WIS 10 — CP pool is purely WIS-driven now</p>
-                    <p>• WIS pool + INT regen split rewards casters who invest in both — WIS for headroom, INT for sustain</p>
-                    <p>• Bard's "Grand Finale" deals massive CHA-scaling burst damage to a single target</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </AccordionContent>
           </AccordionItem>
 
           {/* 4. Combat */}
@@ -639,44 +376,6 @@ export default function GameManual() {
                 </Table>
               </div>
 
-              <Accordion type="single" collapsible>
-                <AccordionItem value="kills-to-level" className="border-none">
-                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
-                    Kills-to-Level Milestones (same-level regular creatures, solo)
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">Level</TableHead>
-                          <TableHead className="text-xs">XP Needed</TableHead>
-                          <TableHead className="text-xs">Regular Kills</TableHead>
-                          <TableHead className="text-xs">Rare Kills</TableHead>
-                          <TableHead className="text-xs">Boss Kills</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {[1, 5, 10, 15, 20, 25, 30, 35, 40].map(lv => {
-                          const xpNeeded = getXpForLevel(lv);
-                          const regXp = getCreatureXp(lv, 'regular');
-                          const rareXp = getCreatureXp(lv, 'rare');
-                          const bossXp = getCreatureXp(lv, 'boss');
-                          return (
-                            <TableRow key={lv}>
-                              <TableCell className="text-xs font-display">{lv}</TableCell>
-                              <TableCell className="text-xs">{xpNeeded.toLocaleString()}</TableCell>
-                              <TableCell className="text-xs">{Math.ceil(xpNeeded / regXp)}</TableCell>
-                              <TableCell className="text-xs">{Math.ceil(xpNeeded / rareXp)}</TableCell>
-                              <TableCell className="text-xs">{Math.ceil(xpNeeded / bossXp)}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </AccordionContent>
           </AccordionItem>
 
           {/* 5. Class Abilities */}
@@ -823,32 +522,6 @@ export default function GameManual() {
                   ))}
                 </TableBody>
               </Table>
-              {/* Example creatures */}
-              <Accordion type="single" collapsible>
-                <AccordionItem value="creature-examples" className="border-none">
-                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
-                    Example Creatures (Lv 1, 10, 20, 30)
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2">
-                      {[1, 10, 20, 30].map(lv => {
-                        const reg = generateCreatureStats(lv, 'regular');
-                        const boss = generateCreatureStats(lv, 'boss');
-                        return (
-                          <div key={lv} className="text-xs">
-                            <span className="font-display text-foreground">Level {lv}:</span>{' '}
-                            <span className="text-muted-foreground">
-                              Regular HP {reg.hp} AC {reg.ac} STR {reg.stats.str} (d{getCreatureDamageDie(lv, 'regular')}) · 
-                              Boss HP {boss.hp} AC {boss.ac} STR {boss.stats.str} (d{getCreatureDamageDie(lv, 'boss')})
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </AccordionContent>
           </AccordionItem>
 
           {/* 7. Items & Economy */}
@@ -905,27 +578,6 @@ export default function GameManual() {
                   </Table>
                 </div>
               </div>
-              {/* Budget examples */}
-              <Accordion type="single" collapsible>
-                <AccordionItem value="budget-examples" className="border-none">
-                  <AccordionTrigger className="py-2 text-xs font-display hover:no-underline">
-                    Stat Budget Examples
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-                      {['common', 'uncommon', 'unique'].map(rarity =>
-                        [1, 5, 10, 20].map(lv => (
-                          <div key={`${rarity}-${lv}`}>
-                            <span className="capitalize">{rarity}</span> Lv{lv} 1h: <span className="text-primary">{getItemStatBudget(lv, rarity, 1)}</span>{' '}
-                            2h: <span className="text-primary">{getItemStatBudget(lv, rarity, 2)}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </AccordionContent>
           </AccordionItem>
 
           {/* ── Weapon Affinity ── */}
