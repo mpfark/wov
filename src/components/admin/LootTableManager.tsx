@@ -5,6 +5,7 @@ import PoolRulesTab from './loot/PoolRulesTab';
 import ItemPoolTab from './loot/ItemPoolTab';
 import LegacyLootTablesTab from './loot/LegacyLootTablesTab';
 import CreatureLootModesTab from './loot/CreatureLootModesTab';
+import WeaponProgressionTab from './loot/WeaponProgressionTab';
 
 export default function LootTableManager() {
   return (
@@ -16,6 +17,7 @@ export default function LootTableManager() {
           <TabsTrigger value="items" className="text-xs">📦 Item Pool</TabsTrigger>
           <TabsTrigger value="legacy" className="text-xs">📋 Legacy Tables</TabsTrigger>
           <TabsTrigger value="creatures" className="text-xs">🐾 Creature Modes</TabsTrigger>
+          <TabsTrigger value="weapon-prog" className="text-xs">⚔️ Weapon Dice</TabsTrigger>
         </TabsList>
         <TabsContent value="rules" className="flex-1 overflow-auto mt-0">
           <PoolRulesTab />
@@ -28,6 +30,9 @@ export default function LootTableManager() {
         </TabsContent>
         <TabsContent value="creatures" className="flex-1 overflow-hidden mt-0">
           <CreatureLootModesTab />
+        </TabsContent>
+        <TabsContent value="weapon-prog" className="flex-1 overflow-auto mt-0">
+          <WeaponProgressionTab />
         </TabsContent>
       </Tabs>
     </div>
