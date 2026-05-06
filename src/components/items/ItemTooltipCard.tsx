@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { getWeaponDieForItem, type WeaponProgressionConfig } from '@/shared/formulas/combat';
 import { CLASS_WEAPON_AFFINITY } from '@/lib/game-data';
 import ItemIllustration from '@/components/items/ItemIllustration';
