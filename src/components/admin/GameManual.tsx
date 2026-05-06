@@ -1017,38 +1017,6 @@ export default function GameManual() {
 
                 <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery. STR-focused classes like Warriors can carry more items before becoming encumbered.</p>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Race</TableHead>
-                      {Object.entries(CLASS_LABELS).map(([key, label]) => (
-                        <TableHead key={key} className="text-xs text-center">{label}</TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {Object.entries(RACE_LABELS).map(([raceKey, raceLabel]) => (
-                      <TableRow key={raceKey}>
-                        <TableCell className="text-xs font-medium">{raceLabel}</TableCell>
-                        {Object.keys(CLASS_LABELS).map(classKey => {
-                          const stats = calculateStats(raceKey, classKey);
-                          const maxMp = getMaxMp(1, stats.dex);
-                          const regenRate = getMpRegenRate(stats.dex);
-                          return (
-                            <TableCell key={classKey} className="text-xs text-center">
-                              {maxMp} <span className="text-muted-foreground/60">({regenRate}/2s)</span>
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* 9. Milestone Rewards */}
           <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🏆 Milestone Rewards
