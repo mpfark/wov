@@ -10,23 +10,23 @@ export default function LootTableManager() {
   return (
     <div className="h-full flex flex-col">
       <AdminEntityToolbar icon={<Package className="w-4 h-4" />} title="Loot Tables" />
-      <Tabs defaultValue="rules" className="flex-1 flex flex-col">
+      <Tabs defaultValue="rules" className="flex-1 flex flex-col min-h-0">
         <TabsList className="shrink-0 mx-3 mt-2">
           <TabsTrigger value="rules" className="text-xs">⚙️ Pool Rules</TabsTrigger>
           <TabsTrigger value="items" className="text-xs">📦 Item Pool</TabsTrigger>
           <TabsTrigger value="legacy" className="text-xs">📋 Legacy Tables</TabsTrigger>
           <TabsTrigger value="creatures" className="text-xs">🐾 Creature Modes</TabsTrigger>
         </TabsList>
-        <TabsContent value="rules" className="flex-1 overflow-auto mt-0">
+        <TabsContent value="rules" className="flex-1 min-h-0 overflow-auto mt-0">
           <PoolRulesTab />
         </TabsContent>
-        <TabsContent value="items" className="flex-1 overflow-hidden mt-0">
+        <TabsContent value="items" className="flex-1 min-h-0 overflow-hidden mt-0">
           <ItemPoolTab />
         </TabsContent>
-        <TabsContent value="legacy" className="flex-1 overflow-hidden mt-0">
+        <TabsContent value="legacy" className="flex-1 min-h-0 overflow-hidden mt-0">
           <LegacyLootTablesTab />
         </TabsContent>
-        <TabsContent value="creatures" className="flex-1 overflow-hidden mt-0">
+        <TabsContent value="creatures" className="flex-1 min-h-0 overflow-hidden mt-0">
           <CreatureLootModesTab />
         </TabsContent>
       </Tabs>
