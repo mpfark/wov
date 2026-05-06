@@ -376,38 +376,21 @@ export default function BlacksmithPanel({
                 const equipped = inventory.find(i => i.equipped_slot === item.slot);
                 const equippedStats = (equipped?.item?.stats || {}) as Record<string, number>;
                 const forgeStats = (item.stats || {}) as Record<string, number>;
-                const allKeys = [...new Set([...Object.keys(forgeStats), ...Object.keys(equippedStats)])];
+                const allKeys = new Set([...Object.keys(forgeStats), ...Object.keys(equippedStats)]);
+                const diffs: { key: string; diff: number }[] = [];
+                if (equipped) {
+                  for (const k of allKeys) {
+                    const d = (forgeStats[k] || 0) - (equippedStats[k] || 0);
+                    if (d !== 0) diffs.push({ key: k, diff: d });
+                  }
+                }
                 return (
-                  <>
-                    <p className="font-display text-foreground">{item.name}</p>
-                    {item.description && <p className="text-xs text-muted-foreground">{item.description}</p>}
-                    <p className="text-[10px] text-muted-foreground capitalize">{item.slot?.replace('_', ' ')} · Lv{item.level}</p>
-                    {item.hands && <p className="text-xs text-muted-foreground">{item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
-                    {item.weapon_tag && <p className="text-xs text-muted-foreground capitalize">{item.weapon_tag}</p>}
-                    {allKeys.filter(k => (forgeStats[k] || 0) !== 0 || (equippedStats[k] || 0) !== 0).map(k => {
-                      const fv = forgeStats[k] || 0;
-                      const ev = equippedStats[k] || 0;
-                      const diff = fv - ev;
-                      const label = STAT_LABELS[k] || k.toUpperCase();
-                      return (
-                        <p key={k} className="text-xs flex items-center gap-1">
-                          <span>+{fv} {label}</span>
-                          {equipped && diff !== 0 && (
-                            <span className={`text-[10px] font-display ${diff > 0 ? 'text-chart-2' : 'text-destructive'}`}>
-                              ({diff > 0 ? '▲' : '▼'}{Math.abs(diff)})
-                            </span>
-                          )}
-                        </p>
-                      );
-                    })}
-                    {equipped ? (
-                      <p className="text-[10px] text-muted-foreground mt-1 border-t border-border pt-1">
-                        vs. <span className={`font-display ${getItemColor(equipped.item)}`}>{equipped.item.name}</span>
-                      </p>
-                    ) : (
-                      <p className="text-[10px] text-elvish mt-1">No item equipped in this slot</p>
-                    )}
-                  </>
+                  <ItemTooltipCard
+                    item={item as any}
+                    weaponProgression={weaponProgression}
+                    classKey={character?.class}
+                    comparison={equipped && diffs.length > 0 ? { label: equipped.item.name, diffs } : null}
+                  />
                 );
               })()}
             </TooltipContent>
