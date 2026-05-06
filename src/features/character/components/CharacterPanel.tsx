@@ -116,17 +116,12 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponPro
       </TooltipTrigger>
       {item && !blocked && (
         <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-          <ItemIllustration url={item.item.illustration_url} alt={item.item.name} />
-          <p className={`font-display ${getItemColor(item.item)}`}>{item.item.name}</p>
-          <p className="text-xs text-muted-foreground">{item.item.description}</p>
-          {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
-          {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
-          {Object.entries(item.item.stats || {}).map(([k, v]) => (
-            <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
-              {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
-            </p>
-          ))}
-          <p className="text-[10px] text-muted-foreground mt-1">Click to unequip</p>
+          <ItemTooltipCard
+            item={item.item as any}
+            weaponProgression={weaponProgression}
+            classKey={classKey}
+            durabilityPct={item.current_durability}
+          />
         </TooltipContent>
       )}
     </Tooltip>
