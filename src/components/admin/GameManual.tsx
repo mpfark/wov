@@ -98,7 +98,7 @@ export default function GameManual() {
   return (
     <AdminPageShell icon={<BookOpen className="w-4 h-4" />} title="Game Manual" tools={tools}>
       <ScrollArea className="h-full">
-        <div className="p-4 max-w-4xl mx-auto space-y-2">
+        <div className="p-4 space-y-2">
 
         <Accordion type="single" value={activeSection} className="[&>[data-state=closed]]:hidden [&_h3:has([data-manual-trigger])]:hidden">
           {/* 1. Level Progression */}
