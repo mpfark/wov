@@ -178,25 +178,33 @@ export default function NPCManager() {
     return matchesText && matchesRegion;
   });
 
+  const tools = (
+    <>
+      <AdminToolSection title="Search">
+        <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="h-7 text-xs" />
+        <Button size="sm" onClick={openNew} className="font-display text-xs h-7 w-full">
+          <Plus className="w-3 h-3 mr-1" /> New NPC
+        </Button>
+      </AdminToolSection>
+      <AdminToolSection title="Region">
+        <Select value={regionFilter} onValueChange={setRegionFilter}>
+          <SelectTrigger className="w-full h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
+          <SelectContent className="bg-popover border-border z-50 max-h-60">
+            <SelectItem value="all" className="text-xs">All Regions</SelectItem>
+            {regionNames.map(r => (
+              <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </AdminToolSection>
+    </>
+  );
+
   return (
-    <div className="h-full flex">
+    <AdminPageShell icon={<MessageCircle className="w-4 h-4" />} title="NPCs" count={npcs.length} tools={tools}>
+      <div className="flex-1 flex min-h-0">
       {/* Left: NPC List */}
       <div className="flex flex-col w-1/2 border-r border-border transition-all">
-        <AdminEntityToolbar icon={<MessageCircle className="w-4 h-4" />} title="NPCs" count={npcs.length}>
-          <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="w-32 h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
-            <SelectContent className="bg-popover border-border z-50 max-h-60">
-              <SelectItem value="all" className="text-xs">All Regions</SelectItem>
-              {regionNames.map(r => (
-                <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
-          <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
-            <Plus className="w-3 h-3 mr-1" /> New
-          </Button>
-        </AdminEntityToolbar>
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
