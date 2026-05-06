@@ -321,12 +321,16 @@ Deno.serve(async (req) => {
     const eq: Record<string, Record<string, number>> = {};
     const mainHandTag: Record<string, string | null> = {};
     const offHandTag: Record<string, string | null> = {};
+    const mainHandLevel: Record<string, number | null> = {};
+    const offHandLevel: Record<string, number | null> = {};
     const isTwoHanded: Record<string, boolean> = {};
     const memberProcs: Record<string, { type: string; chance: number; value: number; emoji: string; text: string }[]> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
       let mhTag: string | null = null;
       let ohTag: string | null = null;
+      let mhLvl: number | null = null;
+      let ohLvl: number | null = null;
       const procs: any[] = [];
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
@@ -335,11 +339,13 @@ Deno.serve(async (req) => {
         if (e.equipped_slot === 'main_hand') {
           if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
           if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
+          if ((e.item as any)?.item_level != null) mhLvl = (e.item as any).item_level;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
         if (e.equipped_slot === 'off_hand') {
           if ((e.item as any)?.weapon_tag) ohTag = (e.item as any).weapon_tag;
+          if ((e.item as any)?.item_level != null) ohLvl = (e.item as any).item_level;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
@@ -347,6 +353,8 @@ Deno.serve(async (req) => {
       eq[cid] = b;
       mainHandTag[cid] = mhTag;
       offHandTag[cid] = ohTag;
+      mainHandLevel[cid] = mhLvl;
+      offHandLevel[cid] = ohLvl;
       memberProcs[cid] = procs;
     }
 
