@@ -24,6 +24,8 @@ export interface InventoryItem {
     weapon_tag?: string | null;
     appearance_key?: string | null;
     illustration_url?: string | null;
+    level?: number | null;
+    procs?: any;
   };
 }
 
