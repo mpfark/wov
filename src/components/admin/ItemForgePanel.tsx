@@ -16,7 +16,7 @@ import { useRole } from '@/hooks/useRole';
 import { toast } from 'sonner';
 import {
   Loader2, Wand2, Check, Package, Sword, Sparkles,
-  Layers, Star, Hash, BarChart2, ArrowRight, Flame,
+  Layers, Star, Hash, BarChart2, ArrowRight, Flame, Info,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -76,7 +76,25 @@ const WEAPON_TAG_LABELS: Record<string, string> = {
   bow: '🏹 bow', staff: '🪄 staff', wand: '✨ wand', shield: '🛡 shield',
 };
 
-/* ─── Component ─────────────────────────────────────────── */
+/* Tier prefix bands — mirrors seed-archetype-items / item-archetypes memory */
+const TIER_BANDS: Array<{ min: number; max: number; prefix: string }> = [
+  { min: 1, max: 5, prefix: 'Worn' },
+  { min: 6, max: 10, prefix: 'Sturdy' },
+  { min: 11, max: 15, prefix: 'Fine' },
+  { min: 16, max: 20, prefix: 'Engraved' },
+  { min: 21, max: 25, prefix: 'Runed' },
+  { min: 26, max: 30, prefix: 'High' },
+  { min: 31, max: 35, prefix: 'Mythic' },
+  { min: 36, max: 40, prefix: 'Ancient' },
+  { min: 41, max: 42, prefix: 'Astral' },
+];
+
+const PRIMARY_ARCHETYPE_HINT = 'Vanguard / Shadow / Warden / Sage / Devout / Regal';
+const HYBRID_ARCHETYPE_HINT = 'Warlord / Raider / Spellblade / Guardian / Mystic / Prophet / Troubadour / Champion';
+
+function bandsInRange(min: number, max: number) {
+  return TIER_BANDS.filter(b => b.max >= min && b.min <= max);
+}
 
 interface ItemForgePanelProps {
   onDataChanged?: () => void;
@@ -319,26 +337,34 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
             {/* Level Range */}
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
-                <BarChart2 className="w-3 h-3" /> Level Range
+                <BarChart2 className="w-3 h-3" /> Level Range (1–42)
               </Label>
               <div className="flex items-center gap-2">
                 <Input
-                  type="number" min={1} max={99}
+                  type="number" min={1} max={42}
                   value={levelMin}
-                  onChange={e => setLevelMin(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={e => setLevelMin(Math.min(42, Math.max(1, parseInt(e.target.value) || 1)))}
                   className="h-7 text-xs text-center w-16"
                 />
                 <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
                 <Input
-                  type="number" min={1} max={99}
+                  type="number" min={1} max={42}
                   value={levelMax}
-                  onChange={e => setLevelMax(Math.max(levelMin, parseInt(e.target.value) || 1))}
+                  onChange={e => setLevelMax(Math.min(42, Math.max(levelMin, parseInt(e.target.value) || 1)))}
                   className="h-7 text-xs text-center w-16"
                 />
               </div>
               {levelMin > levelMax && (
                 <p className="text-[9px] text-destructive">Min must be ≤ max</p>
               )}
+              {/* Tier prefix preview */}
+              <div className="flex flex-wrap gap-1 pt-0.5">
+                {bandsInRange(safeMin, safeMax).map(b => (
+                  <span key={b.prefix} className="text-[9px] px-1 py-0.5 rounded bg-muted/50 text-muted-foreground font-mono">
+                    L{b.min}-{b.max} {b.prefix}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* Item Type */}
@@ -386,10 +412,31 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="random">🎲 Mixed</SelectItem>
-                  <SelectItem value="common">Common</SelectItem>
-                  <SelectItem value="uncommon">Uncommon</SelectItem>
+                  <SelectItem value="common">Common — primary archetype</SelectItem>
+                  <SelectItem value="uncommon">Uncommon — hybrid only</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-[9px] text-muted-foreground/80 leading-snug">
+                {rarity === 'uncommon'
+                  ? <>Hybrids: <span className="text-elvish/80">{HYBRID_ARCHETYPE_HINT}</span></>
+                  : rarity === 'common'
+                    ? <>Primaries: <span className="text-muted-foreground">{PRIMARY_ARCHETYPE_HINT}</span></>
+                    : <>Common = primary stat archetype. Uncommon = two-stat hybrid.</>}
+              </p>
+            </div>
+
+            {/* Archetype Rules info */}
+            <div className="rounded border border-border/50 bg-muted/20 p-2 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Info className="w-3 h-3 text-muted-foreground" />
+                <span className="text-[10px] font-display uppercase tracking-wider text-muted-foreground">Naming Grammar</span>
+              </div>
+              <p className="text-[9px] text-muted-foreground/80 leading-snug font-mono">
+                [Tier] [Archetype] [Slot]
+              </p>
+              <p className="text-[9px] text-muted-foreground/70 leading-snug">
+                e.g. <span className="text-foreground/80">Worn Vanguard Sword</span>, <span className="text-elvish/80">Fine Spellblade Dagger</span>. No proper nouns or "of the…" titles (those belong to Unique tier).
+              </p>
             </div>
 
             {/* Stat Focus */}
