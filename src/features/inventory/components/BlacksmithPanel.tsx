@@ -11,6 +11,8 @@ import { InventoryItem } from '@/features/inventory';
 import { calculateRepairCost } from '@/lib/game-data';
 import { Character } from '@/features/character';
 import { useSoulforgeForge } from './SoulforgeTabContent';
+import ItemTooltipCard from '@/components/items/ItemTooltipCard';
+import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 
 type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
 
