@@ -1547,6 +1547,30 @@ export type Database = {
           },
         ]
       }
+      weapon_progression_config: {
+        Row: {
+          id: number
+          tier1_level: number
+          tier2_level: number
+          tier3_level: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          tier1_level?: number
+          tier2_level?: number
+          tier3_level?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          tier1_level?: number
+          tier2_level?: number
+          tier3_level?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       xp_boost: {
         Row: {
           activated_by: string | null
