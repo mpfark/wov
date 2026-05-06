@@ -1,5 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AdminPageShell } from './common';
+import { BookOpen } from 'lucide-react';
+
+const MANUAL_SECTIONS: { id: string; label: string }[] = [
+  { id: 'levels', label: '📊 Level Progression' },
+  { id: 'stats', label: '🎭 Character Stats' },
+  { id: 'hp-ac', label: '❤️ HP, AC & Regen' },
+  { id: 'cp-system', label: '🔮 Concentration (CP)' },
+  { id: 'combat', label: '⚔️ Combat' },
+  { id: 'xp-rewards', label: '🏆 XP & Rewards' },
+  { id: 'abilities', label: '✨ Class Abilities' },
+  { id: 'creatures', label: '🐉 Creature Scaling' },
+  { id: 'items', label: '🎒 Items & Economy' },
+  { id: 'weapon-affinity', label: '⚔️ Weapon Tags' },
+  { id: 'stamina', label: '🏃 Stamina' },
+  { id: 'milestones', label: '🏆 Milestone Rewards' },
+  { id: 'chat', label: '💬 Chat' },
+  { id: 'renown', label: '🏛️ Renown' },
+  { id: 'economy', label: '💰 Economy' },
+  { id: 'death', label: '💀 Death & Respawn' },
+];
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
