@@ -317,27 +317,38 @@ Call the generate_items tool with the structured output.`;
         const budget = calcBudget(item.level || 1, item.rarity, item.hands || 1);
         let spent = calcStatCost(stats);
 
-        // If AI underspent the budget, top up with random stats
-        let attempts = 0;
-        while (spent < budget && attempts < 50) {
-          const pick = PRIMARY_STATS[Math.floor(Math.random() * PRIMARY_STATS.length)];
-          const cap = getStatCap(pick, item.level || 1);
-          const current = stats[pick] || 0;
-          if (current < cap) {
-            stats[pick] = current + 1;
-            spent++;
+        // Spillover: top up leftover budget into existing stats first (primary→secondary order),
+        // then fall back to a random primary stat. Mirrors the seed catalog spillover pass.
+        const priority = Object.entries(stats)
+          .filter(([k]) => PRIMARY_STATS.includes(k))
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
+          .map(([k]) => k);
+
+        let safety = 100;
+        while (spent < budget && safety-- > 0) {
+          let placed = false;
+          for (const k of priority) {
+            const cap = getStatCap(k, item.level || 1);
+            if ((stats[k] || 0) < cap) {
+              stats[k] = (stats[k] || 0) + 1;
+              spent++;
+              placed = true;
+              if (spent >= budget) break;
+            }
           }
-          attempts++;
+          if (placed) continue;
+          // All existing stats capped — add a fresh primary stat
+          const fresh = PRIMARY_STATS.find(k => !(k in stats));
+          if (!fresh) break;
+          stats[fresh] = 1;
+          priority.push(fresh);
+          spent++;
         }
 
-        // Ensure at least 2 different stats
+        // Ensure at least 2 different stats (uncommons must always have ≥2)
         if (Object.keys(stats).length < 2) {
-          const usedKeys = Object.keys(stats);
-          const available = PRIMARY_STATS.filter(k => !usedKeys.includes(k));
-          if (available.length > 0) {
-            const pick = available[Math.floor(Math.random() * available.length)];
-            stats[pick] = 1;
-          }
+          const available = PRIMARY_STATS.filter(k => !(k in stats));
+          if (available.length > 0) stats[available[0]] = 1;
         }
 
         // If still empty
