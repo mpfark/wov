@@ -336,6 +336,7 @@ export default function GameManual() {
               </div>
 
 
+            </AccordionContent>
           </AccordionItem>
 
           {/* 4. Combat */}
@@ -404,6 +405,7 @@ export default function GameManual() {
                 </Table>
               </div>
 
+            </AccordionContent>
           </AccordionItem>
 
           {/* 5. Class Abilities */}
@@ -550,6 +552,7 @@ export default function GameManual() {
                   ))}
                 </TableBody>
               </Table>
+            </AccordionContent>
           </AccordionItem>
 
           {/* 7. Items & Economy */}
@@ -606,6 +609,7 @@ export default function GameManual() {
                   </Table>
                 </div>
               </div>
+            </AccordionContent>
           </AccordionItem>
 
           {/* ── Weapon Affinity ── */}
