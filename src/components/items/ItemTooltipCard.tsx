@@ -99,10 +99,10 @@ export default function ItemTooltipCard({
             <div className="text-[10px] text-muted-foreground tracking-wide mb-0.5">Attributes</div>
             <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 text-xs">
               {statEntries.map(([k, v]) => (
-                <>
-                  <span key={`l-${k}`} className={`font-display ${k === 'hp_regen' ? 'text-elvish' : 'text-foreground'}`}>{statLabel(k)}</span>
-                  <span key={`v-${k}`} className={`font-display text-right ${k === 'hp_regen' ? 'text-elvish' : 'text-foreground'}`}>+{v as number}</span>
-                </>
+                <Fragment key={k}>
+                  <span className={`font-display ${k === 'hp_regen' ? 'text-elvish' : 'text-foreground'}`}>{statLabel(k)}</span>
+                  <span className={`font-display text-right ${k === 'hp_regen' ? 'text-elvish' : 'text-foreground'}`}>+{v as number}</span>
+                </Fragment>
               ))}
             </div>
           </div>
