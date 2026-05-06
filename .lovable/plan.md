@@ -1,88 +1,141 @@
-## Weapon Dice Progression by Item Level
+## Item Tooltip Redesign + Weapon Progression Fix
 
-Add a soft, item-level-based weapon die upgrade so a level 40 sword hits noticeably harder than a level 1 sword — without touching abilities, crit, procs, or the offhand multiplier.
+Two changes shipped together because they share the same code path: a **bug fix** to make the previous weapon-progression wiring actually work (the column is `level`, not `item_level`), plus the **tooltip redesign** that finally surfaces the scaled weapon damage to players.
 
-### Progression curve
+### 1. Bug fix — wire weapon progression to the real column
 
-Per item (using `items.item_level`):
+`public.items` has a column called `level` (not `item_level`). The previous pass selected/read `item_level`, so progression silently never activates.
 
-```text
-1–10   → +0 die size
-11–20  → +1
-21–30  → +2
-31–40  → +3
-41+    → +3   (reserved for future 2dX upgrade, NOT in this pass)
-```
+Files:
 
-Family base dice (`WEAPON_DAMAGE_DIE`) stay unchanged — daggers/wands keep their lighter feel; bows still start higher; staves still cap lower in 2H. The progression is a flat add to the chosen die size, applied identically to oneHand and twoHand variants.
+- **`supabase/functions/combat-tick/index.ts`** — change the equipment select to `item:items(stats, weapon_tag, hands, procs, level)` and read `(e.item as any)?.level` into `mhLvl` / `ohLvl`.
+- **`src/features/character/components/CharacterPanel.tsx`** — read `mainHandItem?.item?.level` instead of `(item as any).item_level`.
+- **`src/components/admin/loot/WeaponProgressionTab.tsx`** — preview already uses synthetic numbers, no change.
 
-### Helper API
+### 2. Reusable tooltip component
 
-In `src/shared/formulas/combat.ts` (and mirrored to `supabase/functions/_shared/formulas/combat.ts`):
+Create **`src/components/items/ItemTooltipCard.tsx`**:
 
 ```ts
-export function getWeaponDieProgression(itemLevel: number | null | undefined): number {
-  const lvl = itemLevel ?? 1;
-  if (lvl <= 10) return 0;
-  if (lvl <= 20) return 1;
-  if (lvl <= 30) return 2;
-  return 3;
-}
+type ItemLike = {
+  name: string;
+  description?: string | null;
+  rarity: string;
+  is_soulbound?: boolean;
+  item_type: string;
+  slot?: string | null;
+  hands?: number | null;
+  weapon_tag?: string | null;
+  level?: number | null;
+  stats?: Record<string, number> | null;
+  value?: number | null;
+  illustration_url?: string | null;
+  procs?: any[] | null;
+};
 
-export function getWeaponDieForItem(
-  weaponTag: string | null | undefined,
-  hands: 1 | 2,
-  itemLevel: number | null | undefined,
-): number {
-  return getWeaponDie(weaponTag, hands) + getWeaponDieProgression(itemLevel);
+interface Props {
+  item: ItemLike;
+  durabilityPct?: number;          // omit → no durability line
+  qty?: number;                    // > 1 → "Qty: ×N"
+  classKey?: string;               // for affinity label
+  comparison?: { label: string; diffs: { key: string; diff: number }[] };
+  flavorText?: string | null;      // optional italic block
+  showValue?: boolean;             // default true
+  isBroken?: boolean;
 }
 ```
 
-`getWeaponDie` keeps its current signature so legacy/UI fallbacks (no item context, e.g. unarmed) still work. `rollWeaponAttackDamage` gains an optional `itemLevel` parameter and calls `getWeaponDieForItem`.
+Layout (top to bottom, with subtle `border-border` dividers):
 
-### Wire-through (call sites)
+1. **Illustration** (existing `<ItemIllustration>` — keep small)
+2. **Identity block** (centered):
+   - Name in `font-display`, rarity color, slightly larger (`text-sm` vs surrounding `text-xs`), gold glow already present via `text-glow-soulforged` for soulforged
+   - Subline: `Rare One-Handed Mace` — built from `RARITY_LABEL[rarity] + handsLabel + WEAPON_TAG_LABELS[weapon_tag] || itemTypeLabel(item)`
+   - `Level {level}` (muted, smaller)
+3. **Weapon block** (only if `weapon_tag`):
+   - Heading: `⚔ Weapon Damage`
+   - Big line: `1d{die} + STR` using `getWeaponDieForItem(weapon_tag, hands === 2 ? 2 : 1, level, weaponProgression)` — reads progression from the `useWeaponProgression()` hook so the tooltip stays in sync with admin tweaks
+   - Type line: `One-Handed` / `Two-Handed`
+   - `Affinity: {ClassLabel}` if `weapon_tag` matches `CLASS_WEAPON_AFFINITY[classKey]` (only when `classKey` provided)
+4. **Attributes block** (if `stats` non-empty):
+   - Small heading `Attributes`
+   - Each entry on its own row, two-column aligned: `STR` left, `+6` right (CSS grid `grid-cols-[1fr_auto] gap-x-3`)
+   - Special labels: `hp_regen` → `Regen`, `hp` → `HP`
+   - Color: `text-foreground` for normal, `text-elvish` only for `hp_regen`
+5. **Comparison block** (only when `comparison` prop given) — same as today's diff block, but rendered with the new aligned grid and a top border
+6. **Flavor block** (if `flavorText`) — `text-xs italic text-muted-foreground` with a divider above
+7. **Footer line** (muted, `text-[10px]`):
+   - `Durability XX%` · `Value Yg` (only if data provided)
+   - Broken state: `⚒ Broken — needs repair` in `text-destructive`
+   - Qty: `×N`
 
-1. **`supabase/functions/combat-tick/index.ts`**
-   - When loading equipment (line ~307), also select `item_level`: `item:items(stats, weapon_tag, hands, procs, item_level)`.
-   - Track `mainHandLevel[cid]` and `offHandLevel[cid]` alongside the existing `mainHandTag` / `offHandTag` maps.
-   - Replace `getWeaponDie(wTag, wHands)` (line ~982) with `getWeaponDieForItem(wTag, wHands, mainHandLevel[m.id])`.
-   - Replace offhand `getWeaponDie(ohTag, 1)` (line ~1127) with `getWeaponDieForItem(ohTag, 1, offHandLevel[m.id])`.
+Interaction hints like "Click to unequip" are **removed**. They live in:
 
-2. **`src/features/combat/utils/combat-predictor.ts`**
-   - Add optional `weaponItemLevel` to `PredictionContext`.
-   - Use `getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel)`.
-   - Update the call site that builds the prediction context (search `predictConservativeDamage`) to pass the equipped main-hand item level.
+- a small fixed footer bar below the inventory list (`<p className="text-[10px] text-muted-foreground mt-2">Click an equipped item to unequip · Right-click to drop</p>` — single sentence, contextual to whichever inventory section is visible)
 
-3. **`src/shared/formulas/combat.ts` — `resolveAttackRoll`**
-   - Extend `AttackContext` with optional `weaponItemLevel`.
-   - Use `getWeaponDieForItem(...)` so any client-side resolver sharing this helper stays consistent. (Mirror to Deno copy.)
+### 3. Helper module
 
-4. **`src/features/character/components/CharacterPanel.tsx`** (line ~893)
-   - Read the equipped main-hand `item_level` from the same source already used for `mainHandTag` / `isTwoHanded` and call `getWeaponDieForItem(...)` so the character sheet shows the actual progressed die (e.g. `Weapon Damage: 1d9 + STR`).
+Create **`src/lib/item-display.ts`**:
 
-5. **Item tooltips / weapon display** (search for any `getWeaponDie(` usage in inventory/marketplace tooltip components — there are no other callers today, but verify with `rg "getWeaponDie"` after the change). When an item context is available, switch to `getWeaponDieForItem(tag, hands, item.item_level)`.
+```ts
+export const RARITY_LABEL: Record<string, string> = {
+  common: 'Common', uncommon: 'Uncommon', rare: 'Rare', unique: 'Unique', soulforged: 'Soulforged',
+};
 
-6. **Game Manual / combat docs** — if a weapon-dice table is documented in markdown or a help panel, add a brief note: "Weapon dice grow by item level: +1 at 11, +2 at 21, +3 at 31."
+export function handsLabel(hands?: number | null): string {
+  if (hands === 2) return 'Two-Handed';
+  if (hands === 1) return 'One-Handed';
+  return '';
+}
 
-### What stays unchanged
+export function itemSubtitle(item: ItemLike): string {
+  // "Rare One-Handed Mace" / "Unique Greatsword" / "Uncommon Wand" / "Common Tunic"
+}
 
-- Family base dice and 2H die selection (no reintroduction of the 1.25× 2H multiplier).
-- Offhand: still its own die + the existing 30% multiplier — only the die size benefits from progression.
-- STR damage scaling, INT hit bonus, DEX crit, WIS anti-crit, shield block, procs, mitigation, T0/class abilities, crit multiplier — none touched.
-- `UNARMED_DIE` — unarmed has no item, so it never progresses.
+export function statLabel(key: string): string { /* HP, Regen, STR, ... */ }
+```
 
-### Mirror & test discipline
+Centralizes the labels so admin pages, marketplace, blacksmith, and inventory all read the same wording.
 
-- Edit `src/shared/formulas/combat.ts` first, then byte-mirror to `supabase/functions/_shared/formulas/combat.ts` (only difference: `.ts` import suffixes), per the formula-ownership rule.
-- Add a small case to `src/shared/formulas/__tests__/formula-parity.test.ts` snapshotting `getWeaponDieForItem('sword', 1, [1,11,21,31,41])` so future tweaks are intentional.
-- Manual validation: low vs high level sword, dagger, bow; 1H vs 2H; offhand dagger; marketplace tooltip; CharacterPanel weapon line; verify combat-tick logs show the larger die in damage breakdown.
+### 4. Migrate call sites to `ItemTooltipCard`
+
+Replace the inline `<TooltipContent>` bodies in:
+
+- `src/features/character/components/CharacterPanel.tsx`
+  - Equipped slot tooltip (~L116) — pass `comparison={undefined}`, `durabilityPct={item.current_durability}`, `classKey={character.class}`
+  - Belted potion tooltip (~L451) — no weapon block
+  - Consumables tooltip (~L519) — `qty={all.length}`
+  - Inventory item tooltip (~L639) — keep the existing comparison logic but feed it as the `comparison` prop
+- `src/features/inventory/components/BlacksmithPanel.tsx` (~L372) — use `ItemTooltipCard` with `comparison` built from the equipped item
+- `src/components/game/InspectPlayerDialog.tsx` (~L76) — pass `inspect_character_equipment` row mapped to `ItemLike`
+
+Marketplace / Vendor currently don't render a rich hover; adding `ItemTooltipCard` to them is in-scope and trivial — wrap the existing item name with `<Tooltip>` and reuse the card.
+
+### 5. Item flavor text — non-blocking
+
+The DB doesn't currently have a `flavor` column on `items`. The card supports it via the optional `flavorText` prop, but no migration is added in this pass — a follow-up can add `items.flavor_text TEXT` and the AI Item Forge can populate it. Today the prop is simply omitted and the section doesn't render.
+
+### 6. Style notes
+
+- All colors via existing semantic tokens (`text-foreground`, `text-muted-foreground`, `text-elvish`, `text-destructive`, rarity colors via `RARITY_COLORS`). No new hex values.
+- Dividers: `<div className="my-1.5 h-px bg-border/60" />` (subtle, not full-contrast).
+- Card max width stays `max-w-xs`; padding tightens slightly to `p-3 space-y-2`.
+- No new icons beyond the existing emoji `⚔ ⛨ ✦` used in the weapon block — keeps the parchment feel.
 
 ### Files touched
 
-- `src/shared/formulas/combat.ts`
-- `supabase/functions/_shared/formulas/combat.ts` (mirror)
-- `supabase/functions/combat-tick/index.ts`
-- `src/features/combat/utils/combat-predictor.ts` (+ caller)
-- `src/features/character/components/CharacterPanel.tsx`
-- `src/shared/formulas/__tests__/formula-parity.test.ts`
-- Any tooltip component still calling raw `getWeaponDie` with item context (verify post-change)
+- `supabase/functions/combat-tick/index.ts` (column rename: `item_level` → `level`)
+- `src/features/character/components/CharacterPanel.tsx` (column rename + tooltip migration + remove "Click to unequip", add subtle inventory footer hint)
+- `src/lib/item-display.ts` (new — labels)
+- `src/components/items/ItemTooltipCard.tsx` (new — shared tooltip body)
+- `src/features/inventory/components/BlacksmithPanel.tsx` (tooltip migration)
+- `src/components/game/InspectPlayerDialog.tsx` (tooltip migration)
+- `src/features/marketplace/components/MarketplacePanel.tsx` (add hover with ItemTooltipCard)
+- `src/features/inventory/components/VendorPanel.tsx` (add hover with ItemTooltipCard, if not already present)
+
+### Validation
+
+- Equip a sword at level 1, 12, 25, 35 — character sheet and tooltip both show `1d6`, `1d7`, `1d8`, `1d9`.
+- Hover an inventory weapon, equipped weapon, potion, consumable, broken item, soulforged unique — header / weapon / attributes / footer render in the right order with correct rarity color.
+- Blacksmith forge preview still shows the diff against the equipped item.
+- Inspect another player — same card, no comparison block.
