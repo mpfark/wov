@@ -1,111 +1,43 @@
+## Common & Uncommon Seed Rebalance
 
-# Common & Uncommon Gear Rebuild — Archetype System
+Two real issues found, plus one design clarification:
 
-A foundational reset of the procedural item ecosystem. Common and uncommon items get hard-deleted and replaced by a deterministically generated catalog that uses a stable `[Tier Prefix] [Archetype] [Slot]` grammar. Uniques, boss items, soulforged, and admin items are untouched.
+- **Imbalance is intentional**: the 50/74 split per band comes from 8 hybrid archetypes (chest+head+weapon = 24 extra uncommons). Per your decision, hybrids stay uncommon-only.
+- **Non-hybrid uncommons are wasted**: today they fall back to `distributeCommon` so a "Vanguard Sword" uncommon = same stats as common. We will skip generating them.
+- **Budget rounding loses points** at low levels (L1 budget=1 means 70% rounds to 1 with 0 leftover). We will raise the floor and add a spillover pass.
 
----
+### Changes (single file: `supabase/functions/seed-archetype-items/index.ts`)
 
-## 1. Shared archetype tables (single source of truth)
-
-New module `src/shared/itemgen/archetypes.ts` (mirrored to `supabase/functions/_shared/itemgen/archetypes.ts` for Edge use). Contains:
-
-- **TIER_PREFIXES** — band → prefix (capped at L42):
-  - 1–5 Worn · 6–10 Sturdy · 11–15 Fine · 16–20 Engraved · 21–25 Runed · 26–30 High · 31–35 Mythic · 36–40 Ancient · 41–42 Astral
-- **PRIMARY_ARCHETYPES** — STR Vanguard/Iron/Brutal/Warborn/Tyrant; DEX Shadow/Swift/Hunter/Ashen/Nightstalker; CON Warden/Stoneguard/Bulwark/Bastion/Stalwart/Earthshaper/Ironroot; INT Sage/Arcane/Runed/Astral/Spellwoven; WIS Devout/Sanctified/Templar/Enlightened/Dawnbringer; CHA Regal/Noble/Bardic/Silvertongue/Crowned/Majestic/Virtuoso.
-- **HYBRID_ARCHETYPES** — STR+CON Warlord/Juggernaut/Fortress; STR+DEX Raider/Blademaster/Skirmisher; DEX+INT Spellblade/Hexrunner/Arcstrider; WIS+CON Guardian/Justicar/Oathbound; INT+WIS Mystic/Oracle/Seer; CHA+WIS Prophet/Hierophant/Luminary; CHA+DEX Troubadour/Duelist/Shadowcourt; CHA+STR Champion/Sovereign/Lionguard.
-- **SLOT_NOUNS** — head Hood/Helm/Circlet · chest Robe/Vest/Armor/Plate · pants Leggings/Greaves · gloves Gloves/Gauntlets · boots Boots/Sabatons · off_hand Shield/Tome/Idol · weapons Sword/Axe/Mace/Dagger/Bow/Staff/Wand. Slot noun choice biased by stat (e.g. Hood for INT, Plate for STR/CON, Circlet for CHA).
-- **WEAPON_TAG_BY_ARCHETYPE** — STR sword/axe/mace; DEX dagger/bow/sword; INT staff/wand; WIS mace/staff; CHA wand/sword; CON mace/shield. Hybrids merge.
-- Helpers: `bandPrefix(level)`, `pickArchetype(primary, secondary?)`, `pickSlotNoun(slot, primary)`, `composeName(level, primary, secondary, slot, weaponTag)`.
-
-## 2. Stat distribution rules (common vs uncommon)
-
-Reuse `getItemStatBudget` (existing). Add `src/shared/itemgen/distribution.ts`:
-
-- **Common**: 1 dominant stat ≈ 70% of budget, 1 minor stat for the remainder. Single archetype (no hybrid).
-- **Uncommon**: dominant ≈ 55%, secondary ≈ 35%, optional tertiary (often `hp` or `ac`) for spillover. Hybrid archetype if secondary share ≥ 30%.
-- Always respects `getItemStatCap`. Drops `cha`/`int` from melee/CON gear etc. via per-archetype allowed-stat lists.
-
-## 3. Deterministic catalog generator
-
-New Edge Function `seed-archetype-items` (admin-only, overlord-gated):
-
-For each band 1–42 × each primary archetype × each major slot (head/chest/gloves/boots/pants/main_hand/off_hand) × {common, uncommon} → produce one item. For each band × each hybrid archetype × {weapon, chest, head} → produce one uncommon item. Estimated ~2,500 items total at full density (9 bands × 6 primaries × 7 slots × 2 rarities ≈ 756, plus hybrids ≈ 216, plus weapon variants per archetype).
-
-Each item insert sets:
-- `name` via `composeName`, level = mid of band, slot, weapon_tag, hands (2 for staff/bow/greatsword variant), `world_drop=true`, `drop_weight=10`, `is_soulbound=false`, `origin_type='archetype_seed'`, `origin_id=null`, generated description from a small template (`"A {prefix-lower} {archetype-lower} {slot-noun-lower} suited for the {stat} path."`), `value` via `suggestItemGoldValue`.
-- Idempotent by `(name)` — safe to re-run.
-
-Function returns counts; admin UI button surfaces it.
-
-## 4. Hard purge of existing common/uncommon
-
-Migration `purge_common_uncommon_items.sql`:
-
-```sql
--- Identify target item ids
-WITH targets AS (
-  SELECT id FROM items
-  WHERE rarity IN ('common','uncommon')
-    AND (origin_type IS NULL OR origin_type IN ('archetype_seed','blacksmith_forge'))
-)
--- Cascade clean references
-DELETE FROM character_inventory WHERE item_id IN (SELECT id FROM targets);
-DELETE FROM vendor_inventory    WHERE item_id IN (SELECT id FROM targets);
-DELETE FROM marketplace_listings WHERE item_id IN (SELECT id FROM targets);
-DELETE FROM node_ground_loot    WHERE item_id IN (SELECT id FROM targets);
-DELETE FROM loot_table_entries  WHERE item_id IN (SELECT id FROM targets);
-DELETE FROM class_starting_gear WHERE item_id IN (SELECT id FROM targets);
-DELETE FROM universal_starting_gear WHERE item_id IN (SELECT id FROM targets);
-DELETE FROM items               WHERE id IN (SELECT id FROM targets);
+**1. Raise stat budget floor**
+Update `statBudget()` so the minimum is 2 at L1 (instead of 1), keeping the same growth slope:
 ```
+budget = max(2, floor(2 + (level-1) * 0.3 * rarityMult * handsMult))
+```
+Common L1 → 2pts, Uncommon L1 → 3pts, Common L8 → 4pts, etc. This guarantees a primary + minor stat at every level.
 
-Not touched: any item with `rarity` in `unique`/`soulforged`, or `origin_type` `creature`/`node`. Player-owned uniques/soulforged are completely safe.
+**2. Spillover pass — never waste a point**
+After the primary/secondary/tertiary allocation, run a loop that drips any leftover budget into:
+- primary (until cap), then secondary (until cap), then tertiary (hp for tank archetypes, wis otherwise) until cap.
+- Always exits with `sum(allocated) === budget` (or all caps reached, which is rare at low levels).
 
-After purge, run `seed-archetype-items` to repopulate.
+**3. Skip non-hybrid uncommons**
+In `buildCatalog()`, the armor and weapon loops currently emit both `common` and `uncommon` per primary archetype. Drop the uncommon branch for primary archetypes — keep only:
+- All common armor + weapons across 6 primaries (~50/band)
+- All hybrid uncommon armor (chest, head) + weapon (~24/band)
 
-## 5. Starting gear backfill
+Result per band: ~50 common + ~24 uncommon = ~74 items × 9 bands ≈ **666 items total** (down from ~1,114).
 
-Because `class_starting_gear` and `universal_starting_gear` will be wiped, the seed function ends with a small step that re-attaches:
-- One band-1 common weapon per class (Vanguard Sword for warrior, Shadow Dagger for rogue, Sage Staff for wizard, Hunter Bow for ranger, Devout Mace for healer, Bardic Wand for bard, Templar Mace for templar).
-- Universal: Worn Leather Vest (chest), Worn Boots, Worn Gloves.
+**4. Update memory**
+`mem://game/item-archetypes`:
+- Note the new minimum-budget-2 floor.
+- Note "Uncommon = hybrid-only" rule.
+- Document the spillover pass.
 
-## 6. Rewrite `ai-item-forge` for top-up
+### Out of scope
+- No changes to formula files (`shared/formulas/items.ts`) — only the seed function's local `statBudget` helper. If you want the global budget formula to also have the floor of 2, that's a separate decision (it would affect AI Forge, Soulforge, blacksmith, etc.).
+- No re-seed triggered automatically — you'll click **Purge & Seed Catalog** again after the deploy.
 
-Replace its system prompt and post-processing to enforce the new grammar:
-- Inject the archetype tables as context.
-- Reject names that don't match `^(Worn|Sturdy|Fine|Engraved|Runed|High|Mythic|Ancient|Astral) [A-Z][a-z]+ [A-Z][a-z]+$` (case-insensitive on the inner words but Title-cased).
-- Force stat distribution to match common/uncommon rules above (post-processing rebalances if AI drifts).
-- Forge then becomes purely "supplement coverage" — admin picks band + archetype + slot + rarity and gets 1–10 items.
-
-## 7. Admin UI changes
-
-`src/components/admin/ItemForgePanel.tsx`:
-- Add an **Archetype** select (primary stat) + optional secondary stat.
-- Add a **Seed Catalog** button (overlord only) that calls `seed-archetype-items` with confirmation dialog ("This will delete all existing common/uncommon items and rebuild the catalog. Continue?"). After confirm: invoke purge migration … wait, migrations aren't run from the UI — instead, the seed function itself does the cascading delete via service role and then inserts. So one button = one call.
-- Plain Forge mode keeps working but now produces archetype-named items.
-
-## 8. Memory updates
-
-Replace `mem://admin/ai-item-forge.md` and add `mem://game/item-archetypes.md` describing the grammar, archetype tables, and stat distribution rules so future generations stay aligned.
-
----
-
-## Validation checklist after run
-
-- `SELECT COUNT(*) FROM items WHERE rarity IN ('common','uncommon')` returns ~2.5k.
-- For every band 1–42 (in 5-level steps) and every primary stat, at least one weapon and one armor item exists.
-- Random sample of 20 names all match the grammar regex.
-- A new character can be created (starting gear inserts succeed).
-- Marketplace + vendor pages render (no broken item refs since cascade ran).
-
-## Out of scope
-
-Uniques, soulforged, boss/quest items, balance overhaul, AI-driven naming beyond the deterministic grammar.
-
-## Files touched
-
-- New: `src/shared/itemgen/archetypes.ts`, `src/shared/itemgen/distribution.ts`, mirror under `supabase/functions/_shared/itemgen/`.
-- New: `supabase/functions/seed-archetype-items/index.ts`.
-- Edited: `supabase/functions/ai-item-forge/index.ts` (prompt + post-processing).
-- Edited: `src/components/admin/ItemForgePanel.tsx` (Seed button + archetype selectors).
-- Memory: `mem://admin/ai-item-forge.md`, new `mem://game/item-archetypes.md`, index update.
+### Verification after re-seed
+- Query item counts per (level, rarity) to confirm ~50 common / ~24 uncommon per band.
+- Spot-check L3 common armor → should now have 2 stats summing to budget=2.
+- Spot-check L8 uncommon hybrid chest → primary+secondary+tertiary summing to full uncommon budget.
