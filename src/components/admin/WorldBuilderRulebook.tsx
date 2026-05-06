@@ -172,7 +172,7 @@ export default function WorldBuilderRulebook() {
 
           <div className="text-[11px] text-muted-foreground mt-2">
             <p className="font-medium text-foreground text-[11px] mb-0.5">Stat Budget Formula:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">equipment: floor(1 + (level−1) × 0.3 × rarity_mult × hands_mult)</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">equipment: max(2, floor(2 + (level−1) × 0.3 × rarity_mult × hands_mult))</code>
             <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">consumable: equipment_budget × 3</code>
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
