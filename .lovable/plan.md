@@ -1,109 +1,53 @@
-## Goal
+## Goals
 
-Move per-page header toolbars (filters, search, "New", AI utilities, counts, section nav) into a **left-side tool column** placed between the admin sidebar and the page content. Layout becomes:
+1. **Trim the Game Manual** to mechanics-only prose. Keep one heavy table: the Level Progression grid (XP per level + live player count per level). Drop simulated cross-product tables (every race×class HP/AC/CP combo, full creature stat samples per level, item budget grids, etc.).
+2. **Surface existing tunable dials inside the Manual**, gated to Overlord. Each formula section gets an inline "🛠️ Tune" panel that edits the underlying config row.
+3. **Move Weapon Dice tuning out of Loot Tables** and into the Manual's Combat / Weapons section.
 
-```text
-┌───────────┬──────────────┬────────────────────────────────────────┐
-│ Admin     │ Tool column  │ Page content                           │
-│ sidebar   │ (filters,    │ (list / grid / editor / details)       │
-│ (nav)     │  actions,    │                                        │
-│           │  sections)   │                                        │
-└───────────┴──────────────┴────────────────────────────────────────┘
-```
+## Manual content trim — section-by-section
 
-For pages like Items / Creatures the content area itself keeps its inner two-pane layout: **list on the left, editor/new on the right**. So the full picture is `Sidebar | Tool | List | Editor`.
+Keep:
+- **Level Progression** — full per-level XP grid + player counts (unchanged).
+- **Character Stats** — attribute effects prose, race modifier table, class modifier table. Drop the giant race×class synergy combo table.
+- **HP, AC & Regen** — formulas and class base table. Drop per-level simulated HP curves.
+- **CP / Stamina / Combat / XP & Rewards / Creature Scaling / Items & Economy / Weapon Tags / Milestones / Chat / Renown / Economy / Death** — keep prose + formulas + small reference tables (rarities, weapon tag list, class affinities). Drop:
+  - Per-level creature HP/damage simulation tables
+  - Per-rarity item stat budget grids
+  - Per-level XP reward simulations
+  - Any "sample output for L1/L5/L10…" preview tables
 
-## Scope
+Rule of thumb: if a table is computed by looping a formula across levels/rarities just to show what it produces, cut it. Keep it if it shows authored data (race table, class table, weapon tags, milestones).
 
-In scope (presentation-only — no logic changes):
-- New shared layout primitive: `AdminPageShell` rendering a left tool column + main content.
-- Migrate header toolbars into the tool column on:
-  - `ItemManager`, `CreatureManager`, `NPCManager`, `LootTableManager`
-  - `MarketplaceManager`, `IssueReportManager`, `RaceClassManager`, `RoadmapManager`, `UniqueReclaimManager`
-  - `ItemForgePanel` — normalize its existing left-side controls into the shell
-  - World tab in `AdminPage.tsx` — region/area/multi-select/populate buttons → tool column
-- Game Manual rewrite from cascading `Accordion` to **list nav (tool column) + content (main pane)**.
+## Overlord-only tuning panels (inline in Manual)
 
-Out of scope:
-- `UserManager` — already multi-column, leave as is.
-- `AdminDashboard` — overview only, no header.
-- `WorldBuilderPanel`, `WorldBuilderRulebook`, node/region/area editor overlays.
-- Any backend, data shape, or business logic changes.
+Use the existing `useRole().isValar` flag. Each panel only renders for Overlords; Stewards see read-only formula text.
 
-## Design
+Surfaces these existing DB-backed dials:
 
-### `AdminPageShell` primitive
+| Manual section | Tuning panel | Backing table |
+|---|---|---|
+| Combat → Weapons | Weapon Die Progression (t1/t2/t3 thresholds + preview) | `weapon_progression_config` |
+| Items & Economy | Loot Pool Rules (equip/consumable level offsets, common/uncommon split, consumable drop chance) | `loot_pool_config` |
+| XP & Rewards | XP Boost (multiplier + expiry) | `xp_boost` |
 
-- File: `src/components/admin/common/AdminPageShell.tsx`
-- Props: `title`, `icon`, `count?`, `tools` (left column ReactNode), `children` (main pane).
-- Layout: `flex h-full min-h-0`.
-  - Tool column: `w-[260px] shrink-0 border-r border-border bg-card/30 overflow-y-auto flex flex-col`.
-  - Main pane: `flex-1 min-w-0 flex flex-col overflow-hidden`.
-- Tool column header: parchment-styled (icon + title + count), matching current `AdminEntityToolbar` look.
-- Helper `AdminToolSection({ title, children })` for grouped sections inside the tool column (consistent `space-y-2`, `text-[10px] uppercase` labels, padded).
-- Both exported via `src/components/admin/common/index.ts`.
+Each panel is a small inline card with: short formula recap → editable inputs → Save / Reset. No new tables, no formula refactor — just expose what the DB already drives.
 
-### Per-page migration rule
+## Move Weapon Dice tuning
 
-What moves into the tool column:
-- Search input
-- Filter chips/toggles that mutate the dataset (rarity, type, slot, status filters, "Unassigned" toggle, etc.)
-- Counts and badges
-- Page-level actions: "New", "Refresh", AI utilities (Rebalance Stats, Rename Legacy)
+- Delete the **⚔️ Weapon Dice** tab from `LootTableManager` (`src/components/admin/LootTableManager.tsx`).
+- Reuse the `WeaponProgressionTab` body as the tuning panel inside the Manual's Combat → Weapons subsection (Overlord-only).
+- File can stay where it is, or move to `src/components/admin/manual/tuning/WeaponProgressionPanel.tsx`. Keeping the file path simple: leave under `loot/` and import from the manual to minimize churn. (Open to moving it if you prefer.)
 
-What stays in the main pane:
-- The list itself and the editor/new panel (existing inner two-pane layout).
-- Sub-pane navigation strictly tied to a list row (e.g. tabs inside the editor).
+## Files touched
 
-Decision rule used: filters that change *what's in the list* → tool column; UI tied to a *single selected row* → stays in editor pane.
+- `src/components/admin/GameManual.tsx` — strip simulated tables; add Overlord-only tuning cards under Combat / Items / XP sections.
+- `src/components/admin/LootTableManager.tsx` — remove Weapon Dice tab + trigger.
+- `src/components/admin/loot/WeaponProgressionTab.tsx` — keep as-is, imported by GameManual instead of LootTableManager.
+- New small panels for `loot_pool_config` and `xp_boost` inline in GameManual (or extracted as tiny components if they grow).
+- `src/hooks/useRole.ts` already exposes `isValar` — used to gate panels.
 
-### Game Manual rewrite
+## Out of scope
 
-- Define `MANUAL_SECTIONS` registry: `{ id, label, icon, render }`.
-- Extract each existing `AccordionItem` body into its own component under `src/components/admin/manual/sections/*.tsx` to keep `GameManual.tsx` small.
-- `GameManual` state: `activeSectionId` (default first).
-- Layout via `AdminPageShell`:
-  - Tool column = vertical section list, active row highlighted (`bg-primary/10 text-primary border-l-2 border-primary`).
-  - Main pane = `ScrollArea` rendering only the active section.
-- Nested sub-accordions inside a section (stat combos, kills-to-level, creature examples, budget examples) stay as `Accordion` — they are content-level, not page-level navigation.
-
-### World tab
-
-- Wrap the map area in `AdminPageShell`.
-- Tool column groups: **Region**, **Area**, **Selection Mode** (Multi-Select / Populate toggles), and a small stats line (`X regions · Y nodes · Z areas`).
-- Map overlay editor panels (`NodeEditorPanel`, `RegionEditorPanel`, `AreaEditorPanel`, `BatchNodeEditPanel`, `PopulatePanel`) remain as right-side overlays on the map — they are contextual, not page-level tools.
-
-## Files to add
-
-- `src/components/admin/common/AdminPageShell.tsx`
-- `src/components/admin/common/AdminToolSection.tsx`
-- `src/components/admin/manual/manualSections.ts`
-- `src/components/admin/manual/sections/*.tsx` (one per existing accordion section, ~20 files)
-
-## Files to edit
-
-- `src/components/admin/common/index.ts` — re-export shell + section.
-- `src/components/admin/GameManual.tsx`
-- `src/components/admin/ItemManager.tsx`
-- `src/components/admin/CreatureManager.tsx`
-- `src/components/admin/NPCManager.tsx`
-- `src/components/admin/LootTableManager.tsx`
-- `src/components/admin/MarketplaceManager.tsx`
-- `src/components/admin/IssueReportManager.tsx`
-- `src/components/admin/RaceClassManager.tsx`
-- `src/components/admin/RoadmapManager.tsx`
-- `src/components/admin/UniqueReclaimManager.tsx`
-- `src/components/admin/ItemForgePanel.tsx`
-- `src/pages/AdminPage.tsx` — wrap World case with the shell.
-
-## Validation
-
-- Build clean (TypeScript happy).
-- Visit each migrated tab in preview at 1165px wide, confirm: filters/search work, "New" creates, counts update, no layout overflow with `Sidebar | Tool (260) | List | Editor`.
-- Manual: clicking each section in the tool column shows correct content; default selection renders.
-- World: region/area/multi-select/populate all functional from tool column; map editor overlays still appear on click.
-
-## Notes / open questions
-
-- Tool column default width: **260px**. At 1165px viewport with admin sidebar collapsed to icons, this leaves ~850px for `List + Editor` — tight on Items/Creatures. Easy to drop to 220–240px or make the column collapsible if needed; happy to adjust during implementation.
-- The existing `AdminEntityToolbar` becomes redundant once pages migrate; will leave it in place until all callers are converted, then remove.
+- No changes to formula TS constants or edge functions.
+- No new generic "formula override" system — only the three configs that already live in the DB.
+- No content changes to the actual mechanics; only what's *displayed* and where it's *edited*.
