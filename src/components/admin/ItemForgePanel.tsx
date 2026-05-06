@@ -16,7 +16,7 @@ import { useRole } from '@/hooks/useRole';
 import { toast } from 'sonner';
 import {
   Loader2, Wand2, Check, Package, Sword, Sparkles,
-  Layers, Star, Hash, BarChart2, ArrowRight, Flame, Info, Shield,
+  Layers, Star, Hash, BarChart2, ArrowRight, Flame, Info,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
