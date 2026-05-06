@@ -1134,7 +1134,7 @@ Deno.serve(async (req) => {
         if (!isOffhandWeapon(ohTag)) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
-        const ohDie = getWeaponDieForItem(ohTag, 1, offHandLevel[m.id]);
+        const ohDie = getWeaponDieForItem(ohTag, 1, offHandLevel[m.id], weaponProgression);
         const effStr2 = (c.str || 10) + (eb.str || 0);
         const effDex2 = (c.dex || 10) + (eb.dex || 0);
         const sMod2 = sm(effStr2);   // STR — drives offhand damage
