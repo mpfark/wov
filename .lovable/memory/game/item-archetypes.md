@@ -30,9 +30,12 @@ Common/uncommon items use a deterministic naming grammar — never AI-randomized
 head Helm/Hood/Circlet · chest Plate/Armor/Vest/Robe · pants Greaves/Leggings · gloves Gauntlets/Gloves · boots Sabatons/Boots · off_hand Shield/Tome/Idol · weapons Sword/Axe/Mace/Dagger/Bow/Staff/Wand.
 
 ## Stat distribution
-- Common: dominant ~70% of budget, single minor stat for remainder. No hybrids.
-- Uncommon: dominant ~55%, secondary ~35%, optional tertiary spillover (hp for tank, wis otherwise). Hybrid archetype name when secondary ≥30%.
-- Always respects `getItemStatCap` and existing `getItemStatBudget` formula.
+- Common: dominant ~70% of budget, single minor stat. Common is the only rarity for primary (single-stat) archetypes.
+- Uncommon: hybrid-only. Dominant ~55%, secondary ~35%, tertiary spillover (hp for tank, wis otherwise).
+- Budget formula floored at 2 even at L1, so every item has at least primary + minor.
+- After percentage allocation, a spillover loop drips remaining budget into priority order (primary → secondary → tertiary) until budget is fully spent or stat caps are hit. Guarantees no wasted points.
+- Respects `statCap(key, level)` per stat (ac/hp_regen 2+L/10, hp 6+(L/5)·2, attribs 4+L/4).
 
 ## Generation
-Deterministic seed lives in edge function `seed-archetype-items` (overlord-gated). It hard-purges existing common/uncommon items + cascade-cleans references, then inserts the full catalog and re-attaches starter gear.
+Deterministic seed lives in edge function `seed-archetype-items` (overlord-gated). Hard-purges existing common/uncommon items + cascade-cleans references, then inserts catalog and re-attaches starter gear. Each band starts at `band.min` level so L1 starter gear exists. Per band: ~50 commons (6 primaries × 7 slots) + ~24 uncommons (8 hybrids × 3 slots) ≈ 666 items total over 9 bands.
+
