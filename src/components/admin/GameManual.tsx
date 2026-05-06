@@ -34,10 +34,9 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC, CLASS_LEVEL_BONUSES,
   RACE_LABELS, CLASS_LABELS, STAT_LABELS, ITEM_RARITY_MULTIPLIER,
-  ITEM_STAT_COSTS, calculateStats, calculateHP, calculateAC, getStatRegen, getItemStatBudget,
-  generateCreatureStats, getCreatureDamageDie, getXpForLevel, getCreatureXp,
-  XP_RARITY_MULTIPLIER, getMaxCp,
-  getMaxMp, getMpRegenRate,
+  ITEM_STAT_COSTS, getStatRegen,
+  getXpForLevel, getCreatureXp,
+  XP_RARITY_MULTIPLIER,
   CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS,
 } from '@/lib/game-data';
 import { CLASS_ABILITIES } from '@/features/combat';
