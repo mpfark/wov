@@ -203,6 +203,32 @@ export default function GameManual() {
                 </CardContent>
               </Card>
 
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Race Modifiers</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Race</TableHead>
+                      {STAT_KEYS.map(s => <TableHead key={s} className="text-xs">{STAT_LABELS[s]}</TableHead>)}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Object.entries(RACE_STATS).map(([race, stats]) => (
+                      <TableRow key={race}>
+                        <TableCell className="text-xs font-display">{RACE_LABELS[race]}</TableCell>
+                        {STAT_KEYS.map(s => (
+                          <TableCell key={s} className={`text-xs ${stats[s] > 0 ? 'text-green-400' : stats[s] < 0 ? 'text-red-400' : 'text-muted-foreground'}`}>
+                            {stats[s] > 0 ? `+${stats[s]}` : stats[s] || '—'}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div>
+                <p className="text-xs font-display text-primary mb-1">Class Modifiers</p>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -224,7 +250,9 @@ export default function GameManual() {
                   </TableBody>
                 </Table>
               </div>
+            </AccordionContent>
           </AccordionItem>
+
 
           {/* 3. HP, AC & Regen */}
           <AccordionItem value="hp-ac" className="border border-border rounded-lg bg-card/50">
