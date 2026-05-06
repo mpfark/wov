@@ -376,17 +376,17 @@ export default function CharacterPanel({
             <TabsContent value="equipment" className="mt-0">
               <div className="relative flex flex-col items-center gap-1">
                 <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
-                  <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
                   <div />
-                  <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
-                  <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div className="relative">
-                    <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                    <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                     {isProficient && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -398,9 +398,9 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div className="relative">
-                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} locked={inCombat} />
+                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                     {offHandIsShield && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -412,11 +412,11 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
                   <div />
-                  <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
                 </div>
               </div>
