@@ -46,6 +46,8 @@ const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
 const MAX_LEVEL = 42;
 
 export default function GameManual() {
+  const { user } = useAuth();
+  const { isValar } = useRole(user);
   const [playerCounts, setPlayerCounts] = useState<Record<number, number>>({});
   const [activeSection, setActiveSection] = useState<string>(MANUAL_SECTIONS[0].id);
 
