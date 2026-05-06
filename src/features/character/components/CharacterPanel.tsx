@@ -13,7 +13,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 // StatPlannerDialog has moved into the Trainer service panel.
-import ItemIllustration from '@/components/items/ItemIllustration';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 
