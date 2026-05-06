@@ -217,6 +217,27 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
     }
   };
 
+  /* ── Seed full archetype catalog (overlord only) ── */
+  const seedCatalog = async () => {
+    setSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-archetype-items', {
+        body: { purge: true },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(
+        `Catalog rebuilt — purged ${data.purged}, inserted ${data.inserted}, ` +
+        `${data.starting_gear_attached} starter items wired.`
+      );
+      onDataChanged?.();
+    } catch (e: any) {
+      toast.error(e.message || 'Seed failed');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   /* ─── Render ─────────────────────────────────────────── */
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
