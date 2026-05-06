@@ -259,6 +259,8 @@ export interface AttackContext {
   weaponTag?: string | null;
   /** Hands the main-hand weapon is wielded with (1 or 2). Defaults to 1. */
   weaponHands?: 1 | 2;
+  /** Item level of main-hand weapon (drives die-size progression). */
+  weaponItemLevel?: number | null;
 }
 
 export interface AttackResult {
