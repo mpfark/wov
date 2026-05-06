@@ -252,6 +252,38 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-3 space-y-4">
 
+            {/* Overlord: Seed deterministic archetype catalog */}
+            {isValar && (
+              <div className="rounded border border-primary/30 bg-primary/5 p-2 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Flame className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] font-display text-primary uppercase tracking-wider">Archetype Catalog</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Hard-purges all common/uncommon items and rebuilds the deterministic archetype catalog.
+                </p>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="outline" disabled={seeding} className="w-full text-[11px] h-7">
+                      {seeding ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Rebuilding…</> : <><Flame className="w-3 h-3 mr-1" />Purge & Seed Catalog</>}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Rebuild common & uncommon item catalog?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This deletes every existing common and uncommon item — including any copies in player inventories, vendors, marketplace listings, ground loot and loot tables — and replaces them with the deterministic archetype catalog. Uniques, soulforged, boss and quest items are not touched. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={seedCatalog}>Purge & Rebuild</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+
             {/* Forge Mode */}
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
