@@ -279,6 +279,8 @@ export interface AttackContext {
   weaponHands?: 1 | 2;
   /** Item level of main-hand weapon (drives die-size progression). */
   weaponItemLevel?: number | null;
+  /** Optional override for weapon die progression thresholds. */
+  weaponProgression?: WeaponProgressionConfig;
 }
 
 export interface AttackResult {
