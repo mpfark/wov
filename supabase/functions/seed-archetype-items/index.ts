@@ -70,7 +70,30 @@ const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5 };
 function statBudget(level: number, rarity: string, hands = 1): number {
   const m = RARITY_MULT[rarity] || 1;
   const h = hands === 2 ? 1.5 : 1;
-  return Math.floor(1 + (level - 1) * 0.3 * m * h);
+  return Math.max(2, Math.floor(2 + (level - 1) * 0.3 * m * h));
+}
+
+/** Drip leftover budget into stat slots in priority order until budget is fully spent or all caps hit. */
+function spillover(stats: Record<string, number>, level: number, budget: number, priority: string[]) {
+  let used = Object.values(stats).reduce((a, b) => a + b, 0);
+  let remaining = budget - used;
+  if (remaining <= 0) return stats;
+  let safety = 100;
+  while (remaining > 0 && safety-- > 0) {
+    let placed = false;
+    for (const k of priority) {
+      const cap = statCap(k, level);
+      const cur = stats[k] || 0;
+      if (cur < cap) {
+        stats[k] = cur + 1;
+        remaining--;
+        placed = true;
+        if (remaining <= 0) break;
+      }
+    }
+    if (!placed) break; // all caps hit
+  }
+  return stats;
 }
 function statCap(key: string, level: number): number {
   if (key === "ac" || key === "hp_regen") return 2 + Math.floor(level / 10);
@@ -108,13 +131,11 @@ function distributeCommon(level: number, primary: Stat, hands: number): Record<s
   // 70% to primary
   const primaryAmt = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.7)));
   stats[primary] = primaryAmt;
-  let remaining = budget - primaryAmt;
-  if (remaining > 0) {
-    // minor stat: prefer con for melee, dex for caster
-    const minor: Stat = primary === "str" || primary === "con" ? "con" : primary === "dex" ? "str" : primary === "int" || primary === "wis" ? "wis" : "dex";
-    const m = minor === primary ? "con" : minor;
-    stats[m] = (stats[m] || 0) + Math.min(statCap(m, level), remaining);
-  }
+  // minor stat: prefer con for melee, dex for caster
+  const minor: Stat = primary === "str" || primary === "con" ? "con" : primary === "dex" ? "str" : primary === "int" || primary === "wis" ? "wis" : "dex";
+  const m = minor === primary ? "con" : minor;
+  // Spillover: primary, then minor
+  spillover(stats, level, budget, [primary, m]);
   return stats;
 }
 function distributeUncommon(level: number, primary: Stat, secondary: Stat | null, hands: number): Record<string, number> {
@@ -125,16 +146,9 @@ function distributeUncommon(level: number, primary: Stat, secondary: Stat | null
     const secondaryAmt = Math.max(1, Math.min(statCap(secondary, level), Math.round(budget * 0.35)));
     stats[primary] = primaryAmt;
     stats[secondary] = secondaryAmt;
-    let remaining = budget - primaryAmt - secondaryAmt;
-    if (remaining > 0) {
-      // tertiary spillover: hp for tank, dex otherwise
-      if (primary === "con" || secondary === "con" || primary === "str") {
-        stats.hp = Math.min(statCap("hp", level), remaining * 2);
-      } else {
-        const t: Stat = "wis";
-        stats[t] = (stats[t] || 0) + Math.min(statCap(t, level), remaining);
-      }
-    }
+    const tertiary: string = (primary === "con" || secondary === "con" || primary === "str") ? "hp" : "wis";
+    // Spillover order: primary, secondary, tertiary
+    spillover(stats, level, budget, [primary, secondary, tertiary]);
   } else {
     return distributeCommon(level, primary, hands);
   }
@@ -168,59 +182,51 @@ function buildCatalog(): SeedItem[] {
     const level = band.min;
     const prefix = band.prefix;
 
-    // PRIMARY archetypes
+    // PRIMARY archetypes — common only (uncommon tier reserved for hybrids)
     PRIMARIES.forEach((primary, pi) => {
       // Armor slots
       ARMOR_SLOTS.forEach((slot, si) => {
-        for (const rarity of ["common", "uncommon"] as const) {
-          const archetype = pickPrimaryArchetype(primary, pi + si + (rarity === "uncommon" ? 1 : 0));
-          const noun = pickSlotNoun(slot, primary);
-          const name = `${prefix} ${archetype} ${noun}`;
-          const stats = rarity === "common"
-            ? distributeCommon(level, primary, 1)
-            : distributeUncommon(level, primary, null, 1);
-          out.push({
-            name,
-            description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} suited for the ${primary.toUpperCase()} path.`,
-            item_type: "equipment",
-            rarity,
-            slot,
-            level,
-            hands: null,
-            weapon_tag: slot === "off_hand" && noun === "Shield" ? "shield" : null,
-            stats,
-            value: suggestGold(level, rarity),
-            max_durability: 100,
-            world_drop: true,
-            origin_type: "archetype_seed",
-          });
-        }
+        const archetype = pickPrimaryArchetype(primary, pi + si);
+        const noun = pickSlotNoun(slot, primary);
+        const name = `${prefix} ${archetype} ${noun}`;
+        const stats = distributeCommon(level, primary, 1);
+        out.push({
+          name,
+          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} suited for the ${primary.toUpperCase()} path.`,
+          item_type: "equipment",
+          rarity: "common",
+          slot,
+          level,
+          hands: null,
+          weapon_tag: slot === "off_hand" && noun === "Shield" ? "shield" : null,
+          stats,
+          value: suggestGold(level, "common"),
+          max_durability: 100,
+          world_drop: true,
+          origin_type: "archetype_seed",
+        });
       });
 
-      // Weapons (one per archetype's preferred weapon list, both rarities)
+      // Weapons (one per archetype's preferred weapon list)
       WEAPON_BY_STAT[primary].forEach((w, wi) => {
-        for (const rarity of ["common", "uncommon"] as const) {
-          const archetype = pickPrimaryArchetype(primary, pi + wi + (rarity === "uncommon" ? 2 : 0));
-          const name = `${prefix} ${archetype} ${w.noun}`;
-          const stats = rarity === "common"
-            ? distributeCommon(level, primary, w.hands)
-            : distributeUncommon(level, primary, null, w.hands);
-          out.push({
-            name,
-            description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${w.noun.toLowerCase()} favored on the ${primary.toUpperCase()} path.`,
-            item_type: "equipment",
-            rarity,
-            slot: "main_hand",
-            level,
-            hands: w.hands,
-            weapon_tag: w.tag,
-            stats,
-            value: suggestGold(level, rarity),
-            max_durability: 100,
-            world_drop: true,
-            origin_type: "archetype_seed",
-          });
-        }
+        const archetype = pickPrimaryArchetype(primary, pi + wi);
+        const name = `${prefix} ${archetype} ${w.noun}`;
+        const stats = distributeCommon(level, primary, w.hands);
+        out.push({
+          name,
+          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${w.noun.toLowerCase()} favored on the ${primary.toUpperCase()} path.`,
+          item_type: "equipment",
+          rarity: "common",
+          slot: "main_hand",
+          level,
+          hands: w.hands,
+          weapon_tag: w.tag,
+          stats,
+          value: suggestGold(level, "common"),
+          max_durability: 100,
+          world_drop: true,
+          origin_type: "archetype_seed",
+        });
       });
     });
 
