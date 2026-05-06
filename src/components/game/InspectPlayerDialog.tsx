@@ -145,28 +145,28 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
             <div className="flex flex-col items-center gap-1">
               <div className="grid grid-cols-3 gap-1 w-full justify-items-center">
                 {/* Row 1: Trinket - Head - empty */}
-                <InspectSlot slot="trinket" item={getItem('trinket')} />
-                <InspectSlot slot="head" item={getItem('head')} />
+                <InspectSlot slot="trinket" item={getItem('trinket')} classKey={player.class} />
+                <InspectSlot slot="head" item={getItem('head')} classKey={player.class} />
                 <div />
                 {/* Row 2: empty - Amulet - empty */}
                 <div />
-                <InspectSlot slot="amulet" item={getItem('amulet')} />
+                <InspectSlot slot="amulet" item={getItem('amulet')} classKey={player.class} />
                 <div />
                 {/* Row 3: Shoulders - Chest - Gloves */}
-                <InspectSlot slot="shoulders" item={getItem('shoulders')} />
-                <InspectSlot slot="chest" item={getItem('chest')} />
-                <InspectSlot slot="gloves" item={getItem('gloves')} />
+                <InspectSlot slot="shoulders" item={getItem('shoulders')} classKey={player.class} />
+                <InspectSlot slot="chest" item={getItem('chest')} classKey={player.class} />
+                <InspectSlot slot="gloves" item={getItem('gloves')} classKey={player.class} />
                 {/* Row 4: Main Hand - Belt - Off Hand */}
-                <InspectSlot slot="main_hand" item={getItem('main_hand')} />
-                <InspectSlot slot="belt" item={getItem('belt')} />
-                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} />
+                <InspectSlot slot="main_hand" item={getItem('main_hand')} classKey={player.class} />
+                <InspectSlot slot="belt" item={getItem('belt')} classKey={player.class} />
+                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} classKey={player.class} />
                 {/* Row 5: Ring - Pants - empty */}
-                <InspectSlot slot="ring" item={getItem('ring')} />
-                <InspectSlot slot="pants" item={getItem('pants')} />
+                <InspectSlot slot="ring" item={getItem('ring')} classKey={player.class} />
+                <InspectSlot slot="pants" item={getItem('pants')} classKey={player.class} />
                 <div />
                 {/* Row 6: empty - Boots - empty */}
                 <div />
-                <InspectSlot slot="boots" item={getItem('boots')} />
+                <InspectSlot slot="boots" item={getItem('boots')} classKey={player.class} />
                 <div />
               </div>
             </div>
