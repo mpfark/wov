@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
-import ItemIllustration from '@/components/items/ItemIllustration';
+import ItemTooltipCard from '@/components/items/ItemTooltipCard';
+import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 
 const SLOT_LABELS: Record<string, string> = {
   head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
