@@ -13,7 +13,7 @@ import {
   getStatModifier,
   getIntHitBonus,
   getWeaponAffinityBonus,
-  getWeaponDie,
+  getWeaponDieForItem,
 } from './combat-math';
 
 export interface PredictionContext {
