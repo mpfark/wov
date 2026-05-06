@@ -447,16 +447,7 @@ export default function CharacterPanel({
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-                                  <ItemIllustration url={potion.item.illustration_url} alt={potion.item.name} />
-                                  <p className={`font-display ${getItemColor(potion.item)}`}>{potion.item.name}</p>
-                                  <p className="text-xs text-muted-foreground">{potion.item.description}</p>
-                                  <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
-                                  {Object.entries(potion.item.stats || {}).map(([k, v]) => (
-                                    <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
-                                      {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
-                                    </p>
-                                  ))}
-                                  <p className="text-[10px] text-muted-foreground mt-1">Value: {potion.item.value}g</p>
+                                  <ItemTooltipCard item={potion.item as any} />
                                 </TooltipContent>
                               </Tooltip>
                               <div className="flex gap-0.5 shrink-0 ml-1">
