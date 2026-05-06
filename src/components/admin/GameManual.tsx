@@ -286,7 +286,7 @@ export default function GameManual() {
                   ))}
                 </TableBody>
               </Table>
-
+            </AccordionContent>
           </AccordionItem>
 
           {/* 3b. Concentration Points (CP) */}
