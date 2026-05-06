@@ -213,9 +213,9 @@ export default function WorldBuilderRulebook() {
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
             <p className="font-medium text-foreground text-[11px] mb-0.5">Examples:</p>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">Lv5 common 1h: budget=floor(1+4×0.3×1)=2 → {`{"str":1,"dex":1}`}</code>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv10 uncommon 2h: budget=floor(1+9×0.3×1.5×1.5)=7 → {`{"str":3,"dex":2,"con":1,"wis":1}`}</code>
-            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv20 common consumable: budget=floor(1+19×0.3)×3=18 → {`{"hp":18}`}</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block">Lv1 common 1h: budget=max(2, floor(2+0))=2 → {`{"str":1,"dex":1}`}</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv10 uncommon 2h: budget=floor(2+9×0.3×1.5×1.5)=8 → {`{"str":3,"dex":2,"con":2,"wis":1}`}</code>
+            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded block mt-0.5">Lv20 common consumable: budget=floor(2+19×0.3)×3=23 → {`{"hp":23}`}</code>
           </div>
         </Card>
 
