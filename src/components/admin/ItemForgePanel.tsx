@@ -412,10 +412,31 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="random">🎲 Mixed</SelectItem>
-                  <SelectItem value="common">Common</SelectItem>
-                  <SelectItem value="uncommon">Uncommon</SelectItem>
+                  <SelectItem value="common">Common — primary archetype</SelectItem>
+                  <SelectItem value="uncommon">Uncommon — hybrid only</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-[9px] text-muted-foreground/80 leading-snug">
+                {rarity === 'uncommon'
+                  ? <>Hybrids: <span className="text-elvish/80">{HYBRID_ARCHETYPE_HINT}</span></>
+                  : rarity === 'common'
+                    ? <>Primaries: <span className="text-muted-foreground">{PRIMARY_ARCHETYPE_HINT}</span></>
+                    : <>Common = primary stat archetype. Uncommon = two-stat hybrid.</>}
+              </p>
+            </div>
+
+            {/* Archetype Rules info */}
+            <div className="rounded border border-border/50 bg-muted/20 p-2 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Info className="w-3 h-3 text-muted-foreground" />
+                <span className="text-[10px] font-display uppercase tracking-wider text-muted-foreground">Naming Grammar</span>
+              </div>
+              <p className="text-[9px] text-muted-foreground/80 leading-snug font-mono">
+                [Tier] [Archetype] [Slot]
+              </p>
+              <p className="text-[9px] text-muted-foreground/70 leading-snug">
+                e.g. <span className="text-foreground/80">Worn Vanguard Sword</span>, <span className="text-elvish/80">Fine Spellblade Dagger</span>. No proper nouns or "of the…" titles (those belong to Unique tier).
+              </p>
             </div>
 
             {/* Stat Focus */}
