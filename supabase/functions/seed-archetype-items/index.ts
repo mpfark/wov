@@ -182,59 +182,51 @@ function buildCatalog(): SeedItem[] {
     const level = band.min;
     const prefix = band.prefix;
 
-    // PRIMARY archetypes
+    // PRIMARY archetypes — common only (uncommon tier reserved for hybrids)
     PRIMARIES.forEach((primary, pi) => {
       // Armor slots
       ARMOR_SLOTS.forEach((slot, si) => {
-        for (const rarity of ["common", "uncommon"] as const) {
-          const archetype = pickPrimaryArchetype(primary, pi + si + (rarity === "uncommon" ? 1 : 0));
-          const noun = pickSlotNoun(slot, primary);
-          const name = `${prefix} ${archetype} ${noun}`;
-          const stats = rarity === "common"
-            ? distributeCommon(level, primary, 1)
-            : distributeUncommon(level, primary, null, 1);
-          out.push({
-            name,
-            description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} suited for the ${primary.toUpperCase()} path.`,
-            item_type: "equipment",
-            rarity,
-            slot,
-            level,
-            hands: null,
-            weapon_tag: slot === "off_hand" && noun === "Shield" ? "shield" : null,
-            stats,
-            value: suggestGold(level, rarity),
-            max_durability: 100,
-            world_drop: true,
-            origin_type: "archetype_seed",
-          });
-        }
+        const archetype = pickPrimaryArchetype(primary, pi + si);
+        const noun = pickSlotNoun(slot, primary);
+        const name = `${prefix} ${archetype} ${noun}`;
+        const stats = distributeCommon(level, primary, 1);
+        out.push({
+          name,
+          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} suited for the ${primary.toUpperCase()} path.`,
+          item_type: "equipment",
+          rarity: "common",
+          slot,
+          level,
+          hands: null,
+          weapon_tag: slot === "off_hand" && noun === "Shield" ? "shield" : null,
+          stats,
+          value: suggestGold(level, "common"),
+          max_durability: 100,
+          world_drop: true,
+          origin_type: "archetype_seed",
+        });
       });
 
-      // Weapons (one per archetype's preferred weapon list, both rarities)
+      // Weapons (one per archetype's preferred weapon list)
       WEAPON_BY_STAT[primary].forEach((w, wi) => {
-        for (const rarity of ["common", "uncommon"] as const) {
-          const archetype = pickPrimaryArchetype(primary, pi + wi + (rarity === "uncommon" ? 2 : 0));
-          const name = `${prefix} ${archetype} ${w.noun}`;
-          const stats = rarity === "common"
-            ? distributeCommon(level, primary, w.hands)
-            : distributeUncommon(level, primary, null, w.hands);
-          out.push({
-            name,
-            description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${w.noun.toLowerCase()} favored on the ${primary.toUpperCase()} path.`,
-            item_type: "equipment",
-            rarity,
-            slot: "main_hand",
-            level,
-            hands: w.hands,
-            weapon_tag: w.tag,
-            stats,
-            value: suggestGold(level, rarity),
-            max_durability: 100,
-            world_drop: true,
-            origin_type: "archetype_seed",
-          });
-        }
+        const archetype = pickPrimaryArchetype(primary, pi + wi);
+        const name = `${prefix} ${archetype} ${w.noun}`;
+        const stats = distributeCommon(level, primary, w.hands);
+        out.push({
+          name,
+          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${w.noun.toLowerCase()} favored on the ${primary.toUpperCase()} path.`,
+          item_type: "equipment",
+          rarity: "common",
+          slot: "main_hand",
+          level,
+          hands: w.hands,
+          weapon_tag: w.tag,
+          stats,
+          value: suggestGold(level, "common"),
+          max_durability: 100,
+          world_drop: true,
+          origin_type: "archetype_seed",
+        });
       });
     });
 
