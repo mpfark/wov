@@ -79,14 +79,30 @@ export function getWeaponDie(weaponTag: string | null | undefined, hands: 1 | 2)
  *
  * Soft, additive scaling that preserves family identity (dagger stays
  * lighter than a sword) while making higher-level weapons noticeably
- * stronger. Tuning dial.
+ * stronger. Defaults are 11/21/31; configurable via the
+ * `weapon_progression_config` table (see `WeaponProgressionConfig`).
  */
-export function getWeaponDieProgression(itemLevel: number | null | undefined): number {
+export interface WeaponProgressionConfig {
+  tier1_level: number; // first item level granting +1 die size
+  tier2_level: number; // first item level granting +2 die sizes
+  tier3_level: number; // first item level granting +3 die sizes
+}
+
+export const DEFAULT_WEAPON_PROGRESSION: WeaponProgressionConfig = {
+  tier1_level: 11,
+  tier2_level: 21,
+  tier3_level: 31,
+};
+
+export function getWeaponDieProgression(
+  itemLevel: number | null | undefined,
+  cfg: WeaponProgressionConfig = DEFAULT_WEAPON_PROGRESSION,
+): number {
   const lvl = itemLevel ?? 1;
-  if (lvl <= 10) return 0;
-  if (lvl <= 20) return 1;
-  if (lvl <= 30) return 2;
-  return 3;
+  if (lvl >= cfg.tier3_level) return 3;
+  if (lvl >= cfg.tier2_level) return 2;
+  if (lvl >= cfg.tier1_level) return 1;
+  return 0;
 }
 
 /**
@@ -98,10 +114,11 @@ export function getWeaponDieForItem(
   weaponTag: string | null | undefined,
   hands: 1 | 2,
   itemLevel: number | null | undefined,
+  cfg: WeaponProgressionConfig = DEFAULT_WEAPON_PROGRESSION,
 ): number {
   const base = getWeaponDie(weaponTag, hands);
   if (!weaponTag) return base;
-  return base + getWeaponDieProgression(itemLevel);
+  return base + getWeaponDieProgression(itemLevel, cfg);
 }
 
 /** Roll one weapon attack: 1d{weaponDie} + STR modifier. */
@@ -110,8 +127,9 @@ export function rollWeaponAttackDamage(
   hands: 1 | 2,
   str: number,
   itemLevel?: number | null,
+  cfg: WeaponProgressionConfig = DEFAULT_WEAPON_PROGRESSION,
 ): number {
-  const die = getWeaponDieForItem(weaponTag, hands, itemLevel);
+  const die = getWeaponDieForItem(weaponTag, hands, itemLevel, cfg);
   return rollDamage(1, die) + getStatModifier(str);
 }
 
@@ -261,6 +279,8 @@ export interface AttackContext {
   weaponHands?: 1 | 2;
   /** Item level of main-hand weapon (drives die-size progression). */
   weaponItemLevel?: number | null;
+  /** Optional override for weapon die progression thresholds. */
+  weaponProgression?: WeaponProgressionConfig;
 }
 
 export interface AttackResult {
@@ -299,7 +319,7 @@ export function resolveAttackRoll(
   const sdf = getStrDamageFloor(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
-  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel);
+  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, ctx.weaponProgression);
 
   const roll = rollD20();
   const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;
