@@ -42,6 +42,7 @@ const MAX_LEVEL = 42;
 
 export default function GameManual() {
   const [playerCounts, setPlayerCounts] = useState<Record<number, number>>({});
+  const [activeSection, setActiveSection] = useState<string>(MANUAL_SECTIONS[0].id);
 
   useEffect(() => {
     (async () => {
@@ -67,15 +68,36 @@ export default function GameManual() {
     return { level, xpRequired, totalXp, statGain, classBonus, respec, players: playerCounts[level] || 0 };
   });
 
-  return (
-    <ScrollArea className="h-full">
-      <div className="p-4 max-w-4xl mx-auto space-y-2">
-        <h2 className="font-display text-lg text-primary text-glow mb-3">📖 Game Manual</h2>
+  const tools = (
+    <nav className="py-2">
+      {MANUAL_SECTIONS.map(s => {
+        const active = s.id === activeSection;
+        return (
+          <button
+            key={s.id}
+            onClick={() => setActiveSection(s.id)}
+            className={`w-full text-left px-3 py-2 text-xs font-display transition-colors border-l-2 ${
+              active
+                ? 'bg-primary/10 text-primary border-primary'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground border-transparent'
+            }`}
+          >
+            {s.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
 
-        <Accordion type="multiple" className="space-y-1">
+  return (
+    <AdminPageShell icon={<BookOpen className="w-4 h-4" />} title="Game Manual" tools={tools}>
+      <ScrollArea className="h-full">
+        <div className="p-4 max-w-4xl mx-auto space-y-2">
+
+        <Accordion type="single" value={activeSection} className="space-y-1 [&_[data-manual-trigger]]:hidden">
           {/* 1. Level Progression */}
           <AccordionItem value="levels" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               📊 Level Progression (1–{MAX_LEVEL})
             </AccordionTrigger>
             <AccordionContent className="px-4">
