@@ -53,7 +53,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-function InspectSlot({ slot, item }: { slot: string; item: EquippedItem | undefined }) {
+function InspectSlot({ slot, item, classKey }: { slot: string; item: EquippedItem | undefined; classKey?: string }) {
+  const weaponProgression = useWeaponProgression();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
