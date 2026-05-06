@@ -83,8 +83,9 @@ const SLOT_LABELS: Record<string, string> = {
   boots: 'Boots',
 };
 
-function EquipSlot({ slot, item, blocked, onUnequip, locked }: {
+function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression }: {
   slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void; locked?: boolean;
+  classKey?: string; weaponProgression?: import('@/shared/formulas/combat').WeaponProgressionConfig;
 }) {
   return (
     <Tooltip>
