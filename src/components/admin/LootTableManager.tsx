@@ -8,7 +8,7 @@ import CreatureLootModesTab from './loot/CreatureLootModesTab';
 
 export default function LootTableManager() {
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-0">
       <AdminEntityToolbar icon={<Package className="w-4 h-4" />} title="Loot Tables" />
       <Tabs defaultValue="rules" className="flex-1 flex flex-col min-h-0">
         <TabsList className="shrink-0 mx-3 mt-2">
