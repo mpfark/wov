@@ -506,17 +506,7 @@ export default function CharacterPanel({
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-                                <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
-                                <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
-                                <p className="text-xs text-muted-foreground">{inv.item.description}</p>
-                                <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>
-                                {Object.entries(inv.item.stats || {}).map(([k, v]) => (
-                                  <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
-                                    {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
-                                  </p>
-                                ))}
-                                <p className="text-[10px] text-muted-foreground mt-1">Value: {inv.item.value}g</p>
-                                {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
+                                <ItemTooltipCard item={inv.item as any} qty={all.length} />
                               </TooltipContent>
                             </Tooltip>
                             <div className="flex gap-0.5 shrink-0 ml-1">
