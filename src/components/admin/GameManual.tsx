@@ -1294,7 +1294,8 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+    </AdminPageShell>
   );
 }
