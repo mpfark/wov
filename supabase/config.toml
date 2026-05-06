@@ -25,3 +25,5 @@ project_id = "gpclaklkaolyzfnooajt"
     verify_jwt = false
   [functions.ai-suggest-character-name]
     verify_jwt = false
+  [functions.seed-archetype-items]
+    verify_jwt = false
