@@ -279,7 +279,7 @@ Call the generate_items tool with the structured output.`;
     function calcBudget(level: number, rarity: string, hands: number = 1): number {
       const mult = RARITY_MULT[rarity] || 1;
       const handsMult = hands === 2 ? 1.5 : 1;
-      return Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
+      return Math.max(2, Math.floor(2 + (level - 1) * 0.3 * mult * handsMult));
     }
 
     function calcStatCost(stats: Record<string, number>): number {
