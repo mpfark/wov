@@ -117,12 +117,12 @@ export default function ItemTooltipCard({
             <div className="text-[9px] text-muted-foreground mb-0.5">vs {comparison.label}</div>
             <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 text-[10px] font-display">
               {comparison.diffs.map(({ key, diff }) => (
-                <>
-                  <span key={`cl-${key}`} className={diff > 0 ? 'text-elvish' : 'text-destructive'}>{statLabel(key)}</span>
-                  <span key={`cv-${key}`} className={`text-right ${diff > 0 ? 'text-elvish' : 'text-destructive'}`}>
+                <Fragment key={key}>
+                  <span className={diff > 0 ? 'text-elvish' : 'text-destructive'}>{statLabel(key)}</span>
+                  <span className={`text-right ${diff > 0 ? 'text-elvish' : 'text-destructive'}`}>
                     {diff > 0 ? '+' : ''}{diff}
                   </span>
-                </>
+                </Fragment>
               ))}
             </div>
           </div>
