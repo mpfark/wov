@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
-import ItemIllustration from '@/components/items/ItemIllustration';
+import ItemTooltipCard from '@/components/items/ItemTooltipCard';
+import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 
 const SLOT_LABELS: Record<string, string> = {
   head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
@@ -15,6 +16,7 @@ const SLOT_LABELS: Record<string, string> = {
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
+  rare: 'text-blue-400',
   unique: 'text-primary text-glow',
   soulforged: 'text-soulforged text-glow-soulforged',
 };
@@ -32,6 +34,8 @@ interface EquippedItem {
   item_level: number;
   description: string;
   illustration_url?: string | null;
+  weapon_tag?: string | null;
+  is_soulbound?: boolean;
 }
 
 interface PlayerInfo {
@@ -49,7 +53,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-function InspectSlot({ slot, item }: { slot: string; item: EquippedItem | undefined }) {
+function InspectSlot({ slot, item, classKey }: { slot: string; item: EquippedItem | undefined; classKey?: string }) {
+  const weaponProgression = useWeaponProgression();
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -74,22 +79,25 @@ function InspectSlot({ slot, item }: { slot: string; item: EquippedItem | undefi
       </TooltipTrigger>
       {item && (
         <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-          <ItemIllustration url={item.illustration_url} alt={item.item_name} />
-          <p className={`font-display ${getInspectItemColor(item.rarity)}`}>{item.item_name}</p>
-          <p className="text-xs text-muted-foreground">{item.description}</p>
-          <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.slot] || item.slot} · {item.item_type}</p>
-          {item.hands && <p className="text-xs text-muted-foreground">{item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
-          <p className="text-[10px] text-muted-foreground">L{item.item_level}</p>
-          {Object.entries(item.stats || {}).filter(([, v]) => v !== 0).map(([k, v]) => (
-            <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
-              {k === 'hp_regen' ? `+${v} Regen` : `+${v} ${k.toUpperCase()}`}
-            </p>
-          ))}
-          {item.durability_pct < 100 && (
-            <p className={`text-[10px] ${item.durability_pct < 25 ? 'text-destructive' : 'text-muted-foreground'}`}>
-              Durability: {item.durability_pct}%
-            </p>
-          )}
+          <ItemTooltipCard
+            item={{
+              name: item.item_name,
+              rarity: item.rarity,
+              is_soulbound: item.is_soulbound,
+              item_type: item.item_type,
+              slot: item.slot,
+              hands: item.hands,
+              weapon_tag: item.weapon_tag ?? null,
+              level: item.item_level,
+              stats: item.stats,
+              illustration_url: item.illustration_url,
+              description: item.description,
+            }}
+            weaponProgression={weaponProgression}
+            classKey={classKey}
+            durabilityPct={item.durability_pct}
+            showValue={false}
+          />
         </TooltipContent>
       )}
     </Tooltip>
@@ -137,28 +145,28 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
             <div className="flex flex-col items-center gap-1">
               <div className="grid grid-cols-3 gap-1 w-full justify-items-center">
                 {/* Row 1: Trinket - Head - empty */}
-                <InspectSlot slot="trinket" item={getItem('trinket')} />
-                <InspectSlot slot="head" item={getItem('head')} />
+                <InspectSlot slot="trinket" item={getItem('trinket')} classKey={player.class} />
+                <InspectSlot slot="head" item={getItem('head')} classKey={player.class} />
                 <div />
                 {/* Row 2: empty - Amulet - empty */}
                 <div />
-                <InspectSlot slot="amulet" item={getItem('amulet')} />
+                <InspectSlot slot="amulet" item={getItem('amulet')} classKey={player.class} />
                 <div />
                 {/* Row 3: Shoulders - Chest - Gloves */}
-                <InspectSlot slot="shoulders" item={getItem('shoulders')} />
-                <InspectSlot slot="chest" item={getItem('chest')} />
-                <InspectSlot slot="gloves" item={getItem('gloves')} />
+                <InspectSlot slot="shoulders" item={getItem('shoulders')} classKey={player.class} />
+                <InspectSlot slot="chest" item={getItem('chest')} classKey={player.class} />
+                <InspectSlot slot="gloves" item={getItem('gloves')} classKey={player.class} />
                 {/* Row 4: Main Hand - Belt - Off Hand */}
-                <InspectSlot slot="main_hand" item={getItem('main_hand')} />
-                <InspectSlot slot="belt" item={getItem('belt')} />
-                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} />
+                <InspectSlot slot="main_hand" item={getItem('main_hand')} classKey={player.class} />
+                <InspectSlot slot="belt" item={getItem('belt')} classKey={player.class} />
+                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} classKey={player.class} />
                 {/* Row 5: Ring - Pants - empty */}
-                <InspectSlot slot="ring" item={getItem('ring')} />
-                <InspectSlot slot="pants" item={getItem('pants')} />
+                <InspectSlot slot="ring" item={getItem('ring')} classKey={player.class} />
+                <InspectSlot slot="pants" item={getItem('pants')} classKey={player.class} />
                 <div />
                 {/* Row 6: empty - Boots - empty */}
                 <div />
-                <InspectSlot slot="boots" item={getItem('boots')} />
+                <InspectSlot slot="boots" item={getItem('boots')} classKey={player.class} />
                 <div />
               </div>
             </div>

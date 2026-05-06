@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 // StatPlannerDialog has moved into the Trainer service panel.
-import ItemIllustration from '@/components/items/ItemIllustration';
+import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 
 interface Props {
@@ -58,6 +58,7 @@ interface Props {
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
   uncommon: 'text-elvish',
+  rare: 'text-blue-400',
   unique: 'text-primary text-glow',
   soulforged: 'text-soulforged text-glow-soulforged',
 };
@@ -82,8 +83,9 @@ const SLOT_LABELS: Record<string, string> = {
   boots: 'Boots',
 };
 
-function EquipSlot({ slot, item, blocked, onUnequip, locked }: {
+function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression }: {
   slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void; locked?: boolean;
+  classKey?: string; weaponProgression?: import('@/shared/formulas/combat').WeaponProgressionConfig;
 }) {
   return (
     <Tooltip>
@@ -114,17 +116,12 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked }: {
       </TooltipTrigger>
       {item && !blocked && (
         <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-          <ItemIllustration url={item.item.illustration_url} alt={item.item.name} />
-          <p className={`font-display ${getItemColor(item.item)}`}>{item.item.name}</p>
-          <p className="text-xs text-muted-foreground">{item.item.description}</p>
-          {item.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.item.slot] || item.item.slot} · {item.item.item_type}</p>}
-          {item.item.hands && <p className="text-xs text-muted-foreground">{item.item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
-          {Object.entries(item.item.stats || {}).map(([k, v]) => (
-            <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
-              {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
-            </p>
-          ))}
-          <p className="text-[10px] text-muted-foreground mt-1">Click to unequip</p>
+          <ItemTooltipCard
+            item={item.item as any}
+            weaponProgression={weaponProgression}
+            classKey={classKey}
+            durabilityPct={item.current_durability}
+          />
         </TooltipContent>
       )}
     </Tooltip>
@@ -331,7 +328,7 @@ export default function CharacterPanel({
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
   const mainHandTag = mainHandItem?.item?.weapon_tag as string | undefined;
-  const mainHandLevel = (mainHandItem?.item as any)?.item_level as number | null | undefined;
+  const mainHandLevel = (mainHandItem?.item as any)?.level as number | null | undefined;
   const isProficient = !!(mainHandTag && CLASS_WEAPON_AFFINITY[character.class]?.includes(mainHandTag));
   const offHandItem = getEquippedInSlot('off_hand');
   const offHandTag = offHandItem?.item?.weapon_tag as string | undefined;
@@ -378,17 +375,17 @@ export default function CharacterPanel({
             <TabsContent value="equipment" className="mt-0">
               <div className="relative flex flex-col items-center gap-1">
                 <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
-                  <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
                   <div />
-                  <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
-                  <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div className="relative">
-                    <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                    <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                     {isProficient && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -400,9 +397,9 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div className="relative">
-                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} locked={inCombat} />
+                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                     {offHandIsShield && (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -414,11 +411,11 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
-                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
                   <div />
-                  <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} locked={inCombat} />
+                  <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
                 </div>
               </div>
@@ -449,16 +446,7 @@ export default function CharacterPanel({
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-                                  <ItemIllustration url={potion.item.illustration_url} alt={potion.item.name} />
-                                  <p className={`font-display ${getItemColor(potion.item)}`}>{potion.item.name}</p>
-                                  <p className="text-xs text-muted-foreground">{potion.item.description}</p>
-                                  <p className="text-[10px] text-muted-foreground capitalize">{potion.item.item_type}</p>
-                                  {Object.entries(potion.item.stats || {}).map(([k, v]) => (
-                                    <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
-                                      {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
-                                    </p>
-                                  ))}
-                                  <p className="text-[10px] text-muted-foreground mt-1">Value: {potion.item.value}g</p>
+                                  <ItemTooltipCard item={potion.item as any} />
                                 </TooltipContent>
                               </Tooltip>
                               <div className="flex gap-0.5 shrink-0 ml-1">
@@ -517,17 +505,7 @@ export default function CharacterPanel({
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-                                <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
-                                <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
-                                <p className="text-xs text-muted-foreground">{inv.item.description}</p>
-                                <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>
-                                {Object.entries(inv.item.stats || {}).map(([k, v]) => (
-                                  <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : k === 'hp' ? 'text-blood' : ''}`}>
-                                    {k === 'hp_regen' ? `+${v as number} Regen` : k === 'hp' ? `+${v as number} HP` : `+${v as number} ${k.toUpperCase()}`}
-                                  </p>
-                                ))}
-                                <p className="text-[10px] text-muted-foreground mt-1">Value: {inv.item.value}g</p>
-                                {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
+                                <ItemTooltipCard item={inv.item as any} qty={all.length} />
                               </TooltipContent>
                             </Tooltip>
                             <div className="flex gap-0.5 shrink-0 ml-1">
@@ -637,74 +615,53 @@ export default function CharacterPanel({
                             </span>
                           </TooltipTrigger>
                           <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-                            <ItemIllustration url={inv.item.illustration_url} alt={inv.item.name} />
-                            <p className={`font-display ${getItemColor(inv.item)}`}>{inv.item.name}</p>
-                            {isBroken && <p className="text-xs text-destructive font-display">Broken — needs repair</p>}
-                            <p className="text-xs text-muted-foreground">{inv.item.description}</p>
-                            {inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[inv.item.slot] || inv.item.slot} · {inv.item.item_type}{inv.item.hands === 2 ? ' · Two-Handed' : inv.item.hands === 1 ? ' · One-Handed' : ''}</p>}
-                            {!inv.item.slot && <p className="text-[10px] text-muted-foreground capitalize">{inv.item.item_type}</p>}
-                            {Object.entries(inv.item.stats || {}).map(([k, v]) => (
-                              <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
-                                {k === 'hp_regen' ? `+${v as number} Regen` : `+${v as number} ${k.toUpperCase()}`}
-                              </p>
-                            ))}
-                            <p className="text-[10px] text-muted-foreground">Durability: {inv.current_durability}% | Value: {inv.item.value}g</p>
-                            {all.length > 1 && <p className="text-[10px] text-muted-foreground">Qty: {all.length}</p>}
-                            {/* Gear comparison */}
-                            {inv.item.slot && (() => {
-                              const isTwoHandedItem = inv.item.hands === 2;
-                              const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
-                              const newStats = inv.item.stats || {};
-                              const oldStats: Record<string, number> = {};
-                              
-                              if (isTwoHandedItem) {
-                                const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
-                                const offHand = equipped.find(e => e.equipped_slot === 'off_hand');
-                                for (const item of [mainHand, offHand]) {
-                                  if (item) {
-                                    for (const [k, v] of Object.entries(item.item.stats || {})) {
-                                      oldStats[k] = (oldStats[k] || 0) + (v as number);
-                                    }
+                            {(() => {
+                              // Build comparison
+                              let comparison: { label: string; diffs: { key: string; diff: number }[] } | null = null;
+                              if (inv.item.slot) {
+                                const isTwoHandedItem = inv.item.hands === 2;
+                                const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
+                                const newStats = inv.item.stats || {};
+                                const oldStats: Record<string, number> = {};
+                                if (isTwoHandedItem) {
+                                  const mh = equipped.find(e => e.equipped_slot === 'main_hand');
+                                  const oh = equipped.find(e => e.equipped_slot === 'off_hand');
+                                  for (const it of [mh, oh]) {
+                                    if (it) for (const [k, v] of Object.entries(it.item.stats || {})) oldStats[k] = (oldStats[k] || 0) + (v as number);
+                                  }
+                                } else {
+                                  const mh = equipped.find(e => e.equipped_slot === 'main_hand');
+                                  const mainIs2H = mh && mh.item.hands === 2;
+                                  if (mainIs2H && (inv.item.slot === 'main_hand' || inv.item.slot === 'off_hand')) {
+                                    for (const [k, v] of Object.entries(mh!.item.stats || {})) oldStats[k] = (v as number) || 0;
+                                  } else if (currentlyEquipped) {
+                                    for (const [k, v] of Object.entries(currentlyEquipped.item.stats || {})) oldStats[k] = (v as number) || 0;
                                   }
                                 }
-                              } else {
-                                const mainHand = equipped.find(e => e.equipped_slot === 'main_hand');
-                                const mainIs2H = mainHand && mainHand.item.hands === 2;
-                                if (mainIs2H && (inv.item.slot === 'main_hand' || inv.item.slot === 'off_hand')) {
-                                  for (const [k, v] of Object.entries(mainHand.item.stats || {})) {
-                                    oldStats[k] = (v as number) || 0;
-                                  }
-                                } else if (currentlyEquipped) {
-                                  for (const [k, v] of Object.entries(currentlyEquipped.item.stats || {})) {
-                                    oldStats[k] = (v as number) || 0;
-                                  }
+                                const allKeys = new Set([...Object.keys(newStats), ...Object.keys(oldStats)]);
+                                const diffs: { key: string; diff: number }[] = [];
+                                for (const k of allKeys) {
+                                  const nv = (newStats[k] as number) || 0;
+                                  const ov = oldStats[k] || 0;
+                                  if (nv - ov !== 0) diffs.push({ key: k, diff: nv - ov });
+                                }
+                                if (diffs.length > 0) {
+                                  const label = isTwoHandedItem
+                                    ? (equipped.find(e => e.equipped_slot === 'main_hand') || equipped.find(e => e.equipped_slot === 'off_hand') ? 'main + off hand' : 'empty slots')
+                                    : (currentlyEquipped ? currentlyEquipped.item.name : 'empty slot');
+                                  comparison = { label, diffs };
                                 }
                               }
-                              
-                              const allKeys = new Set([...Object.keys(newStats), ...Object.keys(oldStats)]);
-                              if (allKeys.size === 0) return null;
-                              const diffs: { key: string; diff: number }[] = [];
-                              for (const k of allKeys) {
-                                const nv = (newStats[k] as number) || 0;
-                                const ov = oldStats[k] || 0;
-                                if (nv - ov !== 0) diffs.push({ key: k, diff: nv - ov });
-                              }
-                              if (diffs.length === 0) return null;
                               return (
-                                <div className="mt-1.5 pt-1.5 border-t border-border">
-                                  <p className="text-[9px] text-muted-foreground mb-0.5">
-                                    vs {isTwoHandedItem
-                                      ? (equipped.find(e => e.equipped_slot === 'main_hand') || equipped.find(e => e.equipped_slot === 'off_hand')
-                                        ? 'main + off hand'
-                                        : 'empty slots')
-                                      : (currentlyEquipped ? currentlyEquipped.item.name : 'empty slot')}
-                                  </p>
-                                  {diffs.map(({ key, diff }) => (
-                                    <p key={key} className={`text-[10px] font-display ${diff > 0 ? 'text-elvish' : 'text-destructive'}`}>
-                                      {diff > 0 ? '+' : ''}{diff} {key === 'hp_regen' ? 'Regen' : key.toUpperCase()}
-                                    </p>
-                                  ))}
-                                </div>
+                                <ItemTooltipCard
+                                  item={inv.item as any}
+                                  weaponProgression={weaponProgression}
+                                  classKey={character.class}
+                                  durabilityPct={inv.current_durability}
+                                  qty={all.length}
+                                  isBroken={isBroken}
+                                  comparison={comparison}
+                                />
                               );
                             })()}
                           </TooltipContent>
