@@ -319,7 +319,7 @@ export function resolveAttackRoll(
   const sdf = getStrDamageFloor(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
-  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel);
+  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, ctx.weaponProgression);
 
   const roll = rollD20();
   const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;
