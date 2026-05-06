@@ -76,7 +76,25 @@ const WEAPON_TAG_LABELS: Record<string, string> = {
   bow: '🏹 bow', staff: '🪄 staff', wand: '✨ wand', shield: '🛡 shield',
 };
 
-/* ─── Component ─────────────────────────────────────────── */
+/* Tier prefix bands — mirrors seed-archetype-items / item-archetypes memory */
+const TIER_BANDS: Array<{ min: number; max: number; prefix: string }> = [
+  { min: 1, max: 5, prefix: 'Worn' },
+  { min: 6, max: 10, prefix: 'Sturdy' },
+  { min: 11, max: 15, prefix: 'Fine' },
+  { min: 16, max: 20, prefix: 'Engraved' },
+  { min: 21, max: 25, prefix: 'Runed' },
+  { min: 26, max: 30, prefix: 'High' },
+  { min: 31, max: 35, prefix: 'Mythic' },
+  { min: 36, max: 40, prefix: 'Ancient' },
+  { min: 41, max: 42, prefix: 'Astral' },
+];
+
+const PRIMARY_ARCHETYPE_HINT = 'Vanguard / Shadow / Warden / Sage / Devout / Regal';
+const HYBRID_ARCHETYPE_HINT = 'Warlord / Raider / Spellblade / Guardian / Mystic / Prophet / Troubadour / Champion';
+
+function bandsInRange(min: number, max: number) {
+  return TIER_BANDS.filter(b => b.max >= min && b.min <= max);
+}
 
 interface ItemForgePanelProps {
   onDataChanged?: () => void;
