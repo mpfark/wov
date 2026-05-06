@@ -79,22 +79,25 @@ function InspectSlot({ slot, item, classKey }: { slot: string; item: EquippedIte
       </TooltipTrigger>
       {item && (
         <TooltipContent className="bg-popover border-border z-50 max-w-xs">
-          <ItemIllustration url={item.illustration_url} alt={item.item_name} />
-          <p className={`font-display ${getInspectItemColor(item.rarity)}`}>{item.item_name}</p>
-          <p className="text-xs text-muted-foreground">{item.description}</p>
-          <p className="text-[10px] text-muted-foreground capitalize">{SLOT_LABELS[item.slot] || item.slot} · {item.item_type}</p>
-          {item.hands && <p className="text-xs text-muted-foreground">{item.hands === 2 ? 'Two-Handed' : 'One-Handed'}</p>}
-          <p className="text-[10px] text-muted-foreground">L{item.item_level}</p>
-          {Object.entries(item.stats || {}).filter(([, v]) => v !== 0).map(([k, v]) => (
-            <p key={k} className={`text-xs ${k === 'hp_regen' ? 'text-elvish' : ''}`}>
-              {k === 'hp_regen' ? `+${v} Regen` : `+${v} ${k.toUpperCase()}`}
-            </p>
-          ))}
-          {item.durability_pct < 100 && (
-            <p className={`text-[10px] ${item.durability_pct < 25 ? 'text-destructive' : 'text-muted-foreground'}`}>
-              Durability: {item.durability_pct}%
-            </p>
-          )}
+          <ItemTooltipCard
+            item={{
+              name: item.item_name,
+              rarity: item.rarity,
+              is_soulbound: item.is_soulbound,
+              item_type: item.item_type,
+              slot: item.slot,
+              hands: item.hands,
+              weapon_tag: item.weapon_tag ?? null,
+              level: item.item_level,
+              stats: item.stats,
+              illustration_url: item.illustration_url,
+              description: item.description,
+            }}
+            weaponProgression={weaponProgression}
+            classKey={classKey}
+            durabilityPct={item.durability_pct}
+            showValue={false}
+          />
         </TooltipContent>
       )}
     </Tooltip>
