@@ -747,6 +747,7 @@ export default function CreatureManager() {
           <AdminEmptyState message="Select a creature to edit" />
         )}
       </div>
-    </div>
+      </div>
+    </AdminPageShell>
   );
 }
