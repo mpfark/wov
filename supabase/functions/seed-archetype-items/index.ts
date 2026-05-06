@@ -131,13 +131,11 @@ function distributeCommon(level: number, primary: Stat, hands: number): Record<s
   // 70% to primary
   const primaryAmt = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.7)));
   stats[primary] = primaryAmt;
-  let remaining = budget - primaryAmt;
-  if (remaining > 0) {
-    // minor stat: prefer con for melee, dex for caster
-    const minor: Stat = primary === "str" || primary === "con" ? "con" : primary === "dex" ? "str" : primary === "int" || primary === "wis" ? "wis" : "dex";
-    const m = minor === primary ? "con" : minor;
-    stats[m] = (stats[m] || 0) + Math.min(statCap(m, level), remaining);
-  }
+  // minor stat: prefer con for melee, dex for caster
+  const minor: Stat = primary === "str" || primary === "con" ? "con" : primary === "dex" ? "str" : primary === "int" || primary === "wis" ? "wis" : "dex";
+  const m = minor === primary ? "con" : minor;
+  // Spillover: primary, then minor
+  spillover(stats, level, budget, [primary, m]);
   return stats;
 }
 function distributeUncommon(level: number, primary: Stat, secondary: Stat | null, hands: number): Record<string, number> {
@@ -148,16 +146,9 @@ function distributeUncommon(level: number, primary: Stat, secondary: Stat | null
     const secondaryAmt = Math.max(1, Math.min(statCap(secondary, level), Math.round(budget * 0.35)));
     stats[primary] = primaryAmt;
     stats[secondary] = secondaryAmt;
-    let remaining = budget - primaryAmt - secondaryAmt;
-    if (remaining > 0) {
-      // tertiary spillover: hp for tank, dex otherwise
-      if (primary === "con" || secondary === "con" || primary === "str") {
-        stats.hp = Math.min(statCap("hp", level), remaining * 2);
-      } else {
-        const t: Stat = "wis";
-        stats[t] = (stats[t] || 0) + Math.min(statCap(t, level), remaining);
-      }
-    }
+    const tertiary: string = (primary === "con" || secondary === "con" || primary === "str") ? "hp" : "wis";
+    // Spillover order: primary, secondary, tertiary
+    spillover(stats, level, budget, [primary, secondary, tertiary]);
   } else {
     return distributeCommon(level, primary, hands);
   }
