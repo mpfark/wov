@@ -341,13 +341,13 @@ Deno.serve(async (req) => {
         if (e.equipped_slot === 'main_hand') {
           if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
           if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
-          if ((e.item as any)?.item_level != null) mhLvl = (e.item as any).item_level;
+          if ((e.item as any)?.level != null) mhLvl = (e.item as any).level;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
         if (e.equipped_slot === 'off_hand') {
           if ((e.item as any)?.weapon_tag) ohTag = (e.item as any).weapon_tag;
-          if ((e.item as any)?.item_level != null) ohLvl = (e.item as any).item_level;
+          if ((e.item as any)?.level != null) ohLvl = (e.item as any).level;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
