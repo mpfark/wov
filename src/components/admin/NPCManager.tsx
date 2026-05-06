@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, MessageCircle } from 'lucide-react';
-import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
+import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import NodePicker from './NodePicker';
 
 type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer';
