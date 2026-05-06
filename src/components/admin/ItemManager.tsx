@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown, Upload, Loader2 } from 'lucide-react';
 import { uploadIllustration } from '@/lib/upload-illustration';
 import { formatProcMessage } from '@shared/proc-log-format';
-import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
+import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 
