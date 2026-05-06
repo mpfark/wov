@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, Trash2, Skull } from 'lucide-react';
-import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
+import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import { generateCreatureStats, calculateHumanoidGold, getCreatureDamageDie, getStatModifier } from '@/lib/game-data';
 import { Slider } from '@/components/ui/slider';
 import ItemPickerList from './ItemPickerList';
@@ -318,54 +318,66 @@ export default function CreatureManager() {
   const unassignedCount = creatures.filter(c => !c.node_id).length;
   const noLootCount = creatures.filter(hasNoLoot).length;
 
+  const tools = (
+    <>
+      <AdminToolSection title="Search">
+        <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="h-7 text-xs" />
+        <Button size="sm" onClick={openNew} className="font-display text-xs h-7 w-full">
+          <Plus className="w-3 h-3 mr-1" /> New Creature
+        </Button>
+        <button
+          onClick={() => setShowNoLoot(v => !v)}
+          className={`w-full px-2 py-1 rounded text-[10px] font-display transition-colors ${
+            showNoLoot
+              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+              : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-transparent'
+          }`}
+        >
+          No Loot ({noLootCount})
+        </button>
+      </AdminToolSection>
+
+      <AdminToolSection title="Region">
+        <Select value={regionFilter} onValueChange={setRegionFilter}>
+          <SelectTrigger className="w-full h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
+          <SelectContent className="bg-popover border-border z-50 max-h-60">
+            <SelectItem value="all" className="text-xs">All Regions</SelectItem>
+            <SelectItem value="unassigned" className="text-xs text-destructive">⚠ Unassigned ({unassignedCount})</SelectItem>
+            {regionNames.map(r => (
+              <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </AdminToolSection>
+
+      <AdminToolSection title="Sort">
+        <div className="flex flex-wrap gap-1">
+          {(['name', 'level', 'rarity', 'location'] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => {
+                if (sortBy === s) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                else { setSortBy(s); setSortDir('asc'); }
+              }}
+              className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                sortBy === s
+                  ? 'bg-primary/20 text-primary border border-primary/40'
+                  : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+              }`}
+            >
+              {s}{sortBy === s ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+            </button>
+          ))}
+        </div>
+      </AdminToolSection>
+    </>
+  );
+
   return (
-    <div className="h-full flex">
+    <AdminPageShell icon={<Skull className="w-4 h-4" />} title="Creatures" count={creatures.length} tools={tools}>
+      <div className="flex-1 flex min-h-0">
       {/* Left: Creature List */}
       <div className="flex flex-col w-1/2 border-r border-border transition-all">
-        <AdminEntityToolbar icon={<Skull className="w-4 h-4" />} title="Creatures" count={creatures.length}>
-          <Select value={regionFilter} onValueChange={setRegionFilter}>
-            <SelectTrigger className="w-36 h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
-            <SelectContent className="bg-popover border-border z-50 max-h-60">
-              <SelectItem value="all" className="text-xs">All Regions</SelectItem>
-              <SelectItem value="unassigned" className="text-xs text-destructive">⚠ Unassigned ({unassignedCount})</SelectItem>
-              {regionNames.map(r => (
-                <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-0.5">
-            {(['name', 'level', 'rarity', 'location'] as const).map(s => (
-              <button
-                key={s}
-                onClick={() => {
-                  if (sortBy === s) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-                  else { setSortBy(s); setSortDir('asc'); }
-                }}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
-                  sortBy === s
-                    ? 'bg-primary/20 text-primary border border-primary/40'
-                    : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                }`}
-              >
-                {s}{sortBy === s ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
-              </button>
-            ))}
-          </div>
-          <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
-          <button
-            onClick={() => setShowNoLoot(v => !v)}
-            className={`px-2 py-0.5 rounded text-[10px] font-display transition-colors ${
-              showNoLoot
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
-                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            }`}
-          >
-            No Loot ({noLootCount})
-          </button>
-          <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
-            <Plus className="w-3 h-3 mr-1" /> New
-          </Button>
-        </AdminEntityToolbar>
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
@@ -735,6 +747,7 @@ export default function CreatureManager() {
           <AdminEmptyState message="Select a creature to edit" />
         )}
       </div>
-    </div>
+      </div>
+    </AdminPageShell>
   );
 }

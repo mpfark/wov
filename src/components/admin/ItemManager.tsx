@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Skull, ShoppingBag, Search, ArrowUpDown, Package, Sparkles, Wand2, ChevronUp, ChevronDown, Upload, Loader2 } from 'lucide-react';
 import { uploadIllustration } from '@/lib/upload-illustration';
 import { formatProcMessage } from '@shared/proc-log-format';
-import { AdminEntityToolbar, AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState } from './common';
+import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
 
@@ -412,38 +412,27 @@ export default function ItemManager() {
     return 0;
   });
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Page-level global actions bar */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-border bg-card/40 shrink-0">
-        <span className="text-[10px] font-display text-muted-foreground mr-auto uppercase tracking-wide">Catalog Tools</span>
-        <Button size="sm" variant="outline" onClick={handleRenameLegacy} disabled={renamingLegacy} className="font-display text-xs h-7" title="AI-rewrite legacy common/uncommon names to match the current naming policy">
-          <Wand2 className="w-3 h-3 mr-1" /> {renamingLegacy ? 'Renaming…' : 'Rename Legacy'}
+  const tools = (
+    <>
+      <AdminToolSection title="Search">
+        <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="h-7 text-xs" />
+        <Button size="sm" onClick={openNew} className="font-display text-xs h-7 w-full">
+          <Plus className="w-3 h-3 mr-1" /> New Item
         </Button>
-        <Button size="sm" variant="outline" onClick={handleRebalanceStats} disabled={rebalancing} className="font-display text-xs h-7" title="AI-rebalance stats on common/uncommon equipment to match the canonical budget formula">
-          <Sparkles className="w-3 h-3 mr-1" /> {rebalancing ? 'Rebalancing…' : 'Rebalance Stats'}
-        </Button>
-      </div>
-      <div className="flex-1 flex min-h-0">
-      {/* Left: Item List */}
-      <div className="flex flex-col w-1/2 border-r border-border transition-all">
-        <AdminEntityToolbar icon={<Package className="w-4 h-4" />} title="Items" count={filtered.length}>
-          <Input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} className="w-36 h-7 text-xs" />
-          <button
-            onClick={() => setShowUnassigned(v => !v)}
-            className={`px-2 py-0.5 rounded text-[10px] font-display transition-colors ${
-              showUnassigned
-                ? 'bg-destructive/20 text-destructive border border-destructive/50'
-                : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            }`}
-          >
-            Unassigned ({unassignedCount})
-          </button>
-          <Button size="sm" onClick={openNew} className="font-display text-xs h-7">
-            <Plus className="w-3 h-3 mr-1" /> New
-          </Button>
-        </AdminEntityToolbar>
-        <div className="flex items-center gap-1 px-4 py-1.5 border-b border-border bg-card/30 shrink-0 flex-wrap">
+        <button
+          onClick={() => setShowUnassigned(v => !v)}
+          className={`w-full px-2 py-1 rounded text-[10px] font-display transition-colors ${
+            showUnassigned
+              ? 'bg-destructive/20 text-destructive border border-destructive/50'
+              : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-transparent'
+          }`}
+        >
+          Unassigned ({unassignedCount})
+        </button>
+      </AdminToolSection>
+
+      <AdminToolSection title="Type">
+        <div className="flex flex-wrap gap-1">
           {['all', ...ITEM_TYPES].map(t => (
             <button
               key={t}
@@ -454,55 +443,60 @@ export default function ItemManager() {
                   : 'bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               }`}
             >
-              {t} {t !== 'all' ? `(${items.filter(i => i.item_type === t).length})` : `(${items.length})`}
+              {t} ({t === 'all' ? items.length : items.filter(i => i.item_type === t).length})
             </button>
           ))}
         </div>
-        {typeTab === 'equipment' && (
-          <>
-            <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
-              {['all', ...SLOTS].map(s => {
-                const count = items.filter(i => i.item_type === typeTab && (s === 'all' || i.slot === s)).length;
-                return (
-                  <button
-                    key={s}
-                    onClick={() => { setSlotTab(s); setWeaponTagTab('all'); }}
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
-                      slotTab === s
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                  >
-                    {s === 'all' ? 'All' : s.replace('_', ' ')} ({count})
-                  </button>
-                );
-              })}
-            </div>
-            {(slotTab === 'all' || slotTab === 'main_hand' || slotTab === 'off_hand') && (
-              <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/10 shrink-0 flex-wrap">
-                <span className="text-[9px] text-muted-foreground mr-1">Tag:</span>
-                {['all', ...WEAPON_TAGS].map(wt => {
-                  const count = items.filter(i => i.item_type === 'equipment' && (wt === 'all' || i.weapon_tag === wt) && (slotTab === 'all' || i.slot === slotTab)).length;
-                  return (
-                    <button
-                      key={wt}
-                      onClick={() => setWeaponTagTab(wt)}
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
-                        weaponTagTab === wt
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
-                    >
-                      {wt === 'all' ? 'All' : (WEAPON_TAG_LABELS[wt] || wt)} ({count})
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-        {/* Rarity filter + Sort controls */}
-        <div className="flex items-center gap-1 px-4 py-1 border-b border-border bg-card/20 shrink-0 flex-wrap">
+      </AdminToolSection>
+
+      {typeTab === 'equipment' && (
+        <AdminToolSection title="Slot">
+          <div className="flex flex-wrap gap-1">
+            {['all', ...SLOTS].map(s => {
+              const count = items.filter(i => i.item_type === typeTab && (s === 'all' || i.slot === s)).length;
+              return (
+                <button
+                  key={s}
+                  onClick={() => { setSlotTab(s); setWeaponTagTab('all'); }}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                    slotTab === s
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {s === 'all' ? 'All' : s.replace('_', ' ')} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </AdminToolSection>
+      )}
+
+      {typeTab === 'equipment' && (slotTab === 'all' || slotTab === 'main_hand' || slotTab === 'off_hand') && (
+        <AdminToolSection title="Weapon Tag">
+          <div className="flex flex-wrap gap-1">
+            {['all', ...WEAPON_TAGS].map(wt => {
+              const count = items.filter(i => i.item_type === 'equipment' && (wt === 'all' || i.weapon_tag === wt) && (slotTab === 'all' || i.slot === slotTab)).length;
+              return (
+                <button
+                  key={wt}
+                  onClick={() => setWeaponTagTab(wt)}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                    weaponTagTab === wt
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {wt === 'all' ? 'All' : (WEAPON_TAG_LABELS[wt] || wt)} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </AdminToolSection>
+      )}
+
+      <AdminToolSection title="Rarity">
+        <div className="flex flex-wrap gap-1">
           {['all', ...RARITIES].map(r => {
             const count = items.filter(i => {
               if (typeTab !== 'all' && i.item_type !== typeTab) return false;
@@ -518,31 +512,51 @@ export default function ItemManager() {
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 } ${r !== 'all' ? RARITY_COLORS[r] : ''}`}
               >
-                {r === 'all' ? 'All Rarities' : r} ({count})
+                {r === 'all' ? 'All' : r} ({count})
               </button>
             );
           })}
-          <div className="flex-1" />
-          <div className="flex items-center gap-1">
-            <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
-            {(['name', 'level', 'value', 'rarity'] as const).map(s => (
-              <button
-                key={s}
-                onClick={() => {
-                  if (sortBy === s) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-                  else { setSortBy(s); setSortDir('asc'); }
-                }}
-                className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
-                  sortBy === s
-                    ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                {s}{sortBy === s ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
-              </button>
-            ))}
-          </div>
         </div>
+      </AdminToolSection>
+
+      <AdminToolSection title="Sort">
+        <div className="flex flex-wrap items-center gap-1">
+          <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
+          {(['name', 'level', 'value', 'rarity'] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => {
+                if (sortBy === s) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+                else { setSortBy(s); setSortDir('asc'); }
+              }}
+              className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                sortBy === s
+                  ? 'bg-primary/20 text-primary border border-primary/30'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              {s}{sortBy === s ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+            </button>
+          ))}
+        </div>
+      </AdminToolSection>
+
+      <AdminToolSection title="Catalog Tools">
+        <Button size="sm" variant="outline" onClick={handleRenameLegacy} disabled={renamingLegacy} className="font-display text-xs h-7 w-full justify-start" title="AI-rewrite legacy common/uncommon names to match the current naming policy">
+          <Wand2 className="w-3 h-3 mr-1" /> {renamingLegacy ? 'Renaming…' : 'Rename Legacy'}
+        </Button>
+        <Button size="sm" variant="outline" onClick={handleRebalanceStats} disabled={rebalancing} className="font-display text-xs h-7 w-full justify-start" title="AI-rebalance stats on common/uncommon equipment to match the canonical budget formula">
+          <Sparkles className="w-3 h-3 mr-1" /> {rebalancing ? 'Rebalancing…' : 'Rebalance Stats'}
+        </Button>
+      </AdminToolSection>
+    </>
+  );
+
+  return (
+    <AdminPageShell icon={<Package className="w-4 h-4" />} title="Items" count={filtered.length} tools={tools}>
+      <div className="flex-1 flex min-h-0">
+      {/* Left: Item List */}
+      <div className="flex flex-col w-1/2 border-r border-border transition-all">
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-1.5">
             {filtered.length === 0 ? (
@@ -1037,6 +1051,6 @@ export default function ItemManager() {
         )}
       </div>
       </div>
-    </div>
+    </AdminPageShell>
   );
 }

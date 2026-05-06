@@ -1,5 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AdminPageShell } from './common';
+import { BookOpen } from 'lucide-react';
+
+const MANUAL_SECTIONS: { id: string; label: string }[] = [
+  { id: 'levels', label: '📊 Level Progression' },
+  { id: 'stats', label: '🎭 Character Stats' },
+  { id: 'hp-ac', label: '❤️ HP, AC & Regen' },
+  { id: 'cp-system', label: '🔮 Concentration (CP)' },
+  { id: 'combat', label: '⚔️ Combat' },
+  { id: 'xp-rewards', label: '🏆 XP & Rewards' },
+  { id: 'abilities', label: '✨ Class Abilities' },
+  { id: 'creatures', label: '🐉 Creature Scaling' },
+  { id: 'items', label: '🎒 Items & Economy' },
+  { id: 'weapon-affinity', label: '⚔️ Weapon Tags' },
+  { id: 'stamina', label: '🏃 Stamina' },
+  { id: 'milestones', label: '🏆 Milestone Rewards' },
+  { id: 'chat', label: '💬 Chat' },
+  { id: 'renown', label: '🏛️ Renown' },
+  { id: 'economy', label: '💰 Economy' },
+  { id: 'death', label: '💀 Death & Respawn' },
+];
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +42,7 @@ const MAX_LEVEL = 42;
 
 export default function GameManual() {
   const [playerCounts, setPlayerCounts] = useState<Record<number, number>>({});
+  const [activeSection, setActiveSection] = useState<string>(MANUAL_SECTIONS[0].id);
 
   useEffect(() => {
     (async () => {
@@ -46,15 +68,36 @@ export default function GameManual() {
     return { level, xpRequired, totalXp, statGain, classBonus, respec, players: playerCounts[level] || 0 };
   });
 
-  return (
-    <ScrollArea className="h-full">
-      <div className="p-4 max-w-4xl mx-auto space-y-2">
-        <h2 className="font-display text-lg text-primary text-glow mb-3">📖 Game Manual</h2>
+  const tools = (
+    <nav className="py-2">
+      {MANUAL_SECTIONS.map(s => {
+        const active = s.id === activeSection;
+        return (
+          <button
+            key={s.id}
+            onClick={() => setActiveSection(s.id)}
+            className={`w-full text-left px-3 py-2 text-xs font-display transition-colors border-l-2 ${
+              active
+                ? 'bg-primary/10 text-primary border-primary'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground border-transparent'
+            }`}
+          >
+            {s.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
 
-        <Accordion type="multiple" className="space-y-1">
+  return (
+    <AdminPageShell icon={<BookOpen className="w-4 h-4" />} title="Game Manual" tools={tools}>
+      <ScrollArea className="h-full">
+        <div className="p-4 max-w-4xl mx-auto space-y-2">
+
+        <Accordion type="single" value={activeSection} className="[&>[data-state=closed]]:hidden [&_h3:has([data-manual-trigger])]:hidden">
           {/* 1. Level Progression */}
           <AccordionItem value="levels" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               📊 Level Progression (1–{MAX_LEVEL})
             </AccordionTrigger>
             <AccordionContent className="px-4">
@@ -123,7 +166,7 @@ export default function GameManual() {
 
           {/* 2. Character Stats & Creation */}
           <AccordionItem value="stats" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🎭 Character Stats & Creation
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -307,7 +350,7 @@ export default function GameManual() {
 
           {/* 3. HP, AC & Regen */}
           <AccordionItem value="hp-ac" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               ❤️ HP, AC & Regeneration
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -387,7 +430,7 @@ export default function GameManual() {
 
           {/* 3b. Concentration Points (CP) */}
           <AccordionItem value="cp-system" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🔮 Concentration Points (CP)
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -525,7 +568,7 @@ export default function GameManual() {
 
           {/* 4. Combat */}
           <AccordionItem value="combat" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               ⚔️ Combat
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -554,7 +597,7 @@ export default function GameManual() {
 
           {/* 4b. XP & Creature Rewards */}
           <AccordionItem value="xp-rewards" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🏆 XP & Creature Rewards
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -631,7 +674,7 @@ export default function GameManual() {
 
           {/* 5. Class Abilities */}
           <AccordionItem value="abilities" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               ✨ Class Abilities
             </AccordionTrigger>
             <AccordionContent className="px-4">
@@ -734,7 +777,7 @@ export default function GameManual() {
 
           {/* 6. Creature Scaling */}
           <AccordionItem value="creatures" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🐉 Creature Scaling
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -803,7 +846,7 @@ export default function GameManual() {
 
           {/* 7. Items & Economy */}
           <AccordionItem value="items" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🎒 Items & Economy
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -880,7 +923,7 @@ export default function GameManual() {
 
           {/* ── Weapon Affinity ── */}
           <AccordionItem value="weapon-affinity" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               ⚔️ Weapon Tags & Class Affinity
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -941,7 +984,7 @@ export default function GameManual() {
 
           {/* 8. Stamina (MP) */}
           <AccordionItem value="stamina" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🏃 Stamina (Move Points)
             </AccordionTrigger>
             <AccordionContent className="px-4">
@@ -1000,7 +1043,7 @@ export default function GameManual() {
 
           {/* 9. Milestone Rewards */}
           <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🏆 Milestone Rewards
             </AccordionTrigger>
             <AccordionContent className="px-4">
@@ -1069,7 +1112,7 @@ export default function GameManual() {
 
           {/* Chat */}
           <AccordionItem value="chat" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               💬 Chat (Say & Whisper)
             </AccordionTrigger>
             <AccordionContent className="px-4">
@@ -1088,7 +1131,7 @@ export default function GameManual() {
 
           {/* Renown */}
           <AccordionItem value="renown" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               🏛️ Renown
             </AccordionTrigger>
             <AccordionContent className="px-4">
@@ -1171,7 +1214,7 @@ export default function GameManual() {
 
           {/* Economy */}
           <AccordionItem value="economy" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               💰 Economy — Gold, Salvage & Trading
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
@@ -1239,7 +1282,7 @@ export default function GameManual() {
 
           {/* Death & Respawn */}
           <AccordionItem value="death" className="border border-border rounded-lg bg-card/50">
-            <AccordionTrigger className="px-4 py-3 font-display text-sm hover:no-underline">
+            <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
               💀 Death & Respawn
             </AccordionTrigger>
             <AccordionContent className="px-4">
@@ -1251,7 +1294,8 @@ export default function GameManual() {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </div>
-    </ScrollArea>
+        </div>
+      </ScrollArea>
+    </AdminPageShell>
   );
 }
