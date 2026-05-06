@@ -1,50 +1,88 @@
-# Fix: Hidden flag not persisting on node connections
+## Weapon Dice Progression by Item Level
 
-## Problem
+Add a soft, item-level-based weapon die upgrade so a level 40 sword hits noticeably harder than a level 1 sword — without touching abilities, crit, procs, or the offhand multiplier.
 
-When marking a path between two nodes as **Hidden** in the admin Node Editor, the flag visibly saves at first but then disappears. The root cause is a state-sync race between the **ConnectionsManager** sub-panel and the parent **NodeEditorPanel**:
+### Progression curve
 
-- `ConnectionsManager` writes connection changes (including `hidden: true`) directly to the DB and then asynchronously triggers `loadNode(activeNodeId)` to refresh the parent's `form.connections` JSON string.
-- If the user makes any other edit on the node and clicks the top-level **Save Node** button before that refresh lands (or in some flows, even after — because `loadNode` isn't awaited), `saveNode()` writes the **stale** `form.connections` string back to the DB, silently dropping `hidden`.
-- The reverse side on the connected node is unaffected by the parent save, so the two ends can also drift out of sync (one hidden, one not).
+Per item (using `items.item_level`):
 
-A secondary issue: in `saveEditConnection`, the **reverse-side** update only patches `direction` + `hidden`, never `label`. This isn't the reported bug but is worth fixing in the same pass.
+```text
+1–10   → +0 die size
+11–20  → +1
+21–30  → +2
+31–40  → +3
+41+    → +3   (reserved for future 2dX upgrade, NOT in this pass)
+```
 
-## Plan
+Family base dice (`WEAPON_DAMAGE_DIE`) stay unchanged — daggers/wands keep their lighter feel; bows still start higher; staves still cap lower in 2H. The progression is a flat add to the chosen die size, applied identically to oneHand and twoHand variants.
 
-### 1. Make connection edits authoritative and atomic
+### Helper API
 
-In `src/components/admin/NodeEditorPanel.tsx` → `ConnectionsManager`:
+In `src/shared/formulas/combat.ts` (and mirrored to `supabase/functions/_shared/formulas/combat.ts`):
 
-- After every connection mutation (`addConnection`, `saveEditConnection`, `removeConnection`, `quickConnect`), re-fetch the node's `connections` from the DB and pass them up to the parent so `form.connections` is updated in lock-step. Add a new prop `onConnectionsChanged(newConnectionsJson: string)` and call it with the freshly-fetched array stringified.
-- In the parent, wire `onConnectionsChanged` to `setForm(f => ({ ...f, connections: json }))` so the top-level Save Node button can never overwrite the just-saved hidden flag with stale JSON.
+```ts
+export function getWeaponDieProgression(itemLevel: number | null | undefined): number {
+  const lvl = itemLevel ?? 1;
+  if (lvl <= 10) return 0;
+  if (lvl <= 20) return 1;
+  if (lvl <= 30) return 2;
+  return 3;
+}
 
-### 2. Don't let `saveNode` clobber connections
+export function getWeaponDieForItem(
+  weaponTag: string | null | undefined,
+  hands: 1 | 2,
+  itemLevel: number | null | undefined,
+): number {
+  return getWeaponDie(weaponTag, hands) + getWeaponDieProgression(itemLevel);
+}
+```
 
-Still in `NodeEditorPanel.tsx`:
+`getWeaponDie` keeps its current signature so legacy/UI fallbacks (no item context, e.g. unarmed) still work. `rollWeaponAttackDamage` gains an optional `itemLevel` parameter and calls `getWeaponDieForItem`.
 
-- In `saveNode()`, when updating an existing node, **omit the `connections` field from the update payload** entirely. Connections are now owned by `ConnectionsManager` and are always written through it. This removes the entire class of "stale form string overwrites real DB state" bugs for connections (hidden, locked, lock_key, lock_hint, label, direction).
-- For **new** node creation (where `ConnectionsManager` isn't shown yet), keep the existing behavior since the initial connection list is built from `adjacentToNodeId` and is still trustworthy.
+### Wire-through (call sites)
 
-### 3. Always write the `hidden` field explicitly
+1. **`supabase/functions/combat-tick/index.ts`**
+   - When loading equipment (line ~307), also select `item_level`: `item:items(stats, weapon_tag, hands, procs, item_level)`.
+   - Track `mainHandLevel[cid]` and `offHandLevel[cid]` alongside the existing `mainHandTag` / `offHandTag` maps.
+   - Replace `getWeaponDie(wTag, wHands)` (line ~982) with `getWeaponDieForItem(wTag, wHands, mainHandLevel[m.id])`.
+   - Replace offhand `getWeaponDie(ohTag, 1)` (line ~1127) with `getWeaponDieForItem(ohTag, 1, offHandLevel[m.id])`.
 
-In `ConnectionsManager`:
+2. **`src/features/combat/utils/combat-predictor.ts`**
+   - Add optional `weaponItemLevel` to `PredictionContext`.
+   - Use `getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel)`.
+   - Update the call site that builds the prediction context (search `predictConservativeDamage`) to pass the equipped main-hand item level.
 
-- Replace the conditional spread `...(editHidden ? { hidden: true } : {})` with an explicit `hidden: !!editHidden` on both the from-side and reverse-side writes (and same for `addConnection`/`addHidden`). Storing `hidden: false` instead of omitting it makes the intent unambiguous and survives any future shallow-merge logic.
-- On the reverse-side update inside `saveEditConnection`, also propagate `label` so a label change on one end mirrors to the other (consistency fix).
+3. **`src/shared/formulas/combat.ts` — `resolveAttackRoll`**
+   - Extend `AttackContext` with optional `weaponItemLevel`.
+   - Use `getWeaponDieForItem(...)` so any client-side resolver sharing this helper stays consistent. (Mirror to Deno copy.)
 
-### 4. Verification
+4. **`src/features/character/components/CharacterPanel.tsx`** (line ~893)
+   - Read the equipped main-hand `item_level` from the same source already used for `mainHandTag` / `isTwoHanded` and call `getWeaponDieForItem(...)` so the character sheet shows the actual progressed die (e.g. `Weapon Damage: 1d9 + STR`).
 
-After the change, repro the original flow:
-1. Open admin → World → click a node → Connections tab.
-2. Edit an existing connection, check **Hidden**, Save.
-3. Confirm the eye/Hidden badge appears on the row.
-4. Make an unrelated change (e.g. edit description) and click the top-level **Save Node**.
-5. Re-open the node — Hidden flag still present.
-6. Open the *connected* node and confirm the reverse connection also shows Hidden.
+5. **Item tooltips / weapon display** (search for any `getWeaponDie(` usage in inventory/marketplace tooltip components — there are no other callers today, but verify with `rg "getWeaponDie"` after the change). When an item context is available, switch to `getWeaponDieForItem(tag, hands, item.item_level)`.
 
-## Technical notes
+6. **Game Manual / combat docs** — if a weapon-dice table is documented in markdown or a help panel, add a brief note: "Weapon dice grow by item level: +1 at 11, +2 at 21, +3 at 31."
 
-- Files touched: `src/components/admin/NodeEditorPanel.tsx` only.
-- No DB migration needed; `connections` is already a `jsonb` column with arbitrary keys.
-- No changes required on the player side — `useMovementActions`, `MovementPad`, `PlayerGraphView`, `PlayerWorldMapDialog`, `useKeyboardMovement` all already filter on `c.hidden`, so once the flag persists correctly, hidden paths will behave as designed (discoverable only via search).
+### What stays unchanged
+
+- Family base dice and 2H die selection (no reintroduction of the 1.25× 2H multiplier).
+- Offhand: still its own die + the existing 30% multiplier — only the die size benefits from progression.
+- STR damage scaling, INT hit bonus, DEX crit, WIS anti-crit, shield block, procs, mitigation, T0/class abilities, crit multiplier — none touched.
+- `UNARMED_DIE` — unarmed has no item, so it never progresses.
+
+### Mirror & test discipline
+
+- Edit `src/shared/formulas/combat.ts` first, then byte-mirror to `supabase/functions/_shared/formulas/combat.ts` (only difference: `.ts` import suffixes), per the formula-ownership rule.
+- Add a small case to `src/shared/formulas/__tests__/formula-parity.test.ts` snapshotting `getWeaponDieForItem('sword', 1, [1,11,21,31,41])` so future tweaks are intentional.
+- Manual validation: low vs high level sword, dagger, bow; 1H vs 2H; offhand dagger; marketplace tooltip; CharacterPanel weapon line; verify combat-tick logs show the larger die in damage breakdown.
+
+### Files touched
+
+- `src/shared/formulas/combat.ts`
+- `supabase/functions/_shared/formulas/combat.ts` (mirror)
+- `supabase/functions/combat-tick/index.ts`
+- `src/features/combat/utils/combat-predictor.ts` (+ caller)
+- `src/features/character/components/CharacterPanel.tsx`
+- `src/shared/formulas/__tests__/formula-parity.test.ts`
+- Any tooltip component still calling raw `getWeaponDie` with item context (verify post-change)

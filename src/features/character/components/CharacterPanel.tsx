@@ -4,7 +4,7 @@ import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
 import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
 import { SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount } from '@/features/combat';
-import { getWeaponDie, ARCANE_SURGE_DAMAGE_MULT, ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
+import { getWeaponDieForItem, ARCANE_SURGE_DAMAGE_MULT, ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
 import { getClassCritRange } from '@/shared/formulas/classes';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -329,6 +329,7 @@ export default function CharacterPanel({
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
   const mainHandTag = mainHandItem?.item?.weapon_tag as string | undefined;
+  const mainHandLevel = (mainHandItem?.item as any)?.item_level as number | null | undefined;
   const isProficient = !!(mainHandTag && CLASS_WEAPON_AFFINITY[character.class]?.includes(mainHandTag));
   const offHandItem = getEquippedInSlot('off_hand');
   const offHandTag = offHandItem?.item?.weapon_tag as string | undefined;
@@ -890,7 +891,7 @@ export default function CharacterPanel({
 
                   // Autoattack: to-hit uses DEX, damage uses STR.
                   // (Class identity lives in T0 abilities, not in basic-attack stats.)
-                  const weaponDie = getWeaponDie(mainHandTag ?? null, isTwoHanded ? 2 : 1);
+                  const weaponDie = getWeaponDieForItem(mainHandTag ?? null, isTwoHanded ? 2 : 1, mainHandLevel ?? null);
                   const dmgMod = getStatModifier(character.str + (equipmentBonuses.str || 0));   // STR — damage
                   const hitMod = getStatModifier(character.dex + (equipmentBonuses.dex || 0));   // DEX — to-hit
                   const intHit = getIntHitBonus(eInt);

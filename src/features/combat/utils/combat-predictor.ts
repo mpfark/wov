@@ -13,7 +13,7 @@ import {
   getStatModifier,
   getIntHitBonus,
   getWeaponAffinityBonus,
-  getWeaponDie,
+  getWeaponDieForItem,
 } from './combat-math';
 
 export interface PredictionContext {
@@ -28,6 +28,8 @@ export interface PredictionContext {
   weaponTag?: string | null;
   /** Hands the main-hand weapon is wielded with (1 or 2). Defaults to 1. */
   weaponHands?: 1 | 2;
+  /** Item level of main-hand weapon (drives die-size progression). */
+  weaponItemLevel?: number | null;
 }
 
 export interface PredictionResult {
@@ -50,7 +52,7 @@ export function predictConservativeDamage(ctx: PredictionContext): PredictionRes
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const effectiveAC = Math.max(ctx.creatureAC - (ctx.sunderReduction || 0), 0);
   const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
-  const die = getWeaponDie(ctx.weaponTag, hands);
+  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel);
 
   // Estimate hit chance: need roll + dexHitMod + ihb + affinity >= effectiveAC
   const threshold = Math.max(effectiveAC - dexHitMod - ihb - affinity.hitBonus, 1);

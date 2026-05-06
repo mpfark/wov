@@ -69,13 +69,49 @@ export function getWeaponDie(weaponTag: string | null | undefined, hands: 1 | 2)
   return entry.oneHand ?? entry.twoHand ?? UNARMED_DIE;
 }
 
+/**
+ * Item-level weapon die progression.
+ *
+ *   1–10  → +0
+ *   11–20 → +1
+ *   21–30 → +2
+ *   31+   → +3
+ *
+ * Soft, additive scaling that preserves family identity (dagger stays
+ * lighter than a sword) while making higher-level weapons noticeably
+ * stronger. Tuning dial.
+ */
+export function getWeaponDieProgression(itemLevel: number | null | undefined): number {
+  const lvl = itemLevel ?? 1;
+  if (lvl <= 10) return 0;
+  if (lvl <= 20) return 1;
+  if (lvl <= 30) return 2;
+  return 3;
+}
+
+/**
+ * Resolve the autoattack damage die for a weapon, applying item-level
+ * progression on top of the family base die. Unarmed (no tag) ignores
+ * progression because there is no item.
+ */
+export function getWeaponDieForItem(
+  weaponTag: string | null | undefined,
+  hands: 1 | 2,
+  itemLevel: number | null | undefined,
+): number {
+  const base = getWeaponDie(weaponTag, hands);
+  if (!weaponTag) return base;
+  return base + getWeaponDieProgression(itemLevel);
+}
+
 /** Roll one weapon attack: 1d{weaponDie} + STR modifier. */
 export function rollWeaponAttackDamage(
   weaponTag: string | null | undefined,
   hands: 1 | 2,
   str: number,
+  itemLevel?: number | null,
 ): number {
-  const die = getWeaponDie(weaponTag, hands);
+  const die = getWeaponDieForItem(weaponTag, hands, itemLevel);
   return rollDamage(1, die) + getStatModifier(str);
 }
 
@@ -223,6 +259,8 @@ export interface AttackContext {
   weaponTag?: string | null;
   /** Hands the main-hand weapon is wielded with (1 or 2). Defaults to 1. */
   weaponHands?: 1 | 2;
+  /** Item level of main-hand weapon (drives die-size progression). */
+  weaponItemLevel?: number | null;
 }
 
 export interface AttackResult {
@@ -261,7 +299,7 @@ export function resolveAttackRoll(
   const sdf = getStrDamageFloor(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
-  const die = getWeaponDie(ctx.weaponTag, hands);
+  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel);
 
   const roll = rollD20();
   const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;

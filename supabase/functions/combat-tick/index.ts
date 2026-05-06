@@ -34,7 +34,7 @@ import {
   getCreatureDamageDie as creatureDmgDie,
   getCreatureLevelGapMultiplier as creatureLevelGapMult,
   calculateAC as calcAC,
-  getWeaponDie,
+  getWeaponDieForItem,
   getHitQuality,
   HIT_QUALITY_MULT,
   GLANCING_WEAK_CAP,
@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
     const combatNodeId = session.node_id;
     const [equipRes, creaturesRes, effectsRes, xpRes] = await Promise.all([
       db.from('character_inventory')
-        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs)')
+        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs, item_level)')
         .in('character_id', charIds)
         .not('equipped_slot', 'is', null),
       db.from('creatures').select('*').eq('node_id', combatNodeId).eq('is_alive', true),
@@ -321,12 +321,16 @@ Deno.serve(async (req) => {
     const eq: Record<string, Record<string, number>> = {};
     const mainHandTag: Record<string, string | null> = {};
     const offHandTag: Record<string, string | null> = {};
+    const mainHandLevel: Record<string, number | null> = {};
+    const offHandLevel: Record<string, number | null> = {};
     const isTwoHanded: Record<string, boolean> = {};
     const memberProcs: Record<string, { type: string; chance: number; value: number; emoji: string; text: string }[]> = {};
     for (const cid of charIds) {
       const b: Record<string, number> = {};
       let mhTag: string | null = null;
       let ohTag: string | null = null;
+      let mhLvl: number | null = null;
+      let ohLvl: number | null = null;
       const procs: any[] = [];
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
@@ -335,11 +339,13 @@ Deno.serve(async (req) => {
         if (e.equipped_slot === 'main_hand') {
           if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
           if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
+          if ((e.item as any)?.item_level != null) mhLvl = (e.item as any).item_level;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
         if (e.equipped_slot === 'off_hand') {
           if ((e.item as any)?.weapon_tag) ohTag = (e.item as any).weapon_tag;
+          if ((e.item as any)?.item_level != null) ohLvl = (e.item as any).item_level;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
@@ -347,6 +353,8 @@ Deno.serve(async (req) => {
       eq[cid] = b;
       mainHandTag[cid] = mhTag;
       offHandTag[cid] = ohTag;
+      mainHandLevel[cid] = mhLvl;
+      offHandLevel[cid] = ohLvl;
       memberProcs[cid] = procs;
     }
 
@@ -979,7 +987,7 @@ Deno.serve(async (req) => {
         const mb = buffs[m.id] || {};
         const wTag = mainHandTag[m.id];
         const wHands: 1 | 2 = isTwoHanded[m.id] ? 2 : 1;
-        const weaponDie = getWeaponDie(wTag, wHands);
+        const weaponDie = getWeaponDieForItem(wTag, wHands, mainHandLevel[m.id]);
         const effStr = (c.str || 10) + (eb.str || 0);
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const sMod = sm(effStr);   // STR modifier — drives damage + STR floor
@@ -1124,7 +1132,7 @@ Deno.serve(async (req) => {
         if (!isOffhandWeapon(ohTag)) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
-        const ohDie = getWeaponDie(ohTag, 1);
+        const ohDie = getWeaponDieForItem(ohTag, 1, offHandLevel[m.id]);
         const effStr2 = (c.str || 10) + (eb.str || 0);
         const effDex2 = (c.dex || 10) + (eb.dex || 0);
         const sMod2 = sm(effStr2);   // STR — drives offhand damage
