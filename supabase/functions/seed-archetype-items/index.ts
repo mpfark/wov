@@ -70,7 +70,30 @@ const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5 };
 function statBudget(level: number, rarity: string, hands = 1): number {
   const m = RARITY_MULT[rarity] || 1;
   const h = hands === 2 ? 1.5 : 1;
-  return Math.floor(1 + (level - 1) * 0.3 * m * h);
+  return Math.max(2, Math.floor(2 + (level - 1) * 0.3 * m * h));
+}
+
+/** Drip leftover budget into stat slots in priority order until budget is fully spent or all caps hit. */
+function spillover(stats: Record<string, number>, level: number, budget: number, priority: string[]) {
+  let used = Object.values(stats).reduce((a, b) => a + b, 0);
+  let remaining = budget - used;
+  if (remaining <= 0) return stats;
+  let safety = 100;
+  while (remaining > 0 && safety-- > 0) {
+    let placed = false;
+    for (const k of priority) {
+      const cap = statCap(k, level);
+      const cur = stats[k] || 0;
+      if (cur < cap) {
+        stats[k] = cur + 1;
+        remaining--;
+        placed = true;
+        if (remaining <= 0) break;
+      }
+    }
+    if (!placed) break; // all caps hit
+  }
+  return stats;
 }
 function statCap(key: string, level: number): number {
   if (key === "ac" || key === "hp_regen") return 2 + Math.floor(level / 10);
