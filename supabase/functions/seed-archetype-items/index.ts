@@ -165,7 +165,7 @@ interface SeedItem {
 function buildCatalog(): SeedItem[] {
   const out: SeedItem[] = [];
   for (const band of TIER_PREFIXES) {
-    const level = Math.min(42, Math.floor((band.min + band.max) / 2));
+    const level = band.min;
     const prefix = band.prefix;
 
     // PRIMARY archetypes
