@@ -329,6 +329,7 @@ export default function CharacterPanel({
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
   const mainHandTag = mainHandItem?.item?.weapon_tag as string | undefined;
+  const mainHandLevel = (mainHandItem?.item as any)?.item_level as number | null | undefined;
   const isProficient = !!(mainHandTag && CLASS_WEAPON_AFFINITY[character.class]?.includes(mainHandTag));
   const offHandItem = getEquippedInSlot('off_hand');
   const offHandTag = offHandItem?.item?.weapon_tag as string | undefined;
