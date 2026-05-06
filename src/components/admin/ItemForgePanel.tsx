@@ -83,6 +83,10 @@ interface ItemForgePanelProps {
 }
 
 export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = {}) {
+  const { user } = useAuth();
+  const { isValar } = useRole(user);
+  const [seeding, setSeeding] = useState(false);
+
   /* Forge mode */
   const [forgeMode, setForgeMode] = useState<'batch' | 'single'>('batch');
 
