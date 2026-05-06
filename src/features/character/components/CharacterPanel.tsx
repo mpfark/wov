@@ -14,6 +14,7 @@ import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, P
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 // StatPlannerDialog has moved into the Trainer service panel.
 import ItemIllustration from '@/components/items/ItemIllustration';
+import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 
 interface Props {
