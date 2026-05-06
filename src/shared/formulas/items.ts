@@ -25,7 +25,8 @@ export const CONSUMABLE_ALLOWED_STATS = ['hp', 'hp_regen'];
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   const handsMult = hands === 2 ? 1.5 : 1;
-  const base = Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
+  // Floor of 2 even at L1 so every item has primary + minor stat (matches seed-archetype-items).
+  const base = Math.max(2, Math.floor(2 + (level - 1) * 0.3 * mult * handsMult));
   // Consumables get 3x budget since they're single-use
   return itemType === 'consumable' ? base * 3 : base;
 }

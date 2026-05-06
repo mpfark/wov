@@ -127,9 +127,9 @@ describe('XP — fixed snapshots', () => {
 });
 
 describe('Item stat budget — fixed snapshots', () => {
-  it('common L1', () => expect(getItemStatBudget(1, 'common')).toBe(1));
-  it('uncommon L10', () => expect(getItemStatBudget(10, 'uncommon')).toBe(5));
-  it('unique L20 2H', () => expect(getItemStatBudget(20, 'unique', 2)).toBe(26));
+  it('common L1', () => expect(getItemStatBudget(1, 'common')).toBe(2));
+  it('uncommon L10', () => expect(getItemStatBudget(10, 'uncommon')).toBe(6));
+  it('unique L20 2H', () => expect(getItemStatBudget(20, 'unique', 2)).toBe(27));
   it('consumable triples budget', () => {
     const eqp = getItemStatBudget(10, 'common', 1, 'equipment');
     const con = getItemStatBudget(10, 'common', 1, 'consumable');

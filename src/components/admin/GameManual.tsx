@@ -578,13 +578,65 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Stat Budget:</strong> floor(1 + (level − 1) × 0.3 × rarity_mult × hands_mult)</p>
+                <p><strong className="text-foreground">Stat Budget:</strong> max(2, floor(2 + (level − 1) × 0.3 × rarity_mult × hands_mult)) — floor of 2 even at L1, so every item has at least primary + minor.</p>
                 <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5</p>
                 <p><strong className="text-foreground">Repair Cost:</strong> ceil((100 − cur_dur) × value × rarity_mult / 100)</p>
                 <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Unique items are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
                 <p><strong className="text-foreground">Creature Loot:</strong> Drops are resolved via the shared <strong>Loot Table system</strong> — each creature has a <code className="text-primary">drop_chance</code> (0.0–1.0) and a linked <code className="text-primary">loot_table_id</code>. On kill, if the drop roll succeeds, one item is selected from the table using weighted random selection. Gold drops from humanoids use a separate inline configuration.</p>
               </div>
+
+              <Card className="bg-card/30 border-primary/20">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">Naming Grammar (Common &amp; Uncommon)</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Common and uncommon gear use a deterministic <code className="text-foreground">[Tier Prefix] [Archetype] [Slot Noun]</code> grammar. Examples: <span className="text-foreground">Worn Vanguard Sword</span>, <span className="text-elvish">Fine Spellblade Dagger</span>. Lyrical / proper-noun names are reserved for Unique &amp; Soulforged tiers.
+                  </p>
+
+                  <div>
+                    <p className="text-[10px] font-display text-foreground mb-1">Tier Prefix by Level</p>
+                    <div className="grid grid-cols-3 gap-1 text-[10px]">
+                      {[
+                        ['L1–5', 'Worn'], ['L6–10', 'Sturdy'], ['L11–15', 'Fine'],
+                        ['L16–20', 'Engraved'], ['L21–25', 'Runed'], ['L26–30', 'High'],
+                        ['L31–35', 'Mythic'], ['L36–40', 'Ancient'], ['L41–42', 'Astral'],
+                      ].map(([range, prefix]) => (
+                        <div key={range} className="flex justify-between bg-muted/40 rounded px-1.5 py-0.5">
+                          <span className="text-muted-foreground">{range}</span>
+                          <span className="font-display text-foreground">{prefix}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-display text-foreground mb-1">Common = Primary Archetype (single dominant stat)</p>
+                    <div className="text-[10px] text-muted-foreground space-y-0.5">
+                      <p><span className="text-foreground">STR:</span> Vanguard, Iron, Brutal, Warborn, Tyrant</p>
+                      <p><span className="text-foreground">DEX:</span> Shadow, Swift, Hunter, Ashen, Nightstalker</p>
+                      <p><span className="text-foreground">CON:</span> Warden, Stoneguard, Bulwark, Bastion, Stalwart, Earthshaper, Ironroot</p>
+                      <p><span className="text-foreground">INT:</span> Sage, Arcane, Spellwoven, Astral, Runed</p>
+                      <p><span className="text-foreground">WIS:</span> Devout, Sanctified, Templar, Enlightened, Dawnbringer</p>
+                      <p><span className="text-foreground">CHA:</span> Regal, Noble, Bardic, Silvertongue, Crowned, Majestic, Virtuoso</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-display text-elvish mb-1">Uncommon = Hybrid Archetype Only (two stats)</p>
+                    <div className="text-[10px] text-muted-foreground space-y-0.5">
+                      <p><span className="text-foreground">STR+CON:</span> Warlord, Juggernaut, Fortress · <span className="text-foreground">STR+DEX:</span> Raider, Blademaster, Skirmisher</p>
+                      <p><span className="text-foreground">DEX+INT:</span> Spellblade, Hexrunner, Arcstrider · <span className="text-foreground">WIS+CON:</span> Guardian, Justicar, Oathbound</p>
+                      <p><span className="text-foreground">INT+WIS:</span> Mystic, Oracle, Seer · <span className="text-foreground">CHA+WIS:</span> Prophet, Hierophant, Luminary</p>
+                      <p><span className="text-foreground">CHA+DEX:</span> Troubadour, Duelist, Shadowcourt · <span className="text-foreground">CHA+STR:</span> Champion, Sovereign, Lionguard</p>
+                    </div>
+                  </div>
+
+                  <p className="text-[10px] text-muted-foreground/80">
+                    <span className="text-foreground">Stat distribution:</span> common ≈ 70% primary + minor spillover; uncommon ≈ 55% primary / 35% secondary / 10% tertiary spillover. A spillover loop guarantees the full budget is spent.
+                  </p>
+                </CardContent>
+              </Card>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs font-display text-primary mb-1">Rarity Multipliers</p>
