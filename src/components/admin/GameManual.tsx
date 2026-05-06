@@ -1016,6 +1016,9 @@ export default function GameManual() {
                 </div>
 
                 <p className="text-muted-foreground">DEX-focused classes like Rangers and Rogues naturally gain higher max MP and faster recovery. STR-focused classes like Warriors can carry more items before becoming encumbered.</p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
 
           <AccordionItem value="milestones" className="border border-border rounded-lg bg-card/50">
             <AccordionTrigger data-manual-trigger className="px-4 py-3 font-display text-sm hover:no-underline">
