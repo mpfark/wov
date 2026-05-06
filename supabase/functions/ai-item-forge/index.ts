@@ -111,82 +111,78 @@ Deno.serve(async (req) => {
     else typeInstruction = "All items must be consumables (slot = null, stats can ONLY use hp and hp_regen, budget is 3x normal, no stat caps).";
 
     const systemPrompt = `You are an item generator for "Wayfarers of Varneth", a text-based high-fantasy RPG.
-Generate a batch of ${count} distinct, lore-consistent items for a level ${level_min}–${level_max} world.
+Generate a batch of ${count} distinct items for a level ${level_min}–${level_max} world that match the deterministic seed catalog grammar.
 
 NAMING & DESCRIPTION RULES:
-- ALL item names and descriptions must be written ENTIRELY in English using ONLY standard ASCII letters (A-Z, a-z), spaces, hyphens, and apostrophes.
-- Do NOT include metadata, IDs, labels, or prefixes in name or description fields.
-- Descriptions must be a single evocative English sentence. Never leave description empty.
-- Names must be UNIQUE — do NOT generate items with names from this list: ${existingItemNames || "none"}
+- ALL names/descriptions are ASCII English (A-Z, a-z, spaces, hyphens, apostrophes only).
+- No metadata, IDs, prefixes in fields. Description is one evocative sentence.
+- Names must be UNIQUE — do NOT reuse names from: ${existingItemNames || "none"}
 
-NAMING POLICY BY RARITY (CRITICAL — FOLLOW EXACTLY):
+NAMING GRAMMAR (STRICT — mirrors the seed catalog):
+Format: [Tier Prefix] [Archetype] [Slot Noun]
+Examples: "Worn Vanguard Sword", "Sturdy Sage Robe", "Fine Spellblade Dagger", "Engraved Warlord Plate".
 
-COMMON items — boring, generic, material-based. Format: [Tier Adjective] [Material] [Slot Noun]
-- Tier adjectives by level band (use to hint at strength, NOT for flavor):
-  - L1-9: omit, or use "Crude", "Worn", "Rough", "Simple"
-  - L10-19: "Sturdy", "Hardened", "Reinforced"
-  - L20-29: "Heavy", "Tempered", "Banded"
-  - L30-42: "Masterwork", "Riveted", "Honed"
-- Materials by level: Cloth → Leather → Studded Leather → Iron → Steel → Banded Steel → Reinforced Steel
-- Slot nouns: Helm, Pauldrons, Cuirass, Gauntlets, Belt, Greaves, Boots, Ring, Amulet, Pendant, Trinket, Sword, Axe, Dagger, Mace, Bow, Staff, Shield, etc.
-- GOOD examples: "Sturdy Iron Helm", "Masterwork Steel Pauldrons", "Heavy Bone Amulet", "Iron Dagger", "Worn Leather Boots", "Tempered Steel Sword"
-- BAD examples (NEVER for common): "Helm of the Cairn Warden", "Pendant of the Astral Journey", "Whispering Skull Fragment", "Heart of the Ancient Forest"
-- NO proper nouns. NO place names. NO factions. NO "of the X" titles.
+TIER PREFIX by level band (pick by item's level):
+- L1-5 Worn · L6-10 Sturdy · L11-15 Fine · L16-20 Engraved · L21-25 Runed · L26-30 High · L31-35 Mythic · L36-40 Ancient · L41-42 Astral
 
-UNCOMMON items — slightly evocative but still generic archetypes. Format: [Quality Adjective] [Material/Style] [Slot Noun]
-- Allowed quality words ONLY: Fine, Engraved, Etched, Reinforced, Plated, Banded, Polished, Runed, Gilded, Enchanted, Greater
-- GOOD examples: "Gilded Circlet", "Runed Kite Shield", "Engraved Greatsword", "Etched Dagger", "Plated Pauldrons", "Fine Longbow"
-- BAD examples (NEVER for uncommon — these belong to UNIQUE tier only): "Aegis of Dawn", "Dawnbreaker", "Stormsplitter", "Phantom Edge", "Mantle of the Obsidian Watch"
-- NO proper nouns. NO place names. NO factions. NO "of the X" titles.
+COMMON = primary archetype (single dominant stat). Pick ONE archetype matching the dominant stat:
+- STR: Vanguard, Iron, Brutal, Warborn, Tyrant
+- DEX: Shadow, Swift, Hunter, Ashen, Nightstalker
+- CON: Warden, Stoneguard, Bulwark, Bastion, Stalwart, Earthshaper, Ironroot
+- INT: Sage, Arcane, Spellwoven, Astral, Runed
+- WIS: Devout, Sanctified, Templar, Enlightened, Dawnbringer
+- CHA: Regal, Noble, Bardic, Silvertongue, Crowned, Majestic, Virtuoso
 
-THEMATIC CONSISTENCY (apply WITHIN the naming policy above):
-- Item names MUST match their stats. A "Heavy" item leans STR/CON, a "Runed" item leans INT/WIS, a "Gilded" item leans CHA.
-- Material/quality hints by stat focus (incorporate into the boring/generic format above):
-  - STR-focused: Heavy, Iron, Banded, Reinforced
-  - DEX-focused: Light, Polished, Fine, Etched
-  - CON-focused: Hardened, Sturdy, Tempered, Plated
-  - INT-focused: Runed, Engraved, Etched
-  - WIS-focused: Engraved, Runed
-  - CHA-focused: Gilded, Polished, Fine
-- Weapon slot nouns: swords = Sword/Blade/Greatsword, axes = Axe/Greataxe/Hatchet, staves = Staff, etc.
-- Armor slot nouns must match the slot: shoulders = Pauldrons/Spaulders, belt = Belt/Girdle, chest = Cuirass/Hauberk, etc.
+UNCOMMON = HYBRID archetype ONLY (two stats). Pick ONE hybrid name; its two stats become primary+secondary:
+- STR+CON: Warlord, Juggernaut, Fortress
+- STR+DEX: Raider, Blademaster, Skirmisher
+- DEX+INT: Spellblade, Hexrunner, Arcstrider
+- WIS+CON: Guardian, Justicar, Oathbound
+- INT+WIS: Mystic, Oracle, Seer
+- CHA+WIS: Prophet, Hierophant, Luminary
+- CHA+DEX: Troubadour, Duelist, Shadowcourt
+- CHA+STR: Champion, Sovereign, Lionguard
+NEVER generate a non-hybrid uncommon. Uncommons must use a hybrid archetype name from the list above.
+
+SLOT NOUNS (must match slot):
+- head: Helm/Hood/Circlet · chest: Plate/Armor/Vest/Robe · pants: Greaves/Leggings · gloves: Gauntlets/Gloves
+- boots: Sabatons/Boots · off_hand: Shield/Tome/Idol
+- main_hand: Sword/Axe/Mace/Dagger/Bow/Staff/Wand (pick by archetype: STR=Sword/Axe/Mace, DEX=Dagger/Bow/Sword, INT=Staff/Wand, WIS=Mace/Staff, CHA=Wand/Sword)
+
+FORBIDDEN: proper nouns, place names, factions, "of the X" titles, lyrical names ("Dawnbreaker", "Aegis of Dawn"). Those are reserved for the Unique tier.
 
 ITEM TYPE: ${typeInstruction}
 SLOT: ${slotInstruction}
 RARITY: ${rarityInstruction}
 STATS FOCUS: ${statsFocusInstruction}
 
-STAT BUDGET FORMULA:
-- Equipment budget = floor(1 + (level - 1) × 0.3 × rarity_multiplier × hands_multiplier)
-- Consumable budget = equipment_budget × 3
-- Rarity multipliers: common=1.0, uncommon=1.5
-- Hands multiplier: 1.0 for 1-handed, 1.5 for 2-handed (hands=2, main_hand only)
-- Level: pick a level between ${level_min} and ${level_max} for each item.
+STAT BUDGET FORMULA (mirrors seed catalog):
+- Equipment budget = max(2, floor(2 + (level - 1) × 0.3 × rarity_multiplier × hands_multiplier))
+- Floor of 2 even at L1, so every item has at least primary + minor.
+- Consumable budget = equipment budget × 3.
+- Rarity: common=1.0, uncommon=1.5. Hands: 1.0 (1H) / 1.5 (2H, main_hand only).
+- Pick a level between ${level_min} and ${level_max} for each item.
 
-STAT DISTRIBUTION RULES:
-- Equipment items MUST have AT LEAST 2 different stat keys. Items with only 1 stat will be REJECTED.
-- Distribute the FULL budget across multiple stats. Never leave budget unspent.
-- The PRIMARY stat (matching the item's theme) should get ~40-50% of the budget. Secondary stats get the rest.
-- Example for budget=2: {"str":1,"con":1}. Budget=4: {"str":2,"dex":1,"con":1}. Budget=6: {"str":2,"dex":2,"wis":1,"hp":2}.
-- Even for budget=1, split across 2 stats like {"str":1,"dex":1} (going slightly over is fine).
+STAT DISTRIBUTION:
+- COMMON: ~70% to primary stat, remainder spillover into a single minor stat. Single archetype = single primary.
+- UNCOMMON: ~55% primary, ~35% secondary, ~10% tertiary spillover (hp for tank-leaning, wis otherwise). Both archetype stats MUST appear.
+- Spend the FULL budget. Never leave points unallocated.
+- Equipment must have ≥2 different stat keys.
 
 STAT KEYS & COSTS:
-- Valid equipment stats: str(1pt), dex(1pt), con(1pt), int(1pt), wis(1pt), cha(1pt), ac(3pts), hp(0.5pts), hp_regen(2pts)
-- Valid consumable stats: hp, hp_regen ONLY (no other stats, no caps)
+- Equipment: str/dex/con/int/wis/cha=1pt, ac=3pts, hp=0.5pts, hp_regen=2pts
+- Consumable: hp, hp_regen ONLY (no caps)
 
 STAT CAPS (equipment only):
-- Primary stats (str/dex/con/int/wis/cha): max = 4 + floor(level/4)
-- AC: max = 2 + floor(level/10)
-- HP: max = 6 + floor(level/5) × 2
-- HP Regen: max = 2
+- Primary stat: 4 + floor(level/4) · AC: 2 + floor(level/10) · HP: 6 + floor(level/5)×2 · hp_regen: 2 + floor(level/10)
 
 OTHER FIELDS:
-- drop_chance: 0.1–0.5 (uncommon items lower, consumables 0.3–0.5)
-- weapon_tag: For main_hand/off_hand only, set to one of: sword, axe, mace, dagger, bow, staff, wand, shield. Choose based on item name. Non-weapon slots: omit.
+- drop_chance: 0.1–0.5 (uncommon lower, consumables 0.3–0.5)
+- weapon_tag: required for main_hand/off_hand (sword/axe/mace/dagger/bow/staff/wand/shield), null otherwise
 - max_durability: always 100
-- Gold value: set to 0, will be auto-calculated
-- Slot for consumables: null
-- Ensure variety in the batch: don't repeat the same slot/stat combo.
+- value: 0 (auto-calculated)
+- slot: null for consumables
+- Vary archetype + slot across the batch.
 
 ${prompt ? `FLAVOR CONTEXT: ${prompt}` : ""}
 
@@ -283,7 +279,7 @@ Call the generate_items tool with the structured output.`;
     function calcBudget(level: number, rarity: string, hands: number = 1): number {
       const mult = RARITY_MULT[rarity] || 1;
       const handsMult = hands === 2 ? 1.5 : 1;
-      return Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
+      return Math.max(2, Math.floor(2 + (level - 1) * 0.3 * mult * handsMult));
     }
 
     function calcStatCost(stats: Record<string, number>): number {
@@ -321,27 +317,38 @@ Call the generate_items tool with the structured output.`;
         const budget = calcBudget(item.level || 1, item.rarity, item.hands || 1);
         let spent = calcStatCost(stats);
 
-        // If AI underspent the budget, top up with random stats
-        let attempts = 0;
-        while (spent < budget && attempts < 50) {
-          const pick = PRIMARY_STATS[Math.floor(Math.random() * PRIMARY_STATS.length)];
-          const cap = getStatCap(pick, item.level || 1);
-          const current = stats[pick] || 0;
-          if (current < cap) {
-            stats[pick] = current + 1;
-            spent++;
+        // Spillover: top up leftover budget into existing stats first (primary→secondary order),
+        // then fall back to a random primary stat. Mirrors the seed catalog spillover pass.
+        const priority = Object.entries(stats)
+          .filter(([k]) => PRIMARY_STATS.includes(k))
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
+          .map(([k]) => k);
+
+        let safety = 100;
+        while (spent < budget && safety-- > 0) {
+          let placed = false;
+          for (const k of priority) {
+            const cap = getStatCap(k, item.level || 1);
+            if ((stats[k] || 0) < cap) {
+              stats[k] = (stats[k] || 0) + 1;
+              spent++;
+              placed = true;
+              if (spent >= budget) break;
+            }
           }
-          attempts++;
+          if (placed) continue;
+          // All existing stats capped — add a fresh primary stat
+          const fresh = PRIMARY_STATS.find(k => !(k in stats));
+          if (!fresh) break;
+          stats[fresh] = 1;
+          priority.push(fresh);
+          spent++;
         }
 
-        // Ensure at least 2 different stats
+        // Ensure at least 2 different stats (uncommons must always have ≥2)
         if (Object.keys(stats).length < 2) {
-          const usedKeys = Object.keys(stats);
-          const available = PRIMARY_STATS.filter(k => !usedKeys.includes(k));
-          if (available.length > 0) {
-            const pick = available[Math.floor(Math.random() * available.length)];
-            stats[pick] = 1;
-          }
+          const available = PRIMARY_STATS.filter(k => !(k in stats));
+          if (available.length > 0) stats[available[0]] = 1;
         }
 
         // If still empty
