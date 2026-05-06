@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
     const combatNodeId = session.node_id;
     const [equipRes, creaturesRes, effectsRes, xpRes] = await Promise.all([
       db.from('character_inventory')
-        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs)')
+        .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs, item_level)')
         .in('character_id', charIds)
         .not('equipped_slot', 'is', null),
       db.from('creatures').select('*').eq('node_id', combatNodeId).eq('is_alive', true),
