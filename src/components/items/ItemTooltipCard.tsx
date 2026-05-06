@@ -53,7 +53,7 @@ export default function ItemTooltipCard({
   const stats = item.stats || {};
   const statEntries = Object.entries(stats).filter(([, v]) => (v as number) !== 0);
   const subtitle = itemSubtitle(item);
-  const isWeapon = !!item.weapon_tag;
+  const isWeapon = !!item.weapon_tag && !isShield(item.weapon_tag);
   const die = isWeapon
     ? getWeaponDieForItem(item.weapon_tag ?? null, item.hands === 2 ? 2 : 1, item.level ?? null, weaponProgression)
     : 0;
