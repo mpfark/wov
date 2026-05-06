@@ -295,6 +295,7 @@ export default function NPCManager() {
           <AdminEmptyState message="Select an NPC to edit" />
         )}
       </div>
-    </div>
+      </div>
+    </AdminPageShell>
   );
 }
