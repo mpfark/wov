@@ -34,7 +34,6 @@ import {
   getCreatureDamageDie as creatureDmgDie,
   getCreatureLevelGapMultiplier as creatureLevelGapMult,
   calculateAC as calcAC,
-  getWeaponDie,
   getWeaponDieForItem,
   getHitQuality,
   HIT_QUALITY_MULT,
