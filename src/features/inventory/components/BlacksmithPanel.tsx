@@ -94,6 +94,7 @@ export default function BlacksmithPanel({
   const [selectedForgeItem, setSelectedForgeItem] = useState<string | null>(null);
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
+  const weaponProgression = useWeaponProgression();
 
   const damagedItems = inventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
