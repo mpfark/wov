@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AdminPageShell } from './common';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Wrench } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/hooks/useRole';
+import WeaponProgressionTab from './loot/WeaponProgressionTab';
+import PoolRulesTab from './loot/PoolRulesTab';
+import XpBoostPanel from './XpBoostPanel';
 
 const MANUAL_SECTIONS: { id: string; label: string }[] = [
   { id: 'levels', label: '📊 Level Progression' },
