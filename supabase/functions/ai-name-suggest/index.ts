@@ -84,7 +84,7 @@ ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
       userPrompt = `Generate a name and description for a specific location (node) within an area.
 Area: ${context.area_name || "unknown"} (${context.area_type || "unknown"} type).
 Region: ${context.region_name || "unknown"}.
-Node flags: ${[context.is_vendor && "vendor", context.is_inn && "inn", context.is_blacksmith && "blacksmith", context.is_teleport && "teleport"].filter(Boolean).join(", ") || "none"}.
+Node flags: ${[context.is_vendor && "vendor", context.is_inn && "inn", context.is_blacksmith && "blacksmith", context.is_jewelcrafter && "jewelcrafter", context.is_teleport && "teleport"].filter(Boolean).join(", ") || "none"}.
 Nearby locations: ${context.nearby_nodes || "none"}.
 ${context.prompt ? `Theme/style hint: ${context.prompt}` : ""}`;
     } else if (type === "lock_hint") {
