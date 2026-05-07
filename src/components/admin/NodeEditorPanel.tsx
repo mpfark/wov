@@ -723,10 +723,10 @@ export default function NodeEditorPanel({
   };
 
   /* ── Generate AI service NPC ── */
-  const generateServiceNpc = async (role?: 'vendor' | 'blacksmith' | 'trainer') => {
+  const generateServiceNpc = async (role?: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer') => {
     if (!activeNodeId) return;
-    if (!form.is_vendor && !form.is_blacksmith && !form.is_trainer) {
-      toast.error('Node must be a vendor, blacksmith, or trainer');
+    if (!form.is_vendor && !form.is_blacksmith && !form.is_jewelcrafter && !form.is_trainer) {
+      toast.error('Node must be a vendor, blacksmith, jewelcrafter, or trainer');
       return;
     }
     setGeneratingNpc(true);
