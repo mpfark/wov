@@ -89,7 +89,7 @@ serve(async (req) => {
     // Fetch node + area + region context
     const { data: node, error: nodeErr } = await admin
       .from("nodes")
-      .select("id, name, description, is_vendor, is_blacksmith, is_trainer, area_id, region_id")
+      .select("id, name, description, is_vendor, is_blacksmith, is_jewelcrafter, is_trainer, area_id, region_id")
       .eq("id", nodeId)
       .single();
     if (nodeErr || !node) {
@@ -98,23 +98,26 @@ serve(async (req) => {
       });
     }
 
-    if (!node.is_vendor && !node.is_blacksmith && !node.is_trainer) {
-      return new Response(JSON.stringify({ error: "Node is not a vendor, blacksmith, or trainer" }), {
+    if (!node.is_vendor && !node.is_blacksmith && !node.is_jewelcrafter && !node.is_trainer) {
+      return new Response(JSON.stringify({ error: "Node is not a vendor, blacksmith, jewelcrafter, or trainer" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let serviceRole: "vendor" | "blacksmith" | "trainer";
+    let serviceRole: "vendor" | "blacksmith" | "jewelcrafter" | "trainer";
     if (requestedRole === "vendor" && node.is_vendor) serviceRole = "vendor";
     else if (requestedRole === "blacksmith" && node.is_blacksmith) serviceRole = "blacksmith";
+    else if (requestedRole === "jewelcrafter" && node.is_jewelcrafter) serviceRole = "jewelcrafter";
     else if (requestedRole === "trainer" && node.is_trainer) serviceRole = "trainer";
     else if (node.is_trainer) serviceRole = "trainer";
+    else if (node.is_jewelcrafter) serviceRole = "jewelcrafter";
     else if (node.is_blacksmith) serviceRole = "blacksmith";
     else serviceRole = "vendor";
 
     const roleLabel =
       serviceRole === "vendor" ? "shopkeeper / merchant"
       : serviceRole === "blacksmith" ? "blacksmith / smith"
+      : serviceRole === "jewelcrafter" ? "jeweler / lapidary (a refined artisan who crafts rings, amulets, and trinkets)"
       : "renown trainer / master-at-arms (a hardened mentor who trains heroes' core attributes for Renown)";
 
     const [areaRes, regionRes] = await Promise.all([
