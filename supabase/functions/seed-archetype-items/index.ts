@@ -53,6 +53,9 @@ const SLOT_NOUNS: Record<string, Partial<Record<Stat, string[]>> & { default: st
   shoulders:{ str: ["Pauldrons"], con: ["Pauldrons"], dex: ["Spaulders"], int: ["Mantle"], wis: ["Mantle"], cha: ["Mantle"], default: ["Pauldrons"] },
   belt:    { str: ["Girdle"], con: ["Girdle"], dex: ["Belt"], int: ["Sash"], wis: ["Sash"], cha: ["Sash"], default: ["Belt"] },
   off_hand:{ con: ["Shield"], str: ["Shield"], wis: ["Idol"], int: ["Tome"], cha: ["Idol"], dex: ["Shield"], default: ["Shield"] },
+  amulet:  { str: ["Pendant"], con: ["Pendant"], dex: ["Talisman"], int: ["Amulet"], wis: ["Amulet"], cha: ["Locket"], default: ["Amulet"] },
+  ring:    { str: ["Signet"], con: ["Band"], dex: ["Ring"], int: ["Ring"], wis: ["Ring"], cha: ["Signet"], default: ["Ring"] },
+  trinket: { str: ["Charm"], con: ["Totem"], dex: ["Trinket"], int: ["Sigil"], wis: ["Relic"], cha: ["Token"], default: ["Trinket"] },
 };
 
 // Weapon tag preference per primary stat
