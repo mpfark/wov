@@ -1,59 +1,72 @@
-## Goal
+# Verdict: yes, this is a real vulnerability
 
-Add a **Jewelcrafter** service that mirrors the Blacksmith but only forges **rings, amulets, and trinkets** (the slots removed from the Blacksmith earlier).
+The Codex finding is correct, and it's high severity.
 
-## What gets added
+## What's actually broken
 
-### 1. Database (migration)
-- Add `is_jewelcrafter boolean NOT NULL DEFAULT false` to `nodes`.
-- No enum change needed for `npcs.service_role` (it's free text). New value: `'jewelcrafter'`.
+`supabase/functions/combat-tick/index.ts` (lines 140–175) does this:
 
-### 2. New edge function `jewelcrafter-forge`
-Copy of `blacksmith-forge` with:
-- `ALL_SLOTS = ["ring", "amulet", "trinket"]`
-- Node check: `node.is_jewelcrafter` instead of `is_blacksmith`.
-- Same cost formula (`salvage = 5 + level*2`, `gold = level*5`) and same common-rarity, ±2 then ±5 level fallback pool.
-
-### 3. New `JewelcrafterPanel`
-A trimmed copy of `BlacksmithPanel` with:
-- Tabs: **Repair** (rings/amulets/trinkets only) and **Forge**.
-- No Soulforge tab.
-- `FORGE_SLOTS` limited to ring / amulet / trinket.
-- Calls `jewelcrafter-forge` instead of `blacksmith-forge`.
-- Repair tab filters inventory to those three slots (so the smith and jeweler don't overlap repair-wise — see open question below).
-
-### 4. Admin: `NodeEditorPanel`
-- New checkbox `💎 Is Jewelcrafter (forge rings, amulets, trinkets)`.
-- Add `is_jewelcrafter` to form state, load, save, and create-paths.
-- Add `'jewelcrafter'` to the service-NPC role list with label "Jeweler".
-- Flag chip for Jewelcrafter.
-
-### 5. Admin world map + game UI
-- `AdminWorldMapView`, `NodeView`, `MapPanel`, `PlayerGraphView`: show a 💎 icon when `is_jewelcrafter` is set, mirroring the blacksmith 🔨 treatment (staffed glow when a `jewelcrafter` NPC is present).
-- `NodeView` NPC icons/labels: `'jewelcrafter' → 💎 / Jeweler`.
-
-### 6. `GamePage`
-- `jewelcrafterOpen` state, mount `<JewelcrafterPanel>` when `currentNode.is_jewelcrafter`.
-- Talk routing: NPC with `service_role === 'jewelcrafter'` opens the jeweler panel (mirrors blacksmith routing).
-- Action menu: `onOpenJewelcrafter` when on a jewelcrafter node.
-
-### 7. `ai-generate-service-npc` + `ai-name-suggest`
-- Accept `'jewelcrafter'` role with a fitting prompt persona ("a refined jeweler / lapidary").
-
-### 8. Memory
-- Update `mem://style/ui-layout/service-panels` note (or add a sibling) noting Jewelcrafter shares the ServicePanelShell pattern.
-
-## Technical details
-
-```text
-nodes
- ├── is_blacksmith     → main_hand, off_hand, head, chest, shoulders,
- │                       gloves, belt, pants, boots
- └── is_jewelcrafter   → ring, amulet, trinket   (NEW)
+```ts
+function getUserIdFromJwt(authHeader) {
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  const payload = JSON.parse(atob(parts[1]...));   // unsigned base64 decode
+  return payload.sub ?? null;                       // trusted as-is
+}
+...
+const userId = getUserIdFromJwt(authHeader);
+if (!userId) throw new Error('Unauthorized');
 ```
 
-Both flags are independent — a node can be one, the other, both, or neither. Soulforge stays tied to Blacksmith only.
+That `userId` is then used with the **service-role** client to authorize character access:
 
-## Open question
+- L203: `db.from('characters').select('id').eq('user_id', userId)` — picks the party-leader's characters
+- L224: `if (!char || char.user_id !== userId) throw new Error('Not authorized')`
 
-Repair scope: should the **Jewelcrafter also repair** rings/amulets/trinkets (and the Blacksmith stop repairing them), or should the Blacksmith continue to repair everything while only forging is split? Default in this plan: **Jewelcrafter repairs only jewelry; Blacksmith repairs everything else**, but say the word and I'll switch to "Blacksmith repairs all, Jewelcrafter only forges".
+Because `verify_jwt = false` in `supabase/config.toml` AND the function only base64-decodes the payload (no signature check), an attacker can hand-craft `{"sub":"<victim-uuid>"}`, base64 it, and call `combat-tick` posing as that user. The service-role client bypasses RLS entirely, so the spoofed `userId` is the only gate. They can drive any character's combat, spend their CP/MP, fire abilities, and trigger reward writes.
+
+The original code comment justifies skipping verification because `getUser()` was returning intermittent 401s under load. That's a real concern, but the safe replacement is **local signature verification**, not "trust the payload". `getClaims(token)` (used in `combat-catchup/index.ts`) does exactly this — it validates the JWT signature locally against Supabase's signing keys without a GoTrue round-trip.
+
+## Fix plan
+
+### 1. `supabase/functions/combat-tick/index.ts`
+
+Replace `getUserIdFromJwt` with the same pattern `combat-catchup` already uses:
+
+```ts
+const authHeader = req.headers.get('Authorization');
+if (!authHeader?.startsWith('Bearer ')) return json401();
+
+const userDb = createClient(url, anonKey, {
+  global: { headers: { Authorization: authHeader } },
+});
+const token = authHeader.replace('Bearer ', '');
+const { data: claimsData, error } = await userDb.auth.getClaims(token);
+if (error || !claimsData?.claims?.sub) return json401();
+const userId = claimsData.claims.sub as string;
+```
+
+`getClaims` verifies signature + expiry locally using cached JWKS — no per-tick network hop, so the original performance concern doesn't reappear. Keep `verify_jwt = false` in `config.toml` (signing-keys system requires in-code validation anyway, per project conventions).
+
+### 2. Audit other functions with `verify_jwt = false`
+
+From `supabase/config.toml`, these have `verify_jwt = false`. Confirm each either (a) validates with `getClaims()`/`getUser()` before trusting `sub`, or (b) is a legitimately public endpoint:
+
+- `ai-item-forge`, `ai-generate-service-npc`, `ai-item-illustration`, `ai-name-suggest`, `ai-world-builder`, `ai-suggest-character-name` — admin/AI tools, must check role
+- `blacksmith-forge`, `jewelcrafter-forge`, `soulforge-item`, `seed-archetype-items` — write to player inventories, must verify caller
+- `admin-users` — must verify overlord/steward
+- `combat-tick` — the one above
+- `combat-catchup` — already correct (reference implementation)
+- `auth-email-hook` — public webhook, validates by hook secret instead
+
+Any function that does the same "base64-decode `sub`" pattern gets the same `getClaims` fix. Any function that doesn't verify the user at all and writes to user-scoped tables needs the verification added.
+
+### 3. Verification
+
+- Manually craft a token with someone else's `sub` (locally signed with junk key) and confirm `combat-tick` now returns 401 instead of acting on the victim's character.
+- Confirm a normal authenticated combat tick from the app still succeeds (no perf regression from `getClaims`).
+
+## Notes / scope
+
+- This plan is security-only; no gameplay behavior changes.
+- No database migration needed.
+- No client-side change needed — the real Supabase JWT clients already send is accepted as before.
