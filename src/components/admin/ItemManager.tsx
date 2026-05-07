@@ -706,7 +706,10 @@ export default function ItemManager() {
                             if (url) {
                               setForm(f => ({ ...f, illustration_url: url }));
                               toast.success('Illustration generated');
-                              const { data: refreshed } = await supabase.from('items').select('*').order('name');
+                              const { fetchAllRows: fetchAll2 } = await import('@/lib/supabase-paginate');
+                              const refreshed = await fetchAll2<any>((from, to) =>
+                                supabase.from('items').select('*').order('name').range(from, to)
+                              );
                               if (refreshed) setItems(refreshed as unknown as Item[]);
                             }
                           } catch (err: any) {
