@@ -14,6 +14,7 @@ import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
 import ItemForgePanel from '@/components/admin/ItemForgePanel';
+import ItemCoverageAnalyzer from '@/components/admin/ItemCoverageAnalyzer';
 
 import GameManual from '@/components/admin/GameManual';
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
@@ -393,6 +394,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <LootTableManager />;
       case 'item-forge':
         return <ItemForgePanel onDataChanged={loadData} />;
+      case 'item-coverage':
+        return <ItemCoverageAnalyzer />;
       case 'races-classes':
         return <RaceClassManager />;
       case 'xp-boost':

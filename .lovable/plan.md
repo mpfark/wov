@@ -1,72 +1,65 @@
-# Verdict: yes, this is a real vulnerability
+## Item Coverage Analyzer
 
-The Codex finding is correct, and it's high severity.
+A new admin panel that audits the existing item pool and surfaces gaps — especially for uniques — by class, stat, slot, and level band. Read-only: it analyzes and recommends, never creates items.
 
-## What's actually broken
+### Where it lives
 
-`supabase/functions/combat-tick/index.ts` (lines 140–175) does this:
+- New admin tab **"Item Coverage"** registered in `src/components/admin/AdminSidebar.tsx` and routed in `src/pages/AdminPage.tsx`.
+- New component `src/components/admin/ItemCoverageAnalyzer.tsx`.
+- Pure analysis utilities in `src/components/admin/coverage/` so logic is testable independent of UI:
+  - `coverage-types.ts` — types for `CoverageCell`, `Gap`, `Recommendation`.
+  - `coverage-analyzer.ts` — takes raw items + class/stat metadata and returns a coverage report.
+  - `coverage-recommendations.ts` — turns gaps into prioritized "Suggested Next Items".
 
-```ts
-function getUserIdFromJwt(authHeader) {
-  const token = authHeader.replace(/^Bearer\s+/i, '');
-  const payload = JSON.parse(atob(parts[1]...));   // unsigned base64 decode
-  return payload.sub ?? null;                       // trusted as-is
-}
-...
-const userId = getUserIdFromJwt(authHeader);
-if (!userId) throw new Error('Unauthorized');
-```
+### Data inputs
 
-That `userId` is then used with the **service-role** client to authorize character access:
+- `items` table: rarity, level, slot, stats, weapon_tag, hands, item_type.
+- Class metadata from `src/shared/formulas/classes.ts`:
+  - `CLASS_LABELS` — class list
+  - `CLASS_LEVEL_BONUSES` — primary/secondary stats per class
+  - `CLASS_WEAPON_AFFINITY` — preferred weapon tags
+- Level cap from progression memory (L42).
 
-- L203: `db.from('characters').select('id').eq('user_id', userId)` — picks the party-leader's characters
-- L224: `if (!char || char.user_id !== userId) throw new Error('Not authorized')`
+Filter to `world_drop = true` items by default (with a toggle to include all).
 
-Because `verify_jwt = false` in `supabase/config.toml` AND the function only base64-decodes the payload (no signature check), an attacker can hand-craft `{"sub":"<victim-uuid>"}`, base64 it, and call `combat-tick` posing as that user. The service-role client bypasses RLS entirely, so the spoofed `userId` is the only gate. They can drive any character's combat, spend their CP/MP, fire abilities, and trigger reward writes.
+### Level bands
 
-The original code comment justifies skipping verification because `getUser()` was returning intermittent 401s under load. That's a real concern, but the safe replacement is **local signature verification**, not "trust the payload". `getClaims(token)` (used in `combat-catchup/index.ts`) does exactly this — it validates the JWT signature locally against Supabase's signing keys without a GoTrue round-trip.
+Every 5 levels: 1–5, 6–10, 11–15, 16–20, 21–25, 26–30, 31–35, 36–40, 41–42.
 
-## Fix plan
+### Class-fit heuristic
 
-### 1. `supabase/functions/combat-tick/index.ts`
+An item "fits" a class when ANY of these are true:
+- Its dominant stat is one of the class's `CLASS_LEVEL_BONUSES` keys.
+- It is a weapon whose `weapon_tag` is in the class's `CLASS_WEAPON_AFFINITY`.
+- It is a non-stat-based slot (hp/hp_regen-only consumable etc.) — counted as "neutral", not class-specific.
 
-Replace `getUserIdFromJwt` with the same pattern `combat-catchup` already uses:
+### Status thresholds (per class × band × rarity)
 
-```ts
-const authHeader = req.headers.get('Authorization');
-if (!authHeader?.startsWith('Bearer ')) return json401();
+- **good**: ≥ 3 fitting items
+- **weak**: 1–2 fitting items
+- **missing**: 0 fitting items
+- For uniques specifically: **missing** if 0, **weak** if 1, **good** if ≥ 2.
 
-const userDb = createClient(url, anonKey, {
-  global: { headers: { Authorization: authHeader } },
-});
-const token = authHeader.replace('Bearer ', '');
-const { data: claimsData, error } = await userDb.auth.getClaims(token);
-if (error || !claimsData?.claims?.sub) return json401();
-const userId = claimsData.claims.sub as string;
-```
+### UI sections
 
-`getClaims` verifies signature + expiry locally using cached JWKS — no per-tick network hop, so the original performance concern doesn't reappear. Keep `verify_jwt = false` in `config.toml` (signing-keys system requires in-code validation anyway, per project conventions).
+1. **Filters bar** — rarity multi-select (default unique), include consumables toggle, world-drop toggle.
+2. **Class × Level-band Coverage Matrix** — rows = 7 classes, columns = 9 bands, cells colored good/weak/missing with item count. Click a cell → side drawer listing items + gaps.
+3. **Stat Coverage** — STR/DEX/CON/INT/WIS/CHA × bands; counts items where stat is dominant.
+4. **Slot Coverage** — slot × bands matrix.
+5. **Unique Gaps** (most prominent) — sorted list of band/class/slot combos with zero unique support, e.g. "Level 31–35 · Wizard · no INT-focused weapon".
+6. **Suggested Next Items** — prioritized list generated from gaps, format:
+   - "Create level 35 INT staff unique for Wizard"
+   - "Create level 30 WIS/CON shield unique for Templar"
+   Priority = (rarity weight: unique=3, uncommon=1) × (class-coverage deficit) × (band importance, mid/late game weighted higher).
 
-### 2. Audit other functions with `verify_jwt = false`
+### Technical notes
 
-From `supabase/config.toml`, these have `verify_jwt = false`. Confirm each either (a) validates with `getClaims()`/`getUser()` before trusting `sub`, or (b) is a legitimately public endpoint:
+- All analysis happens client-side from a single `supabase.from('items').select(...)` query — fast enough for ~1400 items.
+- Memoize the coverage report with `useMemo` keyed on filters + raw items.
+- Color tokens: use existing semantic tokens (`destructive` for missing, `warning`/`accent` for weak, `primary` for good) — no hardcoded colors.
+- Tooltips on each matrix cell list contributing item names.
+- Add a small unit test file `coverage-analyzer.test.ts` covering: empty pool, single-item pool, class-fit by stat, class-fit by weapon tag, threshold edges.
 
-- `ai-item-forge`, `ai-generate-service-npc`, `ai-item-illustration`, `ai-name-suggest`, `ai-world-builder`, `ai-suggest-character-name` — admin/AI tools, must check role
-- `blacksmith-forge`, `jewelcrafter-forge`, `soulforge-item`, `seed-archetype-items` — write to player inventories, must verify caller
-- `admin-users` — must verify overlord/steward
-- `combat-tick` — the one above
-- `combat-catchup` — already correct (reference implementation)
-- `auth-email-hook` — public webhook, validates by hook secret instead
+### Out of scope (per request)
 
-Any function that does the same "base64-decode `sub`" pattern gets the same `getClaims` fix. Any function that doesn't verify the user at all and writes to user-scoped tables needs the verification added.
-
-### 3. Verification
-
-- Manually craft a token with someone else's `sub` (locally signed with junk key) and confirm `combat-tick` now returns 401 instead of acting on the victim's character.
-- Confirm a normal authenticated combat tick from the app still succeeds (no perf regression from `getClaims`).
-
-## Notes / scope
-
-- This plan is security-only; no gameplay behavior changes.
-- No database migration needed.
-- No client-side change needed — the real Supabase JWT clients already send is accepted as before.
+- No item creation or auto-forge integration. The recommendations are text-only; a future iteration could add "Send to AI Item Forge" buttons.
