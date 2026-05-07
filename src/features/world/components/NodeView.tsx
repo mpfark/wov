@@ -354,10 +354,12 @@ export default function NodeView({
                   {npcs.map(npc => {
                     const roleIcon = npc.service_role === 'vendor' ? '🪙'
                       : npc.service_role === 'blacksmith' ? '🔨'
+                      : npc.service_role === 'jewelcrafter' ? '💎'
                       : npc.service_role === 'trainer' ? '🏛️'
                       : '💬';
                     const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
                       : npc.service_role === 'blacksmith' ? 'Forge'
+                      : npc.service_role === 'jewelcrafter' ? 'Craft'
                       : npc.service_role === 'trainer' ? 'Train'
                       : 'Talk';
                     return (
