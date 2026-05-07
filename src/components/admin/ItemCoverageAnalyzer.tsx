@@ -5,16 +5,195 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { CLASS_LABELS } from '@/shared/formulas/classes';
-import {
-  buildCoverageReport,
-  ATTRIBUTE_STATS,
-  ALL_SLOTS,
-} from './coverage/coverage-analyzer';
-import type { CoverageCell, CoverageStatus } from './coverage/coverage-types';
+import { CLASS_LABELS, CLASS_LEVEL_BONUSES, CLASS_WEAPON_AFFINITY } from '@/shared/formulas/classes';
 import { Loader2 } from 'lucide-react';
 
 const RARITY_OPTIONS = ['unique', 'uncommon', 'common', 'soulforged'];
+const ATTRIBUTE_STATS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+const ALL_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'hands', 'legs', 'feet', 'neck', 'ring'];
+
+type CoverageStatus = 'good' | 'weak' | 'missing';
+
+interface LevelBand {
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  importance: number;
+}
+
+interface CoverageCell {
+  count: number;
+  status: CoverageStatus;
+  itemNames: string[];
+}
+
+interface RawItem {
+  id: string;
+  name: string;
+  rarity: string;
+  level: number | null;
+  slot: string | null;
+  weapon_tag: string | null;
+  hands: number | null;
+  item_type: string | null;
+  stats: Record<string, number> | null;
+  world_drop: boolean | null;
+}
+
+const LEVEL_BANDS: LevelBand[] = [
+  { key: 'b1', label: '1-5', min: 1, max: 5, importance: 1 },
+  { key: 'b2', label: '6-10', min: 6, max: 10, importance: 1 },
+  { key: 'b3', label: '11-15', min: 11, max: 15, importance: 1.2 },
+  { key: 'b4', label: '16-20', min: 16, max: 20, importance: 1.4 },
+  { key: 'b5', label: '21-25', min: 21, max: 25, importance: 1.6 },
+  { key: 'b6', label: '26-30', min: 26, max: 30, importance: 1.8 },
+  { key: 'b7', label: '31-35', min: 31, max: 35, importance: 2 },
+  { key: 'b8', label: '36-40', min: 36, max: 40, importance: 2.2 },
+  { key: 'b9', label: '41-42', min: 41, max: 42, importance: 2.5 },
+];
+
+function bandFor(level: number | null): LevelBand | null {
+  if (level == null) return null;
+  return LEVEL_BANDS.find((band) => level >= band.min && level <= band.max) ?? null;
+}
+
+function dominantStat(stats: Record<string, number> | null): string | null {
+  if (!stats) return null;
+  let best: string | null = null;
+  let bestValue = 0;
+
+  for (const stat of ATTRIBUTE_STATS) {
+    const value = Number(stats[stat] ?? 0);
+    if (value > bestValue) {
+      best = stat;
+      bestValue = value;
+    }
+  }
+
+  return best;
+}
+
+function emptyCell(): CoverageCell {
+  return { count: 0, status: 'missing', itemNames: [] };
+}
+
+function itemFitsClass(classKey: string, item: RawItem): boolean {
+  const itemDominantStat = dominantStat(item.stats);
+  const classStats = Object.keys(CLASS_LEVEL_BONUSES[classKey] ?? {});
+
+  return Boolean(
+    (itemDominantStat && classStats.includes(itemDominantStat)) ||
+    (item.weapon_tag && (CLASS_WEAPON_AFFINITY[classKey] ?? []).includes(item.weapon_tag))
+  );
+}
+
+function reportStatus(count: number, uniqueOnly: boolean): CoverageStatus {
+  if (uniqueOnly) {
+    if (count === 0) return 'missing';
+    if (count === 1) return 'weak';
+    return 'good';
+  }
+
+  if (count === 0) return 'missing';
+  if (count < 3) return 'weak';
+  return 'good';
+}
+
+function buildCoverageReport(
+  rawItems: RawItem[],
+  opts: { rarities: string[]; includeConsumables: boolean; worldDropOnly: boolean }
+) {
+  const uniqueOnly = opts.rarities.length === 1 && opts.rarities[0] === 'unique';
+  const classes = Object.keys(CLASS_LABELS);
+  const classMatrix: Record<string, Record<string, CoverageCell>> = {};
+  const statMatrix: Record<string, Record<string, CoverageCell>> = {};
+  const slotMatrix: Record<string, Record<string, CoverageCell>> = {};
+
+  for (const classKey of classes) {
+    classMatrix[classKey] = {};
+    for (const band of LEVEL_BANDS) classMatrix[classKey][band.key] = emptyCell();
+  }
+  for (const stat of ATTRIBUTE_STATS) {
+    statMatrix[stat] = {};
+    for (const band of LEVEL_BANDS) statMatrix[stat][band.key] = emptyCell();
+  }
+  for (const slot of ALL_SLOTS) {
+    slotMatrix[slot] = {};
+    for (const band of LEVEL_BANDS) slotMatrix[slot][band.key] = emptyCell();
+  }
+
+  const filteredItems = rawItems.filter((item) => {
+    if (opts.rarities.length && !opts.rarities.includes(item.rarity)) return false;
+    if (opts.worldDropOnly && item.world_drop === false) return false;
+    if (!opts.includeConsumables && item.item_type === 'consumable') return false;
+    return true;
+  });
+
+  for (const item of filteredItems) {
+    const band = bandFor(item.level);
+    if (!band) continue;
+
+    for (const classKey of classes) {
+      if (!itemFitsClass(classKey, item)) continue;
+      const cell = classMatrix[classKey][band.key];
+      cell.count += 1;
+      if (cell.itemNames.length < 10) cell.itemNames.push(item.name);
+    }
+
+    const itemDominantStat = dominantStat(item.stats);
+    if (itemDominantStat && statMatrix[itemDominantStat]) {
+      const cell = statMatrix[itemDominantStat][band.key];
+      cell.count += 1;
+      if (cell.itemNames.length < 10) cell.itemNames.push(item.name);
+    }
+
+    if (item.slot && slotMatrix[item.slot]) {
+      const cell = slotMatrix[item.slot][band.key];
+      cell.count += 1;
+      if (cell.itemNames.length < 10) cell.itemNames.push(item.name);
+    }
+  }
+
+  for (const classKey of classes) {
+    for (const band of LEVEL_BANDS) classMatrix[classKey][band.key].status = reportStatus(classMatrix[classKey][band.key].count, uniqueOnly);
+  }
+  for (const stat of ATTRIBUTE_STATS) {
+    for (const band of LEVEL_BANDS) statMatrix[stat][band.key].status = reportStatus(statMatrix[stat][band.key].count, uniqueOnly);
+  }
+  for (const slot of ALL_SLOTS) {
+    for (const band of LEVEL_BANDS) slotMatrix[slot][band.key].status = reportStatus(slotMatrix[slot][band.key].count, uniqueOnly);
+  }
+
+  const gaps: { classKey: string; band: LevelBand; reason: string }[] = [];
+  const recommendations: { id: string; priority: number; text: string }[] = [];
+
+  if (uniqueOnly) {
+    for (const classKey of classes) {
+      for (const band of LEVEL_BANDS) {
+        const cell = classMatrix[classKey][band.key];
+        if (cell.status !== 'missing' && cell.status !== 'weak') continue;
+
+        gaps.push({
+          classKey,
+          band,
+          reason: cell.count === 0 ? 'no fitting unique' : '1 fitting unique',
+        });
+
+        const statHint = Object.keys(CLASS_LEVEL_BONUSES[classKey] ?? {}).map((stat) => stat.toUpperCase()).join('/');
+        const weaponHint = (CLASS_WEAPON_AFFINITY[classKey] ?? [])[0] ?? 'gear';
+        recommendations.push({
+          id: `${classKey}-${band.key}`,
+          priority: Math.round((cell.count === 0 ? 2 : 1) * band.importance * 10),
+          text: `Create level ${band.min}-${band.max} ${statHint}-focused unique ${weaponHint} for ${CLASS_LABELS[classKey]}`,
+        });
+      }
+    }
+    recommendations.sort((a, b) => b.priority - a.priority);
+  }
+
+  return { bands: LEVEL_BANDS, classes, classMatrix, statMatrix, slotMatrix, gaps, recommendations };
+}
 
 function statusClass(s: CoverageStatus): string {
   if (s === 'good') return 'bg-primary/20 text-primary border-primary/40';
