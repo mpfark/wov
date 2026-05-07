@@ -90,11 +90,14 @@ export default function ItemCoverageAnalyzer() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data } = await supabase
-        .from('items')
-        .select('id, name, rarity, level, slot, weapon_tag, hands, item_type, stats, world_drop')
-        .limit(5000);
-      setRawItems(data || []);
+      const { fetchAllRows } = await import('@/lib/supabase-paginate');
+      const data = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from('items')
+          .select('id, name, rarity, level, slot, weapon_tag, hands, item_type, stats, world_drop')
+          .range(from, to)
+      );
+      setRawItems(data);
       setLoading(false);
     })();
   }, []);
