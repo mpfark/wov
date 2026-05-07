@@ -1001,6 +1001,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onSearch: handleSearch,
     onOpenVendor: currentNode?.is_vendor ? () => setVendorOpen(true) : undefined,
     onOpenBlacksmith: currentNode?.is_blacksmith ? () => setBlacksmithOpen(true) : undefined,
+    onOpenJewelcrafter: (currentNode as any)?.is_jewelcrafter ? () => setJewelcrafterOpen(true) : undefined,
     onOpenTrainer: currentNode?.is_trainer ? () => setTrainerOpen(true) : undefined,
     onOpenMarketplace: (currentNode as any)?.is_marketplace ? () => setMarketplaceOpen(true) : undefined,
     onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
