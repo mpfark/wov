@@ -163,6 +163,7 @@ export default function NodeView({
               {(() => {
                 const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
                 const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
+                const hasJewelcrafterNpc = npcs.some(n => n.service_role === 'jewelcrafter');
                 const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
                 return (
                   <>
