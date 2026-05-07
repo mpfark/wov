@@ -53,6 +53,7 @@ const NAV_GROUPS = [
       { key: 'items', label: 'Items', icon: Swords },
       { key: 'loot-tables', label: 'Loot Tables', icon: Dice3 },
       { key: 'item-forge', label: 'Item Forge', icon: Hammer },
+      { key: 'item-coverage', label: 'Item Coverage', icon: BarChart3 },
     ],
   },
   {
