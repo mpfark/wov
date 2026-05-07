@@ -361,7 +361,10 @@ export default function ItemManager() {
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
-    const { data: refreshed } = await supabase.from('items').select('*').order('name');
+    const { fetchAllRows: fetchAll1 } = await import('@/lib/supabase-paginate');
+    const refreshed = await fetchAll1<any>((from, to) =>
+      supabase.from('items').select('*').order('name').range(from, to)
+    );
     if (refreshed) {
       setItems(refreshed as unknown as Item[]);
       const updated = refreshed.find((i: any) => i.id === savedId);
