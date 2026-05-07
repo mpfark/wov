@@ -71,16 +71,18 @@ export default function UserManager({ isValar }: Props) {
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('items').select('id, name, rarity, level, slot').order('name'),
-      supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
-      supabase.from('regions').select('id, name'),
-      supabase.from('areas').select('id, name'),
-    ]).then(([itemsRes, nodesRes, regionsRes, areasRes]) => {
-      if (itemsRes.data) {
-        setAllItems(itemsRes.data);
-        if (itemsRes.data.length > 0 && !giveItemId) setGiveItemId(itemsRes.data[0].id);
-      }
+    (async () => {
+      const { fetchAllRows } = await import('@/lib/supabase-paginate');
+      const [items, nodesRes, regionsRes, areasRes] = await Promise.all([
+        fetchAllRows<any>((from, to) =>
+          supabase.from('items').select('id, name, rarity, level, slot').order('name').range(from, to)
+        ),
+        supabase.from('nodes').select('id, name, region_id, area_id, is_inn, is_vendor, is_blacksmith, is_teleport, is_trainer').order('name'),
+        supabase.from('regions').select('id, name'),
+        supabase.from('areas').select('id, name'),
+      ]);
+      setAllItems(items);
+      if (items.length > 0 && !giveItemId) setGiveItemId(items[0].id);
       if (regionsRes.data) setAllRegions(regionsRes.data);
       if (areasRes.data) setAllAreas(areasRes.data);
       if (nodesRes.data && regionsRes.data) {
@@ -88,7 +90,7 @@ export default function UserManager({ isValar }: Props) {
         setAllNodes(nodesRes.data.map(n => ({ ...n, region_name: regionMap[n.region_id] || 'Unknown' })));
         if (nodesRes.data.length > 0) setTeleportNodeId(nodesRes.data[0].id);
       }
-    });
+    })();
   }, []);
 
   const prevSelectedUserIdRef = useRef<string | null>(null);
