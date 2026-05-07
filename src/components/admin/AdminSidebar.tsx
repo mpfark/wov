@@ -29,6 +29,7 @@ import {
   BookText,
   Store,
   Crown,
+  BarChart3,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
