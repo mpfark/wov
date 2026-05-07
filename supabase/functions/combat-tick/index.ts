@@ -174,12 +174,14 @@ Deno.serve(async (req) => {
   try {
     const url = Deno.env.get('SUPABASE_URL')!;
     const srvKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(url, srvKey);
 
-    // Auth — extract user id from JWT (no network round-trip; getUser() was
-    // returning intermittent 401s under tick load and stalling combat entirely).
+    // Auth — verify JWT signature locally via getClaims (cached JWKS, no
+    // network hop). Trusting the unsigned `sub` claim would let an attacker
+    // forge a token for any user and act as them via the service-role client.
     const authHeader = req.headers.get('Authorization');
-    const userId = getUserIdFromJwt(authHeader);
+    const userId = await verifyUserIdFromJwt(authHeader, url, anonKey);
     if (!userId) throw new Error('Unauthorized');
 
     const {
