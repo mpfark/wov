@@ -252,11 +252,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  const [jewelcrafterOpen, setJewelcrafterOpen] = useState(false);
   /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
   const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
 
   /**
-   * Talk routing: service-role NPCs (vendor/blacksmith) open the matching
+   * Talk routing: service-role NPCs (vendor/blacksmith/jewelcrafter/trainer) open the matching
    * service panel directly with the NPC's name + flavor as subtitle. All
    * other NPCs fall through to the standard dialog.
    */
@@ -269,6 +270,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (npc.service_role === 'blacksmith' && currentNode?.is_blacksmith) {
       setActiveServiceNpc(npc);
       setBlacksmithOpen(true);
+      return;
+    }
+    if (npc.service_role === 'jewelcrafter' && (currentNode as any)?.is_jewelcrafter) {
+      setActiveServiceNpc(npc);
+      setJewelcrafterOpen(true);
       return;
     }
     if (npc.service_role === 'trainer' && currentNode?.is_trainer) {
