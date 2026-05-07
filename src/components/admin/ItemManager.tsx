@@ -195,8 +195,11 @@ export default function ItemManager() {
   } | null>(null);
 
   const loadItems = async () => {
-    const { data } = await supabase.from('items').select('*').order('name');
-    if (data) setItems(data as unknown as Item[]);
+    const { fetchAllRows } = await import('@/lib/supabase-paginate');
+    const data = await fetchAllRows<any>((from, to) =>
+      supabase.from('items').select('*').order('name').range(from, to)
+    );
+    setItems(data as unknown as Item[]);
   };
 
   const loadItemUsage = async (itemId: string, itemRarity?: string) => {
