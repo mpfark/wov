@@ -1,46 +1,59 @@
 ## Goal
-Bring the AI Item Forge (`supabase/functions/ai-item-forge/index.ts`) in sync with the deterministic seed catalog so AI-generated common/uncommon items follow the same grammar, budget floor, and rarity rules.
 
-## Changes
+Add a **Jewelcrafter** service that mirrors the Blacksmith but only forges **rings, amulets, and trinkets** (the slots removed from the Blacksmith earlier).
 
-### 1. Naming grammar → archetype-based
-Replace the current "boring material + slot noun" common rule and "quality adjective" uncommon rule with the seed grammar:
+## What gets added
 
-`[Tier Prefix] [Archetype] [Slot Noun]`
+### 1. Database (migration)
+- Add `is_jewelcrafter boolean NOT NULL DEFAULT false` to `nodes`.
+- No enum change needed for `npcs.service_role` (it's free text). New value: `'jewelcrafter'`.
 
-- **Tier prefix by level band**: 1–5 Worn, 6–10 Sturdy, 11–15 Fine, 16–20 Engraved, 21–25 Runed, 26–30 High, 31–35 Mythic, 36–40 Ancient, 41–42 Astral.
-- **Common archetypes** (single primary stat): Vanguard/Iron/Brutal (STR), Shadow/Swift/Hunter (DEX), Warden/Stoneguard/Bulwark (CON), Sage/Arcane/Spellwoven (INT), Devout/Sanctified/Templar (WIS), Regal/Noble/Bardic (CHA).
-- **Uncommon archetypes** (hybrid only): Warlord (STR+CON), Raider (STR+DEX), Spellblade (DEX+INT), Guardian (WIS+CON), Mystic (INT+WIS), Prophet (CHA+WIS), Troubadour (CHA+DEX), Champion (CHA+STR), etc.
-- Slot nouns: Helm/Hood/Circlet, Plate/Robe/Vest, Gauntlets, Greaves, Sabatons, Shield/Tome/Idol, Sword/Axe/Bow/Staff/Wand…
+### 2. New edge function `jewelcrafter-forge`
+Copy of `blacksmith-forge` with:
+- `ALL_SLOTS = ["ring", "amulet", "trinket"]`
+- Node check: `node.is_jewelcrafter` instead of `is_blacksmith`.
+- Same cost formula (`salvage = 5 + level*2`, `gold = level*5`) and same common-rarity, ±2 then ±5 level fallback pool.
 
-Drop the "Crude/Worn/Masterwork" material-based examples entirely.
+### 3. New `JewelcrafterPanel`
+A trimmed copy of `BlacksmithPanel` with:
+- Tabs: **Repair** (rings/amulets/trinkets only) and **Forge**.
+- No Soulforge tab.
+- `FORGE_SLOTS` limited to ring / amulet / trinket.
+- Calls `jewelcrafter-forge` instead of `blacksmith-forge`.
+- Repair tab filters inventory to those three slots (so the smith and jeweler don't overlap repair-wise — see open question below).
 
-### 2. Rarity rules
-- **Common = primary archetype only** (single dominant stat + small minor stat).
-- **Uncommon = hybrid archetype only** (primary ~55%, secondary ~35%, tertiary spillover). The forge must NOT generate non-hybrid uncommons.
-- If user picks `rarity = uncommon`, system prompt forces a hybrid name.
+### 4. Admin: `NodeEditorPanel`
+- New checkbox `💎 Is Jewelcrafter (forge rings, amulets, trinkets)`.
+- Add `is_jewelcrafter` to form state, load, save, and create-paths.
+- Add `'jewelcrafter'` to the service-NPC role list with label "Jeweler".
+- Flag chip for Jewelcrafter.
 
-### 3. Stat budget alignment with seed
-- **Floor at 2 even at L1**: change `calcBudget` to `Math.max(2, Math.floor(2 + (level-1) * 0.3 * mult * handsMult))` to match the seed function.
-- **Spillover top-up**: keep the existing post-AI top-up loop but make it spend leftover budget into primary→secondary→tertiary in the item's archetype order (not random) so distributions match the seed.
-- Update the budget formula text in the system prompt accordingly.
+### 5. Admin world map + game UI
+- `AdminWorldMapView`, `NodeView`, `MapPanel`, `PlayerGraphView`: show a 💎 icon when `is_jewelcrafter` is set, mirroring the blacksmith 🔨 treatment (staffed glow when a `jewelcrafter` NPC is present).
+- `NodeView` NPC icons/labels: `'jewelcrafter' → 💎 / Jeweler`.
 
-### 4. Memory refresh
-Rewrite `.lovable/memory/admin/ai-item-forge.md` to document:
-- Archetype naming grammar (mirror of `item-archetypes.md`)
-- Min budget 2 floor, spillover pass
-- Common = primary, Uncommon = hybrid only
+### 6. `GamePage`
+- `jewelcrafterOpen` state, mount `<JewelcrafterPanel>` when `currentNode.is_jewelcrafter`.
+- Talk routing: NPC with `service_role === 'jewelcrafter'` opens the jeweler panel (mirrors blacksmith routing).
+- Action menu: `onOpenJewelcrafter` when on a jewelcrafter node.
 
-## Out of scope
-- No changes to `shared/formulas/items.ts` (used by Soulforge / Blacksmith / etc.).
-- No changes to the seed function — it's the source of truth now.
-- Unique and Soulforged forges remain untouched (lyrical names still allowed there).
+### 7. `ai-generate-service-npc` + `ai-name-suggest`
+- Accept `'jewelcrafter'` role with a fitting prompt persona ("a refined jeweler / lapidary").
 
-## Files touched
-- `supabase/functions/ai-item-forge/index.ts` — rewrite system prompt, update `calcBudget`, refine top-up to follow archetype order.
-- `.lovable/memory/admin/ai-item-forge.md` — refresh to match new rules.
+### 8. Memory
+- Update `mem://style/ui-layout/service-panels` note (or add a sibling) noting Jewelcrafter shares the ServicePanelShell pattern.
 
-## Verification
-- Generate a batch of 10 common L5 → names like "Worn Vanguard Sword", "Worn Sage Robe"; each item has primary stat + minor.
-- Generate a batch of 10 uncommon L15 → names like "Fine Spellblade Dagger" with DEX+INT split.
-- Confirm no "Dawnbreaker"/"of the X" leaks and no single-stat uncommons.
+## Technical details
+
+```text
+nodes
+ ├── is_blacksmith     → main_hand, off_hand, head, chest, shoulders,
+ │                       gloves, belt, pants, boots
+ └── is_jewelcrafter   → ring, amulet, trinket   (NEW)
+```
+
+Both flags are independent — a node can be one, the other, both, or neither. Soulforge stays tied to Blacksmith only.
+
+## Open question
+
+Repair scope: should the **Jewelcrafter also repair** rings/amulets/trinkets (and the Blacksmith stop repairing them), or should the Blacksmith continue to repair everything while only forging is split? Default in this plan: **Jewelcrafter repairs only jewelry; Blacksmith repairs everything else**, but say the word and I'll switch to "Blacksmith repairs all, Jewelcrafter only forges".

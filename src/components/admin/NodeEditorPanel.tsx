@@ -75,6 +75,7 @@ function getNodeLabel(node: any, areas: any[]): string {
   if (node?.is_inn) flags.push('Inn');
   if (node?.is_vendor) flags.push('Vendor');
   if (node?.is_blacksmith) flags.push('Blacksmith');
+  if (node?.is_jewelcrafter) flags.push('Jewelcrafter');
   if (node?.is_teleport) flags.push('Teleport');
   if (node?.is_trainer) flags.push('Trainer');
   const area = node?.area_id ? areas.find((a: any) => a.id === node.area_id) : null;
@@ -468,7 +469,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
 
 /* ─── AI Suggest Button for Nodes ────────────────────── */
 function AiSuggestNodeButton({ form, selectedRegionId, regions, allAreas, allNodesGlobal, onSuggestion }: {
-  form: { area_id: string; is_vendor: boolean; is_inn: boolean; is_blacksmith: boolean; is_teleport: boolean; connections: string };
+  form: { area_id: string; is_vendor: boolean; is_inn: boolean; is_blacksmith: boolean; is_jewelcrafter?: boolean; is_teleport: boolean; connections: string };
   selectedRegionId: string;
   regions: any[];
   allAreas: any[];
@@ -530,7 +531,7 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection, nodePositions,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false,
+    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
     illustration_url: '', illustration_metadata: {} as Record<string, string>,
@@ -624,7 +625,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -641,6 +642,7 @@ export default function NodeEditorPanel({
         name: data.name, description: data.description, is_vendor: data.is_vendor,
         is_inn: data.is_inn ?? false,
         is_blacksmith: (data as any).is_blacksmith ?? false,
+        is_jewelcrafter: (data as any).is_jewelcrafter ?? false,
         is_teleport: (data as any).is_teleport ?? false,
         is_trainer: (data as any).is_trainer ?? false,
         is_marketplace: (data as any).is_marketplace ?? false,
@@ -721,10 +723,10 @@ export default function NodeEditorPanel({
   };
 
   /* ── Generate AI service NPC ── */
-  const generateServiceNpc = async (role?: 'vendor' | 'blacksmith' | 'trainer') => {
+  const generateServiceNpc = async (role?: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer') => {
     if (!activeNodeId) return;
-    if (!form.is_vendor && !form.is_blacksmith && !form.is_trainer) {
-      toast.error('Node must be a vendor, blacksmith, or trainer');
+    if (!form.is_vendor && !form.is_blacksmith && !form.is_jewelcrafter && !form.is_trainer) {
+      toast.error('Node must be a vendor, blacksmith, jewelcrafter, or trainer');
       return;
     }
     setGeneratingNpc(true);
@@ -831,7 +833,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -858,7 +860,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, connections, searchable_items,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -1010,6 +1012,11 @@ export default function NodeEditorPanel({
                   <input type="checkbox" checked={form.is_blacksmith}
                     onChange={e => setForm(f => ({ ...f, is_blacksmith: e.target.checked, is_soulforge: e.target.checked ? f.is_soulforge : false }))} />
                   🔨 Is Blacksmith (repair items)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_jewelcrafter}
+                    onChange={e => setForm(f => ({ ...f, is_jewelcrafter: e.target.checked }))} />
+                  💎 Is Jewelcrafter (forge rings, amulets, trinkets)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_teleport}
@@ -1185,10 +1192,12 @@ export default function NodeEditorPanel({
             {activeNodeId && (() => {
               const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
               const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
+              const hasJewelcrafterNpc = npcs.some(n => n.service_role === 'jewelcrafter');
               const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
-              const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'trainer'; enabled: boolean; has: boolean; label: string; desc: string }> = [
+              const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer'; enabled: boolean; has: boolean; label: string; desc: string }> = [
                 { key: 'vendor', enabled: form.is_vendor, has: hasVendorNpc, label: 'Shopkeeper', desc: 'Generates a named shopkeeper that fits this node\u2019s tone.' },
                 { key: 'blacksmith', enabled: form.is_blacksmith, has: hasBlacksmithNpc, label: 'Smith', desc: 'Generates a named smith that fits this node\u2019s tone.' },
+                { key: 'jewelcrafter', enabled: form.is_jewelcrafter, has: hasJewelcrafterNpc, label: 'Jeweler', desc: 'Generates a refined jeweler / lapidary suited to this node.' },
                 { key: 'trainer', enabled: form.is_trainer, has: hasTrainerNpc, label: 'Renown Trainer', desc: 'Generates a hardened mentor who trains heroes\u2019 attributes for Renown.' },
               ];
               const anyEnabled = roleConfigs.some(r => r.enabled);

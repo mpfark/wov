@@ -163,6 +163,7 @@ export default function NodeView({
               {(() => {
                 const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
                 const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
+                const hasJewelcrafterNpc = npcs.some(n => n.service_role === 'jewelcrafter');
                 const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
                 return (
                   <>
@@ -173,6 +174,14 @@ export default function NodeView({
                         title={hasBlacksmithNpc ? 'Blacksmith — staffed' : 'Blacksmith (no smith on duty)'}
                       >
                         🔨
+                      </span>
+                    )}
+                    {(node as any).is_jewelcrafter && (
+                      <span
+                        className={`text-[10px] ${hasJewelcrafterNpc ? 'text-glow' : 'opacity-70'}`}
+                        title={hasJewelcrafterNpc ? 'Jewelcrafter — staffed' : 'Jewelcrafter (no jeweler on duty)'}
+                      >
+                        💎
                       </span>
                     )}
                     {(node as any).is_soulforge && (
@@ -345,10 +354,12 @@ export default function NodeView({
                   {npcs.map(npc => {
                     const roleIcon = npc.service_role === 'vendor' ? '🪙'
                       : npc.service_role === 'blacksmith' ? '🔨'
+                      : npc.service_role === 'jewelcrafter' ? '💎'
                       : npc.service_role === 'trainer' ? '🏛️'
                       : '💬';
                     const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
                       : npc.service_role === 'blacksmith' ? 'Forge'
+                      : npc.service_role === 'jewelcrafter' ? 'Craft'
                       : npc.service_role === 'trainer' ? 'Train'
                       : 'Talk';
                     return (

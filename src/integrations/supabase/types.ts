@@ -1059,6 +1059,7 @@ export type Database = {
           illustration_url: string | null
           is_blacksmith: boolean
           is_inn: boolean
+          is_jewelcrafter: boolean
           is_marketplace: boolean
           is_soulforge: boolean
           is_teleport: boolean
@@ -1080,6 +1081,7 @@ export type Database = {
           illustration_url?: string | null
           is_blacksmith?: boolean
           is_inn?: boolean
+          is_jewelcrafter?: boolean
           is_marketplace?: boolean
           is_soulforge?: boolean
           is_teleport?: boolean
@@ -1101,6 +1103,7 @@ export type Database = {
           illustration_url?: string | null
           is_blacksmith?: boolean
           is_inn?: boolean
+          is_jewelcrafter?: boolean
           is_marketplace?: boolean
           is_soulforge?: boolean
           is_teleport?: boolean

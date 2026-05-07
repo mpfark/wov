@@ -483,6 +483,11 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
                   🔨
                 </text>
               )}
+              {(node as any).is_jewelcrafter && (
+                <text x={pos.px - 26} y={pos.py + 42} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
+                  💎
+                </text>
+              )}
               {node.is_teleport && (
                 <text x={pos.px + 26} y={pos.py + 30} textAnchor="middle" className="text-[10px] select-none pointer-events-none">
                   🌀

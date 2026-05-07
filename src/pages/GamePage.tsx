@@ -6,6 +6,7 @@ import NodeView from '@/features/world/components/NodeView';
 import MapPanel from '@/features/world/components/MapPanel';
 import VendorPanel from '@/features/inventory/components/VendorPanel';
 import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
+import JewelcrafterPanel from '@/features/inventory/components/JewelcrafterPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
@@ -251,11 +252,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
+  const [jewelcrafterOpen, setJewelcrafterOpen] = useState(false);
   /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
   const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
 
   /**
-   * Talk routing: service-role NPCs (vendor/blacksmith) open the matching
+   * Talk routing: service-role NPCs (vendor/blacksmith/jewelcrafter/trainer) open the matching
    * service panel directly with the NPC's name + flavor as subtitle. All
    * other NPCs fall through to the standard dialog.
    */
@@ -268,6 +270,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (npc.service_role === 'blacksmith' && currentNode?.is_blacksmith) {
       setActiveServiceNpc(npc);
       setBlacksmithOpen(true);
+      return;
+    }
+    if (npc.service_role === 'jewelcrafter' && (currentNode as any)?.is_jewelcrafter) {
+      setActiveServiceNpc(npc);
+      setJewelcrafterOpen(true);
       return;
     }
     if (npc.service_role === 'trainer' && currentNode?.is_trainer) {
@@ -994,6 +1001,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onSearch: handleSearch,
     onOpenVendor: currentNode?.is_vendor ? () => setVendorOpen(true) : undefined,
     onOpenBlacksmith: currentNode?.is_blacksmith ? () => setBlacksmithOpen(true) : undefined,
+    onOpenJewelcrafter: (currentNode as any)?.is_jewelcrafter ? () => setJewelcrafterOpen(true) : undefined,
     onOpenTrainer: currentNode?.is_trainer ? () => setTrainerOpen(true) : undefined,
     onOpenMarketplace: (currentNode as any)?.is_marketplace ? () => setMarketplaceOpen(true) : undefined,
     onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
@@ -1235,6 +1243,26 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           character={character}
           npcName={activeServiceNpc?.service_role === 'blacksmith' ? activeServiceNpc.name : undefined}
           npcFlavor={activeServiceNpc?.service_role === 'blacksmith' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
+        />
+      )}
+
+      {/* Jewelcrafter Dialog */}
+      {(currentNode as any).is_jewelcrafter && (
+        <JewelcrafterPanel
+          open={jewelcrafterOpen}
+          onClose={() => { setJewelcrafterOpen(false); setActiveServiceNpc(null); }}
+          characterId={character.id}
+          gold={character.gold}
+          salvage={character.salvage ?? 0}
+          level={character.level}
+          inventory={[...equipped, ...unequipped]}
+          onGoldChange={(g) => updateCharacter({ gold: g })}
+          onSalvageChange={(s) => updateCharacter({ salvage: s })}
+          onInventoryChange={fetchInventory}
+          addLog={addLog}
+          character={character}
+          npcName={activeServiceNpc?.service_role === 'jewelcrafter' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'jewelcrafter' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
 
