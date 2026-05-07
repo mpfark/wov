@@ -64,7 +64,8 @@ export default function GalleryPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [reg, ar, nd, it] = await Promise.all([
+      const { fetchAllRows } = await import('@/lib/supabase-paginate');
+      const [reg, ar, nd, itemsData] = await Promise.all([
         supabase
           .from('regions')
           .select('id, name, description, illustration_url, min_level, max_level')
@@ -80,12 +81,16 @@ export default function GalleryPage() {
           .select('id, name, description, illustration_url')
           .not('illustration_url', 'is', null)
           .neq('illustration_url', ''),
-        supabase
-          .from('items')
-          .select('id, name, description, illustration_url, level, rarity')
-          .not('illustration_url', 'is', null)
-          .neq('illustration_url', ''),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from('items')
+            .select('id, name, description, illustration_url, level, rarity')
+            .not('illustration_url', 'is', null)
+            .neq('illustration_url', '')
+            .range(from, to)
+        ),
       ]);
+      const it = { data: itemsData };
 
       const merged: Illustration[] = [
         ...(reg.data ?? []).map((r): Illustration => ({ ...r, source: 'region' })),
