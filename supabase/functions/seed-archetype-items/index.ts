@@ -50,6 +50,8 @@ const SLOT_NOUNS: Record<string, Partial<Record<Stat, string[]>> & { default: st
   pants:   { str: ["Greaves"], con: ["Greaves"], dex: ["Leggings"], int: ["Leggings"], wis: ["Leggings"], cha: ["Leggings"], default: ["Leggings"] },
   gloves:  { str: ["Gauntlets"], con: ["Gauntlets"], dex: ["Gloves"], int: ["Gloves"], wis: ["Gloves"], cha: ["Gloves"], default: ["Gloves"] },
   boots:   { str: ["Sabatons"], con: ["Sabatons"], dex: ["Boots"], int: ["Boots"], wis: ["Boots"], cha: ["Boots"], default: ["Boots"] },
+  shoulders:{ str: ["Pauldrons"], con: ["Pauldrons"], dex: ["Spaulders"], int: ["Mantle"], wis: ["Mantle"], cha: ["Mantle"], default: ["Pauldrons"] },
+  belt:    { str: ["Girdle"], con: ["Girdle"], dex: ["Belt"], int: ["Sash"], wis: ["Sash"], cha: ["Sash"], default: ["Belt"] },
   off_hand:{ con: ["Shield"], str: ["Shield"], wis: ["Idol"], int: ["Tome"], cha: ["Idol"], dex: ["Shield"], default: ["Shield"] },
 };
 
