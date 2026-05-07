@@ -117,7 +117,7 @@ export default function MapPanel({
   character, party, pendingInvites, isLeader, isTank, myMembership, playersHere,
   onCreateParty, onInvite, onAcceptInvite, onDeclineInvite, onLeaveParty, onKick, onSetTank, onToggleFollow,
   keyboardBindings, activeBuffs, abilityTargetId, onSetAbilityTarget, showTargetSelector,
-  onSearch, onOpenVendor, onOpenBlacksmith, onOpenTeleport, onOpenTrainer, onOpenMarketplace, searchDisabled, hasDiscoverable,
+  onSearch, onOpenVendor, onOpenBlacksmith, onOpenJewelcrafter, onOpenTeleport, onOpenTrainer, onOpenMarketplace, searchDisabled, hasDiscoverable,
   unlockedConnections, onMapTeleport,
   onlinePlayers: summonOnlinePlayers, addLog: summonAddLog, inCombat: summonInCombat, isDead: summonIsDead,
   getRegionForNode, currentRegionMinLevel,
