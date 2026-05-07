@@ -54,12 +54,14 @@ export default function RaceClassManager() {
   }, []);
 
   const loadData = async () => {
-    const [itemsRes, gearRes, uGearRes] = await Promise.all([
-      supabase.from('items').select('id, name, slot, item_type, rarity').order('name'),
+    const { fetchAllRows } = await import('@/lib/supabase-paginate');
+    const [items, gearRes, uGearRes] = await Promise.all([
+      fetchAllRows<any>((from, to) =>
+        supabase.from('items').select('id, name, slot, item_type, rarity').order('name').range(from, to)
+      ),
       supabase.from('class_starting_gear').select('*'),
       supabase.from('universal_starting_gear').select('*'),
     ]);
-    const items = itemsRes.data || [];
     setAllItems(items);
     setWeapons(items.filter((i: any) => i.slot === 'main_hand'));
     const gearMap: Record<string, string> = {};
