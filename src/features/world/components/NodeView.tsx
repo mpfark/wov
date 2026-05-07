@@ -176,6 +176,14 @@ export default function NodeView({
                         🔨
                       </span>
                     )}
+                    {(node as any).is_jewelcrafter && (
+                      <span
+                        className={`text-[10px] ${hasJewelcrafterNpc ? 'text-glow' : 'opacity-70'}`}
+                        title={hasJewelcrafterNpc ? 'Jewelcrafter — staffed' : 'Jewelcrafter (no jeweler on duty)'}
+                      >
+                        💎
+                      </span>
+                    )}
                     {(node as any).is_soulforge && (
                       <span className="text-[10px] text-soulforged text-glow-soulforged" title="Soulforge-capable forge">⚒️</span>
                     )}
