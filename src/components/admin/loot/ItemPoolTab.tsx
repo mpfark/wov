@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/lib/supabase-paginate';
 import { toast } from 'sonner';
 
 interface PoolItem {
@@ -35,13 +36,16 @@ export default function ItemPoolTab() {
   const [pendingChanges, setPendingChanges] = useState<Map<string, Partial<PoolItem>>>(new Map());
 
   const loadItems = async () => {
-    const { data } = await supabase
-      .from('items')
-      .select('id, name, level, rarity, item_type, slot, world_drop, drop_weight, weapon_tag, is_soulbound')
-      .in('item_type', ['equipment', 'consumable'])
-      .order('level')
-      .order('name');
-    if (data) setItems(data as PoolItem[]);
+    const data = await fetchAllRows<PoolItem>((from, to) =>
+      supabase
+        .from('items')
+        .select('id, name, level, rarity, item_type, slot, world_drop, drop_weight, weapon_tag, is_soulbound')
+        .in('item_type', ['equipment', 'consumable'])
+        .order('level')
+        .order('name')
+        .range(from, to)
+    );
+    setItems(data);
   };
 
   useEffect(() => { loadItems(); }, []);

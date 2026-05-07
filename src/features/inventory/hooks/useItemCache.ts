@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/lib/supabase-paginate';
 
 export interface CachedItem {
   id: string;
@@ -25,17 +26,18 @@ async function loadCache() {
   if (cacheLoaded) return;
   if (cachePromise) return cachePromise;
   cachePromise = (async () => {
-    const { data } = await supabase
-      .from('items')
-      .select('id, name, description, item_type, rarity, slot, stats, value, max_durability, hands, level, weapon_tag');
-    if (data) {
-      const newCache = new Map<string, CachedItem>();
-      for (const item of data) {
-        newCache.set(item.id, item as CachedItem);
-      }
-      itemCache = newCache;
-      cacheLoaded = true;
+    const data = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from('items')
+        .select('id, name, description, item_type, rarity, slot, stats, value, max_durability, hands, level, weapon_tag')
+        .range(from, to)
+    );
+    const newCache = new Map<string, CachedItem>();
+    for (const item of data) {
+      newCache.set(item.id, item as CachedItem);
     }
+    itemCache = newCache;
+    cacheLoaded = true;
     cachePromise = null;
   })();
   return cachePromise;
