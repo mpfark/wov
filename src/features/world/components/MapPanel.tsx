@@ -79,6 +79,7 @@ interface Props {
   onSearch?: () => void;
   onOpenVendor?: () => void;
   onOpenBlacksmith?: () => void;
+  onOpenJewelcrafter?: () => void;
   onOpenTeleport?: () => void;
   onOpenTrainer?: () => void;
   onOpenMarketplace?: () => void;
