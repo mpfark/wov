@@ -184,9 +184,13 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
 
   useEffect(() => {
     if (!open) return;
-    supabase.from('items').select('id, name, rarity, value, level, slot').order('name').then(({ data }) => {
-      if (data) setAllItems(data);
-    });
+    (async () => {
+      const { fetchAllRows } = await import('@/lib/supabase-paginate');
+      const data = await fetchAllRows<any>((from, to) =>
+        supabase.from('items').select('id, name, rarity, value, level, slot').order('name').range(from, to)
+      );
+      setAllItems(data);
+    })();
     if (nodeId) {
       loadNode(nodeId);
       loadCreatures(nodeId);
