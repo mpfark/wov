@@ -1192,10 +1192,12 @@ export default function NodeEditorPanel({
             {activeNodeId && (() => {
               const hasVendorNpc = npcs.some(n => n.service_role === 'vendor');
               const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
+              const hasJewelcrafterNpc = npcs.some(n => n.service_role === 'jewelcrafter');
               const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
-              const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'trainer'; enabled: boolean; has: boolean; label: string; desc: string }> = [
+              const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer'; enabled: boolean; has: boolean; label: string; desc: string }> = [
                 { key: 'vendor', enabled: form.is_vendor, has: hasVendorNpc, label: 'Shopkeeper', desc: 'Generates a named shopkeeper that fits this node\u2019s tone.' },
                 { key: 'blacksmith', enabled: form.is_blacksmith, has: hasBlacksmithNpc, label: 'Smith', desc: 'Generates a named smith that fits this node\u2019s tone.' },
+                { key: 'jewelcrafter', enabled: form.is_jewelcrafter, has: hasJewelcrafterNpc, label: 'Jeweler', desc: 'Generates a refined jeweler / lapidary suited to this node.' },
                 { key: 'trainer', enabled: form.is_trainer, has: hasTrainerNpc, label: 'Renown Trainer', desc: 'Generates a hardened mentor who trains heroes\u2019 attributes for Renown.' },
               ];
               const anyEnabled = roleConfigs.some(r => r.enabled);
