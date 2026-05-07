@@ -469,7 +469,7 @@ function ConnectionsManager({ nodeId, connections, allNodesGlobal, allAreas, all
 
 /* ─── AI Suggest Button for Nodes ────────────────────── */
 function AiSuggestNodeButton({ form, selectedRegionId, regions, allAreas, allNodesGlobal, onSuggestion }: {
-  form: { area_id: string; is_vendor: boolean; is_inn: boolean; is_blacksmith: boolean; is_teleport: boolean; connections: string };
+  form: { area_id: string; is_vendor: boolean; is_inn: boolean; is_blacksmith: boolean; is_jewelcrafter?: boolean; is_teleport: boolean; connections: string };
   selectedRegionId: string;
   regions: any[];
   allAreas: any[];
