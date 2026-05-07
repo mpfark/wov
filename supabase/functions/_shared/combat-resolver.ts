@@ -265,19 +265,43 @@ export async function processLootDrops(
         // Roll equipment
         const rarityRoll = Math.random() * 100;
         const rolledRarity = rarityRoll < poolConfig.common_pct ? 'common' : 'uncommon';
+        const otherRarity = rolledRarity === 'common' ? 'uncommon' : 'common';
 
-        const minLevel = creatureLevel + poolConfig.equip_level_min_offset;
-        const maxLevel = creatureLevel + poolConfig.equip_level_max_offset;
+        const baseMin = creatureLevel + poolConfig.equip_level_min_offset;
+        const baseMax = creatureLevel + poolConfig.equip_level_max_offset;
 
-        const { data: eligible } = await db
-          .from('items')
-          .select('id, name, rarity, drop_weight')
-          .eq('world_drop', true)
-          .eq('rarity', rolledRarity)
-          .eq('item_type', 'equipment')
-          .eq('is_soulbound', false)
-          .gte('level', minLevel)
-          .lte('level', maxLevel);
+        // Try (rarity, level-window) tiers in order:
+        //   1. rolled rarity, base window
+        //   2. other rarity, base window         (re-roll rarity)
+        //   3+. progressively widen window ±1 level per step, both rarities,
+        //      until we find an eligible item or exhaust 10 widening steps.
+        const tiers: { rarity: string; min: number; max: number; reason: string }[] = [
+          { rarity: rolledRarity, min: baseMin, max: baseMax, reason: 'base' },
+          { rarity: otherRarity,  min: baseMin, max: baseMax, reason: 'rarity-fallback' },
+        ];
+        for (let widen = 1; widen <= 10; widen++) {
+          tiers.push({ rarity: rolledRarity, min: baseMin - widen, max: baseMax + widen, reason: `widen-${widen}` });
+          tiers.push({ rarity: otherRarity,  min: baseMin - widen, max: baseMax + widen, reason: `widen-${widen}-rarity-fallback` });
+        }
+
+        let eligible: any[] | null = null;
+        let pickedTier: typeof tiers[number] | null = null;
+        for (const tier of tiers) {
+          const { data } = await db
+            .from('items')
+            .select('id, name, rarity, drop_weight')
+            .eq('world_drop', true)
+            .eq('rarity', tier.rarity)
+            .eq('item_type', 'equipment')
+            .eq('is_soulbound', false)
+            .gte('level', Math.max(1, tier.min))
+            .lte('level', tier.max);
+          if (data && data.length > 0) {
+            eligible = data;
+            pickedTier = tier;
+            break;
+          }
+        }
 
         if (eligible && eligible.length > 0) {
           // Weighted random
