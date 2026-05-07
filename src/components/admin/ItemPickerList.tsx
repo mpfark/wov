@@ -32,9 +32,13 @@ export default function ItemPickerList({ value, onChange, label }: ItemPickerLis
   const [maxLevel, setMaxLevel] = useState('');
 
   useEffect(() => {
-    supabase.from('items').select('id, name, rarity, level').order('name').then(({ data }) => {
-      if (data) setItems(data as ItemOption[]);
-    });
+    (async () => {
+      const { fetchAllRows } = await import('@/lib/supabase-paginate');
+      const data = await fetchAllRows<ItemOption>((from, to) =>
+        supabase.from('items').select('id, name, rarity, level').order('name').range(from, to)
+      );
+      setItems(data);
+    })();
   }, []);
 
   const sortedItems = useMemo(() => {
