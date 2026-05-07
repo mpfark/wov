@@ -1,65 +1,44 @@
-## Item Coverage Analyzer
+## Goal
 
-A new admin panel that audits the existing item pool and surfaces gaps — especially for uniques — by class, stat, slot, and level band. Read-only: it analyzes and recommends, never creates items.
+Make sure all 1,364 items show up in the Item Pool admin UI (and other item lists hitting the same 1,000-row Supabase ceiling), so "Worn"/"Sturdy" items aren't silently hidden.
 
-### Where it lives
+## Root cause
 
-- New admin tab **"Item Coverage"** registered in `src/components/admin/AdminSidebar.tsx` and routed in `src/pages/AdminPage.tsx`.
-- New component `src/components/admin/ItemCoverageAnalyzer.tsx`.
-- Pure analysis utilities in `src/components/admin/coverage/` so logic is testable independent of UI:
-  - `coverage-types.ts` — types for `CoverageCell`, `Gap`, `Recommendation`.
-  - `coverage-analyzer.ts` — takes raw items + class/stat metadata and returns a coverage report.
-  - `coverage-recommendations.ts` — turns gaps into prioritized "Suggested Next Items".
+Supabase PostgREST caps every `select()` at **1,000 rows by default**. Several admin queries fetch the whole `items` table without pagination, so anything past row 1,000 (when sorted by `level` then `name`) silently disappears from the UI — even though the rows still exist in the database.
 
-### Data inputs
+## Approach
 
-- `items` table: rarity, level, slot, stats, weapon_tag, hands, item_type.
-- Class metadata from `src/shared/formulas/classes.ts`:
-  - `CLASS_LABELS` — class list
-  - `CLASS_LEVEL_BONUSES` — primary/secondary stats per class
-  - `CLASS_WEAPON_AFFINITY` — preferred weapon tags
-- Level cap from progression memory (L42).
+Add a tiny shared helper that fetches all rows in pages of 1,000 using `.range()`, then use it in the admin views that need the full pool. Keep gameplay/runtime caches unchanged in scope (only fix the admin tools that surface the pool).
 
-Filter to `world_drop = true` items by default (with a toggle to include all).
+### 1. New helper
 
-### Level bands
+`src/lib/supabase-paginate.ts`
 
-Every 5 levels: 1–5, 6–10, 11–15, 16–20, 21–25, 26–30, 31–35, 36–40, 41–42.
+```ts
+export async function fetchAllRows<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>,
+  pageSize = 1000,
+): Promise<T[]> { /* loops .range(from, to) until a short page returns */ }
+```
 
-### Class-fit heuristic
+### 2. Wire into the affected admin queries
 
-An item "fits" a class when ANY of these are true:
-- Its dominant stat is one of the class's `CLASS_LEVEL_BONUSES` keys.
-- It is a weapon whose `weapon_tag` is in the class's `CLASS_WEAPON_AFFINITY`.
-- It is a non-stat-based slot (hp/hp_regen-only consumable etc.) — counted as "neutral", not class-specific.
+- `src/components/admin/loot/ItemPoolTab.tsx` — main fix: replace the single `from('items').select(...).order(...)` with the paginated helper.
+- `src/components/admin/ItemCoverageAnalyzer.tsx` — currently `.limit(5000)`; switch to the helper so it can never silently truncate.
+- `src/features/inventory/hooks/useItemCache.ts` — module-level item cache used across the app; also paginate so client-side lookups never miss items.
 
-### Status thresholds (per class × band × rarity)
+### 3. Leave alone (out of scope)
 
-- **good**: ≥ 3 fitting items
-- **weak**: 1–2 fitting items
-- **missing**: 0 fitting items
-- For uniques specifically: **missing** if 0, **weak** if 1, **good** if ≥ 2.
+Other call sites already filter heavily (e.g. `.in('id', itemIds)`, `ilike(...).limit(5)`, count-only queries) and don't realistically exceed 1,000 rows. We can revisit later if needed.
 
-### UI sections
+## Verification
 
-1. **Filters bar** — rarity multi-select (default unique), include consumables toggle, world-drop toggle.
-2. **Class × Level-band Coverage Matrix** — rows = 7 classes, columns = 9 bands, cells colored good/weak/missing with item count. Click a cell → side drawer listing items + gaps.
-3. **Stat Coverage** — STR/DEX/CON/INT/WIS/CHA × bands; counts items where stat is dominant.
-4. **Slot Coverage** — slot × bands matrix.
-5. **Unique Gaps** (most prominent) — sorted list of band/class/slot combos with zero unique support, e.g. "Level 31–35 · Wizard · no INT-focused weapon".
-6. **Suggested Next Items** — prioritized list generated from gaps, format:
-   - "Create level 35 INT staff unique for Wizard"
-   - "Create level 30 WIS/CON shield unique for Templar"
-   Priority = (rarity weight: unique=3, uncommon=1) × (class-coverage deficit) × (band importance, mid/late game weighted higher).
+- Open `/admin` → Loot → Item Pool, clear filters, confirm the count line shows `1364 items` and Worn/Sturdy items appear.
+- Open Item Coverage Analyzer with `common`+`uncommon` enabled, confirm matrices populate for low-level bands.
+- Confirm no regression in the player-facing inventory (item names/icons still resolve from `useItemCache`).
 
-### Technical notes
+## Notes
 
-- All analysis happens client-side from a single `supabase.from('items').select(...)` query — fast enough for ~1400 items.
-- Memoize the coverage report with `useMemo` keyed on filters + raw items.
-- Color tokens: use existing semantic tokens (`destructive` for missing, `warning`/`accent` for weak, `primary` for good) — no hardcoded colors.
-- Tooltips on each matrix cell list contributing item names.
-- Add a small unit test file `coverage-analyzer.test.ts` covering: empty pool, single-item pool, class-fit by stat, class-fit by weapon tag, threshold edges.
-
-### Out of scope (per request)
-
-- No item creation or auto-forge integration. The recommendations are text-only; a future iteration could add "Send to AI Item Forge" buttons.
+- No DB / RLS changes.
+- No edge-function changes.
+- Pure frontend fix; small and contained.
