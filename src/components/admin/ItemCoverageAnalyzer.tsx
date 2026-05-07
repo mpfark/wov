@@ -5,16 +5,53 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { CLASS_LABELS } from '@/shared/formulas/classes';
-import {
-  buildCoverageReport,
-  ATTRIBUTE_STATS,
-  ALL_SLOTS,
-} from './coverage/coverage-analyzer';
-import type { CoverageCell, CoverageStatus } from './coverage/coverage-types';
+import { CLASS_LABELS, CLASS_LEVEL_BONUSES, CLASS_WEAPON_AFFINITY } from '@/shared/formulas/classes';
 import { Loader2 } from 'lucide-react';
 
 const RARITY_OPTIONS = ['unique', 'uncommon', 'common', 'soulforged'];
+const ATTRIBUTE_STATS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+const ALL_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'hands', 'legs', 'feet', 'neck', 'ring'];
+
+type CoverageStatus = 'good' | 'weak' | 'missing';
+
+interface LevelBand {
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  importance: number;
+}
+
+interface CoverageCell {
+  count: number;
+  status: CoverageStatus;
+  itemNames: string[];
+}
+
+interface RawItem {
+  id: string;
+  name: string;
+  rarity: string;
+  level: number | null;
+  slot: string | null;
+  weapon_tag: string | null;
+  hands: number | null;
+  item_type: string | null;
+  stats: Record<string, number> | null;
+  world_drop: boolean | null;
+}
+
+const LEVEL_BANDS: LevelBand[] = [
+  { key: 'b1', label: '1-5', min: 1, max: 5, importance: 1 },
+  { key: 'b2', label: '6-10', min: 6, max: 10, importance: 1 },
+  { key: 'b3', label: '11-15', min: 11, max: 15, importance: 1.2 },
+  { key: 'b4', label: '16-20', min: 16, max: 20, importance: 1.4 },
+  { key: 'b5', label: '21-25', min: 21, max: 25, importance: 1.6 },
+  { key: 'b6', label: '26-30', min: 26, max: 30, importance: 1.8 },
+  { key: 'b7', label: '31-35', min: 31, max: 35, importance: 2 },
+  { key: 'b8', label: '36-40', min: 36, max: 40, importance: 2.2 },
+  { key: 'b9', label: '41-42', min: 41, max: 42, importance: 2.5 },
+];
 
 function statusClass(s: CoverageStatus): string {
   if (s === 'good') return 'bg-primary/20 text-primary border-primary/40';
