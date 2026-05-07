@@ -265,19 +265,43 @@ export async function processLootDrops(
         // Roll equipment
         const rarityRoll = Math.random() * 100;
         const rolledRarity = rarityRoll < poolConfig.common_pct ? 'common' : 'uncommon';
+        const otherRarity = rolledRarity === 'common' ? 'uncommon' : 'common';
 
-        const minLevel = creatureLevel + poolConfig.equip_level_min_offset;
-        const maxLevel = creatureLevel + poolConfig.equip_level_max_offset;
+        const baseMin = creatureLevel + poolConfig.equip_level_min_offset;
+        const baseMax = creatureLevel + poolConfig.equip_level_max_offset;
 
-        const { data: eligible } = await db
-          .from('items')
-          .select('id, name, rarity, drop_weight')
-          .eq('world_drop', true)
-          .eq('rarity', rolledRarity)
-          .eq('item_type', 'equipment')
-          .eq('is_soulbound', false)
-          .gte('level', minLevel)
-          .lte('level', maxLevel);
+        // Try (rarity, level-window) tiers in order:
+        //   1. rolled rarity, base window
+        //   2. other rarity, base window         (re-roll rarity)
+        //   3+. progressively widen window ±1 level per step, both rarities,
+        //      until we find an eligible item or exhaust 10 widening steps.
+        const tiers: { rarity: string; min: number; max: number; reason: string }[] = [
+          { rarity: rolledRarity, min: baseMin, max: baseMax, reason: 'base' },
+          { rarity: otherRarity,  min: baseMin, max: baseMax, reason: 'rarity-fallback' },
+        ];
+        for (let widen = 1; widen <= 10; widen++) {
+          tiers.push({ rarity: rolledRarity, min: baseMin - widen, max: baseMax + widen, reason: `widen-${widen}` });
+          tiers.push({ rarity: otherRarity,  min: baseMin - widen, max: baseMax + widen, reason: `widen-${widen}-rarity-fallback` });
+        }
+
+        let eligible: any[] | null = null;
+        let pickedTier: typeof tiers[number] | null = null;
+        for (const tier of tiers) {
+          const { data } = await db
+            .from('items')
+            .select('id, name, rarity, drop_weight')
+            .eq('world_drop', true)
+            .eq('rarity', tier.rarity)
+            .eq('item_type', 'equipment')
+            .eq('is_soulbound', false)
+            .gte('level', Math.max(1, tier.min))
+            .lte('level', tier.max);
+          if (data && data.length > 0) {
+            eligible = data;
+            pickedTier = tier;
+            break;
+          }
+        }
 
         if (eligible && eligible.length > 0) {
           // Weighted random
@@ -294,21 +318,38 @@ export async function processLootDrops(
             item_id: picked.id,
             creature_name: drop.creatureName,
           });
+          if (pickedTier && pickedTier.reason !== 'base') {
+            console.log(JSON.stringify({
+              fn: 'combat-resolver', event: 'loot_fallback',
+              creature: drop.creatureName, creatureLevel,
+              rolledRarity, pickedRarity: pickedTier.rarity,
+              window: [pickedTier.min, pickedTier.max], reason: pickedTier.reason,
+            }));
+          }
           events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${picked.name}!` });
         }
 
         // Separate consumable roll
         if (Math.random() < poolConfig.consumable_drop_chance) {
-          const cMinLevel = creatureLevel + poolConfig.consumable_level_min_offset;
-          const cMaxLevel = creatureLevel + poolConfig.consumable_level_max_offset;
+          const cBaseMin = creatureLevel + poolConfig.consumable_level_min_offset;
+          const cBaseMax = creatureLevel + poolConfig.consumable_level_max_offset;
 
-          const { data: consumables } = await db
-            .from('items')
-            .select('id, name, drop_weight')
-            .eq('world_drop', true)
-            .eq('item_type', 'consumable')
-            .gte('level', cMinLevel)
-            .lte('level', cMaxLevel);
+          let consumables: any[] | null = null;
+          let cTierReason = 'base';
+          for (let widen = 0; widen <= 10; widen++) {
+            const { data } = await db
+              .from('items')
+              .select('id, name, drop_weight')
+              .eq('world_drop', true)
+              .eq('item_type', 'consumable')
+              .gte('level', Math.max(1, cBaseMin - widen))
+              .lte('level', cBaseMax + widen);
+            if (data && data.length > 0) {
+              consumables = data;
+              cTierReason = widen === 0 ? 'base' : `widen-${widen}`;
+              break;
+            }
+          }
 
           if (consumables && consumables.length > 0) {
             const totalCW = consumables.reduce((s: number, e: any) => s + (e.drop_weight || 10), 0);
@@ -324,6 +365,12 @@ export async function processLootDrops(
               item_id: pickedC.id,
               creature_name: drop.creatureName,
             });
+            if (cTierReason !== 'base') {
+              console.log(JSON.stringify({
+                fn: 'combat-resolver', event: 'consumable_loot_fallback',
+                creature: drop.creatureName, creatureLevel, reason: cTierReason,
+              }));
+            }
             events.push({ type: 'loot_drop', message: `🧴 ${drop.creatureName} dropped ${pickedC.name}!` });
           }
         }
