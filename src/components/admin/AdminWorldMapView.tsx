@@ -754,9 +754,9 @@ export default function AdminWorldMapView({ regions, nodes, areas = [], creature
                     <text x={pos.px + 20} y={pos.py - 20} textAnchor="middle"
                       className="fill-primary text-[10px] font-bold pointer-events-none select-none">✓</text>
                   )}
-                  {(node.is_vendor || node.is_inn || node.is_blacksmith) && (
+                  {(node.is_vendor || node.is_inn || node.is_blacksmith || node.is_jewelcrafter) && (
                     <text x={pos.px} y={pos.py - 12} textAnchor="middle" className="text-[8px] select-none pointer-events-none">
-                      {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}{node.is_blacksmith ? '🔨' : ''}
+                      {node.is_vendor ? '🛒' : ''}{node.is_inn ? '🏨' : ''}{node.is_blacksmith ? '🔨' : ''}{node.is_jewelcrafter ? '💎' : ''}
                     </text>
                   )}
                   {(() => {
