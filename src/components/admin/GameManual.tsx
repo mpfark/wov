@@ -110,7 +110,7 @@ export default function GameManual() {
               <p className="text-xs text-muted-foreground mb-2">
                 XP per level = <code className="text-primary">floor(level^2.0 × 50)</code>. You gain <strong className="text-foreground">1 stat point per level</strong> to allocate freely. Class bonuses every 3 levels. <strong className="text-foreground">Respec points</strong> at levels 10, 20, 30, 40.
               </p>
-              <div className="max-h-[400px] overflow-auto">
+              <div>
                 <Table>
                   <TableHeader>
                     <TableRow>
