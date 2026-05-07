@@ -40,13 +40,16 @@ export default function LegacyLootTablesTab() {
   const [creatureCounts, setCreatureCounts] = useState<Map<string, number>>(new Map());
 
   const loadData = async () => {
-    const [t, i, c] = await Promise.all([
+    const { fetchAllRows } = await import('@/lib/supabase-paginate');
+    const [t, items, c] = await Promise.all([
       supabase.from('loot_tables').select('*').order('name'),
-      supabase.from('items').select('id, name, rarity, level').order('name'),
+      fetchAllRows<ItemOption>((from, to) =>
+        supabase.from('items').select('id, name, rarity, level').order('name').range(from, to)
+      ),
       supabase.from('creatures').select('loot_table_id'),
     ]);
     if (t.data) setTables(t.data as LootTable[]);
-    if (i.data) setItems(i.data as ItemOption[]);
+    setItems(items);
     if (c.data) {
       const counts = new Map<string, number>();
       for (const cr of c.data) {

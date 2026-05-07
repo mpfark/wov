@@ -84,11 +84,13 @@ export default function UniqueReclaimManager() {
   const load = async () => {
     setLoading(true);
     // 1. Get all unique items
-    const { data: items, error: itemsErr } = await supabase
-      .from('items')
-      .select('id, name')
-      .eq('rarity', 'unique');
-    if (itemsErr) {
+    let items: { id: string; name: string }[] = [];
+    try {
+      const { fetchAllRows } = await import('@/lib/supabase-paginate');
+      items = await fetchAllRows<{ id: string; name: string }>((from, to) =>
+        supabase.from('items').select('id, name').eq('rarity', 'unique').range(from, to)
+      );
+    } catch {
       toast.error('Failed to load unique items');
       setLoading(false);
       return;
