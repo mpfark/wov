@@ -6,15 +6,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ServicePanelShell, ServicePanelEmpty } from '@/components/ui/ServicePanelShell';
 import { supabase } from '@/integrations/supabase/client';
-import { Coins, Hammer } from 'lucide-react';
+import { Coins, Gem } from 'lucide-react';
 import { InventoryItem } from '@/features/inventory';
 import { calculateRepairCost } from '@/lib/game-data';
 import { Character } from '@/features/character';
-import { useSoulforgeForge } from './SoulforgeTabContent';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 
-type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
+type JewelcrafterTab = 'repair' | 'forge';
+
+const JEWELRY_SLOTS = new Set(['ring', 'amulet', 'trinket']);
 
 interface Props {
   open: boolean;
@@ -28,11 +29,7 @@ interface Props {
   onSalvageChange: (newSalvage: number) => void;
   onInventoryChange: () => void;
   addLog: (msg: string) => void;
-  /** Whether the current node has the soulforge flag — adds a 3rd tab. */
-  isSoulforgeNode?: boolean;
-  /** Full character (only required when isSoulforgeNode). */
   character?: Character;
-  /** Optional subtitle name + flavor for service-NPC framing. */
   npcName?: string;
   npcFlavor?: string;
 }
@@ -49,15 +46,9 @@ const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
   item.is_soulbound ? 'text-soulforged text-glow-soulforged' : (RARITY_COLORS[item.rarity] || '');
 
 const FORGE_SLOTS = [
-  { value: 'main_hand', label: 'Main Hand' },
-  { value: 'off_hand', label: 'Off Hand' },
-  { value: 'head', label: 'Head' },
-  { value: 'chest', label: 'Chest' },
-  { value: 'shoulders', label: 'Shoulders' },
-  { value: 'gloves', label: 'Gloves' },
-  { value: 'belt', label: 'Belt' },
-  { value: 'pants', label: 'Pants' },
-  { value: 'boots', label: 'Boots' },
+  { value: 'ring', label: 'Ring' },
+  { value: 'amulet', label: 'Amulet' },
+  { value: 'trinket', label: 'Trinket' },
 ];
 
 const STAT_LABELS: Record<string, string> = {
@@ -77,12 +68,12 @@ interface ForgePoolItem {
   weapon_tag: string | null;
 }
 
-export default function BlacksmithPanel({
+export default function JewelcrafterPanel({
   open, onClose, characterId, gold, salvage, level, inventory,
   onGoldChange, onSalvageChange, onInventoryChange, addLog,
-  isSoulforgeNode = false, character, npcName, npcFlavor,
+  character, npcName, npcFlavor,
 }: Props) {
-  const [tab, setTab] = useState<BlacksmithTab>('repair');
+  const [tab, setTab] = useState<JewelcrafterTab>('repair');
   const [repairing, setRepairing] = useState(false);
   const [forgeSlot, setForgeSlot] = useState<string>('');
   const [forging, setForging] = useState(false);
@@ -93,7 +84,9 @@ export default function BlacksmithPanel({
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
 
-  const damagedItems = inventory.filter(i => i.current_durability < 100);
+  // Only jewelry items at the jeweler
+  const jewelryInventory = inventory.filter(i => JEWELRY_SLOTS.has(i.item.slot as string));
+  const damagedItems = jewelryInventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
 
   const salvageCost = 5 + level * 2;
@@ -105,7 +98,7 @@ export default function BlacksmithPanel({
     setBrowsing(true);
     setSelectedForgeItem(null);
     try {
-      const { data, error } = await supabase.functions.invoke('blacksmith-forge', {
+      const { data, error } = await supabase.functions.invoke('jewelcrafter-forge', {
         body: { character_id: characterId, slot, mode: 'browse' },
       });
       if (error) throw error;
@@ -132,7 +125,7 @@ export default function BlacksmithPanel({
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`🔨 Repaired ${inv.item.name} for ${cost} gold.`);
+    addLog(`💎 Refurbished ${inv.item.name} for ${cost} gold.`);
     setRepairing(false);
   };
 
@@ -140,7 +133,7 @@ export default function BlacksmithPanel({
     const repairableItems = damagedItems.filter(i => !isUnrepairable(i.item.rarity));
     const totalCost = repairableItems.reduce((sum, inv) =>
       sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
-    if (gold < totalCost) { addLog('❌ Not enough gold to repair all!'); return; }
+    if (gold < totalCost) { addLog('❌ Not enough gold to refurbish all!'); return; }
     setRepairing(true);
     for (const inv of repairableItems) {
       await supabase.from('character_inventory').update({ current_durability: 100 }).eq('id', inv.id);
@@ -149,7 +142,7 @@ export default function BlacksmithPanel({
     await supabase.from('characters').update({ gold: newGold }).eq('id', characterId);
     onGoldChange(newGold);
     onInventoryChange();
-    addLog(`🔨 Repaired ${repairableItems.length} items for ${totalCost} gold.`);
+    addLog(`💎 Refurbished ${repairableItems.length} items for ${totalCost} gold.`);
     setRepairing(false);
   };
 
@@ -157,7 +150,7 @@ export default function BlacksmithPanel({
     if (!canForge) return;
     setForging(true);
     try {
-      const { data, error } = await supabase.functions.invoke('blacksmith-forge', {
+      const { data, error } = await supabase.functions.invoke('jewelcrafter-forge', {
         body: { character_id: characterId, slot: forgeSlot, item_id: selectedForgeItem, mode: 'forge' },
       });
       if (error) throw error;
@@ -165,11 +158,11 @@ export default function BlacksmithPanel({
       onGoldChange(data.gold_remaining);
       onSalvageChange(data.salvage_remaining);
       onInventoryChange();
-      addLog(`🔩 The blacksmith forged: ${data.item.name}!`);
+      addLog(`💎 The jeweler crafted: ${data.item.name}!`);
       setForgePool(prev => prev.filter(i => i.id !== selectedForgeItem));
       setSelectedForgeItem(null);
     } catch (e: any) {
-      addLog(`❌ Forge failed: ${e.message || 'Unknown error'}`);
+      addLog(`❌ Crafting failed: ${e.message || 'Unknown error'}`);
     }
     setForging(false);
   };
@@ -197,10 +190,8 @@ export default function BlacksmithPanel({
     .reduce((sum, inv) => sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
   const repairableCount = damagedItems.filter(i => !isUnrepairable(i.item.rarity)).length;
 
-  // ── Slot content ──────────────────────────────────────────────
-
   const repairLeft = damagedItems.length === 0 ? (
-    <ServicePanelEmpty>All equipment is in good condition.</ServicePanelEmpty>
+    <ServicePanelEmpty>All jewelry is in good condition.</ServicePanelEmpty>
   ) : (
     <div className="space-y-1.5">
       {damagedItems.map(inv => {
@@ -243,12 +234,12 @@ export default function BlacksmithPanel({
 
   const repairRight = (
     <div className="space-y-3 text-[11px] text-muted-foreground">
-      <p>Equipment loses durability when you take hits in combat. At <span className="text-destructive font-display">0%</span>, items become unequipped and unusable.</p>
-      <p>Repair cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
-      <p className="text-destructive">⚠️ Unique items cannot be repaired — they are destroyed at 0% durability.</p>
+      <p>The jeweler refurbishes <span className="text-elvish font-display">rings, amulets, and trinkets</span> only. For weapons and armor, visit a blacksmith.</p>
+      <p>Refurbish cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
+      <p className="text-destructive">⚠️ Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
       {repairableCount > 0 && (
         <div className="border-t border-border pt-2 text-foreground">
-          <span className="font-display text-xs">Pending repairs: </span>
+          <span className="font-display text-xs">Pending refurbishes: </span>
           <span>{repairableCount} item{repairableCount === 1 ? '' : 's'}</span>
           <span className="ml-2 text-primary font-display">{totalRepairCost}g total</span>
         </div>
@@ -259,16 +250,16 @@ export default function BlacksmithPanel({
   const repairFooter = repairableCount > 1 ? (
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">
-        Repair all {repairableCount} damaged items at once.
+        Refurbish all {repairableCount} damaged jewelry pieces at once.
       </span>
       <Button size="sm" onClick={repairAll} disabled={repairing || gold < totalRepairCost}
         className="font-display text-xs h-8">
-        <Hammer className="w-3 h-3 mr-1" /> Repair All ({totalRepairCost}g)
+        <Gem className="w-3 h-3 mr-1" /> Refurbish All ({totalRepairCost}g)
       </Button>
     </div>
   ) : (
     <div className="text-xs text-muted-foreground text-center">
-      Click an item's price to repair it.
+      Click an item's price to refurbish it.
     </div>
   );
 
@@ -295,10 +286,9 @@ export default function BlacksmithPanel({
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground italic">Common items only. Pick a slot to browse available equipment for your level.</p>
+        <p className="text-[10px] text-muted-foreground italic">Common items only. Pick a slot to browse available jewelry for your level.</p>
       </div>
 
-      {/* Sell Salvage */}
       <div className="space-y-2 border-t border-border pt-3">
         <h3 className="font-display text-xs text-muted-foreground">🔩 Sell Salvage</h3>
         {salvage === 0 ? (
@@ -328,7 +318,7 @@ export default function BlacksmithPanel({
 
   const forgeRight = (
     <div className="space-y-1">
-      {browsing && <p className="text-xs text-muted-foreground italic animate-pulse">Searching the forge...</p>}
+      {browsing && <p className="text-xs text-muted-foreground italic animate-pulse">Searching the jeweler's bench...</p>}
       {!browsing && forgeSlot && forgePool.length === 0 && (
         <p className="text-xs text-muted-foreground italic">No items available for this slot at your level.</p>
       )}
@@ -351,12 +341,6 @@ export default function BlacksmithPanel({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-display text-foreground">{item.name}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {item.weapon_tag && (
-                      <span className="text-[10px] text-muted-foreground capitalize">{item.weapon_tag}</span>
-                    )}
-                    {item.hands && (
-                      <span className="text-[10px] text-muted-foreground">{item.hands}H</span>
-                    )}
                     <span className="text-[10px] text-muted-foreground">Lv{item.level}</span>
                   </div>
                 </div>
@@ -402,8 +386,8 @@ export default function BlacksmithPanel({
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">
         {selectedForgeItem
-          ? <>Forging selected item — costs <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span></>
-          : 'Select an item from the forge pool.'}
+          ? <>Crafting selected item — costs <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span></>
+          : 'Select an item from the jeweler\'s bench.'}
       </span>
       <Button
         size="sm"
@@ -411,12 +395,10 @@ export default function BlacksmithPanel({
         disabled={!canForge}
         className="font-display text-xs h-8"
       >
-        {forging ? <span className="animate-pulse">Forging...</span> : <>🔨 Forge Selected Item</>}
+        {forging ? <span className="animate-pulse">Crafting...</span> : <>💎 Craft Selected Item</>}
       </Button>
     </div>
   );
-
-  // ── Render ────────────────────────────────────────────────────
 
   const subtitle = (
     <span className="inline-flex flex-col items-center gap-0.5">
@@ -439,31 +421,16 @@ export default function BlacksmithPanel({
     </span>
   );
 
-  const showSoulforge = isSoulforgeNode && !!character;
-
   const tabs = (
-    <Tabs value={tab} onValueChange={v => setTab(v as BlacksmithTab)} className="w-full">
-      <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        <TabsTrigger value="repair" className="font-display text-xs">🔧 Repair</TabsTrigger>
-        <TabsTrigger value="forge" className="font-display text-xs">⚒️ Forge</TabsTrigger>
-        {showSoulforge && (
-          <TabsTrigger value="soulforge" className="font-display text-xs text-soulforged">⚒️ Soulforge</TabsTrigger>
-        )}
+    <Tabs value={tab} onValueChange={v => setTab(v as JewelcrafterTab)} className="w-full">
+      <TabsList className="w-full grid grid-cols-2">
+        <TabsTrigger value="repair" className="font-display text-xs">🔧 Refurbish</TabsTrigger>
+        <TabsTrigger value="forge" className="font-display text-xs">💎 Craft</TabsTrigger>
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
-      {showSoulforge && <TabsContent value="soulforge" className="hidden" />}
     </Tabs>
   );
-
-  // Soulforge slots — hook always called (state persists across tabs).
-  // Pass the real character or null; the hook returns a stable "loading"
-  // slot tree when no character is present, so we never render the
-  // placeholder's misleading "not worthy" branch.
-  const sf = useSoulforgeForge({
-    character: character ?? null,
-    onForged: () => { onInventoryChange(); },
-  });
 
   let activeLeft: typeof repairLeft;
   let activeRight: typeof repairRight | null;
@@ -471,32 +438,26 @@ export default function BlacksmithPanel({
   let activeLeftTitle: string | undefined;
   let activeRightTitle: string | undefined;
 
-  if (tab === 'soulforge' && showSoulforge) {
-    activeLeft = sf.left as typeof repairLeft;
-    activeRight = (sf.right ?? <ServicePanelEmpty>Awaiting your choice…</ServicePanelEmpty>) as typeof repairRight;
-    activeFooter = (sf.footer ?? null) as typeof repairFooter | null;
-    activeLeftTitle = (sf.leftTitle as string | undefined) ?? "The Soulwright's Anvil";
-    activeRightTitle = sf.rightTitle as string | undefined;
-  } else if (tab === 'forge') {
+  if (tab === 'forge') {
     activeLeft = forgeLeft;
     activeRight = forgeRight;
     activeFooter = forgeFooter;
-    activeLeftTitle = 'Forge Options';
-    activeRightTitle = 'Available Items';
+    activeLeftTitle = 'Craft Options';
+    activeRightTitle = 'Available Jewelry';
   } else {
     activeLeft = repairLeft;
     activeRight = repairRight;
     activeFooter = repairFooter;
-    activeLeftTitle = 'Damaged Items';
-    activeRightTitle = 'How Repair Works';
+    activeLeftTitle = 'Damaged Jewelry';
+    activeRightTitle = 'How Refurbishing Works';
   }
 
   return (
     <ServicePanelShell
       open={open}
       onClose={onClose}
-      icon="🔨"
-      title="Blacksmith"
+      icon="💎"
+      title="Jewelcrafter"
       subtitle={subtitle}
       tabs={tabs}
       leftTitle={activeLeftTitle}
