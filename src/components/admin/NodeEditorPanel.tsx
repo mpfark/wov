@@ -602,9 +602,13 @@ export default function NodeEditorPanel({
   useEffect(() => {
     setActiveNodeId(nodeId);
     setSelectedRegionId(initialRegionId);
-    supabase.from('items').select('id, name, rarity, value, level, slot').order('name').then(({ data }) => {
-      if (data) setAllItems(data);
-    });
+    (async () => {
+      const { fetchAllRows } = await import('@/lib/supabase-paginate');
+      const data = await fetchAllRows<any>((from, to) =>
+        supabase.from('items').select('id, name, rarity, value, level, slot').order('name').range(from, to)
+      );
+      setAllItems(data);
+    })();
     // Load all unassigned creatures and NPCs for the picker
     Promise.all([
       supabase.from('creatures').select('id, name, level, rarity, is_aggressive, is_humanoid, hp, max_hp, ac, node_id').order('name'),
