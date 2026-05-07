@@ -1014,6 +1014,11 @@ export default function NodeEditorPanel({
                   🔨 Is Blacksmith (repair items)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_jewelcrafter}
+                    onChange={e => setForm(f => ({ ...f, is_jewelcrafter: e.target.checked }))} />
+                  💎 Is Jewelcrafter (forge rings, amulets, trinkets)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_teleport}
                     onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
                   🌀 Is Teleport Point (fast travel destination)
