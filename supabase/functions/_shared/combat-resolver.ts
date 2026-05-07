@@ -331,16 +331,25 @@ export async function processLootDrops(
 
         // Separate consumable roll
         if (Math.random() < poolConfig.consumable_drop_chance) {
-          const cMinLevel = creatureLevel + poolConfig.consumable_level_min_offset;
-          const cMaxLevel = creatureLevel + poolConfig.consumable_level_max_offset;
+          const cBaseMin = creatureLevel + poolConfig.consumable_level_min_offset;
+          const cBaseMax = creatureLevel + poolConfig.consumable_level_max_offset;
 
-          const { data: consumables } = await db
-            .from('items')
-            .select('id, name, drop_weight')
-            .eq('world_drop', true)
-            .eq('item_type', 'consumable')
-            .gte('level', cMinLevel)
-            .lte('level', cMaxLevel);
+          let consumables: any[] | null = null;
+          let cTierReason = 'base';
+          for (let widen = 0; widen <= 10; widen++) {
+            const { data } = await db
+              .from('items')
+              .select('id, name, drop_weight')
+              .eq('world_drop', true)
+              .eq('item_type', 'consumable')
+              .gte('level', Math.max(1, cBaseMin - widen))
+              .lte('level', cBaseMax + widen);
+            if (data && data.length > 0) {
+              consumables = data;
+              cTierReason = widen === 0 ? 'base' : `widen-${widen}`;
+              break;
+            }
+          }
 
           if (consumables && consumables.length > 0) {
             const totalCW = consumables.reduce((s: number, e: any) => s + (e.drop_weight || 10), 0);
