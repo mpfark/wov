@@ -365,6 +365,12 @@ export async function processLootDrops(
               item_id: pickedC.id,
               creature_name: drop.creatureName,
             });
+            if (cTierReason !== 'base') {
+              console.log(JSON.stringify({
+                fn: 'combat-resolver', event: 'consumable_loot_fallback',
+                creature: drop.creatureName, creatureLevel, reason: cTierReason,
+              }));
+            }
             events.push({ type: 'loot_drop', message: `🧴 ${drop.creatureName} dropped ${pickedC.name}!` });
           }
         }
