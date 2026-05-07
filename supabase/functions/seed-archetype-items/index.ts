@@ -159,7 +159,7 @@ function distributeUncommon(level: number, primary: Stat, secondary: Stat | null
 
 /* ───────── Catalog spec ───────── */
 
-const ARMOR_SLOTS = ["head", "chest", "pants", "gloves", "boots", "off_hand"] as const;
+const ARMOR_SLOTS = ["head", "shoulders", "chest", "gloves", "belt", "pants", "boots", "off_hand"] as const;
 const PRIMARIES: Stat[] = ["str", "dex", "con", "int", "wis", "cha"];
 
 interface SeedItem {
