@@ -26,7 +26,7 @@ async function loadCache() {
   if (cacheLoaded) return;
   if (cachePromise) return cachePromise;
   cachePromise = (async () => {
-    const data = await fetchAllRows<CachedItem>((from, to) =>
+    const data = await fetchAllRows<any>((from, to) =>
       supabase
         .from('items')
         .select('id, name, description, item_type, rarity, slot, stats, value, max_durability, hands, level, weapon_tag')
@@ -34,7 +34,7 @@ async function loadCache() {
     );
     const newCache = new Map<string, CachedItem>();
     for (const item of data) {
-      newCache.set(item.id, item);
+      newCache.set(item.id, item as CachedItem);
     }
     itemCache = newCache;
     cacheLoaded = true;
