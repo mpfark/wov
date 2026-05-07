@@ -15,6 +15,7 @@ interface GraphNode {
   is_vendor: boolean;
   is_inn: boolean;
   is_blacksmith: boolean;
+  is_jewelcrafter?: boolean;
   connections: Array<{ node_id: string; direction: string; label?: string; hidden?: boolean }>;
   x: number;
   y: number;
