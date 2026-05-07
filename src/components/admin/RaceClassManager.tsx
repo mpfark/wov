@@ -190,19 +190,14 @@ export default function RaceClassManager() {
                         </div>
                       </div>
 
-                      {/* Combat ability */}
-                      {combat && (
-                        <div>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Primary Action</p>
-                          <div className="text-xs bg-secondary/50 rounded p-2 space-y-0.5">
-                            <div className="font-medium">{combat.emoji} {combat.label}</div>
-                            <div className="text-muted-foreground">
-                              {STAT_LABELS[combat.stat]} · {combat.diceMin}d{combat.diceMax} damage
-                              {combat.critRange < 20 && ` · Crit ${combat.critRange}-20`}
-                            </div>
-                          </div>
+                      {/* Autoattack note (weapon-driven, not class-specific) */}
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Autoattack</p>
+                        <div className="text-xs bg-secondary/50 rounded p-2 text-muted-foreground">
+                          Weapon-driven. To-hit uses DEX, damage uses STR. See the equipped weapon for dice and crit range.
                         </div>
-                      )}
+                      </div>
+
 
                       {/* Class Abilities */}
                       {CLASS_ABILITIES[cls] && CLASS_ABILITIES[cls].length > 0 && (
