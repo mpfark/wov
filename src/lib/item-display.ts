@@ -67,10 +67,11 @@ export function statLabel(key: string): string {
   return STAT_DISPLAY[key] || key.toUpperCase();
 }
 
-export function affinityLabelFor(weaponTag: string | null | undefined, classKey: string | undefined, classWeapons: Record<string, string[]>): string | null {
-  if (!weaponTag || !classKey) return null;
+export function affinityLabelFor(weaponTag: string | null | undefined, _classKey: string | undefined, classWeapons: Record<string, string[]>): string | null {
+  if (!weaponTag) return null;
+  const matches: string[] = [];
   for (const [cls, tags] of Object.entries(classWeapons)) {
-    if (tags.includes(weaponTag)) return CLASS_LABELS[cls] || cls;
+    if (tags.includes(weaponTag)) matches.push(CLASS_LABELS[cls] || cls);
   }
-  return null;
+  return matches.length ? matches.join(', ') : null;
 }
