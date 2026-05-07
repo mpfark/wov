@@ -1246,6 +1246,26 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
       )}
 
+      {/* Jewelcrafter Dialog */}
+      {(currentNode as any).is_jewelcrafter && (
+        <JewelcrafterPanel
+          open={jewelcrafterOpen}
+          onClose={() => { setJewelcrafterOpen(false); setActiveServiceNpc(null); }}
+          characterId={character.id}
+          gold={character.gold}
+          salvage={character.salvage ?? 0}
+          level={character.level}
+          inventory={[...equipped, ...unequipped]}
+          onGoldChange={(g) => updateCharacter({ gold: g })}
+          onSalvageChange={(s) => updateCharacter({ salvage: s })}
+          onInventoryChange={fetchInventory}
+          addLog={addLog}
+          character={character}
+          npcName={activeServiceNpc?.service_role === 'jewelcrafter' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'jewelcrafter' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
+        />
+      )}
+
       {/* Marketplace Dialog */}
       {(currentNode as any).is_marketplace && (
         <MarketplacePanel
