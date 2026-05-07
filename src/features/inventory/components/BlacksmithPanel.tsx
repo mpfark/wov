@@ -58,9 +58,6 @@ const FORGE_SLOTS = [
   { value: 'belt', label: 'Belt' },
   { value: 'pants', label: 'Pants' },
   { value: 'boots', label: 'Boots' },
-  { value: 'ring', label: 'Ring' },
-  { value: 'amulet', label: 'Amulet' },
-  { value: 'trinket', label: 'Trinket' },
 ];
 
 const STAT_LABELS: Record<string, string> = {
