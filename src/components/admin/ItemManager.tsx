@@ -195,8 +195,11 @@ export default function ItemManager() {
   } | null>(null);
 
   const loadItems = async () => {
-    const { data } = await supabase.from('items').select('*').order('name');
-    if (data) setItems(data as unknown as Item[]);
+    const { fetchAllRows } = await import('@/lib/supabase-paginate');
+    const data = await fetchAllRows<any>((from, to) =>
+      supabase.from('items').select('*').order('name').range(from, to)
+    );
+    setItems(data as unknown as Item[]);
   };
 
   const loadItemUsage = async (itemId: string, itemRarity?: string) => {
@@ -358,7 +361,10 @@ export default function ItemManager() {
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
     }
     setLoading(false);
-    const { data: refreshed } = await supabase.from('items').select('*').order('name');
+    const { fetchAllRows: fetchAll1 } = await import('@/lib/supabase-paginate');
+    const refreshed = await fetchAll1<any>((from, to) =>
+      supabase.from('items').select('*').order('name').range(from, to)
+    );
     if (refreshed) {
       setItems(refreshed as unknown as Item[]);
       const updated = refreshed.find((i: any) => i.id === savedId);
@@ -700,7 +706,10 @@ export default function ItemManager() {
                             if (url) {
                               setForm(f => ({ ...f, illustration_url: url }));
                               toast.success('Illustration generated');
-                              const { data: refreshed } = await supabase.from('items').select('*').order('name');
+                              const { fetchAllRows: fetchAll2 } = await import('@/lib/supabase-paginate');
+                              const refreshed = await fetchAll2<any>((from, to) =>
+                                supabase.from('items').select('*').order('name').range(from, to)
+                              );
                               if (refreshed) setItems(refreshed as unknown as Item[]);
                             }
                           } catch (err: any) {

@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react';
 
 const RARITY_OPTIONS = ['unique', 'uncommon', 'common', 'soulforged'];
 const ATTRIBUTE_STATS = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
-const ALL_SLOTS = ['weapon', 'offhand', 'head', 'chest', 'hands', 'legs', 'feet', 'neck', 'ring'];
+const ALL_SLOTS = ['main_hand', 'off_hand', 'head', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'boots', 'amulet', 'ring', 'trinket'];
 
 type CoverageStatus = 'good' | 'weak' | 'missing';
 
