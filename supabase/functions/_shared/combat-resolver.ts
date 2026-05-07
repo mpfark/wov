@@ -318,6 +318,14 @@ export async function processLootDrops(
             item_id: picked.id,
             creature_name: drop.creatureName,
           });
+          if (pickedTier && pickedTier.reason !== 'base') {
+            console.log(JSON.stringify({
+              fn: 'combat-resolver', event: 'loot_fallback',
+              creature: drop.creatureName, creatureLevel,
+              rolledRarity, pickedRarity: pickedTier.rarity,
+              window: [pickedTier.min, pickedTier.max], reason: pickedTier.reason,
+            }));
+          }
           events.push({ type: 'loot_drop', message: `💎 ${drop.creatureName} dropped ${picked.name}!` });
         }
 
