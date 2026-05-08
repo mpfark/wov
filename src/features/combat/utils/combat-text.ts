@@ -303,11 +303,8 @@ function formatCreatureAttack(
     const prefix = emoji ? `${emoji} ` : '';
     const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
     const targetLabel = isLocal ? 'you' : event.target_name!;
-    // Support %a/%e/%v template variables; fall back to legacy "{creature} {text}" format
-    const hasTemplateVars = /%[aev]/.test(bf.text);
-    const interpolated = hasTemplateVars
-      ? interpolateTemplate(bf.text, attacker, targetLabel, damage)
-      : `${attacker} ${bf.text}`;
+    // Flavor text owns the full sentence; supports %a/%e/%v template variables.
+    const interpolated = interpolateTemplate(bf.text, attacker, targetLabel, damage);
     return `${prefix}${interpolated}${dmgSuffix}!`;
   }
 
