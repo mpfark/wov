@@ -102,6 +102,7 @@ export default function CreatureManager() {
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
+  const [areaFilter, setAreaFilter] = useState<string>('all');
   const [rarityTab, setRarityTab] = useState<string>('all');
   // showUnassigned removed — now handled via regionFilter === 'unassigned'
   const [showNoLoot, setShowNoLoot] = useState(false);
