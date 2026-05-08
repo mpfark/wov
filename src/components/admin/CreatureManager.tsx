@@ -102,6 +102,7 @@ export default function CreatureManager() {
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
+  const [rarityTab, setRarityTab] = useState<string>('all');
   // showUnassigned removed — now handled via regionFilter === 'unassigned'
   const [showNoLoot, setShowNoLoot] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'rarity' | 'location'>('name');
@@ -300,6 +301,7 @@ export default function CreatureManager() {
   const filtered = creatures.filter(c => {
     if (regionFilter === 'unassigned' && c.node_id) return false;
     if (showNoLoot && !hasNoLoot(c)) return false;
+    if (rarityTab !== 'all' && c.rarity !== rarityTab) return false;
     const matchesText = c.name.toLowerCase().includes(filter.toLowerCase()) ||
       c.rarity.includes(filter.toLowerCase()) ||
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
@@ -348,6 +350,27 @@ export default function CreatureManager() {
             ))}
           </SelectContent>
         </Select>
+      </AdminToolSection>
+
+      <AdminToolSection title="Rarity">
+        <div className="flex flex-wrap gap-1">
+          {['all', ...RARITIES].map(r => {
+            const count = creatures.filter(c => r === 'all' || c.rarity === r).length;
+            return (
+              <button
+                key={r}
+                onClick={() => setRarityTab(r)}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                  rarityTab === r
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                } ${r !== 'all' ? RARITY_COLORS[r] : ''}`}
+              >
+                {r === 'all' ? 'All' : r} ({count})
+              </button>
+            );
+          })}
+        </div>
       </AdminToolSection>
 
       <AdminToolSection title="Sort">
