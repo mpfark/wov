@@ -301,6 +301,7 @@ export default function CreatureManager() {
   const filtered = creatures.filter(c => {
     if (regionFilter === 'unassigned' && c.node_id) return false;
     if (showNoLoot && !hasNoLoot(c)) return false;
+    if (rarityTab !== 'all' && c.rarity !== rarityTab) return false;
     const matchesText = c.name.toLowerCase().includes(filter.toLowerCase()) ||
       c.rarity.includes(filter.toLowerCase()) ||
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
