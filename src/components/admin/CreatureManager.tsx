@@ -307,7 +307,9 @@ export default function CreatureManager() {
       c.rarity.includes(filter.toLowerCase()) ||
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
     const matchesRegion = regionFilter === 'all' || regionFilter === 'unassigned' || getNodeRegion(c.node_id) === regionFilter;
-    return matchesText && matchesRegion;
+    const node = c.node_id ? nodes.find(n => n.id === c.node_id) : null;
+    const matchesArea = areaFilter === 'all' || (node && node.area_id === areaFilter);
+    return matchesText && matchesRegion && matchesArea;
   }).sort((a, b) => {
     const dir = sortDir === 'asc' ? 1 : -1;
     switch (sortBy) {
