@@ -352,6 +352,27 @@ export default function CreatureManager() {
         </Select>
       </AdminToolSection>
 
+      <AdminToolSection title="Rarity">
+        <div className="flex flex-wrap gap-1">
+          {['all', ...RARITIES].map(r => {
+            const count = creatures.filter(c => r === 'all' || c.rarity === r).length;
+            return (
+              <button
+                key={r}
+                onClick={() => setRarityTab(r)}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-display capitalize transition-colors ${
+                  rarityTab === r
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                } ${r !== 'all' ? RARITY_COLORS[r] : ''}`}
+              >
+                {r === 'all' ? 'All' : r} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </AdminToolSection>
+
       <AdminToolSection title="Sort">
         <div className="flex flex-wrap gap-1">
           {(['name', 'level', 'rarity', 'location'] as const).map(s => (
