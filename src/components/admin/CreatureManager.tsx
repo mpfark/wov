@@ -343,7 +343,7 @@ export default function CreatureManager() {
       </AdminToolSection>
 
       <AdminToolSection title="Region">
-        <Select value={regionFilter} onValueChange={setRegionFilter}>
+        <Select value={regionFilter} onValueChange={(v) => { setRegionFilter(v); setAreaFilter('all'); }}>
           <SelectTrigger className="w-full h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
           <SelectContent className="bg-popover border-border z-50 max-h-60">
             <SelectItem value="all" className="text-xs">All Regions</SelectItem>
@@ -353,6 +353,33 @@ export default function CreatureManager() {
             ))}
           </SelectContent>
         </Select>
+        {regionFilter !== 'all' && regionFilter !== 'unassigned' && (() => {
+          const region = cmRegions.find(r => r.name === regionFilter);
+          if (!region) return null;
+          const regionNodeIds = new Set(nodes.filter(n => n.region_id === region.id).map(n => n.id));
+          const areaIdsInRegion = new Set(
+            nodes.filter(n => n.region_id === region.id && n.area_id).map(n => n.area_id as string)
+          );
+          const areasInRegion = cmAreas.filter(a => areaIdsInRegion.has(a.id)).sort((a, b) => a.name.localeCompare(b.name));
+          if (areasInRegion.length === 0) return null;
+          const countFor = (aid: string) =>
+            creatures.filter(c => {
+              if (!c.node_id || !regionNodeIds.has(c.node_id)) return false;
+              const node = nodes.find(n => n.id === c.node_id);
+              return node?.area_id === aid;
+            }).length;
+          return (
+            <Select value={areaFilter} onValueChange={setAreaFilter}>
+              <SelectTrigger className="w-full h-7 text-xs mt-1"><SelectValue placeholder="Area" /></SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50 max-h-60">
+                <SelectItem value="all" className="text-xs">All Areas</SelectItem>
+                {areasInRegion.map(a => (
+                  <SelectItem key={a.id} value={a.id} className="text-xs">{a.name} ({countFor(a.id)})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        })()}
       </AdminToolSection>
 
       <AdminToolSection title="Rarity">
