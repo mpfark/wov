@@ -655,12 +655,12 @@ export default function CreatureManager() {
                     />
                     {flavor.text && (
                       <p className="text-[9px] text-muted-foreground italic truncate">
-                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}{(() => {
-                          const hasVars = /%[aev]/.test(flavor.text);
-                          return hasVars
-                            ? flavor.text.replace(/%a/g, form.name || 'Dragon').replace(/%e/g, 'Hero').replace(/%v/g, '25')
-                            : `${form.name || 'Dragon'} ${flavor.text}`;
-                        })()}!
+                        Preview: {flavor.emoji ? `${flavor.emoji} ` : ''}{
+                          flavor.text
+                            .replace(/%a/g, form.name || 'Dragon')
+                            .replace(/%e/g, 'Hero')
+                            .replace(/%v/g, '25')
+                        }!
                       </p>
                     )}
                   </div>
