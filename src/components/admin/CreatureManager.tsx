@@ -104,6 +104,7 @@ export default function CreatureManager() {
   const [regionFilter, setRegionFilter] = useState('all');
   const [areaFilter, setAreaFilter] = useState<string>('all');
   const [rarityTab, setRarityTab] = useState<string>('all');
+  const [typeTab, setTypeTab] = useState<'all' | 'creature' | 'humanoid'>('all');
   // showUnassigned removed — now handled via regionFilter === 'unassigned'
   const [showNoLoot, setShowNoLoot] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'level' | 'rarity' | 'location'>('name');
