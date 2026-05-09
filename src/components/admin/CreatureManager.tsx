@@ -304,6 +304,8 @@ export default function CreatureManager() {
     if (regionFilter === 'unassigned' && c.node_id) return false;
     if (showNoLoot && !hasNoLoot(c)) return false;
     if (rarityTab !== 'all' && c.rarity !== rarityTab) return false;
+    if (typeTab === 'humanoid' && !c.is_humanoid) return false;
+    if (typeTab === 'creature' && c.is_humanoid) return false;
     const matchesText = c.name.toLowerCase().includes(filter.toLowerCase()) ||
       c.rarity.includes(filter.toLowerCase()) ||
       getNodeName(c.node_id).toLowerCase().includes(filter.toLowerCase());
