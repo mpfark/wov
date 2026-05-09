@@ -130,9 +130,10 @@ export default function PopulatePanel({ selectedNodeIds, allNodes, onClose, onDa
           respawn_seconds: creature.respawn_seconds || 300,
           stats: computed.stats,
           loot_table: goldLoot,
-          loot_table_id: creature.loot_table_id || null,
+          loot_table_id: null,
+          loot_mode: isHumanoid ? 'item_pool' : 'salvage_only',
           drop_chance: creature.drop_chance || 0.3,
-        });
+        } as any);
       }
       toast.success(`Populated ${generated.creatures.length} creatures across ${selectedNodeIds.size} nodes.`);
       setGenerated(null);
