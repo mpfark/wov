@@ -406,6 +406,33 @@ export default function CreatureManager() {
         </div>
       </AdminToolSection>
 
+      <AdminToolSection title="Type">
+        <div className="flex flex-wrap gap-1">
+          {([
+            { key: 'all', label: 'All' },
+            { key: 'creature', label: 'Creature' },
+            { key: 'humanoid', label: 'Humanoid' },
+          ] as const).map(({ key, label }) => {
+            const count = creatures.filter(c =>
+              key === 'all' ? true : key === 'humanoid' ? c.is_humanoid : !c.is_humanoid
+            ).length;
+            return (
+              <button
+                key={key}
+                onClick={() => setTypeTab(key)}
+                className={`px-1.5 py-0.5 rounded text-[9px] font-display transition-colors ${
+                  typeTab === key
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </AdminToolSection>
+
       <AdminToolSection title="Sort">
         <div className="flex flex-wrap gap-1">
           {(['name', 'level', 'rarity', 'location'] as const).map(s => (
