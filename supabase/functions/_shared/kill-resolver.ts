@@ -35,6 +35,7 @@ import {
   type MemberReward,
 } from "./reward-calculator.ts";
 import type { LootQueueEntry } from "./combat-resolver.ts";
+import { GEM_DROP_CHANCE, PRIMARY_GEM_KEYS, type GemKey } from "./formulas/gems.ts";
 
 export interface KillCreatureInput {
   id: string;
