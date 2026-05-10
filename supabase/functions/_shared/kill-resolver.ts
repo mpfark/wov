@@ -35,6 +35,7 @@ import {
   type MemberReward,
 } from "./reward-calculator.ts";
 import type { LootQueueEntry } from "./combat-resolver.ts";
+import { GEM_DROP_CHANCE, PRIMARY_GEM_KEYS, type GemKey } from "./formulas/gems.ts";
 
 export interface KillCreatureInput {
   id: string;
@@ -57,16 +58,23 @@ export interface KillContext {
   xpBoostMultiplier: number;
 }
 
+export interface GemDropAward {
+  memberId: string;
+  gemKey: GemKey;
+}
+
 export interface KillOutcome {
   memberRewards: MemberReward[];
   /** The recipient used for log-display values (XP/gold each lines). */
   displayMemberId: string;
   /** Pre-formatted event objects ready to push into the events array. */
-  events: { type: string; message: string; creature_id?: string; creature_name?: string }[];
+  events: { type: string; message: string; creature_id?: string; creature_name?: string; character_id?: string }[];
   /** Loot-queue entries to feed into processLootDrops. */
   lootQueue: LootQueueEntry[];
   /** Boss death-cry text with %a substituted, or null if not applicable. */
   bossDeathCryText: string | null;
+  /** Per-recipient gem drops to upsert into character_gems. */
+  gemDrops: GemDropAward[];
   /** Raw totals for diagnostics / broadcast payloads. */
   totalGoldRolled: number;
   baseXp: number;
@@ -224,12 +232,28 @@ export function resolveCreatureKill(
     }
   }
 
+  // ── 6. Gem drops (per-recipient roll for a random primary gem) ──
+  const gemDrops: GemDropAward[] = [];
+  for (const r of recipients) {
+    if (Math.random() < GEM_DROP_CHANCE) {
+      const gemKey = PRIMARY_GEM_KEYS[Math.floor(Math.random() * PRIMARY_GEM_KEYS.length)];
+      gemDrops.push({ memberId: r.id, gemKey });
+      const gemName = gemKey.charAt(0).toUpperCase() + gemKey.slice(1);
+      events.push({
+        type: 'gem_drop',
+        message: `💎 Found a ${gemName}!`,
+        character_id: r.id,
+      });
+    }
+  }
+
   return {
     memberRewards: result.memberRewards,
     displayMemberId: displayRecipient.id,
     events,
     lootQueue,
     bossDeathCryText,
+    gemDrops,
     totalGoldRolled: result.totalGoldRolled,
     baseXp: result.baseXp,
     partyBonus: result.partyBonus,

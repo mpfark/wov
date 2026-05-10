@@ -406,6 +406,7 @@ Deno.serve(async (req) => {
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: LootQueueEntry[] = [];
+    const gemDropQueue: { memberId: string; gemKey: string }[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
     const killedCreatureIds = new Set<string>();
 
@@ -550,6 +551,9 @@ Deno.serve(async (req) => {
 
       // Queue loot drops
       for (const lq of outcome.lootQueue) lootQueue.push(lq);
+
+      // Queue gem drops (per-recipient upsert into character_gems)
+      for (const gd of outcome.gemDrops) gemDropQueue.push(gd);
     };
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
@@ -1503,6 +1507,33 @@ Deno.serve(async (req) => {
     // Loot depends on killed creatures being persisted
     const lootEvents = await processLootDrops(db, lootQueue);
     events.push(...lootEvents);
+
+    // Apply gem drops by aggregating per (character, gem) and upserting counts.
+    if (gemDropQueue.length > 0) {
+      const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
+      for (const gd of gemDropQueue) {
+        const k = `${gd.memberId}|${gd.gemKey}`;
+        counts.set(k, (counts.get(k) || 0) + 1);
+      }
+      const gemPromises: Promise<any>[] = [];
+      for (const [k, n] of counts) {
+        const [memberId, gemKey] = k.split('|');
+        gemPromises.push((async () => {
+          const { data: existing } = await db
+            .from('character_gems')
+            .select('count')
+            .eq('character_id', memberId)
+            .eq('gem_key', gemKey)
+            .maybeSingle();
+          const newCount = (existing?.count || 0) + n;
+          await db.from('character_gems').upsert(
+            { character_id: memberId, gem_key: gemKey, count: newCount, updated_at: new Date().toISOString() },
+            { onConflict: 'character_id,gem_key' }
+          );
+        })());
+      }
+      await Promise.all(gemPromises);
+    }
 
     // Batch effect upsert after cleanup to avoid conflicts
     if (liveEffects.length > 0) {
