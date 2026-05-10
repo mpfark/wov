@@ -144,18 +144,26 @@ function distributeCommon(level: number, primary: Stat, hands: number): Record<s
   return stats;
 }
 function distributeUncommon(level: number, primary: Stat, secondary: Stat | null, hands: number): Record<string, number> {
+  if (!secondary || secondary === primary) {
+    throw new Error(`distributeUncommon requires a distinct secondary stat (got primary=${primary}, secondary=${secondary})`);
+  }
   const budget = statBudget(level, "uncommon", hands);
   const stats: Record<string, number> = {};
-  if (secondary && secondary !== primary) {
-    const primaryAmt = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.55)));
-    const secondaryAmt = Math.max(1, Math.min(statCap(secondary, level), Math.round(budget * 0.35)));
-    stats[primary] = primaryAmt;
-    stats[secondary] = secondaryAmt;
-    const tertiary: string = (primary === "con" || secondary === "con" || primary === "str") ? "hp" : "wis";
-    // Spillover order: primary, secondary, tertiary
-    spillover(stats, level, budget, [primary, secondary, tertiary]);
-  } else {
-    return distributeCommon(level, primary, hands);
+  const primaryAmt = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.55)));
+  const secondaryAmt = Math.max(1, Math.min(statCap(secondary, level), Math.round(budget * 0.35)));
+  stats[primary] = primaryAmt;
+  stats[secondary] = secondaryAmt;
+  const tertiary: string = (primary === "con" || secondary === "con" || primary === "str") ? "hp" : "wis";
+  // Spillover order: primary, secondary, tertiary
+  spillover(stats, level, budget, [primary, secondary, tertiary]);
+  // Floor: guarantee secondary stat is at least 1 (steal from primary if caps clipped it).
+  if ((stats[secondary] ?? 0) < 1) {
+    if ((stats[primary] ?? 0) > 1) {
+      stats[primary]--;
+      stats[secondary] = 1;
+    } else {
+      stats[secondary] = 1;
+    }
   }
   return stats;
 }
