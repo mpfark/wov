@@ -58,6 +58,11 @@ export interface KillContext {
   xpBoostMultiplier: number;
 }
 
+export interface GemDropAward {
+  memberId: string;
+  gemKey: GemKey;
+}
+
 export interface KillOutcome {
   memberRewards: MemberReward[];
   /** The recipient used for log-display values (XP/gold each lines). */
@@ -68,6 +73,8 @@ export interface KillOutcome {
   lootQueue: LootQueueEntry[];
   /** Boss death-cry text with %a substituted, or null if not applicable. */
   bossDeathCryText: string | null;
+  /** Per-recipient gem drops to upsert into character_gems. */
+  gemDrops: GemDropAward[];
   /** Raw totals for diagnostics / broadcast payloads. */
   totalGoldRolled: number;
   baseXp: number;
