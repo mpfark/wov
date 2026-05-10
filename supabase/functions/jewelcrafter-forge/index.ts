@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { gemForItem } from "../_shared/formulas/gems.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,14 +10,14 @@ const corsHeaders = {
 
 const ALL_SLOTS = ["ring", "amulet", "trinket"] as const;
 
-async function getItemPool(db: any, slot: string, level: number) {
+async function getItemPool(db: any, slot: string, level: number, ownedGems: Record<string, number>) {
   const baseQuery = () => db
     .from("items")
     .select("id, name, rarity, level, stats, description, slot, hands, weapon_tag")
     .eq("item_type", "equipment")
     .eq("slot", slot)
     .eq("is_soulbound", false)
-    .eq("rarity", "common");
+    .in("rarity", ["common", "uncommon"]);
 
   let { data: pool } = await baseQuery()
     .gte("level", level - 2)
@@ -29,7 +30,21 @@ async function getItemPool(db: any, slot: string, level: number) {
     pool = widerPool;
   }
 
-  return pool || [];
+  return (pool || [])
+    .map((it: any) => ({ ...it, required_gem: gemForItem(it.stats, it.rarity) }))
+    .filter((it: any) => it.required_gem && (ownedGems[it.required_gem] || 0) > 0);
+}
+
+async function loadOwnedGems(db: any, characterId: string): Promise<Record<string, number>> {
+  const { data } = await db
+    .from("character_gems")
+    .select("gem_key, count")
+    .eq("character_id", characterId);
+  const map: Record<string, number> = {};
+  for (const row of data || []) {
+    if ((row.count ?? 0) > 0) map[row.gem_key] = row.count;
+  }
+  return map;
 }
 
 serve(async (req) => {
@@ -68,8 +83,9 @@ serve(async (req) => {
     if (!node?.is_jewelcrafter) throw new Error("You must be at a jewelcrafter to forge jewelry");
 
     if (mode === "browse") {
-      const pool = await getItemPool(db, slot, char.level);
-      return new Response(JSON.stringify({ pool }), {
+      const ownedGems = await loadOwnedGems(db, character_id);
+      const pool = await getItemPool(db, slot, char.level, ownedGems);
+      return new Response(JSON.stringify({ pool, owned_gems: ownedGems }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -82,14 +98,26 @@ serve(async (req) => {
     if (char.salvage < salvageCost) throw new Error("Not enough salvage");
     if (char.gold < goldCost) throw new Error("Not enough gold");
 
-    const pool = await getItemPool(db, slot, char.level);
+    const ownedGems = await loadOwnedGems(db, character_id);
+    const pool = await getItemPool(db, slot, char.level, ownedGems);
     const template = pool.find((i: any) => i.id === item_id);
-    if (!template) throw new Error("Selected item is not available for forging at your level");
+    if (!template) throw new Error("Selected item is not available — you may be missing the required gem");
+
+    const gemKey = template.required_gem as string;
+    if (!gemKey || (ownedGems[gemKey] || 0) < 1) {
+      throw new Error("You lack the gem required to craft this item");
+    }
 
     await db.from("characters").update({
       salvage: char.salvage - salvageCost,
       gold: char.gold - goldCost,
     }).eq("id", character_id);
+
+    await db
+      .from("character_gems")
+      .update({ count: ownedGems[gemKey] - 1, updated_at: new Date().toISOString() })
+      .eq("character_id", character_id)
+      .eq("gem_key", gemKey);
 
     await db.from("character_inventory").insert({
       character_id,
@@ -101,6 +129,7 @@ serve(async (req) => {
       item: template,
       salvage_remaining: char.salvage - salvageCost,
       gold_remaining: char.gold - goldCost,
+      gem_used: gemKey,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -12,6 +12,9 @@ import { calculateRepairCost } from '@/lib/game-data';
 import { Character } from '@/features/character';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
+import { GemPouch, GemBadge } from './GemPouch';
+import { useOwnedGems } from '../hooks/useOwnedGems';
+import { GEM_CATALOG, GemKey } from '@/shared/formulas/gems';
 
 type JewelcrafterTab = 'repair' | 'forge';
 
@@ -66,6 +69,7 @@ interface ForgePoolItem {
   slot: string;
   hands: number | null;
   weapon_tag: string | null;
+  required_gem: GemKey | null;
 }
 
 export default function JewelcrafterPanel({
@@ -83,6 +87,7 @@ export default function JewelcrafterPanel({
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
+  const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
 
   // Only jewelry items at the jeweler
   const jewelryInventory = inventory.filter(i => JEWELRY_SLOTS.has(i.item.slot as string));
@@ -91,7 +96,10 @@ export default function JewelcrafterPanel({
 
   const salvageCost = 5 + level * 2;
   const goldCost = level * 5;
-  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && !forging;
+  const selectedItem = forgePool.find(i => i.id === selectedForgeItem) || null;
+  const selectedGem = selectedItem?.required_gem ?? null;
+  const hasGemForSelected = !!selectedGem && (ownedGems[selectedGem] || 0) > 0;
+  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && hasGemForSelected && !forging;
 
   const browseSlot = useCallback(async (slot: string) => {
     if (!slot) { setForgePool([]); return; }
@@ -158,8 +166,19 @@ export default function JewelcrafterPanel({
       onGoldChange(data.gold_remaining);
       onSalvageChange(data.salvage_remaining);
       onInventoryChange();
-      addLog(`💎 The jeweler crafted: ${data.item.name}!`);
-      setForgePool(prev => prev.filter(i => i.id !== selectedForgeItem));
+      const gemUsed: GemKey | undefined = data.gem_used;
+      if (gemUsed) {
+        setOwnedGems(prev => {
+          const next = { ...prev };
+          const remaining = (next[gemUsed] || 0) - 1;
+          if (remaining > 0) next[gemUsed] = remaining;
+          else delete next[gemUsed];
+          return next;
+        });
+      }
+      const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
+      addLog(`💎 The jeweler crafted: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!`);
+      if (forgeSlot) browseSlot(forgeSlot);
       setSelectedForgeItem(null);
     } catch (e: any) {
       addLog(`❌ Crafting failed: ${e.message || 'Unknown error'}`);
@@ -265,6 +284,10 @@ export default function JewelcrafterPanel({
 
   const forgeLeft = (
     <div className="space-y-4">
+      <div className="rounded border border-border bg-background/30 p-2">
+        <GemPouch owned={ownedGems} />
+      </div>
+
       <div className="space-y-2">
         <Select value={forgeSlot} onValueChange={v => { setForgeSlot(v); setForgePool([]); setSelectedForgeItem(null); }}>
           <SelectTrigger className="font-display text-sm h-8">
@@ -283,10 +306,14 @@ export default function JewelcrafterPanel({
             <span className={`font-display ${salvage >= salvageCost ? 'text-dwarvish' : 'text-destructive'}`}>🔩 {salvageCost}</span>
             <span>+</span>
             <span className={`font-display ${gold >= goldCost ? 'text-primary' : 'text-destructive'}`}>{goldCost}g</span>
+            <span>+</span>
+            <span className="font-display">💠 1 gem</span>
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground italic">Common items only. Pick a slot to browse available jewelry for your level.</p>
+        <p className="text-[10px] text-muted-foreground italic">
+          Only items whose required gem you own appear here. Common items need a primary gem; uncommon items need a hybrid gem.
+        </p>
       </div>
 
       <div className="space-y-2 border-t border-border pt-3">
@@ -339,8 +366,9 @@ export default function JewelcrafterPanel({
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-display text-foreground">{item.name}</span>
+                  <span className={`text-sm font-display ${item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground'}`}>{item.name}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <GemBadge gemKey={item.required_gem} />
                     <span className="text-[10px] text-muted-foreground">Lv{item.level}</span>
                   </div>
                 </div>
@@ -385,8 +413,8 @@ export default function JewelcrafterPanel({
   const forgeFooter = (
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">
-        {selectedForgeItem
-          ? <>Crafting selected item — costs <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span></>
+        {selectedItem
+          ? <>Crafting — <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span> + <span className="font-display">💠 1 {selectedGem ? GEM_CATALOG[selectedGem].name : 'gem'}</span>{!hasGemForSelected && <span className="text-destructive ml-1">(missing)</span>}</>
           : 'Select an item from the jeweler\'s bench.'}
       </span>
       <Button

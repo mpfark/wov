@@ -13,6 +13,9 @@ import { Character } from '@/features/character';
 import { useSoulforgeForge } from './SoulforgeTabContent';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
+import { GemPouch, GemBadge } from './GemPouch';
+import { useOwnedGems } from '../hooks/useOwnedGems';
+import { GEM_CATALOG, GemKey } from '@/shared/formulas/gems';
 
 type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
 
@@ -75,6 +78,7 @@ interface ForgePoolItem {
   slot: string;
   hands: number | null;
   weapon_tag: string | null;
+  required_gem: GemKey | null;
 }
 
 export default function BlacksmithPanel({
@@ -92,13 +96,17 @@ export default function BlacksmithPanel({
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
+  const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
 
   const damagedItems = inventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
 
   const salvageCost = 5 + level * 2;
   const goldCost = level * 5;
-  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && !forging;
+  const selectedItem = forgePool.find(i => i.id === selectedForgeItem) || null;
+  const selectedGem = selectedItem?.required_gem ?? null;
+  const hasGemForSelected = !!selectedGem && (ownedGems[selectedGem] || 0) > 0;
+  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && hasGemForSelected && !forging;
 
   const browseSlot = useCallback(async (slot: string) => {
     if (!slot) { setForgePool([]); return; }
@@ -165,8 +173,20 @@ export default function BlacksmithPanel({
       onGoldChange(data.gold_remaining);
       onSalvageChange(data.salvage_remaining);
       onInventoryChange();
-      addLog(`🔩 The blacksmith forged: ${data.item.name}!`);
-      setForgePool(prev => prev.filter(i => i.id !== selectedForgeItem));
+      const gemUsed: GemKey | undefined = data.gem_used;
+      if (gemUsed) {
+        setOwnedGems(prev => {
+          const next = { ...prev };
+          const remaining = (next[gemUsed] || 0) - 1;
+          if (remaining > 0) next[gemUsed] = remaining;
+          else delete next[gemUsed];
+          return next;
+        });
+      }
+      const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
+      addLog(`🔩 The blacksmith forged: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!`);
+      // Re-browse to refresh available items based on remaining gems
+      if (forgeSlot) browseSlot(forgeSlot);
       setSelectedForgeItem(null);
     } catch (e: any) {
       addLog(`❌ Forge failed: ${e.message || 'Unknown error'}`);
@@ -274,6 +294,10 @@ export default function BlacksmithPanel({
 
   const forgeLeft = (
     <div className="space-y-4">
+      <div className="rounded border border-border bg-background/30 p-2">
+        <GemPouch owned={ownedGems} />
+      </div>
+
       <div className="space-y-2">
         <Select value={forgeSlot} onValueChange={v => { setForgeSlot(v); setForgePool([]); setSelectedForgeItem(null); }}>
           <SelectTrigger className="font-display text-sm h-8">
@@ -292,10 +316,14 @@ export default function BlacksmithPanel({
             <span className={`font-display ${salvage >= salvageCost ? 'text-dwarvish' : 'text-destructive'}`}>🔩 {salvageCost}</span>
             <span>+</span>
             <span className={`font-display ${gold >= goldCost ? 'text-primary' : 'text-destructive'}`}>{goldCost}g</span>
+            <span>+</span>
+            <span className="font-display">💠 1 gem</span>
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground italic">Common items only. Pick a slot to browse available equipment for your level.</p>
+        <p className="text-[10px] text-muted-foreground italic">
+          Only items whose required gem you own appear here. Common items need a primary gem; uncommon items need a hybrid gem.
+        </p>
       </div>
 
       {/* Sell Salvage */}
@@ -349,8 +377,9 @@ export default function BlacksmithPanel({
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-display text-foreground">{item.name}</span>
+                  <span className={`text-sm font-display ${item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground'}`}>{item.name}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <GemBadge gemKey={item.required_gem} />
                     {item.weapon_tag && (
                       <span className="text-[10px] text-muted-foreground capitalize">{item.weapon_tag}</span>
                     )}
@@ -401,8 +430,8 @@ export default function BlacksmithPanel({
   const forgeFooter = (
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">
-        {selectedForgeItem
-          ? <>Forging selected item — costs <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span></>
+        {selectedItem
+          ? <>Forging — <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span> + <span className="font-display">💠 1 {selectedGem ? GEM_CATALOG[selectedGem].name : 'gem'}</span>{!hasGemForSelected && <span className="text-destructive ml-1">(missing)</span>}</>
           : 'Select an item from the forge pool.'}
       </span>
       <Button
