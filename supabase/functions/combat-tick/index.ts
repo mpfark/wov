@@ -550,6 +550,9 @@ Deno.serve(async (req) => {
 
       // Queue loot drops
       for (const lq of outcome.lootQueue) lootQueue.push(lq);
+
+      // Queue gem drops (per-recipient upsert into character_gems)
+      for (const gd of outcome.gemDrops) gemDropQueue.push(gd);
     };
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
