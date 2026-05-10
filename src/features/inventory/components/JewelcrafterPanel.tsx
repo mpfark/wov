@@ -284,6 +284,10 @@ export default function JewelcrafterPanel({
 
   const forgeLeft = (
     <div className="space-y-4">
+      <div className="rounded border border-border bg-background/30 p-2">
+        <GemPouch owned={ownedGems} />
+      </div>
+
       <div className="space-y-2">
         <Select value={forgeSlot} onValueChange={v => { setForgeSlot(v); setForgePool([]); setSelectedForgeItem(null); }}>
           <SelectTrigger className="font-display text-sm h-8">
@@ -302,10 +306,14 @@ export default function JewelcrafterPanel({
             <span className={`font-display ${salvage >= salvageCost ? 'text-dwarvish' : 'text-destructive'}`}>🔩 {salvageCost}</span>
             <span>+</span>
             <span className={`font-display ${gold >= goldCost ? 'text-primary' : 'text-destructive'}`}>{goldCost}g</span>
+            <span>+</span>
+            <span className="font-display">💠 1 gem</span>
           </div>
         )}
 
-        <p className="text-[10px] text-muted-foreground italic">Common items only. Pick a slot to browse available jewelry for your level.</p>
+        <p className="text-[10px] text-muted-foreground italic">
+          Only items whose required gem you own appear here. Common items need a primary gem; uncommon items need a hybrid gem.
+        </p>
       </div>
 
       <div className="space-y-2 border-t border-border pt-3">
