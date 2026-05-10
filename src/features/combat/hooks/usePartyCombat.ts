@@ -268,6 +268,20 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       if (!isBroadcastEntry && openerTarget && aliveServerCreatures.includes(openerTarget)) {
         toEngage = [openerTarget];
       }
+      // One-shot opener kill: opener target is in creature_states but already
+      // dead. We still need to run the result through interpretCombatTickResult
+      // so the kill log, XP/gold/Renown/salvage, and loot drop are applied.
+      // Treat the dead target as our engagement for this single tick so the
+      // downstream pipeline matches it; aliveEngagedIds === 0 will then
+      // immediately stopCombat.
+      if (
+        !isBroadcastEntry &&
+        toEngage.length === 0 &&
+        openerTarget &&
+        data.creature_states.some(cs => cs.id === openerTarget)
+      ) {
+        toEngage = [openerTarget];
+      }
       if (toEngage.length > 0) {
         inCombatRef.current = true;
         setInCombat(true);
