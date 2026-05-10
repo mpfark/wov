@@ -14,9 +14,9 @@ import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { GemPouch, GemBadge } from './GemPouch';
 import { useOwnedGems } from '../hooks/useOwnedGems';
-import { GEM_CATALOG, GemKey } from '@/shared/formulas/gems';
+import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS, hybridRecipe, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
 
-type JewelcrafterTab = 'repair' | 'forge';
+type JewelcrafterTab = 'repair' | 'forge' | 'gems';
 
 const JEWELRY_SLOTS = new Set(['ring', 'amulet', 'trinket']);
 
@@ -86,6 +86,7 @@ export default function JewelcrafterPanel({
   const [selectedForgeItem, setSelectedForgeItem] = useState<string | null>(null);
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
+  const [cutting, setCutting] = useState<string | null>(null);
   const weaponProgression = useWeaponProgression();
   const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
 
@@ -202,6 +203,58 @@ export default function JewelcrafterPanel({
       addLog(`❌ Sale failed: ${e.message || 'Unknown error'}`);
     }
     setSelling(false);
+  };
+
+  const handleTradeGem = async (gemKey: GemKey) => {
+    if (cutting) return;
+    if (salvage < GEM_SALVAGE_COST_PRIMARY) { addLog('❌ Not enough salvage.'); return; }
+    setCutting(`trade:${gemKey}`);
+    try {
+      const { data, error } = await supabase.functions.invoke('jewelcrafter-gemcutter', {
+        body: { character_id: characterId, mode: 'trade_gem', gem_key: gemKey },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      onSalvageChange(data.salvage_remaining);
+      setOwnedGems(prev => ({ ...prev, [gemKey]: data.new_count }));
+      addLog(`💠 Traded ${data.salvage_spent} salvage for 1 ${data.gem_name}.`);
+    } catch (e: any) {
+      addLog(`❌ Gem trade failed: ${e.message || 'Unknown error'}`);
+    }
+    setCutting(null);
+  };
+
+  const handleCombineGem = async (hybridKey: GemKey) => {
+    if (cutting) return;
+    const recipe = hybridRecipe(hybridKey);
+    if (!recipe) return;
+    const [a, b] = recipe;
+    if ((ownedGems[a] || 0) < 1 || (ownedGems[b] || 0) < 1) {
+      addLog(`❌ Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}.`);
+      return;
+    }
+    setCutting(`combine:${hybridKey}`);
+    try {
+      const { data, error } = await supabase.functions.invoke('jewelcrafter-gemcutter', {
+        body: { character_id: characterId, mode: 'combine_gem', gem_key: hybridKey },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setOwnedGems(prev => {
+        const next = { ...prev };
+        for (const c of data.consumed as { gem_key: GemKey }[]) {
+          const remaining = (next[c.gem_key] || 0) - 1;
+          if (remaining > 0) next[c.gem_key] = remaining;
+          else delete next[c.gem_key];
+        }
+        next[hybridKey] = data.new_count;
+        return next;
+      });
+      addLog(`💠 Fused ${data.consumed.map((c: any) => c.name).join(' + ')} → 1 ${data.gem_name}.`);
+    } catch (e: any) {
+      addLog(`❌ Gem fusion failed: ${e.message || 'Unknown error'}`);
+    }
+    setCutting(null);
   };
 
   const totalRepairCost = damagedItems
@@ -428,6 +481,100 @@ export default function JewelcrafterPanel({
     </div>
   );
 
+  const gemcutLeft = (
+    <div className="space-y-4">
+      <div className="rounded border border-border bg-background/30 p-2">
+        <GemPouch owned={ownedGems} />
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="font-display text-xs text-muted-foreground">🔩 Trade Salvage → Primary Gem</h3>
+        <p className="text-[10px] text-muted-foreground italic">
+          {GEM_SALVAGE_COST_PRIMARY} salvage per gem. Pick the attribute you need.
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {PRIMARY_GEM_KEYS.map(key => {
+            const def = GEM_CATALOG[key];
+            const owned = ownedGems[key] || 0;
+            const disabled = salvage < GEM_SALVAGE_COST_PRIMARY || cutting !== null;
+            return (
+              <Button
+                key={key}
+                size="sm"
+                variant="outline"
+                onClick={() => handleTradeGem(key)}
+                disabled={disabled}
+                className="font-display text-[11px] h-8 justify-between gap-1 px-2"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: def.color }} />
+                  {def.name}
+                </span>
+                <span className="text-muted-foreground">×{owned}</span>
+              </Button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const gemcutRight = (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        <h3 className="font-display text-xs text-muted-foreground">💠 Combine → Hybrid Gem</h3>
+        <p className="text-[10px] text-muted-foreground italic">
+          Fuse 1 of each matching primary into 1 hybrid (no salvage cost — the primaries are the price).
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        {HYBRID_GEM_KEYS.map(key => {
+          const def = GEM_CATALOG[key];
+          const recipe = hybridRecipe(key)!;
+          const [a, b] = recipe;
+          const aDef = GEM_CATALOG[a];
+          const bDef = GEM_CATALOG[b];
+          const aCount = ownedGems[a] || 0;
+          const bCount = ownedGems[b] || 0;
+          const owned = ownedGems[key] || 0;
+          const canFuse = aCount >= 1 && bCount >= 1 && cutting === null;
+          return (
+            <div key={key} className="flex items-center justify-between gap-2 p-2 rounded border border-border bg-background/40">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: def.color }} />
+                  <span className="font-display text-xs">{def.name}</span>
+                  <span className="text-[10px] text-muted-foreground">({def.stats.map(s => s.toUpperCase()).join('+')})</span>
+                  <span className="text-[10px] text-muted-foreground ml-auto">owned ×{owned}</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                  <span className={aCount >= 1 ? '' : 'text-destructive'}>
+                    <span className="inline-block w-1.5 h-1.5 rounded-full mr-0.5 align-middle" style={{ backgroundColor: aDef.color }} />
+                    {aDef.name} ×{aCount}
+                  </span>
+                  <span>+</span>
+                  <span className={bCount >= 1 ? '' : 'text-destructive'}>
+                    <span className="inline-block w-1.5 h-1.5 rounded-full mr-0.5 align-middle" style={{ backgroundColor: bDef.color }} />
+                    {bDef.name} ×{bCount}
+                  </span>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleCombineGem(key)}
+                disabled={!canFuse}
+                className="font-display text-[11px] h-8 shrink-0"
+              >
+                Fuse
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   const subtitle = (
     <span className="inline-flex flex-col items-center gap-0.5">
       {npcName && (
@@ -451,12 +598,14 @@ export default function JewelcrafterPanel({
 
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as JewelcrafterTab)} className="w-full">
-      <TabsList className="w-full grid grid-cols-2">
+      <TabsList className="w-full grid grid-cols-3">
         <TabsTrigger value="repair" className="font-display text-xs">🔧 Refurbish</TabsTrigger>
         <TabsTrigger value="forge" className="font-display text-xs">💎 Craft</TabsTrigger>
+        <TabsTrigger value="gems" className="font-display text-xs">💠 Gemcutter</TabsTrigger>
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
+      <TabsContent value="gems" className="hidden" />
     </Tabs>
   );
 
@@ -472,6 +621,12 @@ export default function JewelcrafterPanel({
     activeFooter = forgeFooter;
     activeLeftTitle = 'Craft Options';
     activeRightTitle = 'Available Jewelry';
+  } else if (tab === 'gems') {
+    activeLeft = gemcutLeft;
+    activeRight = gemcutRight;
+    activeFooter = null;
+    activeLeftTitle = 'Trade Salvage';
+    activeRightTitle = 'Combine Hybrids';
   } else {
     activeLeft = repairLeft;
     activeRight = repairRight;
