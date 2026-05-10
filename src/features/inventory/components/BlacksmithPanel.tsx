@@ -78,6 +78,7 @@ interface ForgePoolItem {
   slot: string;
   hands: number | null;
   weapon_tag: string | null;
+  required_gem: GemKey | null;
 }
 
 export default function BlacksmithPanel({
