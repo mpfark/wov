@@ -83,8 +83,9 @@ serve(async (req) => {
     if (!node?.is_jewelcrafter) throw new Error("You must be at a jewelcrafter to forge jewelry");
 
     if (mode === "browse") {
-      const pool = await getItemPool(db, slot, char.level);
-      return new Response(JSON.stringify({ pool }), {
+      const ownedGems = await loadOwnedGems(db, character_id);
+      const pool = await getItemPool(db, slot, char.level, ownedGems);
+      return new Response(JSON.stringify({ pool, owned_gems: ownedGems }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -97,14 +98,26 @@ serve(async (req) => {
     if (char.salvage < salvageCost) throw new Error("Not enough salvage");
     if (char.gold < goldCost) throw new Error("Not enough gold");
 
-    const pool = await getItemPool(db, slot, char.level);
+    const ownedGems = await loadOwnedGems(db, character_id);
+    const pool = await getItemPool(db, slot, char.level, ownedGems);
     const template = pool.find((i: any) => i.id === item_id);
-    if (!template) throw new Error("Selected item is not available for forging at your level");
+    if (!template) throw new Error("Selected item is not available — you may be missing the required gem");
+
+    const gemKey = template.required_gem as string;
+    if (!gemKey || (ownedGems[gemKey] || 0) < 1) {
+      throw new Error("You lack the gem required to craft this item");
+    }
 
     await db.from("characters").update({
       salvage: char.salvage - salvageCost,
       gold: char.gold - goldCost,
     }).eq("id", character_id);
+
+    await db
+      .from("character_gems")
+      .update({ count: ownedGems[gemKey] - 1, updated_at: new Date().toISOString() })
+      .eq("character_id", character_id)
+      .eq("gem_key", gemKey);
 
     await db.from("character_inventory").insert({
       character_id,
@@ -116,6 +129,7 @@ serve(async (req) => {
       item: template,
       salvage_remaining: char.salvage - salvageCost,
       gold_remaining: char.gold - goldCost,
+      gem_used: gemKey,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
