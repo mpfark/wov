@@ -86,6 +86,7 @@ export default function JewelcrafterPanel({
   const [selectedForgeItem, setSelectedForgeItem] = useState<string | null>(null);
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
+  const [cutting, setCutting] = useState<string | null>(null);
   const weaponProgression = useWeaponProgression();
   const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
 
