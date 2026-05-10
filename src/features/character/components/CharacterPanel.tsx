@@ -477,6 +477,11 @@ export default function CharacterPanel({
                 </div>
               )}
 
+              {/* Gem Pouch */}
+              <div className="mt-2">
+                <GemPouch owned={ownedGems} />
+              </div>
+
               {/* Consumables & Quest Items */}
               {(() => {
                 const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
