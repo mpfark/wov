@@ -973,11 +973,26 @@ export default function GameManual() {
                 <CardContent className="p-3 space-y-2">
                   <p className="text-xs font-display text-dwarvish">🔩 Salvage</p>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p>A crafting currency used at the <strong className="text-foreground">Blacksmith Forge</strong>. Dropped only by <strong className="text-foreground">non-humanoid creatures</strong> (beasts, monsters, etc.).</p>
+                    <p>A crafting currency used at the <strong className="text-foreground">Blacksmith</strong> and <strong className="text-foreground">Jewelcrafter</strong> forges. Dropped only by <strong className="text-foreground">non-humanoid creatures</strong> (beasts, monsters, etc.).</p>
                     <p><strong className="text-foreground">Drop formula:</strong> <code className="text-primary">1 + floor(level / 5)</code></p>
                     <p><strong className="text-foreground">Rarity multiplier:</strong> Regular ×1, <span className="text-elvish">Rare ×2</span>, <span className="text-destructive">Boss ×4</span></p>
-                    <p><strong className="text-foreground">Forge cost:</strong> <code className="text-primary">🔩 5 + level×2</code> salvage + <code className="text-primary">level×5</code> gold per forge attempt</p>
-                    <p><strong className="text-foreground">Forge output:</strong> Random item for chosen slot — <span className="text-foreground">Common 65%</span> / <span className="text-elvish">Uncommon 35%</span>. Unique items cannot be forged.</p>
+                    <p><strong className="text-foreground">Forge cost:</strong> <code className="text-primary">🔩 5 + level×2</code> salvage + <code className="text-primary">level×5</code> gold + <strong className="text-foreground">1 matching gem</strong> per attempt.</p>
+                    <p><strong className="text-foreground">Forge output:</strong> Random item for chosen slot, gated by the gems you own (see Gems below). <span className="text-foreground">Common</span> requires a primary gem; <span className="text-elvish">Uncommon</span> requires a hybrid gem. Rare/Unique items cannot be forged.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card/30 border-border">
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-xs font-display text-primary">💠 Gems — Forge Gating</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Gems are a second forging material. The gem you spend determines what kind of item the forge will offer — pool entries are filtered to only show items whose dominant attribute(s) match a gem you own.</p>
+                    <p><strong className="text-foreground">Primary gems (6, one per attribute):</strong> <span style={{ color: 'hsl(0,70%,55%)' }}>Garnet → STR</span>, <span style={{ color: 'hsl(50,90%,55%)' }}>Topaz → DEX</span>, <span style={{ color: 'hsl(140,60%,45%)' }}>Emerald → CON</span>, <span style={{ color: 'hsl(220,70%,60%)' }}>Sapphire → INT</span>, <span className="text-foreground">Pearl → WIS</span>, <span style={{ color: 'hsl(280,60%,65%)' }}>Amethyst → CHA</span>. Used to forge <strong>Common</strong> items whose top stat matches the gem.</p>
+                    <p><strong className="text-foreground">Hybrid gems (6, one per attribute pair):</strong> <span style={{ color: 'hsl(30,90%,55%)' }}>Citrine STR+DEX</span>, <span style={{ color: 'hsl(160,50%,50%)' }}>Jade DEX+CON</span>, <span style={{ color: 'hsl(190,70%,55%)' }}>Aquamarine CON+INT</span>, <span style={{ color: 'hsl(250,40%,70%)' }}>Opal INT+WIS</span>, <span style={{ color: 'hsl(210,20%,80%)' }}>Moonstone WIS+CHA</span>, <span style={{ color: 'hsl(20,85%,60%)' }}>Sunstone CHA+STR</span>. Used to forge <span className="text-elvish">Uncommon</span> items whose top-2 stats match the pair.</p>
+                    <p><strong className="text-foreground">Drops:</strong> Every creature has a <code className="text-primary">10%</code> chance per kill to drop a primary gem (uniformly random from the 6). Hybrids never drop directly.</p>
+                    <p><strong className="text-foreground">Trading salvage:</strong> At the Jewelcrafter you can buy a chosen primary gem for <code className="text-primary">25 salvage</code> as bad-luck protection.</p>
+                    <p><strong className="text-foreground">Combining hybrids:</strong> At the Jewelcrafter, fuse <code className="text-primary">1 of each matching primary</code> into 1 hybrid gem (e.g. Garnet + Topaz → Citrine). No salvage cost — the two primaries are the price.</p>
+                    <p><strong className="text-foreground">Forge cost:</strong> 1 matching gem is consumed in addition to the normal salvage + gold cost on every forge attempt.</p>
                   </div>
                 </CardContent>
               </Card>
