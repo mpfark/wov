@@ -383,6 +383,21 @@ Deno.serve(async (req) => {
             });
           }
 
+          // Apply gem drops (offscreen DoT kills can also yield gems).
+          for (const gd of outcome.gemDrops) {
+            const { data: existing } = await db
+              .from('character_gems')
+              .select('count')
+              .eq('character_id', gd.memberId)
+              .eq('gem_key', gd.gemKey)
+              .maybeSingle();
+            const newCount = (existing?.count || 0) + 1;
+            await db.from('character_gems').upsert(
+              { character_id: gd.memberId, gem_key: gd.gemKey, count: newCount, updated_at: new Date().toISOString() },
+              { onConflict: 'character_id,gem_key' }
+            );
+          }
+
           // Display values for HTTP response + broadcasts (uses shared resolver's
           // chosen display recipient — first uncapped, else first member).
           const displayReward = outcome.memberRewards.find(r => r.memberId === outcome.displayMemberId)!;
