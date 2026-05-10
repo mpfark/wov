@@ -326,6 +326,7 @@ export default function CharacterPanel({
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();
+  const { owned: ownedGems } = useOwnedGems(character.id);
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
