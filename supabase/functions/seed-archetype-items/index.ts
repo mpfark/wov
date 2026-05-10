@@ -305,6 +305,15 @@ function buildCatalog(): SeedItem[] {
       }
     });
   }
+  // Invariant: every uncommon must carry at least 2 attribute stats (it's a hybrid by design).
+  const ATTR: Stat[] = ["str", "dex", "con", "int", "wis", "cha"];
+  for (const it of out) {
+    if (it.rarity !== "uncommon") continue;
+    const attrCount = ATTR.filter(k => (it.stats[k] ?? 0) > 0).length;
+    if (attrCount < 2) {
+      throw new Error(`Uncommon item "${it.name}" has fewer than 2 attribute stats: ${JSON.stringify(it.stats)}`);
+    }
+  }
   return out;
 }
 
