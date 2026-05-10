@@ -1508,6 +1508,33 @@ Deno.serve(async (req) => {
     const lootEvents = await processLootDrops(db, lootQueue);
     events.push(...lootEvents);
 
+    // Apply gem drops by aggregating per (character, gem) and upserting counts.
+    if (gemDropQueue.length > 0) {
+      const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
+      for (const gd of gemDropQueue) {
+        const k = `${gd.memberId}|${gd.gemKey}`;
+        counts.set(k, (counts.get(k) || 0) + 1);
+      }
+      const gemPromises: Promise<any>[] = [];
+      for (const [k, n] of counts) {
+        const [memberId, gemKey] = k.split('|');
+        gemPromises.push((async () => {
+          const { data: existing } = await db
+            .from('character_gems')
+            .select('count')
+            .eq('character_id', memberId)
+            .eq('gem_key', gemKey)
+            .maybeSingle();
+          const newCount = (existing?.count || 0) + n;
+          await db.from('character_gems').upsert(
+            { character_id: memberId, gem_key: gemKey, count: newCount, updated_at: new Date().toISOString() },
+            { onConflict: 'character_id,gem_key' }
+          );
+        })());
+      }
+      await Promise.all(gemPromises);
+    }
+
     // Batch effect upsert after cleanup to avoid conflicts
     if (liveEffects.length > 0) {
       const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
