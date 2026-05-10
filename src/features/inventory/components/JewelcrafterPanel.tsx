@@ -14,9 +14,9 @@ import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { GemPouch, GemBadge } from './GemPouch';
 import { useOwnedGems } from '../hooks/useOwnedGems';
-import { GEM_CATALOG, GemKey } from '@/shared/formulas/gems';
+import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS, hybridRecipe, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
 
-type JewelcrafterTab = 'repair' | 'forge';
+type JewelcrafterTab = 'repair' | 'forge' | 'gems';
 
 const JEWELRY_SLOTS = new Set(['ring', 'amulet', 'trinket']);
 
