@@ -430,8 +430,8 @@ export default function BlacksmithPanel({
   const forgeFooter = (
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">
-        {selectedForgeItem
-          ? <>Forging selected item — costs <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span></>
+        {selectedItem
+          ? <>Forging — <span className="text-dwarvish">🔩 {salvageCost}</span> + <span className="text-primary">{goldCost}g</span> + <span className="font-display">💠 1 {selectedGem ? GEM_CATALOG[selectedGem].name : 'gem'}</span>{!hasGemForSelected && <span className="text-destructive ml-1">(missing)</span>}</>
           : 'Select an item from the forge pool.'}
       </span>
       <Button
