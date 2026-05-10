@@ -87,6 +87,7 @@ export default function JewelcrafterPanel({
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
+  const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
 
   // Only jewelry items at the jeweler
   const jewelryInventory = inventory.filter(i => JEWELRY_SLOTS.has(i.item.slot as string));
@@ -95,7 +96,10 @@ export default function JewelcrafterPanel({
 
   const salvageCost = 5 + level * 2;
   const goldCost = level * 5;
-  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && !forging;
+  const selectedItem = forgePool.find(i => i.id === selectedForgeItem) || null;
+  const selectedGem = selectedItem?.required_gem ?? null;
+  const hasGemForSelected = !!selectedGem && (ownedGems[selectedGem] || 0) > 0;
+  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && hasGemForSelected && !forging;
 
   const browseSlot = useCallback(async (slot: string) => {
     if (!slot) { setForgePool([]); return; }
