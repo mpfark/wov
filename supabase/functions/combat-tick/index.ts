@@ -406,6 +406,7 @@ Deno.serve(async (req) => {
     const degradeSet = new Set<string>();
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: LootQueueEntry[] = [];
+    const gemDropQueue: { memberId: string; gemKey: string }[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
     const killedCreatureIds = new Set<string>();
 
