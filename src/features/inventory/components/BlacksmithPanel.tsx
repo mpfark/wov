@@ -173,8 +173,20 @@ export default function BlacksmithPanel({
       onGoldChange(data.gold_remaining);
       onSalvageChange(data.salvage_remaining);
       onInventoryChange();
-      addLog(`🔩 The blacksmith forged: ${data.item.name}!`);
-      setForgePool(prev => prev.filter(i => i.id !== selectedForgeItem));
+      const gemUsed: GemKey | undefined = data.gem_used;
+      if (gemUsed) {
+        setOwnedGems(prev => {
+          const next = { ...prev };
+          const remaining = (next[gemUsed] || 0) - 1;
+          if (remaining > 0) next[gemUsed] = remaining;
+          else delete next[gemUsed];
+          return next;
+        });
+      }
+      const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
+      addLog(`🔩 The blacksmith forged: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!`);
+      // Re-browse to refresh available items based on remaining gems
+      if (forgeSlot) browseSlot(forgeSlot);
       setSelectedForgeItem(null);
     } catch (e: any) {
       addLog(`❌ Forge failed: ${e.message || 'Unknown error'}`);
