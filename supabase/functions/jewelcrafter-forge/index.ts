@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { gemForItem } from "../_shared/formulas/gems.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,14 +10,14 @@ const corsHeaders = {
 
 const ALL_SLOTS = ["ring", "amulet", "trinket"] as const;
 
-async function getItemPool(db: any, slot: string, level: number) {
+async function getItemPool(db: any, slot: string, level: number, ownedGems: Record<string, number>) {
   const baseQuery = () => db
     .from("items")
     .select("id, name, rarity, level, stats, description, slot, hands, weapon_tag")
     .eq("item_type", "equipment")
     .eq("slot", slot)
     .eq("is_soulbound", false)
-    .eq("rarity", "common");
+    .in("rarity", ["common", "uncommon"]);
 
   let { data: pool } = await baseQuery()
     .gte("level", level - 2)
@@ -29,7 +30,21 @@ async function getItemPool(db: any, slot: string, level: number) {
     pool = widerPool;
   }
 
-  return pool || [];
+  return (pool || [])
+    .map((it: any) => ({ ...it, required_gem: gemForItem(it.stats, it.rarity) }))
+    .filter((it: any) => it.required_gem && (ownedGems[it.required_gem] || 0) > 0);
+}
+
+async function loadOwnedGems(db: any, characterId: string): Promise<Record<string, number>> {
+  const { data } = await db
+    .from("character_gems")
+    .select("gem_key, count")
+    .eq("character_id", characterId);
+  const map: Record<string, number> = {};
+  for (const row of data || []) {
+    if ((row.count ?? 0) > 0) map[row.gem_key] = row.count;
+  }
+  return map;
 }
 
 serve(async (req) => {
