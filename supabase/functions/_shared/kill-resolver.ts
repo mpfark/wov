@@ -68,7 +68,7 @@ export interface KillOutcome {
   /** The recipient used for log-display values (XP/gold each lines). */
   displayMemberId: string;
   /** Pre-formatted event objects ready to push into the events array. */
-  events: { type: string; message: string; creature_id?: string; creature_name?: string }[];
+  events: { type: string; message: string; creature_id?: string; creature_name?: string; character_id?: string }[];
   /** Loot-queue entries to feed into processLootDrops. */
   lootQueue: LootQueueEntry[];
   /** Boss death-cry text with %a substituted, or null if not applicable. */
