@@ -237,10 +237,11 @@ export function resolveCreatureKill(
   for (const r of recipients) {
     if (Math.random() < GEM_DROP_CHANCE) {
       const gemKey = PRIMARY_GEM_KEYS[Math.floor(Math.random() * PRIMARY_GEM_KEYS.length)];
-      gemDrops.push({ memberId: r.id, gemKey });
+      const gemName = gemKey.charAt(0).toUpperCase() + gemKey.slice(1);
       events.push({
         type: 'gem_drop',
-        message: `💎 ${r.name ?? 'You'} found a ${gemKey.charAt(0).toUpperCase() + gemKey.slice(1)}!`,
+        message: `💎 Found a ${gemName}!`,
+        character_id: r.id,
       });
     }
   }
