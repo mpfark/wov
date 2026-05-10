@@ -12,6 +12,9 @@ import { calculateRepairCost } from '@/lib/game-data';
 import { Character } from '@/features/character';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
+import { GemPouch, GemBadge } from './GemPouch';
+import { useOwnedGems } from '../hooks/useOwnedGems';
+import { GEM_CATALOG, GemKey } from '@/shared/formulas/gems';
 
 type JewelcrafterTab = 'repair' | 'forge';
 
