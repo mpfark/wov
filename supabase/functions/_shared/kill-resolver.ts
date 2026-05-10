@@ -232,12 +232,26 @@ export function resolveCreatureKill(
     }
   }
 
+  // ── 6. Gem drops (per-recipient roll for a random primary gem) ──
+  const gemDrops: GemDropAward[] = [];
+  for (const r of recipients) {
+    if (Math.random() < GEM_DROP_CHANCE) {
+      const gemKey = PRIMARY_GEM_KEYS[Math.floor(Math.random() * PRIMARY_GEM_KEYS.length)];
+      gemDrops.push({ memberId: r.id, gemKey });
+      events.push({
+        type: 'gem_drop',
+        message: `💎 ${r.name ?? 'You'} found a ${gemKey.charAt(0).toUpperCase() + gemKey.slice(1)}!`,
+      });
+    }
+  }
+
   return {
     memberRewards: result.memberRewards,
     displayMemberId: displayRecipient.id,
     events,
     lootQueue,
     bossDeathCryText,
+    gemDrops,
     totalGoldRolled: result.totalGoldRolled,
     baseXp: result.baseXp,
     partyBonus: result.partyBonus,
