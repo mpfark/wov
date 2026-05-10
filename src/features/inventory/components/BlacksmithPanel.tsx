@@ -377,8 +377,9 @@ export default function BlacksmithPanel({
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-display text-foreground">{item.name}</span>
+                  <span className={`text-sm font-display ${item.rarity === 'uncommon' ? 'text-elvish' : 'text-foreground'}`}>{item.name}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <GemBadge gemKey={item.required_gem} />
                     {item.weapon_tag && (
                       <span className="text-[10px] text-muted-foreground capitalize">{item.weapon_tag}</span>
                     )}
