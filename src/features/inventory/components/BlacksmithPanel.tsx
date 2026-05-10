@@ -96,13 +96,17 @@ export default function BlacksmithPanel({
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
+  const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
 
   const damagedItems = inventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
 
   const salvageCost = 5 + level * 2;
   const goldCost = level * 5;
-  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && !forging;
+  const selectedItem = forgePool.find(i => i.id === selectedForgeItem) || null;
+  const selectedGem = selectedItem?.required_gem ?? null;
+  const hasGemForSelected = !!selectedGem && (ownedGems[selectedGem] || 0) > 0;
+  const canForge = !!selectedForgeItem && salvage >= salvageCost && gold >= goldCost && hasGemForSelected && !forging;
 
   const browseSlot = useCallback(async (slot: string) => {
     if (!slot) { setForgePool([]); return; }
