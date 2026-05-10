@@ -144,14 +144,6 @@ serve(async (req) => {
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
-    return new Response(JSON.stringify({
-      item: template,
-      salvage_remaining: char.salvage - salvageCost,
-      gold_remaining: char.gold - goldCost,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (e: any) {
     console.error("blacksmith-forge error:", e);
     return new Response(JSON.stringify({ error: e.message || "Unknown error" }), {
