@@ -205,6 +205,58 @@ export default function JewelcrafterPanel({
     setSelling(false);
   };
 
+  const handleTradeGem = async (gemKey: GemKey) => {
+    if (cutting) return;
+    if (salvage < GEM_SALVAGE_COST_PRIMARY) { addLog('❌ Not enough salvage.'); return; }
+    setCutting(`trade:${gemKey}`);
+    try {
+      const { data, error } = await supabase.functions.invoke('jewelcrafter-gemcutter', {
+        body: { character_id: characterId, mode: 'trade_gem', gem_key: gemKey },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      onSalvageChange(data.salvage_remaining);
+      setOwnedGems(prev => ({ ...prev, [gemKey]: data.new_count }));
+      addLog(`💠 Traded ${data.salvage_spent} salvage for 1 ${data.gem_name}.`);
+    } catch (e: any) {
+      addLog(`❌ Gem trade failed: ${e.message || 'Unknown error'}`);
+    }
+    setCutting(null);
+  };
+
+  const handleCombineGem = async (hybridKey: GemKey) => {
+    if (cutting) return;
+    const recipe = hybridRecipe(hybridKey);
+    if (!recipe) return;
+    const [a, b] = recipe;
+    if ((ownedGems[a] || 0) < 1 || (ownedGems[b] || 0) < 1) {
+      addLog(`❌ Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}.`);
+      return;
+    }
+    setCutting(`combine:${hybridKey}`);
+    try {
+      const { data, error } = await supabase.functions.invoke('jewelcrafter-gemcutter', {
+        body: { character_id: characterId, mode: 'combine_gem', gem_key: hybridKey },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setOwnedGems(prev => {
+        const next = { ...prev };
+        for (const c of data.consumed as { gem_key: GemKey }[]) {
+          const remaining = (next[c.gem_key] || 0) - 1;
+          if (remaining > 0) next[c.gem_key] = remaining;
+          else delete next[c.gem_key];
+        }
+        next[hybridKey] = data.new_count;
+        return next;
+      });
+      addLog(`💠 Fused ${data.consumed.map((c: any) => c.name).join(' + ')} → 1 ${data.gem_name}.`);
+    } catch (e: any) {
+      addLog(`❌ Gem fusion failed: ${e.message || 'Unknown error'}`);
+    }
+    setCutting(null);
+  };
+
   const totalRepairCost = damagedItems
     .filter(i => !isUnrepairable(i.item.rarity))
     .reduce((sum, inv) => sum + calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity), 0);
