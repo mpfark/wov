@@ -91,8 +91,9 @@ function topAttrs(stats: Record<string, number> | null | undefined, count: numbe
  * The gem required to forge a given item.
  * - common: primary gem matching the dominant attribute
  * - uncommon: hybrid gem matching the top-2 attribute pair
- *   (falls back to primary of dominant if the pair has no hybrid match — should not happen
- *    for archetype-generated uncommons, but defensive)
+ *   Returns null if the item has fewer than 2 attribute stats — uncommon items
+ *   are hybrid by design, so a single-stat uncommon indicates corrupt data and
+ *   should not be forgeable.
  * - other rarities (rare/unique/soulforged) are not forgeable here → null
  */
 export function gemForItem(stats: Record<string, number> | null | undefined, rarity: string): GemKey | null {
@@ -103,10 +104,8 @@ export function gemForItem(stats: Record<string, number> | null | undefined, rar
   }
   if (rarity === 'uncommon') {
     const top = topAttrs(stats, 2);
-    if (top.length < 2) {
-      return top.length === 1 ? gemForAttr(top[0]) : null;
-    }
-    return hybridForPair(top[0], top[1]) ?? gemForAttr(top[0]);
+    if (top.length < 2) return null;
+    return hybridForPair(top[0], top[1]);
   }
   return null;
 }
