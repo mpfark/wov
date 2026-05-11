@@ -383,19 +383,13 @@ Deno.serve(async (req) => {
             });
           }
 
-          // Apply gem drops (offscreen DoT kills can also yield gems).
+          // Apply gem drops via the unified materials helper.
           for (const gd of outcome.gemDrops) {
-            const { data: existing } = await db
-              .from('character_gems')
-              .select('count')
-              .eq('character_id', gd.memberId)
-              .eq('gem_key', gd.gemKey)
-              .maybeSingle();
-            const newCount = (existing?.count || 0) + 1;
-            await db.from('character_gems').upsert(
-              { character_id: gd.memberId, gem_key: gd.gemKey, count: newCount, updated_at: new Date().toISOString() },
-              { onConflict: 'character_id,gem_key' }
-            );
+            await db.rpc('add_material', {
+              _character_id: gd.memberId,
+              _key: gd.gemKey,
+              _delta: 1,
+            });
           }
 
           // Display values for HTTP response + broadcasts (uses shared resolver's
