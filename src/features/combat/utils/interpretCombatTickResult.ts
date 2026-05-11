@@ -170,7 +170,7 @@ export function interpretCombatTickResult(
     if (myState.max_cp !== undefined) characterUpdates.max_cp = myState.max_cp;
     if (myState.max_mp !== undefined) characterUpdates.max_mp = myState.max_mp;
     if (myState.respec_points !== undefined) characterUpdates.respec_points = myState.respec_points;
-    if (myState.salvage !== undefined) characterUpdates.salvage = myState.salvage;
+    // Salvage now lives in character_materials — realtime drives the UI.
     if (myState.cp !== undefined) characterUpdates.cp = myState.cp;
   }
 
