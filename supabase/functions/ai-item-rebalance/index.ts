@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
       const systemPrompt = `You are rebalancing equipment stats in "Wayfarers of Varneth" so each item spends EXACTLY its stat budget.
 
 STAT COSTS (points): str/dex/con/int/wis/cha=1, ac=3, hp=0.5, hp_regen=2
-PER-STAT CAPS (per item): primary stats (str/dex/con/int/wis/cha)=4+floor(level/4), ac=2+floor(level/10), hp=6+floor(level/5)*2, hp_regen=2
+PER-STAT CAPS (per item): primary stats (str/dex/con/int/wis/cha)=4+floor(level/4), ac=2+floor(level/10), hp=6+floor(level/5)*2, hp_regen=2+floor(level/10)
 RULES:
 - New stats MUST sum to EXACTLY the budget (in cost points). Not less, not more.
 - Preserve the dominant stat focus. If dominant is "dex", the new stats must still have dex as the primary (highest non-utility) stat.
