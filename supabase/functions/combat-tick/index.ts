@@ -552,7 +552,7 @@ Deno.serve(async (req) => {
       // Queue loot drops
       for (const lq of outcome.lootQueue) lootQueue.push(lq);
 
-      // Queue gem drops (per-recipient upsert into character_gems)
+      // Queue gem drops (applied via add_material into character_materials)
       for (const gd of outcome.gemDrops) gemDropQueue.push(gd);
     };
 
