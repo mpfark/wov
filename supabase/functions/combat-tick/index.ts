@@ -1358,6 +1358,7 @@ Deno.serve(async (req) => {
     // ── Prepare member state updates ──────────────────────────────
     const memberStates: any[] = [];
     const memberUpdatePromises: PromiseLike<any>[] = [];
+    const materialAddPromises: PromiseLike<any>[] = [];
     for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
