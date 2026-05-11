@@ -355,7 +355,6 @@ export type Database = {
           reserved_buffs: Json
           respec_points: number
           rp_total_earned: number
-          salvage: number
           soulforged_item_created: boolean
           stance_state: Json
           str: number
@@ -393,7 +392,6 @@ export type Database = {
           reserved_buffs?: Json
           respec_points?: number
           rp_total_earned?: number
-          salvage?: number
           soulforged_item_created?: boolean
           stance_state?: Json
           str?: number
@@ -431,7 +429,6 @@ export type Database = {
           reserved_buffs?: Json
           respec_points?: number
           rp_total_earned?: number
-          salvage?: number
           soulforged_item_created?: boolean
           stance_state?: Json
           str?: number
@@ -1699,15 +1696,6 @@ export type Database = {
       award_party_member:
         | {
             Args: { _character_id: string; _gold: number; _xp: number }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _character_id: string
-              _gold: number
-              _salvage?: number
-              _xp: number
-            }
             Returns: undefined
           }
         | {
