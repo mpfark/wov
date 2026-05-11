@@ -20,10 +20,7 @@ function GemDot({ gemKey, count }: { gemKey: GemKey; count: number }) {
             dim ? 'opacity-30 border-border' : 'border-border bg-background/40'
           }`}
         >
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-full border border-border"
-            style={{ backgroundColor: def.color }}
-          />
+          <GemIcon color={def.color} size={12} title={def.name} />
           <span className="text-[10px] font-display tabular-nums">{count}</span>
         </span>
       </TooltipTrigger>
