@@ -213,35 +213,6 @@ export type Database = {
           },
         ]
       }
-      character_gems: {
-        Row: {
-          character_id: string
-          count: number
-          gem_key: string
-          updated_at: string
-        }
-        Insert: {
-          character_id: string
-          count?: number
-          gem_key: string
-          updated_at?: string
-        }
-        Update: {
-          character_id?: string
-          count?: number
-          gem_key?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "character_gems_character_id_fkey"
-            columns: ["character_id"]
-            isOneToOne: false
-            referencedRelation: "characters"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       character_inventory: {
         Row: {
           belt_slot: number | null
