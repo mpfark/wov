@@ -218,6 +218,11 @@ export default function StatusBarsStrip({
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
 
+  // Realtime salvage + gem totals from character_materials.
+  const { counts, byCategory } = useMaterials(character.id);
+  const salvageCount = counts.salvage ?? 0;
+  const gemCount = byCategory('gem').reduce((sum, m) => sum + m.count, 0);
+
   // ── Force Shield stance shield (persistent ward) ─────────────────
   // While the Force Shield stance is reserved, derive the bar from the
   // server-persisted ward HP on `characters.stance_state.force_shield_hp`
