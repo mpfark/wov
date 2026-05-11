@@ -29,7 +29,7 @@ export interface Character {
   mp: number;
   max_mp: number;
   respec_points: number;
-  salvage: number;
+  // salvage now lives in character_materials — read via useMaterials.
   // `bhp` is legacy storage for the current Renown balance.
   // `bhp_trained` is legacy storage for Renown training ranks.
   // Only the player-facing name changed; the columns kept their original names
