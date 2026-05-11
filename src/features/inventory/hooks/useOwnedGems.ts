@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useMaterials } from './useMaterials';
 
 /**
- * Backward-compat wrapper around useMaterials, filtered to gems.
+ * Transitional compatibility wrapper.
+ * Materials ownership now lives in character_materials via useMaterials().
  * Will be removed once all callers migrate to useMaterials directly.
  */
 export function useOwnedGems(characterId: string | null | undefined) {
