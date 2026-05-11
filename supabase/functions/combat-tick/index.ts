@@ -1426,8 +1426,15 @@ Deno.serve(async (req) => {
         updates.bhp = (c.bhp || 0) + mBhp[m.id];
         updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
       }
+      // Salvage now lives in character_materials (mirrored back to characters.salvage
+      // by the add_material helper). Compute the projected new total for the
+      // memberStates broadcast, but route the actual write through the helper RPC.
+      let projectedSalvage = c.salvage || 0;
       if (mSalvage[m.id] > 0) {
-        updates.salvage = (c.salvage || 0) + mSalvage[m.id];
+        projectedSalvage += mSalvage[m.id];
+        materialAddPromises.push(
+          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
+        );
       }
 
       // ── Persist Force Shield ward HP across combats ───────────────
