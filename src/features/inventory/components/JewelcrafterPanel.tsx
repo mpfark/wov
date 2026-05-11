@@ -25,11 +25,9 @@ interface Props {
   onClose: () => void;
   characterId: string;
   gold: number;
-  salvage: number;
   level: number;
   inventory: InventoryItem[];
   onGoldChange: (newGold: number) => void;
-  onSalvageChange: (newSalvage: number) => void;
   onInventoryChange: () => void;
   addLog: (msg: string) => void;
   character?: Character;
