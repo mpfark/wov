@@ -1,5 +1,6 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS } from '@/shared/formulas/gems';
+import { GemIcon } from '@/components/icons/GemIcon';
 
 interface GemPouchProps {
   owned: Record<string, number>;
@@ -19,10 +20,7 @@ function GemDot({ gemKey, count }: { gemKey: GemKey; count: number }) {
             dim ? 'opacity-30 border-border' : 'border-border bg-background/40'
           }`}
         >
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-full border border-border"
-            style={{ backgroundColor: def.color }}
-          />
+          <GemIcon color={def.color} size={12} title={def.name} />
           <span className="text-[10px] font-display tabular-nums">{count}</span>
         </span>
       </TooltipTrigger>
@@ -66,10 +64,7 @@ export function GemBadge({ gemKey }: { gemKey: GemKey | null | undefined }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex items-center gap-1 text-[10px] font-display px-1 py-0.5 rounded border border-border bg-background/40">
-            <span
-              className="inline-block w-2 h-2 rounded-full border border-border"
-              style={{ backgroundColor: def.color }}
-            />
+            <GemIcon color={def.color} size={10} title={def.name} />
             <span>{def.name}</span>
           </span>
         </TooltipTrigger>
