@@ -80,8 +80,8 @@ interface ForgePoolItem {
 }
 
 export default function BlacksmithPanel({
-  open, onClose, characterId, gold, salvage, level, inventory,
-  onGoldChange, onSalvageChange, onInventoryChange, addLog,
+  open, onClose, characterId, gold, level, inventory,
+  onGoldChange, onInventoryChange, addLog,
   isSoulforgeNode = false, character, npcName, npcFlavor,
 }: Props) {
   const [tab, setTab] = useState<BlacksmithTab>('repair');
@@ -94,7 +94,10 @@ export default function BlacksmithPanel({
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
-  const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
+  const { counts, byCategory } = useMaterials(characterId);
+  const salvage = counts.salvage ?? 0;
+  const ownedGems: Record<string, number> = {};
+  for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
 
   const damagedItems = inventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
