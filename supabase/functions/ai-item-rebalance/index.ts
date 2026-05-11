@@ -67,14 +67,20 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const dryRun: boolean = body.dry_run === true;
+    const filterLevel: number | null = typeof body.level === "number" ? body.level : null;
+    const filterRarities: string[] = Array.isArray(body.rarities) && body.rarities.length > 0
+      ? body.rarities
+      : ["common", "uncommon"];
 
     // Fetch common/uncommon equipment
-    const { data: allItems, error: itemsErr } = await supabase
+    let q = supabase
       .from("items")
       .select("id, name, rarity, level, slot, stats, hands, item_type")
-      .in("rarity", ["common", "uncommon"])
+      .in("rarity", filterRarities)
       .eq("item_type", "equipment")
       .limit(5000);
+    if (filterLevel !== null) q = q.eq("level", filterLevel);
+    const { data: allItems, error: itemsErr } = await q;
     if (itemsErr) throw itemsErr;
 
     // Find mismatches
