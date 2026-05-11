@@ -49,7 +49,7 @@ export function useMaterials(characterId: string | null | undefined) {
     load();
 
     const channel = supabase
-      .channel(`character_materials:${characterId}`)
+      .channel(`character_materials:${characterId}:${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'character_materials', filter: `character_id=eq.${characterId}` },
