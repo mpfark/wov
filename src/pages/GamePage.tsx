@@ -1232,11 +1232,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); }}
           characterId={character.id}
           gold={character.gold}
-          salvage={character.salvage ?? 0}
           level={character.level}
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
-          onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
           isSoulforgeNode={(currentNode as any).is_soulforge === true}
