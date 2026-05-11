@@ -172,18 +172,9 @@ export default function BlacksmithPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
-      onSalvageChange(data.salvage_remaining);
+      // Salvage + gem counts come from the character_materials realtime subscription.
       onInventoryChange();
       const gemUsed: GemKey | undefined = data.gem_used;
-      if (gemUsed) {
-        setOwnedGems(prev => {
-          const next = { ...prev };
-          const remaining = (next[gemUsed] || 0) - 1;
-          if (remaining > 0) next[gemUsed] = remaining;
-          else delete next[gemUsed];
-          return next;
-        });
-      }
       const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
       addLog(`🔩 The blacksmith forged: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!`);
       // Re-browse to refresh available items based on remaining gems
@@ -199,14 +190,14 @@ export default function BlacksmithPanel({
     if (sellAmount < 1 || sellAmount > salvage || selling) return;
     setSelling(true);
     try {
-      const goldGain = sellAmount;
-      const newGold = gold + goldGain;
-      const newSalvage = salvage - sellAmount;
-      await supabase.from('characters').update({ gold: newGold, salvage: newSalvage }).eq('id', characterId);
-      onGoldChange(newGold);
-      onSalvageChange(newSalvage);
-      addLog(`🔩 Sold ${sellAmount} salvage for ${goldGain} gold.`);
-      setSellAmount(Math.min(sellAmount, newSalvage) || 1);
+      const { data, error } = await supabase.functions.invoke('sell-material', {
+        body: { character_id: characterId, material_key: 'salvage', amount: sellAmount },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      onGoldChange(data.gold_remaining);
+      addLog(`🔩 Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`);
+      setSellAmount(Math.min(sellAmount, salvage - data.amount_sold) || 1);
     } catch (e: any) {
       addLog(`❌ Sale failed: ${e.message || 'Unknown error'}`);
     }
