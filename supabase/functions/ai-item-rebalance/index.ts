@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  getItemStatBudget,
+  getItemStatCap,
+  calculateItemStatCost,
+} from "../_shared/formulas/items.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,34 +11,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Canonical formulas (mirror src/lib/game-data.ts)
-const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5 };
-const STAT_COSTS: Record<string, number> = {
-  str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1,
-  ac: 3, hp: 0.5, hp_regen: 2,
-};
 const PRIMARY_STATS = ["str", "dex", "con", "int", "wis", "cha"];
 
+// Thin wrappers that delegate to the canonical shared formulas so this function
+// always stays in lockstep with seed-archetype-items and the AI item forge.
 function getBudget(level: number, rarity: string, hands: number | null): number {
-  const rMult = RARITY_MULT[rarity] ?? 1.0;
-  const hMult = hands === 2 ? 1.5 : 1.0;
-  return Math.floor(1 + (level - 1) * 0.3 * rMult * hMult);
+  return getItemStatBudget(level, rarity, hands ?? 1, "equipment");
 }
 
 function getCap(stat: string, level: number): number {
-  if (PRIMARY_STATS.includes(stat)) return 4 + Math.floor(level / 4);
-  if (stat === "ac") return 2 + Math.floor(level / 10);
-  if (stat === "hp") return 6 + Math.floor(level / 5) * 2;
-  if (stat === "hp_regen") return 2;
-  return 0;
+  return getItemStatCap(stat, level, "equipment");
 }
 
 function calcCost(stats: Record<string, number>): number {
-  let total = 0;
-  for (const [k, v] of Object.entries(stats || {})) {
-    total += (STAT_COSTS[k] ?? 0) * (Number(v) || 0);
-  }
-  return total;
+  return calculateItemStatCost(stats || {});
 }
 
 function dominantStat(stats: Record<string, number>): string | null {
@@ -121,7 +112,7 @@ Deno.serve(async (req) => {
       const systemPrompt = `You are rebalancing equipment stats in "Wayfarers of Varneth" so each item spends EXACTLY its stat budget.
 
 STAT COSTS (points): str/dex/con/int/wis/cha=1, ac=3, hp=0.5, hp_regen=2
-PER-STAT CAPS (per item): primary stats (str/dex/con/int/wis/cha)=4+floor(level/4), ac=2+floor(level/10), hp=6+floor(level/5)*2, hp_regen=2
+PER-STAT CAPS (per item): primary stats (str/dex/con/int/wis/cha)=4+floor(level/4), ac=2+floor(level/10), hp=6+floor(level/5)*2, hp_regen=2+floor(level/10)
 RULES:
 - New stats MUST sum to EXACTLY the budget (in cost points). Not less, not more.
 - Preserve the dominant stat focus. If dominant is "dex", the new stats must still have dex as the primary (highest non-utility) stat.
