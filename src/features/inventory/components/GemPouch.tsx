@@ -64,10 +64,7 @@ export function GemBadge({ gemKey }: { gemKey: GemKey | null | undefined }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex items-center gap-1 text-[10px] font-display px-1 py-0.5 rounded border border-border bg-background/40">
-            <span
-              className="inline-block w-2 h-2 rounded-full border border-border"
-              style={{ backgroundColor: def.color }}
-            />
+            <GemIcon color={def.color} size={10} title={def.name} />
             <span>{def.name}</span>
           </span>
         </TooltipTrigger>
