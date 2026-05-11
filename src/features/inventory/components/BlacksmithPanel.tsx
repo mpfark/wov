@@ -14,7 +14,7 @@ import { useSoulforgeForge } from './SoulforgeTabContent';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { GemPouch, GemBadge } from './GemPouch';
-import { useOwnedGems } from '../hooks/useOwnedGems';
+import { useMaterials } from '../hooks/useMaterials';
 import { GEM_CATALOG, GemKey } from '@/shared/formulas/gems';
 
 type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
@@ -24,11 +24,9 @@ interface Props {
   onClose: () => void;
   characterId: string;
   gold: number;
-  salvage: number;
   level: number;
   inventory: InventoryItem[];
   onGoldChange: (newGold: number) => void;
-  onSalvageChange: (newSalvage: number) => void;
   onInventoryChange: () => void;
   addLog: (msg: string) => void;
   /** Whether the current node has the soulforge flag — adds a 3rd tab. */
@@ -82,8 +80,8 @@ interface ForgePoolItem {
 }
 
 export default function BlacksmithPanel({
-  open, onClose, characterId, gold, salvage, level, inventory,
-  onGoldChange, onSalvageChange, onInventoryChange, addLog,
+  open, onClose, characterId, gold, level, inventory,
+  onGoldChange, onInventoryChange, addLog,
   isSoulforgeNode = false, character, npcName, npcFlavor,
 }: Props) {
   const [tab, setTab] = useState<BlacksmithTab>('repair');
@@ -96,7 +94,10 @@ export default function BlacksmithPanel({
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
-  const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
+  const { counts, byCategory } = useMaterials(characterId);
+  const salvage = counts.salvage ?? 0;
+  const ownedGems: Record<string, number> = {};
+  for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
 
   const damagedItems = inventory.filter(i => i.current_durability < 100);
   const isUnrepairable = (rarity: string) => rarity === 'unique';
@@ -171,18 +172,9 @@ export default function BlacksmithPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
-      onSalvageChange(data.salvage_remaining);
+      // Salvage + gem counts come from the character_materials realtime subscription.
       onInventoryChange();
       const gemUsed: GemKey | undefined = data.gem_used;
-      if (gemUsed) {
-        setOwnedGems(prev => {
-          const next = { ...prev };
-          const remaining = (next[gemUsed] || 0) - 1;
-          if (remaining > 0) next[gemUsed] = remaining;
-          else delete next[gemUsed];
-          return next;
-        });
-      }
       const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
       addLog(`🔩 The blacksmith forged: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!`);
       // Re-browse to refresh available items based on remaining gems
@@ -198,14 +190,14 @@ export default function BlacksmithPanel({
     if (sellAmount < 1 || sellAmount > salvage || selling) return;
     setSelling(true);
     try {
-      const goldGain = sellAmount;
-      const newGold = gold + goldGain;
-      const newSalvage = salvage - sellAmount;
-      await supabase.from('characters').update({ gold: newGold, salvage: newSalvage }).eq('id', characterId);
-      onGoldChange(newGold);
-      onSalvageChange(newSalvage);
-      addLog(`🔩 Sold ${sellAmount} salvage for ${goldGain} gold.`);
-      setSellAmount(Math.min(sellAmount, newSalvage) || 1);
+      const { data, error } = await supabase.functions.invoke('sell-material', {
+        body: { character_id: characterId, material_key: 'salvage', amount: sellAmount },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      onGoldChange(data.gold_remaining);
+      addLog(`🔩 Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`);
+      setSellAmount(Math.min(sellAmount, salvage - data.amount_sold) || 1);
     } catch (e: any) {
       addLog(`❌ Sale failed: ${e.message || 'Unknown error'}`);
     }

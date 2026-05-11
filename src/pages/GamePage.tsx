@@ -114,11 +114,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
     if (!rewards || rewards.length === 0) return;
     // `bhp_each` from the server is legacy storage for Renown awarded per recipient.
-    let totalXp = 0, totalGold = 0, totalSalvage = 0, totalRenown = 0;
+    let totalXp = 0, totalGold = 0, totalRenown = 0;
     for (const r of rewards) {
       totalXp += r.xp_each;
       totalGold += r.gold_each;
-      totalSalvage += r.salvage_each;
       totalRenown += r.bhp_each;
       const parts: string[] = [];
       if (r.xp_each > 0) parts.push(`${r.xp_each} XP`);
@@ -127,10 +126,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       if (r.bhp_each > 0) parts.push(`${r.bhp_each} 🏛️ Renown`);
       bus.emit('log:local', { message: `☠️ ${r.creature_name} was slain! Gained ${parts.join(', ')}.` });
     }
+    // Salvage is owned by character_materials and updates via realtime —
+    // don't optimistically write it onto the legacy characters.salvage field.
     updateCharacterLocal({
       xp: character.xp + totalXp,
       gold: character.gold + totalGold,
-      salvage: character.salvage + totalSalvage,
       bhp: character.bhp + totalRenown,
       rp_total_earned: (character.rp_total_earned || 0) + totalRenown,
     });
@@ -1232,11 +1232,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onClose={() => { setBlacksmithOpen(false); setActiveServiceNpc(null); }}
           characterId={character.id}
           gold={character.gold}
-          salvage={character.salvage ?? 0}
           level={character.level}
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
-          onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
           isSoulforgeNode={(currentNode as any).is_soulforge === true}
@@ -1253,11 +1251,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onClose={() => { setJewelcrafterOpen(false); setActiveServiceNpc(null); }}
           characterId={character.id}
           gold={character.gold}
-          salvage={character.salvage ?? 0}
           level={character.level}
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
-          onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
           character={character}

@@ -651,7 +651,7 @@ export function usePartyCombat(params: UsePartyCombatParams) {
                 const updates: Record<string, number> = {};
                 if (myState.xp !== undefined) updates.xp = myState.xp;
                 if (myState.gold !== undefined) updates.gold = myState.gold;
-                if (myState.salvage !== undefined) updates.salvage = myState.salvage;
+                // Salvage lives in character_materials — realtime updates the UI.
                 if (myState.bhp !== undefined) updates.bhp = myState.bhp;
                 if (myState.rp_total_earned !== undefined) updates.rp_total_earned = myState.rp_total_earned;
                 if (myState.level !== undefined) updates.level = myState.level;
