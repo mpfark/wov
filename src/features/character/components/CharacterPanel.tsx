@@ -16,6 +16,7 @@ import _vitruvianMan from '@/assets/vitruvian-man.png';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 import { GemPouch } from '@/features/inventory/components/GemPouch';
+import { MaterialsSection } from '@/features/inventory/components/MaterialsSection';
 import { useOwnedGems } from '@/features/inventory/hooks/useOwnedGems';
 
 interface Props {
