@@ -15,6 +15,6 @@ export function useOwnedGems(characterId: string | null | undefined) {
     return map;
   }, [byCategory]);
   // setOwned kept as no-op for legacy callers; data flows from realtime now.
-  const setOwned = () => {};
+  const setOwned = (_: unknown) => {};
   return { owned, setOwned };
 }
