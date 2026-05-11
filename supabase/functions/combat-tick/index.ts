@@ -1508,6 +1508,7 @@ Deno.serve(async (req) => {
       writeCreatureState(db, creatures, cHp, cKilled),
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
+      ...materialAddPromises,
       ...degradePromises,
     ]);
 
@@ -1516,7 +1517,8 @@ Deno.serve(async (req) => {
     const lootEvents = await processLootDrops(db, lootQueue);
     events.push(...lootEvents);
 
-    // Apply gem drops by aggregating per (character, gem) and upserting counts.
+    // Apply gem drops via the unified materials helper (one add_material call
+    // per drop). add_material mirrors back to character_gems for now.
     if (gemDropQueue.length > 0) {
       const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
       for (const gd of gemDropQueue) {
@@ -1526,19 +1528,9 @@ Deno.serve(async (req) => {
       const gemPromises: Promise<any>[] = [];
       for (const [k, n] of counts) {
         const [memberId, gemKey] = k.split('|');
-        gemPromises.push((async () => {
-          const { data: existing } = await db
-            .from('character_gems')
-            .select('count')
-            .eq('character_id', memberId)
-            .eq('gem_key', gemKey)
-            .maybeSingle();
-          const newCount = (existing?.count || 0) + n;
-          await db.from('character_gems').upsert(
-            { character_id: memberId, gem_key: gemKey, count: newCount, updated_at: new Date().toISOString() },
-            { onConflict: 'character_id,gem_key' }
-          );
-        })());
+        gemPromises.push(
+          db.rpc('add_material', { _character_id: memberId, _key: gemKey, _delta: n })
+        );
       }
       await Promise.all(gemPromises);
     }
