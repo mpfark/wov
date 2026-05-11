@@ -1,44 +1,20 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useMemo } from 'react';
+import { useMaterials } from './useMaterials';
 
+/**
+ * Backward-compat wrapper around useMaterials, filtered to gems.
+ * Will be removed once all callers migrate to useMaterials directly.
+ */
 export function useOwnedGems(characterId: string | null | undefined) {
-  const [owned, setOwned] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    if (!characterId) {
-      setOwned({});
-      return;
+  const { byCategory } = useMaterials(characterId);
+  const owned = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of byCategory('gem')) {
+      if (e.count > 0) map[e.key] = e.count;
     }
-    let cancelled = false;
-
-    const load = async () => {
-      const { data } = await supabase
-        .from('character_gems')
-        .select('gem_key, count')
-        .eq('character_id', characterId);
-      if (cancelled) return;
-      const map: Record<string, number> = {};
-      for (const row of data || []) {
-        if ((row.count ?? 0) > 0) map[row.gem_key] = row.count;
-      }
-      setOwned(map);
-    };
-    load();
-
-    const channel = supabase
-      .channel(`character_gems:${characterId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'character_gems', filter: `character_id=eq.${characterId}` },
-        () => { void load(); },
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
-  }, [characterId]);
-
+    return map;
+  }, [byCategory]);
+  // setOwned kept as no-op for legacy callers; data flows from realtime now.
+  const setOwned = (_: unknown) => {};
   return { owned, setOwned };
 }

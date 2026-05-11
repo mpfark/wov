@@ -483,11 +483,11 @@ Deno.serve(async (req) => {
     if (action === "grant-salvage" && req.method === "POST") {
       const { character_id, amount } = await req.json();
       if (!character_id || !amount || amount < 1) throw { message: "character_id and positive amount required", status: 400 };
-      const { data: char, error: fetchErr } = await adminClient.from("characters").select("salvage").eq("id", character_id).single();
-      if (fetchErr || !char) throw { message: "Character not found", status: 404 };
-      const { error } = await adminClient.from("characters").update({ salvage: (char.salvage || 0) + amount }).eq("id", character_id);
+      const { data: newTotal, error } = await adminClient.rpc('add_material', {
+        _character_id: character_id, _key: 'salvage', _delta: amount,
+      });
       if (error) throw error;
-      return jsonResponse({ success: true, new_total: (char.salvage || 0) + amount });
+      return jsonResponse({ success: true, new_total: newTotal });
     }
 
     if (action === "grant-respec") {
