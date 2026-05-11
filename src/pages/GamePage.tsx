@@ -114,11 +114,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
     if (!rewards || rewards.length === 0) return;
     // `bhp_each` from the server is legacy storage for Renown awarded per recipient.
-    let totalXp = 0, totalGold = 0, totalSalvage = 0, totalRenown = 0;
+    let totalXp = 0, totalGold = 0, totalRenown = 0;
     for (const r of rewards) {
       totalXp += r.xp_each;
       totalGold += r.gold_each;
-      totalSalvage += r.salvage_each;
       totalRenown += r.bhp_each;
       const parts: string[] = [];
       if (r.xp_each > 0) parts.push(`${r.xp_each} XP`);
