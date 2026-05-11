@@ -22,7 +22,7 @@ export interface CombatTickResponse {
     // `rp_total_earned` is the lifetime counter (Renown Board source).
     bhp?: number; rp_total_earned?: number;
     unspent_stat_points?: number; max_cp?: number; max_mp?: number;
-    respec_points?: number; salvage?: number; cp?: number;
+    respec_points?: number; cp?: number;
   }[];
   consumed_buffs?: { type: string; character_id: string; buff: string }[];
   cleared_dots?: { character_id: string; creature_id: string; dot_type: string }[];
