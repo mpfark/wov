@@ -71,8 +71,8 @@ interface ForgePoolItem {
 }
 
 export default function JewelcrafterPanel({
-  open, onClose, characterId, gold, salvage, level, inventory,
-  onGoldChange, onSalvageChange, onInventoryChange, addLog,
+  open, onClose, characterId, gold, level, inventory,
+  onGoldChange, onInventoryChange, addLog,
   character, npcName, npcFlavor,
 }: Props) {
   const [tab, setTab] = useState<JewelcrafterTab>('repair');
@@ -86,7 +86,10 @@ export default function JewelcrafterPanel({
   const [selling, setSelling] = useState(false);
   const [cutting, setCutting] = useState<string | null>(null);
   const weaponProgression = useWeaponProgression();
-  const { owned: ownedGems, setOwned: setOwnedGems } = useOwnedGems(characterId);
+  const { counts, byCategory } = useMaterials(characterId);
+  const salvage = counts.salvage ?? 0;
+  const ownedGems: Record<string, number> = {};
+  for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
 
   // Only jewelry items at the jeweler
   const jewelryInventory = inventory.filter(i => JEWELRY_SLOTS.has(i.item.slot as string));
