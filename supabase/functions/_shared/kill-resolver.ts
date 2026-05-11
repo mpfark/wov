@@ -73,7 +73,7 @@ export interface KillOutcome {
   lootQueue: LootQueueEntry[];
   /** Boss death-cry text with %a substituted, or null if not applicable. */
   bossDeathCryText: string | null;
-  /** Per-recipient gem drops to upsert into character_gems. */
+  /** Per-recipient gem drops; applied via add_material into character_materials. */
   gemDrops: GemDropAward[];
   /** Raw totals for diagnostics / broadcast payloads. */
   totalGoldRolled: number;
