@@ -1,5 +1,6 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS } from '@/shared/formulas/gems';
+import { GemIcon } from '@/components/icons/GemIcon';
 
 interface GemPouchProps {
   owned: Record<string, number>;
