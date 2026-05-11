@@ -89,15 +89,11 @@ serve(async (req) => {
         _character_id: character_id, _key: gem_key, _delta: 1,
       });
 
-      const { data: charAfter } = await db
-        .from("characters").select("salvage").eq("id", character_id).single();
-
       return new Response(
         JSON.stringify({
           gem_key,
           gem_name: GEM_CATALOG[gem_key as GemKey].name,
           new_count: newCount,
-          salvage_remaining: charAfter?.salvage ?? 0,
           salvage_spent: cost,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
