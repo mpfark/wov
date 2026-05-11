@@ -14,7 +14,7 @@ import { useSoulforgeForge } from './SoulforgeTabContent';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { GemPouch, GemBadge } from './GemPouch';
-import { useOwnedGems } from '../hooks/useOwnedGems';
+import { useMaterials } from '../hooks/useMaterials';
 import { GEM_CATALOG, GemKey } from '@/shared/formulas/gems';
 
 type BlacksmithTab = 'repair' | 'forge' | 'soulforge';
