@@ -146,7 +146,6 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       item: template,
-      salvage_remaining: char.salvage - salvageCost,
       gold_remaining: char.gold - goldCost,
       gem_used: gemKey,
     }), {
