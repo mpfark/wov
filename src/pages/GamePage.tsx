@@ -1251,11 +1251,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onClose={() => { setJewelcrafterOpen(false); setActiveServiceNpc(null); }}
           characterId={character.id}
           gold={character.gold}
-          salvage={character.salvage ?? 0}
           level={character.level}
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
-          onSalvageChange={(s) => updateCharacter({ salvage: s })}
           onInventoryChange={fetchInventory}
           addLog={addLog}
           character={character}
