@@ -1471,7 +1471,6 @@ Deno.serve(async (req) => {
         max_cp: updates.max_cp ?? c.max_cp,
         max_mp: updates.max_mp ?? c.max_mp,
         respec_points: updates.respec_points ?? c.respec_points ?? 0,
-        salvage: projectedSalvage,
         cp: updates.cp ?? mCp[m.id],
       });
     }
