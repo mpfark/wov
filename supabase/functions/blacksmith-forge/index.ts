@@ -116,18 +116,25 @@ serve(async (req) => {
       throw new Error("You lack the gem required to forge this item");
     }
 
-    // Deduct resources
+    // Deduct salvage and gem atomically via the materials helpers.
+    const { data: salvageOk } = await db.rpc('consume_material', {
+      _character_id: character_id, _key: 'salvage', _delta: salvageCost,
+    });
+    if (!salvageOk) throw new Error("Not enough salvage");
+
+    const { data: gemOk } = await db.rpc('consume_material', {
+      _character_id: character_id, _key: gemKey, _delta: 1,
+    });
+    if (!gemOk) {
+      // Refund salvage if the gem consume failed.
+      await db.rpc('add_material', { _character_id: character_id, _key: 'salvage', _delta: salvageCost });
+      throw new Error("You lack the gem required to forge this item");
+    }
+
+    // Deduct gold (still on characters until economy refactor).
     await db.from("characters").update({
-      salvage: char.salvage - salvageCost,
       gold: char.gold - goldCost,
     }).eq("id", character_id);
-
-    // Deduct 1 gem
-    await db
-      .from("character_gems")
-      .update({ count: ownedGems[gemKey] - 1, updated_at: new Date().toISOString() })
-      .eq("character_id", character_id)
-      .eq("gem_key", gemKey);
 
     // Add item to inventory
     await db.from("character_inventory").insert({
