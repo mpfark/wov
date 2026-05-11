@@ -481,7 +481,7 @@ export default function CharacterPanel({
               {/* Materials (salvage + gems + future) */}
               <div className="mt-2 space-y-2 rounded border border-border bg-background/40 p-2">
                 <div className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
-                  🧰 Materials
+                  🧰 Material Pouch
                 </div>
                 <MaterialsSection characterId={character.id} />
                 <GemPouch owned={ownedGems} />
