@@ -35,7 +35,7 @@ function makeCithrawielLike(): Character {
     cp: 50, max_cp: 100,
     mp: 80, max_mp: 100,
     respec_points: 0,
-    salvage: 0,
+    
     bhp: 0,
     bhp_trained: {},
     rp_total_earned: 0,
