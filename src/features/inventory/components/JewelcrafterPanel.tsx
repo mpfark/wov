@@ -13,7 +13,7 @@ import { Character } from '@/features/character';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { GemPouch, GemBadge } from './GemPouch';
-import { useOwnedGems } from '../hooks/useOwnedGems';
+import { useMaterials } from '../hooks/useMaterials';
 import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS, hybridRecipe, GEM_SALVAGE_COST_PRIMARY } from '@/shared/formulas/gems';
 
 type JewelcrafterTab = 'repair' | 'forge' | 'gems';
