@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 import { ARCANE_SURGE_DAMAGE_MULT, ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
 import { getCpDisplay } from '@/features/combat/utils/cp-display';
+import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 
 // Duration constants for buff background calculation (in ms).
 // `Inspire` is intentionally absent — its duration is variable (INT-scaled), so
@@ -217,6 +218,11 @@ export default function StatusBarsStrip({
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
 
+  // Realtime salvage + gem totals from character_materials.
+  const { counts, byCategory } = useMaterials(character.id);
+  const salvageCount = counts.salvage ?? 0;
+  const gemCount = byCategory('gem').reduce((sum, m) => sum + m.count, 0);
+
   // ── Force Shield stance shield (persistent ward) ─────────────────
   // While the Force Shield stance is reserved, derive the bar from the
   // server-persisted ward HP on `characters.stance_state.force_shield_hp`
@@ -405,6 +411,22 @@ export default function StatusBarsStrip({
         <div className="flex justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground">XP</span>
           <div className="flex items-center gap-2">
+            {salvageCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-dwarvish tabular-nums cursor-help">🔩 {salvageCount}</span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">Salvage — craft, sell, or trade for gems.</TooltipContent>
+              </Tooltip>
+            )}
+            {gemCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-primary tabular-nums cursor-help">💠 {gemCount}</span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">Gems in pouch — see Character panel for breakdown.</TooltipContent>
+              </Tooltip>
+            )}
             {((character.rp_total_earned || 0) > 0 || character.level >= 30) && (
               <span className="text-gold tabular-nums">🏛️ {character.bhp || 0} RP</span>
             )}
