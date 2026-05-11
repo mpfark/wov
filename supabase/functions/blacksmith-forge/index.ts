@@ -40,12 +40,13 @@ async function getItemPool(db: any, slot: string, level: number, ownedGems: Reco
 
 async function loadOwnedGems(db: any, characterId: string): Promise<Record<string, number>> {
   const { data } = await db
-    .from("character_gems")
-    .select("gem_key, count")
-    .eq("character_id", characterId);
+    .from("character_materials")
+    .select("material_key, count, materials!inner(category)")
+    .eq("character_id", characterId)
+    .eq("materials.category", "gem");
   const map: Record<string, number> = {};
   for (const row of data || []) {
-    if ((row.count ?? 0) > 0) map[row.gem_key] = row.count;
+    if ((row.count ?? 0) > 0) map[row.material_key] = row.count;
   }
   return map;
 }
