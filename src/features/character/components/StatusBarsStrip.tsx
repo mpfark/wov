@@ -412,14 +412,6 @@ export default function StatusBarsStrip({
         <div className="flex justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground">XP</span>
           <div className="flex items-center gap-2">
-            {salvageCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-dwarvish tabular-nums cursor-help">🔩 {salvageCount}</span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">Salvage — craft, sell, or trade for gems.</TooltipContent>
-              </Tooltip>
-            )}
             {gemCount > 0 && (
               <Tooltip>
                 <TooltipTrigger asChild>
