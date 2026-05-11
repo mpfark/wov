@@ -1358,6 +1358,7 @@ Deno.serve(async (req) => {
     // ── Prepare member state updates ──────────────────────────────
     const memberStates: any[] = [];
     const memberUpdatePromises: PromiseLike<any>[] = [];
+    const materialAddPromises: PromiseLike<any>[] = [];
     for (const m of members) {
       const c = m.c;
       const eb = eq[m.id] || {};
@@ -1426,8 +1427,15 @@ Deno.serve(async (req) => {
         updates.bhp = (c.bhp || 0) + mBhp[m.id];
         updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
       }
+      // Salvage now lives in character_materials (mirrored back to characters.salvage
+      // by the add_material helper). Compute the projected new total for the
+      // memberStates broadcast, but route the actual write through the helper RPC.
+      let projectedSalvage = c.salvage || 0;
       if (mSalvage[m.id] > 0) {
-        updates.salvage = (c.salvage || 0) + mSalvage[m.id];
+        projectedSalvage += mSalvage[m.id];
+        materialAddPromises.push(
+          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
+        );
       }
 
       // ── Persist Force Shield ward HP across combats ───────────────
@@ -1465,7 +1473,7 @@ Deno.serve(async (req) => {
         max_cp: updates.max_cp ?? c.max_cp,
         max_mp: updates.max_mp ?? c.max_mp,
         respec_points: updates.respec_points ?? c.respec_points ?? 0,
-        salvage: updates.salvage ?? (c.salvage || 0),
+        salvage: projectedSalvage,
         cp: updates.cp ?? mCp[m.id],
       });
     }
@@ -1500,6 +1508,7 @@ Deno.serve(async (req) => {
       writeCreatureState(db, creatures, cHp, cKilled),
       cleanupEffects(db, expiredIds, killedCreatureIds),
       ...memberUpdatePromises,
+      ...materialAddPromises,
       ...degradePromises,
     ]);
 
@@ -1508,7 +1517,8 @@ Deno.serve(async (req) => {
     const lootEvents = await processLootDrops(db, lootQueue);
     events.push(...lootEvents);
 
-    // Apply gem drops by aggregating per (character, gem) and upserting counts.
+    // Apply gem drops via the unified materials helper (one add_material call
+    // per drop). add_material mirrors back to character_gems for now.
     if (gemDropQueue.length > 0) {
       const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
       for (const gd of gemDropQueue) {
@@ -1518,19 +1528,9 @@ Deno.serve(async (req) => {
       const gemPromises: Promise<any>[] = [];
       for (const [k, n] of counts) {
         const [memberId, gemKey] = k.split('|');
-        gemPromises.push((async () => {
-          const { data: existing } = await db
-            .from('character_gems')
-            .select('count')
-            .eq('character_id', memberId)
-            .eq('gem_key', gemKey)
-            .maybeSingle();
-          const newCount = (existing?.count || 0) + n;
-          await db.from('character_gems').upsert(
-            { character_id: memberId, gem_key: gemKey, count: newCount, updated_at: new Date().toISOString() },
-            { onConflict: 'character_id,gem_key' }
-          );
-        })());
+        gemPromises.push(
+          db.rpc('add_material', { _character_id: memberId, _key: gemKey, _delta: n })
+        );
       }
       await Promise.all(gemPromises);
     }

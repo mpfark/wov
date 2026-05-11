@@ -1,51 +1,74 @@
-# Uncommons must be hybrid — fix L41 single-stat items
+# Materials System Refactor
 
-## What you're seeing
+Bring back a "Material" concept as a unified, extensible resource type. Salvage and gems become entries in a single `character_materials` table and get displayed together in the Equipment tab. Designed so marketplace trading can be added later without another data migration.
 
-Astral Bastion Helm is uncommon but only has `con: 13`. Per the archetypes spec (`mem://game/item-archetypes`), **uncommon = hybrid only** (dominant ~55%, secondary ~35%, tertiary spillover). Single-stat uncommons should not exist.
+## Goals
 
-## Scope of the bug
+- One API for all stackable, non-equippable resources (salvage, gems, future crafting mats).
+- Remove `characters.salvage` from the XP/RP bar — it doesn't belong there.
+- Keep the change additive; no gameplay balance changes.
 
-A DB scan turned up exactly **8 broken uncommons**, all at **level 41**, all CON-only, all from `archetype_seed`:
+## Phase 1 — Data model
 
-- Astral Bastion Helm, Astral Stalwart Armor, Astral Earthshaper Greaves, Astral Ironroot Gauntlets, Astral Warden Sabatons, Astral Stoneguard Shield, Astral Stalwart Mace, Astral Earthshaper Axe
+New table `character_materials`:
+- `character_id uuid`, `material_key text`, `count int`, `updated_at timestamptz`
+- PK `(character_id, material_key)`, RLS: owner read + service role full access.
 
-They use **primary CON archetypes** (Bastion / Stalwart / Earthshaper / Ironroot / Warden / Stoneguard) — those names belong to commons. So both the stat distribution and the naming archetype were picked from the wrong pool.
+New table `materials` (catalog):
+- `key text PK` (e.g. `salvage`, `gem_ruby`, `gem_emerald`, …)
+- `name`, `description`, `icon` (emoji or url), `rarity`, `category` (`scrap` | `gem` | future), `tradeable bool default true`, `stack_max int null`, `value int` (vendor floor for later), `sort_order int`.
 
-The other 614 uncommons in the DB are correct hybrids.
+Seed catalog with: `salvage` + the 12 existing gem keys (6 primary + 6 hybrid), reusing current names/colors/descriptions from `GEM_CATALOG`.
 
-## Why it happens
+Helper SQL functions (SECURITY DEFINER, `set search_path = public`):
+- `add_material(character_id, key, delta)` — **positive deltas only**. Raises if `delta <= 0`. Upserts the row.
+- `consume_material(character_id, key, delta)` — **only writer for reductions**. Atomic, decrements with row lock, raises (or returns false) if balance would go negative. `delta` must be positive.
+- **Invariant:** no caller anywhere passes a negative value to `add_material`. Reductions always go through `consume_material`. Enforced by the `delta <= 0` guard plus a code review pass during cutover.
 
-`supabase/functions/seed-archetype-items/index.ts` has two related issues at the top L41–42 band:
+Migration also backfills `character_materials` from `characters.salvage` and `character_gems`. Legacy columns/table remain temporarily as a read-only fallback and are dropped after Phase 2 cuts over.
 
-1. **Cap clipping in `distributeUncommon`** — at L41 the per-attribute cap is `4 + floor(L/4) = 14`. The full L41 uncommon budget gets allocated to the dominant stat first, hits the cap quickly, and the secondary distribution is silently dropped if the spillover loop terminates early. Result: secondary = 0, item looks single-stat.
-2. **Astral CON items got seeded with primary archetype names** for that band — the hybrid loop appears to fall back to the primary archetype list when it can't find a hybrid match for the band's slot config.
+## Phase 2 — Server cutover
 
-## Plan
+Replace direct reads/writes with the helpers in:
+- `combat-tick`, `combat-catchup`, `_shared/kill-resolver`, `_shared/reward-calculator`, `_shared/combat-resolver` — salvage rewards become `add_material(char, 'salvage', n)` (n > 0).
+- `blacksmith-forge`, `jewelcrafter-forge` — salvage cost + gem consumption use `consume_material`.
+- `jewelcrafter-gemcutter` — `trade_gem` uses `consume_material('salvage', cost)` + `add_material(gem_key, 1)`. `combine_gem` uses `consume_material` for each primary + `add_material` for the hybrid.
+- `gemForItem` / `loadOwnedGems` swap to material lookups by `material_key` (gem keys map 1:1).
+- `admin-users` — salvage grants go through `add_material`; deductions/sets go through `consume_material` (or a dedicated admin setter that bypasses the positive-delta rule explicitly, if needed for corrections).
 
-### 1. Fix the seeder (`seed-archetype-items`)
-- In `distributeUncommon`, **guarantee a non-zero secondary**: after percentage allocation, if secondary stat is still 0, transfer 1 point from the dominant stat (even if dominant ends up below cap-by-1). Spillover loop already exists — add a "secondary floor = 1" enforcement before it.
-- Refuse to emit any uncommon row whose stats contain fewer than 2 attribute keys (`str/dex/con/int/wis/cha` > 0). Throw at seed time so future regressions are loud.
-- Verify the L41–42 band hybrid loop never falls back to a primary-archetype name. If `pickHybridArchetype` returns null for a slot, **skip** that combo for that band rather than substituting a primary name.
+Then drop `characters.salvage` and `character_gems` in a follow-up migration.
 
-### 2. Repair the 8 existing items in place (data fix)
-For each of the 8 ids:
-- Recompute stats with the fixed `distributeUncommon` for the matching hybrid pair. Since these were all "CON something" we'll re-bucket them into one of the existing CON-bearing hybrids: **STR+CON (Warlord/Juggernaut/Fortress)** or **WIS+CON (Guardian/Justicar/Oathbound)**. We'll pair each broken item with the closest hybrid based on slot bias, rename it, and overwrite stats.
-- Done as a one-shot SQL migration so no inventory references are lost (these items aren't held by any character — verified during planning, will re-confirm at run time before writing).
-- Alternative: simply **delete the 8 rows** if they aren't equipped/held anywhere. Cleaner, but loses the L41 CON hybrid coverage at top band — re-seeding the band fills it back in.
+## Phase 3 — UI
 
-Recommended: **delete + re-run the band seed** for L41–42 only. The seeder is idempotent for purge+insert per band today, so this is the lowest-risk path.
+`StatusBarsStrip`: remove the 🔩 salvage chip from the XP/RP line.
 
-### 3. Tighten `gemForItem` for uncommon (defense in depth)
-`src/shared/formulas/gems.ts` (and the Deno mirror) currently falls back to a primary gem when an uncommon has only one stat. Change the uncommon branch to **return `null` if the item has fewer than 2 attribute stats** — that uncommon then can't be forged at all, surfacing the data bug instead of silently asking for a Garnet. (No-op once #1 + #2 are done; insurance against future regressions.)
+`CharacterPanel` Equipment tab — add a **Materials** section under Gem Pouch:
+- Salvage row at the top with current count and tooltip.
+- Existing gem grid kept as a subsection within Materials.
+- Future material types appear automatically by category/sort_order.
+
+New hook `useMaterials(characterId)` (subscribes to `character_materials` realtime). `useOwnedGems` becomes a thin wrapper that filters `category = 'gem'` for one release, then is removed.
+
+`GameManual`: update Items & Economy section to introduce the unified Materials concept.
 
 ## Out of scope
-- Re-balancing the hybrid stat split (55/35 stays).
-- Touching commons.
-- Changing the gem catalog.
 
-## Files
+- Marketplace listings for materials (deliberately deferred — `tradeable` flag is reserved for it).
+- Direct player-to-player trade.
+- Balance changes to drop rates, costs, or formulas.
+- New material types beyond salvage and the existing 12 gems.
 
-- `supabase/functions/seed-archetype-items/index.ts` — fix `distributeUncommon` + hybrid-name fallback guard.
-- `src/shared/formulas/gems.ts` + `supabase/functions/_shared/formulas/gems.ts` — return `null` on single-stat uncommon.
-- One-off SQL via migration tool: delete the 8 broken items, then trigger the seed function for the L41–42 band (or an equivalent targeted insert) — exact approach finalized at implementation time after a final reference check on the 8 ids.
+## Technical notes
+
+- `material_key` is a stable string (not UUID) to keep edge functions simple and migrations readable.
+- Counts stay integers; `add_material` is the only writer for increases, `consume_material` is the only writer for decreases.
+- `add_material` raises on non-positive `delta`; this is a hard contract, not a soft clamp — surfaces buggy callers loudly.
+- `useMaterials` follows the same realtime pattern as `useOwnedGems` today.
+- Memory updates after Phase 2: revise `mem://game/gem-system` and `mem://game/economy-system` to reference the unified material model and the add/consume contract.
+
+## Rollout order
+
+1. Migration: `materials` catalog + `character_materials` + `add_material` (positive-only) + `consume_material` (atomic) + backfill.
+2. Server cutover (forges, combat, gemcutter, admin) — audit each call site to confirm no negative `add_material` usage.
+3. Drop legacy `characters.salvage` and `character_gems`.
+4. UI: remove salvage chip, add Materials section in Equipment tab, update manual.

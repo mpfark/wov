@@ -290,6 +290,35 @@ export type Database = {
           },
         ]
       }
+      character_materials: {
+        Row: {
+          character_id: string
+          count: number
+          material_key: string
+          updated_at: string
+        }
+        Insert: {
+          character_id: string
+          count?: number
+          material_key: string
+          updated_at?: string
+        }
+        Update: {
+          character_id?: string
+          count?: number
+          material_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_materials_material_key_fkey"
+            columns: ["material_key"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       character_visited_nodes: {
         Row: {
           character_id: string
@@ -1028,6 +1057,48 @@ export type Database = {
         }
         Relationships: []
       }
+      materials: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          icon: string
+          key: string
+          name: string
+          rarity: string
+          sort_order: number
+          stack_max: number | null
+          tradeable: boolean
+          value: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          key: string
+          name: string
+          rarity?: string
+          sort_order?: number
+          stack_max?: number | null
+          tradeable?: boolean
+          value?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          key?: string
+          name?: string
+          rarity?: string
+          sort_order?: number
+          stack_max?: number | null
+          tradeable?: boolean
+          value?: number
+        }
+        Relationships: []
+      }
       node_ground_loot: {
         Row: {
           creature_name: string | null
@@ -1641,6 +1712,10 @@ export type Database = {
         Args: { p_character_id: string; p_stance_key: string; p_tier: number }
         Returns: Json
       }
+      add_material: {
+        Args: { _character_id: string; _delta: number; _key: string }
+        Returns: number
+      }
       admin_cancel_listing: { Args: { p_listing_id: string }; Returns: boolean }
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
@@ -1700,6 +1775,10 @@ export type Database = {
       collect_marketplace_payouts: {
         Args: { p_character_id: string }
         Returns: Json
+      }
+      consume_material: {
+        Args: { _character_id: string; _delta: number; _key: string }
+        Returns: boolean
       }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
