@@ -15,23 +15,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function getGemCount(db: any, characterId: string, gemKey: string): Promise<number> {
+async function getMaterialCount(db: any, characterId: string, key: string): Promise<number> {
   const { data } = await db
-    .from("character_gems")
+    .from("character_materials")
     .select("count")
     .eq("character_id", characterId)
-    .eq("gem_key", gemKey)
+    .eq("material_key", key)
     .maybeSingle();
   return data?.count ?? 0;
-}
-
-async function setGemCount(db: any, characterId: string, gemKey: string, count: number) {
-  await db
-    .from("character_gems")
-    .upsert(
-      { character_id: characterId, gem_key: gemKey, count, updated_at: new Date().toISOString() },
-      { onConflict: "character_id,gem_key" },
-    );
 }
 
 serve(async (req) => {
@@ -70,7 +61,7 @@ serve(async (req) => {
 
     const { data: char, error: charErr } = await db
       .from("characters")
-      .select("id, user_id, salvage, current_node_id")
+      .select("id, user_id, current_node_id")
       .eq("id", character_id)
       .single();
     if (charErr || !char) throw new Error("Character not found");
@@ -88,18 +79,25 @@ serve(async (req) => {
         throw new Error("Pick a valid primary gem");
       }
       const cost = GEM_SALVAGE_COST_PRIMARY;
-      if ((char.salvage ?? 0) < cost) throw new Error("Not enough salvage");
 
-      const current = await getGemCount(db, character_id, gem_key);
-      await db.from("characters").update({ salvage: char.salvage - cost }).eq("id", character_id);
-      await setGemCount(db, character_id, gem_key, current + 1);
+      const { data: salvageOk } = await db.rpc('consume_material', {
+        _character_id: character_id, _key: 'salvage', _delta: cost,
+      });
+      if (!salvageOk) throw new Error("Not enough salvage");
+
+      const { data: newCount } = await db.rpc('add_material', {
+        _character_id: character_id, _key: gem_key, _delta: 1,
+      });
+
+      const { data: charAfter } = await db
+        .from("characters").select("salvage").eq("id", character_id).single();
 
       return new Response(
         JSON.stringify({
           gem_key,
           gem_name: GEM_CATALOG[gem_key as GemKey].name,
-          new_count: current + 1,
-          salvage_remaining: char.salvage - cost,
+          new_count: newCount,
+          salvage_remaining: charAfter?.salvage ?? 0,
           salvage_spent: cost,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -114,24 +112,31 @@ serve(async (req) => {
       if (!recipe) throw new Error("Unknown hybrid recipe");
       const [a, b] = recipe;
 
-      const countA = await getGemCount(db, character_id, a);
-      const countB = await getGemCount(db, character_id, b);
-      if (countA < 1 || countB < 1) {
-        throw new Error(
-          `Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}`,
-        );
+      const { data: okA } = await db.rpc('consume_material', {
+        _character_id: character_id, _key: a, _delta: 1,
+      });
+      if (!okA) {
+        throw new Error(`Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}`);
       }
 
-      const currentHybrid = await getGemCount(db, character_id, gem_key);
-      await setGemCount(db, character_id, a, countA - 1);
-      await setGemCount(db, character_id, b, countB - 1);
-      await setGemCount(db, character_id, gem_key, currentHybrid + 1);
+      const { data: okB } = await db.rpc('consume_material', {
+        _character_id: character_id, _key: b, _delta: 1,
+      });
+      if (!okB) {
+        // Refund the first gem.
+        await db.rpc('add_material', { _character_id: character_id, _key: a, _delta: 1 });
+        throw new Error(`Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}`);
+      }
+
+      const { data: newHybrid } = await db.rpc('add_material', {
+        _character_id: character_id, _key: gem_key, _delta: 1,
+      });
 
       return new Response(
         JSON.stringify({
           gem_key,
           gem_name: GEM_CATALOG[gem_key as GemKey].name,
-          new_count: currentHybrid + 1,
+          new_count: newHybrid,
           consumed: [
             { gem_key: a, name: GEM_CATALOG[a].name },
             { gem_key: b, name: GEM_CATALOG[b].name },

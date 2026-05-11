@@ -37,12 +37,13 @@ async function getItemPool(db: any, slot: string, level: number, ownedGems: Reco
 
 async function loadOwnedGems(db: any, characterId: string): Promise<Record<string, number>> {
   const { data } = await db
-    .from("character_gems")
-    .select("gem_key, count")
-    .eq("character_id", characterId);
+    .from("character_materials")
+    .select("material_key, count, materials!inner(category)")
+    .eq("character_id", characterId)
+    .eq("materials.category", "gem");
   const map: Record<string, number> = {};
   for (const row of data || []) {
-    if ((row.count ?? 0) > 0) map[row.gem_key] = row.count;
+    if ((row.count ?? 0) > 0) map[row.material_key] = row.count;
   }
   return map;
 }
@@ -95,7 +96,6 @@ serve(async (req) => {
     const salvageCost = 5 + char.level * 2;
     const goldCost = char.level * 5;
 
-    if (char.salvage < salvageCost) throw new Error("Not enough salvage");
     if (char.gold < goldCost) throw new Error("Not enough gold");
 
     const ownedGems = await loadOwnedGems(db, character_id);
@@ -108,16 +108,23 @@ serve(async (req) => {
       throw new Error("You lack the gem required to craft this item");
     }
 
+    // Atomic salvage + gem deduction via materials helpers.
+    const { data: salvageOk } = await db.rpc('consume_material', {
+      _character_id: character_id, _key: 'salvage', _delta: salvageCost,
+    });
+    if (!salvageOk) throw new Error("Not enough salvage");
+
+    const { data: gemOk } = await db.rpc('consume_material', {
+      _character_id: character_id, _key: gemKey, _delta: 1,
+    });
+    if (!gemOk) {
+      await db.rpc('add_material', { _character_id: character_id, _key: 'salvage', _delta: salvageCost });
+      throw new Error("You lack the gem required to craft this item");
+    }
+
     await db.from("characters").update({
-      salvage: char.salvage - salvageCost,
       gold: char.gold - goldCost,
     }).eq("id", character_id);
-
-    await db
-      .from("character_gems")
-      .update({ count: ownedGems[gemKey] - 1, updated_at: new Date().toISOString() })
-      .eq("character_id", character_id)
-      .eq("gem_key", gemKey);
 
     await db.from("character_inventory").insert({
       character_id,
