@@ -552,7 +552,7 @@ Deno.serve(async (req) => {
       // Queue loot drops
       for (const lq of outcome.lootQueue) lootQueue.push(lq);
 
-      // Queue gem drops (per-recipient upsert into character_gems)
+      // Queue gem drops (applied via add_material into character_materials)
       for (const gd of outcome.gemDrops) gemDropQueue.push(gd);
     };
 
@@ -1427,12 +1427,10 @@ Deno.serve(async (req) => {
         updates.bhp = (c.bhp || 0) + mBhp[m.id];
         updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
       }
-      // Salvage now lives in character_materials (mirrored back to characters.salvage
-      // by the add_material helper). Compute the projected new total for the
-      // memberStates broadcast, but route the actual write through the helper RPC.
-      let projectedSalvage = c.salvage || 0;
+      // Salvage lives in character_materials — write through the helper RPC
+      // and let realtime drive the client. memberStates no longer carries a
+      // projected salvage total.
       if (mSalvage[m.id] > 0) {
-        projectedSalvage += mSalvage[m.id];
         materialAddPromises.push(
           db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
         );
@@ -1473,7 +1471,6 @@ Deno.serve(async (req) => {
         max_cp: updates.max_cp ?? c.max_cp,
         max_mp: updates.max_mp ?? c.max_mp,
         respec_points: updates.respec_points ?? c.respec_points ?? 0,
-        salvage: projectedSalvage,
         cp: updates.cp ?? mCp[m.id],
       });
     }
@@ -1518,7 +1515,7 @@ Deno.serve(async (req) => {
     events.push(...lootEvents);
 
     // Apply gem drops via the unified materials helper (one add_material call
-    // per drop). add_material mirrors back to character_gems for now.
+    // per drop) into character_materials.
     if (gemDropQueue.length > 0) {
       const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
       for (const gd of gemDropQueue) {

@@ -103,7 +103,7 @@ serve(async (req) => {
     const salvageCost = 5 + char.level * 2;
     const goldCost = char.level * 5;
 
-    if (char.salvage < salvageCost) throw new Error("Not enough salvage");
+    // Salvage balance is enforced atomically by consume_material below.
     if (char.gold < goldCost) throw new Error("Not enough gold");
 
     // Validate the chosen item is in the allowed pool (re-fetched to prevent stale gem state)
@@ -146,7 +146,6 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       item: template,
-      salvage_remaining: char.salvage - salvageCost,
       gold_remaining: char.gold - goldCost,
       gem_used: gemKey,
     }), {
