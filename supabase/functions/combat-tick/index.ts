@@ -1515,7 +1515,7 @@ Deno.serve(async (req) => {
     events.push(...lootEvents);
 
     // Apply gem drops via the unified materials helper (one add_material call
-    // per drop). add_material mirrors back to character_gems for now.
+    // per drop) into character_materials.
     if (gemDropQueue.length > 0) {
       const counts = new Map<string, number>(); // key: `${memberId}|${gemKey}`
       for (const gd of gemDropQueue) {
