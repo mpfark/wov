@@ -7,6 +7,7 @@ import { Save, RotateCcw } from 'lucide-react';
 import {
   DEFAULT_WEAPON_PROGRESSION,
   WEAPON_DAMAGE_DIE,
+  RARITY_DIE_BONUS,
   getWeaponDieForItem,
   type WeaponProgressionConfig,
 } from '@/shared/formulas/combat';
@@ -19,8 +20,11 @@ const SAMPLE_WEAPONS: Array<{ tag: string; hands: 1 | 2; label: string }> = [
   { tag: 'bow', hands: 2, label: 'Bow (2H)' },
 ];
 
+const RARITY_PREVIEW: Array<keyof typeof RARITY_DIE_BONUS> = ['common', 'uncommon', 'unique', 'soulforged'];
+
 export default function WeaponProgressionTab() {
   const [cfg, setCfg] = useState<WeaponProgressionConfig>(DEFAULT_WEAPON_PROGRESSION);
+  const [rarity, setRarity] = useState<keyof typeof RARITY_DIE_BONUS>('common');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -118,7 +122,20 @@ export default function WeaponProgressionTab() {
       )}
 
       <div className="space-y-2">
-        <h4 className="font-display text-xs text-primary">Preview</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-display text-xs text-primary">Preview</h4>
+          <div className="flex gap-1">
+            {RARITY_PREVIEW.map(r => (
+              <button
+                key={r}
+                onClick={() => setRarity(r)}
+                className={`px-2 py-0.5 text-[10px] uppercase tracking-wider border rounded ${rarity === r ? 'bg-primary/20 border-primary text-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}
+              >
+                {r} (+{RARITY_DIE_BONUS[r]})
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="overflow-x-auto border border-border rounded">
           <table className="w-full text-xs">
             <thead className="bg-muted/50">
@@ -134,7 +151,7 @@ export default function WeaponProgressionTab() {
                 <tr key={`${w.tag}-${w.hands}`} className="border-t border-border">
                   <td className="p-2 font-medium">{w.label}</td>
                   {SAMPLE_LEVELS.map(l => {
-                    const die = getWeaponDieForItem(w.tag, w.hands, l, cfg);
+                    const die = getWeaponDieForItem(w.tag, w.hands, l, cfg, rarity);
                     return (
                       <td key={l} className="p-2 text-center font-mono">1d{die}</td>
                     );
