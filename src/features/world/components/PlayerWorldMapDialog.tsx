@@ -32,6 +32,13 @@ const OUTLINE_RADIUS = NODE_R + 20;
 const AREA_OUTLINE_RADIUS = NODE_R + 10;
 const DRAG_THRESHOLD = 4;
 
+interface TooltipState {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
+}
+
 export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, currentRegion, onTeleport, inCombat }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -45,6 +52,39 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const { emojiMap } = useAreaTypes();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [creatureLevels, setCreatureLevels] = useState<Map<string, number[]>>(new Map());
+
+  // Fetch creature levels per node when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    supabase.from('creatures').select('node_id, level').eq('is_alive', true)
+      .then(({ data }) => {
+        if (!data) return;
+        const m = new Map<string, number[]>();
+        for (const c of data) {
+          if (!c.node_id || typeof c.level !== 'number') continue;
+          const arr = m.get(c.node_id) || [];
+          arr.push(c.level);
+          m.set(c.node_id, arr);
+        }
+        setCreatureLevels(m);
+      });
+  }, [open]);
+
+  const computeTooltipPos = useCallback((clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }, []);
+
+  const formatLevelRange = (levels: number[]): string | null => {
+    if (levels.length === 0) return null;
+    const min = Math.min(...levels);
+    const max = Math.max(...levels);
+    return min === max ? `Creatures: Lv ${min}` : `Creatures: Lv ${min}–${max}`;
+  };
+
 
   // Fetch visited nodes on open
   useEffect(() => {
