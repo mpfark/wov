@@ -381,9 +381,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               strokeWidth={hull.faded ? 1 : 1.5}
               opacity={hull.faded ? 0.35 : 1}
               strokeDasharray={hull.faded ? "3 2" : undefined}
-              onMouseEnter={(e) => handleAreaHover(e, hull)}
-              onMouseMove={(e) => handleAreaHover(e, hull)}
-              onMouseLeave={() => setTooltip(null)}
               style={{ cursor: 'default' }}
             />
           ))}
