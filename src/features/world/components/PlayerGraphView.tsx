@@ -358,7 +358,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         const allAreaNodeIds = new Set(allAreaNodes.map(n => n.id));
         const fullPath = buildHull(allAreaNodes, allAreaNodeIds);
         if (fullPath) {
-          hulls.push({ path: fullPath, fill, stroke, faded: true });
+          hulls.push({ path: fullPath, fill, stroke, faded: true, areaId: area.id, areaName: area.name });
         }
       }
 
@@ -368,7 +368,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         const primaryAreaNodeIds = new Set(primaryAreaNodes.map(n => n.id));
         const primaryPath = buildHull(primaryAreaNodes, primaryAreaNodeIds);
         if (primaryPath) {
-          hulls.push({ path: primaryPath, fill, stroke });
+          hulls.push({ path: primaryPath, fill, stroke, areaId: area.id, areaName: area.name });
         }
       }
     }
