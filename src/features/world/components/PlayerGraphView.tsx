@@ -232,16 +232,17 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     const fetchCreaturePresence = async () => {
       const { data } = await supabase
         .from('creatures')
-        .select('node_id, is_aggressive')
+        .select('node_id, is_aggressive, level')
         .eq('is_alive', true)
         .in('node_id', visibleNodeIds);
       const map = new Map<string, NodeCreatureInfo>();
       if (data) {
         for (const c of data) {
           if (!c.node_id) continue;
-          const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false };
+          const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false, levels: [] };
           existing.hasCreatures = true;
           if (c.is_aggressive) existing.hasAggressive = true;
+          if (typeof c.level === 'number') existing.levels.push(c.level);
           map.set(c.node_id, existing);
         }
       }
