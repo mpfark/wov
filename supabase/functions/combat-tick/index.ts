@@ -1011,7 +1011,7 @@ Deno.serve(async (req) => {
         const mb = buffs[m.id] || {};
         const wTag = mainHandTag[m.id];
         const wHands: 1 | 2 = isTwoHanded[m.id] ? 2 : 1;
-        const weaponDie = getWeaponDieForItem(wTag, wHands, mainHandLevel[m.id], weaponProgression);
+        const weaponDie = getWeaponDieForItem(wTag, wHands, mainHandLevel[m.id], weaponProgression, mainHandRarity[m.id]);
         const effStr = (c.str || 10) + (eb.str || 0);
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const sMod = sm(effStr);   // STR modifier — drives damage + STR floor
@@ -1156,7 +1156,7 @@ Deno.serve(async (req) => {
         if (!isOffhandWeapon(ohTag)) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
-        const ohDie = getWeaponDieForItem(ohTag, 1, offHandLevel[m.id], weaponProgression);
+        const ohDie = getWeaponDieForItem(ohTag, 1, offHandLevel[m.id], weaponProgression, offHandRarity[m.id]);
         const effStr2 = (c.str || 10) + (eb.str || 0);
         const effDex2 = (c.dex || 10) + (eb.dex || 0);
         const sMod2 = sm(effStr2);   // STR — drives offhand damage
