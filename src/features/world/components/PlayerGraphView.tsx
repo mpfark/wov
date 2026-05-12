@@ -8,6 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
 interface NodeCreatureInfo {
   hasCreatures: boolean;
   hasAggressive: boolean;
+  levels: number[];
+}
+
+interface TooltipState {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
 }
 
 interface Props {
@@ -35,12 +43,16 @@ interface AreaHull {
   fill: string;
   stroke: string;
   faded?: boolean;
+  areaId?: string;
+  areaName?: string;
 }
 
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const initialFetchDone = useRef(false);
   const { emojiMap } = useAreaTypes();
 
@@ -224,16 +236,17 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
     const fetchCreaturePresence = async () => {
       const { data } = await supabase
         .from('creatures')
-        .select('node_id, is_aggressive')
+        .select('node_id, is_aggressive, level')
         .eq('is_alive', true)
         .in('node_id', visibleNodeIds);
       const map = new Map<string, NodeCreatureInfo>();
       if (data) {
         for (const c of data) {
           if (!c.node_id) continue;
-          const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false };
+          const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false, levels: [] };
           existing.hasCreatures = true;
           if (c.is_aggressive) existing.hasAggressive = true;
+          if (typeof c.level === 'number') existing.levels.push(c.level);
           map.set(c.node_id, existing);
         }
       }
@@ -345,7 +358,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         const allAreaNodeIds = new Set(allAreaNodes.map(n => n.id));
         const fullPath = buildHull(allAreaNodes, allAreaNodeIds);
         if (fullPath) {
-          hulls.push({ path: fullPath, fill, stroke, faded: true });
+          hulls.push({ path: fullPath, fill, stroke, faded: true, areaId: area.id, areaName: area.name });
         }
       }
 
@@ -355,15 +368,62 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         const primaryAreaNodeIds = new Set(primaryAreaNodes.map(n => n.id));
         const primaryPath = buildHull(primaryAreaNodes, primaryAreaNodeIds);
         if (primaryPath) {
-          hulls.push({ path: primaryPath, fill, stroke });
+          hulls.push({ path: primaryPath, fill, stroke, areaId: area.id, areaName: area.name });
         }
       }
     }
     return hulls;
   })();
 
+  const computeTooltipPos = (e: React.MouseEvent): { x: number; y: number } => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const handleAreaHover = (e: React.MouseEvent, hull: AreaHull) => {
+    if (!hull.areaId || !hull.areaName) return;
+    const areaNodeIds = new Set(allDisplayNodes.filter(n => n.area_id === hull.areaId).map(n => n.id));
+    const levels: number[] = [];
+    creatureMap.forEach((info, nid) => {
+      if (areaNodeIds.has(nid)) levels.push(...info.levels);
+    });
+    const lines: string[] = [];
+    if (levels.length > 0) {
+      const min = Math.min(...levels);
+      const max = Math.max(...levels);
+      lines.push(min === max ? `Creatures: Lv ${min}` : `Creatures: Lv ${min}–${max}`);
+    } else {
+      lines.push('No creatures');
+    }
+    setTooltip({ ...computeTooltipPos(e), title: hull.areaName, lines });
+  };
+
+  const handleNodeHover = (e: React.MouseEvent, node: GameNode) => {
+    const lines: string[] = [];
+    const area = _areas.find(a => a.id === node.area_id);
+    if (area) lines.push(area.name);
+    const services: string[] = [];
+    if (node.is_teleport) services.push('🌀 Teleport');
+    if ((node as any).is_inn) services.push('🏨 Inn');
+    if ((node as any).is_vendor) services.push('🪙 Vendor');
+    if ((node as any).is_blacksmith) services.push('🔨 Blacksmith');
+    if ((node as any).is_jewelcrafter) services.push('💎 Jewelcrafter');
+    if ((node as any).is_stonebinder) services.push('⚜ Stonebinder');
+    if ((node as any).is_trainer) services.push('🏛️ Trainer');
+    if ((node as any).is_marketplace) services.push('🏛️ Marketplace');
+    if (services.length > 0) lines.push(services.join(' · '));
+    const info = creatureMap.get(node.id);
+    if (info && info.levels.length > 0) {
+      const min = Math.min(...info.levels);
+      const max = Math.max(...info.levels);
+      lines.push(min === max ? `Creatures: Lv ${min}` : `Creatures: Lv ${min}–${max}`);
+    }
+    setTooltip({ ...computeTooltipPos(e), title: node.name, lines });
+  };
+
   return (
-    <div className="w-full">
+    <div ref={containerRef} className="relative w-full">
       <svg
         viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
         className="block w-full h-auto"
@@ -371,7 +431,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         overflow="hidden"
       >
         {/* Area outlines — color-coded by area type */}
-        <g className="pointer-events-none">
+        <g>
           {areaHulls.map((hull, i) => (
             <path
               key={`area-hull-${i}`}
@@ -381,6 +441,10 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
               strokeWidth={hull.faded ? 1 : 1.5}
               opacity={hull.faded ? 0.35 : 1}
               strokeDasharray={hull.faded ? "3 2" : undefined}
+              onMouseEnter={(e) => handleAreaHover(e, hull)}
+              onMouseMove={(e) => handleAreaHover(e, hull)}
+              onMouseLeave={() => setTooltip(null)}
+              style={{ cursor: 'default' }}
             />
           ))}
         </g>
@@ -428,8 +492,9 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
 
           return (
             <g key={node.id}
-              onMouseEnter={() => setHoveredNode(node.id)}
-              onMouseLeave={() => setHoveredNode(null)}
+              onMouseEnter={(e) => { setHoveredNode(node.id); handleNodeHover(e, node); }}
+              onMouseMove={(e) => handleNodeHover(e, node)}
+              onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
               opacity={isVisitedGhost ? 0.35 : 1}
             >
               {/* Glow for current node */}
@@ -532,6 +597,17 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           });
         })}
       </svg>
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-20 rounded-md border border-border bg-popover/95 px-2 py-1 text-[11px] text-popover-foreground shadow-md"
+          style={{ left: tooltip.x + 12, top: tooltip.y + 12, maxWidth: 220 }}
+        >
+          <div className="font-display text-xs text-foreground">{tooltip.title}</div>
+          {tooltip.lines.map((l, i) => (
+            <div key={i} className="text-[10px] text-muted-foreground">{l}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
