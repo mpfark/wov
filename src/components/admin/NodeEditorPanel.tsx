@@ -647,6 +647,7 @@ export default function NodeEditorPanel({
         is_inn: data.is_inn ?? false,
         is_blacksmith: (data as any).is_blacksmith ?? false,
         is_jewelcrafter: (data as any).is_jewelcrafter ?? false,
+        is_stonebinder: (data as any).is_stonebinder ?? false,
         is_teleport: (data as any).is_teleport ?? false,
         is_trainer: (data as any).is_trainer ?? false,
         is_marketplace: (data as any).is_marketplace ?? false,
