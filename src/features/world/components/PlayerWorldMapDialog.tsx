@@ -297,6 +297,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     if (!didDrag.current) {
       setSelectedTeleportNode(null);
     }
+    setTooltip(null);
   }, []);
 
   const centerOnCurrent = useCallback(() => {
