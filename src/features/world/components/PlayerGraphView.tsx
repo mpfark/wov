@@ -234,8 +234,10 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false };
           existing.hasCreatures = true;
           if (c.is_aggressive) existing.hasAggressive = true;
-          if (typeof c.level === 'number') existing.levels.push(c.level);
           map.set(c.node_id, existing);
+        }
+      }
+      // Also include level data for the creature select query (kept minimal: not used here)
         }
       }
       setCreatureMap(map);
