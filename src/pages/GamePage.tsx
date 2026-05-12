@@ -7,6 +7,7 @@ import MapPanel from '@/features/world/components/MapPanel';
 import VendorPanel from '@/features/inventory/components/VendorPanel';
 import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
 import JewelcrafterPanel from '@/features/inventory/components/JewelcrafterPanel';
+import StonebinderPanel from '@/features/inventory/components/StonebinderPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
@@ -253,6 +254,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [jewelcrafterOpen, setJewelcrafterOpen] = useState(false);
+  const [stonebinderOpen, setStonebinderOpen] = useState(false);
   /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
   const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
 
@@ -1002,6 +1004,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onOpenVendor: currentNode?.is_vendor ? () => setVendorOpen(true) : undefined,
     onOpenBlacksmith: currentNode?.is_blacksmith ? () => setBlacksmithOpen(true) : undefined,
     onOpenJewelcrafter: (currentNode as any)?.is_jewelcrafter ? () => setJewelcrafterOpen(true) : undefined,
+    onOpenStonebinder: (currentNode as any)?.is_stonebinder ? () => setStonebinderOpen(true) : undefined,
     onOpenTrainer: currentNode?.is_trainer ? () => setTrainerOpen(true) : undefined,
     onOpenMarketplace: (currentNode as any)?.is_marketplace ? () => setMarketplaceOpen(true) : undefined,
     onOpenTeleport: (currentNode?.is_teleport || character.level >= 22) ? () => {
@@ -1259,6 +1262,18 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           character={character}
           npcName={activeServiceNpc?.service_role === 'jewelcrafter' ? activeServiceNpc.name : undefined}
           npcFlavor={activeServiceNpc?.service_role === 'jewelcrafter' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
+        />
+      )}
+
+      {/* Stonebinder Dialog */}
+      {(currentNode as any).is_stonebinder && (
+        <StonebinderPanel
+          open={stonebinderOpen}
+          onClose={() => setStonebinderOpen(false)}
+          characterId={character.id}
+          inventory={[...equipped, ...unequipped]}
+          onInventoryChange={fetchInventory}
+          addLog={addLog}
         />
       )}
 
