@@ -8,6 +8,14 @@ import { supabase } from '@/integrations/supabase/client';
 interface NodeCreatureInfo {
   hasCreatures: boolean;
   hasAggressive: boolean;
+  levels: number[];
+}
+
+interface TooltipState {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
 }
 
 interface Props {
