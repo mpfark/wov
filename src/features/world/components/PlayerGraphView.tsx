@@ -35,8 +35,6 @@ interface AreaHull {
   fill: string;
   stroke: string;
   faded?: boolean;
-  areaId?: string;
-  areaName?: string;
 }
 
 export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, partyMembers, myCharacterId, areas: _areas = [], characterId, unlockedConnections }: Props) {
