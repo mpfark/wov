@@ -407,6 +407,20 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const fill = getAreaFillColor(emoji);
                   const stroke = getAreaStrokeColor(emoji);
 
+                  const handleAreaTooltip = (e: React.MouseEvent) => {
+                    if (!area) return;
+                    const areaNodeIds = visibleNodes.filter(n => n.area_id === areaId).map(n => n.id);
+                    const levels: number[] = [];
+                    for (const nid of areaNodeIds) {
+                      const arr = creatureLevels.get(nid);
+                      if (arr) levels.push(...arr);
+                    }
+                    const lines: string[] = [];
+                    const range = formatLevelRange(levels);
+                    if (range) lines.push(range);
+                    setTooltip({ ...computeTooltipPos(e.clientX, e.clientY), title: area.name, lines });
+                  };
+
                   return (
                     <g key={`area-${areaId}`}>
                       <path
@@ -414,6 +428,9 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         fill={fill}
                         stroke={stroke}
                         strokeWidth={1.5}
+                        onMouseEnter={handleAreaTooltip}
+                        onMouseMove={handleAreaTooltip}
+                        onMouseLeave={() => setTooltip(null)}
                       />
                       {area && (
                         <text
@@ -422,6 +439,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                           fill={stroke.replace('/ 0.6)', '/ 0.9)')}
                           className="font-display"
                           fontSize={8}
+                          pointerEvents="none"
                         >
                           {area.name}
                         </text>
