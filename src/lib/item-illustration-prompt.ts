@@ -10,9 +10,9 @@ export interface ItemIllustrationMetadata {
 }
 
 const RARITY_STYLE: Record<string, string> = {
-  common: 'weathered, simple craftsmanship, plain materials',
-  uncommon: 'well-crafted, refined details, subtle ornamentation, hints of magical sheen',
-  unique: 'ornate, jeweled, glowing arcane runes, masterwork, legendary aura',
+  common: 'weathered, simple craftsmanship, plain materials, utilitarian',
+  uncommon: 'well-crafted, clean lines, subtle quality details, no magical glow',
+  unique: 'masterwork craftsmanship, fine materials and restrained ornamentation, faint magical character — no glowing runes, no gemstone encrustation, no radiant aura',
 };
 
 interface BuildArgs {
