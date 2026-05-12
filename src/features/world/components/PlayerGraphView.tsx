@@ -51,6 +51,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [creatureMap, setCreatureMap] = useState<Map<string, NodeCreatureInfo>>(new Map());
   const [visitedNodeIds, setVisitedNodeIds] = useState<Set<string>>(new Set());
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const initialFetchDone = useRef(false);
   const { emojiMap } = useAreaTypes();
 
