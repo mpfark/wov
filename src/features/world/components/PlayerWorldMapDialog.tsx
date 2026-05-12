@@ -684,6 +684,19 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
               </div>
             );
           })()}
+
+          {/* Hover tooltip — area / node info */}
+          {tooltip && (
+            <div
+              className="pointer-events-none absolute z-40 rounded-md border border-border bg-popover/95 px-2 py-1 shadow-md"
+              style={{ left: tooltip.x + 12, top: tooltip.y + 12, maxWidth: 240 }}
+            >
+              <div className="font-display text-xs text-foreground">{tooltip.title}</div>
+              {tooltip.lines.map((l, i) => (
+                <div key={i} className="text-[10px] text-muted-foreground">{l}</div>
+              ))}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
