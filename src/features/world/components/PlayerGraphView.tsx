@@ -231,7 +231,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       if (data) {
         for (const c of data) {
           if (!c.node_id) continue;
-          const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false, levels: [] };
+          const existing = map.get(c.node_id) || { hasCreatures: false, hasAggressive: false };
           existing.hasCreatures = true;
           if (c.is_aggressive) existing.hasAggressive = true;
           if (typeof c.level === 'number') existing.levels.push(c.level);
