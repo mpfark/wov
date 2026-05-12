@@ -237,9 +237,6 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
           map.set(c.node_id, existing);
         }
       }
-      // Also include level data for the creature select query (kept minimal: not used here)
-        }
-      }
       setCreatureMap(map);
     };
     fetchCreaturePresence();
