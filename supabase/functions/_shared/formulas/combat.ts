@@ -20,10 +20,10 @@
  *   → finalAppliedDamage
  */
 
-import { getStatModifier, rollD20, rollDamage, diminishing, diminishingFloat } from './stats.ts';
+import { getStatModifier, rollD20, rollDamage, diminishing, diminishingFloat } from './stats';
 import {
   CLASS_BASE_AC, getWeaponAffinityBonus, getClassCritRange,
-} from './classes.ts';
+} from './classes';
 
 // ── Weapon-based autoattack dice ─────────────────────────────────
 //
@@ -106,19 +106,42 @@ export function getWeaponDieProgression(
 }
 
 /**
+ * Rarity-based damage-die bonus, additive on top of family base + level tier.
+ *
+ *   common     → +0
+ *   uncommon   → +1
+ *   unique     → +2
+ *   soulforged → +3
+ *
+ * Anything unrecognized returns 0. Stacks with `getWeaponDieProgression`.
+ */
+export const RARITY_DIE_BONUS: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  unique: 2,
+  soulforged: 3,
+};
+
+export function getRarityDieBonus(rarity: string | null | undefined): number {
+  if (!rarity) return 0;
+  return RARITY_DIE_BONUS[rarity] ?? 0;
+}
+
+/**
  * Resolve the autoattack damage die for a weapon, applying item-level
- * progression on top of the family base die. Unarmed (no tag) ignores
- * progression because there is no item.
+ * progression and rarity bonus on top of the family base die. Unarmed
+ * (no tag) ignores both because there is no item.
  */
 export function getWeaponDieForItem(
   weaponTag: string | null | undefined,
   hands: 1 | 2,
   itemLevel: number | null | undefined,
   cfg: WeaponProgressionConfig = DEFAULT_WEAPON_PROGRESSION,
+  rarity?: string | null,
 ): number {
   const base = getWeaponDie(weaponTag, hands);
   if (!weaponTag) return base;
-  return base + getWeaponDieProgression(itemLevel, cfg);
+  return base + getWeaponDieProgression(itemLevel, cfg) + getRarityDieBonus(rarity);
 }
 
 /** Roll one weapon attack: 1d{weaponDie} + STR modifier. */
@@ -128,8 +151,9 @@ export function rollWeaponAttackDamage(
   str: number,
   itemLevel?: number | null,
   cfg: WeaponProgressionConfig = DEFAULT_WEAPON_PROGRESSION,
+  rarity?: string | null,
 ): number {
-  const die = getWeaponDieForItem(weaponTag, hands, itemLevel, cfg);
+  const die = getWeaponDieForItem(weaponTag, hands, itemLevel, cfg, rarity);
   return rollDamage(1, die) + getStatModifier(str);
 }
 
@@ -279,6 +303,8 @@ export interface AttackContext {
   weaponHands?: 1 | 2;
   /** Item level of main-hand weapon (drives die-size progression). */
   weaponItemLevel?: number | null;
+  /** Rarity of main-hand weapon (drives rarity die bonus). */
+  weaponItemRarity?: string | null;
   /** Optional override for weapon die progression thresholds. */
   weaponProgression?: WeaponProgressionConfig;
 }
@@ -319,7 +345,7 @@ export function resolveAttackRoll(
   const sdf = getStrDamageFloor(ctx.str);
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
-  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, ctx.weaponProgression);
+  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, ctx.weaponProgression, ctx.weaponItemRarity);
 
   const roll = rollD20();
   const totalAtk = roll + dexHitMod + ihb + affinity.hitBonus;
