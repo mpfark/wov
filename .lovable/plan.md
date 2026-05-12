@@ -1,51 +1,63 @@
-## Legacy Salvage Cleanup — Final Pass
+## Goal
 
-Audit shows most of the cutover is already complete. Only one real UI change remains; everything else is comment hygiene.
+Make weapon **rarity** raise the autoattack damage **die size**, on top of the existing level-tier progression. An uncommon sword will roll a bigger die than a common sword of the same level; a unique/soulforged even bigger.
 
-### Audit results
+## Proposed rarity → die bonus
 
-- `characters.salvage` reads in components: **none** (`character.salvage` returns no hits in `src/`)
-- `onSalvageChange` / `updateCharacter({ salvage … })`: **none**
-- `Character.salvage` field on the type: **already removed** (`useCharacter.ts` only has a comment noting it moved)
-- `GamePage.tsx` salvage props to forge panels: **already removed**. Remaining mentions are only in the catch-up rewards toast (`salvage_each` from server payload, plus a comment) — correct, leave as-is.
-- `BlacksmithPanel` / `JewelcrafterPanel` / `MaterialsSection` / `GemPouch`: already read salvage + gems via `useMaterials` exclusively.
-- `useOwnedGems`: already a thin compatibility wrapper over `useMaterials`.
-- `StatusBarsStrip`: still renders a 🔩 salvage chip in the XP line — **needs removal** per spec.
+| Rarity | Die bonus |
+|---|---|
+| common | +0 |
+| uncommon | **+1** |
+| unique | **+2** |
+| soulforged | **+3** |
 
-### Changes
+Stacks **additively** with the existing level-tier bonus (0/+1/+2/+3 at L1/11/21/31). Example, sword (1H base d8):
 
-**1. `src/features/character/components/StatusBarsStrip.tsx`**
-- Remove the `salvageCount` chip block (lines ~414–421) from the XP/RP line.
-- Remove the now-unused `const salvageCount = counts.salvage ?? 0;` (line 223). Keep `counts` / `gemCount` (gems chip stays).
-- Update the surrounding comment to read "Realtime gem totals from character_materials."
-- Salvage now lives only in Equipment → Material Pouch and forge/jewelcrafter UIs.
+- L1 common → d8
+- L1 uncommon → d9
+- L21 common → d10
+- L21 uncommon → d11
+- L31 unique → d13
+- L31 soulforged → d14
 
-**2. `src/features/inventory/hooks/useOwnedGems.ts`**
-- Strengthen the header comment to the canonical wording:
-  ```
-  // Transitional compatibility wrapper.
-  // Materials ownership now lives in character_materials via useMaterials().
-  ```
+This keeps weapon-family identity (a dagger stays smaller than a sword at the same rarity/level) but a higher rarity is now visibly stronger in the damage roll, not just in stat budget.
 
-**3. `src/features/character/hooks/useCharacter.ts`**
-- Tighten the existing salvage comment (line ~32) to:
-  ```
-  // LEGACY: salvage has moved to character_materials (read via useMaterials).
-  // The DB column still exists for migration compatibility but is no longer
-  // mirrored on this type.
-  ```
+## Scope of changes
 
-### Explicitly out of scope (per spec)
+### 1. Canonical formula — `src/shared/formulas/combat.ts`
 
-- Do **not** drop `characters.salvage` or `character_gems` columns.
-- Do **not** remove `useOwnedGems`.
-- No balance, forge, gem, or economy logic changes.
-- Admin "grant-salvage" tool, `GameManual` text, `salvage_only` loot mode, and `xp.ts` doc-comments stay — they're either backend-grant tooling or documentation about the (still-correct) salvage reward economy.
+- Add a `RARITY_DIE_BONUS: Record<string, number>` constant (`common: 0, uncommon: 1, unique: 2, soulforged: 3`, anything else 0).
+- Add new helper `getRarityDieBonus(rarity: string | null | undefined): number`.
+- Extend `getWeaponDieForItem(weaponTag, hands, itemLevel, cfg, rarity?)` with an optional `rarity` parameter and add it to the returned die.
+- Extend `rollWeaponAttackDamage(...)` and the `AttackContext` (`weaponItemRarity?`) used by `resolveAutoattack` so the live combat path picks up the rarity bonus.
+- Mirror the entire change byte-for-byte to `supabase/functions/_shared/formulas/combat.ts` (mirror rule from `formula-ownership.md`).
 
-### Validation
+### 2. Live combat — `supabase/functions/combat-tick/index.ts`
 
-- `rg "character\.salvage|onSalvageChange|salvage:" src/` returns no app-code hits (only `GameManual.tsx` prose).
-- StatusBarsStrip shows HP / CP / XP / RP / gems only — no 🔩 chip.
-- Material Pouch and Gems pouch in CharacterPanel still show counts and update in realtime on kills.
-- Blacksmith and Jewelcrafter still forge, sell, and gem-cut correctly.
-- TypeScript clean.
+- When building per-member weapon context, capture `mainHandRarity[m.id]` and `offHandRarity[m.id]` alongside the existing `mainHandLevel` / `offHandLevel` lookups.
+- Pass rarity into both `getWeaponDieForItem` calls (main-hand at line ~1006, off-hand at line ~1151) and into `resolveAutoattack` via the new `weaponItemRarity` field.
+
+### 3. Predictor — `src/features/combat/utils/combat-predictor.ts`
+
+- Add `weaponItemRarity` to the predictor context and forward it to `getWeaponDieForItem` so the client-side preview matches the server.
+
+### 4. UI surfaces
+
+- **`src/components/items/ItemTooltipCard.tsx`** — pass `item.rarity` to `getWeaponDieForItem` so the tooltip shows the correct `1d{N}`.
+- **`src/features/character/components/CharacterPanel.tsx`** — pass equipped main-hand rarity into the displayed weapon die (line ~866).
+- **`src/components/admin/loot/WeaponProgressionTab.tsx`** — extend the level-vs-die preview table with a column or selector for rarity so admins can see the full matrix.
+
+### 5. Tests / parity
+
+- Add a case to `src/shared/formulas/__tests__/formula-parity.test.ts` snapshot covering the new `getRarityDieBonus` plus a couple of `getWeaponDieForItem` results across rarities.
+
+## Things explicitly NOT changed
+
+- **Stat budget** stays as-is — rarity still grants more STR/HP/etc. via `getItemStatBudget`. The die bonus is purely additive on top.
+- **Existing items** need no migration. Rarity is already stored on every row in `items`; the formula simply starts reading it.
+- **Crit math, hit bonuses, AC** — untouched.
+- **Creature damage** — unaffected (creatures don't have rarity-tagged weapons).
+
+## Open question
+
+The proposed bonuses are `+0 / +1 / +2 / +3`. If you'd rather make soulforged feel only marginally above unique (e.g. `+0 / +1 / +2 / +2`) or push uncommon harder (`+0 / +2 / +3 / +4`), say the word and I'll swap the table before implementing.
