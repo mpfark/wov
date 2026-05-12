@@ -335,6 +335,8 @@ Deno.serve(async (req) => {
     const offHandTag: Record<string, string | null> = {};
     const mainHandLevel: Record<string, number | null> = {};
     const offHandLevel: Record<string, number | null> = {};
+    const mainHandRarity: Record<string, string | null> = {};
+    const offHandRarity: Record<string, string | null> = {};
     const isTwoHanded: Record<string, boolean> = {};
     const memberProcs: Record<string, { type: string; chance: number; value: number; emoji: string; text: string }[]> = {};
     for (const cid of charIds) {
@@ -343,6 +345,8 @@ Deno.serve(async (req) => {
       let ohTag: string | null = null;
       let mhLvl: number | null = null;
       let ohLvl: number | null = null;
+      let mhRarity: string | null = null;
+      let ohRarity: string | null = null;
       const procs: any[] = [];
       for (const e of (allEquip || []).filter(e => e.character_id === cid)) {
         for (const [s, v] of Object.entries((e.item as any)?.stats || {})) {
@@ -352,12 +356,14 @@ Deno.serve(async (req) => {
           if ((e.item as any)?.weapon_tag) mhTag = (e.item as any).weapon_tag;
           if ((e.item as any)?.hands === 2) isTwoHanded[cid] = true;
           if ((e.item as any)?.level != null) mhLvl = (e.item as any).level;
+          if ((e.item as any)?.rarity) mhRarity = (e.item as any).rarity;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
         if (e.equipped_slot === 'off_hand') {
           if ((e.item as any)?.weapon_tag) ohTag = (e.item as any).weapon_tag;
           if ((e.item as any)?.level != null) ohLvl = (e.item as any).level;
+          if ((e.item as any)?.rarity) ohRarity = (e.item as any).rarity;
           const itemProcs = (e.item as any)?.procs;
           if (Array.isArray(itemProcs)) procs.push(...itemProcs);
         }
@@ -367,6 +373,8 @@ Deno.serve(async (req) => {
       offHandTag[cid] = ohTag;
       mainHandLevel[cid] = mhLvl;
       offHandLevel[cid] = ohLvl;
+      mainHandRarity[cid] = mhRarity;
+      offHandRarity[cid] = ohRarity;
       memberProcs[cid] = procs;
     }
 
@@ -1003,7 +1011,7 @@ Deno.serve(async (req) => {
         const mb = buffs[m.id] || {};
         const wTag = mainHandTag[m.id];
         const wHands: 1 | 2 = isTwoHanded[m.id] ? 2 : 1;
-        const weaponDie = getWeaponDieForItem(wTag, wHands, mainHandLevel[m.id], weaponProgression);
+        const weaponDie = getWeaponDieForItem(wTag, wHands, mainHandLevel[m.id], weaponProgression, mainHandRarity[m.id]);
         const effStr = (c.str || 10) + (eb.str || 0);
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const sMod = sm(effStr);   // STR modifier — drives damage + STR floor
@@ -1148,7 +1156,7 @@ Deno.serve(async (req) => {
         if (!isOffhandWeapon(ohTag)) continue;
         const c = m.c;
         const eb = eq[m.id] || {};
-        const ohDie = getWeaponDieForItem(ohTag, 1, offHandLevel[m.id], weaponProgression);
+        const ohDie = getWeaponDieForItem(ohTag, 1, offHandLevel[m.id], weaponProgression, offHandRarity[m.id]);
         const effStr2 = (c.str || 10) + (eb.str || 0);
         const effDex2 = (c.dex || 10) + (eb.dex || 0);
         const sMod2 = sm(effStr2);   // STR — drives offhand damage

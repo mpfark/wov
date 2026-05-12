@@ -333,6 +333,7 @@ export default function CharacterPanel({
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
   const mainHandTag = mainHandItem?.item?.weapon_tag as string | undefined;
   const mainHandLevel = (mainHandItem?.item as any)?.level as number | null | undefined;
+  const mainHandRarity = (mainHandItem?.item as any)?.rarity as string | null | undefined;
   const isProficient = !!(mainHandTag && CLASS_WEAPON_AFFINITY[character.class]?.includes(mainHandTag));
   const offHandItem = getEquippedInSlot('off_hand');
   const offHandTag = offHandItem?.item?.weapon_tag as string | undefined;
@@ -863,7 +864,7 @@ export default function CharacterPanel({
 
                   // Autoattack: to-hit uses DEX, damage uses STR.
                   // (Class identity lives in T0 abilities, not in basic-attack stats.)
-                  const weaponDie = getWeaponDieForItem(mainHandTag ?? null, isTwoHanded ? 2 : 1, mainHandLevel ?? null, weaponProgression);
+                  const weaponDie = getWeaponDieForItem(mainHandTag ?? null, isTwoHanded ? 2 : 1, mainHandLevel ?? null, weaponProgression, mainHandRarity ?? null);
                   const dmgMod = getStatModifier(character.str + (equipmentBonuses.str || 0));   // STR — damage
                   const hitMod = getStatModifier(character.dex + (equipmentBonuses.dex || 0));   // DEX — to-hit
                   const intHit = getIntHitBonus(eInt);
