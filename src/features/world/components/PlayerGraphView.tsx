@@ -345,7 +345,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         const allAreaNodeIds = new Set(allAreaNodes.map(n => n.id));
         const fullPath = buildHull(allAreaNodes, allAreaNodeIds);
         if (fullPath) {
-          hulls.push({ path: fullPath, fill, stroke, faded: true, areaId: area.id, areaName: area.name });
+          hulls.push({ path: fullPath, fill, stroke, faded: true });
         }
       }
 
