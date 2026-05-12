@@ -30,6 +30,8 @@ export interface PredictionContext {
   weaponHands?: 1 | 2;
   /** Item level of main-hand weapon (drives die-size progression). */
   weaponItemLevel?: number | null;
+  /** Rarity of main-hand weapon (drives rarity die bonus). */
+  weaponItemRarity?: string | null;
 }
 
 export interface PredictionResult {
@@ -52,7 +54,7 @@ export function predictConservativeDamage(ctx: PredictionContext): PredictionRes
   const affinity = getWeaponAffinityBonus(ctx.classKey, ctx.weaponTag);
   const effectiveAC = Math.max(ctx.creatureAC - (ctx.sunderReduction || 0), 0);
   const hands: 1 | 2 = ctx.weaponHands === 2 ? 2 : 1;
-  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel);
+  const die = getWeaponDieForItem(ctx.weaponTag, hands, ctx.weaponItemLevel, undefined, ctx.weaponItemRarity);
 
   // Estimate hit chance: need roll + dexHitMod + ihb + affinity >= effectiveAC
   const threshold = Math.max(effectiveAC - dexHitMod - ihb - affinity.hitBonus, 1);

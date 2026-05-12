@@ -55,7 +55,7 @@ export default function ItemTooltipCard({
   const subtitle = itemSubtitle(item);
   const isWeapon = !!item.weapon_tag && !isShield(item.weapon_tag);
   const die = isWeapon
-    ? getWeaponDieForItem(item.weapon_tag ?? null, item.hands === 2 ? 2 : 1, item.level ?? null, weaponProgression)
+    ? getWeaponDieForItem(item.weapon_tag ?? null, item.hands === 2 ? 2 : 1, item.level ?? null, weaponProgression, (item as any).rarity ?? null)
     : 0;
   const affinity = affinityLabelFor(item.weapon_tag, classKey, CLASS_WEAPON_AFFINITY);
 
