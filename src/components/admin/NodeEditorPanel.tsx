@@ -1024,6 +1024,11 @@ export default function NodeEditorPanel({
                   💎 Is Jewelcrafter (forge rings, amulets, trinkets)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={form.is_stonebinder}
+                    onChange={e => setForm(f => ({ ...f, is_stonebinder: e.target.checked }))} />
+                  ⚜ Is Stonebinder (fuse Turning Stones into Ascended)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_teleport}
                     onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
                   🌀 Is Teleport Point (fast travel destination)
