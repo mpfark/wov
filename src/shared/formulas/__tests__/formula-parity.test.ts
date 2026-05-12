@@ -30,6 +30,7 @@ import {
   calculateAC, getEffectiveAC,
   getWisAntiCrit, getShieldBlockChance, getShieldBlockAmount,
   getHitQuality, HIT_QUALITY_MULT,
+  getRarityDieBonus, getWeaponDieForItem,
 } from '@/shared/formulas/combat';
 import {
   getXpPenalty,
@@ -134,6 +135,27 @@ describe('Item stat budget — fixed snapshots', () => {
     const eqp = getItemStatBudget(10, 'common', 1, 'equipment');
     const con = getItemStatBudget(10, 'common', 1, 'consumable');
     expect(con).toBe(eqp * 3);
+  });
+});
+
+describe('Weapon die — rarity + level progression', () => {
+  it('rarity bonus table', () => {
+    expect(getRarityDieBonus('common')).toBe(0);
+    expect(getRarityDieBonus('uncommon')).toBe(1);
+    expect(getRarityDieBonus('unique')).toBe(2);
+    expect(getRarityDieBonus('soulforged')).toBe(3);
+    expect(getRarityDieBonus(null)).toBe(0);
+    expect(getRarityDieBonus('mystery')).toBe(0);
+  });
+  it('stacks rarity + level on weapon die', () => {
+    // sword 1H base d6
+    expect(getWeaponDieForItem('sword', 1, 1, undefined, 'common')).toBe(6);
+    expect(getWeaponDieForItem('sword', 1, 1, undefined, 'uncommon')).toBe(7);
+    expect(getWeaponDieForItem('sword', 1, 21, undefined, 'common')).toBe(8);  // +2 level tier
+    expect(getWeaponDieForItem('sword', 1, 31, undefined, 'soulforged')).toBe(12); // 6+3+3
+  });
+  it('unarmed ignores rarity', () => {
+    expect(getWeaponDieForItem(null, 1, 40, undefined, 'soulforged')).toBe(3); // UNARMED_DIE
   });
 });
 
