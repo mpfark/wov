@@ -355,62 +355,15 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         const primaryAreaNodeIds = new Set(primaryAreaNodes.map(n => n.id));
         const primaryPath = buildHull(primaryAreaNodes, primaryAreaNodeIds);
         if (primaryPath) {
-          hulls.push({ path: primaryPath, fill, stroke, areaId: area.id, areaName: area.name });
+          hulls.push({ path: primaryPath, fill, stroke });
         }
       }
     }
     return hulls;
   })();
 
-  const computeTooltipPos = (e: React.MouseEvent): { x: number; y: number } => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
-
-  const handleAreaHover = (e: React.MouseEvent, hull: AreaHull) => {
-    if (!hull.areaId || !hull.areaName) return;
-    const areaNodeIds = new Set(allDisplayNodes.filter(n => n.area_id === hull.areaId).map(n => n.id));
-    const levels: number[] = [];
-    creatureMap.forEach((info, nid) => {
-      if (areaNodeIds.has(nid)) levels.push(...info.levels);
-    });
-    const lines: string[] = [];
-    if (levels.length > 0) {
-      const min = Math.min(...levels);
-      const max = Math.max(...levels);
-      lines.push(min === max ? `Creatures: Lv ${min}` : `Creatures: Lv ${min}–${max}`);
-    } else {
-      lines.push('No creatures');
-    }
-    setTooltip({ ...computeTooltipPos(e), title: hull.areaName, lines });
-  };
-
-  const handleNodeHover = (e: React.MouseEvent, node: GameNode) => {
-    const lines: string[] = [];
-    const area = _areas.find(a => a.id === node.area_id);
-    if (area) lines.push(area.name);
-    const services: string[] = [];
-    if (node.is_teleport) services.push('🌀 Teleport');
-    if ((node as any).is_inn) services.push('🏨 Inn');
-    if ((node as any).is_vendor) services.push('🪙 Vendor');
-    if ((node as any).is_blacksmith) services.push('🔨 Blacksmith');
-    if ((node as any).is_jewelcrafter) services.push('💎 Jewelcrafter');
-    if ((node as any).is_stonebinder) services.push('⚜ Stonebinder');
-    if ((node as any).is_trainer) services.push('🏛️ Trainer');
-    if ((node as any).is_marketplace) services.push('🏛️ Marketplace');
-    if (services.length > 0) lines.push(services.join(' · '));
-    const info = creatureMap.get(node.id);
-    if (info && info.levels.length > 0) {
-      const min = Math.min(...info.levels);
-      const max = Math.max(...info.levels);
-      lines.push(min === max ? `Creatures: Lv ${min}` : `Creatures: Lv ${min}–${max}`);
-    }
-    setTooltip({ ...computeTooltipPos(e), title: node.name, lines });
-  };
-
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div className="relative w-full">
       <svg
         viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
         className="block w-full h-auto"
