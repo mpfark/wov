@@ -32,6 +32,13 @@ const OUTLINE_RADIUS = NODE_R + 20;
 const AREA_OUTLINE_RADIUS = NODE_R + 10;
 const DRAG_THRESHOLD = 4;
 
+interface TooltipState {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
+}
+
 export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, currentNodeId, nodes, regions, areas, playerCp, currentRegion, onTeleport, inCombat }: Props) {
   const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -45,6 +52,39 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
   const { emojiMap } = useAreaTypes();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedTeleportNode, setSelectedTeleportNode] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [creatureLevels, setCreatureLevels] = useState<Map<string, number[]>>(new Map());
+
+  // Fetch creature levels per node when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    supabase.from('creatures').select('node_id, level').eq('is_alive', true)
+      .then(({ data }) => {
+        if (!data) return;
+        const m = new Map<string, number[]>();
+        for (const c of data) {
+          if (!c.node_id || typeof c.level !== 'number') continue;
+          const arr = m.get(c.node_id) || [];
+          arr.push(c.level);
+          m.set(c.node_id, arr);
+        }
+        setCreatureLevels(m);
+      });
+  }, [open]);
+
+  const computeTooltipPos = useCallback((clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }, []);
+
+  const formatLevelRange = (levels: number[]): string | null => {
+    if (levels.length === 0) return null;
+    const min = Math.min(...levels);
+    const max = Math.max(...levels);
+    return min === max ? `Creatures: Lv ${min}` : `Creatures: Lv ${min}–${max}`;
+  };
+
 
   // Fetch visited nodes on open
   useEffect(() => {
@@ -257,6 +297,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     if (!didDrag.current) {
       setSelectedTeleportNode(null);
     }
+    setTooltip(null);
   }, []);
 
   const centerOnCurrent = useCallback(() => {
@@ -367,6 +408,20 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   const fill = getAreaFillColor(emoji);
                   const stroke = getAreaStrokeColor(emoji);
 
+                  const handleAreaTooltip = (e: React.MouseEvent) => {
+                    if (!area) return;
+                    const areaNodeIds = visibleNodes.filter(n => n.area_id === areaId).map(n => n.id);
+                    const levels: number[] = [];
+                    for (const nid of areaNodeIds) {
+                      const arr = creatureLevels.get(nid);
+                      if (arr) levels.push(...arr);
+                    }
+                    const lines: string[] = [];
+                    const range = formatLevelRange(levels);
+                    if (range) lines.push(range);
+                    setTooltip({ ...computeTooltipPos(e.clientX, e.clientY), title: area.name, lines });
+                  };
+
                   return (
                     <g key={`area-${areaId}`}>
                       <path
@@ -374,6 +429,9 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                         fill={fill}
                         stroke={stroke}
                         strokeWidth={1.5}
+                        onMouseEnter={handleAreaTooltip}
+                        onMouseMove={handleAreaTooltip}
+                        onMouseLeave={() => setTooltip(null)}
                       />
                       {area && (
                         <text
@@ -382,6 +440,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                           fill={stroke.replace('/ 0.6)', '/ 0.9)')}
                           className="font-display"
                           fontSize={8}
+                          pointerEvents="none"
                         >
                           {area.name}
                         </text>
@@ -465,11 +524,30 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   
                   const isSelected = selectedTeleportNode === node.id;
 
+                  const buildNodeTooltip = (e: React.MouseEvent) => {
+                    const lines: string[] = [];
+                    if (area && area.name !== node.name) lines.push(area.name);
+                    const services: string[] = [];
+                    if (node.is_teleport) services.push('🌀 Teleport');
+                    if ((node as any).is_inn) services.push('🏨 Inn');
+                    if (node.is_vendor) services.push('🪙 Vendor');
+                    if (node.is_blacksmith) services.push('🔨 Blacksmith');
+                    if ((node as any).is_jewelcrafter) services.push('💎 Jewelcrafter');
+                    if ((node as any).is_stonebinder) services.push('⚜ Stonebinder');
+                    if ((node as any).is_trainer) services.push('🏛️ Trainer');
+                    if ((node as any).is_marketplace) services.push('🏛️ Marketplace');
+                    if (services.length > 0) lines.push(services.join(' · '));
+                    const range = formatLevelRange(creatureLevels.get(node.id) || []);
+                    if (range) lines.push(range);
+                    setTooltip({ ...computeTooltipPos(e.clientX, e.clientY), title: node.name || area?.name || 'Unknown', lines });
+                  };
+
                   return (
                     <g
                       key={node.id}
-                      onMouseEnter={() => setHoveredNode(node.id)}
-                      onMouseLeave={() => setHoveredNode(null)}
+                      onMouseEnter={(e) => { setHoveredNode(node.id); buildNodeTooltip(e); }}
+                      onMouseMove={buildNodeTooltip}
+                      onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (canTeleportHere) {
@@ -607,6 +685,19 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
               </div>
             );
           })()}
+
+          {/* Hover tooltip — area / node info */}
+          {tooltip && (
+            <div
+              className="pointer-events-none absolute z-40 rounded-md border border-border bg-popover/95 px-2 py-1 shadow-md"
+              style={{ left: tooltip.x + 12, top: tooltip.y + 12, maxWidth: 240 }}
+            >
+              <div className="font-display text-xs text-foreground">{tooltip.title}</div>
+              {tooltip.lines.map((l, i) => (
+                <div key={i} className="text-[10px] text-muted-foreground">{l}</div>
+              ))}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
