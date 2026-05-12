@@ -535,7 +535,7 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                     if ((node as any).is_jewelcrafter) services.push('💎 Jewelcrafter');
                     if ((node as any).is_stonebinder) services.push('⚜ Stonebinder');
                     if ((node as any).is_trainer) services.push('🏛️ Trainer');
-                    if ((node as any).is_marketplace) services.push('🏛️ Marketplace');
+                    if ((node as any).is_marketplace) services.push('🏷️ Marketplace');
                     if (services.length > 0) lines.push(services.join(' · '));
                     const range = formatLevelRange(creatureLevels.get(node.id) || []);
                     if (range) lines.push(range);

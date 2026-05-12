@@ -504,7 +504,7 @@ export default function MapPanel({
                         onClick={onOpenMarketplace}
                         className="h-5 w-5 flex items-center justify-center rounded bg-primary/15 border border-primary/40 shadow-[0_0_6px_hsl(var(--primary)/0.3)] hover:bg-primary/25 transition-colors"
                       >
-                        <span className="text-[10px]">🏛️</span>
+                        <span className="text-[10px]">🏷️</span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="text-xs">Marketplace</TooltipContent>
