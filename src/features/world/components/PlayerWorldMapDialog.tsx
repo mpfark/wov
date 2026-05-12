@@ -523,11 +523,30 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
                   
                   const isSelected = selectedTeleportNode === node.id;
 
+                  const buildNodeTooltip = (e: React.MouseEvent) => {
+                    const lines: string[] = [];
+                    if (area && area.name !== node.name) lines.push(area.name);
+                    const services: string[] = [];
+                    if (node.is_teleport) services.push('🌀 Teleport');
+                    if ((node as any).is_inn) services.push('🏨 Inn');
+                    if (node.is_vendor) services.push('🪙 Vendor');
+                    if (node.is_blacksmith) services.push('🔨 Blacksmith');
+                    if ((node as any).is_jewelcrafter) services.push('💎 Jewelcrafter');
+                    if ((node as any).is_stonebinder) services.push('⚜ Stonebinder');
+                    if ((node as any).is_trainer) services.push('🏛️ Trainer');
+                    if ((node as any).is_marketplace) services.push('🏛️ Marketplace');
+                    if (services.length > 0) lines.push(services.join(' · '));
+                    const range = formatLevelRange(creatureLevels.get(node.id) || []);
+                    if (range) lines.push(range);
+                    setTooltip({ ...computeTooltipPos(e.clientX, e.clientY), title: node.name || area?.name || 'Unknown', lines });
+                  };
+
                   return (
                     <g
                       key={node.id}
-                      onMouseEnter={() => setHoveredNode(node.id)}
-                      onMouseLeave={() => setHoveredNode(null)}
+                      onMouseEnter={(e) => { setHoveredNode(node.id); buildNodeTooltip(e); }}
+                      onMouseMove={buildNodeTooltip}
+                      onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (canTeleportHere) {
