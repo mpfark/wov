@@ -429,9 +429,8 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
 
           return (
             <g key={node.id}
-              onMouseEnter={(e) => { setHoveredNode(node.id); handleNodeHover(e, node); }}
-              onMouseMove={(e) => handleNodeHover(e, node)}
-              onMouseLeave={() => { setHoveredNode(null); setTooltip(null); }}
+              onMouseEnter={() => setHoveredNode(node.id)}
+              onMouseLeave={() => setHoveredNode(null)}
               opacity={isVisitedGhost ? 0.35 : 1}
             >
               {/* Glow for current node */}
