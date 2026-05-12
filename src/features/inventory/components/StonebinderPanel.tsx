@@ -214,7 +214,6 @@ export default function StonebinderPanel({
                 hands: null,
                 level: preview.item.level,
               } as any}
-              currentDurability={preview.item.max_durability}
             />
           </div>
           <p className="text-xs text-destructive font-display text-center">
