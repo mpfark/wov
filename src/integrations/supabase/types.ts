@@ -351,6 +351,9 @@ export type Database = {
           max_mp: number
           mp: number
           name: string
+          portrait_generated_at: string | null
+          portrait_metadata: Json
+          portrait_url: string
           race: Database["public"]["Enums"]["character_race"]
           reserved_buffs: Json
           respec_points: number
@@ -388,6 +391,9 @@ export type Database = {
           max_mp?: number
           mp?: number
           name: string
+          portrait_generated_at?: string | null
+          portrait_metadata?: Json
+          portrait_url?: string
           race: Database["public"]["Enums"]["character_race"]
           reserved_buffs?: Json
           respec_points?: number
@@ -425,6 +431,9 @@ export type Database = {
           max_mp?: number
           mp?: number
           name?: string
+          portrait_generated_at?: string | null
+          portrait_metadata?: Json
+          portrait_url?: string
           race?: Database["public"]["Enums"]["character_race"]
           reserved_buffs?: Json
           respec_points?: number

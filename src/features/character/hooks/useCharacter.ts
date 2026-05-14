@@ -46,6 +46,12 @@ export interface Character {
   reserved_buffs?: any;
   /** Persistent stance values (e.g. Force Shield ward HP across combats). */
   stance_state?: { force_shield_hp?: number; force_shield_updated_at?: string } | null;
+  /** AI-generated character portrait URL (empty string when none). */
+  portrait_url?: string;
+  /** Inputs used for the last portrait generation. */
+  portrait_metadata?: Record<string, unknown>;
+  /** Timestamp of the last portrait generation (24h cooldown). */
+  portrait_generated_at?: string | null;
 }
 
 export function useCharacter(user: User | null) {

@@ -18,6 +18,7 @@ import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/sta
 import { GemPouch } from '@/features/inventory/components/GemPouch';
 import { MaterialsSection } from '@/features/inventory/components/MaterialsSection';
 import { useOwnedGems } from '@/features/inventory/hooks/useOwnedGems';
+import PortraitTab from './PortraitTab';
 
 interface Props {
   character: Character;
@@ -367,6 +368,7 @@ export default function CharacterPanel({
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               )}
             </TabsTrigger>
+            <TabsTrigger value="portrait" className="font-display text-[10px] h-6 flex-1">Portrait</TabsTrigger>
           </TabsList>
 
           {/* Gold — always visible */}
@@ -1006,6 +1008,10 @@ export default function CharacterPanel({
                   );
                 })()}
               </div>
+            </TabsContent>
+
+            <TabsContent value="portrait" className="mt-0">
+              <PortraitTab character={character} equipped={equipped} inCombat={inCombat} />
             </TabsContent>
           </div>
         </Tabs>
