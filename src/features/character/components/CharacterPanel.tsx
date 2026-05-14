@@ -1009,6 +1009,10 @@ export default function CharacterPanel({
                 })()}
               </div>
             </TabsContent>
+
+            <TabsContent value="portrait" className="mt-0">
+              <PortraitTab character={character} equipped={equipped} inCombat={inCombat} />
+            </TabsContent>
           </div>
         </Tabs>
 
