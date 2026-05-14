@@ -18,6 +18,7 @@ import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/sta
 import { GemPouch } from '@/features/inventory/components/GemPouch';
 import { MaterialsSection } from '@/features/inventory/components/MaterialsSection';
 import { useOwnedGems } from '@/features/inventory/hooks/useOwnedGems';
+import PortraitTab from './PortraitTab';
 
 interface Props {
   character: Character;
