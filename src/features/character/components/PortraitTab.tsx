@@ -87,8 +87,7 @@ export default function PortraitTab({ character, equipped, inCombat }: Props) {
   const handleGenerate = async () => {
     const result = await generate({ description, height, body_type: bodyType });
     if (result) {
-      setLocalPortraitUrl(result.portrait_url);
-      setLocalGeneratedAt(result.generated_at);
+      setOptimistic({ url: result.portrait_url, at: result.generated_at });
     }
   };
 
