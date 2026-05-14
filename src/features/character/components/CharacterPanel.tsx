@@ -368,6 +368,7 @@ export default function CharacterPanel({
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               )}
             </TabsTrigger>
+            <TabsTrigger value="portrait" className="font-display text-[10px] h-6 flex-1">Portrait</TabsTrigger>
           </TabsList>
 
           {/* Gold — always visible */}
