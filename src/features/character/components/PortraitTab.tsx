@@ -43,18 +43,28 @@ export default function PortraitTab({ character, equipped, inCombat }: Props) {
   const [description, setDescription] = useState(meta?.description ?? '');
   const [height, setHeight] = useState<PortraitHeight>(meta?.height ?? 'average');
   const [bodyType, setBodyType] = useState<PortraitBodyType>(meta?.body_type ?? 'average');
-  const [localPortraitUrl, setLocalPortraitUrl] = useState<string | undefined>(portraitUrl);
-  const [localGeneratedAt, setLocalGeneratedAt] = useState<string | null | undefined>(generatedAt);
+  // Optimistic override (used only briefly before the character row refreshes via realtime)
+  const [optimistic, setOptimistic] = useState<{ url: string; at: string } | null>(null);
 
-  // Sync when character changes (different selected char)
+  // Sync editable inputs when switching characters
   useEffect(() => {
     setDescription(meta?.description ?? '');
     setHeight(meta?.height ?? 'average');
     setBodyType(meta?.body_type ?? 'average');
-    setLocalPortraitUrl(portraitUrl);
-    setLocalGeneratedAt(generatedAt);
+    setOptimistic(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [character.id]);
+
+  // Once the authoritative row catches up to (or past) the optimistic timestamp, drop the override.
+  useEffect(() => {
+    if (!optimistic) return;
+    if (generatedAt && new Date(generatedAt).getTime() >= new Date(optimistic.at).getTime()) {
+      setOptimistic(null);
+    }
+  }, [generatedAt, optimistic]);
+
+  const localPortraitUrl = optimistic?.url ?? portraitUrl;
+  const localGeneratedAt = optimistic?.at ?? generatedAt;
 
   const { generate, isGenerating } = useCharacterPortrait(character.id);
 
