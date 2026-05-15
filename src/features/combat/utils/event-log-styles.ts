@@ -1,0 +1,339 @@
+/**
+ * event-log-styles.ts — Centralized visual style map for the Event Log.
+ *
+ * Owns: log-line categorization (color/intensity/emphasis) and number-token
+ * extraction. Pure, no React, no side effects.
+ *
+ * The log STRINGS themselves are produced by combat-text.ts and many gameplay
+ * hooks; this module only decides how to render them. Wording is preserved
+ * byte-for-byte — we only split off an optional leading icon and an optional
+ * trailing damage/heal/block number for stronger emphasis.
+ */
+
+export type EventLogCategory =
+  | 'player_attack'
+  | 'enemy_attack'
+  | 'heal'
+  | 'holy'
+  | 'fire'
+  | 'poison'
+  | 'bleed'
+  | 'shadow'
+  | 'buff'
+  | 'mitigation'
+  | 'loot'
+  | 'xp'
+  | 'level_up'
+  | 'crit'
+  | 'kill'
+  | 'system'
+  | 'whisper'
+  | 'speech'
+  | 'passive'
+  | 'neutral';
+
+export interface EventLogStyle {
+  textClass: string;
+  iconClass: string;
+  numberClass: string;
+  emphasis: 'normal' | 'strong';
+}
+
+/**
+ * Single source of truth for log visuals. All colors come from semantic
+ * tokens defined in index.css / tailwind.config.ts — never hex.
+ */
+export const EVENT_STYLE: Record<EventLogCategory, EventLogStyle> = {
+  player_attack: {
+    textClass: 'text-log-player',
+    iconClass: 'text-log-player/80',
+    numberClass: 'text-log-number-damage font-semibold',
+    emphasis: 'normal',
+  },
+  enemy_attack: {
+    textClass: 'text-log-enemy',
+    iconClass: 'text-log-enemy/80',
+    numberClass: 'text-log-number-damage font-semibold',
+    emphasis: 'normal',
+  },
+  heal: {
+    textClass: 'text-log-heal',
+    iconClass: 'text-log-heal/80',
+    numberClass: 'text-log-number-heal font-semibold',
+    emphasis: 'normal',
+  },
+  holy: {
+    textClass: 'text-log-holy',
+    iconClass: 'text-log-holy/80',
+    numberClass: 'text-log-number-heal font-semibold',
+    emphasis: 'normal',
+  },
+  fire: {
+    textClass: 'text-log-fire',
+    iconClass: 'text-log-fire/80',
+    numberClass: 'text-log-number-damage font-semibold',
+    emphasis: 'normal',
+  },
+  poison: {
+    textClass: 'text-log-poison',
+    iconClass: 'text-log-poison/80',
+    numberClass: 'text-log-number-damage font-semibold',
+    emphasis: 'normal',
+  },
+  bleed: {
+    textClass: 'text-log-bleed',
+    iconClass: 'text-log-bleed/80',
+    numberClass: 'text-log-number-damage font-semibold',
+    emphasis: 'normal',
+  },
+  shadow: {
+    textClass: 'text-log-shadow',
+    iconClass: 'text-log-shadow/80',
+    numberClass: 'text-log-number-damage font-semibold',
+    emphasis: 'normal',
+  },
+  buff: {
+    textClass: 'text-log-buff',
+    iconClass: 'text-log-buff/80',
+    numberClass: 'text-log-buff font-semibold',
+    emphasis: 'normal',
+  },
+  mitigation: {
+    textClass: 'text-log-mitigation',
+    iconClass: 'text-log-mitigation/80',
+    numberClass: 'text-log-number-block font-semibold',
+    emphasis: 'normal',
+  },
+  loot: {
+    textClass: 'text-log-loot',
+    iconClass: 'text-log-loot/80',
+    numberClass: 'text-log-loot font-semibold',
+    emphasis: 'normal',
+  },
+  xp: {
+    textClass: 'text-log-loot/90',
+    iconClass: 'text-log-loot/70',
+    numberClass: 'text-log-loot font-semibold',
+    emphasis: 'normal',
+  },
+  level_up: {
+    textClass: 'text-primary',
+    iconClass: 'text-primary',
+    numberClass: 'text-primary font-semibold',
+    emphasis: 'strong',
+  },
+  crit: {
+    textClass: 'text-primary log-crit',
+    iconClass: 'text-primary',
+    numberClass: 'text-primary font-bold',
+    emphasis: 'strong',
+  },
+  kill: {
+    textClass: 'text-destructive',
+    iconClass: 'text-destructive',
+    numberClass: 'text-destructive font-semibold',
+    emphasis: 'strong',
+  },
+  system: {
+    textClass: 'text-log-system italic',
+    iconClass: 'text-log-system/70',
+    numberClass: 'text-log-system',
+    emphasis: 'normal',
+  },
+  whisper: {
+    textClass: 'text-log-shadow',
+    iconClass: 'text-log-shadow/80',
+    numberClass: 'text-log-shadow',
+    emphasis: 'normal',
+  },
+  speech: {
+    textClass: 'text-foreground',
+    iconClass: 'text-foreground/70',
+    numberClass: 'text-foreground',
+    emphasis: 'normal',
+  },
+  passive: {
+    textClass: 'text-log-player/70',
+    iconClass: 'text-log-player/60',
+    numberClass: 'text-log-number-damage/80',
+    emphasis: 'normal',
+  },
+  neutral: {
+    textClass: 'text-foreground/80',
+    iconClass: 'text-foreground/60',
+    numberClass: 'text-foreground font-semibold',
+    emphasis: 'normal',
+  },
+};
+
+export interface ClassifiedLog {
+  category: EventLogCategory;
+  isRemote: boolean;
+  isCrit: boolean;
+  isKill: boolean;
+  isLevelUp: boolean;
+}
+
+/**
+ * Pure classifier — no allocation beyond the result object.
+ *
+ * Decision order matters: stronger signals (crit / kill / level-up / loot)
+ * win over base category so the renderer can apply the correct emphasis.
+ */
+export function classifyLogLine(log: string): ClassifiedLog {
+  const isRemote = log.includes('(remote)');
+  const isCrit = log.includes('CRITICAL!') || log.startsWith('💥');
+  const isKill =
+    log.startsWith('💀') ||
+    log.includes('been defeated') ||
+    log.includes('struck down');
+  const isLevelUp = log.startsWith('🎉') || log.includes('Level Up');
+
+  // Strong-emphasis categories first.
+  if (isLevelUp) return { category: 'level_up', isRemote, isCrit, isKill, isLevelUp };
+  if (isKill) return { category: 'kill', isRemote, isCrit, isKill, isLevelUp };
+  if (isCrit) return { category: 'crit', isRemote, isCrit, isKill, isLevelUp };
+
+  // Loot / XP / rewards.
+  if (
+    log.startsWith('🏆') ||
+    log.includes('Legendary') ||
+    log.includes('Soulforged item') ||
+    log.includes('Unique item')
+  ) {
+    return { category: 'loot', isRemote, isCrit, isKill, isLevelUp };
+  }
+  if (log.startsWith('📈') || log.startsWith('💰') || log.includes('XP') || log.includes('gold')) {
+    return { category: 'xp', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Communication.
+  if (log.startsWith('🤫')) return { category: 'whisper', isRemote, isCrit, isKill, isLevelUp };
+  if (log.startsWith('💬')) return { category: 'speech', isRemote, isCrit, isKill, isLevelUp };
+
+  // System / travel / queueing.
+  if (log.startsWith('⏳') || log.startsWith('🧭') || log.startsWith('🗺️') || log.startsWith('🚪')) {
+    return { category: 'system', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Mitigation / shield / block.
+  if (
+    log.startsWith('🛡️') ||
+    log.includes('blocks') ||
+    log.includes('absorbs') ||
+    log.includes('parries') ||
+    log.includes('deflects')
+  ) {
+    return { category: 'mitigation', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Healing / restore.
+  if (
+    log.startsWith('💚') ||
+    log.startsWith('💪') ||
+    log.startsWith('💉') ||
+    log.includes('restore') ||
+    log.includes('recover') ||
+    log.includes('heals you')
+  ) {
+    return { category: 'heal', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Holy / radiance / consecration.
+  if (
+    log.startsWith('✨') ||
+    log.startsWith('🕊️') ||
+    log.includes('holy damage') ||
+    log.includes('Consecrate')
+  ) {
+    return { category: 'holy', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Elemental DoTs / effects.
+  if (log.startsWith('🔥')) return { category: 'fire', isRemote, isCrit, isKill, isLevelUp };
+  if (log.startsWith('🧪')) return { category: 'poison', isRemote, isCrit, isKill, isLevelUp };
+  if (log.startsWith('🩸')) return { category: 'bleed', isRemote, isCrit, isKill, isLevelUp };
+  if (log.startsWith('🌑') || log.startsWith('🌫️')) {
+    return { category: 'shadow', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Buffs / songs / stances.
+  if (
+    log.startsWith('🎶') ||
+    log.startsWith('🌿') ||
+    log.startsWith('🔄') ||
+    log.startsWith('📯') ||
+    log.startsWith('🦅')
+  ) {
+    return { category: 'buff', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Damage warnings / DoT damage taken (no DoT-source emoji match above).
+  if (log.startsWith('⚠️') || log.startsWith('💔')) {
+    return { category: 'enemy_attack', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Player attack glyphs (weapons + class fallbacks).
+  if (
+    log.startsWith('⚔️') ||
+    log.startsWith('🗡️') ||
+    log.startsWith('🏹') ||
+    log.startsWith('🪓') ||
+    log.startsWith('🔨') ||
+    log.startsWith('🪄') ||
+    log.startsWith('🎯') ||
+    log.startsWith('🔪') ||
+    log.startsWith('🦘')
+  ) {
+    return { category: 'player_attack', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  // Generic enemy attack heuristic — text without a leading emoji that
+  // mentions damage to "you".
+  if (log.includes('damage') && (log.includes(' you') || log.startsWith('You '))) {
+    return { category: 'enemy_attack', isRemote, isCrit, isKill, isLevelUp };
+  }
+
+  return { category: 'neutral', isRemote, isCrit, isKill, isLevelUp };
+}
+
+// ── Token splitter ─────────────────────────────────────────────
+
+const EMOJI_PREFIX_RE =
+  /^([\p{Extended_Pictographic}\p{Emoji_Presentation}](?:\uFE0F|\u200D[\p{Extended_Pictographic}\p{Emoji_Presentation}]\uFE0F?)*\s*)+/u;
+
+const NUMBER_TAIL_RE =
+  /(\s\[\d+\][.!]?|\s+for\s+\d+\s+(?:[a-z]+\s+)?damage[.!]?|\s+restores\s+\d+\s+(?:HP|MP|CP)(?:\s+to\s+\w+)?[.!]?|\s+blocks\s+\d+\s+damage[.!]?|\s+heals\s+(?:you\s+|\w+\s+)?for\s+\d+[.!]?)$/i;
+
+export interface LogTokens {
+  icon: string;
+  body: string;
+  number: string;
+}
+
+/**
+ * Split a log line into icon / body / number for structured rendering.
+ *
+ * Always preserves the original wording: icon + body + number, when joined,
+ * equals the input string. If no icon or number is detected, those fields
+ * are empty and `body` is the full string.
+ */
+export function splitLogTokens(log: string): LogTokens {
+  let rest = log;
+  let icon = '';
+
+  const iconMatch = rest.match(EMOJI_PREFIX_RE);
+  if (iconMatch) {
+    icon = iconMatch[0].trimEnd();
+    rest = rest.slice(iconMatch[0].length);
+  }
+
+  let number = '';
+  const numMatch = rest.match(NUMBER_TAIL_RE);
+  if (numMatch) {
+    number = numMatch[0].trimStart();
+    rest = rest.slice(0, rest.length - numMatch[0].length);
+  }
+
+  return { icon, body: rest, number };
+}

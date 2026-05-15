@@ -56,6 +56,26 @@
     --dot-burn: 15 70% 45%;
     --dot-bleed: 0 55% 48%;
     --soulforged: 200 70% 55%;
+
+    /* ── Event Log palette ────────────────────────
+       One token per category — keeps the log visually
+       cohesive without inventing per-ability colors. */
+    --log-player: 38 65% 62%;        /* warm gold/amber */
+    --log-enemy: 0 55% 58%;          /* muted red */
+    --log-heal: 160 45% 60%;         /* pale teal */
+    --log-holy: 50 40% 80%;          /* soft warm white */
+    --log-fire: 18 70% 58%;          /* ember */
+    --log-poison: 120 40% 50%;       /* muted green */
+    --log-bleed: 0 55% 50%;          /* blood */
+    --log-shadow: 270 25% 60%;       /* muted violet */
+    --log-buff: 280 30% 65%;         /* violet */
+    --log-mitigation: 215 20% 60%;   /* dim blue-grey */
+    --log-loot: 42 70% 60%;          /* soft gold */
+    --log-system: 215 15% 55%;       /* dim blue-grey */
+
+    --log-number-damage: 35 80% 70%; /* bright warm */
+    --log-number-heal: 150 55% 65%;  /* soft green/teal */
+    --log-number-block: 215 30% 70%; /* muted blue-grey */
   }
 }
 
@@ -256,6 +276,36 @@
 }
 .combat-start-flash {
   animation: combat-start-glow 0.4s ease-out;
+}
+
+/* ═══════════════════════════════════════
+   Event Log line layout
+   ═══════════════════════════════════════ */
+
+.event-log-line {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  padding: 1px 0 1px 6px;
+  border-left: 1px solid hsl(var(--border) / 0.25);
+}
+.event-log-line + .event-log-line {
+  margin-top: 1px;
+}
+.event-log-icon {
+  display: inline-block;
+  width: 1.1em;
+  margin-right: 0.25rem;
+  opacity: 0.85;
+  vertical-align: baseline;
+  font-size: 0.95em;
+}
+.event-log-body {
+  /* inherits text color from line */
+}
+.event-log-number {
+  margin-left: 0.15rem;
+  letter-spacing: 0.01em;
 }
 
 /* ═══════════════════════════════════════
