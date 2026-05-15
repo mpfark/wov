@@ -1,92 +1,136 @@
-# Character Portrait Generator
+# Event Log Visual Consistency Pass
 
-A new "Portrait" tab in the Character Panel where the player describes their character (free-text), picks a height and body type, and clicks **Generate** to produce a single AI illustration of the character wearing their currently equipped gear. Limited to **one generation per character per 24h**.
+## Goal
+Keep all flavorful MUD wording exactly as it is today. Replace the ad-hoc, emoji-keyword color map in `combat-log-utils.ts` with a small, centralized **category-based style system** so every line in the Event Log shares a consistent color hierarchy, typography, spacing, and emphasis.
 
-## UX
+No gameplay or wording changes. Pure presentation refactor inside `src/features/combat/`.
 
-New 4th tab in `CharacterPanel.tsx` (next to Equipment / Inventory / Attributes), titled **Portrait**.
+---
 
-Layout (top → bottom):
-1. **Inputs** (collapsible once a portrait exists):
-   - Description (textarea, max 500 chars) — e.g. "Scarred veteran with silver braids and a crooked nose."
-   - Height (select): Short / Average / Tall
-   - Body type (select): Lean / Average / Muscular / Heavyset
-2. **Generate button**:
-   - Disabled when on cooldown; shows "Next portrait available in Xh Ym".
-   - Disabled while generation is in flight (spinner).
-3. **Portrait area**:
-   - If a portrait exists: show the image (square, framed in the same parchment style as `ItemIllustration`).
-   - Below the image: small caption with the generation timestamp.
-   - If none yet: empty-state hint ("Describe your character above and forge their likeness.").
+## What changes for the player
 
-The cooldown is **per character**, not per user, so each character can have its own portrait.
+- All player actions read in one consistent warm gold/amber tone.
+- Incoming enemy hits read in one muted red tone.
+- Heals/support read in one pale teal tone, buffs in muted violet, loot in soft gold, system/travel in dim blue-grey.
+- DoTs (bleed/poison/burn) keep their identity but with normalized intensity.
+- Damage and heal **numbers** become the only strongly emphasized token in normal lines.
+- Crits, killing blows, level-ups, legendary loot keep stronger styling — but only those.
+- Repeated passive-trigger lines (retaliation, shield procs, remote DoTs) render slightly dimmer than the player's own active actions.
+- Tighter line height, consistent left padding, subtle separators between events.
+- One icon per line at a normalized size and opacity; no oversized glow stacks.
 
-## Data
+The wording (`🔥 Your Holy Shield sears the Stillpoint Sentry for 53 holy damage!`) is unchanged.
 
-New columns on `characters`:
-- `portrait_url text not null default ''`
-- `portrait_metadata jsonb not null default '{}'::jsonb` — stores `{ description, height, body_type, generated_at }` so we can re-show the inputs.
-- `portrait_generated_at timestamptz null` — used to enforce the 24h cooldown server-side.
+---
 
-No new RLS needed; the `characters` policies already cover owner read/write. The edge function uses the service role for the actual update so the cooldown check is authoritative.
+## Categories
 
-## Edge function: `ai-character-portrait`
+Single source of truth for visual identity:
 
-Modeled directly on `supabase/functions/ai-item-illustration/index.ts` so the visual baseline matches:
-
-- Auth: validate JWT, load character, ensure `auth.uid() = characters.user_id` (no admin bypass needed).
-- Rate limit: reject if `portrait_generated_at` is within the last 24h. Return 429 with `next_available_at` in the body so the client can render the countdown.
-- Input validation (zod): `character_id uuid`, `description string ≤ 500`, `height ∈ {short, average, tall}`, `body_type ∈ {lean, average, muscular, heavyset}`.
-- Build prompt (see below), call the same `google/gemini-3.1-flash-image-preview` model with `modalities: ["image", "text"]`.
-- Upload to a new public bucket `character-portraits` at path `{character_id}-{timestamp}.png`.
-- Update `characters.portrait_url`, `portrait_metadata`, `portrait_generated_at`.
-- Return `{ portrait_url, generated_at }`.
-
-Storage: create bucket `character-portraits` (public read), service-role write only.
-
-## Prompt — keeps the same baseline
-
-A new helper `src/lib/character-portrait-prompt.ts` (mirrored inline in the edge function, exactly like the item illustration pattern) produces:
-
-```
-A single hero-shot full-body portrait of {Race} {Class} named "{Name}".
-Appearance: {description}.
-Build: {height}, {body_type}.
-Equipped gear: {comma-separated list of equipped item names with slot, e.g. "longsword (main hand), kite shield (off hand), chainmail hauberk (chest)"}.
-Style: masterwork craftsmanship, fine materials and restrained ornamentation, faint magical character — no glowing runes, no gemstone encrustation, no radiant aura.
-Dark fantasy painterly art, dramatic chiaroscuro lighting against a deep neutral background, centered framing, no text, no watermark, no border, square 1:1 composition, character only — no extra figures, no background scenery.
+```text
+EVENT_STYLE = {
+  player_attack    → warm gold/amber
+  enemy_attack     → muted red
+  heal             → pale teal
+  holy             → pale teal / soft white
+  fire             → warm ember
+  poison           → muted green
+  bleed            → muted blood red
+  shadow           → muted violet
+  buff             → muted violet
+  mitigation       → dim blue-grey (block/absorb)
+  loot             → soft gold
+  renown / xp      → soft gold (subtle)
+  level_up / crit  → primary, bold (reserved emphasis)
+  system / travel  → dim blue-grey
+  whisper          → muted purple
+  remote / passive → 0.6–0.7 opacity variant of base category
+}
 ```
 
-This reuses the same restrained `unique`-tier wording from the recently toned-down `RARITY_STYLE.unique`, plus the same painterly suffix, so portraits sit visually next to item illustrations without a stylistic mismatch.
+Each category resolves to: `{ textClass, iconClass, numberClass, emphasis: 'normal' | 'strong' }`.
 
-## Frontend
+---
 
-New files:
-- `src/features/character/components/PortraitTab.tsx` — the tab body (inputs + button + image).
-- `src/features/character/hooks/useCharacterPortrait.ts` — wraps `supabase.functions.invoke('ai-character-portrait', …)`, exposes `generate`, `isGenerating`, `cooldownEndsAt`, `portraitUrl`, `metadata`.
-- `src/lib/character-portrait-prompt.ts` — frontend mirror of the prompt builder (used only for an optional "preview prompt" debug; the edge function is the source of truth).
+## Technical Direction
 
-Edits:
-- `CharacterPanel.tsx`: add a `portrait` tab trigger and `<TabsContent value="portrait">` mounting `PortraitTab`. Tab must be **locked in combat** (consistent with the existing 3-tab combat lock noted in memory `features/character-panel/layout`).
-- `useCharacter.ts`: include the new columns in the character select so `portrait_url` / `portrait_metadata` / `portrait_generated_at` are available without an extra fetch.
+### New file: `src/features/combat/utils/event-log-styles.ts`
+- Exports `EventLogCategory` type and `EVENT_STYLE` map (Tailwind class strings only — all colors via existing semantic tokens in `index.css` / `tailwind.config.ts`; no new hex).
+- Exports `classifyLogLine(log: string): { category, isRemote, isCrit, isKill }` — a pure function that takes the existing string log entries and decides their category. It absorbs and replaces the giant `if/else` chain currently inside `combat-log-utils.ts#getLogColor`.
+- Exports `splitLogTokens(log: string): { icon, body, number }` — light parser that pulls:
+  - leading emoji (first grapheme) → `icon`
+  - trailing damage/heal value, matched against patterns already produced by `combat-text.ts` (`[NN]`, `for NN damage`, `restores NN HP`, `blocks NN`) → `number`
+  - everything else → `body`
+- Returns the original string untouched if no number is found, so wording is preserved.
 
-## Cooldown (client display)
+### Tokens to add in `src/index.css`
+A small number of new HSL CSS variables, each used by the new style map:
+- `--log-player`, `--log-enemy`, `--log-heal`, `--log-holy`, `--log-fire`, `--log-poison`, `--log-bleed`, `--log-shadow`, `--log-buff`, `--log-mitigation`, `--log-loot`, `--log-system`, `--log-number-damage`, `--log-number-heal`, `--log-number-block`.
+- Several reuse existing tokens (`--gold`, `--blood`, `--elvish`, `--dwarvish`, `--dot-*`) where the hue already matches; only add new variables when no existing one fits.
+- Mirror in `tailwind.config.ts` under `colors.log.*` so utility classes like `text-log-player`, `text-log-enemy`, `text-log-number-damage` are available.
 
-Client reads `portrait_generated_at` from the character row, computes `nextAt = generatedAt + 24h`, and shows a live countdown (refreshes every minute). The server still enforces the actual limit; the client is purely informational.
+### Refactor: `src/features/combat/utils/combat-log-utils.ts`
+- `getLogColor` becomes a thin shim that calls `classifyLogLine` then returns `EVENT_STYLE[category].textClass` (kept for any external caller). Internal cache stays.
+- No more emoji-keyword color decisions live here.
+
+### Refactor: `src/features/combat/components/EventLogPanel.tsx`
+- For each entry, call `classifyLogLine` + `splitLogTokens`, then render:
+  ```tsx
+  <p className={cn('event-log-line', style.textClass, style.emphasis === 'strong' && 'font-semibold', isRemote && 'opacity-60')}>
+    {icon && <span className={cn('event-log-icon', style.iconClass)}>{icon}</span>}
+    <span className="event-log-body">{body}</span>
+    {number && <span className={cn('event-log-number', style.numberClass)}>{number}</span>}
+  </p>
+  ```
+- Add small CSS rules in `index.css` (or scoped in the panel) for `.event-log-line` (line-height, left padding, subtle bottom separator at 1px `border-border/30`), `.event-log-icon` (fixed width, vertical-align baseline, `opacity-80`), and `.event-log-number` (slightly heavier weight, 1.05× size).
+- The existing `---tick---` separator continues to render as the divider it already is.
+- The display-mode toggle (`numbers` / `words` / `both`) is untouched — it still controls `combat-text.ts` formatting upstream.
+
+### Repeated/passive dimming
+- Inside `classifyLogLine`, the existing `(remote)` substring detection becomes `isRemote = true` and the renderer applies a single `opacity-60` modifier instead of the current bespoke per-emoji classes.
+- DoT ticks (bleed/poison/burn) without a player-source verb classify as `passive`, rendered at one intensity step lower than `player_attack`.
+
+### Crit / killing blow / level-up / loot emphasis
+- `classifyLogLine` flags `isCrit` (line contains `CRITICAL!` or starts with `💥`), `isKill` (`💀`, `been defeated`, `struck down`), `isLevelUp` (`🎉` or `Level Up`), and rare-loot (`🏆`, `Legendary`, `Soulforged`).
+- These map to `emphasis: 'strong'` and use `text-primary` / `text-glow` (existing) — **only** these get the brighter treatment.
+
+### What stays untouched
+- `combat-text.ts` — wording, tier words, flavor sentences, weapon emoji, boss flavor.
+- All emitters in `useGameLoop`, `useCombatActions`, `usePartyCombatLog`, `useConsumableActions`, etc. — they keep producing the same strings.
+- The `numbers / words / both` toggle behavior.
+- Server logs, broadcast payloads, persisted activity logs.
+
+---
+
+## File-by-file impact
+
+| File | Change |
+|---|---|
+| `src/features/combat/utils/event-log-styles.ts` | **new** — categories, style map, `classifyLogLine`, `splitLogTokens` |
+| `src/features/combat/utils/combat-log-utils.ts` | reduce `getLogColor` to a shim over the new classifier |
+| `src/features/combat/components/EventLogPanel.tsx` | render structured icon/body/number spans; apply category + remote dimming |
+| `src/index.css` | add `--log-*` HSL tokens; add `.event-log-line/.event-log-icon/.event-log-number` rules |
+| `tailwind.config.ts` | expose `colors.log.*` to match the new tokens |
+
+No edits to combat hooks, server functions, or wording producers.
+
+---
 
 ## Out of scope
 
-- Multiple saved portraits / history.
-- Manual prompt override (admin-only, can be added later).
-- Per-equipment-change auto-regeneration.
-- Sharing the portrait outside the character panel (e.g. inspect dialog) — easy follow-up once the column exists.
+- Any change to the wording, verbs, flavor, or tier-word system in `combat-text.ts`.
+- Any change to what the server emits or what gets stored in activity/combat logs.
+- Filtering, collapsing, or grouping of repeated lines (beyond opacity dimming for `(remote)` / passive).
+- New animations or motion effects.
+- Sound or haptic cues.
 
-## Technical summary
+---
 
-| Area | Change |
-|---|---|
-| DB migration | Add `portrait_url`, `portrait_metadata`, `portrait_generated_at` to `characters` |
-| Storage | New public bucket `character-portraits` |
-| Edge function | New `ai-character-portrait` (auth + 24h cooldown + Lovable AI image gen + storage upload + characters update) |
-| Frontend | New `PortraitTab.tsx`, `useCharacterPortrait.ts`, `character-portrait-prompt.ts`; wire into `CharacterPanel` as a 4th tab |
-| Memory | Update `features/character-panel/layout` from "3-tabs" to "4-tabs (Equipment / Inventory / Attributes / Portrait), locked in combat" |
+## Success Criteria
+
+- Every entry in the Event Log resolves to exactly one of the categories in `EVENT_STYLE` and uses its color/icon/number classes — no orphan ad-hoc colors.
+- Player lines, enemy lines, heals, buffs, loot, and system lines each share one consistent tone across all sources.
+- Damage and heal numbers are the strongest visible token in normal lines; everything else reads as calm body text.
+- Crits, killing blows, level-ups, and legendary/soulforged drops are the only lines with `font-semibold` / glow emphasis.
+- Remote / passive ticks render at reduced opacity without losing their category identity.
+- The MUD wording is byte-identical to today; only colors, weights, spacing, and icon sizes change.
