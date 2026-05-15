@@ -279,6 +279,36 @@
 }
 
 /* ═══════════════════════════════════════
+   Event Log line layout
+   ═══════════════════════════════════════ */
+
+.event-log-line {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  padding: 1px 0 1px 6px;
+  border-left: 1px solid hsl(var(--border) / 0.25);
+}
+.event-log-line + .event-log-line {
+  margin-top: 1px;
+}
+.event-log-icon {
+  display: inline-block;
+  width: 1.1em;
+  margin-right: 0.25rem;
+  opacity: 0.85;
+  vertical-align: baseline;
+  font-size: 0.95em;
+}
+.event-log-body {
+  /* inherits text color from line */
+}
+.event-log-number {
+  margin-left: 0.15rem;
+  letter-spacing: 0.01em;
+}
+
+/* ═══════════════════════════════════════
    Auth — Gateway to the Realm
    ═══════════════════════════════════════ */
 

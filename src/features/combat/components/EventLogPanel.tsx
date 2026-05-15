@@ -1,13 +1,22 @@
 /**
  * Owns: event/combat log list rendering, scroll anchor, display mode toggle.
+ *
+ * Visual styling is data-driven — every entry is classified into a category
+ * (event-log-styles) and rendered as icon + body + number spans with the
+ * category's color/emphasis. Wording is preserved byte-for-byte.
  */
 import { RefObject, useState, useCallback } from 'react';
-import { getLogColor } from '@/features/combat/utils/combat-log-utils';
+import { cn } from '@/lib/utils';
 import {
   type CombatLogDisplayMode,
   getStoredDisplayMode,
   setStoredDisplayMode,
 } from '@/features/combat/utils/combat-text';
+import {
+  classifyLogLine,
+  splitLogTokens,
+  EVENT_STYLE,
+} from '@/features/combat/utils/event-log-styles';
 
 interface EventLogPanelProps {
   filteredEventLog: string[];
@@ -54,17 +63,35 @@ export default function EventLogPanel({
           {MODE_LABELS[displayMode]}
         </button>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border space-y-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border">
         {filteredEventLog.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
         ) : (
-          filteredEventLog.map((log, i) =>
-            log === '---tick---' ? (
-              <div key={i} className="border-t-2 border-border/60 my-2" />
-            ) : (
-              <p key={i} className={`text-xs ${getLogColor(log)}`}>{log}</p>
-            )
-          )
+          filteredEventLog.map((log, i) => {
+            if (log === '---tick---') {
+              return <div key={i} className="border-t-2 border-border/60 my-2" />;
+            }
+            const cls = classifyLogLine(log);
+            const style = EVENT_STYLE[cls.category];
+            const { icon, body, number } = splitLogTokens(log);
+            return (
+              <p
+                key={i}
+                className={cn(
+                  'event-log-line',
+                  style.textClass,
+                  style.emphasis === 'strong' && 'font-semibold',
+                  cls.isRemote && 'opacity-60 italic',
+                )}
+              >
+                {icon && <span className={cn('event-log-icon', style.iconClass)}>{icon}</span>}
+                <span className="event-log-body">{body}</span>
+                {number && (
+                  <span className={cn('event-log-number', style.numberClass)}>{` ${number}`}</span>
+                )}
+              </p>
+            );
+          })
         )}
         <div ref={logEndRef} />
       </div>
