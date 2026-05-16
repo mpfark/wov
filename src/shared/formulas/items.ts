@@ -4,6 +4,17 @@
  * CANONICAL OWNER for: ITEM_RARITY_MULTIPLIER, ITEM_STAT_COSTS, ITEM_STAT_CAPS,
  * getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue,
  * calculateRepairCost, CONSUMABLE_ALLOWED_STATS.
+ *
+ * Late-game compression (planned + applied 2026-05):
+ *   - Soft taper above L30 (90% / 80% / 72%) on all rarities/hands.
+ *   - Primary-stat cap tapers from L28 onward and ceilings at 13 at L40+.
+ *   - Uncommon hybrids get +1 budget point at L30+ ("hybrid efficiency bonus").
+ *   - Unique 2H weapons drop hands_mult 1.5 → 1.35 so the unique×2H curve
+ *     (formerly 4.5× a common's budget at the same level) is reined in.
+ *
+ * Mirrored in `supabase/functions/_shared/formulas/items.ts` and the local
+ * helpers inside `supabase/functions/seed-archetype-items` and
+ * `supabase/functions/ai-item-forge`. Keep all four in sync.
  */
 
 export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {
@@ -22,12 +33,30 @@ export const ITEM_STAT_CAPS: Record<string, number> = {
 
 export const CONSUMABLE_ALLOWED_STATS = ['hp', 'hp_regen'];
 
+/** Two-handed multiplier. Reduced for unique tier so unique×2H stops being the runaway outlier. */
+export function getItemHandsMultiplier(rarity: string, hands: number): number {
+  if (hands !== 2) return 1.0;
+  return rarity === 'unique' ? 1.35 : 1.5;
+}
+
+/** Late-game soft taper. Identity below L30, then 90% / 80% / 72%. */
+export function getItemLevelTaper(level: number): number {
+  if (level <= 30) return 1.0;
+  if (level <= 35) return 0.90;
+  if (level <= 40) return 0.80;
+  return 0.72;
+}
+
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
-  const handsMult = hands === 2 ? 1.5 : 1;
-  // Floor of 2 even at L1 so every item has primary + minor stat (matches seed-archetype-items).
-  const base = Math.max(2, Math.floor(2 + (level - 1) * 0.3 * mult * handsMult));
-  // Consumables get 3x budget since they're single-use
+  const handsMult = getItemHandsMultiplier(rarity, hands);
+  const taper = getItemLevelTaper(level);
+  const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
+  // Hybrid efficiency: uncommons get +1 budget point at L30+ so they stay
+  // attractive vs pure-primary commons after the taper kicks in.
+  const hybridBonus = rarity === 'uncommon' && level >= 30 ? 1 : 0;
+  // Floor of 2 even at L1 so every item has primary + minor stat.
+  const base = Math.max(2, Math.floor(raw * taper) + hybridBonus);
   return itemType === 'consumable' ? base * 3 : base;
 }
 
@@ -47,7 +76,10 @@ export function getItemStatCap(statKey: string, level: number = 1, itemType: str
   if (statKey === 'hp') {
     return 6 + Math.floor(level / 5) * 2;
   }
-  return 4 + Math.floor(level / 4);
+  // Primary attribute cap. Linear until L28, then +1 every 6 levels, ceilings at 13.
+  if (level <= 28) return 4 + Math.floor(level / 4);
+  if (level <= 40) return 11 + Math.floor((level - 28) / 6);
+  return 13;
 }
 
 export function suggestItemGoldValue(level: number, rarity: string): number {

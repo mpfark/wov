@@ -72,10 +72,25 @@ const WEAPON_BY_STAT: Record<Stat, Array<{ tag: string; noun: string; hands: 1 |
 
 const RARITY_MULT: Record<string, number> = { common: 1.0, uncommon: 1.5 };
 
+function handsMultiplier(rarity: string, hands: number): number {
+  if (hands !== 2) return 1.0;
+  return rarity === "unique" ? 1.35 : 1.5;
+}
+function levelTaper(level: number): number {
+  if (level <= 30) return 1.0;
+  if (level <= 35) return 0.90;
+  if (level <= 40) return 0.80;
+  return 0.72;
+}
+
 function statBudget(level: number, rarity: string, hands = 1): number {
   const m = RARITY_MULT[rarity] || 1;
-  const h = hands === 2 ? 1.5 : 1;
-  return Math.max(2, Math.floor(2 + (level - 1) * 0.3 * m * h));
+  const h = handsMultiplier(rarity, hands);
+  const t = levelTaper(level);
+  const raw = 2 + (level - 1) * 0.3 * m * h;
+  // Uncommon hybrids get +1 budget point at L30+ ("hybrid efficiency bonus").
+  const hybridBonus = rarity === "uncommon" && level >= 30 ? 1 : 0;
+  return Math.max(2, Math.floor(raw * t) + hybridBonus);
 }
 
 /** Drip leftover budget into stat slots in priority order until budget is fully spent or all caps hit. */
@@ -103,7 +118,10 @@ function spillover(stats: Record<string, number>, level: number, budget: number,
 function statCap(key: string, level: number): number {
   if (key === "ac" || key === "hp_regen") return 2 + Math.floor(level / 10);
   if (key === "hp") return 6 + Math.floor(level / 5) * 2;
-  return 4 + Math.floor(level / 4);
+  // Primary attribute cap with late-game taper: +1 every 6 levels above L28, hard ceiling 13.
+  if (level <= 28) return 4 + Math.floor(level / 4);
+  if (level <= 40) return 11 + Math.floor((level - 28) / 6);
+  return 13;
 }
 function suggestGold(level: number, rarity: string): number {
   const m = RARITY_MULT[rarity] || 1;

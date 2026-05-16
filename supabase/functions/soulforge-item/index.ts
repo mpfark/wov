@@ -14,17 +14,38 @@ const STAT_COSTS: Record<string, number> = {
   str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2, potion_slots: 1,
 };
 
+// ── Canonical budget/cap (mirrors src/shared/formulas/items.ts) ─────────
+// Soulforged rarity_mult = 2.0 (fixed: previously hard-coded to 1.5).
+// The taper above L30 keeps the player-facing budget approximately the
+// same as the old bug at L40/L42, so this fix is invisible to existing
+// flows while making the formula consistent across the codebase.
+const RARITY_MULT: Record<string, number> = { soulforged: 2.0 };
+
+function handsMultiplier(rarity: string, hands: number): number {
+  if (hands !== 2) return 1.0;
+  return rarity === "unique" ? 1.35 : 1.5;
+}
+function levelTaper(level: number): number {
+  if (level <= 30) return 1.0;
+  if (level <= 35) return 0.90;
+  if (level <= 40) return 0.80;
+  return 0.72;
+}
 function getStatBudget(level: number, hands: number): number {
-  const mult = 1.5; // uncommon
-  const handsMult = hands === 2 ? 1.5 : 1;
-  return Math.floor(1 + (level - 1) * 0.3 * mult * handsMult);
+  const mult = RARITY_MULT.soulforged;
+  const hMult = handsMultiplier("soulforged", hands);
+  const taper = levelTaper(level);
+  const raw = 2 + (level - 1) * 0.3 * mult * hMult;
+  return Math.max(2, Math.floor(raw * taper));
 }
 
 function getStatCap(key: string, level: number): number {
   if (key === "potion_slots") return 4;
   if (key === "ac" || key === "hp_regen") return 2 + Math.floor(level / 10);
   if (key === "hp") return 6 + Math.floor(level / 5) * 2;
-  return 4 + Math.floor(level / 4);
+  if (level <= 28) return 4 + Math.floor(level / 4);
+  if (level <= 40) return 11 + Math.floor((level - 28) / 6);
+  return 13;
 }
 
 function calcCost(stats: Record<string, number>): number {
@@ -140,8 +161,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Calculate value
-    const value = Math.floor(effectiveLevel * 2.5 * (1.5 * 1.5));
+    // Calculate value (soulforged rarity multiplier = 2.0)
+    const value = Math.floor(effectiveLevel * 2.5 * (2.0 * 2.0));
 
     // Insert item
     const { data: item, error: itemErr } = await admin
