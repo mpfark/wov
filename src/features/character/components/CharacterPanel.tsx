@@ -345,12 +345,12 @@ export default function CharacterPanel({
     <TooltipProvider delayDuration={200}>
       <div className="h-full flex flex-col p-3 space-y-3 overflow-y-auto">
         {/* Name & Identity */}
-        <div className="text-center">
-          <h2 className="font-display text-lg text-primary text-glow">{character.name}</h2>
+        <div className="text-center gap-row">
+          <h2 className="t-display-lg text-lg">{character.name}</h2>
           {getCharacterTitle(character.level, character.gender) && (
-            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(character.level, character.gender)}</p>
+            <p className="t-label text-primary/70">{getCharacterTitle(character.level, character.gender)}</p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="t-meta">
             {RACE_LABELS[character.race]} {CLASS_LABELS[character.class]} — Lvl {character.level}
           </p>
         </div>
@@ -358,22 +358,22 @@ export default function CharacterPanel({
         {/* Tabs: Equipment & Attributes */}
         <Tabs defaultValue="equipment" className="space-y-1.5">
           <TabsList className="h-7 w-full bg-muted/50 p-0.5">
-            <TabsTrigger value="equipment" className="font-display text-[10px] h-6 flex-1">Equipment</TabsTrigger>
-            <TabsTrigger value="inventory" className="font-display text-[10px] h-6 flex-1">
+            <TabsTrigger value="equipment" className="t-label h-6 flex-1 data-[state=active]:text-primary">Equipment</TabsTrigger>
+            <TabsTrigger value="inventory" className="t-label h-6 flex-1 data-[state=active]:text-primary">
               Inventory
             </TabsTrigger>
-            <TabsTrigger value="attributes" className="font-display text-[10px] h-6 flex-1 relative">
+            <TabsTrigger value="attributes" className="t-label h-6 flex-1 relative data-[state=active]:text-primary">
               Attributes
               {character.unspent_stat_points > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               )}
             </TabsTrigger>
-            <TabsTrigger value="portrait" className="font-display text-[10px] h-6 flex-1">Portrait</TabsTrigger>
+            <TabsTrigger value="portrait" className="t-label h-6 flex-1 data-[state=active]:text-primary">Portrait</TabsTrigger>
           </TabsList>
 
           {/* Gold — always visible */}
-          <div className="flex justify-center text-xs">
-            <span className="font-display text-primary">Gold {character.gold}</span>
+          <div className="flex justify-center">
+            <span className="t-numeric text-primary text-xs">Gold {character.gold}</span>
           </div>
 
           {/* Tab content */}
