@@ -1,136 +1,139 @@
-# Event Log Visual Consistency Pass
 
-## Goal
-Keep all flavorful MUD wording exactly as it is today. Replace the ad-hoc, emoji-keyword color map in `combat-log-utils.ts` with a small, centralized **category-based style system** so every line in the Event Log shares a consistent color hierarchy, typography, spacing, and emphasis.
+# Typography & UI Rhythm Pass — Plan
 
-No gameplay or wording changes. Pure presentation refactor inside `src/features/combat/`.
+Goal: keep the dark fantasy / MUD identity, but give the UI one shared type scale, one spacing rhythm, and a smaller set of "text modes" so the eye can parse panels faster. No redesign, no Event Log rework.
 
----
+## 1. Audit findings (what's actually causing the noise)
 
-## What changes for the player
+A quick sweep of the codebase shows the root causes:
 
-- All player actions read in one consistent warm gold/amber tone.
-- Incoming enemy hits read in one muted red tone.
-- Heals/support read in one pale teal tone, buffs in muted violet, loot in soft gold, system/travel in dim blue-grey.
-- DoTs (bleed/poison/burn) keep their identity but with normalized intensity.
-- Damage and heal **numbers** become the only strongly emphasized token in normal lines.
-- Crits, killing blows, level-ups, legendary loot keep stronger styling — but only those.
-- Repeated passive-trigger lines (retaliation, shield procs, remote DoTs) render slightly dimmer than the player's own active actions.
-- Tighter line height, consistent left padding, subtle separators between events.
-- One icon per line at a normalized size and opacity; no oversized glow stacks.
+- **Too many one-off sizes.** ~780 hits of arbitrary `text-[10px] / [11px] / [12px] / [13px]` across components. Sizes drift per panel.
+- **Too many "label modes."** Headers freely mix `font-display + uppercase + tracking-wide(r/est)`, gold/teal/muted variants, italics, and `text-glow`. Each panel reinvents its own header treatment (Character, Inventory, Service panels, Admin all differ).
+- **Spacing is local, not systemic.** `space-y-1`, `space-y-1.5`, `space-y-2`, `gap-1`, `gap-1.5`, `py-1.5`, `py-2`, `my-1.5` all appear next to each other inside the same panel. There is no defined "row / group / section" rhythm.
+- **Opacity used as a color.** `text-muted-foreground/80`, `/70`, `/60`, plain `opacity-50/60/70/80` are scattered; metadata vs disabled vs "dim" isn't differentiated.
+- **Numeric emphasis is inconsistent.** Stats, costs, durability, HP/CP/MP all render in body weight + base color. The Event Log just got dedicated `log-number-*` tokens — nothing else has equivalents.
+- **Tooltips are flat.** `ItemTooltipCard` puts identity, stats, metadata, flavor at near-equal weight; only rarity color separates them.
+- **Interaction states.** Tabs/buttons rely on default shadcn variants; selected tab vs hovered tab vs disabled action aren't visually ranked.
 
-The wording (`🔥 Your Holy Shield sears the Stillpoint Sentry for 53 holy damage!`) is unchanged.
+The Event Log pass already established the right pattern (semantic tokens + structured spans). This plan extends that pattern outward — it does not touch the Event Log.
 
----
+## 2. Proposed systems
 
-## Categories
+### 2a. Type scale (5 roles, not 15 sizes)
 
-Single source of truth for visual identity:
+| Role | Class preset | Use |
+|---|---|---|
+| `display-lg` | `font-display text-base tracking-wide text-primary text-glow` | Panel/page title (one per panel) |
+| `display-sm` | `font-display text-sm tracking-wide text-primary` | Section headers inside a panel |
+| `label` | `font-display text-[11px] uppercase tracking-[0.14em] text-muted-foreground` | Metadata labels, tab labels, group captions |
+| `body` | `text-sm leading-snug text-foreground` | Default readable prose, descriptions, log lines |
+| `meta` | `text-xs leading-snug text-muted-foreground` | Secondary info, timestamps, counts |
+| `numeric` | `font-display tabular-nums text-foreground` (size inherits) | Any displayed number (stats, gold, HP, durability) |
 
-```text
-EVENT_STYLE = {
-  player_attack    → warm gold/amber
-  enemy_attack     → muted red
-  heal             → pale teal
-  holy             → pale teal / soft white
-  fire             → warm ember
-  poison           → muted green
-  bleed            → muted blood red
-  shadow           → muted violet
-  buff             → muted violet
-  mitigation       → dim blue-grey (block/absorb)
-  loot             → soft gold
-  renown / xp      → soft gold (subtle)
-  level_up / crit  → primary, bold (reserved emphasis)
-  system / travel  → dim blue-grey
-  whisper          → muted purple
-  remote / passive → 0.6–0.7 opacity variant of base category
-}
-```
+Rules:
+- Only `display-lg` may use `text-glow`. Stops the "everything glows" effect.
+- `uppercase + tracking` reserved for `label`. No uppercase body text, no uppercase section headers.
+- `italic` reserved for flavor text in tooltips and combat narrative lines. Nowhere else.
+- `tabular-nums` always on numeric values so columns of stats line up.
 
-Each category resolves to: `{ textClass, iconClass, numberClass, emphasis: 'normal' | 'strong' }`.
+### 2b. Spacing rhythm (4 levels)
 
----
+Replace ad-hoc spacing with semantic gap classes:
 
-## Technical Direction
+| Token | Value | Use |
+|---|---|---|
+| `gap-row` | `space-y-1` (4px) | Items inside a tightly grouped list (stats row, log line) |
+| `gap-group` | `space-y-2` (8px) | Between groups inside a section (identity / stats / flavor) |
+| `gap-section` | `space-y-4` (16px) | Between sections inside a panel |
+| `gap-panel` | `space-y-6` (24px) | Between top-level panel blocks |
 
-### New file: `src/features/combat/utils/event-log-styles.ts`
-- Exports `EventLogCategory` type and `EVENT_STYLE` map (Tailwind class strings only — all colors via existing semantic tokens in `index.css` / `tailwind.config.ts`; no new hex).
-- Exports `classifyLogLine(log: string): { category, isRemote, isCrit, isKill }` — a pure function that takes the existing string log entries and decides their category. It absorbs and replaces the giant `if/else` chain currently inside `combat-log-utils.ts#getLogColor`.
-- Exports `splitLogTokens(log: string): { icon, body, number }` — light parser that pulls:
-  - leading emoji (first grapheme) → `icon`
-  - trailing damage/heal value, matched against patterns already produced by `combat-text.ts` (`[NN]`, `for NN damage`, `restores NN HP`, `blocks NN`) → `number`
-  - everything else → `body`
-- Returns the original string untouched if no number is found, so wording is preserved.
+Panel padding standardizes to `p-3` (compact panels: inventory, character) and `p-4` (service panels). Divider style standardizes to `h-px bg-border/60`.
 
-### Tokens to add in `src/index.css`
-A small number of new HSL CSS variables, each used by the new style map:
-- `--log-player`, `--log-enemy`, `--log-heal`, `--log-holy`, `--log-fire`, `--log-poison`, `--log-bleed`, `--log-shadow`, `--log-buff`, `--log-mitigation`, `--log-loot`, `--log-system`, `--log-number-damage`, `--log-number-heal`, `--log-number-block`.
-- Several reuse existing tokens (`--gold`, `--blood`, `--elvish`, `--dwarvish`, `--dot-*`) where the hue already matches; only add new variables when no existing one fits.
-- Mirror in `tailwind.config.ts` under `colors.log.*` so utility classes like `text-log-player`, `text-log-enemy`, `text-log-number-damage` are available.
+### 2c. Opacity hierarchy (stop using % as a color)
 
-### Refactor: `src/features/combat/utils/combat-log-utils.ts`
-- `getLogColor` becomes a thin shim that calls `classifyLogLine` then returns `EVENT_STYLE[category].textClass` (kept for any external caller). Internal cache stays.
-- No more emoji-keyword color decisions live here.
+Replace mixed `/60 /70 /80` with three tiers using existing tokens:
 
-### Refactor: `src/features/combat/components/EventLogPanel.tsx`
-- For each entry, call `classifyLogLine` + `splitLogTokens`, then render:
-  ```tsx
-  <p className={cn('event-log-line', style.textClass, style.emphasis === 'strong' && 'font-semibold', isRemote && 'opacity-60')}>
-    {icon && <span className={cn('event-log-icon', style.iconClass)}>{icon}</span>}
-    <span className="event-log-body">{body}</span>
-    {number && <span className={cn('event-log-number', style.numberClass)}>{number}</span>}
-  </p>
-  ```
-- Add small CSS rules in `index.css` (or scoped in the panel) for `.event-log-line` (line-height, left padding, subtle bottom separator at 1px `border-border/30`), `.event-log-icon` (fixed width, vertical-align baseline, `opacity-80`), and `.event-log-number` (slightly heavier weight, 1.05× size).
-- The existing `---tick---` separator continues to render as the divider it already is.
-- The display-mode toggle (`numbers` / `words` / `both`) is untouched — it still controls `combat-text.ts` formatting upstream.
+- **Primary text** — `text-foreground` (full).
+- **Metadata** — `text-muted-foreground` (~55% luminance vs bg; already defined).
+- **Disabled / passive** — `opacity-60` only, applied to the whole interactive element, never to text alone.
 
-### Repeated/passive dimming
-- Inside `classifyLogLine`, the existing `(remote)` substring detection becomes `isRemote = true` and the renderer applies a single `opacity-60` modifier instead of the current bespoke per-emoji classes.
-- DoT ticks (bleed/poison/burn) without a player-source verb classify as `passive`, rendered at one intensity step lower than `player_attack`.
+### 2d. Numeric emphasis tokens (mirror what Event Log did)
 
-### Crit / killing blow / level-up / loot emphasis
-- `classifyLogLine` flags `isCrit` (line contains `CRITICAL!` or starts with `💥`), `isKill` (`💀`, `been defeated`, `struck down`), `isLevelUp` (`🎉` or `Level Up`), and rare-loot (`🏆`, `Legendary`, `Soulforged`).
-- These map to `emphasis: 'strong'` and use `text-primary` / `text-glow` (existing) — **only** these get the brighter treatment.
+Add semantic `ui-number-*` tokens in `index.css` + `tailwind.config.ts`:
+- `ui-number` — neutral large number (stat value, gold count).
+- `ui-number-pos` — gains (+1 STR diff, heal).
+- `ui-number-neg` — losses, broken durability.
+- `ui-number-cap` — "of max" (e.g. `42 / 60` — the `/ 60` is dimmed).
 
-### What stays untouched
-- `combat-text.ts` — wording, tier words, flavor sentences, weapon emoji, boss flavor.
-- All emitters in `useGameLoop`, `useCombatActions`, `usePartyCombatLog`, `useConsumableActions`, etc. — they keep producing the same strings.
-- The `numbers / words / both` toggle behavior.
-- Server logs, broadcast payloads, persisted activity logs.
+Always pair with `tabular-nums`.
 
----
+### 2e. Tooltip hierarchy (item tooltip card)
 
-## File-by-file impact
+Restructure into 4 visually-ranked blocks separated by `gap-group`:
+1. **Identity** — rarity-colored name (display-sm), subtitle as `label`, level as `meta`.
+2. **Stats** — two-column grid, label left (`label`), value right (`numeric`, sign-colored).
+3. **Metadata** — durability bar, weight, value as `meta` row.
+4. **Flavor** — italic, `meta` color, top border separator.
 
-| File | Change |
-|---|---|
-| `src/features/combat/utils/event-log-styles.ts` | **new** — categories, style map, `classifyLogLine`, `splitLogTokens` |
-| `src/features/combat/utils/combat-log-utils.ts` | reduce `getLogColor` to a shim over the new classifier |
-| `src/features/combat/components/EventLogPanel.tsx` | render structured icon/body/number spans; apply category + remote dimming |
-| `src/index.css` | add `--log-*` HSL tokens; add `.event-log-line/.event-log-icon/.event-log-number` rules |
-| `tailwind.config.ts` | expose `colors.log.*` to match the new tokens |
+### 2f. Interaction clarity
 
-No edits to combat hooks, server functions, or wording producers.
+- **Tabs**: selected = `text-primary` + 1px bottom border `border-gold/70`; hover = `text-foreground`; idle = `text-muted-foreground`. Drop background fills.
+- **Buttons**: keep current variants; only add `font-display tracking-wide` to primary CTAs so they read as "action" without extra glow.
+- **Clickable text in panels** (item names in lists, etc.) gets a single `hover:text-primary transition-colors` rule instead of varying treatments.
 
----
+## 3. Implementation plan (low → high risk, phased)
 
-## Out of scope
+### Phase 1 — Foundations (low risk, no visual jump)
+1. Add tokens to `src/index.css` (`--ui-number-*`) and `tailwind.config.ts` (`colors.ui.*`).
+2. Create `src/styles/typography.css` (or extend `index.css`) with utility classes: `.t-display-lg`, `.t-display-sm`, `.t-label`, `.t-body`, `.t-meta`, `.t-numeric`. These are documented presets, not magic — components can still use raw Tailwind.
+3. Add a short `src/features/README.md` section "Typography & rhythm" describing the 5 roles + 4 gap tokens.
 
-- Any change to the wording, verbs, flavor, or tier-word system in `combat-text.ts`.
-- Any change to what the server emits or what gets stored in activity/combat logs.
-- Filtering, collapsing, or grouping of repeated lines (beyond opacity dimming for `(remote)` / passive).
-- New animations or motion effects.
-- Sound or haptic cues.
+Risk: none — purely additive.
 
----
+### Phase 2 — Tooltip card (high visibility, contained scope)
+4. Refactor `src/components/items/ItemTooltipCard.tsx` to the 4-block hierarchy above. This is the most-seen surface and the clearest "before/after".
 
-## Success Criteria
+Risk: low — single file, no logic changes.
 
-- Every entry in the Event Log resolves to exactly one of the categories in `EVENT_STYLE` and uses its color/icon/number classes — no orphan ad-hoc colors.
-- Player lines, enemy lines, heals, buffs, loot, and system lines each share one consistent tone across all sources.
-- Damage and heal numbers are the strongest visible token in normal lines; everything else reads as calm body text.
-- Crits, killing blows, level-ups, and legendary/soulforged drops are the only lines with `font-semibold` / glow emphasis.
-- Remote / passive ticks render at reduced opacity without losing their category identity.
-- The MUD wording is byte-identical to today; only colors, weights, spacing, and icon sizes change.
+### Phase 3 — Character + Inventory panels (the densest panels)
+5. `src/features/character/components/CharacterPanel.tsx`, `StatusBarsStrip.tsx`, `PortraitTab.tsx`: replace ad-hoc text sizes with role classes, normalize spacing to the 4 gap tokens, apply `tabular-nums` to all numeric displays.
+6. `src/features/inventory/components/*Panel.tsx` + `MaterialsSection`, `GemPouch`: same treatment, plus tab styling pass.
+
+Risk: medium — touches many files but mechanical (find/replace patterns + visual QA per panel).
+
+### Phase 4 — Service panels (Vendor / Blacksmith / Jewelcrafter / Stonebinder / Trainer / Scroll / Soulforge)
+7. Standardize `ServicePanelShell` header/tab typography to `display-lg` + `label`.
+8. Apply role classes inside each service panel body.
+
+Risk: medium — many files, but they all share `ServicePanelShell` so the header pass is one edit.
+
+### Phase 5 — Admin pages
+9. Apply role classes to `AdminPageShell`, `AdminEditorHeader`, `AdminToolSection`. Admin is internal-only so this is last.
+
+Risk: low — internal surface, can iterate freely.
+
+### Phase 6 — Cleanup
+10. Add a small ESLint rule or grep-CI check that flags new `text-[NNpx]` literals so we don't regress.
+11. Remove now-unused glow / uppercase / italic clusters identified during the pass.
+
+Risk: low.
+
+## 4. Explicitly out of scope
+
+- Event Log styling (already overhauled).
+- Combat text wording / flavor.
+- Colors of rarity, class, faction, gem.
+- Fonts (`Cinzel` + `Crimson Text` stay).
+- Layout structure of any panel.
+- Animations.
+
+## 5. What you'll see after Phase 1+2
+
+The tooltip card switches to the new hierarchy and the foundation is in place; everything else still looks identical. From there each subsequent phase is an independently shippable PR-sized change you can approve panel-by-panel, so the rollout is gradual and reversible — no "big bang" rewrite.
+
+## 6. Technical notes
+
+- All new color tokens go through `hsl(var(--...))` in `tailwind.config.ts`, matching existing convention.
+- Role classes are plain CSS utility composites in `index.css` `@layer components` — no new dependency, no CSS-in-JS.
+- `tabular-nums` is a CSS feature, no font change required (both Cinzel and Crimson Text expose it).
+- The Event Log's `event-log-*` classes stay as-is; the new `t-*` classes coexist.
