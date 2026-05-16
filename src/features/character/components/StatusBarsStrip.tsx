@@ -227,14 +227,15 @@ export default function StatusBarsStrip({
   // ── Force Shield stance shield (persistent ward) ─────────────────
   // While the Force Shield stance is reserved, derive the bar from the
   // server-persisted ward HP on `characters.stance_state.force_shield_hp`
-  // (capped by INT_mod + floor(level/2)). This lets the bar render and
-  // visibly fill back up while OOC, instead of being driven by a timed
-  // local absorb buff.
+  // (capped by WIS_mod + floor(level/2) — WIS shapes the sustained ward;
+  // INT drives regen rate, handled in apply_force_shield_regen SQL). This
+  // lets the bar render and visibly fill back up while OOC, instead of
+  // being driven by a timed local absorb buff.
   const forceShieldStance: { shieldHp: number; shieldCap: number; inCombat: boolean } | null = (() => {
     if (!reservedBuffs || !reservedBuffs.force_shield) return null;
-    const intTotal = (character.int ?? 10) + (equipmentBonuses.int ?? 0);
-    const intMod = Math.max(0, Math.floor((intTotal - 10) / 2));
-    const shieldCap = Math.max(1, intMod + Math.floor((character.level ?? 1) * 0.5));
+    const wisTotal = (character.wis ?? 10) + (equipmentBonuses.wis ?? 0);
+    const wisMod = Math.max(0, Math.floor((wisTotal - 10) / 2));
+    const shieldCap = Math.max(1, wisMod + Math.floor((character.level ?? 1) * 0.5));
     const persisted = ((character as any).stance_state && typeof (character as any).stance_state === 'object')
       ? Number((character as any).stance_state.force_shield_hp)
       : NaN;

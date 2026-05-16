@@ -474,7 +474,9 @@ Deno.serve(async (req) => {
           // we only seed the live combat-session value from the persisted
           // characters.stance_state.force_shield_hp on the first tick of a
           // new session, then preserve it for the rest of the fight.
-          const shieldCap = Math.max(1, intMod + Math.floor((m.c.level || 1) * 0.5));
+          // Pool cap = WIS (sustained ward). Regen rate (in apply_force_shield_regen SQL)
+          // remains INT-scaled — INT shapes the spark, WIS shapes the ward.
+          const shieldCap = Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5));
           let current = mb.absorb_buff?.shield_hp;
           if (current === undefined) {
             const persisted = (m.c.stance_state && typeof m.c.stance_state === 'object')
@@ -1261,16 +1263,20 @@ Deno.serve(async (req) => {
         const c = m.c;
         const eb = eq[m.id] || {};
         const intMod = sm((c.int || 10) + (eb.int || 0));
+        const wisMod = sm((c.wis || 10) + (eb.wis || 0));
+        // Direct pulse damage = INT (the spark / blast).
         let pulseDmg = Math.max(1, 2 + intMod);
         if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * ARCANE_SURGE_DAMAGE_MULT), 1);
 
         cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
 
-        // Upsert burn DoT (mirrors prior autoattack-proc formula for parity)
+        // Upsert burn DoT — damage-per-tick + duration scale from WIS
+        // (sustained, lingering flame). Pulse and burn read different stats
+        // so wizards genuinely benefit from both primaries.
         const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-        const dmgPerTick = Math.max(1, Math.floor(intMod * 0.7 * 0.67));
-        const duration = Math.min(45000, 30000 + intMod * 1000);
+        const dmgPerTick = Math.max(1, Math.floor(wisMod * 0.7 * 0.67));
+        const duration = Math.min(45000, 30000 + wisMod * 1000);
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
           session_id: null, effect_type: 'ignite',
