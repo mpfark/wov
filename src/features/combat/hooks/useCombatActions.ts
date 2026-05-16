@@ -507,14 +507,17 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Shield Wall is now a stance — handled at the stance toggle block above.
       // This branch should be unreachable; left as a no-op safety net.
     } else if (ability.type === 'consecrate') {
-      // Templar — Consecrate: 3 ticks (~6s) of node heal + creature burn.
+      // Templar — Consecrate: dual-primary — magnitude (heal/burn) = WIS, number of ticks scales with CON.
       const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
-      const durationMs = 6_000;
+      const conMod = Math.max(0, getStatModifier(p.character.con + (p.equipmentBonuses.con || 0)));
+      const ticks = Math.min(5, 3 + (conMod >= 3 ? 1 : 0) + (conMod >= 6 ? 1 : 0));
+      const durationMs = ticks * 2_000;
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
-      p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${Math.round(durationMs / 1000)}s — allies healed, enemies burned.`);
+      p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${ticks} ticks (${Math.round(durationMs / 1000)}s) — allies healed, enemies burned.`);
     } else if (ability.type === 'mitigation_buff') {
-      // Templar — Divine Challenge: 30s flat 30% damage reduction.
-      const durationMs = 30_000;
+      // Templar — Divine Challenge: dual-primary — DR fixed, duration scales with CON.
+      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
+      const durationMs = Math.min(45_000, 30_000 + Math.max(0, conMod) * 1_000);
       p.buffSetters.setDivineChallengeBuff({ reduction: 0.30, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Divine Challenge! You take 30% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
     }
