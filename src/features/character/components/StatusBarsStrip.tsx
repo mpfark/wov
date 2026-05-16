@@ -113,7 +113,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (igniteActive) {
     const dur = BUFF_DURATIONS['Ignite'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((igniteBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🔥🔥', label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
+    buffs.push({ emoji: '🌋', label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
   }
 
   // Force Shield: stance takes precedence over the legacy timed absorb buff so
