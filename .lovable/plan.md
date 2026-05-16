@@ -1,3 +1,5 @@
+## Status: COMPLETE — all 7 classes implemented (Wizard, Warrior, Ranger, Rogue, Bard, Healer, Templar).
+
 ## Goal
 
 Apply the wizard pattern to every remaining class: **primary stat = magnitude, secondary primary = duration / cap / count / utility scalar** (or thematic reverse). One class per follow-up implementation pass; this plan locks the proposed splits so we don't re-debate per class.
