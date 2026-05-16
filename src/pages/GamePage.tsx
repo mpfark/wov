@@ -649,7 +649,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   const { inCombat, activeCombatCreatureId, engagedCreatureIds, creatureHpOverrides,
     lastTickTime, startCombat, stopCombat: stopCombatFn,
-    fleeStopCombat, queueAbility, pendingCpCost } = combat;
+    fleeStopCombat, queueAbility, pendingCpCost, pendingAbility } = combat;
 
   // Merge creature HP from all sources: combat-tick > broadcast > base
   const mergedCreatureHpOverrides = useMergedCreatureHpOverrides(creatureHpOverrides, broadcastOverrides);
@@ -1119,6 +1119,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               classAbilities={CLASS_ABILITIES[character.class] || []}
               onUseAbility={(idx, target) => handleUseAbility(idx, target ?? selectedTargetId ?? undefined)}
               abilityTargetId={abilityTargetId}
+              pendingAbilityIndex={pendingAbility?.index ?? null}
+              reservedBuffs={(character as any).reserved_buffs ?? null}
               actionBindings={keyboardMovement.actionBindings}
               poisonStacks={poisonStacks}
               igniteStacks={igniteStacks}
