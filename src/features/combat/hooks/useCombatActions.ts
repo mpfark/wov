@@ -63,27 +63,9 @@ const T0_OPENER_TYPES = new Set([
   'fireball', 'power_strike', 'aimed_shot', 'backstab', 'smite', 'cutting_words',
 ]);
 
-/** Flavour text for queued abilities */
-function getQueueFlavour(ability: { label: string; emoji: string; type: string }, creatureName?: string): string {
-  const target = creatureName || 'your target';
-  switch (ability.type) {
-    case 'self_heal': return `⏳ ${ability.emoji} You brace yourself and begin catching your breath...`;
-    case 'heal': return `⏳ ${ability.emoji} You channel healing energy...`;
-    case 'dot_debuff': return `⏳ ${ability.emoji} You look for an opportunity to rend ${target}...`;
-    case 'multi_attack': return `⏳ ${ability.emoji} You nock multiple arrows...`;
-    case 'execute_attack': return `⏳ ${ability.emoji} You line up a vicious strike on ${target}...`;
-    case 'ignite_consume': return `⏳ ${ability.emoji} You gather the flames building on ${target}...`;
-    case 'hp_transfer': return `⏳ ${ability.emoji} You begin channeling your life force...`;
-    case 'burst_damage': return `⏳ ${ability.emoji} You draw breath for a devastating crescendo...`;
-    case 'fireball': return `⏳ ${ability.emoji} You begin shaping a ball of arcane flame at ${target}...`;
-    case 'power_strike': return `⏳ ${ability.emoji} You wind up a heavy strike at ${target}...`;
-    case 'aimed_shot': return `⏳ ${ability.emoji} You take careful aim at ${target}...`;
-    case 'backstab': return `⏳ ${ability.emoji} You slip into the shadows behind ${target}...`;
-    case 'smite': return `⏳ ${ability.emoji} You call down divine light upon ${target}...`;
-    case 'cutting_words': return `⏳ ${ability.emoji} You ready a barbed insult for ${target}...`;
-    default: return `⏳ ${ability.emoji} ${ability.label}...`;
-  }
-}
+// (Queue-flavor "⏳ …" chat log was removed — the ability button's pulsing
+// outline is the only pending-cast indicator now.)
+
 
 /** Resolve creature target — prefer explicit targetId, fall back to active combat target */
 function resolveCreatureTarget(
