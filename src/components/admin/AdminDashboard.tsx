@@ -87,11 +87,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             onClick={() => onNavigate(card.tab)}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 p-4">
-              <CardTitle className="text-xs font-display text-muted-foreground">{card.label}</CardTitle>
+              <CardTitle className="t-label text-[11px]">{card.label}</CardTitle>
               <card.icon className="h-4 w-4 text-primary/60" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-display text-foreground">
+              <div className="t-numeric text-2xl">
                 {counts[card.key]}
               </div>
             </CardContent>
