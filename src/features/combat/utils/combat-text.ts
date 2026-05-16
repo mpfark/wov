@@ -288,19 +288,20 @@ function formatCreatureAttack(
   const isMiss = event.type === 'creature_miss';
   const isCrit = !!event.is_crit;
   const damage = event.damage ?? 0;
+  const ICON = '👹 ';
 
   if (isMiss) {
     if (isLocal) {
-      return `${attacker} misses you.`;
+      return `${ICON}${attacker} misses you.`;
     }
-    return `${attacker} misses ${event.target_name!}.`;
+    return `${ICON}${attacker} misses ${event.target_name!}.`;
   }
 
   // Boss crit flavor: if present, use themed text instead of tier-word system
   if (isCrit && event.boss_flavor) {
     const bf = event.boss_flavor;
     const emoji = bf.emoji || '';
-    const prefix = emoji ? `${emoji} ` : '';
+    const prefix = emoji ? `${emoji} ` : ICON;
     const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
     const targetLabel = isLocal ? 'you' : event.target_name!;
     // Flavor text owns the full sentence; supports %a/%e/%v template variables.
@@ -314,9 +315,9 @@ function formatCreatureAttack(
 
   if (isLocal) {
     const flavor = pickRandom(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
-    return `${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${dmgSuffix}${punct}`;
+    return `${ICON}${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${dmgSuffix}${punct}`;
   }
 
   const flavor = pickRandom(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
-  return `${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${dmgSuffix}${punct}`;
+  return `${ICON}${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${dmgSuffix}${punct}`;
 }
