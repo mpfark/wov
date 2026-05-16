@@ -860,6 +860,9 @@ Deno.serve(async (req) => {
           const absorbed = Math.min(dmg, mb.absorb_buff.shield_hp);
           mb.absorb_buff.shield_hp -= absorbed;
           dmg -= absorbed;
+          // Single-icon policy: Force Shield's own emoji only — no extra
+          // sparkle/star glyph. (Previous builds rendered "🛡️ ✨" which the
+          // EventLog split across two visual rows.)
           events.push({ type: 'absorb', message: `🛡️ ${creature.name} hits ${targetName} — shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
           if (dmg <= 0) return;
         }
