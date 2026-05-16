@@ -76,6 +76,14 @@
     --log-number-damage: 35 80% 70%; /* bright warm */
     --log-number-heal: 150 55% 65%;  /* soft green/teal */
     --log-number-block: 215 30% 70%; /* muted blue-grey */
+
+    /* ── UI numeric palette ──────────────────────
+       Shared by stats, gold, durability, HP/CP/MP.
+       Use with `tabular-nums` so columns line up. */
+    --ui-number: 40 45% 85%;          /* neutral parchment */
+    --ui-number-pos: 150 50% 62%;     /* gain / heal */
+    --ui-number-neg: 0 60% 60%;       /* loss / broken */
+    --ui-number-cap: 35 20% 50%;      /* "/ max" dim */
   }
 }
 
