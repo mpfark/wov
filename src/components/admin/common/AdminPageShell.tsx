@@ -46,10 +46,10 @@ export default function AdminPageShell({
               </span>
             )}
             {title && (
-              <h2 className="font-display text-sm text-primary truncate">{title}</h2>
+              <h2 className="t-display-sm truncate">{title}</h2>
             )}
             {count !== undefined && (
-              <span className="text-xs text-muted-foreground">({count})</span>
+              <span className="t-meta">({count})</span>
             )}
           </div>
         )}
