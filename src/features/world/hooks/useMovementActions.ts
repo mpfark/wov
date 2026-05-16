@@ -158,7 +158,7 @@ async function moveFollowers(
         broadcastMove(f.character_id, f.character.name, targetNodeId, currentNodeId);
       }
     }
-    addLog('Your party follows you.');
+    addLog('🧭 Your party follows you.');
     fetchParty();
   }
 }
@@ -326,13 +326,13 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const dirLabel = direction ? (dirNames[direction] || direction) : null;
       const targetArea = p.getNodeArea(targetNode);
       const moveName = getNodeDisplayName(targetNode, targetArea);
-      p.addLog(`You travel ${dirLabel || moveName}.`);
+      p.addLog(`🧭 You travel ${dirLabel || moveName}.`);
       logActivity(p.character.user_id, p.character.id, 'move', `Traveled ${dirLabel || 'to ' + moveName}`, { node_id: nodeId });
 
       // Move followers (parallel with leader move already committed above)
       await moveFollowers(p.partyMembers, p.character.id, p.character.current_node_id!, nodeId, p.isLeader, true, p.addLog, p.fetchParty, p.broadcastMove);
     } catch {
-      p.addLog('Failed to move.');
+      p.addLog('⚠️ Failed to move.');
     }
   }, [p.character, p.getNode, p.getRegion, p.updateCharacter, p.addLog, p.party, p.isLeader, p.partyMembers, p.creatures, p.effectiveAC, p.degradeEquipment, p.fetchParty, p.isDead, p.inCombat, p.fleeStopCombat, p.buffState, p.buffSetters, p.equipped, p.unequipped, p.equipmentBonuses, p.currentNode, p.unlockedConnections, p.onUnlockPath, p.activeCombatCreatureId, p.myMembership, p.toggleFollow, p.broadcastMove, p.broadcastHp, p.getNodeArea, p.fetchInventory]);
 
@@ -454,7 +454,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`);
       if (targetNode) {
         await p.updateCharacter({ current_node_id: discovered.node_id });
-        p.addLog(`You travel through the hidden path to ${targetName}.`);
+        p.addLog(`🧭 You travel through the hidden path to ${targetName}.`);
       }
       revealHints();
       return;
@@ -503,7 +503,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       p.addLog(`🔍 Search roll: ${roll}${searchMod >= 0 ? '+' : ''}${searchMod}=${total} — You discover a hidden path to ${targetName}!`);
       if (targetNode) {
         await p.updateCharacter({ current_node_id: discovered.node_id });
-        p.addLog(`You travel through the hidden path to ${targetName}.`);
+        p.addLog(`🧭 You travel through the hidden path to ${targetName}.`);
       }
     } else {
       const noneMsg = hintsToReveal.length > 0
