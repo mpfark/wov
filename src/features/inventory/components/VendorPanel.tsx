@@ -285,7 +285,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       )}
       <span className="inline-flex items-center gap-2">
         <Coins className="w-3 h-3 text-primary" />
-        <span className="font-display text-primary">{gold} Gold</span>
+        <span className="font-display tabular-nums text-primary">{gold} Gold</span>
         {chaMod > 0 && (
           <span className="text-[10px] text-muted-foreground">
             (CHA: Buy −{Math.round(buyDiscount * 100)}%, Sell {Math.round(sellMultiplier * 100)}%)

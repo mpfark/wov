@@ -450,11 +450,11 @@ export default function BlacksmithPanel({
       <span className="inline-flex items-center gap-3">
         <span className="inline-flex items-center gap-1">
           <Coins className="w-3 h-3 text-primary" />
-          <span className="font-display text-primary">{gold}</span>
+          <span className="font-display tabular-nums text-primary">{gold}</span>
         </span>
         <span className="inline-flex items-center gap-1">
           <span>🔩</span>
-          <span className="font-display text-dwarvish">{salvage}</span>
+          <span className="font-display tabular-nums text-dwarvish">{salvage}</span>
         </span>
       </span>
     </span>
