@@ -151,20 +151,20 @@ export default function TrainerPanel({
   const tabsRow = (
     <Tabs value={tab} onValueChange={(v) => setTab(v as TrainerTab)} className="w-full">
       <TabsList className="grid grid-cols-4 w-full bg-background/40">
-        <TabsTrigger value="allocate" className="font-display text-xs relative">
+        <TabsTrigger value="allocate" className="t-label text-[11px] data-[state=active]:text-primary relative">
           Allocate
           {character.unspent_stat_points > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary animate-pulse" />
           )}
         </TabsTrigger>
-        <TabsTrigger value="respec" className="font-display text-xs relative">
+        <TabsTrigger value="respec" className="t-label text-[11px] data-[state=active]:text-primary relative">
           Respec
           {(character.respec_points || 0) > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-chart-5 animate-pulse" />
           )}
         </TabsTrigger>
-        <TabsTrigger value="renown" className="font-display text-xs">Renown</TabsTrigger>
-        <TabsTrigger value="leaderboard" className="font-display text-xs">Board</TabsTrigger>
+        <TabsTrigger value="renown" className="t-label text-[11px] data-[state=active]:text-primary">Renown</TabsTrigger>
+        <TabsTrigger value="leaderboard" className="t-label text-[11px] data-[state=active]:text-primary">Board</TabsTrigger>
       </TabsList>
     </Tabs>
   );
