@@ -44,7 +44,7 @@ interface Party {
 
 export interface MemberBuffState {
   crit_buff?: { bonus: number };
-  stealth_buff?: boolean;
+  stealth_buff?: boolean | { mult?: number };
   damage_buff?: boolean;
   root_debuff_target?: string;
   root_debuff_reduction?: number;

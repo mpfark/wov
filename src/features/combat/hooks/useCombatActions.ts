@@ -281,9 +281,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
         return;
       }
       const wisMod = getStatModifier(p.character.wis);
+      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const transferAmount = Math.max(3, wisMod * 2 + Math.floor(p.character.level / 2));
-      const maxTransfer = p.character.hp - 1;
-      if (maxTransfer <= 0) { p.addLog(`${ability.emoji} You don't have enough HP to transfer!`); return; }
+      // Dual-primary split: amount = WIS, safety floor scales with CON (hardy
+      // healers can safely sacrifice deeper without dropping themselves dangerously low).
+      const reserveHp = Math.max(1, conMod);
+      const maxTransfer = p.character.hp - reserveHp;
+      if (maxTransfer <= 0) { p.addLog(`${ability.emoji} You don't have enough HP to transfer! (need to keep ${reserveHp} HP)`); return; }
       const actualTransfer = Math.min(transferAmount, maxTransfer);
       await p.updateCharacter({ hp: p.character.hp - actualTransfer });
       const { data: restored, error } = await supabase.rpc('heal_party_member', {
@@ -339,15 +343,20 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song! (+${mergedHp} HP & +${mergedCp} CP regen for ${durSec}s)`);
       }
     } else if (ability.type === 'crit_buff') {
-      const dexMod = getStatModifier(p.character.dex);
-      const critBonus = Math.max(1, Math.min(dexMod, 5));
+      // Eagle Eye (Ranger): dual-primary — focused vision blends DEX precision + WIS attunement.
+      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
+      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      const critBonus = Math.max(1, Math.min(5, Math.floor((Math.max(0, dexMod) + Math.max(0, wisMod)) / 2)));
       p.buffSetters.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + 30000 });
       p.addLog(`${ability.emoji} Eagle Eye! Your crit range is now ${20 - critBonus}-20 for 30s.`);
     } else if (ability.type === 'stealth_buff') {
+      // Shadowstep (Rogue): dual-primary — duration scales with DEX, ambush mult with CHA flair.
       const dexMod = getStatModifier(p.character.dex);
+      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const durationMs = Math.min(15000 + dexMod * 1000, 25000);
-      p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s.`);
+      const ambushMult = Math.min(2.5, 2 + Math.max(0, chaMod) * 0.05);
+      p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
+      p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`);
     } else if (ability.type === 'damage_buff') {
       const intMod = getStatModifier(p.character.int);
       const durationMs = Math.min(25, 15 + intMod) * 1000;
@@ -360,8 +369,12 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for ${ability.label}.`); return; }
-      const wisMod = getStatModifier(p.character.wis);
-      const durationMs = Math.min(15000, 8000 + wisMod * 1000);
+      // Class-branched dual-primary: Ranger's Nature's Snare scales duration with WIS;
+      // Bard's Dissonance scales duration with INT (bards have no WIS in their kit).
+      const scaleMod = p.character.class === 'bard'
+        ? getStatModifier(p.character.int + (p.equipmentBonuses.int || 0))
+        : getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      const durationMs = Math.min(15000, 8000 + Math.max(0, scaleMod) * 1000);
       const reduction = 0.3;
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
@@ -439,27 +452,36 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'party_regen') {
-      const scaleStat = p.character.class === 'healer'
+      // Dual-primary split:
+      //   Healer (WIS+CON): heal/tick = WIS, duration = CON (stamina sustains the radiance).
+      //   Bard   (CHA+INT): heal/tick = CHA, duration = INT (knowledge stretches the melody).
+      const isHealer = p.character.class === 'healer';
+      const magnitudeMod = isHealer
         ? getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0))
         : getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
-      const healPerTick = Math.max(1, scaleStat + 2);
-      const durationMs = Math.min(25000, 15000 + scaleStat * 1000);
-      p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: p.character.class === 'healer' ? 'healer' : 'bard' });
+      const durationMod = isHealer
+        ? getStatModifier(p.character.con + (p.equipmentBonuses.con || 0))
+        : getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
+      const healPerTick = Math.max(1, magnitudeMod + 2);
+      const durationMs = Math.min(30000, 15000 + Math.max(0, durationMod) * 1000);
+      p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: isHealer ? 'healer' : 'bard' });
       const who = p.party ? 'your party' : 'you';
-      const abilityName = p.character.class === 'healer' ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
+      const abilityName = isHealer ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
       p.addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ally_absorb') {
-      // Divine Aegis — no timer; ward persists until fully absorbed.
+      // Divine Aegis — dual-primary: pool = WIS, duration = CON (endurance keeps the ward up).
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const shieldHp = wisMod * 2 + Math.floor(p.character.level * 0.7);
-      const NO_EXPIRY = Number.MAX_SAFE_INTEGER;
-      p.buffSetters.setAbsorbBuff({ shieldHp, shieldCap: shieldHp, expiresAt: NO_EXPIRY });
+      const durationMs = Math.min(60_000, 30_000 + Math.max(0, conMod) * 2_000);
+      p.buffSetters.setAbsorbBuff({ shieldHp, shieldCap: shieldHp, expiresAt: Date.now() + durationMs });
+      const durSec = Math.round(durationMs / 1000);
       if (targetId && targetId !== p.character.id) {
         const targetMember = p.partyMembers.find(m => m.character_id === targetId);
         const targetName = targetMember?.character.name || 'ally';
-        p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} with ${shieldHp} HP — lasts until absorbed.`);
+        p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} with ${shieldHp} HP for up to ${durSec}s.`);
       } else {
-        p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP — lasts until absorbed.`);
+        p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for up to ${durSec}s.`);
       }
     } else if (ability.type === 'sunder_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
@@ -485,14 +507,17 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Shield Wall is now a stance — handled at the stance toggle block above.
       // This branch should be unreachable; left as a no-op safety net.
     } else if (ability.type === 'consecrate') {
-      // Templar — Consecrate: 3 ticks (~6s) of node heal + creature burn.
+      // Templar — Consecrate: dual-primary — magnitude (heal/burn) = WIS, number of ticks scales with CON.
       const wisMod = Math.max(0, getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0)));
-      const durationMs = 6_000;
+      const conMod = Math.max(0, getStatModifier(p.character.con + (p.equipmentBonuses.con || 0)));
+      const ticks = Math.min(5, 3 + (conMod >= 3 ? 1 : 0) + (conMod >= 6 ? 1 : 0));
+      const durationMs = ticks * 2_000;
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
-      p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${Math.round(durationMs / 1000)}s — allies healed, enemies burned.`);
+      p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${ticks} ticks (${Math.round(durationMs / 1000)}s) — allies healed, enemies burned.`);
     } else if (ability.type === 'mitigation_buff') {
-      // Templar — Divine Challenge: 30s flat 30% damage reduction.
-      const durationMs = 30_000;
+      // Templar — Divine Challenge: dual-primary — DR fixed, duration scales with CON.
+      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
+      const durationMs = Math.min(45_000, 30_000 + Math.max(0, conMod) * 1_000);
       p.buffSetters.setDivineChallengeBuff({ reduction: 0.30, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Divine Challenge! You take 30% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
     }

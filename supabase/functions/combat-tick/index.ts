@@ -448,19 +448,26 @@ Deno.serve(async (req) => {
         const cInt = (m.c.int || 10) + ((eq[m.id] as any)?.int || 0);
         const cWis = (m.c.wis || 10) + ((eq[m.id] as any)?.wis || 0);
         const cDex = (m.c.dex || 10) + ((eq[m.id] as any)?.dex || 0);
+        const cCon = (m.c.con || 10) + ((eq[m.id] as any)?.con || 0);
         const intMod = Math.max(0, Math.floor((cInt - 10) / 2));
         const wisMod = Math.max(0, Math.floor((cWis - 10) / 2));
         const dexMod = Math.max(0, Math.floor((cDex - 10) / 2));
+        const conMod = Math.max(0, Math.floor((cCon - 10) / 2));
         if (reserved.ignite)       mb.ignite_buff = true;
         if (reserved.envenom)      mb.poison_buff = true;
-        if (reserved.eagle_eye)    mb.crit_buff = { bonus: Math.max(1, Math.floor(dexMod / 2) + 1) };
+        if (reserved.eagle_eye) {
+          // Dual-primary (Ranger DEX+WIS): blended focused vision. Cap 5.
+          const blended = Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2)));
+          mb.crit_buff = { bonus: blended };
+        }
         if (reserved.arcane_surge) mb.damage_buff = true;
         if (reserved.battle_cry) {
           // Match useCombatActions: 15% reduction (20% with shield), small crit reduction
           mb.battle_cry_dr = { reduction: 0.15, crit_reduction: 0.10 };
         }
         if (reserved.holy_shield) {
-          mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
+          // Dual-primary (Templar WIS+CON): magnitude = WIS, CON adds to retaliation damage.
+          mb.holy_shield = { wis_mod: wisMod, con_mod: conMod, expires_at: farFuture };
         }
         if (reserved.shield_wall) {
           // Shield Wall stance: +50% block chance (multiplicative). Applied
@@ -599,19 +606,23 @@ Deno.serve(async (req) => {
       // weapon-die autoattack path). Each ability's identity is tied to its
       // class's primary stat and is independent of equipped weapon.
       if (pa.ability_type === 'multi_attack') {
-        // Barrage (Ranger / DEX): per-arrow base = 2 + dexMod + floor(level/4).
+        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow base = 2 + dexMod + floor(level/4).
+        // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
         // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
         // Buff parity with autoattacks: respects Eagle Eye (crit_buff), Arcane Surge
         // (damage_buff), Shadowstep (stealth_buff), and Disengage (disengage_next_hit).
         // Stealth/Disengage are consumed once for the whole Barrage volley (not per arrow).
         const effDex = (c.dex || 10) + (eb.dex || 0);
+        const effWis = (c.wis || 10) + (eb.wis || 0);
         const dexMod = sm(effDex);
-        const arrowCount = dexMod >= 3 ? 3 : 2;
+        const wisMod = sm(effWis);
+        const arrowCount = Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0));
         const perArrowBase = Math.max(2 + dexMod + Math.floor((c.level || 1) / 4), 1);
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
-        const isStealth = !!mb.stealth_buff;
+        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? 2) : (mb.stealth_buff ? 2 : 0);
+        const isStealth = stealthMult > 0;
         const isDmgBuff = !!mb.damage_buff;
         const hasDisengage = !!mb.disengage_next_hit;
         const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
@@ -624,7 +635,7 @@ Deno.serve(async (req) => {
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
             let arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
-            if (isStealth) arrowDmg = arrowDmg * 2;
+            if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
             if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * ARCANE_SURGE_DAMAGE_MULT);
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
@@ -652,13 +663,16 @@ Deno.serve(async (req) => {
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
       } else if (pa.ability_type === 'execute_attack') {
-        // Eviscerate (Rogue / DEX finisher): base = 4 + 2*dexMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Multiplier from poison stacks (0–5).
+        // Eviscerate (Rogue / dual-primary DEX+CHA finisher): base = 4 + 2*dexMod + floor(level/3).
+        // Guaranteed hit, no crit roll. Per-stack bonus scales with CHA showmanship (cap +0.65/stack).
         const effDex = (c.dex || 10) + (eb.dex || 0);
+        const effCha = (c.cha || 10) + (eb.cha || 0);
         const dexMod = sm(effDex);
+        const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
         const baseDmg = 4 + 2 * dexMod + Math.floor((c.level || 1) / 3);
-        const multiplier = 1 + 0.5 * stacks;
+        const perStackBonus = Math.min(0.65, 0.50 + Math.max(0, chaMod) * 0.02);
+        const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
@@ -740,14 +754,24 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
       } else if (pa.ability_type === 'burst_damage') {
+        // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
+        // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
         const effCha = (c.cha || 10) + (eb.cha || 0);
+        const effInt = (c.int || 10) + (eb.int || 0);
         const chaMod = sm(effCha);
+        const intMod = sm(effInt);
         const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
         let damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
+        // INT crit-edge: d20 vs crit threshold lowered by floor(intMod/2). Floor 17.
+        const critRoll = rollD20();
+        const critThreshold = Math.max(17, 20 - Math.floor(Math.max(0, intMod) / 2));
+        const isFinaleCrit = critRoll >= critThreshold;
+        if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * ARCANE_SURGE_DAMAGE_MULT), 1);
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
-        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale! ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage!`, character_id: member.id });
+        const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
+        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage! (crit d20=${critRoll} vs ${critThreshold}+)`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, effCha);
         }
@@ -909,13 +933,15 @@ Deno.serve(async (req) => {
 
         // ── Holy Shield (Templar) reactive retaliation ────────────
         // After damage lands (even partial), holy aura strikes back at the
-        // attacker. Once per attacker per tick. Scales with templar's WIS.
+        // attacker. Once per attacker per tick. Dual-primary (Templar WIS+CON):
+        // WIS is the magnitude core, CON is a durability kicker on the burn.
         if (mb.holy_shield && (mb.holy_shield.expires_at ?? 0) > now && !cKilled.has(creature.id) && cHp[creature.id] > 0) {
           const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
           if (!seen.has(creature.id)) {
             seen.add(creature.id);
             const wisModForReturn = Math.max(0, sm(effectiveWis));
-            const returnDmg = Math.max(1, 2 + wisModForReturn + Math.floor((targetC.level || 1) / 4));
+            const conKicker = Math.max(0, mb.holy_shield.con_mod ?? 0);
+            const returnDmg = Math.max(1, 2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4));
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
@@ -1027,7 +1053,8 @@ Deno.serve(async (req) => {
         const baseCrit = getClassCritRange(c.class);
         const effCrit = baseCrit - dcb - critBonusFromBuff;
         const sdf = strDmgFloor(effStr);
-        const isStealth = !!mb.stealth_buff;
+        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? 2) : (mb.stealth_buff ? 2 : 0);
+        const isStealth = stealthMult > 0;
         const isDmgBuff = !!mb.damage_buff;
         const hasDisengage = !!mb.disengage_next_hit;
         const affinity = weaponAffinity(c.class, wTag);
@@ -1065,10 +1092,10 @@ Deno.serve(async (req) => {
           if (isCrit) dmg = Math.max(dmg * 2, 1);
           if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
           if (isStealth) {
-            dmg = dmg * 2;
+            dmg = Math.max(Math.floor(dmg * stealthMult), 1);
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
             consumedBuffs[m.id].push('stealth');
-            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
+            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals ×${stealthMult.toFixed(2)} damage!`, character_id: m.id });
           }
           if (isDmgBuff) dmg = Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT);
           if (hasDisengage) {

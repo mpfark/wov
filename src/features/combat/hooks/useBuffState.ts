@@ -183,7 +183,7 @@ export function useBuffState(params: UseBuffStateParams) {
     const now = Date.now();
     const buffs: Record<string, any> = {};
     if (critBuff && now < critBuff.expiresAt) buffs.crit_buff = { bonus: critBuff.bonus };
-    if (stealthBuff && now < stealthBuff.expiresAt) buffs.stealth_buff = true;
+    if (stealthBuff && now < stealthBuff.expiresAt) buffs.stealth_buff = { mult: stealthBuff.mult ?? 2 };
     if (damageBuff && now < damageBuff.expiresAt) buffs.damage_buff = true;
     if (rootDebuff && now < rootDebuff.expiresAt) {
       buffs.root_debuff_target = (rootDebuff as any).creatureId;

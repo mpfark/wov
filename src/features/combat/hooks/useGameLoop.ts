@@ -16,7 +16,7 @@ import { useBuffState } from './useBuffState';
 export interface RegenBuff { multiplier: number; expiresAt: number } // kept for type compat but unused
 export interface FoodBuff { flatRegen: number; expiresAt: number }
 export interface CritBuff { bonus: number; expiresAt: number }
-export interface StealthBuff { expiresAt: number }
+export interface StealthBuff { expiresAt: number; mult?: number }
 export interface DamageBuff { expiresAt: number }
 export interface RootDebuff { damageReduction: number; expiresAt: number }
 export interface BattleCryBuff { damageReduction: number; critReduction: number; expiresAt: number }
