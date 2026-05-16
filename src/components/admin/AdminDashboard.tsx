@@ -75,7 +75,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   return (
     <div className="p-6 overflow-y-auto">
       <div className="mb-6">
-        <h2 className="font-display text-lg text-primary mb-1">Welcome back</h2>
+        <h2 className="t-display-lg text-base mb-1">Welcome back</h2>
         <p className="text-sm text-muted-foreground">Quick overview of the world state.</p>
       </div>
 
