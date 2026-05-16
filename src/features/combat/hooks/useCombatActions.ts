@@ -452,27 +452,36 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'party_regen') {
-      const scaleStat = p.character.class === 'healer'
+      // Dual-primary split:
+      //   Healer (WIS+CON): heal/tick = WIS, duration = CON (stamina sustains the radiance).
+      //   Bard   (CHA+INT): heal/tick = CHA, duration = INT (knowledge stretches the melody).
+      const isHealer = p.character.class === 'healer';
+      const magnitudeMod = isHealer
         ? getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0))
         : getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
-      const healPerTick = Math.max(1, scaleStat + 2);
-      const durationMs = Math.min(25000, 15000 + scaleStat * 1000);
-      p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: p.character.class === 'healer' ? 'healer' : 'bard' });
+      const durationMod = isHealer
+        ? getStatModifier(p.character.con + (p.equipmentBonuses.con || 0))
+        : getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
+      const healPerTick = Math.max(1, magnitudeMod + 2);
+      const durationMs = Math.min(30000, 15000 + Math.max(0, durationMod) * 1000);
+      p.buffSetters.setPartyRegenBuff({ healPerTick, expiresAt: Date.now() + durationMs, source: isHealer ? 'healer' : 'bard' });
       const who = p.party ? 'your party' : 'you';
-      const abilityName = p.character.class === 'healer' ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
+      const abilityName = isHealer ? 'Purifying Light! Divine radiance' : 'Crescendo! A rising melody';
       p.addLog(`${ability.emoji} ${abilityName} heals ${who} for ${healPerTick} HP every 3s for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'ally_absorb') {
-      // Divine Aegis — no timer; ward persists until fully absorbed.
+      // Divine Aegis — dual-primary: pool = WIS, duration = CON (endurance keeps the ward up).
       const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const shieldHp = wisMod * 2 + Math.floor(p.character.level * 0.7);
-      const NO_EXPIRY = Number.MAX_SAFE_INTEGER;
-      p.buffSetters.setAbsorbBuff({ shieldHp, shieldCap: shieldHp, expiresAt: NO_EXPIRY });
+      const durationMs = Math.min(60_000, 30_000 + Math.max(0, conMod) * 2_000);
+      p.buffSetters.setAbsorbBuff({ shieldHp, shieldCap: shieldHp, expiresAt: Date.now() + durationMs });
+      const durSec = Math.round(durationMs / 1000);
       if (targetId && targetId !== p.character.id) {
         const targetMember = p.partyMembers.find(m => m.character_id === targetId);
         const targetName = targetMember?.character.name || 'ally';
-        p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} with ${shieldHp} HP — lasts until absorbed.`);
+        p.addLog(`${ability.emoji} Divine Aegis! You shield ${targetName} with ${shieldHp} HP for up to ${durSec}s.`);
       } else {
-        p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP — lasts until absorbed.`);
+        p.addLog(`${ability.emoji} Divine Aegis! Absorb shield with ${shieldHp} HP for up to ${durSec}s.`);
       }
     } else if (ability.type === 'sunder_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
