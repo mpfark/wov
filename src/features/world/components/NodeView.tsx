@@ -6,6 +6,7 @@ import { Character } from '@/features/character';
 import { GroundLootItem } from '@/features/inventory';
 import { getCharacterTitle } from '@/lib/game-data';
 import { ClassAbility } from '@/features/combat';
+import { getStanceForAbility, isStanceActive, type ReservedBuffsMap } from '@/features/combat/utils/stances';
 import { getKeyLabel, type ActionBindings } from '@/features/world';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
