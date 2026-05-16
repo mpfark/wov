@@ -890,7 +890,7 @@ Deno.serve(async (req) => {
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
         const cab = creatureAtkBonus(creature.level);
-        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR${cab > 0 ? ` + ${cab} Lvl` : ''} = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
+        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `👹 ${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR${cab > 0 ? ` + ${cab} Lvl` : ''} = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
 
         // Boss crit flavor enrichment
         if (isCrit) {
@@ -929,7 +929,7 @@ Deno.serve(async (req) => {
         }
       } else {
         const cabMiss = creatureAtkBonus(creature.level);
-        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR${cabMiss > 0 ? ` + ${cabMiss} Lvl` : ''} = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
+        events.push({ type: 'creature_miss', message: `👹 ${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR${cabMiss > 0 ? ` + ${cabMiss} Lvl` : ''} = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
       }
     };
 
