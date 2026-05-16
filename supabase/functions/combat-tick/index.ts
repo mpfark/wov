@@ -1053,7 +1053,8 @@ Deno.serve(async (req) => {
         const baseCrit = getClassCritRange(c.class);
         const effCrit = baseCrit - dcb - critBonusFromBuff;
         const sdf = strDmgFloor(effStr);
-        const isStealth = !!mb.stealth_buff;
+        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? 2) : (mb.stealth_buff ? 2 : 0);
+        const isStealth = stealthMult > 0;
         const isDmgBuff = !!mb.damage_buff;
         const hasDisengage = !!mb.disengage_next_hit;
         const affinity = weaponAffinity(c.class, wTag);
