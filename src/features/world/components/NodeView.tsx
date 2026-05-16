@@ -488,6 +488,14 @@ export default function NodeView({
                   const selfFallback = ability.type === 'ally_absorb' ? character.id : undefined;
                   const resolvedTarget = (abilityTargetId ?? selfFallback) || undefined;
                   const disableNoTarget = needsTarget && !resolvedTarget;
+                  const stanceDef = getStanceForAbility(ability.type);
+                  const stanceActive = !!(stanceDef && isStanceActive(reservedBuffs, stanceDef.key));
+                  const isPending = pendingAbilityIndex === idx;
+                  const stateClass = stanceActive
+                    ? 'bg-soulforged/15 border-soulforged text-soulforged hover:bg-soulforged/25'
+                    : isPending
+                      ? 'border-elvish text-elvish ring-2 ring-elvish/70 animate-pulse'
+                      : 'text-elvish border-elvish/50';
                   return (
                     <Tooltip key={idx}>
                       <TooltipTrigger asChild>
@@ -497,7 +505,7 @@ export default function NodeView({
                             size="sm"
                             onClick={() => onUseAbility(idx, resolvedTarget)}
                             disabled={levelLocked || notEnoughCp || character.hp <= 0 || disableNoTarget}
-                            className="font-display text-[10px] h-6 px-2 text-elvish border-elvish/50"
+                            className={`font-display text-[10px] h-6 px-2 ${stateClass}`}
                           >
                             {ability.emoji} {ability.label}
                             {actionBindings?.[`ability${idx + 1}` as keyof ActionBindings]?.[0] && !levelLocked && !notEnoughCp && (
@@ -509,7 +517,11 @@ export default function NodeView({
                       <TooltipContent side="top" className="text-xs max-w-[200px]">
                         {levelLocked
                           ? `Unlocks at level ${ability.levelRequired}`
-                          : `${ability.description} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
+                          : stanceActive
+                            ? `${ability.description} · Active stance — click to drop (CP not refunded).`
+                            : isPending
+                              ? `${ability.description} · Queued — casting on next tick.`
+                              : `${ability.description} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
                         }
                       </TooltipContent>
                     </Tooltip>
