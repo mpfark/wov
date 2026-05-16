@@ -933,13 +933,15 @@ Deno.serve(async (req) => {
 
         // ── Holy Shield (Templar) reactive retaliation ────────────
         // After damage lands (even partial), holy aura strikes back at the
-        // attacker. Once per attacker per tick. Scales with templar's WIS.
+        // attacker. Once per attacker per tick. Dual-primary (Templar WIS+CON):
+        // WIS is the magnitude core, CON is a durability kicker on the burn.
         if (mb.holy_shield && (mb.holy_shield.expires_at ?? 0) > now && !cKilled.has(creature.id) && cHp[creature.id] > 0) {
           const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
           if (!seen.has(creature.id)) {
             seen.add(creature.id);
             const wisModForReturn = Math.max(0, sm(effectiveWis));
-            const returnDmg = Math.max(1, 2 + wisModForReturn + Math.floor((targetC.level || 1) / 4));
+            const conKicker = Math.max(0, mb.holy_shield.con_mod ?? 0);
+            const returnDmg = Math.max(1, 2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4));
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
