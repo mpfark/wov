@@ -474,7 +474,9 @@ Deno.serve(async (req) => {
           // we only seed the live combat-session value from the persisted
           // characters.stance_state.force_shield_hp on the first tick of a
           // new session, then preserve it for the rest of the fight.
-          const shieldCap = Math.max(1, intMod + Math.floor((m.c.level || 1) * 0.5));
+          // Pool cap = WIS (sustained ward). Regen rate (in apply_force_shield_regen SQL)
+          // remains INT-scaled — INT shapes the spark, WIS shapes the ward.
+          const shieldCap = Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5));
           let current = mb.absorb_buff?.shield_hp;
           if (current === undefined) {
             const persisted = (m.c.stance_state && typeof m.c.stance_state === 'object')
