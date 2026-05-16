@@ -18,11 +18,11 @@ export default function AdminToolSection({
   return (
     <div className={`px-3 py-2.5 border-b border-border/60 last:border-b-0 ${className}`}>
       {title && (
-        <p className="text-[10px] font-display uppercase tracking-wide text-muted-foreground mb-2">
+        <p className="t-label text-[10px] mb-2">
           {title}
         </p>
       )}
-      <div className="space-y-1.5">{children}</div>
+      <div className="gap-row">{children}</div>
     </div>
   );
 }

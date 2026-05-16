@@ -120,7 +120,7 @@ export default function AdminSidebar({ activeTab, onNavigate, isValar }: AdminSi
 
         {NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label}>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+            <SidebarGroupLabel className="t-label text-[10px] tracking-wider opacity-70">
               {group.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -145,7 +145,7 @@ export default function AdminSidebar({ activeTab, onNavigate, isValar }: AdminSi
 
       <SidebarFooter className="p-2 border-t border-border">
         {!collapsed && (
-          <p className="text-[10px] text-muted-foreground text-center">World Editor</p>
+          <p className="t-meta text-center">World Editor</p>
         )}
       </SidebarFooter>
     </Sidebar>

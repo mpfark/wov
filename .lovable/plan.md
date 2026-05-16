@@ -107,7 +107,7 @@ Risk: medium — touched many components but mechanically (role-class swap), no 
 
 Risk: medium — many files, but they all share `ServicePanelShell` so the header pass is one edit.
 
-### Phase 5 — Admin pages
+### Phase 5 — Admin pages ✅
 9. Apply role classes to `AdminPageShell`, `AdminEditorHeader`, `AdminToolSection`. Admin is internal-only so this is last.
 
 Risk: low — internal surface, can iterate freely.
