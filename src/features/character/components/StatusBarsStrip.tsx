@@ -161,13 +161,13 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (holyShieldActive) {
     const dur = BUFF_DURATIONS['Holy Shield'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((holyShieldBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🛡️✝️', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ emoji: '⚡', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   if (consecrateActive) {
     const dur = consecrateBuff!.durationMs || BUFF_DURATIONS['Consecrate'] || 6_000;
     const pct = Math.max(0, Math.min(100, ((consecrateBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '✨🟡', label: 'Consecrate', detail: 'Heals allies, burns enemies on this node', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ emoji: '🔆', label: 'Consecrate', detail: 'Heals allies, burns enemies on this node', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   if (divineChallengeActive) {
