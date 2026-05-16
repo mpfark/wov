@@ -93,6 +93,12 @@ export default {
           "number-heal": "hsl(var(--log-number-heal))",
           "number-block": "hsl(var(--log-number-block))",
         },
+        ui: {
+          number: "hsl(var(--ui-number))",
+          "number-pos": "hsl(var(--ui-number-pos))",
+          "number-neg": "hsl(var(--ui-number-neg))",
+          "number-cap": "hsl(var(--ui-number-cap))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
