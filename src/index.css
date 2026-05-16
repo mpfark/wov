@@ -102,7 +102,43 @@
   }
 }
 
-/* Parchment texture overlay */
+/* ═══════════════════════════════════════
+   Typography roles — five named modes
+   See src/features/README.md "Typography & rhythm"
+   ═══════════════════════════════════════ */
+@layer components {
+  .t-display-lg {
+    @apply font-display text-base tracking-wide text-primary;
+    text-shadow: 0 0 10px hsl(38 80% 50% / 0.3), 0 0 30px hsl(38 80% 50% / 0.1);
+  }
+  .t-display-sm {
+    @apply font-display text-sm tracking-wide text-primary;
+  }
+  .t-label {
+    @apply font-display uppercase text-muted-foreground;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+  .t-body {
+    @apply text-sm leading-snug text-foreground;
+  }
+  .t-meta {
+    @apply text-xs leading-snug text-muted-foreground;
+  }
+  .t-numeric {
+    @apply font-display text-foreground;
+    font-variant-numeric: tabular-nums;
+  }
+  .t-numeric-pos { color: hsl(var(--ui-number-pos)); }
+  .t-numeric-neg { color: hsl(var(--ui-number-neg)); }
+  .t-numeric-cap { color: hsl(var(--ui-number-cap)); }
+
+  /* Spacing rhythm — semantic vertical gaps */
+  .gap-row > * + *     { margin-top: 4px; }
+  .gap-group > * + *   { margin-top: 8px; }
+  .gap-section > * + * { margin-top: 16px; }
+  .gap-panel > * + *   { margin-top: 24px; }
+}
 .parchment-bg {
   background:
     radial-gradient(ellipse at 20% 50%, hsl(35 30% 18%) 0%, transparent 70%),
