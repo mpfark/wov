@@ -467,8 +467,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Sunder Armor.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
+      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const acReduction = Math.max(2, strMod);
-      const durationSec = Math.min(20, 12 + strMod);
+      // Dual-primary split: AC reduction = STR (crushing blow), duration = DEX (precise targeting lingers).
+      const durationSec = Math.min(20, 12 + Math.max(0, dexMod));
       p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name } }));
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {
