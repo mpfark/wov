@@ -430,8 +430,8 @@ export default function CharacterPanel({
               {/* Belt Potions */}
               {beltCapacity > 0 && (
                 <div className="mt-2">
-                  <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-                    Belt Potions ({beltedPotions.length}/{beltCapacity})
+                  <h3 className="t-label mb-1.5">
+                    Belt Potions <span className="t-numeric text-xs ml-1">{beltedPotions.length}/{beltCapacity}</span>
                   </h3>
                   <div className="space-y-1">
                     {Array.from({ length: beltCapacity }, (_, i) => {
@@ -483,7 +483,7 @@ export default function CharacterPanel({
 
               {/* Materials (salvage + gems + future) */}
               <div className="mt-2 space-y-2 rounded border border-border bg-background/40 p-2">
-                <div className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
+                <div className="t-label flex items-center gap-1">
                   🧰 Material Pouch
                 </div>
                 <MaterialsSection characterId={character.id} />
@@ -504,8 +504,8 @@ export default function CharacterPanel({
                 }
                 return (
                   <div className="mt-3 flex flex-col">
-                    <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-                      Consumables ({consumableAndQuestItems.length})
+                    <h3 className="t-label mb-1.5">
+                      Consumables <span className="t-numeric text-xs ml-1">{consumableAndQuestItems.length}</span>
                     </h3>
                     <div className="space-y-1">
                       {grouped.map(({ representative: inv, all }) => {
@@ -581,8 +581,8 @@ export default function CharacterPanel({
                     const capacity = getCarryCapacity(effectiveStr);
                     const isOver = bagWeight > capacity;
                     return (
-                      <h3 className="font-display text-xs text-muted-foreground">
-                        Items ({inventoryItems.length}) — <span className={isOver ? 'text-destructive' : ''}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
+                      <h3 className="t-label">
+                        Items <span className="t-numeric text-xs ml-1">{inventoryItems.length}</span> — <span className={`t-numeric text-xs ${isOver ? 'text-destructive' : ''}`}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
                       </h3>
                     );
                   })()}
@@ -790,9 +790,9 @@ export default function CharacterPanel({
                               {/* Stat allocation moved to Trainer panel */}
                               <span className="font-display text-foreground">{STAT_FULL_NAMES[stat]}</span>
                             </span>
-                            <span className="flex gap-1.5 tabular-nums">
-                              <span className="text-foreground">{base}</span>
-                              <span className="text-chart-2 w-5 text-right">{bonus > 0 ? `+${bonus}` : ''}</span>
+                            <span className="flex gap-1.5 t-numeric text-xs">
+                              <span>{base}</span>
+                              <span className="t-numeric-pos w-5 text-right">{bonus > 0 ? `+${bonus}` : ''}</span>
                               <span className="text-muted-foreground w-6 text-right text-[10px]">({mod >= 0 ? '+' : ''}{mod})</span>
                             </span>
                           </div>
@@ -979,19 +979,19 @@ export default function CharacterPanel({
 
                   const renderSection = (title: string, rows: DerivedRow[], cols: boolean = false) => (
                     <div className="border-t border-border pt-1.5">
-                      <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">{title}</h4>
+                      <h4 className="t-label mb-1">{title}</h4>
                       <div className={cols ? 'grid grid-cols-2 gap-x-3' : 'space-y-0'}>
                         {rows.map(r => (
                           <Tooltip key={r.label}>
                             <TooltipTrigger asChild>
                               <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
                                 <span className="text-muted-foreground">{r.label}</span>
-                                <span className={`font-display tabular-nums ${r.buffed ? `${r.buffColor || 'text-elvish'} font-semibold` : 'text-foreground'}`}>{r.value}</span>
+                                <span className={`t-numeric ${r.buffed ? `${r.buffColor || 'text-elvish'} font-semibold` : ''}`}>{r.value}</span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent className="bg-popover border-border z-50">
-                              <p className="font-display text-sm">{r.label}</p>
-                              <p className="text-xs text-muted-foreground whitespace-pre-line">{r.tip}</p>
+                              <p className="t-display-sm">{r.label}</p>
+                              <p className="t-meta whitespace-pre-line">{r.tip}</p>
                             </TooltipContent>
                           </Tooltip>
                         ))}
