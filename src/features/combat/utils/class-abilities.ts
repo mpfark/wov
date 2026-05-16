@@ -71,9 +71,9 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   ],
   rogue: [
     { label: 'Backstab', emoji: '🗡️', description: 'Strike at a vital point for damage scaling with DEX', cpCost: 10, type: 'backstab', tier: 0, levelRequired: 1 },
-    { label: 'Shadowstep', emoji: '🌑', description: 'Vanish into shadow — avoid attacks when fleeing and deal bonus damage on your next strike', cpCost: 15, type: 'stealth_buff', tier: 1, levelRequired: 5 },
+    { label: 'Shadowstep', emoji: '🌑', description: 'Vanish into shadow — duration scales with DEX, and your next strike from stealth deals an ambush multiplier scaling with CHA (cap ×2.5).', cpCost: 15, type: 'stealth_buff', tier: 1, levelRequired: 5 },
     { label: 'Envenom', emoji: '🐍', description: '⚓ Stance (T3 — reserves 20% of max CP). Each hit has a 40% chance to apply a stackable poison DoT (max 5). Mutually exclusive with Ignite. Click again to drop. Reserved CP is NOT refunded.', cpCost: 50, type: 'poison_buff', tier: 2, levelRequired: 10 },
-    { label: 'Eviscerate', emoji: '🔪', description: 'A vicious strike that consumes all poison stacks for +50% bonus damage per stack', cpCost: 40, type: 'execute_attack', tier: 3, levelRequired: 15 },
+    { label: 'Eviscerate', emoji: '🔪', description: 'A vicious strike that consumes all poison stacks for bonus damage per stack. Per-stack bonus scales with CHA (showmanship per stack), capped at +65% per stack.', cpCost: 40, type: 'execute_attack', tier: 3, levelRequired: 15 },
     { label: 'Cloak of Shadows', emoji: '🌫️', description: 'Wrap yourself in shadow, gaining a 50% chance to dodge incoming attacks', cpCost: 60, type: 'evasion_buff', tier: 4, levelRequired: 20 },
   ],
   wizard: [
