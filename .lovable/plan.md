@@ -1,139 +1,175 @@
+# Late-Game Item Budget Compression — Audit & Plan
 
-# Typography & UI Rhythm Pass — Plan
+## 1. How budgets are calculated today
 
-Goal: keep the dark fantasy / MUD identity, but give the UI one shared type scale, one spacing rhythm, and a smaller set of "text modes" so the eye can parse panels faster. No redesign, no Event Log rework.
+**Canonical formula** (`src/shared/formulas/items.ts` + `_shared/formulas/items.ts`):
 
-## 1. Audit findings (what's actually causing the noise)
+```text
+budget = max(2, floor(2 + (level - 1) * 0.3 * rarity_mult * hands_mult))
 
-A quick sweep of the codebase shows the root causes:
+rarity_mult: common 1.0 · uncommon 1.5 · soulforged 2.0 · unique 3.0
+hands_mult:  1H 1.0 · 2H 1.5
+primary cap: 4 + floor(level / 4)
+ac / hp_regen cap: 2 + floor(level / 10)
+hp cap: 6 + floor(level / 5) * 2
+```
 
-- **Too many one-off sizes.** ~780 hits of arbitrary `text-[10px] / [11px] / [12px] / [13px]` across components. Sizes drift per panel.
-- **Too many "label modes."** Headers freely mix `font-display + uppercase + tracking-wide(r/est)`, gold/teal/muted variants, italics, and `text-glow`. Each panel reinvents its own header treatment (Character, Inventory, Service panels, Admin all differ).
-- **Spacing is local, not systemic.** `space-y-1`, `space-y-1.5`, `space-y-2`, `gap-1`, `gap-1.5`, `py-1.5`, `py-2`, `my-1.5` all appear next to each other inside the same panel. There is no defined "row / group / section" rhythm.
-- **Opacity used as a color.** `text-muted-foreground/80`, `/70`, `/60`, plain `opacity-50/60/70/80` are scattered; metadata vs disabled vs "dim" isn't differentiated.
-- **Numeric emphasis is inconsistent.** Stats, costs, durability, HP/CP/MP all render in body weight + base color. The Event Log just got dedicated `log-number-*` tokens — nothing else has equivalents.
-- **Tooltips are flat.** `ItemTooltipCard` puts identity, stats, metadata, flavor at near-equal weight; only rarity color separates them.
-- **Interaction states.** Tabs/buttons rely on default shadcn variants; selected tab vs hovered tab vs disabled action aren't visually ranked.
+Same numbers are mirrored in the `seed-archetype-items` seeder, the AI Forge prompt, and the rebalance edge function.
 
-The Event Log pass already established the right pattern (semantic tokens + structured spans). This plan extends that pattern outward — it does not touch the Event Log.
+### Computed end-points
 
-## 2. Proposed systems
+| Tier | L1 | L20 | L30 | L35 | L40 | L42 |
+|---|---|---|---|---|---|---|
+| Common 1H | 2 | 7 | 10 | 12 | 13 | **14** |
+| Common 2H | 2 | 10 | 15 | 17 | 19 | **20** |
+| Uncommon 1H | 2 | 10 | 15 | 17 | 19 | **20** |
+| Uncommon 2H | 2 | 14 | 21 | 25 | 28 | **29** |
+| Soulforged 1H | 2 | 13 | 19 | 22 | 25 | **26** |
+| Unique 1H | 2 | 19 | 28 | 33 | 37 | **38** |
+| Unique 2H | 2 | 28 | 42 | 49 | 55 | **57** |
+| Primary stat cap | 4 | 9 | 11 | 12 | 14 | 14 |
 
-### 2a. Type scale (5 roles, not 15 sizes)
+The curve is **purely linear**. Each tier adds the same delta per level forever, so the *gap* between rarities widens at high level instead of compressing.
 
-| Role | Class preset | Use |
-|---|---|---|
-| `display-lg` | `font-display text-base tracking-wide text-primary text-glow` | Panel/page title (one per panel) |
-| `display-sm` | `font-display text-sm tracking-wide text-primary` | Section headers inside a panel |
-| `label` | `font-display text-[11px] uppercase tracking-[0.14em] text-muted-foreground` | Metadata labels, tab labels, group captions |
-| `body` | `text-sm leading-snug text-foreground` | Default readable prose, descriptions, log lines |
-| `meta` | `text-xs leading-snug text-muted-foreground` | Secondary info, timestamps, counts |
-| `numeric` | `font-display tabular-nums text-foreground` (size inherits) | Any displayed number (stats, gold, HP, durability) |
+## 2. Observed inflation in live data
 
-Rules:
-- Only `display-lg` may use `text-glow`. Stops the "everything glows" effect.
-- `uppercase + tracking` reserved for `label`. No uppercase body text, no uppercase section headers.
-- `italic` reserved for flavor text in tooltips and combat narrative lines. Nowhere else.
-- `tabular-nums` always on numeric values so columns of stats line up.
+Database snapshot (avg across all generated items per band):
 
-### 2b. Spacing rhythm (4 levels)
+| Rarity | L1 | L21 | L31 | L41 | Max single primary |
+|---|---|---|---|---|---|
+| Common | 2.0 attr | 8.1 | 11.2 | 13.7 | 14 |
+| Uncommon | 2.0 attr | 11.1 | 15.1 | 18.8 | 14 |
 
-Replace ad-hoc spacing with semantic gap classes:
+Live high-level characters already show the symptom:
+- Wizard L42 Puffin: **INT 64**, WIS 24
+- Wizard L40 Cithra: **INT 54**, WIS 30
+- Warrior L42 Cithrawiel: STR 30, DEX 38, **CON 46**
 
-| Token | Value | Use |
-|---|---|---|
-| `gap-row` | `space-y-1` (4px) | Items inside a tightly grouped list (stats row, log line) |
-| `gap-group` | `space-y-2` (8px) | Between groups inside a section (identity / stats / flavor) |
-| `gap-section` | `space-y-4` (16px) | Between sections inside a panel |
-| `gap-panel` | `space-y-6` (24px) | Between top-level panel blocks |
+Hand-crafted uniques compound it: Staff of the Last Path (L35, 2H) carries cha 12 / int 12 / wis 12 + 5 regen. Turning Stones grant **+14 in a single primary** from a *trinket* slot, and Ascended Stones (L47) grant **+10/+10** in two primaries from a single trinket — essentially a free second amulet.
 
-Panel padding standardizes to `p-3` (compact panels: inventory, character) and `p-4` (service panels). Divider style standardizes to `h-px bg-border/60`.
+## 3. Where the runaway scaling comes from
 
-### 2c. Opacity hierarchy (stop using % as a color)
+Ranked by contribution to top-end stat totals:
 
-Replace mixed `/60 /70 /80` with three tiers using existing tokens:
+1. **Pure-primary common items at level cap.** With budget 14 and primary cap 14, the 70/30 split + spillover loop dumps nearly the whole budget into one stat. 11 archetype-aligned armor slots × 14 = **154 single-stat points** is structurally reachable.
+2. **`hands_mult` stacking multiplicatively with `rarity_mult` on weapons.** A 2H unique gets `3.0 × 1.5 = 4.5×` a common's budget — by far the steepest curve in the system.
+3. **Unique rarity multiplier (3.0).** It is 2× soulforged and 6× the pure-stat baseline. Most existing unique stat sheets exceed even that, since they are author-tuned (see Severance: con 15 + four 5s at L45).
+4. **Turning Stones / Ascended Stones in a trinket slot.** They behave like a second weapon-grade attribute source. The Ascended at L47 with 10+10 attributes is the single most efficient endgame slot in the game.
+5. **Primary cap scaling linearly forever** (`4 + L/4`). Nothing tapers at level 30+, so the cap and the budget both keep climbing in lockstep, and the cap is exactly the budget at L42.
+6. **`soulforge-item` budget mismatch.** It hard-codes `1.5` (uncommon multiplier), but the canonical multiplier for `soulforged` is `2.0` — currently a *bug* favouring the player slightly less than designed. Worth fixing alongside the compression so the formula is true. (See `supabase/functions/soulforge-item/index.ts` lines 17-21.)
 
-- **Primary text** — `text-foreground` (full).
-- **Metadata** — `text-muted-foreground` (~55% luminance vs bg; already defined).
-- **Disabled / passive** — `opacity-60` only, applied to the whole interactive element, never to text alone.
+## 4. Proposed direction (audit, no changes yet)
 
-### 2d. Numeric emphasis tokens (mirror what Event Log did)
+A **soft taper above L30** in three coordinated places, plus a small structural change to weapon multipliers and unique tuning. Magnitudes are starting estimates for discussion — final numbers should be tuned against live characters.
 
-Add semantic `ui-number-*` tokens in `index.css` + `tailwind.config.ts`:
-- `ui-number` — neutral large number (stat value, gold count).
-- `ui-number-pos` — gains (+1 STR diff, heal).
-- `ui-number-neg` — losses, broken durability.
-- `ui-number-cap` — "of max" (e.g. `42 / 60` — the `/ 60` is dimmed).
+### 4a. Budget curve — soft taper
 
-Always pair with `tabular-nums`.
+Keep the L1–L30 curve identical. Add a diminishing factor above L30:
 
-### 2e. Tooltip hierarchy (item tooltip card)
+```text
+raw = 2 + (L - 1) * 0.3 * rarity_mult * hands_mult
+taper = L <= 30 ? 1.0
+      : L <= 35 ? 0.90
+      : L <= 40 ? 0.80
+      : 0.72   // L41-42
+budget = max(2, floor(raw * taper))
+```
 
-Restructure into 4 visually-ranked blocks separated by `gap-group`:
-1. **Identity** — rarity-colored name (display-sm), subtitle as `label`, level as `meta`.
-2. **Stats** — two-column grid, label left (`label`), value right (`numeric`, sign-colored).
-3. **Metadata** — durability bar, weight, value as `meta` row.
-4. **Flavor** — italic, `meta` color, top border separator.
+Result at L42 (rounded):
 
-### 2f. Interaction clarity
+| Tier | Now | Proposed | Δ |
+|---|---|---|---|
+| Common 1H | 14 | 11 | −21% |
+| Common 2H | 20 | 15 | −25% |
+| Uncommon 1H | 20 | 15 | −25% |
+| Uncommon 2H | 29 | 22 | −24% |
+| Soulforged 1H | 26 | 20 | −23% |
+| Unique 1H | 38 | 28 | −26% |
+| Unique 2H | 57 | 42 | −26% |
 
-- **Tabs**: selected = `text-primary` + 1px bottom border `border-gold/70`; hover = `text-foreground`; idle = `text-muted-foreground`. Drop background fills.
-- **Buttons**: keep current variants; only add `font-display tracking-wide` to primary CTAs so they read as "action" without extra glow.
-- **Clickable text in panels** (item names in lists, etc.) gets a single `hover:text-primary transition-colors` rule instead of varying treatments.
+This trims ~25% off only the very top end without touching L1–L30 progression.
 
-## 3. Implementation plan (low → high risk, phased)
+### 4b. Hybrid efficiency bonus
 
-### Phase 1 — Foundations (low risk, no visual jump)
-1. Add tokens to `src/index.css` (`--ui-number-*`) and `tailwind.config.ts` (`colors.ui.*`).
-2. Create `src/styles/typography.css` (or extend `index.css`) with utility classes: `.t-display-lg`, `.t-display-sm`, `.t-label`, `.t-body`, `.t-meta`, `.t-numeric`. These are documented presets, not magic — components can still use raw Tailwind.
-3. Add a short `src/features/README.md` section "Typography & rhythm" describing the 5 roles + 4 gap tokens.
+Give uncommon items a small per-point efficiency credit at high level so hybrids remain attractive vs pure-stat:
 
-Risk: none — purely additive.
+```text
+hybrid_bonus = L >= 30 ? +1 budget point : 0  (uncommon only)
+```
 
-### Phase 2 — Tooltip card (high visibility, contained scope)
-4. Refactor `src/components/items/ItemTooltipCard.tsx` to the 4-block hierarchy above. This is the most-seen surface and the clearest "before/after".
+Cheap to implement, swings a single attribute point in the hybrid's favour, signals the design intent without re-tuning rarities.
 
-Risk: low — single file, no logic changes.
+### 4c. De-couple weapon multiplier
 
-### Phase 3 — Character + Inventory panels (the densest panels) ✅
-5. `src/features/character/components/CharacterPanel.tsx`, `StatusBarsStrip.tsx`, `PortraitTab.tsx`: identity block uses `t-display-lg` + `t-label` + `t-meta`; tab triggers use `t-label` with `data-[state=active]:text-primary`; section headers (Belt Potions, Material Pouch, Consumables, Items, Pools/Offense/Defense) use `t-label`; stat & derived numbers use `t-numeric` (+ `t-numeric-pos` for bonus column); HP/CP/MP/XP/RP/gem counters use `t-numeric`. Portrait tab labels use `t-label`.
-6. `src/features/inventory/components/GemPouch.tsx`: pouch header uses `t-label`. `MaterialsSection.tsx` chips already use `font-display tabular-nums` — left as-is.
+Change `hands_mult` from `1.5` to `1.35` on rare tiers only (or apply only up to uncommon) so 2H uniques stop being the runaway outlier. A 2H unique at L42 would land near 38 budget instead of 57.
 
-Risk: medium — touched many components but mechanically (role-class swap), no logic changes.
+### 4d. Primary cap taper
 
-### Phase 4 — Service panels (Vendor / Blacksmith / Jewelcrafter / Stonebinder / Trainer / Scroll / Soulforge) ✅
-7. Standardize `ServicePanelShell` header/tab typography to `display-lg` + `label`.
-8. Apply role classes inside each service panel body.
+Currently `4 + floor(L/4)` — at L42 = 14, which is exactly the common budget. Replace with:
 
-Risk: medium — many files, but they all share `ServicePanelShell` so the header pass is one edit.
+```text
+primaryCap(L) = L <= 28 ? 4 + floor(L / 4)
+              : L <= 40 ? 11 + floor((L - 28) / 6)   // +1 every 6 levels
+              : 13                                    // hard ceiling
+```
 
-### Phase 5 — Admin pages ✅
-9. Apply role classes to `AdminPageShell`, `AdminEditorHeader`, `AdminToolSection`. Admin is internal-only so this is last.
+That keeps the cap at 11 at L28, 12 at L34, 13 at L40+. Forces pure-stat items to spread points into a minor stat at the very top end.
 
-Risk: low — internal surface, can iterate freely.
+### 4e. Unique catalog touch-up
 
-### Phase 6 — Cleanup
-10. Add a small ESLint rule or grep-CI check that flags new `text-[NNpx]` literals so we don't regress.
-11. Remove now-unused glow / uppercase / italic clusters identified during the pass.
+Most uniques live with author-set stat sheets that already exceed even the unique multiplier. Two options:
 
-Risk: low.
+1. **One-pass manual re-tune** of the ~30 existing uniques to match a target budget (e.g. unique 1H ≈ 28 at L42 after taper). Lowest risk to identity if done by hand.
+2. **Scripted compression**: scale every primary stat > primary cap down to the new cap, leave secondaries (hp / hp_regen) and unique procs intact. Faster, blunter.
 
-## 4. Explicitly out of scope
+Recommendation: option 1, surfaced as an admin review panel that proposes new stat lines and the user can accept/skip per item.
 
-- Event Log styling (already overhauled).
-- Combat text wording / flavor.
-- Colors of rarity, class, faction, gem.
-- Fonts (`Cinzel` + `Crimson Text` stay).
-- Layout structure of any panel.
-- Animations.
+### 4f. Turning Stones
 
-## 5. What you'll see after Phase 1+2
+These are uniques with primary stat = old cap (14). With the new cap of 13, lower the primary to 13 and the Ascended pair from 10/10 → 9/9. Modest but they are the worst single-slot offender so the change matters.
 
-The tooltip card switches to the new hierarchy and the foundation is in place; everything else still looks identical. From there each subsequent phase is an independently shippable PR-sized change you can approve panel-by-panel, so the rollout is gradual and reversible — no "big bang" rewrite.
+### 4g. Fix soulforge budget mismatch
 
-## 6. Technical notes
+Replace the hard-coded `mult = 1.5` in `supabase/functions/soulforge-item/index.ts` with the real soulforged multiplier (2.0), then apply the same taper. Player-facing budget stays approximately the same (since the taper offsets the bug fix) but the formula becomes consistent.
 
-- All new color tokens go through `hsl(var(--...))` in `tailwind.config.ts`, matching existing convention.
-- Role classes are plain CSS utility composites in `index.css` `@layer components` — no new dependency, no CSS-in-JS.
-- `tabular-nums` is a CSS feature, no font change required (both Cinzel and Crimson Text expose it).
-- The Event Log's `event-log-*` classes stay as-is; the new `t-*` classes coexist.
+## 5. Risk-ordered rollout
+
+Do these in order, ship each as its own migration + edge-function deploy, and watch the data between steps.
+
+1. **Soulforge formula fix** — invisible cleanup, no player impact.
+2. **Budget taper above L30** in `src/shared/formulas/items.ts`, `_shared/formulas/items.ts`, `seed-archetype-items`, and the AI Forge prompt. Re-seed common/uncommon catalog — they regenerate deterministically, so this is a single overlord click.
+3. **Primary cap taper** — same files; affects only newly generated items until step 4.
+4. **Rebalance pass on existing items** using the AI rebalance edge function (already exists, just runs over the new budget). It safely brings legacy items down to budget without changing names or identities.
+5. **Hybrid efficiency bonus** — small uncommon-only adjustment, easy to add after the seed reruns.
+6. **Hands multiplier reduction** — affects weapons; do last so weapon balance can be observed in isolation.
+7. **Unique catalog touch-up** — manual review using a small admin tool that previews old → new for each unique.
+
+Existing player-owned items: the rebalance edge function (`ai-item-rebalance`) already exists for this exact purpose and respects soulbound. Soulbound soulforged + crown items should be **grandfathered** rather than re-tuned, since each character only gets one.
+
+## 6. Expected endgame totals after compression
+
+Pure-INT wizard, fully gear-stacked, post-compression:
+
+```text
+Before:  base + class growth + ~154 from 11 common archetype slots
+         + 14 from staff + 14 from turning stone  ≈  200+ INT
+
+After:   base + class growth + ~110 from 11 archetype slots (cap 13, spillover forced)
+         + 11 from 2H staff + 13 from turning stone   ≈  150 INT
+```
+
+A drop of roughly 25% on the most stackable build. Hybrids gain a relative ~5% efficiency on top.
+
+## 7. Out of scope for this plan
+
+- No changes to gem system, stat formulas (HP/CP/MP regen curves), or ability scaling math.
+- No change to the deterministic archetype grammar or naming.
+- No change to drop rates, vendor pricing, or repair costs.
+- Soulforged + Crown stat budgets remain player-defined within the new caps.
+
+## 8. Open questions for confirmation
+
+1. Confirm the **−25% target** at L42 is the desired magnitude (vs e.g. −15% or −35%).
+2. Confirm uniques should be re-tuned (option 1: hand) vs scripted compression (option 2).
+3. Should the **hands multiplier change** apply to all rarities or only unique?
+4. Should the **soulforge formula fix** preserve current player budgets (apply bug-equivalent factor) or move strictly to the canonical 2.0 × taper?
