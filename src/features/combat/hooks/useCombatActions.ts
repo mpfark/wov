@@ -282,13 +282,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       resolvedT0TargetId = cTargetId;
     }
 
-    // Damage/heal abilities must be queued for the heartbeat tick
+    // Damage/heal abilities must be queued for the heartbeat tick.
+    // No chat-log entry is emitted — the ability button itself pulses while
+    // pending, which is sufficient visual feedback (and avoids the orphan
+    // ⏳ line landing on its own row when queued out of combat).
     if (!isInstantBuff && !_fromTick) {
       const queueTargetId = resolvedT0TargetId ?? targetId;
       p.queueAbility(abilityIndex, queueTargetId);
-      const cTarget = queueTargetId ? p.creatures?.find(c => c.id === queueTargetId)
-        : p.activeCombatCreatureId ? p.creatures?.find(c => c.id === p.activeCombatCreatureId) : undefined;
-      p.addLog(getQueueFlavour(ability, cTarget?.name));
       return;
     }
 
