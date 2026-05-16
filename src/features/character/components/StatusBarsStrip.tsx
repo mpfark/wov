@@ -113,7 +113,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (igniteActive) {
     const dur = BUFF_DURATIONS['Ignite'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((igniteBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🔥🔥', label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
+    buffs.push({ emoji: '🌋', label: 'Ignite', detail: '40% burn proc', color: 'text-dwarvish', bgColor: 'bg-dwarvish/15', pct });
   }
 
   // Force Shield: stance takes precedence over the legacy timed absorb buff so
@@ -123,19 +123,19 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
     const detail = forceShieldStance.inCombat
       ? `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP`
       : `${forceShieldStance.shieldHp} / ${forceShieldStance.shieldCap} HP · regenerating`;
-    buffs.push({ emoji: '🛡️✨', label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
+    buffs.push({ emoji: '🛡️', label: 'Force Shield', detail, color: 'text-primary', bgColor: 'bg-primary/15', pct });
   } else if (absorbActive) {
     // Divine Aegis — castable absorb ward, no countdown.
     const cap = Math.max(1, absorbBuff!.shieldCap ?? absorbBuff!.shieldHp);
     const pct = Math.max(0, Math.min(100, (absorbBuff!.shieldHp / cap) * 100));
-    buffs.push({ emoji: '🛡️💚', label: 'Divine Aegis', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ emoji: '🛡️', label: 'Divine Aegis', detail: `${absorbBuff!.shieldHp} HP`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (partyRegenActive) {
     const isHealer = partyRegenBuff!.source === 'healer';
     const dur = BUFF_DURATIONS[isHealer ? 'Purifying Light' : 'Crescendo'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((partyRegenBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: isHealer ? '✨💚' : '🎶✨', label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ emoji: isHealer ? '🌟' : '✨', label: isHealer ? 'Purifying Light' : 'Crescendo', detail: `+${partyRegenBuff!.healPerTick} HP/2s`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (inspireActive) {
@@ -161,13 +161,13 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (holyShieldActive) {
     const dur = BUFF_DURATIONS['Holy Shield'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((holyShieldBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '🛡️✝️', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ emoji: '⚡', label: 'Holy Shield', detail: 'Reflects holy damage on attackers', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   if (consecrateActive) {
     const dur = consecrateBuff!.durationMs || BUFF_DURATIONS['Consecrate'] || 6_000;
     const pct = Math.max(0, Math.min(100, ((consecrateBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '✨🟡', label: 'Consecrate', detail: 'Heals allies, burns enemies on this node', color: 'text-gold', bgColor: 'bg-gold/15', pct });
+    buffs.push({ emoji: '🔆', label: 'Consecrate', detail: 'Heals allies, burns enemies on this node', color: 'text-gold', bgColor: 'bg-gold/15', pct });
   }
 
   if (divineChallengeActive) {
