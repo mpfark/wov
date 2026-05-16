@@ -343,15 +343,20 @@ export function useCombatActions(params: UseCombatActionsParams) {
         p.addLog(`${ability.emoji} ${p.character.name} plays an inspiring song! (+${mergedHp} HP & +${mergedCp} CP regen for ${durSec}s)`);
       }
     } else if (ability.type === 'crit_buff') {
-      const dexMod = getStatModifier(p.character.dex);
-      const critBonus = Math.max(1, Math.min(dexMod, 5));
+      // Eagle Eye (Ranger): dual-primary — focused vision blends DEX precision + WIS attunement.
+      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
+      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      const critBonus = Math.max(1, Math.min(5, Math.floor((Math.max(0, dexMod) + Math.max(0, wisMod)) / 2)));
       p.buffSetters.setCritBuff({ bonus: critBonus, expiresAt: Date.now() + 30000 });
       p.addLog(`${ability.emoji} Eagle Eye! Your crit range is now ${20 - critBonus}-20 for 30s.`);
     } else if (ability.type === 'stealth_buff') {
+      // Shadowstep (Rogue): dual-primary — duration scales with DEX, ambush mult with CHA flair.
       const dexMod = getStatModifier(p.character.dex);
+      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
       const durationMs = Math.min(15000 + dexMod * 1000, 25000);
-      p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s.`);
+      const ambushMult = Math.min(2.5, 2 + Math.max(0, chaMod) * 0.05);
+      p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
+      p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`);
     } else if (ability.type === 'damage_buff') {
       const intMod = getStatModifier(p.character.int);
       const durationMs = Math.min(25, 15 + intMod) * 1000;
