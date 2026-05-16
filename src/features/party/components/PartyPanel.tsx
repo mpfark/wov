@@ -49,7 +49,7 @@ export default function PartyPanel({
     { key: 'poison', emoji: '🐍', label: 'Envenom', color: 'text-elvish' },
     { key: 'evasion', emoji: '🌫️', label: 'Evasion', color: 'text-primary' },
     { key: 'ignite', emoji: '🔥', label: 'Ignite', color: 'text-dwarvish' },
-    { key: 'absorb', emoji: '🛡️✨', label: 'Force Shield', color: 'text-primary' },
+    { key: 'absorb', emoji: '🛡️', label: 'Force Shield', color: 'text-primary' },
     { key: 'root', emoji: '🌿', label: 'Entangle', color: 'text-elvish' },
     { key: 'sunder', emoji: '🔨', label: 'Sunder', color: 'text-dwarvish' },
   ];
