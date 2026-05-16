@@ -78,7 +78,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   ],
   wizard: [
     { label: 'Fireball', emoji: '🔥', description: 'Hurl a ball of arcane flame at your target, scaling with INT', cpCost: 10, type: 'fireball', tier: 0, levelRequired: 1 },
-    { label: 'Force Shield', emoji: '🛡️', description: '⚓ Stance (T1 — reserves 10% of max CP). Maintains an arcane absorb shield (INT-scaled) that re-forms while active. Click again to drop. Reserved CP is NOT refunded.', cpCost: 15, type: 'absorb_buff', tier: 1, levelRequired: 5 },
+    { label: 'Force Shield', emoji: '🛡️', description: '⚓ Stance (T1 — reserves 10% of max CP). Maintains an arcane absorb shield (WIS-scaled pool, INT-scaled regen) that re-forms out of combat. Click again to drop. Reserved CP is NOT refunded.', cpCost: 15, type: 'absorb_buff', tier: 1, levelRequired: 5 },
     { label: 'Arcane Surge', emoji: '✨', description: '⚓ Stance (T2 — reserves 15% of max CP). All your damage is increased by 15% while active. Click again to drop. Reserved CP is NOT refunded.', cpCost: 25, type: 'damage_buff', tier: 2, levelRequired: 10 },
     { label: 'Ignite', emoji: '🌋', description: '⚓ Stance (T3 — reserves 20% of max CP). While in combat, each heartbeat an orb has a 40% chance to strike your target — INT-scaled fire damage with a stackable burn (max 5). Mutually exclusive with Envenom. Click again to drop. Reserved CP is NOT refunded.', cpCost: 50, type: 'ignite_buff', tier: 3, levelRequired: 15 },
     { label: 'Conflagrate', emoji: '💥', description: 'Consume all burn stacks on your target for +50% bonus damage per stack', cpCost: 60, type: 'ignite_consume', tier: 4, levelRequired: 20 },
