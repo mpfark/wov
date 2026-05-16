@@ -275,7 +275,7 @@ export default function StatusBarsStrip({
             <span className="text-muted-foreground">HP</span>
             <span className="flex items-center gap-0.5">
               {regenTick && <span className="text-[9px] text-elvish animate-fade-in font-display">+</span>}
-              <span className="text-blood tabular-nums">{character.hp}/{effectiveMaxHp}</span>
+              <span className="t-numeric text-blood text-[10px]">{character.hp}/{effectiveMaxHp}</span>
               {wardOverlay && (() => {
                 const isFS = wardOverlay.kind === 'force_shield';
                 const colorVar = isFS ? 'var(--primary)' : 'var(--elvish)';
@@ -341,7 +341,7 @@ export default function StatusBarsStrip({
         <div>
           <div className="flex justify-between text-[10px] mb-0.5">
             <span className="text-muted-foreground">CP</span>
-            <span className="text-[hsl(var(--primary))] tabular-nums">
+            <span className="t-numeric text-[hsl(var(--primary))] text-[10px]">
               {cp}/{maxCp}
               {cpView.stanceShown > 0 && (
                 <Tooltip>
@@ -396,7 +396,7 @@ export default function StatusBarsStrip({
         <div>
           <div className="flex justify-between text-[10px] mb-0.5">
             <span className="text-muted-foreground">MP</span>
-            <span className="text-dwarvish tabular-nums">{mp}/{maxMp}</span>
+            <span className="t-numeric text-dwarvish text-[10px]">{mp}/{maxMp}</span>
           </div>
           <div className="h-1.5 bg-background rounded-full overflow-hidden border border-border">
             <div className="h-full transition-all duration-500 rounded-full" style={{
