@@ -268,8 +268,8 @@ export function classifyLogLine(log: string): ClassifiedLog {
     return { category: 'buff', isRemote, isCrit, isKill, isLevelUp };
   }
 
-  // Damage warnings / DoT damage taken (no DoT-source emoji match above).
-  if (log.startsWith('⚠️') || log.startsWith('💔')) {
+  // Damage warnings / DoT damage taken / creature attacks.
+  if (log.startsWith('⚠️') || log.startsWith('💔') || log.startsWith('👹')) {
     return { category: 'enemy_attack', isRemote, isCrit, isKill, isLevelUp };
   }
 
