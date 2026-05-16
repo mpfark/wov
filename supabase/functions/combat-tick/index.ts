@@ -890,7 +890,7 @@ Deno.serve(async (req) => {
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
         const cab = creatureAtkBonus(creature.level);
-        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR${cab > 0 ? ` + ${cab} Lvl` : ''} = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
+        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `👹 ${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR${cab > 0 ? ` + ${cab} Lvl` : ''} = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
 
         // Boss crit flavor enrichment
         if (isCrit) {
