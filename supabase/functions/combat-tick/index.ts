@@ -860,7 +860,7 @@ Deno.serve(async (req) => {
           const absorbed = Math.min(dmg, mb.absorb_buff.shield_hp);
           mb.absorb_buff.shield_hp -= absorbed;
           dmg -= absorbed;
-          events.push({ type: 'absorb', message: `🛡️✨ ${creature.name} hits ${targetName} — shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
+          events.push({ type: 'absorb', message: `🛡️ ${creature.name} hits ${targetName} — shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
           if (dmg <= 0) return;
         }
 
@@ -914,7 +914,7 @@ Deno.serve(async (req) => {
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
-              message: `🛡️✝️ ${targetName}'s Holy Shield burns ${creature.name} for ${returnDmg} holy damage!`,
+              message: `⚡ ${targetName}'s Holy Shield burns ${creature.name} for ${returnDmg} holy damage!`,
               character_id: targetId,
               creature_id: creature.id,
             });
@@ -976,7 +976,7 @@ Deno.serve(async (req) => {
           if (restored > 0) {
             events.push({
               type: 'consecrate_heal',
-              message: `✨🟡 Consecrated ground restores ${restored} HP to ${ally.c.name}.`,
+              message: `🔆 Consecrated ground restores ${restored} HP to ${ally.c.name}.`,
               character_id: ally.id,
             });
           }
@@ -988,7 +988,7 @@ Deno.serve(async (req) => {
           cHp[cr.id] = Math.max(cHp[cr.id] - burnAmt, 0);
           events.push({
             type: 'consecrate_burn',
-            message: `✨🟡 Holy fire sears ${cr.name} for ${burnAmt} damage!`,
+            message: `🔆 Holy fire sears ${cr.name} for ${burnAmt} damage!`,
             character_id: m.id,
             creature_id: cr.id,
           });

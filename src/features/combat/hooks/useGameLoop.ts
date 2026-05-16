@@ -273,7 +273,7 @@ export function useGameLoop(params: UseGameLoopParams) {
     if (!partyRegenBuff || Date.now() >= partyRegenBuff.expiresAt) return;
     const isHealer = partyRegenBuff.source === 'healer';
     const abilityLabel = isHealer ? 'Purifying Light' : 'Crescendo';
-    const abilityEmoji = isHealer ? '✨💚' : '🎶✨';
+    const abilityEmoji = isHealer ? '🌟' : '✨';
     const interval = setInterval(async () => {
       if (Date.now() >= partyRegenBuff.expiresAt) {
         setPartyRegenBuff(null); clearInterval(interval); return;

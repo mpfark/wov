@@ -245,7 +245,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Ignite'] || 30_000;
     const pct = Math.max(0, Math.min(100, ((igniteBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🔥🔥',
+      emoji: '🌋',
       label: 'Ignite',
       detail: '40% burn proc',
       color: 'text-dwarvish',
@@ -258,7 +258,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Force Shield'] || 20_000;
     const pct = Math.max(0, Math.min(100, ((absorbBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🛡️✨',
+      emoji: '🛡️',
       label: 'Force Shield',
       detail: `${absorbBuff!.shieldHp} HP`,
       color: 'text-primary',
@@ -271,7 +271,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     const dur = BUFF_DURATIONS['Crescendo'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((partyRegenBuff!.expiresAt - now) / dur) * 100));
     buffs.push({
-      emoji: '🎶✨',
+      emoji: '✨',
       label: 'Crescendo',
       detail: `+${partyRegenBuff!.healPerTick} HP/3s`,
       color: 'text-elvish',
