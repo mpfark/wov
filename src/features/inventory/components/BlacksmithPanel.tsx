@@ -260,7 +260,7 @@ export default function BlacksmithPanel({
       <p className="text-destructive">⚠️ Unique items cannot be repaired — they are destroyed at 0% durability.</p>
       {repairableCount > 0 && (
         <div className="border-t border-border pt-2 text-foreground">
-          <span className="font-display text-xs">Pending repairs: </span>
+          <span className="t-label text-[11px] data-[state=active]:text-primary">Pending repairs: </span>
           <span>{repairableCount} item{repairableCount === 1 ? '' : 's'}</span>
           <span className="ml-2 text-primary font-display">{totalRepairCost}g total</span>
         </div>
@@ -320,7 +320,7 @@ export default function BlacksmithPanel({
 
       {/* Sell Salvage */}
       <div className="space-y-2 border-t border-border pt-3">
-        <h3 className="font-display text-xs text-muted-foreground">🔩 Sell Salvage</h3>
+        <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
         ) : (
@@ -450,11 +450,11 @@ export default function BlacksmithPanel({
       <span className="inline-flex items-center gap-3">
         <span className="inline-flex items-center gap-1">
           <Coins className="w-3 h-3 text-primary" />
-          <span className="font-display text-primary">{gold}</span>
+          <span className="font-display tabular-nums text-primary">{gold}</span>
         </span>
         <span className="inline-flex items-center gap-1">
           <span>🔩</span>
-          <span className="font-display text-dwarvish">{salvage}</span>
+          <span className="font-display tabular-nums text-dwarvish">{salvage}</span>
         </span>
       </span>
     </span>
@@ -465,10 +465,10 @@ export default function BlacksmithPanel({
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as BlacksmithTab)} className="w-full">
       <TabsList className={`w-full grid ${showSoulforge ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        <TabsTrigger value="repair" className="font-display text-xs">🔧 Repair</TabsTrigger>
-        <TabsTrigger value="forge" className="font-display text-xs">⚒️ Forge</TabsTrigger>
+        <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Repair</TabsTrigger>
+        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">⚒️ Forge</TabsTrigger>
         {showSoulforge && (
-          <TabsTrigger value="soulforge" className="font-display text-xs text-soulforged">⚒️ Soulforge</TabsTrigger>
+          <TabsTrigger value="soulforge" className="t-label text-[11px] data-[state=active]:text-soulforged text-soulforged">⚒️ Soulforge</TabsTrigger>
         )}
       </TabsList>
       <TabsContent value="repair" className="hidden" />

@@ -101,7 +101,7 @@ Risk: low — single file, no logic changes.
 
 Risk: medium — touched many components but mechanically (role-class swap), no logic changes.
 
-### Phase 4 — Service panels (Vendor / Blacksmith / Jewelcrafter / Stonebinder / Trainer / Scroll / Soulforge)
+### Phase 4 — Service panels (Vendor / Blacksmith / Jewelcrafter / Stonebinder / Trainer / Scroll / Soulforge) ✅
 7. Standardize `ServicePanelShell` header/tab typography to `display-lg` + `label`.
 8. Apply role classes inside each service panel body.
 

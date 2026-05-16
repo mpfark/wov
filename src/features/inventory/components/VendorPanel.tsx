@@ -285,7 +285,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       )}
       <span className="inline-flex items-center gap-2">
         <Coins className="w-3 h-3 text-primary" />
-        <span className="font-display text-primary">{gold} Gold</span>
+        <span className="font-display tabular-nums text-primary">{gold} Gold</span>
         {chaMod > 0 && (
           <span className="text-[10px] text-muted-foreground">
             (CHA: Buy −{Math.round(buyDiscount * 100)}%, Sell {Math.round(sellMultiplier * 100)}%)
@@ -298,8 +298,8 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as 'buy' | 'sell')} className="w-full">
       <TabsList className="w-full grid grid-cols-2">
-        <TabsTrigger value="buy" className="font-display text-xs">🪙 Buy</TabsTrigger>
-        <TabsTrigger value="sell" className="font-display text-xs">📦 Sell</TabsTrigger>
+        <TabsTrigger value="buy" className="t-label text-[11px] data-[state=active]:text-primary">🪙 Buy</TabsTrigger>
+        <TabsTrigger value="sell" className="t-label text-[11px] data-[state=active]:text-primary">📦 Sell</TabsTrigger>
       </TabsList>
       <TabsContent value="buy" className="hidden" />
       <TabsContent value="sell" className="hidden" />

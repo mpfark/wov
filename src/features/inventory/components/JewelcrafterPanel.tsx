@@ -293,7 +293,7 @@ export default function JewelcrafterPanel({
       <p className="text-destructive">⚠️ Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
       {repairableCount > 0 && (
         <div className="border-t border-border pt-2 text-foreground">
-          <span className="font-display text-xs">Pending refurbishes: </span>
+          <span className="t-label text-[11px] data-[state=active]:text-primary">Pending refurbishes: </span>
           <span>{repairableCount} item{repairableCount === 1 ? '' : 's'}</span>
           <span className="ml-2 text-primary font-display">{totalRepairCost}g total</span>
         </div>
@@ -352,7 +352,7 @@ export default function JewelcrafterPanel({
       </div>
 
       <div className="space-y-2 border-t border-border pt-3">
-        <h3 className="font-display text-xs text-muted-foreground">🔩 Sell Salvage</h3>
+        <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
         ) : (
@@ -470,7 +470,7 @@ export default function JewelcrafterPanel({
       </div>
 
       <div className="space-y-2">
-        <h3 className="font-display text-xs text-muted-foreground">🔩 Trade Salvage → Primary Gem</h3>
+        <h3 className="t-label text-[11px]">🔩 Trade Salvage → Primary Gem</h3>
         <p className="text-[10px] text-muted-foreground italic">
           {GEM_SALVAGE_COST_PRIMARY} salvage per gem. Pick the attribute you need.
         </p>
@@ -504,7 +504,7 @@ export default function JewelcrafterPanel({
   const gemcutRight = (
     <div className="space-y-2">
       <div className="space-y-1">
-        <h3 className="font-display text-xs text-muted-foreground">💠 Combine → Hybrid Gem</h3>
+        <h3 className="t-label text-[11px]">💠 Combine → Hybrid Gem</h3>
         <p className="text-[10px] text-muted-foreground italic">
           Fuse 1 of each matching primary into 1 hybrid (no salvage cost — the primaries are the price).
         </p>
@@ -525,7 +525,7 @@ export default function JewelcrafterPanel({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="inline-block w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: def.color }} />
-                  <span className="font-display text-xs">{def.name}</span>
+                  <span className="t-label text-[11px] data-[state=active]:text-primary">{def.name}</span>
                   <span className="text-[10px] text-muted-foreground">({def.stats.map(s => s.toUpperCase()).join('+')})</span>
                   <span className="text-[10px] text-muted-foreground ml-auto">owned ×{owned}</span>
                 </div>
@@ -568,11 +568,11 @@ export default function JewelcrafterPanel({
       <span className="inline-flex items-center gap-3">
         <span className="inline-flex items-center gap-1">
           <Coins className="w-3 h-3 text-primary" />
-          <span className="font-display text-primary">{gold}</span>
+          <span className="font-display tabular-nums text-primary">{gold}</span>
         </span>
         <span className="inline-flex items-center gap-1">
           <span>🔩</span>
-          <span className="font-display text-dwarvish">{salvage}</span>
+          <span className="font-display tabular-nums text-dwarvish">{salvage}</span>
         </span>
       </span>
     </span>
@@ -581,9 +581,9 @@ export default function JewelcrafterPanel({
   const tabs = (
     <Tabs value={tab} onValueChange={v => setTab(v as JewelcrafterTab)} className="w-full">
       <TabsList className="w-full grid grid-cols-3">
-        <TabsTrigger value="repair" className="font-display text-xs">🔧 Refurbish</TabsTrigger>
-        <TabsTrigger value="forge" className="font-display text-xs">💎 Craft</TabsTrigger>
-        <TabsTrigger value="gems" className="font-display text-xs">💠 Gemcutter</TabsTrigger>
+        <TabsTrigger value="repair" className="t-label text-[11px] data-[state=active]:text-primary">🔧 Refurbish</TabsTrigger>
+        <TabsTrigger value="forge" className="t-label text-[11px] data-[state=active]:text-primary">💎 Craft</TabsTrigger>
+        <TabsTrigger value="gems" className="t-label text-[11px] data-[state=active]:text-primary">💠 Gemcutter</TabsTrigger>
       </TabsList>
       <TabsContent value="repair" className="hidden" />
       <TabsContent value="forge" className="hidden" />
