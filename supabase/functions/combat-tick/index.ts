@@ -929,7 +929,7 @@ Deno.serve(async (req) => {
         }
       } else {
         const cabMiss = creatureAtkBonus(creature.level);
-        events.push({ type: 'creature_miss', message: `${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR${cabMiss > 0 ? ` + ${cabMiss} Lvl` : ''} = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
+        events.push({ type: 'creature_miss', message: `👹 ${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR${cabMiss > 0 ? ` + ${cabMiss} Lvl` : ''} = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
       }
     };
 
