@@ -1092,10 +1092,10 @@ Deno.serve(async (req) => {
           if (isCrit) dmg = Math.max(dmg * 2, 1);
           if (affinity.damageMult > 1) dmg = Math.floor(dmg * affinity.damageMult);
           if (isStealth) {
-            dmg = dmg * 2;
+            dmg = Math.max(Math.floor(dmg * stealthMult), 1);
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
             consumedBuffs[m.id].push('stealth');
-            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals double damage!`, character_id: m.id });
+            events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals ×${stealthMult.toFixed(2)} damage!`, character_id: m.id });
           }
           if (isDmgBuff) dmg = Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT);
           if (hasDisengage) {
