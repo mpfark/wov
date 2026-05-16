@@ -415,15 +415,15 @@ export default function StatusBarsStrip({
             {gemCount > 0 && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="text-primary tabular-nums cursor-help">💠 {gemCount}</span>
+                  <span className="t-numeric text-primary text-[9px] cursor-help">💠 {gemCount}</span>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">Gems in pouch — see Character panel for breakdown.</TooltipContent>
               </Tooltip>
             )}
             {((character.rp_total_earned || 0) > 0 || character.level >= 30) && (
-              <span className="text-gold tabular-nums">🏛️ {character.bhp || 0} RP</span>
+              <span className="t-numeric text-gold text-[9px]">🏛️ {character.bhp || 0} RP</span>
             )}
-            <span className="text-primary tabular-nums">{character.xp}/{xpForNext}</span>
+            <span className="t-numeric text-primary text-[9px]">{character.xp}/{xpForNext}</span>
           </div>
         </div>
         <div className="h-1 bg-background rounded-full overflow-hidden border border-border">
