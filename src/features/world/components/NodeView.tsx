@@ -42,6 +42,10 @@ interface Props {
   classAbilities?: ClassAbility[];
   onUseAbility?: (abilityIndex: number, targetId?: string) => void;
   abilityTargetId?: string | null;
+  /** Index of an ability currently queued/pending cast — that button pulses until resolved. */
+  pendingAbilityIndex?: number | null;
+  /** Active stance map — abilities mapped to active stances render in stance state. */
+  reservedBuffs?: ReservedBuffsMap | null;
   actionBindings?: ActionBindings;
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
