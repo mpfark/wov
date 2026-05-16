@@ -57,9 +57,9 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   ],
   ranger: [
     { label: 'Aimed Shot', emoji: '🎯', description: 'Take a careful shot at your target, scaling with DEX', cpCost: 10, type: 'aimed_shot', tier: 0, levelRequired: 1 },
-    { label: 'Eagle Eye', emoji: '🦅', description: '⚓ Stance (T1 — reserves 10% of max CP). Widens your critical hit range based on DEX while active. Click again to drop. Reserved CP is NOT refunded.', cpCost: 15, type: 'crit_buff', tier: 1, levelRequired: 5 },
-    { label: 'Barrage', emoji: '🏹', description: 'Fire a volley of 2-3 arrows at 70% damage each, scaling with DEX', cpCost: 25, type: 'multi_attack', tier: 2, levelRequired: 10 },
-    { label: "Nature's Snare", emoji: '🌿', description: 'Entangle your target, reducing its damage by 30% for a duration scaling with WIS', cpCost: 40, type: 'root_debuff', tier: 3, levelRequired: 15 },
+    { label: 'Eagle Eye', emoji: '🦅', description: '⚓ Stance (T1 — reserves 10% of max CP). Widens your critical hit range based on a blend of DEX (precision) and WIS (attunement) while active. Click again to drop. Reserved CP is NOT refunded.', cpCost: 15, type: 'crit_buff', tier: 1, levelRequired: 5 },
+    { label: 'Barrage', emoji: '🏹', description: 'Fire a volley of arrows at 70% damage each (scales with DEX). Arrow count: 2 base, +1 with DEX≥3, +1 more with WIS≥4 (max 4).', cpCost: 25, type: 'multi_attack', tier: 2, levelRequired: 10 },
+    { label: "Nature's Snare", emoji: '🌿', description: 'Entangle your target, reducing its damage by 30%. Duration scales with WIS.', cpCost: 40, type: 'root_debuff', tier: 3, levelRequired: 15 },
     { label: 'Disengage', emoji: '🦘', description: 'Leap backward — dodge all attacks briefly and deal 50% bonus damage on your next strike', cpCost: 60, type: 'disengage_buff', tier: 4, levelRequired: 20 },
   ],
   bard: [
