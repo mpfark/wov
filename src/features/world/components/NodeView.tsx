@@ -63,6 +63,8 @@ interface Props {
 export default function NodeView({
   node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
+  pendingAbilityIndex = null,
+  reservedBuffs = null,
   actionBindings,
   poisonStacks = {},
   igniteStacks = {},
