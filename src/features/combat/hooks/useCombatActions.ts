@@ -381,8 +381,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Rend.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
+      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
-      const durationMs = Math.min(30000, 20000 + strMod * 1000);
+      // Dual-primary split: damage = STR (the wound), duration = DEX (precision keeps it open).
+      const durationMs = Math.min(30000, 20000 + Math.max(0, dexMod) * 1000);
       const intervalMs = 2000;
       p.buffSetters.setBleedStacks((prev: Record<string, DotDebuff>) => ({
         ...prev,
@@ -465,8 +467,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Sunder Armor.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
+      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
       const acReduction = Math.max(2, strMod);
-      const durationSec = Math.min(20, 12 + strMod);
+      // Dual-primary split: AC reduction = STR (crushing blow), duration = DEX (precise targeting lingers).
+      const durationSec = Math.min(20, 12 + Math.max(0, dexMod));
       p.buffSetters.setSunderDebuff(prev => ({ ...prev, [cTargetId]: { acReduction, expiresAt: Date.now() + durationSec * 1000, creatureId: cTargetId, creatureName: creature.name } }));
       p.addLog(`${ability.emoji} Sunder Armor! ${creature.name}'s AC reduced by ${acReduction} for ${durationSec}s.`);
     } else if (ability.type === 'burst_damage') {

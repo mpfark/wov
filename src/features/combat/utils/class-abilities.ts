@@ -52,8 +52,8 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
     { label: 'Power Strike', emoji: '⚔️', description: 'A heavy, focused blow that deals damage scaling with STR', cpCost: 10, type: 'power_strike', tier: 0, levelRequired: 1 },
     { label: 'Second Wind', emoji: '💪', description: 'Catch your breath and recover HP based on CON', cpCost: 15, type: 'self_heal', tier: 1, levelRequired: 5 },
     { label: 'Battle Cry', emoji: '📯', description: '⚓ Stance (T2 — reserves 15% of max CP). Reduces incoming damage by 15% (20% with shield) and softens crits while active. Click again to drop. Reserved CP is NOT refunded.', cpCost: 25, type: 'battle_cry', tier: 2, levelRequired: 10 },
-    { label: 'Rend', emoji: '🩸', description: 'Slice your target, applying a bleed that deals STR-based damage over time', cpCost: 40, type: 'dot_debuff', tier: 3, levelRequired: 15 },
-    { label: 'Sunder Armor', emoji: '🔨', description: "A crushing blow that reduces your target's AC based on STR, making it easier to hit", cpCost: 60, type: 'sunder_debuff', tier: 4, levelRequired: 20 },
+    { label: 'Rend', emoji: '🩸', description: 'Slice your target, applying a bleed that deals STR-scaled damage every 2s. Duration scales with DEX (precision keeps the wound open).', cpCost: 40, type: 'dot_debuff', tier: 3, levelRequired: 15 },
+    { label: 'Sunder Armor', emoji: '🔨', description: "A crushing blow that reduces your target's AC by a STR-scaled amount. Duration scales with DEX (precise strike, lasting weakness).", cpCost: 60, type: 'sunder_debuff', tier: 4, levelRequired: 20 },
   ],
   ranger: [
     { label: 'Aimed Shot', emoji: '🎯', description: 'Take a careful shot at your target, scaling with DEX', cpCost: 10, type: 'aimed_shot', tier: 0, levelRequired: 1 },

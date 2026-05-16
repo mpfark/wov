@@ -1,77 +1,107 @@
 ## Goal
 
-Each class has two "primary" stats (per `CLASS_LEVEL_BONUSES`). Today most abilities scale off only one of them, so the second primary contributes nothing to that class's kit beyond passive cross-stat curves (INT→hit, WIS→anti-crit, etc.). We'll split key ability scalars so both primaries matter — starting with the wizard since you called it out, and applying the same rule to every other class.
+Apply the wizard pattern to every remaining class: **primary stat = magnitude, secondary primary = duration / cap / count / utility scalar** (or thematic reverse). One class per follow-up implementation pass; this plan locks the proposed splits so we don't re-debate per class.
 
-This is balance/identity work, not a rework. Cost, cooldown, ability list, and visuals don't change.
+Out of scope: ability costs, cooldowns, ability lists, stance lists, cross-stat passives (INT→hit, DEX→crit, WIS→anti-crit, STR→damage floor), item budgets.
 
-## Wizard (INT + WIS) — concrete changes
+All file refs are current as of audit.
 
-Current scaling (server, `supabase/functions/combat-tick/index.ts` + SQL):
-
-- **Force Shield pool cap:** `max(1, intMod + floor(level/2))` (combat-tick line ~477 and SQL `apply_force_shield_regen` line ~76)
-- **Force Shield regen/tick:** `1 + floor(intMod/2)` (SQL line ~77)
-- **Ignite pulse direct hit:** `2 + intMod`
-- **Ignite burn DoT:** `floor(intMod * 0.7 * 0.67)` per tick, duration `30s + intMod*1s` (cap 45s)
-- **Conflagrate (ignite_consume):** `4 + 2*intMod + floor(level/3)` — leave alone (signature INT nuke)
-- **Arcane Surge:** flat ×1.15 — leave alone
-
-Proposed split (your suggestion, adopted):
-
-| Effect | Now | Proposed |
-|---|---|---|
-| Force Shield **pool cap** | `intMod + level/2` | `wisMod + floor(level/2)` |
-| Force Shield **regen/tick** | `1 + intMod/2` | `1 + floor(intMod/2)` (unchanged — already INT) |
-| Ignite **pulse hit** | `2 + intMod` | `2 + intMod` (unchanged — "strength of the spark" = INT) |
-| Ignite **DoT damage/tick** | `floor(intMod*0.7*0.67)` | `floor(wisMod*0.7*0.67)` |
-| Ignite **DoT duration** | `30s + intMod*1s` (cap 45s) | `30s + wisMod*1s` (cap 45s) — sustained burn = WIS |
-
-Rationale: the original ask (shield pool=WIS, shield regen=INT; ignite "strength"=INT, dots=WIS) maps cleanly. INT = the "spark / blast / instant force"; WIS = "sustained ward and lingering flame." Both wizard primaries now matter for every spec, and pure-INT glass cannons trade Force Shield size and burn longevity for raw nuke power.
-
-## Other classes — audit & proposed splits
-
-Same rule everywhere: every ability that scales off one of a class's two primaries should be examined; if a sensible secondary lever exists (duration, cap, secondary tick, proc chance, utility magnitude), split it onto the other primary.
+## Per-class audit + proposed split
 
 ### Warrior (STR + DEX)
-- **Autoattack:** DEX to-hit, STR damage ✓ already uses both.
-- **Rend (DoT):** tick = `(strMod*1.5+2)*0.67`, duration `20s + strMod*1s`. → keep tick=STR, switch **duration** to `20s + dexMod*1s` (precision opens the wound longer).
-- **Sunder (debuff):** currently STR-scaled reduction. → keep magnitude=STR; add **duration** scaling to DEX, or vice versa (whichever the current code uses — we'll inspect during impl).
-- **Battle Cry:** flat 15% DR. → no change (flat by design).
+
+| Ability | Now | Proposed |
+|---|---|---|
+| Autoattack | DEX to-hit, STR damage | unchanged ✓ already dual |
+| Second Wind (self_heal) | `max(3, conMod*3 + level)` — CON only | unchanged (CON is class survival, not a primary) |
+| Battle Cry (stance) | DR flat 15%/20% w/ shield; duration `15s+dexMod*1s` (cap 25s); crit_reduction 10% | unchanged — already DEX-scaled duration ✓ |
+| **Rend** (dot_debuff, client) | tick=`floor((strMod*1.5+2)*0.67)`, duration `20s+strMod*1s` (cap 30s) | tick = STR (unchanged); **duration = `20s + dexMod*1s` (cap 30s)** — precision keeps the wound open |
+| **Sunder Armor** (sunder_debuff, client) | acReduction=`max(2,strMod)`, duration `min(20, 12+strMod)`s | acReduction = STR (unchanged); **duration = `min(20, 12+dexMod)`s** — precise strike, lasting weakness |
+
+Files: `src/features/combat/hooks/useCombatActions.ts` (lines 378–400 Rend, 462–471 Sunder).
 
 ### Ranger (DEX + WIS)
-- **Barrage:** per-arrow base `2 + dexMod + floor(level/4)`, arrowCount = `dexMod>=3 ? 3 : 2`. → keep DEX damage; add **arrow count** threshold to WIS (e.g. `+1 arrow if wisMod>=4`) so WIS-heavy rangers actually fire one extra shaft. Alternatively, give Eagle Eye crit-buff bonus a WIS component (currently `floor(dexMod/2)+1`).
-- **Eagle Eye:** currently DEX. → split: bonus = `max(1, floor((dexMod+wisMod)/3)+1)`.
+
+| Ability | Now | Proposed |
+|---|---|---|
+| Aimed Shot (T0) | DEX | unchanged |
+| **Eagle Eye** (crit_buff stance) | `bonus = max(1, min(dexMod, 5))` | **`bonus = max(1, min(floor((dexMod+wisMod)/2), 5))`** — focused vision = WIS + DEX |
+| **Barrage** (multi_attack, server) | arrowCount = `dexMod≥3 ? 3 : 2`, per-arrow `2+dexMod+floor(lvl/4)` | per-arrow dmg = DEX (unchanged); **arrowCount: base 2, +1 if `dexMod≥3`, +1 more if `wisMod≥4`** (max 4) — WIS-heavy rangers loose one extra arrow |
+| Nature's Snare (root_debuff) | reduction 30% flat, duration `min(15s, 8s+wisMod*1s)` | unchanged ✓ already WIS |
+| Disengage (disengage_buff) | dodge dur `min(8s, 5s+dexMod*0.5s)`, next-hit +50% for 15s | unchanged (signature mobility) |
+
+Files: `useCombatActions.ts` (crit_buff line 341, root_debuff 358, disengage 416); `combat-tick/index.ts` (Barrage line 602–648 — read `wisMod` from gear-merged stats).
 
 ### Rogue (DEX + CHA)
-- **Eviscerate:** `4 + 2*dexMod + floor(level/3)`. → keep DEX damage; add **finisher bonus** when target has any active debuff (charisma = trickery/setup) — or simpler: **stealth ambush damage** (currently flat ×2) scales subtly with CHA, e.g. `×(2 + chaMod*0.05)` capped at ×2.5.
-- **Disengage:** flat mult. → leave OR scale bonus mult slightly with CHA.
+
+| Ability | Now | Proposed |
+|---|---|---|
+| Backstab (T0) | DEX | unchanged |
+| **Shadowstep** (stealth_buff) | duration `min(25s, 15s+dexMod*1s)`, ambush =flat ×2 | duration = DEX (unchanged); **ambush mult = `min(2.5, 2 + chaMod*0.05)`** — flair amplifies the strike from shadow |
+| Envenom (stance, poison_buff) | 40% proc, 5-min duration, max 5 stacks | unchanged (commitment buff) |
+| **Eviscerate** (execute_attack, server) | `4 + 2*dexMod + floor(lvl/3)` + 50%/stack | base = DEX (unchanged); **per-stack bonus = `0.50 + chaMod*0.02`** (cap 0.65) — showmanship per stack |
+| Cloak of Shadows (evasion_buff) | 50% dodge, dur `min(15s, 10s+dexMod*0.5s)` | unchanged (signature) |
+
+Files: `useCombatActions.ts` (stealth 346, evasion 411); `combat-tick/index.ts` (Eviscerate line 655–665, read chaMod).
 
 ### Healer (WIS + CON)
-- **Party regen, holy_shield return:** WIS. → keep WIS for amount; add CON for **duration / max stacks** of holy_shield, or HP threshold of regen tick.
+
+| Ability | Now | Proposed |
+|---|---|---|
+| Smite (T0) | WIS | unchanged |
+| Heal (heal) | `max(3, wisMod*3 + level)` | unchanged (signature WIS spell) |
+| **Transfer Health** (hp_transfer) | transfer = `max(3, wisMod*2 + floor(lvl/2))`, costs HP | amount = WIS (unchanged); **caster HP floor: leave 1 HP today → leave `max(1, conMod)` HP** — robust healers can safely sacrifice more without OOM-bottom |
+| **Purifying Light** (party_regen, healer branch) | `heal/tick = max(1, wisMod+2)`, dur `min(25s, 15s+wisMod*1s)` | heal/tick = WIS (unchanged); **duration = `min(30s, 15s + conMod*1s)`** — stamina sustains the radiance |
+| **Divine Aegis** (ally_absorb) | shieldHp = `wisMod*2 + floor(lvl*0.7)`, no expiry | pool = WIS (unchanged); **add a hard duration `min(60s, 30s + conMod*2s)` instead of `NO_EXPIRY`** — CON gives the ward staying power; today it's infinite which makes CON irrelevant |
+
+Files: `useCombatActions.ts` (heal 296, hp_transfer 278, party_regen 439, ally_absorb 449).
+
+Caveat on Divine Aegis: changing from infinite to timed is the only place this plan adjusts behaviour, not just numbers. Flag for explicit approval.
 
 ### Bard (CHA + INT)
-- **Mock (DoT):** base `chaMod*4 + level*1.5`, tick die `chaMod*2`. → keep CHA for damage; add INT for **duration** and/or **debuff effect** magnitude.
+
+| Ability | Now | Proposed |
+|---|---|---|
+| Cutting Words (T0) | CHA | unchanged |
+| Inspire (regen_buff) | hp/cp scale CHA, duration `60–180s + intMod*8s` | unchanged ✓ already dual |
+| Dissonance (root_debuff) | flat 30%, dur `min(15s, 8s + wisMod*1s)` ❌ uses WIS (not a bard primary) | **duration = `min(15s, 8s + intMod*1s)`** — bards don't have WIS, INT carries the lingering insult. (Note: bard hits the same `root_debuff` branch as ranger; we'll need to scale by class.) |
+| **Crescendo** (party_regen, bard branch) | `heal/tick = max(1, chaMod+2)`, dur `min(25s, 15s+chaMod*1s)` | heal/tick = CHA (unchanged); **duration = `min(30s, 15s + intMod*1s)`** |
+| **Grand Finale** (burst_damage, server) | damage scales CHA (Arcane Surge stacks) | magnitude = CHA (unchanged); **add INT crit-edge `+floor(intMod/2)` to the d20 against natural-crit threshold** — knowledge sharpens the killing note. Optional; can also stay magnitude-only. |
+
+Files: `useCombatActions.ts` (root_debuff 358 — class-branch it); `combat-tick/index.ts` (burst_damage line 742–750).
 
 ### Templar (WIS + CON)
-- Mirrors healer. Holy Shield return = WIS; add CON for **expiration window** or **max return hits**.
 
-We'll lock the exact secondary lever for each non-wizard class once you sign off on the wizard pattern. The principle is constant: **primary stat = magnitude, secondary primary = duration / cap / count / utility scalar**, or vice versa where it reads better thematically.
+| Ability | Now | Proposed |
+|---|---|---|
+| Judgment (T0) | WIS | unchanged |
+| **Holy Shield** (stance, reactive_holy) | retaliation = WIS, fixed 30s | retaliation = WIS (unchanged); **duration = `30s + conMod*2s` (cap 60s)** — endurance sustains the ward (this is a stance so duration is "stance kept up"; instead apply duration to the **per-attacker grace window**: today re-trigger every server tick; raise grace to `2s + floor(conMod/2)s` between procs against the same attacker → CON = how often the shield can re-fire) |
+| Shield Wall (block_buff stance) | +50% block flat, requires shield | unchanged |
+| **Consecrate** (consecrate, server) | heal/tick & burn/tick = `2 + wisMod`, fixed 6s = 3 ticks | per-tick = WIS (unchanged); **number of ticks = `3 + (conMod≥3 ? 1 : 0) + (conMod≥6 ? 1 : 0)`** (cap 5 ticks / 10s) — CON extends sanctified ground |
+| **Divine Challenge** (mitigation_buff) | flat 30% DR, 30s | reduction = flat (unchanged); **duration = `min(45s, 30s + conMod*1s)`** |
 
-## Out of scope
-
-- Ability costs, cooldowns, the stance/ability list itself.
-- Cross-stat passives (INT→hit, DEX→crit, WIS→anti-crit, STR→damage floor) — those already make non-primary stats matter globally.
-- Item budget / stat caps (just shipped).
-- Client-side ability tooltips will be updated to reflect the new scalars, but no new UI is added.
+Files: `useCombatActions.ts` (reactive_holy 474, consecrate 483, mitigation_buff 489); `combat-tick/index.ts` (Holy Shield retaliation 913–921, Consecrate loop 960–1000).
 
 ## Rollout order
 
-1. **Wizard** (this plan): change Force Shield pool cap to WIS in both `combat-tick/index.ts` and `apply_force_shield_regen` SQL function (new migration); change Ignite DoT damage + duration to WIS in `combat-tick`. Update tooltips/log strings.
-2. **Warrior, Ranger, Rogue, Healer, Bard, Templar** — one class per follow-up pass, each with the same review/split exercise above. We confirm the exact secondary lever per class before editing.
-3. After all classes are split, update the `mem://game/class-abilities/<class>` notes (or create them) so the "uses both primaries" rule is recorded as canon.
+One class per follow-up pass. Suggested order:
 
-## Open questions before I implement
+1. **Warrior** — pure client-only, two scalar swaps. Lowest risk, fastest test.
+2. **Ranger** — touches client (Eagle Eye) + server (Barrage arrow count).
+3. **Rogue** — touches client (Shadowstep) + server (Eviscerate per-stack bonus).
+4. **Bard** — requires branching `root_debuff` by class so Dissonance reads INT while Nature's Snare keeps WIS.
+5. **Healer** — Divine Aegis behaviour change (infinite → timed) needs explicit sign-off before edit.
+6. **Templar** — most touch points (Holy Shield grace, Consecrate ticks, Divine Challenge dur).
 
-1. Confirm the wizard mapping above (shield **pool**=WIS, shield **regen**=INT, ignite **pulse**=INT, ignite **DoT damage+duration**=WIS).
-2. For Force Shield's OOC behavior: when a wizard with high INT but low WIS activates it, today they get pool=INT. Under the new rule pool=WIS — should we **grandfather existing shields** (clamp current `force_shield_hp` to new cap on next regen tick, which the SQL already does via `least(cap, …)`)? Default plan: yes, no migration of player data needed.
-3. For the other six classes, do you want me to draft one combined follow-up plan listing every proposed split, or one plan per class so you can approve them individually?
-4. Any class where you'd rather **swap** my mapping (e.g. ranger arrow count = WIS feels off to you and you'd prefer WIS extends a buff duration instead)?
+Each pass also updates the matching `mem://game/class-abilities/<class>` note (creating if absent) so the dual-primary rule is recorded as canon, plus the GameManual tooltips and `class-abilities.ts` description strings.
+
+## Open questions before I implement any of these
+
+1. **Healer Divine Aegis**: today it lasts until fully absorbed (infinite timer). My proposal caps it at `min(60s, 30s + conMod*2s)`. Acceptable, or keep infinite and put CON elsewhere (e.g. shield pool gets a CON kicker `+conMod` on top of WIS)?
+2. **Bard Grand Finale INT crit-edge**: nice-to-have or skip? Skipping leaves Grand Finale CHA-only.
+3. **Bard Dissonance**: confirm we should branch the shared `root_debuff` handler by class so bard reads INT and ranger still reads WIS.
+4. **Templar Holy Shield**: prefer the "per-attacker grace window scales with CON" model, or a simpler "+conMod% retaliation damage" (CON kicker on the magnitude)? The grace-window version preserves identity better.
+5. **Ranger Barrage**: confirm `wisMod≥4 → +1 arrow` is the right gate, or you'd rather WIS extend Eagle Eye duration (currently fixed 30s) instead.
+6. Any class where you want to swap my mapping?
+
+Once you answer, I'll start the warrior pass.
