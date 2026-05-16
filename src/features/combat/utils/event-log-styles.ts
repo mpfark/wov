@@ -243,6 +243,9 @@ export function classifyLogLine(log: string): ClassifiedLog {
   if (
     log.startsWith('✨') ||
     log.startsWith('🕊️') ||
+    log.startsWith('🌟') ||
+    log.startsWith('🔆') ||
+    log.startsWith('⚡') ||
     log.includes('holy damage') ||
     log.includes('Consecrate')
   ) {
