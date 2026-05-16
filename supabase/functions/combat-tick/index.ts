@@ -448,19 +448,26 @@ Deno.serve(async (req) => {
         const cInt = (m.c.int || 10) + ((eq[m.id] as any)?.int || 0);
         const cWis = (m.c.wis || 10) + ((eq[m.id] as any)?.wis || 0);
         const cDex = (m.c.dex || 10) + ((eq[m.id] as any)?.dex || 0);
+        const cCon = (m.c.con || 10) + ((eq[m.id] as any)?.con || 0);
         const intMod = Math.max(0, Math.floor((cInt - 10) / 2));
         const wisMod = Math.max(0, Math.floor((cWis - 10) / 2));
         const dexMod = Math.max(0, Math.floor((cDex - 10) / 2));
+        const conMod = Math.max(0, Math.floor((cCon - 10) / 2));
         if (reserved.ignite)       mb.ignite_buff = true;
         if (reserved.envenom)      mb.poison_buff = true;
-        if (reserved.eagle_eye)    mb.crit_buff = { bonus: Math.max(1, Math.floor(dexMod / 2) + 1) };
+        if (reserved.eagle_eye) {
+          // Dual-primary (Ranger DEX+WIS): blended focused vision. Cap 5.
+          const blended = Math.max(1, Math.min(5, Math.floor((dexMod + wisMod) / 2)));
+          mb.crit_buff = { bonus: blended };
+        }
         if (reserved.arcane_surge) mb.damage_buff = true;
         if (reserved.battle_cry) {
           // Match useCombatActions: 15% reduction (20% with shield), small crit reduction
           mb.battle_cry_dr = { reduction: 0.15, crit_reduction: 0.10 };
         }
         if (reserved.holy_shield) {
-          mb.holy_shield = { wis_mod: wisMod, expires_at: farFuture };
+          // Dual-primary (Templar WIS+CON): magnitude = WIS, CON adds to retaliation damage.
+          mb.holy_shield = { wis_mod: wisMod, con_mod: conMod, expires_at: farFuture };
         }
         if (reserved.shield_wall) {
           // Shield Wall stance: +50% block chance (multiplicative). Applied
