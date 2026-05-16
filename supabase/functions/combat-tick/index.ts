@@ -599,19 +599,23 @@ Deno.serve(async (req) => {
       // weapon-die autoattack path). Each ability's identity is tied to its
       // class's primary stat and is independent of equipped weapon.
       if (pa.ability_type === 'multi_attack') {
-        // Barrage (Ranger / DEX): per-arrow base = 2 + dexMod + floor(level/4).
+        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow base = 2 + dexMod + floor(level/4).
+        // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
         // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
         // Buff parity with autoattacks: respects Eagle Eye (crit_buff), Arcane Surge
         // (damage_buff), Shadowstep (stealth_buff), and Disengage (disengage_next_hit).
         // Stealth/Disengage are consumed once for the whole Barrage volley (not per arrow).
         const effDex = (c.dex || 10) + (eb.dex || 0);
+        const effWis = (c.wis || 10) + (eb.wis || 0);
         const dexMod = sm(effDex);
-        const arrowCount = dexMod >= 3 ? 3 : 2;
+        const wisMod = sm(effWis);
+        const arrowCount = Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0));
         const perArrowBase = Math.max(2 + dexMod + Math.floor((c.level || 1) / 4), 1);
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
-        const isStealth = !!mb.stealth_buff;
+        const stealthMult = (mb.stealth_buff && typeof mb.stealth_buff === 'object') ? (mb.stealth_buff.mult ?? 2) : (mb.stealth_buff ? 2 : 0);
+        const isStealth = stealthMult > 0;
         const isDmgBuff = !!mb.damage_buff;
         const hasDisengage = !!mb.disengage_next_hit;
         const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
@@ -624,7 +628,7 @@ Deno.serve(async (req) => {
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
             let arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
-            if (isStealth) arrowDmg = arrowDmg * 2;
+            if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
             if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * ARCANE_SURGE_DAMAGE_MULT);
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
@@ -652,13 +656,16 @@ Deno.serve(async (req) => {
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
       } else if (pa.ability_type === 'execute_attack') {
-        // Eviscerate (Rogue / DEX finisher): base = 4 + 2*dexMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Multiplier from poison stacks (0–5).
+        // Eviscerate (Rogue / dual-primary DEX+CHA finisher): base = 4 + 2*dexMod + floor(level/3).
+        // Guaranteed hit, no crit roll. Per-stack bonus scales with CHA showmanship (cap +0.65/stack).
         const effDex = (c.dex || 10) + (eb.dex || 0);
+        const effCha = (c.cha || 10) + (eb.cha || 0);
         const dexMod = sm(effDex);
+        const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
         const baseDmg = 4 + 2 * dexMod + Math.floor((c.level || 1) / 3);
-        const multiplier = 1 + 0.5 * stacks;
+        const perStackBonus = Math.min(0.65, 0.50 + Math.max(0, chaMod) * 0.02);
+        const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
