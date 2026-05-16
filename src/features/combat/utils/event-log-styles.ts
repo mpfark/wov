@@ -253,8 +253,8 @@ export function classifyLogLine(log: string): ClassifiedLog {
   }
 
   // Elemental DoTs / effects.
-  if (log.startsWith('🔥')) return { category: 'fire', isRemote, isCrit, isKill, isLevelUp };
-  if (log.startsWith('🧪')) return { category: 'poison', isRemote, isCrit, isKill, isLevelUp };
+  if (log.startsWith('🔥') || log.startsWith('🌋')) return { category: 'fire', isRemote, isCrit, isKill, isLevelUp };
+  if (log.startsWith('🧪') || log.startsWith('🐍')) return { category: 'poison', isRemote, isCrit, isKill, isLevelUp };
   if (log.startsWith('🩸')) return { category: 'bleed', isRemote, isCrit, isKill, isLevelUp };
   if (log.startsWith('🌑') || log.startsWith('🌫️')) {
     return { category: 'shadow', isRemote, isCrit, isKill, isLevelUp };
@@ -266,7 +266,9 @@ export function classifyLogLine(log: string): ClassifiedLog {
     log.startsWith('🌿') ||
     log.startsWith('🔄') ||
     log.startsWith('📯') ||
-    log.startsWith('🦅')
+    log.startsWith('🦅') ||
+    log.startsWith('🦘') ||
+    log.startsWith('⚜️')
   ) {
     return { category: 'buff', isRemote, isCrit, isKill, isLevelUp };
   }
