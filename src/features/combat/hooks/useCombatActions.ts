@@ -281,9 +281,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
         return;
       }
       const wisMod = getStatModifier(p.character.wis);
+      const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const transferAmount = Math.max(3, wisMod * 2 + Math.floor(p.character.level / 2));
-      const maxTransfer = p.character.hp - 1;
-      if (maxTransfer <= 0) { p.addLog(`${ability.emoji} You don't have enough HP to transfer!`); return; }
+      // Dual-primary split: amount = WIS, safety floor scales with CON (hardy
+      // healers can safely sacrifice deeper without dropping themselves dangerously low).
+      const reserveHp = Math.max(1, conMod);
+      const maxTransfer = p.character.hp - reserveHp;
+      if (maxTransfer <= 0) { p.addLog(`${ability.emoji} You don't have enough HP to transfer! (need to keep ${reserveHp} HP)`); return; }
       const actualTransfer = Math.min(transferAmount, maxTransfer);
       await p.updateCharacter({ hp: p.character.hp - actualTransfer });
       const { data: restored, error } = await supabase.rpc('heal_party_member', {
