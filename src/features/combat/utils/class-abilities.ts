@@ -44,9 +44,9 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
   healer: [
     { label: 'Smite', emoji: '⭐', description: 'Channel a burst of divine light at your target, scaling with WIS', cpCost: 10, type: 'smite', tier: 0, levelRequired: 1 },
     { label: 'Heal', emoji: '💚', description: 'Restore HP based on your Wisdom', cpCost: 15, type: 'heal', tier: 1, levelRequired: 5 },
-    { label: 'Transfer Health', emoji: '💉', description: 'Sacrifice your own HP to heal a targeted ally', cpCost: 25, type: 'hp_transfer', tier: 2, levelRequired: 10 },
-    { label: 'Purifying Light', emoji: '🌟', description: 'A wave of divine radiance that heals all nearby allies over time, scaling with WIS', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
-    { label: 'Divine Aegis', emoji: '🛡️', description: 'Create an absorb shield on a targeted ally (or self), soaking incoming damage based on WIS', cpCost: 60, type: 'ally_absorb', tier: 4, levelRequired: 20 },
+    { label: 'Transfer Health', emoji: '💉', description: 'Sacrifice your own HP (amount = WIS) to heal a targeted ally. CON sets your safety floor — hardy healers can give more without dropping themselves low.', cpCost: 25, type: 'hp_transfer', tier: 2, levelRequired: 10 },
+    { label: 'Purifying Light', emoji: '🌟', description: 'A wave of divine radiance that heals all nearby allies over time. Heal/tick scales with WIS; duration scales with CON (stamina sustains the radiance).', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
+    { label: 'Divine Aegis', emoji: '🛡️', description: 'Create an absorb shield on a targeted ally (or self). Pool scales with WIS; duration (up to 60s) scales with CON.', cpCost: 60, type: 'ally_absorb', tier: 4, levelRequired: 20 },
   ],
   warrior: [
     { label: 'Power Strike', emoji: '⚔️', description: 'A heavy, focused blow that deals damage scaling with STR', cpCost: 10, type: 'power_strike', tier: 0, levelRequired: 1 },
