@@ -369,8 +369,12 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use ${ability.label}!`); return; }
       const creature = p.creatures.find(c => c.id === cTargetId);
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for ${ability.label}.`); return; }
-      const wisMod = getStatModifier(p.character.wis);
-      const durationMs = Math.min(15000, 8000 + wisMod * 1000);
+      // Class-branched dual-primary: Ranger's Nature's Snare scales duration with WIS;
+      // Bard's Dissonance scales duration with INT (bards have no WIS in their kit).
+      const scaleMod = p.character.class === 'bard'
+        ? getStatModifier(p.character.int + (p.equipmentBonuses.int || 0))
+        : getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      const durationMs = Math.min(15000, 8000 + Math.max(0, scaleMod) * 1000);
       const reduction = 0.3;
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
