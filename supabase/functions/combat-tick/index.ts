@@ -747,14 +747,24 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
       } else if (pa.ability_type === 'burst_damage') {
+        // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
+        // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
         const effCha = (c.cha || 10) + (eb.cha || 0);
+        const effInt = (c.int || 10) + (eb.int || 0);
         const chaMod = sm(effCha);
+        const intMod = sm(effInt);
         const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
         let damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
+        // INT crit-edge: d20 vs crit threshold lowered by floor(intMod/2). Floor 17.
+        const critRoll = rollD20();
+        const critThreshold = Math.max(17, 20 - Math.floor(Math.max(0, intMod) / 2));
+        const isFinaleCrit = critRoll >= critThreshold;
+        if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * ARCANE_SURGE_DAMAGE_MULT), 1);
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
-        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale! ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage!`, character_id: member.id });
+        const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
+        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage! (crit d20=${critRoll} vs ${critThreshold}+)`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, effCha);
         }
