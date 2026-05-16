@@ -156,9 +156,11 @@ SLOT: ${slotInstruction}
 RARITY: ${rarityInstruction}
 STATS FOCUS: ${statsFocusInstruction}
 
-STAT BUDGET FORMULA (mirrors seed catalog):
-- Equipment budget = max(2, floor(2 + (level - 1) × 0.3 × rarity_multiplier × hands_multiplier))
-- Floor of 2 even at L1, so every item has at least primary + minor.
+STAT BUDGET FORMULA (mirrors seed catalog — late-game compression applied):
+- raw = 2 + (level - 1) × 0.3 × rarity_multiplier × hands_multiplier
+- taper = 1.0 (L≤30) / 0.90 (L31–35) / 0.80 (L36–40) / 0.72 (L41+)
+- hybrid_bonus = +1 if rarity = uncommon AND level ≥ 30, else 0
+- Equipment budget = max(2, floor(raw × taper) + hybrid_bonus)
 - Consumable budget = equipment budget × 3.
 - Rarity: common=1.0, uncommon=1.5. Hands: 1.0 (1H) / 1.5 (2H, main_hand only).
 - Pick a level between ${level_min} and ${level_max} for each item.
@@ -173,8 +175,9 @@ STAT KEYS & COSTS:
 - Equipment: str/dex/con/int/wis/cha=1pt, ac=3pts, hp=0.5pts, hp_regen=2pts
 - Consumable: hp, hp_regen ONLY (no caps)
 
-STAT CAPS (equipment only):
-- Primary stat: 4 + floor(level/4) · AC: 2 + floor(level/10) · HP: 6 + floor(level/5)×2 · hp_regen: 2 + floor(level/10)
+STAT CAPS (equipment only — primary cap tapers above L28, ceilings at 13):
+- Primary stat: 4 + floor(level/4) for L≤28, then 11 + floor((level-28)/6) for L29–40, then 13 for L41+
+- AC: 2 + floor(level/10) · HP: 6 + floor(level/5)×2 · hp_regen: 2 + floor(level/10)
 
 OTHER FIELDS:
 - drop_chance: 0.1–0.5 (uncommon lower, consumables 0.3–0.5)
@@ -276,10 +279,14 @@ Call the generate_items tool with the structured output.`;
     const STAT_COSTS: Record<string, number> = { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1, ac: 3, hp: 0.5, hp_regen: 2 };
     const PRIMARY_STATS = ["str", "dex", "con", "int", "wis", "cha"];
 
+    // Mirrors src/shared/formulas/items.ts (taper + hybrid bonus + unique 2H mult 1.35).
     function calcBudget(level: number, rarity: string, hands: number = 1): number {
       const mult = RARITY_MULT[rarity] || 1;
-      const handsMult = hands === 2 ? 1.5 : 1;
-      return Math.max(2, Math.floor(2 + (level - 1) * 0.3 * mult * handsMult));
+      const handsMult = hands === 2 ? (rarity === "unique" ? 1.35 : 1.5) : 1;
+      const taper = level <= 30 ? 1.0 : level <= 35 ? 0.90 : level <= 40 ? 0.80 : 0.72;
+      const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
+      const hybridBonus = rarity === "uncommon" && level >= 30 ? 1 : 0;
+      return Math.max(2, Math.floor(raw * taper) + hybridBonus);
     }
 
     function calcStatCost(stats: Record<string, number>): number {
@@ -289,7 +296,9 @@ Call the generate_items tool with the structured output.`;
     function getStatCap(key: string, level: number): number {
       if (key === "ac" || key === "hp_regen") return 2 + Math.floor(level / 10);
       if (key === "hp") return 6 + Math.floor(level / 5) * 2;
-      return 4 + Math.floor(level / 4);
+      if (level <= 28) return 4 + Math.floor(level / 4);
+      if (level <= 40) return 11 + Math.floor((level - 28) / 6);
+      return 13;
     }
 
     const parsed = JSON.parse(toolCall.function.arguments);
