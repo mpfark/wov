@@ -345,12 +345,12 @@ export default function CharacterPanel({
     <TooltipProvider delayDuration={200}>
       <div className="h-full flex flex-col p-3 space-y-3 overflow-y-auto">
         {/* Name & Identity */}
-        <div className="text-center">
-          <h2 className="font-display text-lg text-primary text-glow">{character.name}</h2>
+        <div className="text-center gap-row">
+          <h2 className="t-display-lg text-lg">{character.name}</h2>
           {getCharacterTitle(character.level, character.gender) && (
-            <p className="text-[10px] text-primary/70 font-display tracking-widest uppercase">{getCharacterTitle(character.level, character.gender)}</p>
+            <p className="t-label text-primary/70">{getCharacterTitle(character.level, character.gender)}</p>
           )}
-          <p className="text-xs text-muted-foreground">
+          <p className="t-meta">
             {RACE_LABELS[character.race]} {CLASS_LABELS[character.class]} — Lvl {character.level}
           </p>
         </div>
@@ -358,22 +358,22 @@ export default function CharacterPanel({
         {/* Tabs: Equipment & Attributes */}
         <Tabs defaultValue="equipment" className="space-y-1.5">
           <TabsList className="h-7 w-full bg-muted/50 p-0.5">
-            <TabsTrigger value="equipment" className="font-display text-[10px] h-6 flex-1">Equipment</TabsTrigger>
-            <TabsTrigger value="inventory" className="font-display text-[10px] h-6 flex-1">
+            <TabsTrigger value="equipment" className="t-label h-6 flex-1 data-[state=active]:text-primary">Equipment</TabsTrigger>
+            <TabsTrigger value="inventory" className="t-label h-6 flex-1 data-[state=active]:text-primary">
               Inventory
             </TabsTrigger>
-            <TabsTrigger value="attributes" className="font-display text-[10px] h-6 flex-1 relative">
+            <TabsTrigger value="attributes" className="t-label h-6 flex-1 relative data-[state=active]:text-primary">
               Attributes
               {character.unspent_stat_points > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               )}
             </TabsTrigger>
-            <TabsTrigger value="portrait" className="font-display text-[10px] h-6 flex-1">Portrait</TabsTrigger>
+            <TabsTrigger value="portrait" className="t-label h-6 flex-1 data-[state=active]:text-primary">Portrait</TabsTrigger>
           </TabsList>
 
           {/* Gold — always visible */}
-          <div className="flex justify-center text-xs">
-            <span className="font-display text-primary">Gold {character.gold}</span>
+          <div className="flex justify-center">
+            <span className="t-numeric text-primary text-xs">Gold {character.gold}</span>
           </div>
 
           {/* Tab content */}
@@ -430,8 +430,8 @@ export default function CharacterPanel({
               {/* Belt Potions */}
               {beltCapacity > 0 && (
                 <div className="mt-2">
-                  <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-                    Belt Potions ({beltedPotions.length}/{beltCapacity})
+                  <h3 className="t-label mb-1.5">
+                    Belt Potions <span className="t-numeric text-xs ml-1">{beltedPotions.length}/{beltCapacity}</span>
                   </h3>
                   <div className="space-y-1">
                     {Array.from({ length: beltCapacity }, (_, i) => {
@@ -483,7 +483,7 @@ export default function CharacterPanel({
 
               {/* Materials (salvage + gems + future) */}
               <div className="mt-2 space-y-2 rounded border border-border bg-background/40 p-2">
-                <div className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
+                <div className="t-label flex items-center gap-1">
                   🧰 Material Pouch
                 </div>
                 <MaterialsSection characterId={character.id} />
@@ -504,8 +504,8 @@ export default function CharacterPanel({
                 }
                 return (
                   <div className="mt-3 flex flex-col">
-                    <h3 className="font-display text-xs text-muted-foreground mb-1.5">
-                      Consumables ({consumableAndQuestItems.length})
+                    <h3 className="t-label mb-1.5">
+                      Consumables <span className="t-numeric text-xs ml-1">{consumableAndQuestItems.length}</span>
                     </h3>
                     <div className="space-y-1">
                       {grouped.map(({ representative: inv, all }) => {
@@ -581,8 +581,8 @@ export default function CharacterPanel({
                     const capacity = getCarryCapacity(effectiveStr);
                     const isOver = bagWeight > capacity;
                     return (
-                      <h3 className="font-display text-xs text-muted-foreground">
-                        Items ({inventoryItems.length}) — <span className={isOver ? 'text-destructive' : ''}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
+                      <h3 className="t-label">
+                        Items <span className="t-numeric text-xs ml-1">{inventoryItems.length}</span> — <span className={`t-numeric text-xs ${isOver ? 'text-destructive' : ''}`}>{bagWeight}/{capacity}{isOver ? ' ⚠️' : ''}</span>
                       </h3>
                     );
                   })()}
@@ -790,9 +790,9 @@ export default function CharacterPanel({
                               {/* Stat allocation moved to Trainer panel */}
                               <span className="font-display text-foreground">{STAT_FULL_NAMES[stat]}</span>
                             </span>
-                            <span className="flex gap-1.5 tabular-nums">
-                              <span className="text-foreground">{base}</span>
-                              <span className="text-chart-2 w-5 text-right">{bonus > 0 ? `+${bonus}` : ''}</span>
+                            <span className="flex gap-1.5 t-numeric text-xs">
+                              <span>{base}</span>
+                              <span className="t-numeric-pos w-5 text-right">{bonus > 0 ? `+${bonus}` : ''}</span>
                               <span className="text-muted-foreground w-6 text-right text-[10px]">({mod >= 0 ? '+' : ''}{mod})</span>
                             </span>
                           </div>
@@ -979,19 +979,19 @@ export default function CharacterPanel({
 
                   const renderSection = (title: string, rows: DerivedRow[], cols: boolean = false) => (
                     <div className="border-t border-border pt-1.5">
-                      <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider mb-1">{title}</h4>
+                      <h4 className="t-label mb-1">{title}</h4>
                       <div className={cols ? 'grid grid-cols-2 gap-x-3' : 'space-y-0'}>
                         {rows.map(r => (
                           <Tooltip key={r.label}>
                             <TooltipTrigger asChild>
                               <div className="flex items-center justify-between text-xs py-0.5 px-1 rounded hover:bg-accent/30 cursor-help">
                                 <span className="text-muted-foreground">{r.label}</span>
-                                <span className={`font-display tabular-nums ${r.buffed ? `${r.buffColor || 'text-elvish'} font-semibold` : 'text-foreground'}`}>{r.value}</span>
+                                <span className={`t-numeric ${r.buffed ? `${r.buffColor || 'text-elvish'} font-semibold` : ''}`}>{r.value}</span>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent className="bg-popover border-border z-50">
-                              <p className="font-display text-sm">{r.label}</p>
-                              <p className="text-xs text-muted-foreground whitespace-pre-line">{r.tip}</p>
+                              <p className="t-display-sm">{r.label}</p>
+                              <p className="t-meta whitespace-pre-line">{r.tip}</p>
                             </TooltipContent>
                           </Tooltip>
                         ))}

@@ -101,7 +101,7 @@ export default function PortraitTab({ character, equipped, inCombat }: Props) {
 
       <div className="space-y-2">
         <div>
-          <Label className="font-display text-[10px] uppercase tracking-wide text-muted-foreground">
+          <Label className="t-label">
             Appearance notes
           </Label>
           <Textarea
@@ -112,14 +112,14 @@ export default function PortraitTab({ character, equipped, inCombat }: Props) {
             maxLength={500}
             disabled={isGenerating}
           />
-          <div className="text-[10px] text-muted-foreground text-right mt-0.5">
+          <div className="t-meta text-right mt-0.5">
             {description.length}/500
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="font-display text-[10px] uppercase tracking-wide text-muted-foreground">
+            <Label className="t-label">
               Height
             </Label>
             <Select value={height} onValueChange={(v) => setHeight(v as PortraitHeight)} disabled={isGenerating}>
@@ -132,7 +132,7 @@ export default function PortraitTab({ character, equipped, inCombat }: Props) {
             </Select>
           </div>
           <div>
-            <Label className="font-display text-[10px] uppercase tracking-wide text-muted-foreground">
+            <Label className="t-label">
               Body type
             </Label>
             <Select value={bodyType} onValueChange={(v) => setBodyType(v as PortraitBodyType)} disabled={isGenerating}>

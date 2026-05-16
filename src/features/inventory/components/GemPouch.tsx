@@ -39,7 +39,7 @@ export function GemPouch({ owned, showEmpty = true }: GemPouchProps) {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="space-y-1">
-        <div className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
+        <div className="t-label flex items-center gap-1">
           💠 Gems
         </div>
         {empty ? (

@@ -95,11 +95,11 @@ Risk: none — purely additive.
 
 Risk: low — single file, no logic changes.
 
-### Phase 3 — Character + Inventory panels (the densest panels)
-5. `src/features/character/components/CharacterPanel.tsx`, `StatusBarsStrip.tsx`, `PortraitTab.tsx`: replace ad-hoc text sizes with role classes, normalize spacing to the 4 gap tokens, apply `tabular-nums` to all numeric displays.
-6. `src/features/inventory/components/*Panel.tsx` + `MaterialsSection`, `GemPouch`: same treatment, plus tab styling pass.
+### Phase 3 — Character + Inventory panels (the densest panels) ✅
+5. `src/features/character/components/CharacterPanel.tsx`, `StatusBarsStrip.tsx`, `PortraitTab.tsx`: identity block uses `t-display-lg` + `t-label` + `t-meta`; tab triggers use `t-label` with `data-[state=active]:text-primary`; section headers (Belt Potions, Material Pouch, Consumables, Items, Pools/Offense/Defense) use `t-label`; stat & derived numbers use `t-numeric` (+ `t-numeric-pos` for bonus column); HP/CP/MP/XP/RP/gem counters use `t-numeric`. Portrait tab labels use `t-label`.
+6. `src/features/inventory/components/GemPouch.tsx`: pouch header uses `t-label`. `MaterialsSection.tsx` chips already use `font-display tabular-nums` — left as-is.
 
-Risk: medium — touches many files but mechanical (find/replace patterns + visual QA per panel).
+Risk: medium — touched many components but mechanically (role-class swap), no logic changes.
 
 ### Phase 4 — Service panels (Vendor / Blacksmith / Jewelcrafter / Stonebinder / Trainer / Scroll / Soulforge)
 7. Standardize `ServicePanelShell` header/tab typography to `display-lg` + `label`.
