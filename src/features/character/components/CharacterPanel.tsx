@@ -358,17 +358,17 @@ export default function CharacterPanel({
         {/* Tabs: Equipment & Attributes */}
         <Tabs defaultValue="equipment" className="space-y-1.5">
           <TabsList className="h-7 w-full bg-muted/50 p-0.5">
-            <TabsTrigger value="equipment" className="t-label h-6 flex-1 data-[state=active]:text-primary">Equipment</TabsTrigger>
-            <TabsTrigger value="inventory" className="t-label h-6 flex-1 data-[state=active]:text-primary">
+            <TabsTrigger value="equipment" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">Equipment</TabsTrigger>
+            <TabsTrigger value="inventory" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">
               Inventory
             </TabsTrigger>
-            <TabsTrigger value="attributes" className="t-label h-6 flex-1 relative data-[state=active]:text-primary">
+            <TabsTrigger value="attributes" className="t-label text-[10px] tracking-wide h-6 flex-1 relative data-[state=active]:text-primary">
               Attributes
               {character.unspent_stat_points > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
               )}
             </TabsTrigger>
-            <TabsTrigger value="portrait" className="t-label h-6 flex-1 data-[state=active]:text-primary">Portrait</TabsTrigger>
+            <TabsTrigger value="portrait" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">Portrait</TabsTrigger>
           </TabsList>
 
           {/* Gold — always visible */}
