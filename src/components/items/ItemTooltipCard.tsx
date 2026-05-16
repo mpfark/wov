@@ -43,7 +43,7 @@ interface Props {
   showValue?: boolean;
 }
 
-const Divider = () => <div className="my-1.5 h-px bg-border/60" />;
+const Divider = () => <div className="h-px bg-border/60" />;
 
 export default function ItemTooltipCard({
   item, weaponProgression, classKey,
@@ -59,97 +59,116 @@ export default function ItemTooltipCard({
     : 0;
   const affinity = affinityLabelFor(item.weapon_tag, classKey, CLASS_WEAPON_AFFINITY);
 
+  const hasStatsBlock = isWeapon || statEntries.length > 0 || (comparison && comparison.diffs.length > 0);
+  const hasMetaBlock = durabilityPct != null || (showValue && item.value != null) || (qty && qty > 1) || isBroken;
+  const hasFlavorBlock = !!(flavorText || item.description);
+
   return (
-    <div className="space-y-1.5 max-w-xs">
+    <div className="gap-group max-w-xs">
       {item.illustration_url && (
         <ItemIllustration url={item.illustration_url} alt={item.name} />
       )}
 
-      {/* Identity */}
-      <div className="text-center">
-        <div className={`font-display text-sm tracking-wide ${rarityClass(item)}`}>{item.name}</div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{subtitle}</div>
+      {/* 1 — Identity */}
+      <div className="text-center gap-row">
+        <div className={`t-display-sm ${rarityClass(item)}`}>{item.name}</div>
+        {subtitle && <div className="t-label">{subtitle}</div>}
         {item.level != null && item.level > 0 && (
-          <div className="text-[10px] text-muted-foreground/80">Level {item.level}</div>
+          <div className="t-meta">Level {item.level}</div>
         )}
       </div>
 
-      {isBroken && (
-        <div className="text-[10px] text-destructive font-display text-center">⚒ Broken — needs repair</div>
-      )}
-
-      {/* Weapon block */}
-      {isWeapon && (
+      {/* 2 — Stats (weapon damage + attributes + comparison) */}
+      {hasStatsBlock && (
         <>
           <Divider />
-          <div className="space-y-0.5">
-            <div className="text-[10px] text-muted-foreground tracking-wide">⚔ Weapon Damage</div>
-            <div className="font-display text-sm text-primary">1d{die} <span className="text-muted-foreground text-xs">+ STR</span></div>
-            {affinity && (
-              <div className="text-[10px] text-elvish">⛨ Affinity: {affinity}</div>
+          <div className="gap-group">
+            {isWeapon && (
+              <div className="grid grid-cols-[1fr_auto] gap-x-3 items-baseline">
+                <span className="t-label">⚔ Weapon Damage</span>
+                <span className="t-numeric text-sm text-primary">
+                  1d{die}<span className="t-meta ml-1">+ STR</span>
+                </span>
+                {affinity && (
+                  <>
+                    <span className="t-label">⛨ Affinity</span>
+                    <span className="t-body text-elvish text-right">{affinity}</span>
+                  </>
+                )}
+              </div>
+            )}
+
+            {statEntries.length > 0 && (
+              <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
+                {statEntries.map(([k, v]) => {
+                  const tone = k === 'hp_regen' ? 'text-elvish' : '';
+                  return (
+                    <Fragment key={k}>
+                      <span className={`t-label ${tone}`}>{statLabel(k)}</span>
+                      <span className={`t-numeric t-numeric-pos text-right text-xs ${tone}`}>+{v as number}</span>
+                    </Fragment>
+                  );
+                })}
+              </div>
+            )}
+
+            {comparison && comparison.diffs.length > 0 && (
+              <div>
+                <div className="t-label mb-0.5">vs {comparison.label}</div>
+                <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
+                  {comparison.diffs.map(({ key, diff }) => {
+                    const cls = diff > 0 ? 't-numeric-pos' : 't-numeric-neg';
+                    return (
+                      <Fragment key={key}>
+                        <span className={`t-label ${cls}`}>{statLabel(key)}</span>
+                        <span className={`t-numeric ${cls} text-right text-xs`}>
+                          {diff > 0 ? '+' : ''}{diff}
+                        </span>
+                      </Fragment>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </>
       )}
 
-      {/* Attributes */}
-      {statEntries.length > 0 && (
+      {/* 3 — Metadata (durability / value / qty / broken) */}
+      {hasMetaBlock && (
         <>
           <Divider />
-          <div>
-            <div className="text-[10px] text-muted-foreground tracking-wide mb-0.5">Attributes</div>
-            <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 text-xs">
-              {statEntries.map(([k, v]) => (
-                <Fragment key={k}>
-                  <span className={`font-display ${k === 'hp_regen' ? 'text-elvish' : 'text-foreground'}`}>{statLabel(k)}</span>
-                  <span className={`font-display text-right ${k === 'hp_regen' ? 'text-elvish' : 'text-foreground'}`}>+{v as number}</span>
-                </Fragment>
-              ))}
-            </div>
+          <div className="flex justify-between gap-2 t-meta">
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              {isBroken && <span className="t-numeric-neg font-display">⚒ Broken</span>}
+              {durabilityPct != null && (
+                <span>
+                  Durability <span className="t-numeric text-xs">{durabilityPct}</span>
+                  <span className="t-numeric-cap">%</span>
+                </span>
+              )}
+              {showValue && item.value != null && (
+                <span>
+                  Value <span className="t-numeric text-xs">{item.value}</span>
+                  <span className="t-numeric-cap">g</span>
+                </span>
+              )}
+            </span>
+            {qty && qty > 1 && (
+              <span><span className="t-numeric-cap">×</span><span className="t-numeric text-xs">{qty}</span></span>
+            )}
           </div>
         </>
       )}
 
-      {/* Comparison */}
-      {comparison && comparison.diffs.length > 0 && (
-        <>
-          <Divider />
-          <div>
-            <div className="text-[9px] text-muted-foreground mb-0.5">vs {comparison.label}</div>
-            <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 text-[10px] font-display">
-              {comparison.diffs.map(({ key, diff }) => (
-                <Fragment key={key}>
-                  <span className={diff > 0 ? 'text-elvish' : 'text-destructive'}>{statLabel(key)}</span>
-                  <span className={`text-right ${diff > 0 ? 'text-elvish' : 'text-destructive'}`}>
-                    {diff > 0 ? '+' : ''}{diff}
-                  </span>
-                </Fragment>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Flavor */}
-      {(flavorText || item.description) && (
+      {/* 4 — Flavor */}
+      {hasFlavorBlock && (
         <>
           <Divider />
           {flavorText
-            ? <p className="text-[11px] italic text-muted-foreground/90 leading-snug">"{flavorText}"</p>
-            : <p className="text-[11px] text-muted-foreground/80 leading-snug">{item.description}</p>}
+            ? <p className="t-meta italic">"{flavorText}"</p>
+            : <p className="t-meta">{item.description}</p>}
         </>
-      )}
-
-      {/* Footer */}
-      {(durabilityPct != null || (showValue && item.value != null) || (qty && qty > 1)) && (
-        <div className="text-[10px] text-muted-foreground/70 pt-0.5 flex justify-between gap-2">
-          <span>
-            {durabilityPct != null && <>Durability {durabilityPct}%</>}
-            {durabilityPct != null && showValue && item.value != null ? ' · ' : ''}
-            {showValue && item.value != null && <>Value {item.value}g</>}
-          </span>
-          {qty && qty > 1 && <span>×{qty}</span>}
-        </div>
       )}
     </div>
   );
