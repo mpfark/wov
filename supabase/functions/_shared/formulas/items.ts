@@ -1,9 +1,10 @@
 /**
  * items.ts — Item stat budget, cost, caps, repair, suggested gold value.
  *
- * CANONICAL OWNER for: ITEM_RARITY_MULTIPLIER, ITEM_STAT_COSTS, ITEM_STAT_CAPS,
- * getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue,
- * calculateRepairCost, CONSUMABLE_ALLOWED_STATS.
+ * Mirror of `src/shared/formulas/items.ts`. Keep both in sync.
+ * Late-game compression: soft taper above L30, primary-cap taper at L28+,
+ * +1 budget point for uncommon hybrids at L30+, and unique 2H mult reduced
+ * from 1.5 → 1.35.
  */
 
 export const ITEM_RARITY_MULTIPLIER: Record<string, number> = {
@@ -22,12 +23,25 @@ export const ITEM_STAT_CAPS: Record<string, number> = {
 
 export const CONSUMABLE_ALLOWED_STATS = ['hp', 'hp_regen'];
 
+export function getItemHandsMultiplier(rarity: string, hands: number): number {
+  if (hands !== 2) return 1.0;
+  return rarity === 'unique' ? 1.35 : 1.5;
+}
+
+export function getItemLevelTaper(level: number): number {
+  if (level <= 30) return 1.0;
+  if (level <= 35) return 0.90;
+  if (level <= 40) return 0.80;
+  return 0.72;
+}
+
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
-  const handsMult = hands === 2 ? 1.5 : 1;
-  // Floor of 2 even at L1 so every item has primary + minor stat (matches seed-archetype-items).
-  const base = Math.max(2, Math.floor(2 + (level - 1) * 0.3 * mult * handsMult));
-  // Consumables get 3x budget since they're single-use
+  const handsMult = getItemHandsMultiplier(rarity, hands);
+  const taper = getItemLevelTaper(level);
+  const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
+  const hybridBonus = rarity === 'uncommon' && level >= 30 ? 1 : 0;
+  const base = Math.max(2, Math.floor(raw * taper) + hybridBonus);
   return itemType === 'consumable' ? base * 3 : base;
 }
 
@@ -47,7 +61,9 @@ export function getItemStatCap(statKey: string, level: number = 1, itemType: str
   if (statKey === 'hp') {
     return 6 + Math.floor(level / 5) * 2;
   }
-  return 4 + Math.floor(level / 4);
+  if (level <= 28) return 4 + Math.floor(level / 4);
+  if (level <= 40) return 11 + Math.floor((level - 28) / 6);
+  return 13;
 }
 
 export function suggestItemGoldValue(level: number, rarity: string): number {
@@ -61,7 +77,6 @@ const REPAIR_RARITY_MULT: Record<string, number> = {
 
 export function calculateRepairCost(_maxDurability: number, currentDurability: number, value: number, rarity: string): number {
   const mult = REPAIR_RARITY_MULT[rarity] ?? 1;
-  if (mult === 0) return 0; // unique = unrepairable
-  // All items have a fixed max durability of 100
+  if (mult === 0) return 0;
   return Math.max(1, Math.ceil((100 - currentDurability) * value * mult / 100));
 }
