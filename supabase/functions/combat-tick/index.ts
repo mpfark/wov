@@ -41,6 +41,8 @@ import {
   getCreatureAttackBonus as creatureAtkBonus,
   getShieldBlockChance,
   getShieldBlockAmount,
+  getShieldWallChanceBonus,
+  getShieldWallAmountBonus,
   ARCANE_SURGE_DAMAGE_MULT,
   type HitQuality,
 } from "../_shared/formulas/combat.ts";
