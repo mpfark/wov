@@ -472,10 +472,13 @@ Deno.serve(async (req) => {
           mb.holy_shield = { wis_mod: wisMod, con_mod: conMod, expires_at: farFuture };
         }
         if (reserved.shield_wall) {
-          // Shield Wall stance: +50% block chance (multiplicative). Applied
-          // in the shield-block step below; requires a shield equipped to
-          // actually benefit.
-          mb.shield_wall_stance = true;
+          // Dual-primary (Templar WIS+CON): WIS → bonus block chance,
+          // CON → bonus block amount. Requires a shield equipped to actually
+          // benefit; the block step below reads both fields.
+          mb.shield_wall_stance = {
+            chance_bonus: getShieldWallChanceBonus(cWis),
+            amount_bonus: getShieldWallAmountBonus(cCon),
+          };
         }
         if (reserved.force_shield) {
           // Force Shield: ward only regenerates OUT OF COMBAT (handled by
