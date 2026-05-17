@@ -869,18 +869,21 @@ Deno.serve(async (req) => {
 
 
         // 5. Shield block (flat reduction, shield only). Shield Wall stance
-        // adds a flat +50% block chance on top of the player's base block chance
-        // (clamped to 95%).
+        // adds WIS-scaled bonus block chance and CON-scaled bonus block
+        // amount on top of the base DEX/STR formulas (chance clamped to 95%).
         if (hasShield) {
+          const sw = mb.shield_wall_stance;
           let blockChance = getShieldBlockChance(effectiveDex);
-          if (mb.shield_wall_stance) {
-            blockChance = Math.min(0.95, blockChance + 0.5);
+          if (sw) {
+            blockChance = Math.min(0.95, blockChance + (sw.chance_bonus ?? 0));
           }
           if (Math.random() < blockChance) {
-            const blockAmt = Math.min(getShieldBlockAmount(effectiveStr), dmg);
+            const baseAmt = getShieldBlockAmount(effectiveStr);
+            const bonusAmt = sw ? (sw.amount_bonus ?? 0) : 0;
+            const blockAmt = Math.min(baseAmt + bonusAmt, dmg);
             const preDmg = dmg;
             dmg = Math.max(dmg - blockAmt, 0);
-            const stanceTag = mb.shield_wall_stance ? ' 🛡️ (Shield Wall)' : '';
+            const stanceTag = sw ? ` 🛡️ (Shield Wall +${bonusAmt})` : '';
             events.push({ type: 'shield_block', message: `🛡️ ${targetName} blocks with shield!${stanceTag} (−${blockAmt} damage, ${preDmg} → ${dmg})`, character_id: targetId });
             if (dmg <= 0) return;
           }
