@@ -962,11 +962,14 @@ export default function CharacterPanel({
                     offenseRows.push({ label: 'Procs', value: procs.join(' / '), tip: procs.join(', ') + ' on hit', buffed: true, buffColor: 'text-elvish' });
                   }
 
-                  // Shield block stats (boosted by Shield Wall stance)
+                  // Shield block stats (boosted by Shield Wall stance — WIS chance, CON amount)
                   const shieldWallActive = !!((character as any).reserved_buffs && (character as any).reserved_buffs.shield_wall);
                   const baseBlockChance = offHandIsShield ? getShieldBlockChance(eDex) : 0;
-                  const blockChance = shieldWallActive ? Math.min(0.95, baseBlockChance + 0.5) : baseBlockChance;
-                  const blockAmount = offHandIsShield ? getShieldBlockAmount(character.str + (equipmentBonuses.str || 0)) : 0;
+                  const baseBlockAmount = offHandIsShield ? getShieldBlockAmount(character.str + (equipmentBonuses.str || 0)) : 0;
+                  const swChanceBonus = shieldWallActive ? getShieldWallChanceBonus(eWis) : 0;
+                  const swAmountBonus = shieldWallActive ? getShieldWallAmountBonus(eCon) : 0;
+                  const blockChance = Math.min(0.95, baseBlockChance + swChanceBonus);
+                  const blockAmount = baseBlockAmount + swAmountBonus;
 
                   const defenseRows: DerivedRow[] = [
                     { label: 'AC', value: `${totalAC}`, tip: `Base ${totalAC}${offHandIsShield ? ' (incl. +1 Shield)' : ''} vs regular creature atk +${creatureAtkMod}` },
