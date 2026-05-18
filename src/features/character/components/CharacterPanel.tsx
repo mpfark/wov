@@ -874,7 +874,14 @@ export default function CharacterPanel({
                   const intHit = getIntHitBonus(eInt);
                   const dexCrit = getDexCritBonus(eDex);
                   const baseCritRange = getClassCritRange(character.class) - dexCrit;
-                  const effectiveCrit = critBuffActive ? baseCritRange - critBuff!.bonus : baseCritRange;
+                  const dexModForCrit = getStatModifier(eDex);
+                  const wisModForCrit = getStatModifier(eWis);
+                  const eagleEyeBonus = eagleEyeActive
+                    ? Math.max(1, Math.min(5, Math.floor((Math.max(0, dexModForCrit) + Math.max(0, wisModForCrit)) / 2)))
+                    : 0;
+                  const critStanceActive = eagleEyeActive || !!critBuffActive;
+                  const critBonusAmount = eagleEyeActive ? eagleEyeBonus : (critBuffActive ? critBuff!.bonus : 0);
+                  const effectiveCrit = baseCritRange - critBonusAmount;
                   const wisAntiCritChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
@@ -945,7 +952,7 @@ export default function CharacterPanel({
                     { label: 'Attack', value: `1d${weaponDie} ${dmgMod >= 0 ? '+' : ''}${dmgMod}${isProficient ? ' ⚔' : ''}${dmgMultParts.length > 0 ? ' ✦' : ''}`, tip: `Autoattack damage: 1d${weaponDie} weapon die + STR modifier${isTwoHanded ? ' (two-handed)' : ''}${mainHandTag ? '' : ' (unarmed)'}\nTo-hit uses DEX (separate from damage).${isProficient ? '\n⚔ Proficient: +1 Hit, ×1.10 Damage' : ''}${dmgMultParts.length > 0 ? '\n' + dmgMultParts.join(', ') : ''}`, buffed: dmgMultParts.length > 0, buffColor: 'text-elvish' },
                     { label: 'Atk Speed', value: `${atkSpeed}s`, tip: `Fixed 2.0s heartbeat` },
                     { label: 'Hit Chance', value: `${hitChance}%`, tip: `d20 + ${hitMod} DEX + ${intHit} INT${affinityHit ? ' + 1 Affinity' : ''} → ${hitChance}% vs same-level creature (AC ${sameLevelAC})\n(Damage scales from STR; accuracy from DEX.)` },
-                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critBuffActive ? `, +${critBuff!.bonus} Eagle Eye` : ''}`, buffed: !!critBuffActive, buffColor: 'text-primary' },
+                    { label: 'Crit Range', value: effectiveCrit === 20 ? '20' : `${effectiveCrit}–20`, tip: `${dexCrit > 0 ? `+${dexCrit} DEX bonus` : 'DEX bonus at 14+'}${critStanceActive ? `, +${critBonusAmount} Eagle Eye` : ''}`, buffed: critStanceActive, buffColor: 'text-primary' },
                     { label: 'Min Damage', value: strFloor > 0 ? `+${strFloor}` : '–', tip: strFloor > 0 ? 'STR bonus: minimum damage floor on all attacks' : 'STR 14+ for minimum damage floor on all attacks' },
                   ];
 
