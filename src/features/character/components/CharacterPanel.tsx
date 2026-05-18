@@ -837,6 +837,8 @@ export default function CharacterPanel({
                   const now = Date.now();
                   const battleCryActive = battleCryBuff && now < battleCryBuff.expiresAt;
                   const critBuffActive = critBuff && now < critBuff.expiresAt;
+                  const reservedBuffs = ((character as any).reserved_buffs ?? {}) as Record<string, unknown>;
+                  const eagleEyeActive = !!reservedBuffs.eagle_eye;
                   const evasionActive = evasionBuff && now < evasionBuff.expiresAt;
                   const dmgBuffActive = damageBuff && now < damageBuff.expiresAt;
                   const absorbActive = absorbBuff && now < absorbBuff.expiresAt;
