@@ -18,7 +18,7 @@ export interface FoodBuff { flatRegen: number; expiresAt: number }
 export interface CritBuff { bonus: number; expiresAt: number }
 export interface StealthBuff { expiresAt: number; mult?: number }
 export interface DamageBuff { expiresAt: number }
-export interface RootDebuff { damageReduction: number; expiresAt: number }
+export interface RootDebuff { damageReduction: number; expiresAt: number; creatureId?: string }
 export interface BattleCryBuff { damageReduction: number; critReduction: number; expiresAt: number }
 export interface DotDebuff {
   damagePerTick: number; intervalMs: number; expiresAt: number;

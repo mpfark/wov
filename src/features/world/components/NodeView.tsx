@@ -50,6 +50,7 @@ interface Props {
   poisonStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   igniteStacks?: Record<string, { stacks: number; damagePerTick: number; expiresAt: number }>;
   sunderDebuff?: Record<string, { acReduction: number; expiresAt: number; creatureId: string; creatureName: string }>;
+  rootDebuff?: { creatureId?: string; damageReduction: number; expiresAt: number } | null;
   bleedStacks?: Record<string, { damagePerTick: number; expiresAt: number }>;
   groundLoot?: GroundLootItem[];
   onPickUpLoot?: (groundLootId: string) => void;
@@ -69,6 +70,7 @@ export default function NodeView({
   poisonStacks = {},
   igniteStacks = {},
   sunderDebuff,
+  rootDebuff = null,
   bleedStacks = {},
   groundLoot = [],
   onPickUpLoot,
@@ -324,6 +326,18 @@ export default function NodeView({
                               </TooltipTrigger>
                               <TooltipContent side="top" className="text-xs">
                                 Sundered: AC reduced by {creatureSunder!.acReduction}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {rootDebuff && rootDebuff.creatureId === c.id && Date.now() < rootDebuff.expiresAt && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-[10px] text-elvish font-display animate-pulse">
+                                  🌿
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">
+                                Snared: damage reduced by {Math.round(rootDebuff.damageReduction * 100)}%
                               </TooltipContent>
                             </Tooltip>
                           )}
