@@ -632,6 +632,7 @@ Deno.serve(async (req) => {
         const hasDisengage = !!mb.disengage_next_hit;
         const disengageMult = hasDisengage ? (mb.disengage_next_hit.bonus_mult || 0) : 0;
         let totalDmg = 0;
+        events.push({ type: 'ability_cast', message: `🏹 ${c.name} unleashes a Barrage of ${arrowCount} arrows!`, character_id: member.id });
         for (let i = 0; i < arrowCount; i++) {
           const t = creatures.find(cr => cr.id === pa.target_creature_id && cHp[cr.id] > 0 && !cKilled.has(cr.id));
           if (!t) break;
@@ -646,17 +647,31 @@ Deno.serve(async (req) => {
             arrowDmg = Math.max(arrowDmg, 1);
             totalDmg += arrowDmg;
             cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
-            const critTag = isCrit ? ' CRIT!' : '';
-            events.push({ type: 'ability_hit', message: `🏹🏹 Arrow ${i + 1}: ${c.name} hits ${t.name}!${critTag} Rolled ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — ${arrowDmg} damage.`, character_id: member.id });
+            events.push({
+              type: 'attack_hit',
+              message: `Arrow ${i + 1}/${arrowCount}: ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — ${arrowDmg}`,
+              attacker_name: c.name,
+              target_name: t.name,
+              attacker_class: c.class,
+              weapon_tag: 'bow',
+              damage: arrowDmg,
+              is_crit: isCrit,
+              character_id: member.id,
+            });
           } else {
-            events.push({ type: 'ability_miss', message: `🏹🏹 Arrow ${i + 1}: ${c.name} misses ${t.name}! Rolled ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac}.`, character_id: member.id });
+            events.push({
+              type: 'attack_miss',
+              message: `Arrow ${i + 1}/${arrowCount}: ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — miss`,
+              attacker_name: c.name,
+              target_name: t.name,
+              attacker_class: c.class,
+              weapon_tag: 'bow',
+              character_id: member.id,
+            });
           }
           if (cHp[t.id] <= 0 && !cKilled.has(t.id)) {
             handleCreatureKill(t, c.name, (c.cha || 10) + (eb.cha || 0));
           }
-        }
-        if (totalDmg > 0) {
-          events.push({ type: 'ability_hit', message: `🏹🏹 Barrage total: ${totalDmg} damage! (${arrowCount} arrows)`, character_id: member.id });
         }
         // Consume stealth/disengage once per Barrage cast (parity with autoattacks)
         if (totalDmg > 0 && (isStealth || hasDisengage)) {
