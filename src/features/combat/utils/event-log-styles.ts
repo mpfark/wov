@@ -187,7 +187,7 @@ export function classifyLogLine(log: string): ClassifiedLog {
     log.startsWith('💀') ||
     log.includes('been defeated') ||
     log.includes('struck down');
-  const isLevelUp = log.startsWith('🎉') || log.includes('Level Up');
+  const isLevelUp = log.startsWith('🎉') || log.includes('Level Up') || log.startsWith('✨') || log.startsWith('🌋');
 
   // Strong-emphasis categories first.
   if (isLevelUp) return { category: 'level_up', isRemote, isCrit, isKill, isLevelUp };
