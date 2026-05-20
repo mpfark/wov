@@ -152,12 +152,26 @@ Deno.serve(async (req) => {
       if (char.crown_item_created) {
         return new Response(JSON.stringify({ error: "Already forged your Crown" }), { status: 403, headers: corsHeaders });
       }
+      // Consume the Soulmarked Ember granted at level 40.
+      const { data: emberOk } = await admin.rpc('consume_material', {
+        _character_id: character_id, _key: 'soulmarked_ember', _delta: 1,
+      });
+      if (!emberOk) {
+        return new Response(JSON.stringify({ error: "You lack a Soulmarked Ember — return when the forge has claimed you." }), { status: 403, headers: corsHeaders });
+      }
     } else {
       if (char.level < 42) {
         return new Response(JSON.stringify({ error: "Must be level 42" }), { status: 403, headers: corsHeaders });
       }
       if (char.soulforged_item_created) {
         return new Response(JSON.stringify({ error: "Already forged" }), { status: 403, headers: corsHeaders });
+      }
+      // Consume the Corebound Fragment granted at level 42.
+      const { data: fragOk } = await admin.rpc('consume_material', {
+        _character_id: character_id, _key: 'corebound_fragment', _delta: 1,
+      });
+      if (!fragOk) {
+        return new Response(JSON.stringify({ error: "You lack a Corebound Fragment." }), { status: 403, headers: corsHeaders });
       }
     }
 
