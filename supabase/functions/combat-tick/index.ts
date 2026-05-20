@@ -1469,6 +1469,30 @@ Deno.serve(async (req) => {
             events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
           }
 
+          // ── Deep-Core Forge milestone tokens ──
+          // Soulbound materials that hint at the Soulforge in Kharak-Dum
+          // and are consumed when the player forges their Crown / Soulforged item.
+          if (newLevel === 40) {
+            materialAddPromises.push(
+              db.rpc('add_material', { _character_id: m.id, _key: 'soulmarked_ember', _delta: 1 })
+            );
+            events.push({
+              type: 'milestone_ember',
+              character_id: m.id,
+              message: '✨ As your strength settles into something greater, you feel a distant pull deep beneath the mountains — ancient, patient, and waiting.',
+            });
+          }
+          if (newLevel === 42) {
+            materialAddPromises.push(
+              db.rpc('add_material', { _character_id: m.id, _key: 'corebound_fragment', _delta: 1 })
+            );
+            events.push({
+              type: 'milestone_ember',
+              character_id: m.id,
+              message: '🌋 The distant pull beneath the mountains returns — heavier now, no longer waiting, but expecting.',
+            });
+          }
+
           const fInt = (updates.int ?? c.int) + (eb.int || 0);
           const fWis = (updates.wis ?? c.wis) + (eb.wis || 0);
           const fCha = (updates.cha ?? c.cha) + (eb.cha || 0);
