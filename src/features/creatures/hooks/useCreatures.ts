@@ -380,6 +380,14 @@ export function useCreatures(
       });
   }, [currentNode?.id]); // re-run when node changes
 
+  // Imperative hard-remove. Used when combat-tick confirms a kill so the
+  // creature disappears immediately even if the realtime UPDATE for
+  // is_alive=false never lands within the soft-dead TTL. Respawns reappear
+  // via INSERT/UPDATE realtime as normal.
+  const removeCreatureLocal = useCallback((id: string) => {
+    setCreatures(prev => prev.some(c => c.id === id) ? prev.filter(c => c.id !== id) : prev);
+  }, []);
+
   // Apply soft-dead broadcast hints: hide creatures other players reported as killed,
   // until either the server confirms or the hint expires (~8s).
   const visibleCreatures = useMemo(() => {
@@ -387,5 +395,5 @@ export function useCreatures(
     return creatures.filter(c => !softDeadIds.has(c.id));
   }, [creatures, softDeadIds]);
 
-  return { creatures: visibleCreatures, creaturesLoading, prefetchedCreatureCount };
+  return { creatures: visibleCreatures, creaturesLoading, prefetchedCreatureCount, removeCreatureLocal };
 }

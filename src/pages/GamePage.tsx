@@ -144,7 +144,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, []);
   const emitLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
   const { broadcastOverrides, softDeadIds, broadcastDamage, cleanupOverrides, markSoftDead } = useCreatureBroadcast(nodeChannel, character.current_node_id, character.id, emitLocalLog, creatureNameResolver);
-  const { creatures, creaturesLoading } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards, softDeadIds);
+  const { creatures, creaturesLoading, removeCreatureLocal } = useCreatures(character.current_node_id, nodeChannel, currentNodeForPrefetch, handleCatchupRewards, softDeadIds);
   useEffect(() => { creaturesRef.current = creatures; }, [creatures]);
 
   useEffect(() => {
@@ -632,9 +632,14 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       });
     },
     onCreaturesKilled: (ids) => {
-      // Optimistic local hide via the existing soft-dead system. The realtime
-      // UPDATE (is_alive=false) will land shortly after and replace this.
-      for (const id of ids) markSoftDead(id);
+      // Optimistic local hide via soft-dead (8s TTL) AND hard-remove from the
+      // creatures list. The realtime UPDATE (is_alive=false) is the canonical
+      // source, but if it's delayed beyond the soft-dead TTL the creature
+      // would otherwise linger until the next node entry.
+      for (const id of ids) {
+        markSoftDead(id);
+        removeCreatureLocal(id);
+      }
     },
     setPoisonBuff: buffSetters.setPoisonBuff,
     setIgniteBuff: buffSetters.setIgniteBuff,
