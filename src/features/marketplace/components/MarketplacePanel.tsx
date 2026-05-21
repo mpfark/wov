@@ -306,7 +306,7 @@ export default function MarketplacePanel({
           const colorClass = RARITY_COLORS[s.item_snapshot?.rarity] || 'text-foreground';
           const soldAgo = s.sold_at ? formatTimeAgo(s.sold_at) : '—';
           return (
-            <div key={s.id} className="flex items-center justify-between p-1.5 rounded border border-border/40 bg-background/40">
+            <div key={s.id} className="flex items-center justify-between p-1.5 rounded surface-row">
               <div className="min-w-0">
                 <span className={`font-display text-xs truncate ${colorClass}`}>{s.item_snapshot?.name}</span>
                 <span className="text-[10px] text-muted-foreground ml-1">· sold {soldAgo}</span>
