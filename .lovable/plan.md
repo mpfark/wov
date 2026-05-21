@@ -1,107 +1,76 @@
-## Goal
+# Visual Polish: Depth, Hierarchy & Readability
 
-When a character dings level 40 or 42, automatically grant a unique soulbound material to their pouch and surface a flavor line in the event log that hints at the Deep-Core Forge in Kharak-Dum. Each material is consumed when the player forges its matching item at the Soulforge.
+Goal: Reduce the flat "everything sits on the same parchment" feeling without redesigning any panel. Keep the dark-fantasy aesthetic. All changes happen at the **design-token layer** (`src/index.css`, `tailwind.config.ts`) plus a handful of **shared utility classes** that existing panels already consume (`bg-card`, `border-border`, `ornate-border`, etc.). No component rewrites, no layout changes, no logic changes.
 
-## Materials to add
+## What changes
 
-Both inserted into the `materials` catalog so they show up in `MaterialsSection` like any other pouch entry.
+### 1. Layered surface tokens (`src/index.css` `:root`)
+Introduce a 3-step surface ramp so panels, cards and nested rows visually separate:
+- `--surface-1` — outer chrome (app shell, sidebars). Slightly darker than `--background`.
+- `--surface-2` — panels (`--card` re-points here). Current card lightness.
+- `--surface-3` — nested rows / inventory slots / log container. ~4% lighter than surface-2.
+- `--surface-raised` — hover / active row, ~6% lighter, used by tooltips/popovers.
 
-| key | name | category | rarity | tradeable | value | icon | sort_order |
-|---|---|---|---|---|---|---|---|
-| `soulmarked_ember` | Soulmarked Ember | `forge_token` | `unique` | `false` | `0` | 🔥 | 500 |
-| `corebound_fragment` | Corebound Fragment | `forge_token` | `soulforged` | `false` | `0` | 🩸 | 510 |
+Re-point existing tokens so nothing breaks:
+- `--card` → `--surface-2`
+- `--popover` → `--surface-raised`
+- `--muted` → `--surface-3`
 
-`tradeable=false` already blocks selling via the existing `sell-material` edge function (line 53). Materials have no drop UI today, so "cannot be dropped" is already true by construction — no extra guard needed.
+### 2. Border ramp
+Single `--border` today reads the same on every edge. Add:
+- `--border-subtle` (current −20% alpha) for inner dividers
+- `--border` (unchanged) for panel edges
+- `--border-strong` (current +25% lightness) for outer chrome / focused cards
 
-### Descriptions (stored in `materials.description`)
+Expose all three via tailwind (`border-subtle`, `border-strong`).
 
-- **Soulmarked Ember** — "A dark fragment of mineral and ash, warm despite its cold appearance. Thin lines of ember-red glow faintly beneath its surface, pulsing slowly like a distant heartbeat. Holding it for too long leaves an uneasy sensation — not pain, but recognition. The fragment seems subtly drawn toward something far below the world above."
-- **Corebound Fragment** — "A dense shard of blackened metal veined with slow-moving heat. Unlike the Soulmarked Ember, this fragment feels impossibly heavy for its size. The Deep-Core Forge no longer calls to you. It expects you."
+### 3. Soft depth shadows
+Add two reusable shadow tokens (no big drop shadows — fantasy parchment stays matte):
+- `--shadow-inset-soft` — `inset 0 1px 0 hsl(var(--gold) / 0.04), inset 0 0 24px hsl(35 20% 6% / 0.35)` for panels.
+- `--shadow-rise` — `0 1px 0 hsl(var(--gold) / 0.05), 0 6px 18px hsl(0 0% 0% / 0.35)` for floating surfaces (popovers, dialogs).
 
-## Where the grant fires
+Wire into utility classes `.surface-panel`, `.surface-row`, `.surface-raised` so panels can opt in by swapping one className (or by updating `.ornate-border` to use the new inset shadow — recommended, since most panels already use it).
 
-Single source of truth for level-ups is `supabase/functions/combat-tick/index.ts` around lines 1449–1485 (the `newLevel = c.level + 1` block, alongside the existing respec-point milestones for L10/20/30/40). Offscreen catchup defers leveling to the next online tick, so this single insertion covers all paths.
-
-Inside that block, after the existing milestone events, add:
-
-```ts
-if (newLevel === 40) {
-  materialAddPromises.push(
-    db.rpc('add_material', { _character_id: m.id, _key: 'soulmarked_ember', _delta: 1 })
+### 4. Section separators
+Replace flat 1px `border-t border-border` dividers with a gilded hairline class:
+```css
+.divider-hairline {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    hsl(var(--gold) / 0.18) 20%,
+    hsl(var(--gold) / 0.18) 80%,
+    transparent
   );
-  events.push({
-    type: 'milestone_ember',
-    character_id: m.id,
-    message: '✨ As your strength settles into something greater, you feel a distant pull deep beneath the mountains — ancient, patient, and waiting.',
-  });
-}
-if (newLevel === 42) {
-  materialAddPromises.push(
-    db.rpc('add_material', { _character_id: m.id, _key: 'corebound_fragment', _delta: 1 })
-  );
-  events.push({
-    type: 'milestone_ember',
-    character_id: m.id,
-    message: '🌋 The distant pull beneath the mountains returns — heavier now, no longer waiting, but expecting.',
-  });
 }
 ```
+Used opt-in where current dividers feel flat (NodeView section breaks, CharacterPanel tab content separators, EventLogPanel tick separator). Existing `border-t border-border` keeps working everywhere else.
 
-`materialAddPromises` and `db` are already in scope in this block (used by the existing salvage grant a few lines below).
+### 5. Readability tuning for long sessions
+- Lift `--foreground` lightness +3% (85 → 88) — body text gains contrast on the darker surface-1.
+- Lift `--muted-foreground` +5% so meta text remains legible against the new `--surface-3`.
+- Tighten `event-log-line` left border to `--border-subtle` so the log stops looking like a striped table.
+- Slight bump to `--gold` glow on `.text-glow` (already used for displays) — unchanged hue, just a hair more presence.
 
-## Event log styling
+## What does NOT change
 
-Register the new `milestone_ember` type in `src/features/combat/utils/event-log-styles.ts` so the line gets a distinct color (suggest the existing `level_up` / `respec` palette — gold/magenta tone). No changes to `interpretCombatTickResult.ts` are required: it forwards `ev.message` verbatim for unknown structured events, and the line will appear in the combat/event log just like the current `🎉 Level Up!` and `🔄 respec` messages.
-
-## Material consumption at the forge
-
-Update `supabase/functions/soulforge-item/index.ts` to consume the matching token immediately before each successful forge:
-
-- Crown branch (`isCrown === true`, line ~148): after the existing level/`crown_item_created` checks, call `consume_material({ _key: 'soulmarked_ember', _delta: 1 })`. If it fails, return `403 "You lack a Soulmarked Ember — return when the forge has claimed you."`
-- Soulforge branch (`isCrown === false`, line ~155): same pattern with `corebound_fragment`. Error: `"You lack a Corebound Fragment."`
-
-Both consumes happen BEFORE the `items` insert, so a missing token blocks the forge cleanly with no rollback needed.
-
-## Backfill (one-shot data fix)
-
-Existing characters who are already ≥40 / ≥42 should also receive their tokens once. After the migration is approved, run via the insert tool:
-
-```sql
--- Grant Soulmarked Ember to every L40+ character that hasn't forged a Crown yet
-INSERT INTO character_materials (character_id, material_key, count)
-SELECT id, 'soulmarked_ember', 1
-FROM characters
-WHERE level >= 40 AND crown_item_created = false
-ON CONFLICT (character_id, material_key)
-DO UPDATE SET count = character_materials.count + 1;
-
--- Grant Corebound Fragment to every L42 character that hasn't forged a Soulforged item yet
-INSERT INTO character_materials (character_id, material_key, count)
-SELECT id, 'corebound_fragment', 1
-FROM characters
-WHERE level >= 42 AND soulforged_item_created = false
-ON CONFLICT (character_id, material_key)
-DO UPDATE SET count = character_materials.count + 1;
-```
+- No component file is rewritten. Token re-pointing flows through every existing `bg-card`, `border-border`, `bg-popover`, etc. automatically.
+- No layout, spacing, font, icon, or copy change.
+- Rarity colors, log palette, combat visuals, gateway/auth styling untouched.
+- No new dependencies.
 
 ## Files touched
 
-- **Migration** — insert two rows into `materials` (new `forge_token` category is just a string label; no enum change needed).
-- `supabase/functions/combat-tick/index.ts` — milestone grants + event lines.
-- `supabase/functions/soulforge-item/index.ts` — consume token in both forge branches.
-- `src/features/combat/utils/event-log-styles.ts` — color/category for `milestone_ember`.
-- Data backfill via the insert tool (one-time).
-
-## Out of scope
-
-- No new whisper / chat broadcast (replaces the earlier whisper plan).
-- No new UI for the materials — they render automatically through `MaterialsSection` (`useMaterials` reads the catalog, `category !== 'gem'` includes them).
-- No NPC quest hooks, map markers, or tutorial overlays — discovery is intentionally implicit per the design intent.
-- No expansion tiers (future embers) — scaffolded only conceptually.
+- `src/index.css` — add surface/border/shadow tokens, update `.ornate-border`, add `.divider-hairline`, `.surface-panel`, `.surface-row`, `.surface-raised`, tweak `.event-log-line`.
+- `tailwind.config.ts` — expose `border-subtle`, `border-strong`, and `surface.{1,2,3,raised}` color tokens (purely additive; existing classes keep working).
+- Optional 3–4 surgical className swaps in `NodeView.tsx`, `CharacterPanel.tsx`, `EventLogPanel.tsx` to apply `.divider-hairline` at the most-seen section breaks. Each is a one-line edit.
 
 ## Verification
 
-1. Ding a test character 39→40 and 41→42 via combat; confirm the flavor line appears in the event log and the matching material lands in the pouch with a tooltip description.
-2. Attempt to sell either token at a vendor — `sell-material` should return "not tradeable".
-3. Forge a Crown without an Ember (manually `consume_material` first) — should fail; with the Ember present, forge succeeds and the Ember count drops by 1. Repeat for the L42 fragment.
-4. Confirm backfill grants tokens to existing eligible characters exactly once.
+After applying:
+1. Open the game preview at `/` → confirm panels read as three depth layers (outer shell darker, panels mid, nested rows lighter).
+2. Open Character Panel → equipment slots and inventory rows should sit visibly *on* the panel, not flush with it.
+3. Open Event Log during combat → tick separators and entry stripes look gilded, not blocky.
+4. Compare night-session readability: body text on `--surface-1` should pass WCAG AA against the darker shell.
+5. No regressions in service panels, tooltips, marketplace, blacksmith — they consume the same tokens and inherit the new ramp.
