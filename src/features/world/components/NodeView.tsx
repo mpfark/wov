@@ -485,13 +485,17 @@ export default function NodeView({
 
           {/* Status Bars — above action bar */}
           {statusBarsProps && (
-            <div className="pt-1.5 border-t border-border mt-1">
-              <StatusBarsStrip character={character} {...statusBarsProps} />
-            </div>
+            <>
+              <div className="divider-hairline mt-1" />
+              <div className="pt-1.5">
+                <StatusBarsStrip character={character} {...statusBarsProps} />
+              </div>
+            </>
           )}
 
           {/* Compact Action Bar - pinned to bottom */}
-          <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
+          <div className="divider-hairline mt-1" />
+          <div className="pt-1.5 space-y-1.5 flex flex-col items-center">
             {/* Row 3: Abilities */}
             {classAbilities.length > 0 && onUseAbility && (
               <div className="flex flex-wrap items-center gap-1 justify-center">
