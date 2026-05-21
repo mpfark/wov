@@ -150,7 +150,7 @@ export default function TrainerPanel({
   // ── Tabs ──
   const tabsRow = (
     <Tabs value={tab} onValueChange={(v) => setTab(v as TrainerTab)} className="w-full">
-      <TabsList className="grid grid-cols-4 w-full bg-background/40">
+      <TabsList className="grid grid-cols-4 w-full bg-surface-3/60">
         <TabsTrigger value="allocate" className="t-label text-[11px] data-[state=active]:text-primary relative">
           Allocate
           {character.unspent_stat_points > 0 && (

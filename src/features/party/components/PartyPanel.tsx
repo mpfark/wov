@@ -162,7 +162,7 @@ export default function PartyPanel({
             <div className="space-y-1">
               <p className="text-[10px] text-muted-foreground">Nearby:</p>
               {invitablePlayers.map(p => (
-                <div key={p.id} className="flex items-center justify-between text-xs p-1 rounded border border-border/50">
+                <div key={p.id} className="flex items-center justify-between text-xs p-1 rounded surface-row border-border-subtle">
                   <span className="text-elvish font-display truncate">{p.name}</span>
                   <Button size="sm" variant="ghost" className="h-5 p-0 px-1 text-[10px]"
                     onClick={() => onInvite(p.id)}>

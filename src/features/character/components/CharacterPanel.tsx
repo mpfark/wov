@@ -357,7 +357,7 @@ export default function CharacterPanel({
 
         {/* Tabs: Equipment & Attributes */}
         <Tabs defaultValue="equipment" className="space-y-1.5">
-          <TabsList className="h-7 w-full bg-muted/50 p-0.5">
+          <TabsList className="h-7 w-full bg-surface-3/60 p-0.5">
             <TabsTrigger value="equipment" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">Equipment</TabsTrigger>
             <TabsTrigger value="inventory" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">
               Inventory
