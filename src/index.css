@@ -6,33 +6,46 @@
 
 @layer base {
   :root {
-    --background: 35 30% 12%;
-    --foreground: 40 45% 85%;
+    --background: 35 30% 10%;
+    --foreground: 40 45% 88%;
+
+    /* Layered surface ramp (darker → lighter) */
+    --surface-1: 35 28% 11%;   /* outer chrome / sidebars */
+    --surface-2: 35 25% 16%;   /* panels (== card) */
+    --surface-3: 33 22% 20%;   /* nested rows / inventory slots / log container */
+    --surface-raised: 35 25% 23%; /* hover / popover / tooltip */
 
     --card: 35 25% 16%;
-    --card-foreground: 40 45% 85%;
+    --card-foreground: 40 45% 88%;
 
-    --popover: 35 25% 14%;
-    --popover-foreground: 40 45% 85%;
+    --popover: 35 25% 23%;
+    --popover-foreground: 40 45% 88%;
 
     --primary: 38 65% 50%;
     --primary-foreground: 35 30% 10%;
 
     --secondary: 30 20% 22%;
-    --secondary-foreground: 40 40% 78%;
+    --secondary-foreground: 40 40% 80%;
 
-    --muted: 30 15% 20%;
-    --muted-foreground: 35 20% 55%;
+    --muted: 33 22% 20%;
+    --muted-foreground: 35 22% 62%;
 
     --accent: 25 50% 30%;
-    --accent-foreground: 40 45% 88%;
+    --accent-foreground: 40 45% 90%;
 
     --destructive: 0 65% 45%;
     --destructive-foreground: 40 45% 90%;
 
     --border: 35 20% 25%;
+    --border-subtle: 35 20% 22%;
+    --border-strong: 35 28% 34%;
     --input: 35 20% 22%;
     --ring: 38 65% 50%;
+
+    /* Soft depth shadows */
+    --shadow-inset-soft: inset 0 1px 0 hsl(38 65% 50% / 0.05), inset 0 0 24px hsl(35 20% 4% / 0.45);
+    --shadow-rise: 0 1px 0 hsl(38 65% 50% / 0.06), 0 8px 22px hsl(0 0% 0% / 0.45);
+
 
     --radius: 0.375rem;
 
