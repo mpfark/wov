@@ -60,7 +60,7 @@ function InspectSlot({ slot, item, classKey }: { slot: string; item: EquippedIte
       <TooltipTrigger asChild>
         <div
           className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center transition-colors ${
-            item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
+            item ? 'border-primary/50 bg-primary/5' : 'surface-row'
           }`}
         >
           <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>

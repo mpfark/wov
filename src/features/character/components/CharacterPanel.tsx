@@ -99,7 +99,7 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponPro
             locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
           } ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
-            item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
+            item ? 'border-primary/50 bg-primary/5' : 'surface-row'
           }`}
           onClick={() => item && !blocked && !locked && onUnequip(item.id)}
         >
@@ -438,7 +438,7 @@ export default function CharacterPanel({
                       const slot = i + 1;
                       const potion = beltedPotions.find(p => p.belt_slot === slot);
                       return (
-                        <div key={slot} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                        <div key={slot} className="flex items-center justify-between p-1.5 rounded surface-row text-xs">
                           <span className="text-muted-foreground text-[9px] w-4">
                             {actionBindings?.[`potion${slot}`]?.[0]
                               ? `[${actionBindings[`potion${slot}`][0]}]`
@@ -482,7 +482,7 @@ export default function CharacterPanel({
               )}
 
               {/* Materials (salvage + gems + future) */}
-              <div className="mt-2 space-y-2 rounded border border-border bg-background/40 p-2">
+              <div className="mt-2 space-y-2 rounded surface-row p-2">
                 <div className="t-label flex items-center gap-1">
                   🧰 Material Pouch
                 </div>
@@ -511,7 +511,7 @@ export default function CharacterPanel({
                       {grouped.map(({ representative: inv, all }) => {
                         const isBroken = inv.current_durability <= 0;
                         return (
-                          <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
+                          <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded surface-row text-xs ${isBroken ? 'opacity-50' : ''}`}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
@@ -618,7 +618,7 @@ export default function CharacterPanel({
                     return grouped.map(({ representative: inv, all }) => {
                       const isBroken = inv.current_durability <= 0;
                       return (
-                      <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
+                      <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded surface-row text-xs ${isBroken ? 'opacity-50' : ''}`}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>

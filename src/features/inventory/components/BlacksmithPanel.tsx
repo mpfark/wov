@@ -220,7 +220,7 @@ export default function BlacksmithPanel({
         const cost = cantRepair ? 0 : calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
         const durPct = inv.current_durability;
         return (
-          <div key={inv.id} className={`p-2 rounded border border-border bg-background/40 space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
+          <div key={inv.id} className={`p-2 rounded surface-row space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <span className={`text-sm font-display ${getItemColor(inv.item)} block truncate`}>{inv.item.name}</span>
@@ -286,7 +286,7 @@ export default function BlacksmithPanel({
 
   const forgeLeft = (
     <div className="space-y-4">
-      <div className="rounded border border-border bg-background/30 p-2">
+      <div className="rounded surface-row p-2">
         <GemPouch owned={ownedGems} />
       </div>
 
@@ -365,7 +365,7 @@ export default function BlacksmithPanel({
                 className={`w-full text-left p-2 rounded border transition-colors ${
                   item.id === selectedForgeItem
                     ? 'border-primary bg-primary/10'
-                    : 'border-border bg-background/40 hover:bg-background/60'
+                    : 'surface-row hover:bg-background/60'
                 }`}
               >
                 <div className="flex items-center justify-between">

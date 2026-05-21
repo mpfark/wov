@@ -332,7 +332,7 @@ export default function TrainerPanel({
       <div
         key={`${rank}-${row.id}`}
         className={`grid grid-cols-[36px_1fr_auto] gap-2 items-center p-1.5 rounded border ${
-          isMe ? 'border-primary bg-primary/10' : 'border-border bg-background/40'
+          isMe ? 'border-primary bg-primary/10' : 'surface-row'
         }`}
       >
         <span className={`font-display text-xs text-center tabular-nums ${rank <= 3 ? 'text-primary text-glow' : 'text-muted-foreground'}`}>

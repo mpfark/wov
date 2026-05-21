@@ -182,7 +182,7 @@ export default function MarketplacePanel({
                 type="button"
                 onClick={() => setSelectedListing(isSelected ? null : l.id)}
                 className={`w-full text-left p-2 rounded border transition-colors ${
-                  isSelected ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+                  isSelected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -268,7 +268,7 @@ export default function MarketplacePanel({
               : 100;
             const payout = l.price - l.tax_amount;
             return (
-              <div key={l.id} className="p-2 rounded border border-border bg-background/40">
+              <div key={l.id} className="p-2 rounded surface-row">
                 <div className="flex items-center justify-between gap-2">
                   <span className={`font-display text-sm truncate ${colorClass}`}>{l.item_snapshot?.name}</span>
                   <span className="font-mono text-xs">{l.price.toLocaleString()}g</span>
@@ -355,7 +355,7 @@ export default function MarketplacePanel({
             key={inv.id}
             onClick={() => setPickedInv(inv.id)}
             className={`w-full text-left p-2 rounded border transition-colors ${
-              isPicked ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+              isPicked ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
           >
             <div className="flex items-center justify-between">

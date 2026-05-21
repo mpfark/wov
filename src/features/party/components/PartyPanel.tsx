@@ -87,7 +87,7 @@ export default function PartyPanel({
             const isMemberLeader = party.leader_id === m.character_id;
             return (
               <div key={m.id} className="space-y-0.5">
-                <div className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                <div className="flex items-center justify-between p-1.5 rounded surface-row text-xs">
                   <div className="flex items-center gap-1 truncate">
                     {isMemberLeader && <Crown className="w-3 h-3 text-primary shrink-0" />}
                     {isMemberTank && <Shield className="w-3 h-3 text-chart-2 shrink-0" />}

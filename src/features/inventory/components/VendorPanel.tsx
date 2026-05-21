@@ -167,7 +167,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
             type="button"
             onClick={() => setSelectedBuyId(selected ? null : vi.id)}
             className={`w-full text-left flex items-center justify-between p-2 rounded border transition-colors ${
-              selected ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+              selected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
@@ -206,7 +206,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
             type="button"
             onClick={() => setSelectedSellId(selected ? null : inv.id)}
             className={`w-full text-left flex items-center justify-between p-2 rounded border transition-colors ${
-              selected ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+              selected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
