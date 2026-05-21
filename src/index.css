@@ -160,13 +160,41 @@
     hsl(var(--background));
 }
 
-/* Ornate border style */
+/* Ornate border style — panel surface with soft inset depth */
 .ornate-border {
-  border: 1px solid hsl(var(--border));
-  box-shadow:
-    inset 0 0 20px hsl(35 20% 10% / 0.5),
-    0 0 15px hsl(35 20% 8% / 0.3);
+  border: 1px solid hsl(var(--border-strong));
+  box-shadow: var(--shadow-inset-soft);
 }
+
+/* Layered surface utilities — opt-in depth ramp */
+.surface-panel {
+  background-color: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border-strong));
+  box-shadow: var(--shadow-inset-soft);
+}
+.surface-row {
+  background-color: hsl(var(--surface-3) / 0.55);
+  border: 1px solid hsl(var(--border-subtle));
+}
+.surface-raised {
+  background-color: hsl(var(--surface-raised));
+  border: 1px solid hsl(var(--border-strong));
+  box-shadow: var(--shadow-rise);
+}
+
+/* Gilded hairline divider — replaces flat border-t for section breaks */
+.divider-hairline {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    hsl(var(--gold) / 0.22) 20%,
+    hsl(var(--gold) / 0.22) 80%,
+    transparent
+  );
+}
+
 
 /* Gold text glow */
 .text-glow {
