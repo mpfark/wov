@@ -156,7 +156,7 @@ export default function NodeView({
         {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2 relative z-10">
           {/* Location Header */}
-           <div className="text-center border-b border-border pb-2">
+           <div className="text-center pb-2 border-b border-border-strong/60">
             <h2
               className="font-display text-xl text-glow"
               style={{ color: area ? getAreaHeaderColor(emojiMap[area.area_type] || '📍') : undefined }}
