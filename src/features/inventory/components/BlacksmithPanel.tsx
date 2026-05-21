@@ -259,7 +259,7 @@ export default function BlacksmithPanel({
       <p>Repair cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
       <p className="text-destructive">⚠️ Unique items cannot be repaired — they are destroyed at 0% durability.</p>
       {repairableCount > 0 && (
-        <div className="border-t border-border pt-2 text-foreground">
+        <div className="border-t border-border-subtle pt-2 text-foreground">
           <span className="t-label text-[11px] data-[state=active]:text-primary">Pending repairs: </span>
           <span>{repairableCount} item{repairableCount === 1 ? '' : 's'}</span>
           <span className="ml-2 text-primary font-display">{totalRepairCost}g total</span>
@@ -319,7 +319,7 @@ export default function BlacksmithPanel({
       </div>
 
       {/* Sell Salvage */}
-      <div className="space-y-2 border-t border-border pt-3">
+      <div className="space-y-2 border-t border-border-subtle pt-3">
         <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>

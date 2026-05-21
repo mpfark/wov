@@ -211,7 +211,7 @@ export default function MarketplacePanel({
       <p className="text-[10px] text-muted-foreground capitalize">
         Level {selected.item_snapshot?.level} · {selected.item_snapshot?.slot ?? selected.item_snapshot?.item_type}
       </p>
-      <div className="text-xs text-muted-foreground space-y-1 border-t border-border pt-2">
+      <div className="text-xs text-muted-foreground space-y-1 border-t border-border-subtle pt-2">
         <div>Stats: <span className="text-foreground">{statSummary(selected.item_snapshot?.stats)}</span></div>
         <div>
           Durability:{' '}

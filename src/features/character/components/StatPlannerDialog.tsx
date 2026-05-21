@@ -189,7 +189,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
 
       {/* Derived stats preview */}
       {totalSpent > 0 && (
-        <div className="border-t border-border pt-3 space-y-2">
+        <div className="border-t border-border-subtle pt-3 space-y-2">
           <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider">Impact Preview</h4>
 
           <div className="space-y-0.5">
