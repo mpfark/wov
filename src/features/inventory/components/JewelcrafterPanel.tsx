@@ -253,7 +253,7 @@ export default function JewelcrafterPanel({
         const cost = cantRepair ? 0 : calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
         const durPct = inv.current_durability;
         return (
-          <div key={inv.id} className={`p-2 rounded border border-border bg-background/40 space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
+          <div key={inv.id} className={`p-2 rounded surface-row space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <span className={`text-sm font-display ${getItemColor(inv.item)} block truncate`}>{inv.item.name}</span>
@@ -292,7 +292,7 @@ export default function JewelcrafterPanel({
       <p>Refurbish cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
       <p className="text-destructive">⚠️ Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
       {repairableCount > 0 && (
-        <div className="border-t border-border pt-2 text-foreground">
+        <div className="border-t border-border-subtle pt-2 text-foreground">
           <span className="t-label text-[11px] data-[state=active]:text-primary">Pending refurbishes: </span>
           <span>{repairableCount} item{repairableCount === 1 ? '' : 's'}</span>
           <span className="ml-2 text-primary font-display">{totalRepairCost}g total</span>
@@ -319,7 +319,7 @@ export default function JewelcrafterPanel({
 
   const forgeLeft = (
     <div className="space-y-4">
-      <div className="rounded border border-border bg-background/30 p-2">
+      <div className="rounded surface-row p-2">
         <GemPouch owned={ownedGems} />
       </div>
 
@@ -351,7 +351,7 @@ export default function JewelcrafterPanel({
         </p>
       </div>
 
-      <div className="space-y-2 border-t border-border pt-3">
+      <div className="space-y-2 border-t border-border-subtle pt-3">
         <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
@@ -397,7 +397,7 @@ export default function JewelcrafterPanel({
                 className={`w-full text-left p-2 rounded border transition-colors ${
                   item.id === selectedForgeItem
                     ? 'border-primary bg-primary/10'
-                    : 'border-border bg-background/40 hover:bg-background/60'
+                    : 'surface-row hover:bg-background/60'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -465,7 +465,7 @@ export default function JewelcrafterPanel({
 
   const gemcutLeft = (
     <div className="space-y-4">
-      <div className="rounded border border-border bg-background/30 p-2">
+      <div className="rounded surface-row p-2">
         <GemPouch owned={ownedGems} />
       </div>
 
@@ -521,7 +521,7 @@ export default function JewelcrafterPanel({
           const owned = ownedGems[key] || 0;
           const canFuse = aCount >= 1 && bCount >= 1 && cutting === null;
           return (
-            <div key={key} className="flex items-center justify-between gap-2 p-2 rounded border border-border bg-background/40">
+            <div key={key} className="flex items-center justify-between gap-2 p-2 rounded surface-row">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <span className="inline-block w-2.5 h-2.5 rounded-full border border-border" style={{ backgroundColor: def.color }} />

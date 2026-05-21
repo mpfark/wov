@@ -17,7 +17,7 @@ function GemDot({ gemKey, count }: { gemKey: GemKey; count: number }) {
       <TooltipTrigger asChild>
         <span
           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${
-            dim ? 'opacity-30 border-border' : 'border-border bg-background/40'
+            dim ? 'opacity-30 border-border' : 'surface-row'
           }`}
         >
           <GemIcon color={def.color} size={12} title={def.name} />
@@ -63,7 +63,7 @@ export function GemBadge({ gemKey }: { gemKey: GemKey | null | undefined }) {
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="inline-flex items-center gap-1 text-[10px] font-display px-1 py-0.5 rounded border border-border bg-background/40">
+          <span className="inline-flex items-center gap-1 text-[10px] font-display px-1 py-0.5 rounded surface-row">
             <GemIcon color={def.color} size={10} title={def.name} />
             <span>{def.name}</span>
           </span>

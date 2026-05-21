@@ -31,7 +31,7 @@ function MaterialChip({ material }: { material: MaterialEntry }) {
       <TooltipTrigger asChild>
         <span
           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-display tabular-nums ${
-            dim ? 'opacity-30 border-border' : 'border-border bg-background/40'
+            dim ? 'opacity-30 border-border' : 'surface-row'
           }`}
         >
           <span>{material.icon || '🔩'}</span>

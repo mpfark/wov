@@ -149,7 +149,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
       {destinations.map(d => {
         const canAfford = playerCp >= d.cpCost;
         return (
-          <div key={d.node.id} className="flex items-center justify-between p-2 rounded border border-border bg-background/40 hover:bg-background/60 transition-colors">
+          <div key={d.node.id} className="flex items-center justify-between p-2 rounded surface-row hover:bg-background/60 transition-colors">
             <div className="min-w-0 flex-1">
               <p className="font-display text-sm text-foreground truncate">{getNodeDisplayName(d.node, areas.find(a => a.id === d.node.area_id))}</p>
               <p className="text-[10px] text-muted-foreground">

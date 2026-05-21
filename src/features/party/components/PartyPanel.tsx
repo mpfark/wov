@@ -87,7 +87,7 @@ export default function PartyPanel({
             const isMemberLeader = party.leader_id === m.character_id;
             return (
               <div key={m.id} className="space-y-0.5">
-                <div className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                <div className="flex items-center justify-between p-1.5 rounded surface-row text-xs">
                   <div className="flex items-center gap-1 truncate">
                     {isMemberLeader && <Crown className="w-3 h-3 text-primary shrink-0" />}
                     {isMemberTank && <Shield className="w-3 h-3 text-chart-2 shrink-0" />}
@@ -162,7 +162,7 @@ export default function PartyPanel({
             <div className="space-y-1">
               <p className="text-[10px] text-muted-foreground">Nearby:</p>
               {invitablePlayers.map(p => (
-                <div key={p.id} className="flex items-center justify-between text-xs p-1 rounded border border-border/50">
+                <div key={p.id} className="flex items-center justify-between text-xs p-1 rounded surface-row border-border-subtle">
                   <span className="text-elvish font-display truncate">{p.name}</span>
                   <Button size="sm" variant="ghost" className="h-5 p-0 px-1 text-[10px]"
                     onClick={() => onInvite(p.id)}>

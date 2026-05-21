@@ -182,7 +182,7 @@ export default function MarketplacePanel({
                 type="button"
                 onClick={() => setSelectedListing(isSelected ? null : l.id)}
                 className={`w-full text-left p-2 rounded border transition-colors ${
-                  isSelected ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+                  isSelected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -211,7 +211,7 @@ export default function MarketplacePanel({
       <p className="text-[10px] text-muted-foreground capitalize">
         Level {selected.item_snapshot?.level} · {selected.item_snapshot?.slot ?? selected.item_snapshot?.item_type}
       </p>
-      <div className="text-xs text-muted-foreground space-y-1 border-t border-border pt-2">
+      <div className="text-xs text-muted-foreground space-y-1 border-t border-border-subtle pt-2">
         <div>Stats: <span className="text-foreground">{statSummary(selected.item_snapshot?.stats)}</span></div>
         <div>
           Durability:{' '}
@@ -268,7 +268,7 @@ export default function MarketplacePanel({
               : 100;
             const payout = l.price - l.tax_amount;
             return (
-              <div key={l.id} className="p-2 rounded border border-border bg-background/40">
+              <div key={l.id} className="p-2 rounded surface-row">
                 <div className="flex items-center justify-between gap-2">
                   <span className={`font-display text-sm truncate ${colorClass}`}>{l.item_snapshot?.name}</span>
                   <span className="font-mono text-xs">{l.price.toLocaleString()}g</span>
@@ -306,7 +306,7 @@ export default function MarketplacePanel({
           const colorClass = RARITY_COLORS[s.item_snapshot?.rarity] || 'text-foreground';
           const soldAgo = s.sold_at ? formatTimeAgo(s.sold_at) : '—';
           return (
-            <div key={s.id} className="flex items-center justify-between p-1.5 rounded border border-border/40 bg-background/40">
+            <div key={s.id} className="flex items-center justify-between p-1.5 rounded surface-row">
               <div className="min-w-0">
                 <span className={`font-display text-xs truncate ${colorClass}`}>{s.item_snapshot?.name}</span>
                 <span className="text-[10px] text-muted-foreground ml-1">· sold {soldAgo}</span>
@@ -355,7 +355,7 @@ export default function MarketplacePanel({
             key={inv.id}
             onClick={() => setPickedInv(inv.id)}
             className={`w-full text-left p-2 rounded border transition-colors ${
-              isPicked ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+              isPicked ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
           >
             <div className="flex items-center justify-between">

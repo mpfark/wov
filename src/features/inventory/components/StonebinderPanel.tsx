@@ -165,7 +165,7 @@ export default function StonebinderPanel({
             className={`w-full text-left p-2 rounded border transition-colors flex items-center gap-2 ${
               selected
                 ? 'border-primary bg-primary/10'
-                : 'border-border bg-background/40 hover:bg-background/60'
+                : 'surface-row hover:bg-background/60'
             }`}
           >
             <span className="text-base shrink-0" aria-hidden>{stat ? STONE_GLYPH[stat] : '◇'}</span>

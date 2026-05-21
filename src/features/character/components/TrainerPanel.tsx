@@ -150,7 +150,7 @@ export default function TrainerPanel({
   // ── Tabs ──
   const tabsRow = (
     <Tabs value={tab} onValueChange={(v) => setTab(v as TrainerTab)} className="w-full">
-      <TabsList className="grid grid-cols-4 w-full bg-background/40">
+      <TabsList className="grid grid-cols-4 w-full bg-surface-3/60">
         <TabsTrigger value="allocate" className="t-label text-[11px] data-[state=active]:text-primary relative">
           Allocate
           {character.unspent_stat_points > 0 && (
@@ -223,7 +223,7 @@ export default function TrainerPanel({
               const nonManualBase = (creationStats[stat] || 8) + levelBonusTotal + renownRank;
               const manualPoints = Math.max(base - nonManualBase, 0);
               return (
-                <div key={stat} className="grid grid-cols-[1fr_auto_auto] gap-3 items-center px-1.5 py-1 bg-background/40 rounded border border-border text-xs">
+                <div key={stat} className="grid grid-cols-[1fr_auto_auto] gap-3 items-center px-1.5 py-1 surface-row rounded text-xs">
                   <span className="font-display text-foreground">{STAT_LABELS[stat]}</span>
                   <span className="text-right tabular-nums text-muted-foreground">{base}</span>
                   <span className={`text-right tabular-nums w-10 ${manualPoints > 0 ? 'text-chart-5' : 'text-muted-foreground/50'}`}>
@@ -279,7 +279,7 @@ export default function TrainerPanel({
               const canAfford = character.bhp >= cost;
 
               return (
-                <div key={stat} className="grid grid-cols-[1fr_50px_60px_60px_auto] gap-1 items-center p-1.5 bg-background/50 rounded border border-border">
+                <div key={stat} className="grid grid-cols-[1fr_50px_60px_60px_auto] gap-1 items-center p-1.5 surface-row rounded">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span className="font-display text-xs text-foreground cursor-default">{STAT_LABELS[stat]}</span>
@@ -332,7 +332,7 @@ export default function TrainerPanel({
       <div
         key={`${rank}-${row.id}`}
         className={`grid grid-cols-[36px_1fr_auto] gap-2 items-center p-1.5 rounded border ${
-          isMe ? 'border-primary bg-primary/10' : 'border-border bg-background/40'
+          isMe ? 'border-primary bg-primary/10' : 'surface-row'
         }`}
       >
         <span className={`font-display text-xs text-center tabular-nums ${rank <= 3 ? 'text-primary text-glow' : 'text-muted-foreground'}`}>
@@ -380,7 +380,7 @@ export default function TrainerPanel({
       )}
 
       {!loadingBoard && myRank !== null && (
-        <div className="pt-2 mt-2 border-t border-border space-y-1">
+        <div className="pt-2 mt-2 border-t border-border-subtle space-y-1">
           <p className="text-[10px] text-muted-foreground text-center font-display">— Your Rank —</p>
           {renderLeaderRow(
             {

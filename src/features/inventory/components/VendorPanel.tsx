@@ -167,7 +167,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
             type="button"
             onClick={() => setSelectedBuyId(selected ? null : vi.id)}
             className={`w-full text-left flex items-center justify-between p-2 rounded border transition-colors ${
-              selected ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+              selected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
@@ -206,7 +206,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
             type="button"
             onClick={() => setSelectedSellId(selected ? null : inv.id)}
             className={`w-full text-left flex items-center justify-between p-2 rounded border transition-colors ${
-              selected ? 'border-primary bg-primary/10' : 'border-border bg-background/40 hover:bg-background/60'
+              selected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
@@ -240,7 +240,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       {statSummary(selectedBuy.vi.item.stats) && (
         <p className="text-xs text-elvish">{statSummary(selectedBuy.vi.item.stats)}</p>
       )}
-      <div className="text-xs text-muted-foreground border-t border-border pt-2">
+      <div className="text-xs text-muted-foreground border-t border-border-subtle pt-2">
         Base price: <span className="text-foreground">{selectedBuy.vi.price}g</span>
         {buyDiscount > 0 && (
           <> · You pay: <span className="text-primary font-display">{getDiscountedPrice(selectedBuy.vi.price)}g</span></>
@@ -261,7 +261,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       {statSummary(selectedSell.inv.item.stats) && (
         <p className="text-xs text-elvish">{statSummary(selectedSell.inv.item.stats)}</p>
       )}
-      <div className="text-xs text-muted-foreground border-t border-border pt-2">
+      <div className="text-xs text-muted-foreground border-t border-border-subtle pt-2">
         Base value: <span className="text-foreground">{selectedSell.inv.item.value}g</span>
         {chaMod > 0 && (
           <> · CHA bonus: <span className="text-elvish">×{sellMultiplier.toFixed(2)}</span></>

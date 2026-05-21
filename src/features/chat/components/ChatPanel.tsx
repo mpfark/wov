@@ -15,7 +15,7 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   return (
     <div className="h-full w-[320px] shrink-0 ornate-border bg-card/60 flex flex-col">
-      <div className="px-3 py-2 border-b border-border shrink-0 flex items-center justify-between">
+      <div className="px-3 py-2 border-b border-border-subtle shrink-0 flex items-center justify-between">
         <h3 className="font-display text-xs text-muted-foreground">Chat</h3>
         <Button
           variant="ghost"

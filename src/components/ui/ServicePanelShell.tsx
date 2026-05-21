@@ -136,7 +136,7 @@ export function ServicePanelShell({
 
           {/* === Footer === */}
           {footer && (
-            <div className="shrink-0 border-t border-[hsl(var(--gold)/0.2)] px-5 py-3 bg-background/20">
+            <div className="shrink-0 border-t border-border-subtle px-5 py-3 bg-surface-1/40">
               {footer}
             </div>
           )}

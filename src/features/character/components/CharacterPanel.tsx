@@ -99,7 +99,7 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponPro
             locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
           } ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
-            item ? 'border-primary/50 bg-primary/5' : 'border-border bg-background/30'
+            item ? 'border-primary/50 bg-primary/5' : 'surface-row'
           }`}
           onClick={() => item && !blocked && !locked && onUnequip(item.id)}
         >
@@ -357,7 +357,7 @@ export default function CharacterPanel({
 
         {/* Tabs: Equipment & Attributes */}
         <Tabs defaultValue="equipment" className="space-y-1.5">
-          <TabsList className="h-7 w-full bg-muted/50 p-0.5">
+          <TabsList className="h-7 w-full bg-surface-3/60 p-0.5">
             <TabsTrigger value="equipment" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">Equipment</TabsTrigger>
             <TabsTrigger value="inventory" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">
               Inventory
@@ -438,7 +438,7 @@ export default function CharacterPanel({
                       const slot = i + 1;
                       const potion = beltedPotions.find(p => p.belt_slot === slot);
                       return (
-                        <div key={slot} className="flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs">
+                        <div key={slot} className="flex items-center justify-between p-1.5 rounded surface-row text-xs">
                           <span className="text-muted-foreground text-[9px] w-4">
                             {actionBindings?.[`potion${slot}`]?.[0]
                               ? `[${actionBindings[`potion${slot}`][0]}]`
@@ -482,7 +482,7 @@ export default function CharacterPanel({
               )}
 
               {/* Materials (salvage + gems + future) */}
-              <div className="mt-2 space-y-2 rounded border border-border bg-background/40 p-2">
+              <div className="mt-2 space-y-2 rounded surface-row p-2">
                 <div className="t-label flex items-center gap-1">
                   🧰 Material Pouch
                 </div>
@@ -511,7 +511,7 @@ export default function CharacterPanel({
                       {grouped.map(({ representative: inv, all }) => {
                         const isBroken = inv.current_durability <= 0;
                         return (
-                          <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
+                          <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded surface-row text-xs ${isBroken ? 'opacity-50' : ''}`}>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
@@ -618,7 +618,7 @@ export default function CharacterPanel({
                     return grouped.map(({ representative: inv, all }) => {
                       const isBroken = inv.current_durability <= 0;
                       return (
-                      <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded border border-border bg-background/30 text-xs ${isBroken ? 'opacity-50' : ''}`}>
+                      <div key={inv.item_id} className={`flex items-center justify-between p-1.5 rounded surface-row text-xs ${isBroken ? 'opacity-50' : ''}`}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className={`font-display truncate flex-1 cursor-help ${getItemColor(inv.item)}`}>
@@ -802,7 +802,7 @@ export default function CharacterPanel({
                           <p className="text-xs text-muted-foreground">{STAT_DESCRIPTIONS[stat]}</p>
                           <p className="text-[10px] text-muted-foreground">Modifier: {mod >= 0 ? '+' : ''}{mod}</p>
                           {derivedLines.length > 0 && (
-                            <div className="mt-0.5 border-t border-border/50 pt-0.5 space-y-0">
+                            <div className="mt-0.5 border-t border-border-subtle/50 pt-0.5 space-y-0">
                               {derivedLines.map((line, i) => (
                                 <p key={i} className="text-[10px] text-chart-2">{line}</p>
                               ))}
@@ -990,7 +990,7 @@ export default function CharacterPanel({
                   ];
 
                   const renderSection = (title: string, rows: DerivedRow[], cols: boolean = false) => (
-                    <div className="border-t border-border pt-1.5">
+                    <div className="border-t border-border-subtle pt-1.5">
                       <h4 className="t-label mb-1">{title}</h4>
                       <div className={cols ? 'grid grid-cols-2 gap-x-3' : 'space-y-0'}>
                         {rows.map(r => (

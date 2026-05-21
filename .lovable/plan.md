@@ -1,76 +1,96 @@
-# Visual Polish: Depth, Hierarchy & Readability
+# Surface & Shadow Token Consistency Audit
 
-Goal: Reduce the flat "everything sits on the same parchment" feeling without redesigning any panel. Keep the dark-fantasy aesthetic. All changes happen at the **design-token layer** (`src/index.css`, `tailwind.config.ts`) plus a handful of **shared utility classes** that existing panels already consume (`bg-card`, `border-border`, `ornate-border`, etc.). No component rewrites, no layout changes, no logic changes.
+## What I checked
 
-## What changes
+Searched every panel, popover, tooltip, dialog, and row-style element in `src/features/**`, `src/components/game/**`, and the shadcn primitives. Cross-referenced against the ramp introduced in the last pass:
 
-### 1. Layered surface tokens (`src/index.css` `:root`)
-Introduce a 3-step surface ramp so panels, cards and nested rows visually separate:
-- `--surface-1` — outer chrome (app shell, sidebars). Slightly darker than `--background`.
-- `--surface-2` — panels (`--card` re-points here). Current card lightness.
-- `--surface-3` — nested rows / inventory slots / log container. ~4% lighter than surface-2.
-- `--surface-raised` — hover / active row, ~6% lighter, used by tooltips/popovers.
+- Surfaces: `--surface-1` (shell) / `--surface-2` (panel, == card) / `--surface-3` (row, == muted) / `--surface-raised` (popover, tooltip, hover)
+- Borders: `--border-subtle` / `--border` / `--border-strong`
+- Shadows: `--shadow-inset-soft` (panels), `--shadow-rise` (floating)
+- Dividers: `.divider-hairline`
+- Row utility: `.surface-row`, panel utility: `.surface-panel`, raised utility: `.surface-raised`
 
-Re-point existing tokens so nothing breaks:
-- `--card` → `--surface-2`
-- `--popover` → `--surface-raised`
-- `--muted` → `--surface-3`
+## Findings
 
-### 2. Border ramp
-Single `--border` today reads the same on every edge. Add:
-- `--border-subtle` (current −20% alpha) for inner dividers
-- `--border` (unchanged) for panel edges
-- `--border-strong` (current +25% lightness) for outer chrome / focused cards
+### 1. Inventory / equipment / list rows — biggest inconsistency
 
-Expose all three via tailwind (`border-subtle`, `border-strong`).
+Across ~25 files the same nested-row treatment is open-coded as `border border-border bg-background/30` (or `/40`, `/50`, `/60`). These should all read as **surface-3** rows so they visibly sit on the panel.
 
-### 3. Soft depth shadows
-Add two reusable shadow tokens (no big drop shadows — fantasy parchment stays matte):
-- `--shadow-inset-soft` — `inset 0 1px 0 hsl(var(--gold) / 0.04), inset 0 0 24px hsl(35 20% 6% / 0.35)` for panels.
-- `--shadow-rise` — `0 1px 0 hsl(var(--gold) / 0.05), 0 6px 18px hsl(0 0% 0% / 0.35)` for floating surfaces (popovers, dialogs).
+Files: `CharacterPanel.tsx` (equipment slots, inventory items, belt rows, materials, gems, scrolls — ~8 occurrences), `MarketplacePanel.tsx` (×4), `VendorPanel.tsx` (×2), `BlacksmithPanel.tsx` (×3), `JewelcrafterPanel.tsx` (×5), `StonebinderPanel.tsx`, `TrainerPanel.tsx` (×3), `TeleportDialog.tsx`, `NodeView.tsx` (creature/NPC/player/loot cards), `PartyPanel.tsx`, `InspectPlayerDialog.tsx`, `MaterialsSection.tsx`, `GemPouch.tsx`.
 
-Wire into utility classes `.surface-panel`, `.surface-row`, `.surface-raised` so panels can opt in by swapping one className (or by updating `.ornate-border` to use the new inset shadow — recommended, since most panels already use it).
+Migration: replace the literal `bg-background/30..60 border border-border` pattern with the `surface-row` utility class. Selected/active variants keep their `border-primary bg-primary/10` override on top.
 
-### 4. Section separators
-Replace flat 1px `border-t border-border` dividers with a gilded hairline class:
-```css
-.divider-hairline {
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    hsl(var(--gold) / 0.18) 20%,
-    hsl(var(--gold) / 0.18) 80%,
-    transparent
-  );
-}
-```
-Used opt-in where current dividers feel flat (NodeView section breaks, CharacterPanel tab content separators, EventLogPanel tick separator). Existing `border-t border-border` keeps working everywhere else.
+### 2. Floating surfaces don't use the rise shadow
 
-### 5. Readability tuning for long sessions
-- Lift `--foreground` lightness +3% (85 → 88) — body text gains contrast on the darker surface-1.
-- Lift `--muted-foreground` +5% so meta text remains legible against the new `--surface-3`.
-- Tighten `event-log-line` left border to `--border-subtle` so the log stops looking like a striped table.
-- Slight bump to `--gold` glow on `.text-glow` (already used for displays) — unchanged hue, just a hair more presence.
+`Tooltip`, `Popover`, `HoverCard`, `BroadcastDebugOverlay`, `gateway-card` consumers, and ad-hoc dropdown menus still render with `shadow-md` / `shadow-lg` / `shadow-xl`. They already pull `bg-popover` (surface-raised), but the shadow is generic.
 
-## What does NOT change
+Migration: add a single `.surface-raised` opt-in (or extend the existing class application) on the three shadcn primitives (`tooltip.tsx`, `popover.tsx`, `hover-card.tsx`) so they all use `var(--shadow-rise)` and the strong border. `BroadcastDebugOverlay` swaps `shadow-xl` → `surface-raised`.
 
-- No component file is rewritten. Token re-pointing flows through every existing `bg-card`, `border-border`, `bg-popover`, etc. automatically.
-- No layout, spacing, font, icon, or copy change.
-- Rarity colors, log palette, combat visuals, gateway/auth styling untouched.
-- No new dependencies.
+### 3. Dialog uses `bg-background` instead of a panel surface
 
-## Files touched
+`src/components/ui/dialog.tsx` renders dialogs on `bg-background shadow-lg` — so dialogs look identical to the app shell, defeating the layer ramp. Every game dialog (NPC, Teleport, SoulforgeDialog, StatPlanner, Inspect, ReportIssue, Summon, etc.) inherits this.
 
-- `src/index.css` — add surface/border/shadow tokens, update `.ornate-border`, add `.divider-hairline`, `.surface-panel`, `.surface-row`, `.surface-raised`, tweak `.event-log-line`.
-- `tailwind.config.ts` — expose `border-subtle`, `border-strong`, and `surface.{1,2,3,raised}` color tokens (purely additive; existing classes keep working).
-- Optional 3–4 surgical className swaps in `NodeView.tsx`, `CharacterPanel.tsx`, `EventLogPanel.tsx` to apply `.divider-hairline` at the most-seen section breaks. Each is a one-line edit.
+Migration: change shadcn `DialogContent` base to `bg-card border-border-strong shadow-rise` so dialogs read as a raised panel. Per-dialog overrides (`bg-card`, `border-primary/30`, etc.) continue to win.
+
+### 4. Card primitive still uses generic `shadow-sm`
+
+`src/components/ui/card.tsx` uses `shadow-sm`. Either drop it or swap to `shadow-[var(--shadow-inset-soft)]` so generic `<Card>` matches `.ornate-border` panels.
+
+### 5. Flat `border-t border-border` section dividers inside panels
+
+Still present in `CharacterPanel.tsx` (×3 — attribute breakdown, totals row, derived stats), `StatPlannerDialog.tsx`, `MarketplacePanel.tsx`, `TrainerPanel.tsx`, `VendorPanel.tsx` (×2), `BlacksmithPanel.tsx` (×2), `JewelcrafterPanel.tsx` (×2). NodeView and EventLog already migrated.
+
+Migration: replace each visible section break with `<div className="divider-hairline my-2" />`. The flat 1px treatment may stay where it's a true edge (panel header bottom, footer top) — those should switch to `border-border-subtle` instead of being made gilded.
+
+### 6. Event Log container is still flat
+
+`EventLogPanel.tsx`'s scrollable container uses `bg-background/30 rounded border border-border`. The container should be a surface-3 row well: replace with `surface-row rounded`.
+
+### 7. ServicePanelShell footer divider
+
+`ServicePanelShell.tsx:139` hardcodes `border-t border-[hsl(var(--gold)/0.2)] bg-background/20`. Swap to `divider-hairline` above an unstyled footer (or `bg-surface-1/40`) for parity with header treatment.
+
+### 8. ChatPanel uses bare `bg-card/60` and no row treatment
+
+`src/features/chat/components/ChatPanel.tsx` — outer wrapper already uses `ornate-border` ✓, but the header divider is `border-b border-border`; should become `divider-hairline`. Messages render as flat `<p>` — no row treatment needed (chat is a stream, not a list).
+
+### 9. Tab strips are inconsistent
+
+`CharacterPanel.tsx:360` uses `bg-muted/50`, `TrainerPanel.tsx:153` uses `bg-background/40`. Both should land on a single token — recommend `bg-surface-3/60` so tab strips sit visibly on `surface-2` panels.
+
+## Scope of changes
+
+All work happens in the **presentation layer**:
+
+- `src/components/ui/tooltip.tsx`, `popover.tsx`, `hover-card.tsx`, `dialog.tsx`, `card.tsx` — one-line className edit each.
+- `src/components/ui/ServicePanelShell.tsx` — footer divider swap.
+- ~25 feature files — mechanical replacement of `border border-border bg-background/30..60` → `surface-row`, and `border-t border-border` (inside content) → `<div className="divider-hairline my-2" />`.
+- `src/features/combat/components/EventLogPanel.tsx` — log container class swap.
+- `src/features/chat/components/ChatPanel.tsx` — header divider swap.
+
+No new tokens. No logic, state, layout, or copy changes. No component rewrites — only className edits to consume the existing ramp.
+
+## What stays as-is
+
+- Selected/active/error states (`border-primary bg-primary/10`, `border-destructive`, `border-elvish/40`) — they override the row class and should keep their meaning.
+- Specialized surfaces: `scroll-panel-inner`, `gateway-card`, sidebar — they have their own visual systems.
+- Combat status bars (`bg-background rounded-full overflow-hidden`) — these are progress wells, not rows; correct as-is.
+- Admin pages — out of scope for player-facing readability pass.
 
 ## Verification
 
-After applying:
-1. Open the game preview at `/` → confirm panels read as three depth layers (outer shell darker, panels mid, nested rows lighter).
-2. Open Character Panel → equipment slots and inventory rows should sit visibly *on* the panel, not flush with it.
-3. Open Event Log during combat → tick separators and entry stripes look gilded, not blocky.
-4. Compare night-session readability: body text on `--surface-1` should pass WCAG AA against the darker shell.
-5. No regressions in service panels, tooltips, marketplace, blacksmith — they consume the same tokens and inherit the new ramp.
+1. Open Character Panel → Equipment, Inventory, Belt, Attribute tabs: every row sits visibly on the panel, no flat sections.
+2. Hover an item → tooltip pops with rise shadow and stronger border.
+3. Open any dialog (Teleport, Soulforge, Inspect, NPC) → dialog reads as a raised panel, not a full-screen flat surface.
+4. Open Marketplace, Vendor, Blacksmith, Jewelcrafter, Stonebinder → list rows match Character Panel rows.
+5. Event Log container reads as a sunken well; tick dividers and section dividers are gilded hairlines.
+6. No regressions in selected/hover/active states (rarity colors, party highlights, target ring).
+
+## Files touched (estimate)
+
+- 5 shadcn primitives (one-line each)
+- 1 ServicePanelShell
+- ~12 feature panel files (mechanical class swaps)
+- 1 EventLogPanel, 1 ChatPanel
+
+All changes are className-only.
