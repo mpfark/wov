@@ -69,7 +69,7 @@ export default function EventLogPanel({
         ) : (
           filteredEventLog.map((log, i) => {
             if (log === '---tick---') {
-              return <div key={i} className="border-t-2 border-border/60 my-2" />;
+              return <div key={i} className="divider-hairline my-2" />;
             }
             const cls = classifyLogLine(log);
             const style = EVENT_STYLE[cls.category];

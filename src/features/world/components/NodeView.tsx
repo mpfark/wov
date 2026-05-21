@@ -156,7 +156,7 @@ export default function NodeView({
         {/* Scrollable content - only header & description */}
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2 relative z-10">
           {/* Location Header */}
-           <div className="text-center border-b border-border pb-2">
+           <div className="text-center pb-2 border-b border-border-strong/60">
             <h2
               className="font-display text-xl text-glow"
               style={{ color: area ? getAreaHeaderColor(emojiMap[area.area_type] || '📍') : undefined }}
@@ -485,13 +485,17 @@ export default function NodeView({
 
           {/* Status Bars — above action bar */}
           {statusBarsProps && (
-            <div className="pt-1.5 border-t border-border mt-1">
-              <StatusBarsStrip character={character} {...statusBarsProps} />
-            </div>
+            <>
+              <div className="divider-hairline mt-1" />
+              <div className="pt-1.5">
+                <StatusBarsStrip character={character} {...statusBarsProps} />
+              </div>
+            </>
           )}
 
           {/* Compact Action Bar - pinned to bottom */}
-          <div className="pt-1.5 border-t border-border mt-1 space-y-1.5 flex flex-col items-center">
+          <div className="divider-hairline mt-1" />
+          <div className="pt-1.5 space-y-1.5 flex flex-col items-center">
             {/* Row 3: Abilities */}
             {classAbilities.length > 0 && onUseAbility && (
               <div className="flex flex-wrap items-center gap-1 justify-center">

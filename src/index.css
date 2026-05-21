@@ -6,33 +6,46 @@
 
 @layer base {
   :root {
-    --background: 35 30% 12%;
-    --foreground: 40 45% 85%;
+    --background: 35 30% 10%;
+    --foreground: 40 45% 88%;
+
+    /* Layered surface ramp (darker → lighter) */
+    --surface-1: 35 28% 11%;   /* outer chrome / sidebars */
+    --surface-2: 35 25% 16%;   /* panels (== card) */
+    --surface-3: 33 22% 20%;   /* nested rows / inventory slots / log container */
+    --surface-raised: 35 25% 23%; /* hover / popover / tooltip */
 
     --card: 35 25% 16%;
-    --card-foreground: 40 45% 85%;
+    --card-foreground: 40 45% 88%;
 
-    --popover: 35 25% 14%;
-    --popover-foreground: 40 45% 85%;
+    --popover: 35 25% 23%;
+    --popover-foreground: 40 45% 88%;
 
     --primary: 38 65% 50%;
     --primary-foreground: 35 30% 10%;
 
     --secondary: 30 20% 22%;
-    --secondary-foreground: 40 40% 78%;
+    --secondary-foreground: 40 40% 80%;
 
-    --muted: 30 15% 20%;
-    --muted-foreground: 35 20% 55%;
+    --muted: 33 22% 20%;
+    --muted-foreground: 35 22% 62%;
 
     --accent: 25 50% 30%;
-    --accent-foreground: 40 45% 88%;
+    --accent-foreground: 40 45% 90%;
 
     --destructive: 0 65% 45%;
     --destructive-foreground: 40 45% 90%;
 
     --border: 35 20% 25%;
+    --border-subtle: 35 20% 22%;
+    --border-strong: 35 28% 34%;
     --input: 35 20% 22%;
     --ring: 38 65% 50%;
+
+    /* Soft depth shadows */
+    --shadow-inset-soft: inset 0 1px 0 hsl(38 65% 50% / 0.05), inset 0 0 24px hsl(35 20% 4% / 0.45);
+    --shadow-rise: 0 1px 0 hsl(38 65% 50% / 0.06), 0 8px 22px hsl(0 0% 0% / 0.45);
+
 
     --radius: 0.375rem;
 
@@ -147,13 +160,41 @@
     hsl(var(--background));
 }
 
-/* Ornate border style */
+/* Ornate border style — panel surface with soft inset depth */
 .ornate-border {
-  border: 1px solid hsl(var(--border));
-  box-shadow:
-    inset 0 0 20px hsl(35 20% 10% / 0.5),
-    0 0 15px hsl(35 20% 8% / 0.3);
+  border: 1px solid hsl(var(--border-strong));
+  box-shadow: var(--shadow-inset-soft);
 }
+
+/* Layered surface utilities — opt-in depth ramp */
+.surface-panel {
+  background-color: hsl(var(--surface-2));
+  border: 1px solid hsl(var(--border-strong));
+  box-shadow: var(--shadow-inset-soft);
+}
+.surface-row {
+  background-color: hsl(var(--surface-3) / 0.55);
+  border: 1px solid hsl(var(--border-subtle));
+}
+.surface-raised {
+  background-color: hsl(var(--surface-raised));
+  border: 1px solid hsl(var(--border-strong));
+  box-shadow: var(--shadow-rise);
+}
+
+/* Gilded hairline divider — replaces flat border-t for section breaks */
+.divider-hairline {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    hsl(var(--gold) / 0.22) 20%,
+    hsl(var(--gold) / 0.22) 80%,
+    transparent
+  );
+}
+
 
 /* Gold text glow */
 .text-glow {
@@ -331,7 +372,7 @@
   font-size: 0.75rem;
   line-height: 1.35;
   padding: 1px 0 1px 6px;
-  border-left: 1px solid hsl(var(--border) / 0.25);
+  border-left: 1px solid hsl(var(--border-subtle) / 0.5);
 }
 .event-log-line + .event-log-line {
   margin-top: 1px;
