@@ -63,7 +63,7 @@ export default function EventLogPanel({
           {MODE_LABELS[displayMode]}
         </button>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-2 bg-background/30 rounded border border-border">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 surface-row rounded">
         {filteredEventLog.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
         ) : (
