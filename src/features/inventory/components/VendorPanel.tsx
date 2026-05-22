@@ -290,9 +290,33 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
         <> · Vendor pays: <span className="text-elvish font-display">{getSellPrice(selectedSell.inv)}g</span></>
       </div>
     </div>
+  ) : selectedSellStacks.length > 1 ? (
+    <div className="space-y-2">
+      <h4 className="font-display text-base text-primary">
+        {selectedSellStacks.length} stacks selected
+      </h4>
+      <p className="text-[10px] text-muted-foreground">
+        {sellAllInventory.length} item{sellAllInventory.length === 1 ? '' : 's'} total
+      </p>
+      <div className="max-h-48 overflow-y-auto space-y-1 text-xs">
+        {selectedSellStacks.map(({ inv, count }) => (
+          <div key={inv.id} className="flex items-center justify-between gap-2">
+            <span className={`${getItemColor(inv.item)} truncate`}>
+              {inv.item.name}{count > 1 && <span className="text-muted-foreground"> ×{count}</span>}
+            </span>
+            <span className="text-elvish font-display shrink-0">{getSellPrice(inv) * count}g</span>
+          </div>
+        ))}
+      </div>
+      <div className="text-xs text-muted-foreground border-t border-border-subtle pt-2">
+        Vendor pays: <span className="text-elvish font-display">{sellAllTotal}g</span>
+      </div>
+    </div>
   ) : (
-    <ServicePanelEmpty>Select an inventory item to see its sell value.</ServicePanelEmpty>
+    <ServicePanelEmpty>Select one or more inventory items to see their sell value.</ServicePanelEmpty>
   );
+
+
 
   // ── Render ────────────────────────────────────────────────────
 
