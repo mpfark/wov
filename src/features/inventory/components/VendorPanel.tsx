@@ -69,7 +69,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const [vendorItems, setVendorItems] = useState<VendorItem[]>([]);
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [selectedBuyId, setSelectedBuyId] = useState<string | null>(null);
-  const [selectedSellId, setSelectedSellId] = useState<string | null>(null);
+  const [selectedSellItemIds, setSelectedSellItemIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) return;
@@ -114,7 +114,18 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   }, [sellableItems]);
 
   const selectedBuy = stackedBuy.find(s => s.vi.id === selectedBuyId) ?? null;
-  const selectedSell = stackedSell.find(s => s.inv.id === selectedSellId) ?? null;
+  const selectedSellStacks = stackedSell.filter(s => selectedSellItemIds.has(s.inv.item_id));
+  const selectedSell = selectedSellStacks.length === 1 ? selectedSellStacks[0] : null;
+  const sellAllInventory = sellableItems.filter(i => selectedSellItemIds.has(i.item_id));
+  const sellAllTotal = sellAllInventory.reduce((sum, i) => sum + getSellPrice(i), 0);
+
+  const toggleSellSelect = (itemId: string) => {
+    setSelectedSellItemIds(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId); else next.add(itemId);
+      return next;
+    });
+  };
 
   const buyItem = async (vi: VendorItem) => {
     const finalPrice = getDiscountedPrice(vi.price);
@@ -139,18 +150,28 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     }
   };
 
-  const sellItem = async (inv: InventoryItem) => {
-    const { data: sellPrice, error } = await supabase.rpc('sell_item' as any, {
-      p_character_id: characterId,
-      p_inventory_id: inv.id,
-    });
-    if (error) { addLog(`❌ ${error.message}`); return; }
-    const actualPrice = sellPrice as number;
-    onGoldChange(gold + actualPrice);
+  const sellSelected = async () => {
+    if (sellAllInventory.length === 0) return;
+    let totalEarned = 0;
+    const soldNames: string[] = [];
+    for (const inv of sellAllInventory) {
+      const { data: sellPrice, error } = await supabase.rpc('sell_item' as any, {
+        p_character_id: characterId,
+        p_inventory_id: inv.id,
+      });
+      if (error) { addLog(`❌ ${error.message}`); continue; }
+      totalEarned += (sellPrice as number) || 0;
+      soldNames.push(inv.item.name);
+    }
+    if (totalEarned > 0) onGoldChange(gold + totalEarned);
     onInventoryChange();
     const chaNote = chaMod > 0 ? ` (CHA bonus)` : '';
-    addLog(`🪙 Sold ${inv.item.name} for ${actualPrice} gold.${chaNote}`);
-    setSelectedSellId(null);
+    if (soldNames.length === 1) {
+      addLog(`🪙 Sold ${soldNames[0]} for ${totalEarned} gold.${chaNote}`);
+    } else if (soldNames.length > 1) {
+      addLog(`🪙 Sold ${soldNames.length} items for ${totalEarned} gold.${chaNote}`);
+    }
+    setSelectedSellItemIds(new Set());
   };
 
   // ── Slot content ──────────────────────────────────────────────
@@ -199,12 +220,12 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   ) : (
     <div className="space-y-1.5">
       {stackedSell.map(({ inv, count }) => {
-        const selected = inv.id === selectedSellId;
+        const selected = selectedSellItemIds.has(inv.item_id);
         return (
           <button
             key={inv.id}
             type="button"
-            onClick={() => setSelectedSellId(selected ? null : inv.id)}
+            onClick={() => toggleSellSelect(inv.item_id)}
             className={`w-full text-left flex items-center justify-between p-2 rounded border transition-colors ${
               selected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
@@ -269,9 +290,33 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
         <> · Vendor pays: <span className="text-elvish font-display">{getSellPrice(selectedSell.inv)}g</span></>
       </div>
     </div>
+  ) : selectedSellStacks.length > 1 ? (
+    <div className="space-y-2">
+      <h4 className="font-display text-base text-primary">
+        {selectedSellStacks.length} stacks selected
+      </h4>
+      <p className="text-[10px] text-muted-foreground">
+        {sellAllInventory.length} item{sellAllInventory.length === 1 ? '' : 's'} total
+      </p>
+      <div className="max-h-48 overflow-y-auto space-y-1 text-xs">
+        {selectedSellStacks.map(({ inv, count }) => (
+          <div key={inv.id} className="flex items-center justify-between gap-2">
+            <span className={`${getItemColor(inv.item)} truncate`}>
+              {inv.item.name}{count > 1 && <span className="text-muted-foreground"> ×{count}</span>}
+            </span>
+            <span className="text-elvish font-display shrink-0">{getSellPrice(inv) * count}g</span>
+          </div>
+        ))}
+      </div>
+      <div className="text-xs text-muted-foreground border-t border-border-subtle pt-2">
+        Vendor pays: <span className="text-elvish font-display">{sellAllTotal}g</span>
+      </div>
+    </div>
   ) : (
-    <ServicePanelEmpty>Select an inventory item to see its sell value.</ServicePanelEmpty>
+    <ServicePanelEmpty>Select one or more inventory items to see their sell value.</ServicePanelEmpty>
   );
+
+
 
   // ── Render ────────────────────────────────────────────────────
 
@@ -327,17 +372,23 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   ) : (
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">
-        {selectedSell ? <>Selling <span className={getItemColor(selectedSell.inv.item)}>{selectedSell.inv.item.name}</span></> : 'Select an item to sell.'}
+        {sellAllInventory.length === 0
+          ? 'Select items to sell.'
+          : sellAllInventory.length === 1 && selectedSell
+            ? <>Selling <span className={getItemColor(selectedSell.inv.item)}>{selectedSell.inv.item.name}</span></>
+            : <>Selling {sellAllInventory.length} items</>}
       </span>
       <Button
         size="sm"
         variant="outline"
-        onClick={() => selectedSell && sellItem(selectedSell.inv)}
-        disabled={!selectedSell}
+        onClick={sellSelected}
+        disabled={sellAllInventory.length === 0}
         className="font-display text-xs h-8"
       >
         <ArrowUpFromLine className="w-3 h-3 mr-1" />
-        Sell{selectedSell ? ` (${getSellPrice(selectedSell.inv)}g)` : ''}
+        {sellAllInventory.length > 1
+          ? `Sell all items (${sellAllTotal}g)`
+          : `Sell${sellAllInventory.length === 1 ? ` (${sellAllTotal}g)` : ''}`}
       </Button>
     </div>
   );
