@@ -114,7 +114,18 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   }, [sellableItems]);
 
   const selectedBuy = stackedBuy.find(s => s.vi.id === selectedBuyId) ?? null;
-  const selectedSell = stackedSell.find(s => s.inv.id === selectedSellId) ?? null;
+  const selectedSellStacks = stackedSell.filter(s => selectedSellItemIds.has(s.inv.item_id));
+  const selectedSell = selectedSellStacks.length === 1 ? selectedSellStacks[0] : null;
+  const sellAllInventory = sellableItems.filter(i => selectedSellItemIds.has(i.item_id));
+  const sellAllTotal = sellAllInventory.reduce((sum, i) => sum + getSellPrice(i), 0);
+
+  const toggleSellSelect = (itemId: string) => {
+    setSelectedSellItemIds(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId); else next.add(itemId);
+      return next;
+    });
+  };
 
   const buyItem = async (vi: VendorItem) => {
     const finalPrice = getDiscountedPrice(vi.price);
