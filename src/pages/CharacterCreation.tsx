@@ -273,7 +273,9 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                   <div className="flex items-center gap-3 px-2 text-sm">
                     <span className="text-blood font-display">HP {previewHp}</span>
                     <span className="text-muted-foreground font-display">AC {previewAc}</span>
-                    <span className="text-primary font-display">Gold 10</span>
+                    <span className="text-primary font-display">Gold 40</span>
+                    <span className="text-muted-foreground font-display">Salvage 42</span>
+                    <span className="text-muted-foreground font-display">Gems ×6</span>
                   </div>
                 </div>
                 <Button
