@@ -150,18 +150,28 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
     }
   };
 
-  const sellItem = async (inv: InventoryItem) => {
-    const { data: sellPrice, error } = await supabase.rpc('sell_item' as any, {
-      p_character_id: characterId,
-      p_inventory_id: inv.id,
-    });
-    if (error) { addLog(`❌ ${error.message}`); return; }
-    const actualPrice = sellPrice as number;
-    onGoldChange(gold + actualPrice);
+  const sellSelected = async () => {
+    if (sellAllInventory.length === 0) return;
+    let totalEarned = 0;
+    const soldNames: string[] = [];
+    for (const inv of sellAllInventory) {
+      const { data: sellPrice, error } = await supabase.rpc('sell_item' as any, {
+        p_character_id: characterId,
+        p_inventory_id: inv.id,
+      });
+      if (error) { addLog(`❌ ${error.message}`); continue; }
+      totalEarned += (sellPrice as number) || 0;
+      soldNames.push(inv.item.name);
+    }
+    if (totalEarned > 0) onGoldChange(gold + totalEarned);
     onInventoryChange();
     const chaNote = chaMod > 0 ? ` (CHA bonus)` : '';
-    addLog(`🪙 Sold ${inv.item.name} for ${actualPrice} gold.${chaNote}`);
-    setSelectedSellId(null);
+    if (soldNames.length === 1) {
+      addLog(`🪙 Sold ${soldNames[0]} for ${totalEarned} gold.${chaNote}`);
+    } else if (soldNames.length > 1) {
+      addLog(`🪙 Sold ${soldNames.length} items for ${totalEarned} gold.${chaNote}`);
+    }
+    setSelectedSellItemIds(new Set());
   };
 
   // ── Slot content ──────────────────────────────────────────────
