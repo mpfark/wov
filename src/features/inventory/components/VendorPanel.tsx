@@ -220,12 +220,12 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   ) : (
     <div className="space-y-1.5">
       {stackedSell.map(({ inv, count }) => {
-        const selected = inv.id === selectedSellId;
+        const selected = selectedSellItemIds.has(inv.item_id);
         return (
           <button
             key={inv.id}
             type="button"
-            onClick={() => setSelectedSellId(selected ? null : inv.id)}
+            onClick={() => toggleSellSelect(inv.item_id)}
             className={`w-full text-left flex items-center justify-between p-2 rounded border transition-colors ${
               selected ? 'border-primary bg-primary/10' : 'surface-row hover:bg-background/60'
             }`}
