@@ -50,14 +50,19 @@ export function getItemLevelTaper(level: number): number {
 export function getItemStatBudget(level: number, rarity: string, hands: number = 1, itemType: string = 'equipment'): number {
   const mult = ITEM_RARITY_MULTIPLIER[rarity] || 1;
   const handsMult = getItemHandsMultiplier(rarity, hands);
+  // Consumables skip the late-game taper/hybrid bonus so potions keep
+  // scaling linearly with level past L29 instead of plateauing at 30 points.
+  if (itemType === 'consumable') {
+    const rawC = 2 + (level - 1) * 0.3 * mult * handsMult;
+    return Math.max(2, Math.floor(rawC)) * 3;
+  }
   const taper = getItemLevelTaper(level);
   const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
   // Hybrid efficiency: uncommons get +1 budget point at L30+ so they stay
   // attractive vs pure-primary commons after the taper kicks in.
   const hybridBonus = rarity === 'uncommon' && level >= 30 ? 1 : 0;
   // Floor of 2 even at L1 so every item has primary + minor stat.
-  const base = Math.max(2, Math.floor(raw * taper) + hybridBonus);
-  return itemType === 'consumable' ? base * 3 : base;
+  return Math.max(2, Math.floor(raw * taper) + hybridBonus);
 }
 
 export function calculateItemStatCost(stats: Record<string, number>): number {
