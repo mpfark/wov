@@ -69,7 +69,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const [vendorItems, setVendorItems] = useState<VendorItem[]>([]);
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [selectedBuyId, setSelectedBuyId] = useState<string | null>(null);
-  const [selectedSellId, setSelectedSellId] = useState<string | null>(null);
+  const [selectedSellItemIds, setSelectedSellItemIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!open) return;
