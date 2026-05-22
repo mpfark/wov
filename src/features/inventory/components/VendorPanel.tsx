@@ -372,17 +372,23 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   ) : (
     <div className="flex items-center justify-between gap-2">
       <span className="text-xs text-muted-foreground">
-        {selectedSell ? <>Selling <span className={getItemColor(selectedSell.inv.item)}>{selectedSell.inv.item.name}</span></> : 'Select an item to sell.'}
+        {sellAllInventory.length === 0
+          ? 'Select items to sell.'
+          : sellAllInventory.length === 1 && selectedSell
+            ? <>Selling <span className={getItemColor(selectedSell.inv.item)}>{selectedSell.inv.item.name}</span></>
+            : <>Selling {sellAllInventory.length} items</>}
       </span>
       <Button
         size="sm"
         variant="outline"
-        onClick={() => selectedSell && sellItem(selectedSell.inv)}
-        disabled={!selectedSell}
+        onClick={sellSelected}
+        disabled={sellAllInventory.length === 0}
         className="font-display text-xs h-8"
       >
         <ArrowUpFromLine className="w-3 h-3 mr-1" />
-        Sell{selectedSell ? ` (${getSellPrice(selectedSell.inv)}g)` : ''}
+        {sellAllInventory.length > 1
+          ? `Sell all items (${sellAllTotal}g)`
+          : `Sell${sellAllInventory.length === 1 ? ` (${sellAllTotal}g)` : ''}`}
       </Button>
     </div>
   );
