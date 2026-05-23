@@ -1,52 +1,71 @@
-## Goal
+# Normalize panel spacing with rhythm tokens
 
-Stop auto-equipping the 6 universal armor pieces. Instead give a new character exactly the resources needed to walk into a blacksmith and forge one common item per armor slot themselves. The class weapon (from `class_starting_gear`) is still granted as today.
+Replace ad-hoc Tailwind spacing (`space-y-*`, `gap-1/1.5/2/3/4`, mixed `p-2/3/4`) across gameplay panels with the four semantic rhythm utilities already defined in `src/index.css`, so all major panels share the same vertical cadence and padding.
 
-## Cost math (per current blacksmith-forge logic at level 1)
+## Token contract (already in index.css)
 
-Per slot at L1:
-- salvage = `5 + level*2` = **7**
-- gold = `level*5` = **5**
-- gem = 1 matching primary gem
+| Class | Gap | Use |
+|---|---|---|
+| `gap-row`     | 4px  | Tight list items (stat rows, log lines, slot rows) |
+| `gap-group`   | 8px  | Between groups inside a section (identity/stats/flavor) |
+| `gap-section` | 16px | Between sections inside a panel |
+| `gap-panel`   | 24px | Between top-level panel blocks |
 
-6 armor slots (head, chest, shoulders, gloves, pants, boots — `off_hand`/`belt` are intentionally excluded since they aren't part of "fill out 6 slots"):
-- **42 salvage**
-- **30 gold** for forging
-- **1 of each primary gem** (garnet, topaz, emerald, sapphire, pearl, amethyst) → covers any single-attribute common in any slot
+Panel padding standard: `p-3` for compact side panels, `p-4` for service/dialog panels. Dividers: `divider-hairline` (already defined) instead of `border-t`/`<hr>`.
 
-Existing default 10 starting gold stays, so new characters spawn with **40 gold** total (10 walking-around + 30 forge budget).
+## Mapping rules
 
-Note: which armor slots count as the "6" is the one question worth confirming — see Open question below. The math is the same either way (any 6 of the armor slots cost 42 salvage / 30 gold).
+Apply these substitutions per container, choosing the bucket by *what the children mean*, not by the previous pixel value:
 
-## Changes
+- Vertical stack of tight rows (stat lines, log lines, slot list rows) → `gap-row`
+- Stack of label+value groups, form field groups, or small clusters → `gap-group`
+- Stack of distinct sections inside one panel (header / body / footer-of-section) → `gap-section`
+- Stack of top-level panel blocks (e.g. character → status → portrait inside a tab) → `gap-panel`
+- Horizontal `flex gap-1/1.5` chip rows → keep as `gap-1.5` (rhythm tokens are vertical-only); only swap if the row is a vertical stack rendered with flex-col.
+- Panel root padding: `p-2` / `p-3` / `p-4` ad-hoc → `p-3` (side panels) or `p-4` (ServicePanelShell body slots / dialogs).
+- Replace `space-y-N` with the matching rhythm class on the same element (rhythm utilities use the same `> * + *` selector).
 
-### 1. Database — update `grant_starting_gear` (migration)
+Do NOT touch: button internal padding, badge padding, icon sizes, `event-log-*` classes, grid `gap-*` for true grids (inventory slot grids, gem grids), or any horizontal flex `gap-*`.
 
-Rewrite the SECURITY DEFINER function to:
-- Keep the auth check.
-- **Skip** the `universal_starting_gear` loop entirely.
-- Keep the `class_starting_gear` loop (weapon grant) unchanged.
-- Top up character gold by **+30** (so 10 default + 30 = 40).
-- Upsert into `character_materials`:
-  - `salvage` → +42
-  - each of `garnet, topaz, emerald, sapphire, pearl, amethyst` → +1
+## Scope (files)
 
-Implemented with simple `INSERT … ON CONFLICT (character_id, material_key) DO UPDATE SET count = character_materials.count + EXCLUDED.count` so it's idempotent-safe against the existing unique constraint.
+Pass 1 — high-density panels (most replacements):
+- `src/features/inventory/components/JewelcrafterPanel.tsx`
+- `src/features/marketplace/components/MarketplacePanel.tsx`
+- `src/features/inventory/components/BlacksmithPanel.tsx`
+- `src/features/character/components/CharacterPanel.tsx`
+- `src/features/inventory/components/VendorPanel.tsx`
+- `src/features/inventory/components/SoulforgeTabContent.tsx`
+- `src/features/inventory/components/SoulforgeDialog.tsx`
+- `src/features/character/components/TrainerPanel.tsx`
 
-### 2. Character creation UI (`src/pages/CharacterCreation.tsx`)
+Pass 2 — supporting panels:
+- `src/features/character/components/StatPlannerDialog.tsx`
+- `src/features/character/components/PortraitTab.tsx`
+- `src/features/character/components/StatusBarsStrip.tsx`
+- `src/features/party/components/PartyPanel.tsx`
+- `src/features/inventory/components/StonebinderPanel.tsx`
+- `src/features/inventory/components/GemPouch.tsx`
+- `src/features/inventory/components/MaterialsSection.tsx`
+- `src/features/combat/components/EventLogPanel.tsx` (header strip only; preserve `event-log-*`)
+- `src/features/chat/components/ChatPanel.tsx`
 
-- Update the sticky preview footer to show the new starting kit: `Gold 40`, `Salvage 42`, `Gems ×6` instead of the current `Gold 10` line, so players see what they'll spawn with.
-- No logic change beyond the label — the RPC still does the granting.
+## Process per file
 
-### 3. Admin panel note
+1. Read the file.
+2. For each container, classify children (row/group/section/panel) and swap to the matching rhythm class.
+3. Normalize root/body padding to `p-3` (side panel) or `p-4` (ServicePanelShell slots).
+4. Replace `border-t border-border` section separators with `divider-hairline` where the intent is a visual section break (not a structural panel edge).
+5. Leave grids, horizontal flex rows, button/badge/icon internals untouched.
 
-`RaceClassManager` still manages `universal_starting_gear` rows. We leave the table and admin UI in place (in case it's wanted again later) — the rows simply stop being applied. No code change needed there. Worth mentioning in the closing message so it isn't surprising.
+## Out of scope
 
-## Files touched
+- No color, font, or component-API changes.
+- No new tokens — only consume what's already in `index.css`.
+- No behavior or layout-structure changes (same containers, same children, just different spacing classes).
+- Admin panels, auth/gateway, world map, and NPC dialog are out of scope for this pass.
 
-- New migration: rewrite `public.grant_starting_gear(uuid)`.
-- `src/pages/CharacterCreation.tsx` — preview text only.
+## Verification
 
-## Open question
-
-The blacksmith treats 9 slots as forgeable (`main_hand, off_hand, head, chest, gloves, belt, pants, boots, shoulders`). "Fill out 6 slots" most naturally means the 6 armor pieces **head, chest, shoulders, gloves, pants, boots** (excluding `off_hand` and `belt`, since off-hand depends on class/weapon choice and belt is a potion holder). If you'd rather the budget also cover `belt` and/or `off_hand`, say which and I'll bump the salvage/gold accordingly (each extra slot = +7 salvage, +5 gold).
+- TypeScript build passes.
+- Visual check in preview: Character, Inventory tab, Vendor, Blacksmith, Jewelcrafter, Marketplace, Combat log all show consistent vertical rhythm; no collapsed/overlapping rows, no doubled spacing where `space-y-*` got duplicated.
