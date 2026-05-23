@@ -179,7 +179,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const buyList = stackedBuy.length === 0 ? (
     <ServicePanelEmpty>This vendor has nothing for sale.</ServicePanelEmpty>
   ) : (
-    <div className="space-y-1.5">
+    <div className="gap-row">
       {stackedBuy.map(({ vi, count, totalStock }) => {
         const selected = vi.id === selectedBuyId;
         return (
@@ -218,7 +218,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   const sellList = stackedSell.length === 0 ? (
     <ServicePanelEmpty>No items to sell.</ServicePanelEmpty>
   ) : (
-    <div className="space-y-1.5">
+    <div className="gap-row">
       {stackedSell.map(({ inv, count }) => {
         const selected = selectedSellItemIds.has(inv.item_id);
         return (
@@ -249,7 +249,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   );
 
   const buyDetail = selectedBuy ? (
-    <div className="space-y-2">
+    <div className="gap-group">
       <h4 className={`font-display text-base ${getItemColor(selectedBuy.vi.item)}`}>{selectedBuy.vi.item.name}</h4>
       <p className="text-[10px] text-muted-foreground capitalize">
         {selectedBuy.vi.item.slot || selectedBuy.vi.item.item_type}
@@ -273,7 +273,7 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
   );
 
   const sellDetail = selectedSell ? (
-    <div className="space-y-2">
+    <div className="gap-group">
       <h4 className={`font-display text-base ${getItemColor(selectedSell.inv.item)}`}>{selectedSell.inv.item.name}</h4>
       <p className="text-[10px] text-muted-foreground capitalize">
         {selectedSell.inv.item.slot || selectedSell.inv.item.item_type}
@@ -291,14 +291,14 @@ export default function VendorPanel({ open, onClose, nodeId, characterId, gold, 
       </div>
     </div>
   ) : selectedSellStacks.length > 1 ? (
-    <div className="space-y-2">
+    <div className="gap-group">
       <h4 className="font-display text-base text-primary">
         {selectedSellStacks.length} stacks selected
       </h4>
       <p className="text-[10px] text-muted-foreground">
         {sellAllInventory.length} item{sellAllInventory.length === 1 ? '' : 's'} total
       </p>
-      <div className="max-h-48 overflow-y-auto space-y-1 text-xs">
+      <div className="max-h-48 overflow-y-auto gap-row text-xs">
         {selectedSellStacks.map(({ inv, count }) => (
           <div key={inv.id} className="flex items-center justify-between gap-2">
             <span className={`${getItemColor(inv.item)} truncate`}>

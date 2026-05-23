@@ -247,13 +247,13 @@ export default function JewelcrafterPanel({
   const repairLeft = damagedItems.length === 0 ? (
     <ServicePanelEmpty>All jewelry is in good condition.</ServicePanelEmpty>
   ) : (
-    <div className="space-y-1.5">
+    <div className="gap-row">
       {damagedItems.map(inv => {
         const cantRepair = isUnrepairable(inv.item.rarity);
         const cost = cantRepair ? 0 : calculateRepairCost(100, inv.current_durability, inv.item.value, inv.item.rarity);
         const durPct = inv.current_durability;
         return (
-          <div key={inv.id} className={`p-2 rounded surface-row space-y-1.5 ${cantRepair ? 'opacity-60' : ''}`}>
+          <div key={inv.id} className={`p-2 rounded surface-row gap-row ${cantRepair ? 'opacity-60' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="min-w-0">
                 <span className={`text-sm font-display ${getItemColor(inv.item)} block truncate`}>{inv.item.name}</span>
@@ -287,7 +287,7 @@ export default function JewelcrafterPanel({
   );
 
   const repairRight = (
-    <div className="space-y-3 text-[11px] text-muted-foreground">
+    <div className="gap-section text-[11px] text-muted-foreground">
       <p>The jeweler refurbishes <span className="text-elvish font-display">rings, amulets, and trinkets</span> only. For weapons and armor, visit a blacksmith.</p>
       <p>Refurbish cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
       <p className="text-destructive">⚠️ Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
@@ -318,12 +318,12 @@ export default function JewelcrafterPanel({
   );
 
   const forgeLeft = (
-    <div className="space-y-4">
+    <div className="gap-section">
       <div className="rounded surface-row p-2">
         <GemPouch owned={ownedGems} />
       </div>
 
-      <div className="space-y-2">
+      <div className="gap-group">
         <Select value={forgeSlot} onValueChange={v => { setForgeSlot(v); setForgePool([]); setSelectedForgeItem(null); }}>
           <SelectTrigger className="font-display text-sm h-8">
             <SelectValue placeholder="Choose slot..." />
@@ -351,12 +351,12 @@ export default function JewelcrafterPanel({
         </p>
       </div>
 
-      <div className="space-y-2 border-t border-border-subtle pt-3">
+      <div className="gap-group border-t border-border-subtle pt-3">
         <h3 className="t-label text-[11px]">🔩 Sell Salvage</h3>
         {salvage === 0 ? (
           <p className="text-xs text-muted-foreground italic">No salvage to sell.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="gap-group">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Amount:</span>
               <span className="font-display text-dwarvish">🔩 {sellAmount} → {sellAmount}g</span>
@@ -379,7 +379,7 @@ export default function JewelcrafterPanel({
   );
 
   const forgeRight = (
-    <div className="space-y-1">
+    <div className="gap-row">
       {browsing && <p className="text-xs text-muted-foreground italic animate-pulse">Searching the jeweler's bench...</p>}
       {!browsing && forgeSlot && forgePool.length === 0 && (
         <p className="text-xs text-muted-foreground italic">No items available for this slot at your level.</p>
@@ -464,12 +464,12 @@ export default function JewelcrafterPanel({
   );
 
   const gemcutLeft = (
-    <div className="space-y-4">
+    <div className="gap-section">
       <div className="rounded surface-row p-2">
         <GemPouch owned={ownedGems} />
       </div>
 
-      <div className="space-y-2">
+      <div className="gap-group">
         <h3 className="t-label text-[11px]">🔩 Trade Salvage → Primary Gem</h3>
         <p className="text-[10px] text-muted-foreground italic">
           {GEM_SALVAGE_COST_PRIMARY} salvage per gem. Pick the attribute you need.
@@ -502,14 +502,14 @@ export default function JewelcrafterPanel({
   );
 
   const gemcutRight = (
-    <div className="space-y-2">
-      <div className="space-y-1">
+    <div className="gap-group">
+      <div className="gap-row">
         <h3 className="t-label text-[11px]">💠 Combine → Hybrid Gem</h3>
         <p className="text-[10px] text-muted-foreground italic">
           Fuse 1 of each matching primary into 1 hybrid (no salvage cost — the primaries are the price).
         </p>
       </div>
-      <div className="space-y-1.5">
+      <div className="gap-row">
         {HYBRID_GEM_KEYS.map(key => {
           const def = GEM_CATALOG[key];
           const recipe = hybridRecipe(key)!;

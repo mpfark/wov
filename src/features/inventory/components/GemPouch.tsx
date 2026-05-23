@@ -38,7 +38,7 @@ export function GemPouch({ owned, showEmpty = true }: GemPouchProps) {
   const empty = primaries.length === 0 && hybrids.length === 0;
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="space-y-1">
+      <div className="gap-row">
         <div className="t-label flex items-center gap-1">
           💠 Gems
         </div>

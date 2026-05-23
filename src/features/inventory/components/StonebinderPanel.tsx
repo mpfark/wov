@@ -152,7 +152,7 @@ export default function StonebinderPanel({
   const left = stones.length === 0 ? (
     <ServicePanelEmpty>You carry no primary Turning Stones.</ServicePanelEmpty>
   ) : (
-    <div className="space-y-1.5">
+    <div className="gap-row">
       {stones.map((inv) => {
         const stat = primaryStatOf(inv);
         const selected = inv.id === stoneA || inv.id === stoneB;
@@ -184,7 +184,7 @@ export default function StonebinderPanel({
   );
 
   const right = (
-    <div className="space-y-3">
+    <div className="gap-section">
       {!a && !b && (
         <ServicePanelEmpty>Choose two stones of different essence to bind.</ServicePanelEmpty>
       )}

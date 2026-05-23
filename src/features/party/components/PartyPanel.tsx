@@ -56,14 +56,14 @@ export default function PartyPanel({
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="space-y-2">
+    <div className="gap-group">
       <h3 className="font-display text-xs text-muted-foreground flex items-center gap-1">
         <Users className="w-3 h-3" /> Party
       </h3>
 
       {/* Pending invites */}
       {pendingInvites.map(inv => (
-        <div key={inv.id} className="p-2 rounded border border-primary/50 bg-primary/5 text-xs space-y-1">
+        <div key={inv.id} className="p-2 rounded border border-primary/50 bg-primary/5 text-xs gap-row">
           <p className="text-foreground"><span className="text-primary font-display">{inv.leader_name}</span> invites you!</p>
           <div className="flex gap-1">
             <Button size="sm" variant="default" className="h-6 text-[10px]" onClick={() => onAcceptInvite(inv.id)}>Accept</Button>
@@ -77,7 +77,7 @@ export default function PartyPanel({
           <Users className="w-3 h-3 mr-1" /> Create Party
         </Button>
       ) : (
-        <div className="space-y-1.5">
+        <div className="gap-row">
           {/* Members list */}
           {members.map(m => {
             if (!m.character) return null;
@@ -86,7 +86,7 @@ export default function PartyPanel({
             const isMemberTank = effectiveTankId === m.character_id;
             const isMemberLeader = party.leader_id === m.character_id;
             return (
-              <div key={m.id} className="space-y-0.5">
+              <div key={m.id} className="gap-row">
                 <div className="flex items-center justify-between p-1.5 rounded surface-row text-xs">
                   <div className="flex items-center gap-1 truncate">
                     {isMemberLeader && <Crown className="w-3 h-3 text-primary shrink-0" />}
@@ -159,7 +159,7 @@ export default function PartyPanel({
 
           {/* Invite nearby players */}
           {isLeader && invitablePlayers.length > 0 && (
-            <div className="space-y-1">
+            <div className="gap-row">
               <p className="text-[10px] text-muted-foreground">Nearby:</p>
               {invitablePlayers.map(p => (
                 <div key={p.id} className="flex items-center justify-between text-xs p-1 rounded surface-row border-border-subtle">

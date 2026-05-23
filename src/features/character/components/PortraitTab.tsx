@@ -92,14 +92,14 @@ export default function PortraitTab({ character, equipped, inCombat }: Props) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="gap-section">
       {inCombat && (
         <p className="text-[11px] text-center text-muted-foreground italic">
           Portraits cannot be forged while in combat.
         </p>
       )}
 
-      <div className="space-y-2">
+      <div className="gap-group">
         <div>
           <Label className="t-label">
             Appearance notes
@@ -172,7 +172,7 @@ export default function PortraitTab({ character, equipped, inCombat }: Props) {
 
       <div className="border-t border-border pt-3">
         {localPortraitUrl ? (
-          <div className="space-y-1.5">
+          <div className="gap-row">
             <div className="aspect-square w-full rounded border border-border overflow-hidden bg-muted/30">
               <img
                 src={localPortraitUrl}

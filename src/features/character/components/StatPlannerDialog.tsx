@@ -137,7 +137,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
   };
 
   return (
-    <div className="space-y-4">
+    <div className="gap-section">
       {/* Points remaining */}
       <div className="text-center font-display text-sm">
         <span className={pointsRemaining === 0 ? 'text-muted-foreground' : 'text-primary'}>
@@ -147,7 +147,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
       </div>
 
       {/* Stat allocation controls */}
-      <div className="space-y-1">
+      <div className="gap-row">
         {STAT_KEYS.map(stat => {
           const current = currentStats[stat];
           const add = planned[stat] || 0;
@@ -189,10 +189,10 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
 
       {/* Derived stats preview */}
       {totalSpent > 0 && (
-        <div className="border-t border-border-subtle pt-3 space-y-2">
+        <div className="border-t border-border-subtle pt-3 gap-group">
           <h4 className="font-display text-[10px] text-muted-foreground/60 uppercase tracking-wider">Impact Preview</h4>
 
-          <div className="space-y-0.5">
+          <div className="gap-row">
             <CompRow label="Max HP" currentVal={derived.current.maxHp} plannedVal={derived.planned.maxHp} />
             <CompRow label="HP Regen" currentVal={derived.current.hpRegen} plannedVal={derived.planned.hpRegen} format={v => `${v}/tick`} />
             <CompRow label="Max CP" currentVal={derived.current.maxCp} plannedVal={derived.planned.maxCp} />
@@ -201,7 +201,7 @@ export function StatPlannerBody({ character, equipmentBonuses, onCommit, onAfter
             <CompRow label="Stamina Regen" currentVal={derived.current.mpRegen} plannedVal={derived.planned.mpRegen} format={v => `${v}/tick`} />
           </div>
 
-          <div className="space-y-0.5">
+          <div className="gap-row">
             <CompRow label="AC" currentVal={derived.current.ac} plannedVal={derived.planned.ac} />
             <CompRow label="Hit Bonus" currentVal={derived.current.totalHit} plannedVal={derived.planned.totalHit} format={v => `+${v}`} />
             <CompRow label="Crit Range" currentVal={derived.current.critRange} plannedVal={derived.planned.critRange} format={v => v === 20 ? '20' : `${v}–20`} lowerIsBetter />

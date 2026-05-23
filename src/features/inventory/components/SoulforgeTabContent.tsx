@@ -183,7 +183,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   // ── Empty / not-worthy / done states (single column) ──────────────
   if (isNotWorthy) {
     const empty = (
-      <div className="p-4 text-center space-y-2">
+      <div className="p-4 text-center gap-group">
         <p className="text-sm text-foreground/80 italic">
           "You are not yet worthy, wayfarer. Return when you have proven your reign."
         </p>
@@ -194,7 +194,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   }
   if (allDone) {
     const done = (
-      <div className="p-4 text-center space-y-2">
+      <div className="p-4 text-center gap-group">
         <p className="text-sm text-foreground/80 italic">
           "You have forged all that fate allows. Your legacy is complete."
         </p>
@@ -206,7 +206,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   // ── Mode selection ────────────────────────────────────────────────
   if (!mode) {
     const modePick = (
-      <div className="space-y-3">
+      <div className="gap-section">
         <p className="text-xs text-muted-foreground text-center italic">
           "What shall I forge for you today, your Majesty?"
         </p>
@@ -241,7 +241,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
       </div>
     );
     const intro = (
-      <div className="space-y-2 text-[11px] text-muted-foreground">
+      <div className="gap-group text-[11px] text-muted-foreground">
         <p>The Soulforge binds raw will into a single legacy item.</p>
         <p>Each character may forge a Royal Crown at level 40, and a Soulbound Item at level 42 — once each.</p>
         <p className="text-soulforged">Forged items cannot be dropped, sold, or traded.</p>
@@ -252,7 +252,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
 
   // ── Active forge flow ────────────────────────────────────────────
   const left = (
-    <div className="space-y-3">
+    <div className="gap-section">
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={reset}>← Back</Button>
         <span className="text-xs font-display text-muted-foreground">
@@ -330,7 +330,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
   );
 
   const right = (
-    <div className="space-y-3">
+    <div className="gap-section">
       {!activeSlot ? (
         <ServicePanelEmpty>Select a slot to begin allocating stats.</ServicePanelEmpty>
       ) : (
@@ -341,7 +341,7 @@ export function useSoulforgeForge({ character, onForged }: UseSoulforgeForgeOpti
               {remaining} / {budget} pts
             </span>
           </div>
-          <div className="space-y-1">
+          <div className="gap-row">
             {STAT_KEYS.filter(key => key !== 'potion_slots' || activeSlot === 'belt').map(key => {
               const val = stats[key] || 0;
               const cap = getItemStatCap(key, activeLevel);
