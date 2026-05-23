@@ -343,7 +343,7 @@ export default function CharacterPanel({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="h-full flex flex-col p-3 space-y-3 overflow-y-auto">
+      <div className="h-full flex flex-col p-3 gap-section overflow-y-auto">
         {/* Name & Identity */}
         <div className="text-center gap-row">
           <h2 className="t-display-lg text-lg">{character.name}</h2>
@@ -356,7 +356,7 @@ export default function CharacterPanel({
         </div>
 
         {/* Tabs: Equipment & Attributes */}
-        <Tabs defaultValue="equipment" className="space-y-1.5">
+        <Tabs defaultValue="equipment" className="gap-row">
           <TabsList className="h-7 w-full bg-surface-3/60 p-0.5">
             <TabsTrigger value="equipment" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">Equipment</TabsTrigger>
             <TabsTrigger value="inventory" className="t-label text-[10px] tracking-wide h-6 flex-1 data-[state=active]:text-primary">
@@ -433,7 +433,7 @@ export default function CharacterPanel({
                   <h3 className="t-label mb-1.5">
                     Belt Potions <span className="t-numeric text-xs ml-1">{beltedPotions.length}/{beltCapacity}</span>
                   </h3>
-                  <div className="space-y-1">
+                  <div className="gap-row">
                     {Array.from({ length: beltCapacity }, (_, i) => {
                       const slot = i + 1;
                       const potion = beltedPotions.find(p => p.belt_slot === slot);
@@ -482,7 +482,7 @@ export default function CharacterPanel({
               )}
 
               {/* Materials (salvage + gems + future) */}
-              <div className="mt-2 space-y-2 rounded surface-row p-2">
+              <div className="mt-2 gap-group rounded surface-row p-2">
                 <div className="t-label flex items-center gap-1">
                   🧰 Material Pouch
                 </div>
@@ -507,7 +507,7 @@ export default function CharacterPanel({
                     <h3 className="t-label mb-1.5">
                       Consumables <span className="t-numeric text-xs ml-1">{consumableAndQuestItems.length}</span>
                     </h3>
-                    <div className="space-y-1">
+                    <div className="gap-row">
                       {grouped.map(({ representative: inv, all }) => {
                         const isBroken = inv.current_durability <= 0;
                         return (
@@ -595,7 +595,7 @@ export default function CharacterPanel({
                     <span className="capitalize">{inventorySort === 'default' ? '' : inventorySort}</span>
                   </button>
                 </div>
-                <div className="space-y-1">
+                <div className="gap-row">
                   {(() => {
                     const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
                     const inventoryItems = bagItems.filter(i => i.item.item_type !== 'consumable' && i.item.item_type !== 'quest');
@@ -750,10 +750,10 @@ export default function CharacterPanel({
             </TabsContent>
 
             <TabsContent value="attributes" className="mt-0">
-              <div className="space-y-2.5">
+              <div className="gap-group.5">
                 {/* Base stats — single column: STR, DEX, CON, INT, WIS, CHA */}
                 {(character.unspent_stat_points > 0 || (character.respec_points || 0) > 0) && (
-                  <div className="text-[10px] font-display text-center py-1 px-2 bg-primary/10 rounded border border-primary/20 space-y-0.5">
+                  <div className="text-[10px] font-display text-center py-1 px-2 bg-primary/10 rounded border border-primary/20 gap-row">
                     <div className="flex justify-center gap-3 items-center">
                       {character.unspent_stat_points > 0 && (
                         <span className="text-primary">{character.unspent_stat_points} stat point{character.unspent_stat_points > 1 ? 's' : ''}</span>
@@ -820,7 +820,7 @@ export default function CharacterPanel({
 
                 {/* Renown Balance + Lifetime */}
                 {(character.bhp > 0 || (character.rp_total_earned || 0) > 0 || character.level >= 30) && (
-                  <div className="space-y-0.5">
+                  <div className="gap-row">
                     <div className="flex items-center justify-between text-xs px-1 py-0.5 bg-elvish/10 rounded border border-elvish/20">
                       <span className="font-display text-elvish">🏛️ Available Renown</span>
                       <span className="font-display text-elvish tabular-nums">{character.bhp || 0}</span>

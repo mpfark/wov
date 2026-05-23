@@ -78,7 +78,7 @@ function StatAllocator({ stats, setStats, budget, cost, slot, level }: {
           {remaining} / {budget} pts remaining
         </span>
       </div>
-      <div className="space-y-1">
+      <div className="gap-row">
         {STAT_KEYS.filter(key => key !== 'potion_slots' || slot === 'belt').map(key => {
           const val = stats[key] || 0;
           const cap = getItemStatCap(key, level);
@@ -215,21 +215,21 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
         </DialogHeader>
 
         {isNotWorthy ? (
-          <div className="p-4 text-center space-y-2">
+          <div className="p-4 text-center gap-group">
             <p className="text-sm text-foreground/80 italic">
               "You are not yet worthy, wayfarer. Return when you have proven your reign."
             </p>
             <p className="text-xs text-muted-foreground">(Reach level 40 to forge your Crown.)</p>
           </div>
         ) : allDone ? (
-          <div className="p-4 text-center space-y-2">
+          <div className="p-4 text-center gap-group">
             <p className="text-sm text-foreground/80 italic">
               "You have forged all that fate allows. Your legacy is complete."
             </p>
           </div>
         ) : !mode ? (
           /* Mode selection */
-          <div className="space-y-3 p-2">
+          <div className="gap-section p-2">
             <p className="text-xs text-muted-foreground text-center">
               "What shall I forge for you today, {character.gender === 'female' ? 'your Majesty' : 'your Majesty'}?"
             </p>
@@ -256,7 +256,7 @@ export default function SoulforgeDialog({ open, onClose, character, onForged }: 
           </div>
         ) : (
           /* Forge UI */
-          <div className="space-y-4">
+          <div className="gap-section">
             <div className="flex items-center justify-between">
               <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={reset}>← Back</Button>
               <span className="text-xs font-display text-muted-foreground">

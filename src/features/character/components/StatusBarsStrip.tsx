@@ -267,7 +267,7 @@ export default function StatusBarsStrip({
 
 
   return (
-    <div className="space-y-1">
+    <div className="gap-row">
       {/* HP + CP + Stamina in a compact row */}
       <div className="grid grid-cols-3 gap-2">
         {/* HP */}

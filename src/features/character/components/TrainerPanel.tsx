@@ -192,7 +192,7 @@ export default function TrainerPanel({
   const respecAvailable = (character.respec_points || 0) > 0;
 
   const respecContent = (
-    <div className="space-y-3">
+    <div className="gap-section">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Available Respec Points</span>
         <span className="font-display text-chart-5 text-lg">{character.respec_points || 0}</span>
@@ -210,7 +210,7 @@ export default function TrainerPanel({
             Class level bonuses and Renown training are preserved.
           </p>
 
-          <div className="space-y-1">
+          <div className="gap-row">
             <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-[10px] text-muted-foreground font-display px-1">
               <span>Attribute</span>
               <span className="text-right">Current</span>
@@ -250,7 +250,7 @@ export default function TrainerPanel({
   // ── Renown tab ──
   const totalTrained = Object.values(trained).reduce((sum, v) => sum + v, 0);
   const renownContent = (
-    <div className="space-y-3">
+    <div className="gap-section">
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Available Renown</span>
         <span className="font-display text-primary text-lg">{character.bhp} RP</span>
@@ -264,7 +264,7 @@ export default function TrainerPanel({
         </ServicePanelEmpty>
       ) : (
         <TooltipProvider delayDuration={200}>
-          <div className="space-y-1.5">
+          <div className="gap-row">
             <div className="grid grid-cols-[1fr_50px_60px_60px_auto] gap-1 text-[10px] text-muted-foreground font-display px-1">
               <span>Attribute</span>
               <span className="text-center">Rank</span>
@@ -354,7 +354,7 @@ export default function TrainerPanel({
   };
 
   const leaderboardContent = (
-    <div className="space-y-2">
+    <div className="gap-group">
       <div className="grid grid-cols-[36px_1fr_auto] gap-2 px-1 text-[10px] font-display text-muted-foreground">
         <span className="text-center">Rank</span>
         <span>Wayfarer</span>
@@ -374,13 +374,13 @@ export default function TrainerPanel({
       )}
 
       {!loadingBoard && leaders && leaders.length > 0 && (
-        <div className="space-y-1">
+        <div className="gap-row">
           {leaders.map((row, idx) => renderLeaderRow(row, idx + 1))}
         </div>
       )}
 
       {!loadingBoard && myRank !== null && (
-        <div className="pt-2 mt-2 border-t border-border-subtle space-y-1">
+        <div className="pt-2 mt-2 border-t border-border-subtle gap-row">
           <p className="text-[10px] text-muted-foreground text-center font-display">— Your Rank —</p>
           {renderLeaderRow(
             {

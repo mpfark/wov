@@ -27,7 +27,7 @@ export default function ChatPanel({
           <MessageCircle className="w-3 h-3" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-2 space-y-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 gap-row">
         {messages.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">No messages yet. Press Enter to chat.</p>
         ) : (

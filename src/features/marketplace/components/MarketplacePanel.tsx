@@ -156,7 +156,7 @@ export default function MarketplacePanel({
   // ── BROWSE slot content ──────────────────────────────────────
 
   const browseLeft = (
-    <div className="space-y-2">
+    <div className="gap-group">
       <div className="relative">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
         <Input
@@ -171,7 +171,7 @@ export default function MarketplacePanel({
       ) : filteredListings.length === 0 ? (
         <ServicePanelEmpty>No active listings.</ServicePanelEmpty>
       ) : (
-        <div className="space-y-1">
+        <div className="gap-row">
           {filteredListings.map(l => {
             const isMine = l.seller_character_id === characterId;
             const colorClass = RARITY_COLORS[l.item_snapshot?.rarity] || 'text-foreground';
@@ -204,14 +204,14 @@ export default function MarketplacePanel({
   );
 
   const browseRight = selected ? (
-    <div className="space-y-2">
+    <div className="gap-group">
       <h4 className={`font-display text-base ${RARITY_COLORS[selected.item_snapshot?.rarity] || 'text-foreground'}`}>
         {selected.item_snapshot?.name}
       </h4>
       <p className="text-[10px] text-muted-foreground capitalize">
         Level {selected.item_snapshot?.level} · {selected.item_snapshot?.slot ?? selected.item_snapshot?.item_type}
       </p>
-      <div className="text-xs text-muted-foreground space-y-1 border-t border-border-subtle pt-2">
+      <div className="text-xs text-muted-foreground gap-row border-t border-border-subtle pt-2">
         <div>Stats: <span className="text-foreground">{statSummary(selected.item_snapshot?.stats)}</span></div>
         <div>
           Durability:{' '}
@@ -252,7 +252,7 @@ export default function MarketplacePanel({
   // ── MINE slot content ────────────────────────────────────────
 
   const mineLeft = (
-    <div className="space-y-2">
+    <div className="gap-group">
       <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2 text-[10px] text-destructive">
         <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
         <span>Listings are final and cannot be cancelled. Unsold items after 12 hours return to the world.</span>
@@ -260,7 +260,7 @@ export default function MarketplacePanel({
       {myListings.length === 0 ? (
         <ServicePanelEmpty>You have no active listings.</ServicePanelEmpty>
       ) : (
-        <div className="space-y-1">
+        <div className="gap-row">
           {myListings.map(l => {
             const colorClass = RARITY_COLORS[l.item_snapshot?.rarity] || 'text-foreground';
             const dPct = l.item_snapshot?.max_durability
@@ -288,7 +288,7 @@ export default function MarketplacePanel({
   const mineRight = uncollectedSales.length === 0 ? (
     <ServicePanelEmpty>No earnings awaiting collection.</ServicePanelEmpty>
   ) : (
-    <div className="space-y-2">
+    <div className="gap-group">
       <div className="flex items-center gap-2">
         <HandCoins className="h-4 w-4 text-primary" />
         <span className="font-display text-xs text-primary">Earnings awaiting collection</span>
@@ -301,7 +301,7 @@ export default function MarketplacePanel({
           You must be standing at a marketplace to collect.
         </p>
       )}
-      <div className="space-y-1">
+      <div className="gap-row">
         {uncollectedSales.map(s => {
           const colorClass = RARITY_COLORS[s.item_snapshot?.rarity] || 'text-foreground';
           const soldAgo = s.sold_at ? formatTimeAgo(s.sold_at) : '—';
@@ -344,7 +344,7 @@ export default function MarketplacePanel({
   const createLeft = eligibleInventory.length === 0 ? (
     <ServicePanelEmpty>No eligible items. Only unequipped, non-soulbound unique items can be listed.</ServicePanelEmpty>
   ) : (
-    <div className="space-y-1">
+    <div className="gap-row">
       {eligibleInventory.map(inv => {
         const dPct = inv.item.max_durability
           ? Math.round((inv.current_durability / inv.item.max_durability) * 100)
@@ -370,14 +370,14 @@ export default function MarketplacePanel({
   );
 
   const createRight = (
-    <div className="space-y-3">
+    <div className="gap-section">
       <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-2 text-[10px] text-destructive">
         <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
         <span>
           <strong>Listings are final.</strong> Items cannot be recovered or cancelled. Unsold items after 12 hours return to the world drop pool.
         </span>
       </div>
-      <div className="space-y-1.5">
+      <div className="gap-row">
         <label className="text-[10px] text-muted-foreground font-display">Asking price (gold)</label>
         <Input
           type="number"
@@ -386,7 +386,7 @@ export default function MarketplacePanel({
           onChange={(e) => setPrice(Math.max(0, Number(e.target.value) || 0))}
           className="h-8 text-xs"
         />
-        <div className="text-[10px] text-muted-foreground bg-muted/20 rounded p-2 space-y-0.5">
+        <div className="text-[10px] text-muted-foreground bg-muted/20 rounded p-2 gap-row">
           <div>Price: <span className="font-mono text-foreground">{price.toLocaleString()}</span></div>
           <div>Tax (10%): <span className="font-mono text-destructive">−{taxAmount.toLocaleString()}</span></div>
           <div>You receive: <span className="font-mono text-elvish">{sellerPayout.toLocaleString()}</span></div>
