@@ -536,10 +536,10 @@ export default function NodeView({
                         {levelLocked
                           ? `Unlocks at level ${ability.levelRequired}`
                           : stanceActive
-                            ? `${ability.description} · Active stance — click to drop (CP not refunded).`
+                            ? `${ability.tooltip} · Active — click to drop (CP not refunded).`
                             : isPending
-                              ? `${ability.description} · Queued — casting on next tick.`
-                              : `${ability.description} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
+                              ? `${ability.tooltip} · Queued — casts on next tick.`
+                              : `${ability.tooltip} · ${ability.cpCost} CP${disableNoTarget ? ' — select a target in party panel' : ''}`
                         }
                       </TooltipContent>
                     </Tooltip>
