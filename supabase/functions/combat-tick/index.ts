@@ -1320,22 +1320,21 @@ Deno.serve(async (req) => {
 
       // ── Ignite "shield of fireballs" pulse phase ────────────────
       // While Ignite is active, an orb of flame circles the wizard and
-      // pulses every heartbeat at the current target with a 40% chance to
-      // strike. Decoupled from autoattacks so it works for caster wizards
-      // who never swing a weapon. Each successful pulse deals a small
-      // INT-scaled hit AND applies/refreshes a burn stack (max 5).
+      // pulses every heartbeat at the current target. Proc chance scales with
+      // INT (no more flat 40%), pulse damage scales with INT, and the applied
+      // burn DoT scales with WIS — every Wizard primary contributes.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
         if (!mb.ignite_buff) continue;
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;
-        if (Math.random() >= 0.4) continue;
 
         const c = m.c;
         const eb = eq[m.id] || {};
         const intMod = sm((c.int || 10) + (eb.int || 0));
         const wisMod = sm((c.wis || 10) + (eb.wis || 0));
+        if (Math.random() >= getIgniteOrbChance(intMod)) continue;
         // Direct pulse damage = INT (the spark / blast).
         let pulseDmg = Math.max(1, 2 + intMod);
         if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
