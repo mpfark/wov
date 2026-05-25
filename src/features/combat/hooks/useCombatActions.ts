@@ -380,7 +380,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         ? getStatModifier(p.character.int + (p.equipmentBonuses.int || 0))
         : getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const durationMs = Math.min(15000, 8000 + Math.max(0, scaleMod) * 1000);
-      const reduction = 0.3;
+      const reduction = getRootReduction(scaleMod);
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'battle_cry') {
