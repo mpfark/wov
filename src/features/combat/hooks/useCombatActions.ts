@@ -364,10 +364,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
       p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`);
     } else if (ability.type === 'damage_buff') {
-      const intMod = getStatModifier(p.character.int);
-      const durationMs = Math.min(25, 15 + intMod) * 1000;
-      p.buffSetters.setDamageBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Arcane Surge! All your damage is amplified (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%) for ${Math.round(durationMs / 1000)}s.`);
+      // Stance — unreachable here; the stance toggle block at the top of
+      // handleUseAbility intercepts this ability type. Left as a no-op safety net.
+      return;
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'root_debuff') {
