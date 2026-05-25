@@ -4,7 +4,7 @@ import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
 import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
 import { SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount, getShieldWallChanceBonus, getShieldWallAmountBonus } from '@/features/combat';
-import { getWeaponDieForItem, ARCANE_SURGE_DAMAGE_MULT, ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
+import { getWeaponDieForItem } from '@/shared/formulas/combat';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { getClassCritRange } from '@/shared/formulas/classes';
 import { Button } from '@/components/ui/button';
@@ -220,7 +220,7 @@ export function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poison
     buffs.push({
       emoji: '✨',
       label: 'Arcane Surge',
-      detail: `${ARCANE_SURGE_DAMAGE_MULT}× dmg (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%)`,
+      detail: `dmg ↑ (scales with INT)`,
       color: 'text-elvish',
       bgColor: 'bg-elvish/15',
       pct,
@@ -924,7 +924,7 @@ export default function CharacterPanel({
 
                   // Damage multiplier text
                   const dmgMultParts: string[] = [];
-                  if (dmgBuffActive) dmgMultParts.push(`${ARCANE_SURGE_DAMAGE_MULT}× Arcane Surge (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%)`);
+                  if (dmgBuffActive) dmgMultParts.push(`Arcane Surge (scales with INT)`);
 
                   type DerivedRow = { label: string; value: string; tip: string; buffed?: boolean; buffColor?: string };
 

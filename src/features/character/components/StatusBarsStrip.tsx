@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
-import { ARCANE_SURGE_DAMAGE_MULT, ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
+
 import { getCpDisplay } from '@/features/combat/utils/cp-display';
 import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 
@@ -100,7 +100,7 @@ function ActiveBuffs({ isAtInn, foodBuff, critBuff, battleCryBuff, poisonBuff, d
   if (dmgBuffActive) {
     const dur = BUFF_DURATIONS['Arcane Surge'] || 25_000;
     const pct = Math.max(0, Math.min(100, ((damageBuff!.expiresAt - now) / dur) * 100));
-    buffs.push({ emoji: '✨', label: 'Arcane Surge', detail: `${ARCANE_SURGE_DAMAGE_MULT}× dmg (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%)`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
+    buffs.push({ emoji: '✨', label: 'Arcane Surge', detail: `dmg ↑ (scales with INT)`, color: 'text-elvish', bgColor: 'bg-elvish/15', pct });
   }
 
   if (evasionActive) {

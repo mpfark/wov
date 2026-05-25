@@ -43,9 +43,17 @@ import {
   getShieldBlockAmount,
   getShieldWallChanceBonus,
   getShieldWallAmountBonus,
-  ARCANE_SURGE_DAMAGE_MULT,
   type HitQuality,
 } from "../_shared/formulas/combat.ts";
+import {
+  getArcaneSurgeMult,
+  getConflagratePerStack,
+  getEnvenomProc,
+  getEnvenomMaxStacks,
+  getIgniteOrbChance,
+  getBarragePerArrowRatio,
+  getBattleCryDR,
+} from "../_shared/formulas/abilities.ts";
 import {
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
@@ -464,8 +472,14 @@ Deno.serve(async (req) => {
         }
         if (reserved.arcane_surge) mb.damage_buff = true;
         if (reserved.battle_cry) {
-          // Match useCombatActions: 15% reduction (20% with shield), small crit reduction
-          mb.battle_cry_dr = { reduction: 0.15, crit_reduction: 0.10 };
+          // Dual-primary (Warrior STR+DEX): magnitude scales with STR (and +5%
+          // shield bonus), duration is implicit via the stance. Crit reduction
+          // shares the curve. Hardcoded values have been retired.
+          const cStr = (m.c.str || 10) + ((eq[m.id] as any)?.str || 0);
+          const strMod = Math.max(0, Math.floor((cStr - 10) / 2));
+          const hasShield = isShield(offHandTag[m.id]);
+          const { dr, critReduction } = getBattleCryDR(strMod, hasShield);
+          mb.battle_cry_dr = { reduction: dr, crit_reduction: critReduction };
         }
         if (reserved.holy_shield) {
           // Dual-primary (Templar WIS+CON): magnitude = WIS, CON adds to retaliation damage.
@@ -622,7 +636,9 @@ Deno.serve(async (req) => {
         const dexMod = sm(effDex);
         const wisMod = sm(effWis);
         const arrowCount = Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0));
-        const perArrowBase = Math.max(2 + dexMod + Math.floor((c.level || 1) / 4), 1);
+        // Per-arrow ratio scales with DEX (no more flat 70% of base); arrow count already scales with WIS.
+        const perArrowRatio = getBarragePerArrowRatio(dexMod);
+        const perArrowBase = Math.max(Math.floor((2 + dexMod + Math.floor((c.level || 1) / 4)) * perArrowRatio), 1);
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
@@ -642,7 +658,7 @@ Deno.serve(async (req) => {
             const isCrit = roll >= critRange;
             let arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
             if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
-            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * ARCANE_SURGE_DAMAGE_MULT);
+            if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
             totalDmg += arrowDmg;
@@ -705,17 +721,18 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
       } else if (pa.ability_type === 'ignite_consume') {
-        // Conflagrate (Wizard / INT detonator): base = 4 + 2*intMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Multiplier from burn stacks (0–5).
-        // INT-scaling preserved so wizards aren't punished for not equipping a melee weapon.
+        // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
+        // Guaranteed hit, no crit roll. Per-stack bonus scales with INT (no more flat 50%).
+        // Burn stack count itself scales with WIS via the Ignite pulse engine.
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
         const baseDmg = 4 + 2 * intMod + Math.floor((c.level || 1) / 3);
-        const multiplier = 1 + 0.5 * stacks;
+        const perStackBonus = getConflagratePerStack(intMod);
+        const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
-        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * ARCANE_SURGE_DAMAGE_MULT), 1);
+        if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name} for ${finalDmg} damage!`, character_id: member.id });
@@ -757,7 +774,7 @@ Deno.serve(async (req) => {
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
-        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT), 1);
+        if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         let { emoji, verb } = T0_LABEL[pa.ability_type];
         // Templars share the 'smite' handler with healers but flavor it as Judgment.
@@ -788,7 +805,7 @@ Deno.serve(async (req) => {
         const isFinaleCrit = critRoll >= critThreshold;
         if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
-        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * ARCANE_SURGE_DAMAGE_MULT), 1);
+        if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage! (crit d20=${critRoll} vs ${critThreshold}+)`, character_id: member.id });
@@ -802,7 +819,7 @@ Deno.serve(async (req) => {
         let dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
-        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * ARCANE_SURGE_DAMAGE_MULT), 1);
+        if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         const durationMs = Math.min(30000, 20000 + strMod * 1000);
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
@@ -1107,7 +1124,7 @@ Deno.serve(async (req) => {
           // NOTE: Two-handed weapons benefit from a larger weapon die (step 1) only;
           // there is no separate 2H damage multiplier in the autoattack pipeline.
           // Arcane Surge (damage_buff): final damage is multiplied by
-          // ARCANE_SURGE_DAMAGE_MULT further down. No flat INT bonus on the
+          // getArcaneSurgeMult further down. No flat INT bonus on the
           // raw weapon roll — STR remains the sole damage stat for autoattacks.
           let raw = rollDmg(1, weaponDie) + sMod;
           if (!isCrit) raw = Math.max(raw, 1 + sdf); // STR damage floor (non-crit)
@@ -1120,7 +1137,7 @@ Deno.serve(async (req) => {
             consumedBuffs[m.id].push('stealth');
             events.push({ type: 'buff_consumed', message: `🌑 ${c.name}'s stealth ambush deals ×${stealthMult.toFixed(2)} damage!`, character_id: m.id });
           }
-          if (isDmgBuff) dmg = Math.floor(dmg * ARCANE_SURGE_DAMAGE_MULT);
+          if (isDmgBuff) dmg = Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
           if (hasDisengage) {
             dmg = Math.floor(dmg * (1 + mb.disengage_next_hit.bonus_mult));
             if (!consumedBuffs[m.id]) consumedBuffs[m.id] = [];
@@ -1147,15 +1164,20 @@ Deno.serve(async (req) => {
             hit_quality: quality,
           });
 
-          if (mb.poison_buff && Math.random() < 0.4) {
+          // Envenom (Rogue / dual-primary DEX+CHA): proc chance scales with DEX,
+          // max stack ceiling scales with CHA. Per-tick damage already scales with DEX.
+          const dexMod = sm((c.dex || 10) + (eb.dex || 0));
+          const chaMod = sm((c.cha || 10) + (eb.cha || 0));
+          const envenomProc = getEnvenomProc(dexMod);
+          const envenomMaxStacks = getEnvenomMaxStacks(chaMod);
+          if (mb.poison_buff && Math.random() < envenomProc) {
             // Server-side DoT creation: upsert poison into active_effects.
             // IMPORTANT: when refreshing an existing stack, preserve `next_tick_at`
             // so the tick cadence isn't reset every proc — otherwise repeated
             // procs in consecutive heartbeats would push the next tick forward
             // forever and the DoT would never deal damage.
             const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
-            const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-            const dexMod = sm((c.dex || 10) + (eb.dex || 0));
+            const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
             const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
@@ -1248,7 +1270,7 @@ Deno.serve(async (req) => {
           let dmg2 = Math.max(Math.floor(raw2 * HIT_QUALITY_MULT[quality2]), 1);
           if (isCrit2) dmg2 = Math.max(dmg2 * 2, 1);
           dmg2 = Math.max(Math.floor(dmg2 * OFFHAND_DAMAGE_MULT), 1);
-          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * ARCANE_SURGE_DAMAGE_MULT), 1);
+          if (isDmgBuff2) dmg2 = Math.max(Math.floor(dmg2 * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
 
           // Clamp minimum 1
           dmg2 = Math.max(dmg2, 1);
@@ -1298,25 +1320,24 @@ Deno.serve(async (req) => {
 
       // ── Ignite "shield of fireballs" pulse phase ────────────────
       // While Ignite is active, an orb of flame circles the wizard and
-      // pulses every heartbeat at the current target with a 40% chance to
-      // strike. Decoupled from autoattacks so it works for caster wizards
-      // who never swing a weapon. Each successful pulse deals a small
-      // INT-scaled hit AND applies/refreshes a burn stack (max 5).
+      // pulses every heartbeat at the current target. Proc chance scales with
+      // INT (no more flat 40%), pulse damage scales with INT, and the applied
+      // burn DoT scales with WIS — every Wizard primary contributes.
       for (const m of members) {
         if (mHp[m.id] <= 0) continue;
         const mb = buffs[m.id] || {};
         if (!mb.ignite_buff) continue;
         const target = creatures.find(cr => cHp[cr.id] > 0 && !cKilled.has(cr.id));
         if (!target) continue;
-        if (Math.random() >= 0.4) continue;
 
         const c = m.c;
         const eb = eq[m.id] || {};
         const intMod = sm((c.int || 10) + (eb.int || 0));
         const wisMod = sm((c.wis || 10) + (eb.wis || 0));
+        if (Math.random() >= getIgniteOrbChance(intMod)) continue;
         // Direct pulse damage = INT (the spark / blast).
         let pulseDmg = Math.max(1, 2 + intMod);
-        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * ARCANE_SURGE_DAMAGE_MULT), 1);
+        if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
 
         cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
 

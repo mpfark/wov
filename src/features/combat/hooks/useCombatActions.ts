@@ -18,7 +18,13 @@ import { supabase } from '@/integrations/supabase/client';
 import type { DotDebuff } from '@/features/combat';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 import { getAvailableCp } from '@/features/combat/utils/cp-display';
-import { ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
+import {
+  getRootReduction,
+  getBattleCryDR,
+  getCloakDodge,
+  getDisengageMult,
+  getDivineChallengeReduction,
+} from '@/shared/formulas/abilities';
 import {
   getStanceForAbility,
   isStanceActive,
@@ -358,10 +364,9 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setStealthBuff({ expiresAt: Date.now() + durationMs, mult: ambushMult });
       p.addLog(`${ability.emoji} Shadowstep! You vanish into the shadows for ${Math.round(durationMs / 1000)}s (ambush ×${ambushMult.toFixed(2)}).`);
     } else if (ability.type === 'damage_buff') {
-      const intMod = getStatModifier(p.character.int);
-      const durationMs = Math.min(25, 15 + intMod) * 1000;
-      p.buffSetters.setDamageBuff({ expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Arcane Surge! All your damage is amplified (+${ARCANE_SURGE_DAMAGE_BONUS_PCT}%) for ${Math.round(durationMs / 1000)}s.`);
+      // Stance — unreachable here; the stance toggle block at the top of
+      // handleUseAbility intercepts this ability type. Left as a no-op safety net.
+      return;
     } else if (ability.type === 'multi_attack') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'root_debuff') {
@@ -375,19 +380,15 @@ export function useCombatActions(params: UseCombatActionsParams) {
         ? getStatModifier(p.character.int + (p.equipmentBonuses.int || 0))
         : getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const durationMs = Math.min(15000, 8000 + Math.max(0, scaleMod) * 1000);
-      const reduction = 0.3;
+      const reduction = getRootReduction(scaleMod);
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'battle_cry') {
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const hasShield = p.equipped.some((e: any) => e.item?.weapon_tag === 'shield');
-      const baseDR = 0.15;
-      const shieldBonus = hasShield ? 0.05 : 0;
-      const totalDR = baseDR + shieldBonus;
-      const critReduction = 0.15;
-      const durationMs = Math.min(25000, 15000 + dexMod * 1000);
-      p.buffSetters.setBattleCryBuff({ damageReduction: totalDR, critReduction, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Battle Cry! ${Math.round(totalDR * 100)}% damage reduction${hasShield ? ' (shield bonus!)' : ''} for ${Math.round(durationMs / 1000)}s.`);
+      // Stance — unreachable; intercepted by stance toggle block above.
+      // Magnitude formula lives in getBattleCryDR (STR magnitude / DEX duration,
+      // shield grants +5% bonus DR) and is applied server-side via buff flags.
+      void getBattleCryDR; // keep import referenced
+      return;
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
@@ -425,16 +426,25 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
+      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
+      // Dual-primary (Rogue DEX+CHA): dodge magnitude = CHA (showmanship),
+      // duration = DEX (footwork).
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
-      p.buffSetters.setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
-      p.addLog(`${ability.emoji} Cloak of Shadows! 50% dodge chance for ${Math.round(durationMs / 1000)}s.`);
+      const dodgeChance = getCloakDodge(chaMod);
+      p.buffSetters.setEvasionBuff({ dodgeChance, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
+      p.addLog(`${ability.emoji} Cloak of Shadows! ${Math.round(dodgeChance * 100)}% dodge chance for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'disengage_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
+      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      // Dual-primary (Ranger DEX+WIS): dodge duration = DEX, next-hit
+      // bonus magnitude = WIS (calm aim after the leap).
       const dodgeDurationMs = Math.min(8000, 5000 + dexMod * 500);
       const nextHitDurationMs = 15000;
+      const bonusMult = getDisengageMult(wisMod);
       p.buffSetters.setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs, source: 'disengage' as const });
-      p.buffSetters.setDisengageNextHit({ bonusMult: 1.5, expiresAt: Date.now() + nextHitDurationMs });
-      p.addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals 50% bonus damage!`);
+      p.buffSetters.setDisengageNextHit({ bonusMult, expiresAt: Date.now() + nextHitDurationMs });
+      const bonusPct = Math.round((bonusMult - 1) * 100);
+      p.addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals +${bonusPct}% bonus damage!`);
     } else if (ability.type === 'ignite_buff') {
       if (p.buffState.igniteBuff && p.buffState.igniteBuff.expiresAt > Date.now()) {
         p.addLog(`⚠️ ${ability.emoji} Ignite is already active.`);
@@ -515,11 +525,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
       p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${ticks} ticks (${Math.round(durationMs / 1000)}s) — allies healed, enemies burned.`);
     } else if (ability.type === 'mitigation_buff') {
-      // Templar — Divine Challenge: dual-primary — DR fixed, duration scales with CON.
+      // Templar — Divine Challenge: dual-primary (WIS magnitude / CON duration).
+      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const durationMs = Math.min(45_000, 30_000 + Math.max(0, conMod) * 1_000);
-      p.buffSetters.setDivineChallengeBuff({ reduction: 0.30, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Divine Challenge! You take 30% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
+      const reduction = getDivineChallengeReduction(wisMod);
+      p.buffSetters.setDivineChallengeBuff({ reduction, expiresAt: Date.now() + durationMs });
+      p.addLog(`${ability.emoji} Divine Challenge! You take ${Math.round(reduction * 100)}% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // smite / cutting_words) are resolved entirely server-side by combat-tick
