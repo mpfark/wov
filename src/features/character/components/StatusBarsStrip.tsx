@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Character } from '@/features/character';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
-import { ARCANE_SURGE_DAMAGE_MULT, ARCANE_SURGE_DAMAGE_BONUS_PCT } from '@/shared/formulas/combat';
+
 import { getCpDisplay } from '@/features/combat/utils/cp-display';
 import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 
