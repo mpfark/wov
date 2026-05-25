@@ -426,16 +426,25 @@ export function useCombatActions(params: UseCombatActionsParams) {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'evasion_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
+      const chaMod = getStatModifier(p.character.cha + (p.equipmentBonuses.cha || 0));
+      // Dual-primary (Rogue DEX+CHA): dodge magnitude = CHA (showmanship),
+      // duration = DEX (footwork).
       const durationMs = Math.min(15000, 10000 + dexMod * 500);
-      p.buffSetters.setEvasionBuff({ dodgeChance: 0.5, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
-      p.addLog(`${ability.emoji} Cloak of Shadows! 50% dodge chance for ${Math.round(durationMs / 1000)}s.`);
+      const dodgeChance = getCloakDodge(chaMod);
+      p.buffSetters.setEvasionBuff({ dodgeChance, expiresAt: Date.now() + durationMs, source: 'cloak' as const });
+      p.addLog(`${ability.emoji} Cloak of Shadows! ${Math.round(dodgeChance * 100)}% dodge chance for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'disengage_buff') {
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
+      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
+      // Dual-primary (Ranger DEX+WIS): dodge duration = DEX, next-hit
+      // bonus magnitude = WIS (calm aim after the leap).
       const dodgeDurationMs = Math.min(8000, 5000 + dexMod * 500);
       const nextHitDurationMs = 15000;
+      const bonusMult = getDisengageMult(wisMod);
       p.buffSetters.setEvasionBuff({ dodgeChance: 1.0, expiresAt: Date.now() + dodgeDurationMs, source: 'disengage' as const });
-      p.buffSetters.setDisengageNextHit({ bonusMult: 1.5, expiresAt: Date.now() + nextHitDurationMs });
-      p.addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals 50% bonus damage!`);
+      p.buffSetters.setDisengageNextHit({ bonusMult, expiresAt: Date.now() + nextHitDurationMs });
+      const bonusPct = Math.round((bonusMult - 1) * 100);
+      p.addLog(`${ability.emoji} Disengage! You leap back — dodging all attacks for ${Math.round(dodgeDurationMs / 1000)}s. Your next strike deals +${bonusPct}% bonus damage!`);
     } else if (ability.type === 'ignite_buff') {
       if (p.buffState.igniteBuff && p.buffState.igniteBuff.expiresAt > Date.now()) {
         p.addLog(`⚠️ ${ability.emoji} Ignite is already active.`);
