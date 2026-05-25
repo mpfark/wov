@@ -464,8 +464,14 @@ Deno.serve(async (req) => {
         }
         if (reserved.arcane_surge) mb.damage_buff = true;
         if (reserved.battle_cry) {
-          // Match useCombatActions: 15% reduction (20% with shield), small crit reduction
-          mb.battle_cry_dr = { reduction: 0.15, crit_reduction: 0.10 };
+          // Dual-primary (Warrior STR+DEX): magnitude scales with STR (and +5%
+          // shield bonus), duration is implicit via the stance. Crit reduction
+          // shares the curve. Hardcoded values have been retired.
+          const cStr = (m.c.str || 10) + ((eq[m.id] as any)?.str || 0);
+          const strMod = Math.max(0, Math.floor((cStr - 10) / 2));
+          const hasShield = isShield(offHandTag[m.id]);
+          const { dr, critReduction } = getBattleCryDR(strMod, hasShield);
+          mb.battle_cry_dr = { reduction: dr, crit_reduction: critReduction };
         }
         if (reserved.holy_shield) {
           // Dual-primary (Templar WIS+CON): magnitude = WIS, CON adds to retaliation damage.
