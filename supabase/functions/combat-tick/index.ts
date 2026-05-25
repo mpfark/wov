@@ -636,7 +636,9 @@ Deno.serve(async (req) => {
         const dexMod = sm(effDex);
         const wisMod = sm(effWis);
         const arrowCount = Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0));
-        const perArrowBase = Math.max(2 + dexMod + Math.floor((c.level || 1) / 4), 1);
+        // Per-arrow ratio scales with DEX (no more flat 70% of base); arrow count already scales with WIS.
+        const perArrowRatio = getBarragePerArrowRatio(dexMod);
+        const perArrowBase = Math.max(Math.floor((2 + dexMod + Math.floor((c.level || 1) / 4)) * perArrowRatio), 1);
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
