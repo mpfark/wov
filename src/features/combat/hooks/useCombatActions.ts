@@ -525,11 +525,13 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setConsecrateBuff({ wisMod, expiresAt: Date.now() + durationMs, durationMs });
       p.addLog(`${ability.emoji} Consecrate! Holy ground sanctified for ${ticks} ticks (${Math.round(durationMs / 1000)}s) — allies healed, enemies burned.`);
     } else if (ability.type === 'mitigation_buff') {
-      // Templar — Divine Challenge: dual-primary — DR fixed, duration scales with CON.
+      // Templar — Divine Challenge: dual-primary (WIS magnitude / CON duration).
+      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const conMod = getStatModifier(p.character.con + (p.equipmentBonuses.con || 0));
       const durationMs = Math.min(45_000, 30_000 + Math.max(0, conMod) * 1_000);
-      p.buffSetters.setDivineChallengeBuff({ reduction: 0.30, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Divine Challenge! You take 30% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
+      const reduction = getDivineChallengeReduction(wisMod);
+      p.buffSetters.setDivineChallengeBuff({ reduction, expiresAt: Date.now() + durationMs });
+      p.addLog(`${ability.emoji} Divine Challenge! You take ${Math.round(reduction * 100)}% less damage from all sources for ${Math.round(durationMs / 1000)}s.`);
     }
     // T0 damage abilities (fireball / power_strike / aimed_shot / backstab /
     // smite / cutting_words) are resolved entirely server-side by combat-tick
