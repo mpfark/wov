@@ -43,9 +43,17 @@ import {
   getShieldBlockAmount,
   getShieldWallChanceBonus,
   getShieldWallAmountBonus,
-  ARCANE_SURGE_DAMAGE_MULT,
   type HitQuality,
 } from "../_shared/formulas/combat.ts";
+import {
+  getArcaneSurgeMult,
+  getConflagratePerStack,
+  getEnvenomProc,
+  getEnvenomMaxStacks,
+  getIgniteOrbChance,
+  getBarragePerArrowRatio,
+  getBattleCryDR,
+} from "../_shared/formulas/abilities.ts";
 import {
   CLASS_LEVEL_BONUSES as CLASS_LVL_BONUS,
   CLASS_LABELS,
