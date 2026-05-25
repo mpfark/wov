@@ -384,15 +384,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
       p.buffSetters.setRootDebuff({ damageReduction: reduction, expiresAt: Date.now() + durationMs, creatureId: cTargetId });
       p.addLog(`${ability.emoji} ${ability.label}! ${creature.name}'s damage reduced by ${Math.round(reduction * 100)}% for ${Math.round(durationMs / 1000)}s.`);
     } else if (ability.type === 'battle_cry') {
-      const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const hasShield = p.equipped.some((e: any) => e.item?.weapon_tag === 'shield');
-      const baseDR = 0.15;
-      const shieldBonus = hasShield ? 0.05 : 0;
-      const totalDR = baseDR + shieldBonus;
-      const critReduction = 0.15;
-      const durationMs = Math.min(25000, 15000 + dexMod * 1000);
-      p.buffSetters.setBattleCryBuff({ damageReduction: totalDR, critReduction, expiresAt: Date.now() + durationMs });
-      p.addLog(`${ability.emoji} Battle Cry! ${Math.round(totalDR * 100)}% damage reduction${hasShield ? ' (shield bonus!)' : ''} for ${Math.round(durationMs / 1000)}s.`);
+      // Stance — unreachable; intercepted by stance toggle block above.
+      // Magnitude formula lives in getBattleCryDR (STR magnitude / DEX duration,
+      // shield grants +5% bonus DR) and is applied server-side via buff flags.
+      void getBattleCryDR; // keep import referenced
+      return;
     } else if (ability.type === 'dot_debuff') {
       const cTargetId = resolveCreatureTarget(p.creatures, p.activeCombatCreatureId, targetId);
       if (!p.inCombat || !cTargetId) { p.addLog(`${ability.emoji} You must be in combat to use Rend!`); return; }
