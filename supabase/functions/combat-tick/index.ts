@@ -1164,15 +1164,20 @@ Deno.serve(async (req) => {
             hit_quality: quality,
           });
 
-          if (mb.poison_buff && Math.random() < 0.4) {
+          // Envenom (Rogue / dual-primary DEX+CHA): proc chance scales with DEX,
+          // max stack ceiling scales with CHA. Per-tick damage already scales with DEX.
+          const dexMod = sm((c.dex || 10) + (eb.dex || 0));
+          const chaMod = sm((c.cha || 10) + (eb.cha || 0));
+          const envenomProc = getEnvenomProc(dexMod);
+          const envenomMaxStacks = getEnvenomMaxStacks(chaMod);
+          if (mb.poison_buff && Math.random() < envenomProc) {
             // Server-side DoT creation: upsert poison into active_effects.
             // IMPORTANT: when refreshing an existing stack, preserve `next_tick_at`
             // so the tick cadence isn't reset every proc — otherwise repeated
             // procs in consecutive heartbeats would push the next tick forward
             // forever and the DoT would never deal damage.
             const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
-            const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-            const dexMod = sm((c.dex || 10) + (eb.dex || 0));
+            const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
             const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
