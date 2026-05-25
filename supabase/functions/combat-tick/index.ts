@@ -719,14 +719,15 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
         }
       } else if (pa.ability_type === 'ignite_consume') {
-        // Conflagrate (Wizard / INT detonator): base = 4 + 2*intMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Multiplier from burn stacks (0–5).
-        // INT-scaling preserved so wizards aren't punished for not equipping a melee weapon.
+        // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
+        // Guaranteed hit, no crit roll. Per-stack bonus scales with INT (no more flat 50%).
+        // Burn stack count itself scales with WIS via the Ignite pulse engine.
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
         const baseDmg = 4 + 2 * intMod + Math.floor((c.level || 1) / 3);
-        const multiplier = 1 + 0.5 * stacks;
+        const perStackBonus = getConflagratePerStack(intMod);
+        const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
         if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
