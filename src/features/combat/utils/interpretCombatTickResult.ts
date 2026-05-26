@@ -94,7 +94,7 @@ export interface TickInterpretation {
  * Pure interpretation of a CombatTickResponse.
  * Does NOT mutate any state — returns structured instructions.
  */
-export function n(
+export function interpretCombatTickResult(
   data: CombatTickResponse,
   characterId: string,
   characterName: string,
@@ -137,7 +137,7 @@ export function n(
     const hasStructuredData = structured.attacker_name && structured.target_name;
     let msg: string;
     if (hasStructuredData) {
-      msg = formatCombatEvent(structured, displayMode, characterId);
+      msg = formatCombatEvent(structured, characterId);
     } else {
       msg = ev.message;
     }

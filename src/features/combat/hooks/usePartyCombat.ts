@@ -23,7 +23,7 @@ import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
 import type { CombatTickResponse } from '../utils/interpretCombatTickResult';
-import { getStoredDisplayMode } from '../utils/combat-text';
+
 import { useCombatAggroEffects } from './useCombatAggroEffects';
 import { useCombatLifecycle } from './useCombatLifecycle';
 
@@ -312,7 +312,6 @@ export function usePartyCombat(params: UsePartyCombatParams) {
       ext.current.character.id,
       ext.current.character.name,
       engagedCreatureIdsRef.current,
-      getStoredDisplayMode(),
     );
 
     if (result.ticksProcessed && result.ticksProcessed > 1) {
