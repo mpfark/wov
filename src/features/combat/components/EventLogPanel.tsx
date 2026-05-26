@@ -11,6 +11,7 @@ import {
   type CombatLogDisplayMode,
   getStoredDisplayMode,
   setStoredDisplayMode,
+  stripFlavorNumber,
 } from '@/features/combat/utils/combat-text';
 import {
   classifyLogLine,
