@@ -419,6 +419,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <WorldBuilderRulebook />;
       case 'manual':
         return <GameManual />;
+      case 'credit-drain':
+        return <CreditDrainHistory />;
       default:
         return <AdminDashboard onNavigate={setActiveTab} />;
     }
