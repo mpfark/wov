@@ -1,88 +1,103 @@
-
 ## Goal
 
-Make the Event Log feel consistent. Today there are three modes (Numbers / Words / Both) and three different sentence styles depending on which code path emitted the line. Going forward:
+Add two layers of flavor text:
 
-- Two modes only: **Flavor** and **Flavor + Numbers**.
-- Every combat/ability/mitigation event uses the same shape:
-  `{emoji} {flavor sentence} [N]`
-- In **Flavor** mode, the trailing `[N]` is stripped automatically. In **Flavor + Numbers** it is shown.
-- Inline numbers ("for 65 holy damage", "−12 damage, 80 → 68", "restores 45 HP", "1d8 + 3 STR…") are removed from the flavor sentence itself.
+1. **Cast-time flavor** when a damage/heal ability is queued (replaces the silent "button pulses only" state).
+2. **Stance activation/drop flavor** — replace the generic `"Holy Shield activated! Reserves N CP…"` line with themed sentences.
 
-## Examples (before → after)
+Both are client-side, single-line additions to the event log. Mechanics are untouched.
 
-Holy Shield retaliation
-- Before: `⚡ Your Holy Shield burns Grey-Tuft Brawler for 65 holy damage!`
-- After (Flavor+N): `⚡ Your Holy Shield burns Grey-Tuft Brawler! [65]`
-- After (Flavor): `⚡ Your Holy Shield burns Grey-Tuft Brawler!`
+---
 
-Shield block + the hit that lands
-- Before: `🛡️ You block with shield! (−12 damage, 80 → 68)` followed by `👹 Brawler strikes you ... — 68 damage.`
-- After (Flavor+N): `🛡️ You raise your shield and turn the blow! [12]` then `👹 Brawler crushes you, battering you. [68]`
-- After (Flavor): same without the brackets.
+## 1. Cast-time flavor line
 
-Heals / restores
-- `💚 Healer mends your wounds! [45]`
-- `🔆 Consecrated ground soothes Ally. [12]`
+Currently in `useCombatActions.ts` the queue path (~line 273-281) intentionally writes nothing — only the button pulses. We'll add a single `p.addLog(...)` right before `p.queueAbility(...)` for queued (non-instant) abilities, picking text from a per-ability table keyed by `ability.type`. The line uses the format already established by the event-log rework:
 
-Ability hits (Rend, Eviscerate, Grand Finale, Barrage arrow, off-hand, etc.)
-- `🩸 You rend Brawler — blood weeps from the gash! [9/tick]`
-- `🔪 You eviscerate Brawler, consuming 3 poison stacks! [142]`
-- `🗡️ Your off-hand finds an opening! [22]`
+`{emoji} {flavor sentence}`  *(no `[N]` — cast-time has no damage yet)*
 
-Misses / dodges / awareness keep their flavor, no `[N]`.
+Target name is resolved from the same `resolveCreatureTarget` call already in scope. If no creature target (heals / party regen), we substitute `yourself` / `your allies` per ability type.
 
-## Scope
+### Proposed cast lines (one short, evocative sentence each)
 
-### 1. Event Log UI — drop the third mode
-- `src/features/combat/utils/combat-text.ts`: `CombatLogDisplayMode` becomes `'flavor' | 'flavor_numbers'`. `getStoredDisplayMode` migrates old values (`numbers` → `flavor_numbers`, `words` → `flavor`, `both` → `flavor_numbers`).
-- `EventLogPanel.tsx`: button cycles between two modes. Labels `F` / `F+N`.
-- A new pure helper `stripFlavorNumber(line)` removes a single trailing ` [\d+]` (and the matching `[N]` inside special suffixes like `[9/tick]`) when mode is `flavor`. Applied uniformly to every rendered line.
+T0 openers (class identity):
+- `smite` (healer / templar Judgment) — `"✝️ You raise your hand and call judgment down on {target}…"` (templar) / `"⭐ You channel divine light toward {target}…"` (healer). We branch on `character.class` since both share `type: 'smite'`.
+- `fireball` — `"🔥 You weave arcane flame between your fingers, aimed at {target}…"`
+- `power_strike` — `"⚔️ You set your stance and ready a crushing blow against {target}…"`
+- `aimed_shot` — `"🎯 You draw, breathe, and steady your aim on {target}…"`
+- `backstab` — `"🗡️ You slip behind {target}, blade reversed…"`
+- `cutting_words` — `"🎵 You take a breath, voice sharpening for {target}…"`
 
-### 2. Standardize all server-side combat messages
-File: `supabase/functions/combat-tick/index.ts` (plus `_shared/combat-resolver.ts` for DoT verbs). Every `events.push({ ..., message })` is rewritten so the message is `flavor sentence` + optional ` [N]` suffix. No inline "for X damage", "restores X HP", "(−X damage, A → B)", "Rolled d20 + ... vs AC ...".
+Higher-tier server-resolved abilities:
+- `multi_attack` (Barrage) — `"🏹 You nock three arrows and draw, sighting {target}…"`
+- `dot_debuff` (Rend) — `"🩸 You ready a tearing cut across {target}…"`
+- `sunder_debuff` — `"🔨 You wind back to crush {target}'s guard…"`
+- `execute_attack` (Eviscerate) — `"🔪 You coil to detonate the venom in {target}…"`
+- `ignite_consume` (Conflagrate) — `"💥 You reach out to ignite the embers burning {target}…"`
+- `burst_damage` (Grand Finale) — `"💥 You inhale, the final chord rising toward {target}…"`
+- `hp_transfer` — `"💉 You open a vein of life, willing it toward {ally}…"`
+- `heal` — `"💚 You gather warm light around yourself…"`
+- `self_heal` (Second Wind) — `"💪 You plant your feet and catch your breath…"`
 
-Affected messages (non-exhaustive, grouped):
+Instant-resolve buffs/debuffs (`INSTANT_BUFF_TYPES`) keep silent — they post their result line immediately, so no pre-cast text is needed.
 
-- Holy Shield retaliation → `⚡ {targetName}'s Holy Shield burns {creature}! [N]`
-- Shield block → `🛡️ {target} raises their shield and turns the blow! [Nblocked]`
-- Absorb shield → `🛡️ A shimmering ward soaks the strike for {target}! [N]`
-- Battle Cry DR → `📯 {target}'s war cry softens the blow! [Nreduced]`
-- Divine Challenge DR → `⚜️ {target}'s Divine Challenge mitigates the strike! [Nreduced]`
-- Creature hit / crit / miss → continues to go through `formatCombatEvent` (already structured). Roll-math text is removed; trailing `[N]` is added in the formatter.
-- Player attack / off-hand → same, roll math gone, flavor sentence + `[N]`.
-- Rend bleed apply → `🩸 {c} rends {target} — blood weeps from the gash! [Nper tick]`
-- Eviscerate / Detonate burns / Barrage arrow / Ignite pulse / Grand Finale → flavor + `[N]`.
-- Consecrate tick heal → `🔆 Consecrated ground soothes {ally}. [N]`
-- Consecrate tick burn → `🔆 Holy fire sears {creature}. [N]`
-- DoT ticks (`combat-resolver.ts`): `🩸/🧪/🔥 {target} suffers {effect_type}. [N]` (the renderer already routes by emoji to the right category).
+### Implementation sketch
 
-### 3. Stat number colors stay intact
+```ts
+// new file: src/features/combat/utils/cast-flavor.ts (pure)
+export function getCastFlavor(
+  abilityType: string,
+  characterClass: string,
+  targetName: string | null,
+): string | null { ... }
+```
 
-`splitLogTokens` and `EVENT_STYLE.*.numberClass` already color the trailing token. The simplified `[N]` matches the existing `\s\[\d+\][.!]?` branch of `NUMBER_TAIL_RE`, so coloring keeps working without further changes. The legacy "for X damage" / "restores X HP" branches can be deleted later — kept now for safety while older queued events drain.
+Hook it in `useCombatActions.handleUseAbility` immediately before `p.queueAbility(...)`:
 
-### 4. Lore / tone of the new flavor strings
+```ts
+const targetName = queueTargetId
+  ? p.creatures.find(c => c.id === queueTargetId)?.name ?? null
+  : null;
+const flavor = getCastFlavor(ability.type, p.character.class, targetName);
+if (flavor) p.addLog(flavor);
+p.queueAbility(abilityIndex, queueTargetId);
+```
 
-- Player attacks already use the tier-word + flavor system in `combat-text.ts` — that stays.
-- Block / absorb / DR / retaliation each get 2-3 randomized flavor variants picked at render time (kept on the server for simplicity, one variant per event). Tone matches the existing dark-fantasy parchment voice.
+---
 
-### 5. Out of scope (suggestions for later, not in this change)
+## 2. Stance activation / drop flavor
 
-- Coloring the bracket differently per category (e.g. block = blue, heal = green) — already handled by `numberClass` per category, free.
-- Showing `+N` for heals vs `-N` for damage. Could be added as a sign convention later; for now `[N]` is uniform.
-- Migrating chat / system / loot lines — they don't carry combat numbers, untouched.
+Replace the two existing generic log lines (`useCombatActions.ts` lines 207 and 236) with stance-specific text. The reserved-CP info stays — but as a short parenthetical so the flavor reads first.
 
-## Files
+Per stance (activation / drop):
 
-- `src/features/combat/utils/combat-text.ts` — type + mode migration + `stripFlavorNumber`.
-- `src/features/combat/components/EventLogPanel.tsx` — two-mode toggle, strip numbers in flavor mode.
-- `src/features/combat/utils/event-log-styles.ts` — no logic change; verify `NUMBER_TAIL_RE` covers `[N]` only (it already does).
-- `supabase/functions/combat-tick/index.ts` — rewrite every `message:` listed above.
-- `supabase/functions/_shared/combat-resolver.ts` — rewrite DoT tick message to flavor + `[N]`.
-- `src/features/combat/utils/event-log-styles.ts` tests / `combat-text.ts` tests — add a small unit test for `stripFlavorNumber` (covers `[12]`, `[12].`, `[12]!`, multi-bracket like `[3/tick]`).
+| Stance | Activate | Drop |
+|---|---|---|
+| Holy Shield | `"⚡ Radiant wards flare around you — Holy Shield burns ready. ({cost} CP reserved.)"` | `"⚡ The radiant wards dim and fade. (Reserved CP is not refunded.)"` |
+| Force Shield | `"🛡️ Threads of arcane light braid into a shimmering barrier. ({cost} CP reserved.)"` | `"🛡️ The arcane barrier unravels into motes. (Reserved CP is not refunded.)"` |
+| Eagle Eye | `"🦅 Your vision narrows — every flaw in your foe stands out. ({cost} CP reserved.)"` | `"🦅 The world widens again as Eagle Eye fades. (Reserved CP is not refunded.)"` |
+| Arcane Surge | `"✨ Arcane current crackles down your arms. ({cost} CP reserved.)"` | `"✨ The arcane current ebbs and stills. (Reserved CP is not refunded.)"` |
+| Battle Cry | `"📯 You bellow a battle cry — your blood runs cold and steady. ({cost} CP reserved.)"` | `"📯 Your battle cry falls silent. (Reserved CP is not refunded.)"` |
+| Shield Wall | `"🛡️ You plant your shield and root your stance. ({cost} CP reserved.)"` | `"🛡️ You ease out of Shield Wall stance. (Reserved CP is not refunded.)"` |
+| Ignite | `"🌋 Embers gather at your fingertips, waiting to leap. ({cost} CP reserved.)"` | `"🌋 The embers gutter out. (Reserved CP is not refunded.)"` |
+| Envenom | `"🐍 You coat your blade in slow, dark venom. ({cost} CP reserved.)"` | `"🐍 You wipe the last of the venom from your blade. (Reserved CP is not refunded.)"` |
 
-## Notes for the technical implementation
+### Implementation sketch
 
-- `getStoredDisplayMode` performs a one-time migration so existing localStorage keys don't dump users into an unknown mode.
-- Stripping is a single regex on the final rendered string, applied in `EventLogPanel` before `splitLogTokens`. This keeps `combat-text.ts` pure and avoids per-callsite branching.
-- Server messages remain canonical (always include `[N]` where a number exists). The client decides whether to display the bracket. This means saved logs / replays remain useful in either mode.
+Extend `src/features/combat/utils/stances.ts` with:
+
+```ts
+export function getStanceActivateFlavor(key: StanceKey, cost: number): string
+export function getStanceDropFlavor(key: StanceKey): string
+```
+
+— each backed by a `Record<StanceKey, {activate, drop}>` table. Swap the two `p.addLog(...)` calls in `useCombatActions.ts` to use them.
+
+---
+
+## Files touched
+
+- `src/features/combat/utils/cast-flavor.ts` *(new, pure)*
+- `src/features/combat/utils/stances.ts` *(+flavor table & helpers)*
+- `src/features/combat/hooks/useCombatActions.ts` *(2 stance log lines swapped; 1 cast-flavor line added before `queueAbility`)*
+
+No server, schema, or formula changes. No behavior changes.
