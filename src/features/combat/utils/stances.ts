@@ -92,3 +92,56 @@ export function isMutuallyExcluded(reservedBuffs: ReservedBuffsMap | null | unde
   if (key === 'envenom' && reservedBuffs.ignite) return true;
   return false;
 }
+
+// ── Stance activate / drop flavor ─────────────────────────────
+// Replaces the generic "X activated! Reserves N CP..." line with themed,
+// per-stance text. Reserved-CP info is kept as a short trailing parenthetical.
+
+interface StanceFlavor { activate: string; drop: string }
+
+const STANCE_FLAVOR: Record<StanceKey, StanceFlavor> = {
+  holy_shield: {
+    activate: '⚡ Radiant wards flare around you — Holy Shield burns ready.',
+    drop:     '⚡ The radiant wards dim and fade.',
+  },
+  force_shield: {
+    activate: '🛡️ Threads of arcane light braid into a shimmering barrier.',
+    drop:     '🛡️ The arcane barrier unravels into motes.',
+  },
+  eagle_eye: {
+    activate: '🦅 Your vision narrows — every flaw in your foe stands out.',
+    drop:     '🦅 The world widens again as Eagle Eye fades.',
+  },
+  arcane_surge: {
+    activate: '✨ Arcane current crackles down your arms.',
+    drop:     '✨ The arcane current ebbs and stills.',
+  },
+  battle_cry: {
+    activate: '📯 You bellow a battle cry — your blood runs cold and steady.',
+    drop:     '📯 Your battle cry falls silent.',
+  },
+  shield_wall: {
+    activate: '🛡️ You plant your shield and root your stance.',
+    drop:     '🛡️ You ease out of Shield Wall stance.',
+  },
+  ignite: {
+    activate: '🌋 Embers gather at your fingertips, waiting to leap.',
+    drop:     '🌋 The embers gutter out.',
+  },
+  envenom: {
+    activate: '🐍 You coat your blade in slow, dark venom.',
+    drop:     '🐍 You wipe the last of the venom from your blade.',
+  },
+};
+
+export function getStanceActivateFlavor(key: StanceKey, cost: number): string {
+  const f = STANCE_FLAVOR[key];
+  if (!f) return `${key} activated. (${cost} CP reserved.)`;
+  return `${f.activate} (${cost} CP reserved.)`;
+}
+
+export function getStanceDropFlavor(key: StanceKey): string {
+  const f = STANCE_FLAVOR[key];
+  if (!f) return `${key} dropped. (Reserved CP is not refunded.)`;
+  return `${f.drop} (Reserved CP is not refunded.)`;
+}
