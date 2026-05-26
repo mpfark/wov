@@ -735,10 +735,10 @@ Deno.serve(async (req) => {
         if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name} for ${finalDmg} damage!`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
         } else {
-          events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} for ${finalDmg} damage. (No burn stacks)`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
