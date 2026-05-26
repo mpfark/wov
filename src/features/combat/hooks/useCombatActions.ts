@@ -31,9 +31,12 @@ import {
   isMutuallyExcluded,
   sumStanceReserved,
   getStanceReserveCost,
+  getStanceActivateFlavor,
+  getStanceDropFlavor,
   type ReservedBuffsMap,
 } from '@/features/combat/utils/stances';
 import { getEffectiveMaxCp } from '@/lib/game-data';
+import { getCastFlavor } from '@/features/combat/utils/cast-flavor';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Pure helpers (module-level, outside hook)
@@ -204,7 +207,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         // Optimistically reflect the new reserved_buffs map immediately so the
         // CP bar / pip row updates without waiting for a full character refetch.
         p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
-        p.addLog(`${ability.emoji} You drop ${stanceDef.label}. The reserved CP is not refunded — you must regenerate it.`);
+        p.addLog(getStanceDropFlavor(stanceDef.key));
         return;
       }
 
@@ -233,7 +236,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
       }
       // Optimistic reflect — RPC returns the full reserved_buffs map.
       p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
-      p.addLog(`${ability.emoji} ${stanceDef.label} activated! Reserves ${cost} CP until you drop it.`);
+      p.addLog(getStanceActivateFlavor(stanceDef.key, cost));
       return;
     }
 
@@ -276,6 +279,11 @@ export function useCombatActions(params: UseCombatActionsParams) {
     // ⏳ line landing on its own row when queued out of combat).
     if (!isInstantBuff && !_fromTick) {
       const queueTargetId = resolvedT0TargetId ?? targetId;
+      const targetName = queueTargetId
+        ? (p.creatures.find((c: any) => c.id === queueTargetId)?.name ?? null)
+        : null;
+      const castFlavor = getCastFlavor(ability.type, p.character.class, targetName);
+      if (castFlavor) p.addLog(castFlavor);
       p.queueAbility(abilityIndex, queueTargetId);
       return;
     }
