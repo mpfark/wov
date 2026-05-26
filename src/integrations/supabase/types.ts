@@ -97,6 +97,71 @@ export type Database = {
           },
         ]
       }
+      ai_credit_drain_item_log: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          node_id: string
+          run_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          node_id: string
+          run_id: string
+          status: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          node_id?: string
+          run_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_credit_drain_item_log_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "ai_credit_drain_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_credit_drain_log: {
+        Row: {
+          cap: number
+          generated_count: number
+          id: string
+          notes: string | null
+          run_finished_at: string | null
+          run_started_at: string
+          stop_reason: string
+        }
+        Insert: {
+          cap?: number
+          generated_count?: number
+          id?: string
+          notes?: string | null
+          run_finished_at?: string | null
+          run_started_at?: string
+          stop_reason?: string
+        }
+        Update: {
+          cap?: number
+          generated_count?: number
+          id?: string
+          notes?: string | null
+          run_finished_at?: string | null
+          run_started_at?: string
+          stop_reason?: string
+        }
+        Relationships: []
+      }
       appearance_entries: {
         Row: {
           asset_url: string
