@@ -11,6 +11,7 @@ import {
   type CombatLogDisplayMode,
   getStoredDisplayMode,
   setStoredDisplayMode,
+  stripFlavorNumber,
 } from '@/features/combat/utils/combat-text';
 import {
   classifyLogLine,
@@ -24,18 +25,16 @@ interface EventLogPanelProps {
 }
 
 const MODE_LABELS: Record<CombatLogDisplayMode, string> = {
-  numbers: 'N',
-  words: 'W',
-  both: 'B',
+  flavor: 'F',
+  flavor_numbers: 'F+N',
 };
 
 const MODE_TITLES: Record<CombatLogDisplayMode, string> = {
-  numbers: 'Numbers — classic numeric log',
-  words: 'Words — flavorful text only',
-  both: 'Both — flavor text + damage numbers',
+  flavor: 'Flavor — narrative text only',
+  flavor_numbers: 'Flavor + Numbers — narrative text with damage values',
 };
 
-const MODE_CYCLE: CombatLogDisplayMode[] = ['numbers', 'words', 'both'];
+const MODE_CYCLE: CombatLogDisplayMode[] = ['flavor', 'flavor_numbers'];
 
 export default function EventLogPanel({
   filteredEventLog, logEndRef,
@@ -67,10 +66,12 @@ export default function EventLogPanel({
         {filteredEventLog.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
         ) : (
-          filteredEventLog.map((log, i) => {
-            if (log === '---tick---') {
+          filteredEventLog.map((rawLog, i) => {
+            if (rawLog === '---tick---') {
               return <div key={i} className="divider-hairline my-2" />;
             }
+            // Flavor mode: strip the trailing canonical [N] suffix server lines emit.
+            const log = displayMode === 'flavor' ? stripFlavorNumber(rawLog) : rawLog;
             const cls = classifyLogLine(log);
             const style = EVENT_STYLE[cls.category];
             const { icon, body, number } = splitLogTokens(log);

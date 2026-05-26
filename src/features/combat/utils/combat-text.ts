@@ -10,18 +10,31 @@ import { interpolateTemplate } from '@shared/proc-log-format';
 
 // ── Display mode ────────────────────────────────────────────────
 
-export type CombatLogDisplayMode = 'numbers' | 'words' | 'both';
+export type CombatLogDisplayMode = 'flavor' | 'flavor_numbers';
 
 export function getStoredDisplayMode(): CombatLogDisplayMode {
   try {
     const v = localStorage.getItem('combatLogDisplayMode');
-    if (v === 'numbers' || v === 'words' || v === 'both') return v;
+    if (v === 'flavor' || v === 'flavor_numbers') return v;
+    // Legacy migration: numbers/both → flavor_numbers, words → flavor.
+    if (v === 'words') return 'flavor';
+    if (v === 'numbers' || v === 'both') return 'flavor_numbers';
   } catch {}
-  return 'both';
+  return 'flavor_numbers';
 }
 
 export function setStoredDisplayMode(mode: CombatLogDisplayMode) {
   try { localStorage.setItem('combatLogDisplayMode', mode); } catch {}
+}
+
+/**
+ * Strip the trailing ` [N]` or ` [N/tick]` suffix (with optional terminal
+ * punctuation) so a canonical "flavor [N]" line can be rendered without the
+ * number in flavor-only mode. Pure — leaves the input untouched if no match.
+ */
+const FLAVOR_NUMBER_TAIL_RE = /\s\[\d+(?:\/\w+)?\]([.!])?$/;
+export function stripFlavorNumber(line: string): string {
+  return line.replace(FLAVOR_NUMBER_TAIL_RE, (_m, punct) => (punct ?? ''));
 }
 
 // ── Damage impact tiers (absolute ranges, no verb overlap) ──────
@@ -204,14 +217,14 @@ export interface StructuredAttackEvent {
 
 /**
  * Format a combat event into MUD-style tier + flavor text.
+ *
+ * Output is always canonical "flavor [N]" — the [N] suffix is stripped by
+ * the renderer when the user picks the flavor-only display mode.
  */
 export function formatCombatEvent(
   event: StructuredAttackEvent,
-  displayMode: CombatLogDisplayMode,
   localCharacterId: string,
 ): string {
-  if (displayMode === 'numbers') return event.message;
-
   const isPlayerAttack = (event.type === 'attack_hit' || event.type === 'attack_miss') && event.attacker_name && event.target_name;
   const isCreatureAttack = (event.type === 'creature_hit' || event.type === 'creature_crit' || event.type === 'creature_miss') && event.attacker_name && event.target_name;
   const isOffhand = (event.type === 'offhand_hit' || event.type === 'offhand_miss') && event.attacker_name && event.target_name;
@@ -224,10 +237,10 @@ export function formatCombatEvent(
   const isLocal = event.character_id === localCharacterId;
 
   if (isPlayerAttack || isOffhand) {
-    return formatPlayerAttack(event, displayMode, isLocal, emoji);
+    return formatPlayerAttack(event, isLocal, emoji);
   }
   if (isCreatureAttack) {
-    return formatCreatureAttack(event, displayMode, isLocal);
+    return formatCreatureAttack(event, isLocal);
   }
 
   return event.message;
@@ -252,7 +265,6 @@ function getEventEmoji(event: StructuredAttackEvent): string {
 
 function formatPlayerAttack(
   event: StructuredAttackEvent,
-  displayMode: CombatLogDisplayMode,
   isLocal: boolean,
   emoji: string,
 ): string {
@@ -270,18 +282,17 @@ function formatPlayerAttack(
 
   const tierWord = getDamageTierWord(damage);
   const flavor = pickRandom(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
-  const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
   const punct = isCrit ? '!' : '.';
+  const dmgSuffix = damage > 0 ? ` [${damage}]` : '';
 
   if (isLocal) {
-    return `${emoji} You ${tierWord} ${target}, ${flavor}${dmgSuffix}${punct}`;
+    return `${emoji} You ${tierWord} ${target}, ${flavor}${punct}${dmgSuffix}`;
   }
-  return `${emoji} ${event.attacker_name!} ${conjugateTierWord(tierWord)} ${target}, ${flavor}${dmgSuffix}${punct}`;
+  return `${emoji} ${event.attacker_name!} ${conjugateTierWord(tierWord)} ${target}, ${flavor}${punct}${dmgSuffix}`;
 }
 
 function formatCreatureAttack(
   event: StructuredAttackEvent,
-  displayMode: CombatLogDisplayMode,
   isLocal: boolean,
 ): string {
   const attacker = event.attacker_name!;
@@ -297,27 +308,26 @@ function formatCreatureAttack(
     return `${ICON}${attacker} misses ${event.target_name!}.`;
   }
 
+  const dmgSuffix = damage > 0 ? ` [${damage}]` : '';
+
   // Boss crit flavor: if present, use themed text instead of tier-word system
   if (isCrit && event.boss_flavor) {
     const bf = event.boss_flavor;
     const emoji = bf.emoji || '';
     const prefix = emoji ? `${emoji} ` : ICON;
-    const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
     const targetLabel = isLocal ? 'you' : event.target_name!;
-    // Flavor text owns the full sentence; supports %a/%e/%v template variables.
     const interpolated = interpolateTemplate(bf.text, attacker, targetLabel, damage);
-    return `${prefix}${interpolated}${dmgSuffix}!`;
+    return `${prefix}${interpolated}!${dmgSuffix}`;
   }
 
   const tierWord = getDamageTierWord(damage);
-  const dmgSuffix = displayMode === 'both' ? ` [${damage}]` : '';
   const punct = isCrit ? '!' : '.';
 
   if (isLocal) {
     const flavor = pickRandom(DAMAGE_FLAVOR_YOU[tierWord] ?? DAMAGE_FLAVOR_YOU.hit);
-    return `${ICON}${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${dmgSuffix}${punct}`;
+    return `${ICON}${attacker} ${conjugateTierWord(tierWord)} you, ${flavor}${punct}${dmgSuffix}`;
   }
 
   const flavor = pickRandom(DAMAGE_FLAVOR[tierWord] ?? DAMAGE_FLAVOR.hit);
-  return `${ICON}${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${dmgSuffix}${punct}`;
+  return `${ICON}${attacker} ${conjugateTierWord(tierWord)} ${event.target_name!}, ${flavor}${punct}${dmgSuffix}`;
 }
