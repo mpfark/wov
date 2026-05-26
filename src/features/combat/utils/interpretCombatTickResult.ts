@@ -11,7 +11,7 @@
  */
 
 import type { Character } from '@/features/character';
-import { formatCombatEvent, type CombatLogDisplayMode, type StructuredAttackEvent } from './combat-text';
+import { formatCombatEvent, type StructuredAttackEvent } from './combat-text';
 
 export interface CombatTickResponse {
   events: { type: string; message: string; character_id?: string; creature_id?: string; creature_name?: string }[];
@@ -94,12 +94,11 @@ export interface TickInterpretation {
  * Pure interpretation of a CombatTickResponse.
  * Does NOT mutate any state — returns structured instructions.
  */
-export function interpretCombatTickResult(
+export function n(
   data: CombatTickResponse,
   characterId: string,
   characterName: string,
   currentEngagedIds: string[],
-  displayMode: CombatLogDisplayMode = 'both',
 ): TickInterpretation {
   // ── Creature HP updates ──
   const creatureHpUpdates: Record<string, number> = {};
