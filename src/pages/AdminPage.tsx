@@ -17,6 +17,7 @@ import ItemForgePanel from '@/components/admin/ItemForgePanel';
 import ItemCoverageAnalyzer from '@/components/admin/ItemCoverageAnalyzer';
 
 import GameManual from '@/components/admin/GameManual';
+import CreditDrainHistory from '@/components/admin/CreditDrainHistory';
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
@@ -418,6 +419,8 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <WorldBuilderRulebook />;
       case 'manual':
         return <GameManual />;
+      case 'credit-drain':
+        return <CreditDrainHistory />;
       default:
         return <AdminDashboard onNavigate={setActiveTab} />;
     }

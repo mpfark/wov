@@ -30,6 +30,7 @@ import {
   Store,
   Crown,
   BarChart3,
+  Sparkles,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -76,6 +77,7 @@ const NAV_GROUPS = [
       { key: 'marketplace', label: 'Marketplace', icon: Store },
       { key: 'unique-reclaim', label: 'Unique Reclaim', icon: Crown },
       { key: 'roadmap', label: 'Roadmap', icon: MapPin },
+      { key: 'credit-drain', label: 'Credit Drain', icon: Sparkles },
     ],
   },
   {
