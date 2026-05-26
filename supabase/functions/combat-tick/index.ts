@@ -665,7 +665,7 @@ Deno.serve(async (req) => {
             cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
             events.push({
               type: 'attack_hit',
-              message: `Arrow ${i + 1}/${arrowCount}: ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — ${arrowDmg}`,
+              message: `🏹 Arrow ${i + 1}/${arrowCount} strikes ${t.name}! [${arrowDmg}]`,
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
@@ -677,7 +677,7 @@ Deno.serve(async (req) => {
           } else {
             events.push({
               type: 'attack_miss',
-              message: `Arrow ${i + 1}/${arrowCount}: ${roll}+${dexMod}=${totalAtk} vs AC ${t.ac} — miss`,
+              message: `🏹 Arrow ${i + 1}/${arrowCount} misses ${t.name}.`,
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
@@ -712,10 +712,10 @@ Deno.serve(async (req) => {
         const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''} for ${finalDmg} damage!`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
         } else {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} for ${finalDmg} damage. (No poison stacks)`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]`, character_id: member.id });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
@@ -784,7 +784,7 @@ Deno.serve(async (req) => {
         }
         events.push({
           type: 'ability_hit',
-          message: `${emoji} ${c.name} ${verb} ${target.name} for ${dmg} damage.`,
+          message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]`,
           character_id: member.id,
         });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -808,7 +808,7 @@ Deno.serve(async (req) => {
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
-        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name} for ${damage} damage! (crit d20=${critRoll} vs ${critThreshold}+)`, character_id: member.id });
+        events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, effCha);
         }
@@ -837,7 +837,7 @@ Deno.serve(async (req) => {
         } else {
           activeEffects.push({ id: crypto.randomUUID(), ...effData });
         }
-        events.push({ type: 'bleed_applied', message: `🩸 ${c.name} rends ${target.name}! Bleeding for ${dmgPerTick} damage every 2s.`, character_id: member.id });
+        events.push({ type: 'bleed_applied', message: `🩸 ${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]`, character_id: member.id });
       }
     }
 
@@ -916,7 +916,7 @@ Deno.serve(async (req) => {
             const preDmg = dmg;
             dmg = Math.max(dmg - blockAmt, 0);
             const stanceTag = sw ? ` 🛡️ (Shield Wall +${bonusAmt})` : '';
-            events.push({ type: 'shield_block', message: `🛡️ ${targetName} blocks with shield!${stanceTag} (−${blockAmt} damage, ${preDmg} → ${dmg})`, character_id: targetId });
+            events.push({ type: 'shield_block', message: `🛡️ ${targetName} raises their shield and turns the blow!${stanceTag} [${blockAmt}]`, character_id: targetId });
             if (dmg <= 0) return;
           }
         }
@@ -929,7 +929,7 @@ Deno.serve(async (req) => {
           // Single-icon policy: Force Shield's own emoji only — no extra
           // sparkle/star glyph. (Previous builds rendered "🛡️ ✨" which the
           // EventLog split across two visual rows.)
-          events.push({ type: 'absorb', message: `🛡️ ${creature.name} hits ${targetName} — shield absorbs ${absorbed} damage! (${mb.absorb_buff.shield_hp} remaining)`, character_id: targetId });
+          events.push({ type: 'absorb', message: `🛡️ A shimmering ward soaks ${creature.name}'s strike for ${targetName}! [${absorbed}]`, character_id: targetId });
           if (dmg <= 0) return;
         }
 
@@ -939,7 +939,7 @@ Deno.serve(async (req) => {
           if (isCrit) dr += mb.battle_cry_dr.crit_reduction || 0;
           const preDmg = dmg;
           dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
-          events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry reduces damage! (${preDmg} → ${dmg})` });
+          events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry softens the blow! [${preDmg - dmg}]` });
         }
 
         // 7b. Divine Challenge (Templar) — flat 30% damage reduction.
@@ -947,7 +947,7 @@ Deno.serve(async (req) => {
           const dr = mb.divine_challenge.reduction || 0.30;
           const preDmg = dmg;
           dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
-          events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! (${preDmg} → ${dmg})`, character_id: targetId });
+          events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
         }
 
         // 8. Caps and clamps
@@ -959,7 +959,7 @@ Deno.serve(async (req) => {
         degradeSet.add(targetId);
         const critLabel = isCrit ? 'CRITICAL! ' : '';
         const cab = creatureAtkBonus(creature.level);
-        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `👹 ${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! Rolled ${d20} + ${cStr} STR${cab > 0 ? ` + ${cab} Lvl` : ''} = ${roll} vs AC ${tAC} — ${dmg} damage.`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
+        const critEvent: any = { type: isCrit ? 'creature_crit' : 'creature_hit', message: `👹 ${tankLabel}${critLabel}${creature.name} strikes ${targetName}${tankLabel ? ' (Tank)' : ''}! [${dmg}]`, attacker_name: creature.name, target_name: targetName, damage: dmg, is_crit: isCrit, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: quality };
 
         // Boss crit flavor enrichment
         if (isCrit) {
@@ -985,7 +985,7 @@ Deno.serve(async (req) => {
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
-              message: `⚡ ${targetName}'s Holy Shield burns ${creature.name} for ${returnDmg} holy damage!`,
+              message: `⚡ ${targetName}'s Holy Shield burns ${creature.name}! [${returnDmg}]`,
               character_id: targetId,
               creature_id: creature.id,
             });
@@ -1000,7 +1000,7 @@ Deno.serve(async (req) => {
         }
       } else {
         const cabMiss = creatureAtkBonus(creature.level);
-        events.push({ type: 'creature_miss', message: `👹 ${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses! Rolled ${d20} + ${cStr} STR${cabMiss > 0 ? ` + ${cabMiss} Lvl` : ''} = ${roll} vs AC ${tAC}.`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
+        events.push({ type: 'creature_miss', message: `👹 ${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses!`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
       }
     };
 
@@ -1047,7 +1047,7 @@ Deno.serve(async (req) => {
           if (restored > 0) {
             events.push({
               type: 'consecrate_heal',
-              message: `🔆 Consecrated ground restores ${restored} HP to ${ally.c.name}.`,
+              message: `🔆 Consecrated ground soothes ${ally.c.name}. [${restored}]`,
               character_id: ally.id,
             });
           }
@@ -1059,7 +1059,7 @@ Deno.serve(async (req) => {
           cHp[cr.id] = Math.max(cHp[cr.id] - burnAmt, 0);
           events.push({
             type: 'consecrate_burn',
-            message: `🔆 Holy fire sears ${cr.name} for ${burnAmt} damage!`,
+            message: `🔆 Holy fire sears ${cr.name}! [${burnAmt}]`,
             character_id: m.id,
             creature_id: cr.id,
           });
@@ -1153,7 +1153,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
-            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! Rolled ${roll} + ${dMod} DEX${intLabel}${affLabel} = ${total} vs AC ${creatureAc} — ${dmg} damage (${dieLabel} + ${sMod} STR).`,
+            message: `${isCrit ? '⚔️ CRITICAL! ' : '⚔️ '}${c.name} attacks ${target.name}! [${dmg}]`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -1210,7 +1210,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'attack_miss',
-            message: `⚔️ ${c.name} attacks ${target.name} — miss! Rolled ${roll} + ${dMod} DEX${intLabel}${affLabel} = ${total} vs AC ${creatureAc}.`,
+            message: `⚔️ ${c.name} attacks ${target.name} — miss!`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -1281,7 +1281,7 @@ Deno.serve(async (req) => {
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
             type: 'offhand_hit',
-            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand strikes ${target.name}! Rolled ${roll2}+${dMod2} DEX${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2} — ${dmg2} damage (1d${ohDie} + ${sMod2} STR, 30%).`,
+            message: `${isCrit2 ? '🗡️ CRIT! ' : '🗡️ '}${c.name}'s off-hand finds an opening on ${target.name}! [${dmg2}]`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -1304,7 +1304,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({
             type: 'offhand_miss',
-            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss! Rolled ${roll2}+${dMod2} DEX${ihb2 > 0 ? `+${ihb2} INT` : ''}=${total2} vs AC ${creatureAc2}.`,
+            message: `🗡️ ${c.name}'s off-hand swings at ${target.name} — miss!`,
             attacker_name: c.name,
             target_name: target.name,
             attacker_class: c.class,
@@ -1373,7 +1373,7 @@ Deno.serve(async (req) => {
           attacker_name: c.name,
           target_name: target.name,
           damage: pulseDmg,
-          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} for ${pulseDmg} damage! (burn x${newStacks})`,
+          message: `🔥 A flaming orb leaps from ${c.name} and sears ${target.name} (burn x${newStacks})! [${pulseDmg}]`,
         });
         // Re-emit the legacy ignite_proc event so the existing client wiring
         // (useBuffState.handleAddIgniteStack via interpretCombatTickResult)
