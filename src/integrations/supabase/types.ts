@@ -162,6 +162,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_secrets: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       appearance_entries: {
         Row: {
           asset_url: string
@@ -1847,6 +1865,7 @@ export type Database = {
       }
       expire_marketplace_listings: { Args: never; Returns: number }
       find_character_id_by_name: { Args: { _name: string }; Returns: string }
+      get_app_secret: { Args: { _key: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
       get_renown_leaderboard: {
         Args: { _limit?: number }
