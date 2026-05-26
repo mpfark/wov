@@ -30,6 +30,7 @@ import {
   Store,
   Crown,
   BarChart3,
+  Sparkles,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
