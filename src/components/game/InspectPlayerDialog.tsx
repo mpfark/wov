@@ -78,7 +78,7 @@ function InspectSlot({ slot, item, classKey }: { slot: string; item: EquippedIte
         </div>
       </TooltipTrigger>
       {item && (
-        <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+        <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
           <ItemTooltipCard
             item={{
               name: item.item_name,

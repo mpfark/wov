@@ -119,7 +119,7 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponPro
         </div>
       </TooltipTrigger>
       {item && !blocked && (
-        <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+        <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
           <ItemTooltipCard
             item={item.item as any}
             weaponProgression={weaponProgression}
@@ -452,7 +452,7 @@ export default function CharacterPanel({
                                     {potion.item.name}
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                                <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
                                   <ItemTooltipCard item={potion.item as any} />
                                 </TooltipContent>
                               </Tooltip>
@@ -520,7 +520,7 @@ export default function CharacterPanel({
                                   {all.length > 1 && <span className="text-[9px] text-muted-foreground ml-1">×{all.length}</span>}
                                 </span>
                               </TooltipTrigger>
-                              <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                              <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
                                 <ItemTooltipCard item={inv.item as any} qty={all.length} />
                               </TooltipContent>
                             </Tooltip>
@@ -630,7 +630,7 @@ export default function CharacterPanel({
                               {isBroken && <span className="text-[9px] text-destructive ml-1">(Broken)</span>}
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent className="bg-popover border-border z-50 max-w-xs">
+                          <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
                             {(() => {
                               // Build comparison
                               let comparison: { label: string; diffs: { key: string; diff: number }[] } | null = null;
