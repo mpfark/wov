@@ -43,7 +43,7 @@ interface Props {
   showValue?: boolean;
 }
 
-const Divider = () => <div className="h-px bg-border/60" />;
+const Divider = () => <div className="divider-hairline" />;
 
 export default function ItemTooltipCard({
   item, weaponProgression, classKey,
@@ -64,7 +64,8 @@ export default function ItemTooltipCard({
   const hasFlavorBlock = !!(flavorText || item.description);
 
   return (
-    <div className="gap-group max-w-xs">
+    <div className="tooltip-scroll gap-group max-w-xs">
+
       {item.illustration_url && (
         <ItemIllustration url={item.illustration_url} alt={item.name} />
       )}
