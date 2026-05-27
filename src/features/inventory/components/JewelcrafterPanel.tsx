@@ -416,7 +416,7 @@ export default function JewelcrafterPanel({
                 </div>
               </button>
             </TooltipTrigger>
-            <TooltipContent side="left" className="bg-popover border-border z-50 max-w-xs">
+            <TooltipContent side="left" className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
               {(() => {
                 const equipped = inventory.find(i => i.equipped_slot === item.slot);
                 const equippedStats = (equipped?.item?.stats || {}) as Record<string, number>;
