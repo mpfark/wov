@@ -69,14 +69,20 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
     }
   }, [currentNodeId, stopCombat, aggroProcessedRef, recentlyKilledRef, pendingAggroRef, creatureHpOverridesRef, setCreatureHpOverrides]);
 
-  // Death — also clear commitment buffs (Envenom / Ignite)
+  // Death — clear commitment buffs (Envenom / Ignite) AND stance reservations.
+  // The server (combat-tick) wipes characters.reserved_buffs on HP <= 0, but the
+  // 3s pending-write mask in useCharacter can swallow the realtime echo if the
+  // player just activated a stance. Mirror the wipe locally and clear the mask
+  // so stance buttons reflect the dead state immediately.
   useEffect(() => {
     if (isDead) {
       stopCombat();
       setPoisonBuff?.(null);
       setIgniteBuff?.(null);
+      clearReservedBuffsLocal?.();
     }
-  }, [isDead, stopCombat, setPoisonBuff, setIgniteBuff]);
+  }, [isDead, stopCombat, setPoisonBuff, setIgniteBuff, clearReservedBuffsLocal]);
+
 
   // Non-leader timeout
   useEffect(() => {
