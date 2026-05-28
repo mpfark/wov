@@ -52,6 +52,8 @@ export default function GameRoute() {
       character={character}
       updateCharacter={updateCharacter}
       updateCharacterLocal={updateCharacterLocal}
+      clearCharacterFields={clearCharacterFields}
+
       onSignOut={signOut}
       isAdmin={isAdmin}
       onOpenAdmin={() => window.open('/admin', '_blank')}
