@@ -733,6 +733,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     pendingAggroRef,
     setPoisonBuff: params.setPoisonBuff,
     setIgniteBuff: params.setIgniteBuff,
+    clearReservedBuffsLocal: params.clearReservedBuffsLocal,
+
   });
 
   return {
