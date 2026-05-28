@@ -74,7 +74,8 @@ interface Props {
   resourcesSynced?: boolean;
 }
 
-export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
+export default function GamePage({ character, updateCharacter, updateCharacterLocal, clearCharacterFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
+
   
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
