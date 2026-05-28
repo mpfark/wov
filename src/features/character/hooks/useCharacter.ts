@@ -339,5 +339,3 @@ export function useCharacter(user: User | null) {
     refetchCharacters,
   };
 }
-
-}
