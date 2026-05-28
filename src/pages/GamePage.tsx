@@ -61,6 +61,8 @@ interface Props {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   updateCharacterLocal?: (updates: Partial<Character>) => void;
+  clearCharacterFields?: (updates: Partial<Character>) => void;
+
   onSignOut: () => void;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
