@@ -218,46 +218,28 @@ export function useCharacter(user: User | null) {
   }, []);
 
   /** Update character state locally AND persist to DB (for player-initiated actions).
-  /** Update character state locally only — no DB write.
-   *  Used by combat tick processing where the server already persisted the values. */
-  const updateCharacterLocal = useCallback((updates: Partial<Character>) => {
-    if (!selectedCharacterId) return;
-    const charId = selectedCharacterId;
+   *  Optional `effectiveCaps` lets callers (e.g. regen loop) clamp to gear-boosted
+   *  effective maxima instead of the base max stored on the row. */
+  const updateCharacter = async (
+    updates: Partial<Character>,
+    effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }
+  ) => {
+    if (!selectedCharacter) return;
+    const charId = selectedCharacter.id;
     const fields = Object.keys(updates);
 
-    // Mark fields as pending so realtime won't revert optimistic values
+    // Mark fields as pending so realtime won't revert them
     const pending = pendingWritesRef.current.get(charId) || new Set<string>();
     fields.forEach(f => pending.add(f));
     pendingWritesRef.current.set(charId, pending);
 
     setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
 
-    // Clear pending after a short delay to let realtime catch up
-    setTimeout(() => {
-      const current = pendingWritesRef.current.get(charId);
-      if (current) {
-        fields.forEach(f => current.delete(f));
-        if (current.size === 0) pendingWritesRef.current.delete(charId);
-      }
-    }, 3000);
-  }, [selectedCharacterId]);
-
-  /** Force-clear fields locally AND drop their pending-write masks so the next
-   *  realtime echo from the server (which is authoritative) is accepted instead
-   *  of merged out. Use for on-death wipes like reserved_buffs where stale
-   *  optimistic state must not survive past the server's authoritative reset. */
-  const clearCharacterFields = useCallback((updates: Partial<Character>) => {
-    if (!selectedCharacterId) return;
-    const charId = selectedCharacterId;
-    const fields = Object.keys(updates);
-    setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
-    const current = pendingWritesRef.current.get(charId);
-    if (current) {
-      fields.forEach(f => current.delete(f));
-      if (current.size === 0) pendingWritesRef.current.delete(charId);
-    }
-  }, [selectedCharacterId]);
-
+    // Build DB payload — clamp hp/cp/mp so the server-side trigger doesn't
+    // silently reduce them. Prefer caller-supplied effective caps (which
+    // include equipment bonuses); fall back to the base max on the row.
+    const charForCaps = characters.find(c => c.id === charId);
+    const dbUpdates = charForCaps
       ? clampResourceUpdates(updates, charForCaps, effectiveCaps)
       : { ...updates };
 
@@ -302,6 +284,23 @@ export function useCharacter(user: User | null) {
       }
     }, 3000);
   }, [selectedCharacterId]);
+
+  /** Force-clear fields locally AND drop their pending-write masks so the next
+   *  realtime echo from the server (which is authoritative) is accepted instead
+   *  of merged out. Use for on-death wipes like reserved_buffs where stale
+   *  optimistic state must not survive past the server's authoritative reset. */
+  const clearCharacterFields = useCallback((updates: Partial<Character>) => {
+    if (!selectedCharacterId) return;
+    const charId = selectedCharacterId;
+    const fields = Object.keys(updates);
+    setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
+    const current = pendingWritesRef.current.get(charId);
+    if (current) {
+      fields.forEach(f => current.delete(f));
+      if (current.size === 0) pendingWritesRef.current.delete(charId);
+    }
+  }, [selectedCharacterId]);
+
 
   // ── Force Shield: out-of-combat ward regen ──────────────────────
   // While the Force Shield stance is reserved, periodically nudge the
