@@ -44,7 +44,8 @@ export function useCombatLifecycle(params: UseCombatLifecycleParams) {
     stopCombat, intervalRef, lastTickRef, inCombatRef, tickBusyRef, tickPendingRef,
     creatureHpOverridesRef, setCreatureHpOverrides, channelRef,
     aggroProcessedRef, recentlyKilledRef, pendingAggroRef,
-    setPoisonBuff, setIgniteBuff,
+    setPoisonBuff, setIgniteBuff, clearReservedBuffsLocal,
+
   } = params;
 
   const prevNodeRef = useRef(currentNodeId);
