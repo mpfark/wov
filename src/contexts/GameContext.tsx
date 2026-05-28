@@ -52,9 +52,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading, signOut } = useAuth();
   const {
     characters, character, loading: charLoading,
-    selectCharacter, clearSelectedCharacter, deleteCharacter,
-    createCharacter, updateCharacter, updateCharacterLocal, selectCharacterAfterCreate,
+    createCharacter, updateCharacter, updateCharacterLocal, clearCharacterFields, selectCharacterAfterCreate,
     refetchCharacters,
+  } = useCharacter(user);
+
   } = useCharacter(user);
   const { nodes, regions, loading: nodesLoading } = useNodes(!!user);
   const { isAdmin, isValar, loading: roleLoading } = useRole(user);
