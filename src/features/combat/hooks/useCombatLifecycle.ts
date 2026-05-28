@@ -33,6 +33,9 @@ export interface UseCombatLifecycleParams {
   // Buff setters for death cleanup
   setPoisonBuff?: React.Dispatch<React.SetStateAction<any>>;
   setIgniteBuff?: React.Dispatch<React.SetStateAction<any>>;
+  /** Wipe reserved_buffs locally on death (server is authoritative). */
+  clearReservedBuffsLocal?: () => void;
+
 }
 
 export function useCombatLifecycle(params: UseCombatLifecycleParams) {
