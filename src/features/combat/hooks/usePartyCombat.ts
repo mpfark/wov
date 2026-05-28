@@ -94,6 +94,10 @@ export interface UsePartyCombatParams {
   /** Buff setters for death cleanup (Envenom/Ignite) */
   setPoisonBuff?: React.Dispatch<React.SetStateAction<any>>;
   setIgniteBuff?: React.Dispatch<React.SetStateAction<any>>;
+  /** Force-clear reserved_buffs locally on death so stance buttons don't
+   *  remain pressed past the server's authoritative wipe. */
+  clearReservedBuffsLocal?: () => void;
+
 }
 
 export function usePartyCombat(params: UsePartyCombatParams) {
@@ -729,6 +733,8 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     pendingAggroRef,
     setPoisonBuff: params.setPoisonBuff,
     setIgniteBuff: params.setIgniteBuff,
+    clearReservedBuffsLocal: params.clearReservedBuffsLocal,
+
   });
 
   return {

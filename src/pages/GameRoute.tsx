@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
 
 export default function GameRoute() {
-  const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
+  const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
+
   const navigate = useNavigate();
   const [syncing, setSyncing] = useState(false);
   const syncedForCharRef = useRef<string | null>(null);
@@ -51,6 +52,8 @@ export default function GameRoute() {
       character={character}
       updateCharacter={updateCharacter}
       updateCharacterLocal={updateCharacterLocal}
+      clearCharacterFields={clearCharacterFields}
+
       onSignOut={signOut}
       isAdmin={isAdmin}
       onOpenAdmin={() => window.open('/admin', '_blank')}

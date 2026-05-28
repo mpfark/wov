@@ -285,6 +285,23 @@ export function useCharacter(user: User | null) {
     }, 3000);
   }, [selectedCharacterId]);
 
+  /** Force-clear fields locally AND drop their pending-write masks so the next
+   *  realtime echo from the server (which is authoritative) is accepted instead
+   *  of merged out. Use for on-death wipes like reserved_buffs where stale
+   *  optimistic state must not survive past the server's authoritative reset. */
+  const clearCharacterFields = useCallback((updates: Partial<Character>) => {
+    if (!selectedCharacterId) return;
+    const charId = selectedCharacterId;
+    const fields = Object.keys(updates);
+    setCharacters(prev => prev.map(c => c.id === charId ? { ...c, ...updates } : c));
+    const current = pendingWritesRef.current.get(charId);
+    if (current) {
+      fields.forEach(f => current.delete(f));
+      if (current.size === 0) pendingWritesRef.current.delete(charId);
+    }
+  }, [selectedCharacterId]);
+
+
   // ── Force Shield: out-of-combat ward regen ──────────────────────
   // While the Force Shield stance is reserved, periodically nudge the
   // server's lazy-regen RPC so `stance_state.force_shield_hp` ticks back
@@ -317,6 +334,7 @@ export function useCharacter(user: User | null) {
     createCharacter,
     updateCharacter,
     updateCharacterLocal,
+    clearCharacterFields,
     selectCharacterAfterCreate,
     refetchCharacters,
   };

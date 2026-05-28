@@ -61,6 +61,8 @@ interface Props {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   updateCharacterLocal?: (updates: Partial<Character>) => void;
+  clearCharacterFields?: (updates: Partial<Character>) => void;
+
   onSignOut: () => void;
   isAdmin?: boolean;
   onOpenAdmin?: () => void;
@@ -72,7 +74,8 @@ interface Props {
   resourcesSynced?: boolean;
 }
 
-export default function GamePage({ character, updateCharacter, updateCharacterLocal, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
+export default function GamePage({ character, updateCharacter, updateCharacterLocal, clearCharacterFields, onSignOut, isAdmin, onOpenAdmin, startingNodeId, onSwitchCharacter, refetchCharacters, resourcesSynced = true }: Props) {
+
   
   const bus = useCreateGameEventBus();
   useItemCache(); // Preload item cache on game entry
@@ -643,6 +646,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     },
     setPoisonBuff: buffSetters.setPoisonBuff,
     setIgniteBuff: buffSetters.setIgniteBuff,
+    clearReservedBuffsLocal: () => clearCharacterFields?.({ reserved_buffs: {} as any }),
+
     getCreatureStacks: (creatureId, stackType) => {
       const map = stackType === 'poison' ? poisonStacks : igniteStacks;
       const entry = map?.[creatureId];

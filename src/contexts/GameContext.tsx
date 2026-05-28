@@ -23,7 +23,9 @@ interface GameContextValue {
   createCharacter: (data: any) => Promise<any>;
   updateCharacter: (updates: Partial<Character>, effectiveCaps?: { maxHp?: number; maxCp?: number; maxMp?: number }) => Promise<void>;
   updateCharacterLocal: (updates: Partial<Character>) => void;
+  clearCharacterFields: (updates: Partial<Character>) => void;
   selectCharacterAfterCreate: (id: string) => void;
+
   refetchCharacters: () => void;
 
   // Role
@@ -51,9 +53,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const {
     characters, character, loading: charLoading,
     selectCharacter, clearSelectedCharacter, deleteCharacter,
-    createCharacter, updateCharacter, updateCharacterLocal, selectCharacterAfterCreate,
+    createCharacter, updateCharacter, updateCharacterLocal, clearCharacterFields, selectCharacterAfterCreate,
     refetchCharacters,
   } = useCharacter(user);
+
   const { nodes, regions, loading: nodesLoading } = useNodes(!!user);
   const { isAdmin, isValar, loading: roleLoading } = useRole(user);
 
@@ -107,7 +110,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       user, authLoading, signOut,
       characters, character, charLoading,
       selectCharacter, clearSelectedCharacter, deleteCharacter,
-      createCharacter, updateCharacter, updateCharacterLocal, selectCharacterAfterCreate, refetchCharacters,
+      createCharacter, updateCharacter, updateCharacterLocal, clearCharacterFields, selectCharacterAfterCreate, refetchCharacters,
+
       isAdmin, isValar, roleLoading,
       nodes, regions, nodesLoading, startingNode,
       profileLoading, hasCompletedOnboarding, profileFullName,
