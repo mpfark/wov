@@ -334,7 +334,10 @@ export function useCharacter(user: User | null) {
     createCharacter,
     updateCharacter,
     updateCharacterLocal,
+    clearCharacterFields,
     selectCharacterAfterCreate,
     refetchCharacters,
   };
+}
+
 }
