@@ -814,13 +814,19 @@ Deno.serve(async (req) => {
         }
       } else if (pa.ability_type === 'dot_debuff') {
         // Server-side Rend/bleed: create persistent active_effects row
+        // Dual-primary (Warrior STR+DEX): damage = STR (the wound),
+        // duration = DEX (precision keeps it open). Mirrors the client preview
+        // in useCombatActions.ts and the ability description.
         const effStr = (c.str || 10) + (eb.str || 0);
+        const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
+        const dexMod = sm(effDex);
         let dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
-        const durationMs = Math.min(30000, 20000 + strMod * 1000);
+        const durationMs = Math.min(30000, 20000 + Math.max(0, dexMod) * 1000);
+
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
         const effData = {

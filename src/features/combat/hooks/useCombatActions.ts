@@ -464,11 +464,16 @@ export function useCombatActions(params: UseCombatActionsParams) {
     } else if (ability.type === 'ignite_consume') {
       // Processed server-side via combat-tick heartbeat
     } else if (ability.type === 'absorb_buff') {
+      // Force Shield (legacy timed preview — stance toggle intercepts in practice).
+      // Pool scales with WIS to match server authority (combat-tick) and the
+      // ability description. INT shapes regen; WIS shapes the ward.
+      const wisMod = getStatModifier(p.character.wis + (p.equipmentBonuses.wis || 0));
       const intMod = getStatModifier(p.character.int + (p.equipmentBonuses.int || 0));
-      const shieldHp = intMod + Math.floor(p.character.level * 0.5);
+      const shieldHp = Math.max(1, wisMod + Math.floor(p.character.level * 0.5));
       const durationMs = Math.min(15000, 8000 + intMod * 1000);
       p.buffSetters.setAbsorbBuff({ shieldHp, expiresAt: Date.now() + durationMs });
       p.addLog(`${ability.emoji} Force Shield! Absorb shield with ${shieldHp} HP for ${Math.round(durationMs / 1000)}s.`);
+
     } else if (ability.type === 'party_regen') {
       // Dual-primary split:
       //   Healer (WIS+CON): heal/tick = WIS, duration = CON (stamina sustains the radiance).
