@@ -214,11 +214,13 @@ function buildCatalog(): SeedItem[] {
     const level = band.min;
     const prefix = band.prefix;
 
-    // PRIMARY archetypes — common only (uncommon tier reserved for hybrids)
-    PRIMARIES.forEach((primary, pi) => {
+    // PRIMARY archetypes — common only (uncommon tier reserved for hybrids).
+    // One archetype per stat × every armor slot + every weapon variant for that stat.
+    PRIMARIES.forEach((primary) => {
+      const archetype = pickPrimaryArchetype(primary);
+
       // Armor slots
-      ARMOR_SLOTS.forEach((slot, si) => {
-        const archetype = pickPrimaryArchetype(primary, pi + si);
+      ARMOR_SLOTS.forEach((slot) => {
         const noun = pickSlotNoun(slot, primary);
         const name = `${prefix} ${archetype} ${noun}`;
         const stats = distributeCommon(level, primary, 1);
@@ -239,9 +241,8 @@ function buildCatalog(): SeedItem[] {
         });
       });
 
-      // Weapons (one per archetype's preferred weapon list)
-      WEAPON_BY_STAT[primary].forEach((w, wi) => {
-        const archetype = pickPrimaryArchetype(primary, pi + wi);
+      // Weapons (every preferred weapon for this stat)
+      WEAPON_BY_STAT[primary].forEach((w) => {
         const name = `${prefix} ${archetype} ${w.noun}`;
         const stats = distributeCommon(level, primary, w.hands);
         out.push({
@@ -262,65 +263,72 @@ function buildCatalog(): SeedItem[] {
       });
     });
 
-    // HYBRID archetypes — uncommon only, key slots
-    HYBRID_ARCHETYPES.forEach((h, hi) => {
-      const archetype = h.names[hi % h.names.length];
-      // chest
-      {
-        const noun = pickSlotNoun("chest", h.a);
-        out.push({
-          name: `${prefix} ${archetype} ${noun}`,
-          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} blending ${h.a.toUpperCase()} and ${h.b.toUpperCase()}.`,
-          item_type: "equipment",
-          rarity: "uncommon",
-          slot: "chest",
-          level,
-          hands: null,
-          weapon_tag: null,
-          stats: distributeUncommon(level, h.a, h.b, 1),
-          value: suggestGold(level, "uncommon"),
-          max_durability: 100,
-          world_drop: true,
-          origin_type: "archetype_seed",
-        });
-      }
-      // head
-      {
-        const noun = pickSlotNoun("head", h.a);
-        out.push({
-          name: `${prefix} ${archetype} ${noun}`,
-          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} blending ${h.a.toUpperCase()} and ${h.b.toUpperCase()}.`,
-          item_type: "equipment",
-          rarity: "uncommon",
-          slot: "head",
-          level,
-          hands: null,
-          weapon_tag: null,
-          stats: distributeUncommon(level, h.a, h.b, 1),
-          value: suggestGold(level, "uncommon"),
-          max_durability: 100,
-          world_drop: true,
-          origin_type: "archetype_seed",
-        });
-      }
-      // weapon (use primary's first weapon)
-      {
-        const w = WEAPON_BY_STAT[h.a][0];
-        out.push({
-          name: `${prefix} ${archetype} ${w.noun}`,
-          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${w.noun.toLowerCase()} blending ${h.a.toUpperCase()} and ${h.b.toUpperCase()}.`,
-          item_type: "equipment",
-          rarity: "uncommon",
-          slot: "main_hand",
-          level,
-          hands: w.hands,
-          weapon_tag: w.tag,
-          stats: distributeUncommon(level, h.a, h.b, w.hands),
-          value: suggestGold(level, "uncommon"),
-          max_durability: 100,
-          world_drop: true,
-          origin_type: "archetype_seed",
-        });
+    // HYBRID archetypes — uncommon only. Emit BOTH directional variants per
+    // pair so the forge offers a side-by-side choice when the player owns the
+    // matching hybrid gem.
+    HYBRID_ARCHETYPES.forEach((h) => {
+      const variants: Array<{ archetype: string; primary: Stat; secondary: Stat }> = [
+        { archetype: h.nameA, primary: h.a, secondary: h.b },
+        { archetype: h.nameB, primary: h.b, secondary: h.a },
+      ];
+      for (const v of variants) {
+        // chest
+        {
+          const noun = pickSlotNoun("chest", v.primary);
+          out.push({
+            name: `${prefix} ${v.archetype} ${noun}`,
+            description: `A ${prefix.toLowerCase()} ${v.archetype.toLowerCase()} ${noun.toLowerCase()} blending ${v.primary.toUpperCase()} and ${v.secondary.toUpperCase()}.`,
+            item_type: "equipment",
+            rarity: "uncommon",
+            slot: "chest",
+            level,
+            hands: null,
+            weapon_tag: null,
+            stats: distributeUncommon(level, v.primary, v.secondary, 1),
+            value: suggestGold(level, "uncommon"),
+            max_durability: 100,
+            world_drop: true,
+            origin_type: "archetype_seed",
+          });
+        }
+        // head
+        {
+          const noun = pickSlotNoun("head", v.primary);
+          out.push({
+            name: `${prefix} ${v.archetype} ${noun}`,
+            description: `A ${prefix.toLowerCase()} ${v.archetype.toLowerCase()} ${noun.toLowerCase()} blending ${v.primary.toUpperCase()} and ${v.secondary.toUpperCase()}.`,
+            item_type: "equipment",
+            rarity: "uncommon",
+            slot: "head",
+            level,
+            hands: null,
+            weapon_tag: null,
+            stats: distributeUncommon(level, v.primary, v.secondary, 1),
+            value: suggestGold(level, "uncommon"),
+            max_durability: 100,
+            world_drop: true,
+            origin_type: "archetype_seed",
+          });
+        }
+        // weapon (use primary's first weapon)
+        {
+          const w = WEAPON_BY_STAT[v.primary][0];
+          out.push({
+            name: `${prefix} ${v.archetype} ${w.noun}`,
+            description: `A ${prefix.toLowerCase()} ${v.archetype.toLowerCase()} ${w.noun.toLowerCase()} blending ${v.primary.toUpperCase()} and ${v.secondary.toUpperCase()}.`,
+            item_type: "equipment",
+            rarity: "uncommon",
+            slot: "main_hand",
+            level,
+            hands: w.hands,
+            weapon_tag: w.tag,
+            stats: distributeUncommon(level, v.primary, v.secondary, w.hands),
+            value: suggestGold(level, "uncommon"),
+            max_durability: 100,
+            world_drop: true,
+            origin_type: "archetype_seed",
+          });
+        }
       }
     });
   }
