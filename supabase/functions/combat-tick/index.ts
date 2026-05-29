@@ -733,7 +733,10 @@ Deno.serve(async (req) => {
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
-        const baseDmg = 4 + 2 * intMod + Math.floor((c.level || 1) / 3);
+        // Soft-scaled INT base (profile 'burst'). Per-stack bonus already uses
+        // diminishingFloat in getConflagratePerStack, so no additional scaling there.
+        const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
+        const baseDmg = Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3));
         const perStackBonus = getConflagratePerStack(intMod);
         const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
@@ -806,8 +809,11 @@ Deno.serve(async (req) => {
         const effInt = (c.int || 10) + (eb.int || 0);
         const chaMod = sm(effCha);
         const intMod = sm(effInt);
-        const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
-        let damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
+        // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
+        // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
+        const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
+        const baseDmg = Math.max(8, Math.round(effChaBurst * 4 + Math.floor(c.level * 1.5)));
+        let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effChaBurst * 2)));
         // INT crit-edge: d20 vs crit threshold lowered by floor(intMod/2). Floor 17.
         const critRoll = rollD20();
         const critThreshold = Math.max(17, 20 - Math.floor(Math.max(0, intMod) / 2));
@@ -996,9 +1002,10 @@ Deno.serve(async (req) => {
           const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
           if (!seen.has(creature.id)) {
             seen.add(creature.id);
-            const wisModForReturn = Math.max(0, sm(effectiveWis));
-            const conKicker = Math.max(0, mb.holy_shield.con_mod ?? 0);
-            const returnDmg = Math.max(1, 2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4));
+            // Soft-scaled WIS + CON kickers (profile 'damage') for Holy Shield retaliation.
+            const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
+            const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
+            const returnDmg = Math.max(1, Math.round(2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4)));
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
