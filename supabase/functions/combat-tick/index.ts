@@ -707,10 +707,15 @@ Deno.serve(async (req) => {
         const dexMod = sm(effDex);
         const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
-        const baseDmg = 4 + 2 * dexMod + Math.floor((c.level || 1) / 3);
-        const perStackBonus = Math.min(0.65, 0.50 + Math.max(0, chaMod) * 0.02);
+        // Soft-scaled: DEX base via 'damage' profile, CHA per-stack rider via
+        // 'stacking' profile. The old hard +0.65/stack ceiling is replaced by
+        // reduced marginal gain — high CHA still climbs, just slower.
+        const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
+        const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
+        const baseDmg = 4 + 2 * effDexDmg + Math.floor((c.level || 1) / 3);
+        const perStackBonus = 0.50 + effChaStack * 0.02;
         const multiplier = 1 + perStackBonus * stacks;
-        const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+        const finalDmg = Math.max(Math.round(baseDmg * multiplier), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id });
