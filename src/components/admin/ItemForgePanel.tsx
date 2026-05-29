@@ -89,8 +89,8 @@ const TIER_BANDS: Array<{ min: number; max: number; prefix: string }> = [
   { min: 41, max: 42, prefix: 'Astral' },
 ];
 
-const PRIMARY_ARCHETYPE_HINT = 'Vanguard / Shadow / Warden / Sage / Devout / Regal';
-const HYBRID_ARCHETYPE_HINT = 'Warlord / Raider / Spellblade / Guardian / Mystic / Prophet / Troubadour / Champion';
+const PRIMARY_ARCHETYPE_HINT = 'Vanguard / Shadow / Stoneguard / Spellwoven / Sanctified / Crowned';
+const HYBRID_ARCHETYPE_HINT = 'Warlord·Fortress / Blademaster·Skirmisher / Stalker·Pathfinder / Justicar·Oathbound / Mystic·Oracle / Prophet·Hierophant / Troubadour·Duelist / Sovereign·Champion';
 
 function bandsInRange(min: number, max: number) {
   return TIER_BANDS.filter(b => b.max >= min && b.min <= max);

@@ -120,29 +120,29 @@ NAMING & DESCRIPTION RULES:
 
 NAMING GRAMMAR (STRICT — mirrors the seed catalog):
 Format: [Tier Prefix] [Archetype] [Slot Noun]
-Examples: "Worn Vanguard Sword", "Sturdy Sage Robe", "Fine Spellblade Dagger", "Engraved Warlord Plate".
+Examples: "Worn Vanguard Sword", "Sturdy Spellwoven Robe", "Fine Stalker Bow", "Engraved Warlord Plate".
 
 TIER PREFIX by level band (pick by item's level):
 - L1-5 Worn · L6-10 Sturdy · L11-15 Fine · L16-20 Engraved · L21-25 Runed · L26-30 High · L31-35 Mythic · L36-40 Ancient · L41-42 Astral
 
-COMMON = primary archetype (single dominant stat). Pick ONE archetype matching the dominant stat:
-- STR: Vanguard, Iron, Brutal, Warborn, Tyrant
-- DEX: Shadow, Swift, Hunter, Ashen, Nightstalker
-- CON: Warden, Stoneguard, Bulwark, Bastion, Stalwart, Earthshaper, Ironroot
-- INT: Sage, Arcane, Spellwoven, Astral, Runed
-- WIS: Devout, Sanctified, Templar, Enlightened, Dawnbringer
-- CHA: Regal, Noble, Bardic, Silvertongue, Crowned, Majestic, Virtuoso
+COMMON = primary archetype (single dominant stat). Use EXACTLY this name for the dominant stat:
+- STR → Vanguard
+- DEX → Shadow
+- CON → Stoneguard
+- INT → Spellwoven
+- WIS → Sanctified
+- CHA → Crowned
 
-UNCOMMON = HYBRID archetype ONLY (two stats). Pick ONE hybrid name; its two stats become primary+secondary:
-- STR+CON: Warlord, Juggernaut, Fortress
-- STR+DEX: Raider, Blademaster, Skirmisher
-- DEX+INT: Spellblade, Hexrunner, Arcstrider
-- WIS+CON: Guardian, Justicar, Oathbound
-- INT+WIS: Mystic, Oracle, Seer
-- CHA+WIS: Prophet, Hierophant, Luminary
-- CHA+DEX: Troubadour, Duelist, Shadowcourt
-- CHA+STR: Champion, Sovereign, Lionguard
-NEVER generate a non-hybrid uncommon. Uncommons must use a hybrid archetype name from the list above.
+UNCOMMON = HYBRID archetype ONLY (two stats). Pick the directional name based on which of the two stats is HIGHER in the stat block:
+- STR+CON: STR-dominant → Warlord · CON-dominant → Fortress
+- STR+DEX: STR-dominant → Blademaster · DEX-dominant → Skirmisher
+- DEX+WIS: DEX-dominant → Stalker · WIS-dominant → Pathfinder
+- WIS+CON: WIS-dominant → Justicar · CON-dominant → Oathbound
+- INT+WIS: INT-dominant → Mystic · WIS-dominant → Oracle
+- CHA+WIS: CHA-dominant → Prophet · WIS-dominant → Hierophant
+- CHA+DEX: CHA-dominant → Troubadour · DEX-dominant → Duelist
+- CHA+STR: CHA-dominant → Sovereign · STR-dominant → Champion
+NEVER generate a non-hybrid uncommon. Uncommons must use a hybrid archetype name from the list above, and the stat pair MUST be one of the 8 listed pairs.
 
 SLOT NOUNS (must match slot):
 - head: Helm/Hood/Circlet · chest: Plate/Armor/Vest/Robe · pants: Greaves/Leggings · gloves: Gauntlets/Gloves

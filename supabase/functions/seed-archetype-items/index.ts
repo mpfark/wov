@@ -23,24 +23,31 @@ const TIER_PREFIXES: Array<{ min: number; max: number; prefix: string }> = [
 
 type Stat = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
-const PRIMARY_ARCHETYPES: Record<Stat, string[]> = {
-  str: ["Vanguard", "Iron", "Brutal", "Warborn", "Tyrant"],
-  dex: ["Shadow", "Swift", "Hunter", "Ashen", "Nightstalker"],
-  con: ["Warden", "Stoneguard", "Bulwark", "Bastion", "Stalwart", "Earthshaper", "Ironroot"],
-  int: ["Sage", "Arcane", "Spellwoven", "Astral", "Runed"],
-  wis: ["Devout", "Sanctified", "Templar", "Enlightened", "Dawnbringer"],
-  cha: ["Regal", "Noble", "Bardic", "Silvertongue", "Crowned", "Majestic", "Virtuoso"],
+// One archetype name per primary stat — no collisions with TIER_PREFIXES.
+const PRIMARY_ARCHETYPES: Record<Stat, string> = {
+  str: "Vanguard",
+  dex: "Shadow",
+  con: "Stoneguard",
+  int: "Spellwoven",
+  wis: "Sanctified",
+  cha: "Crowned",
 };
 
-const HYBRID_ARCHETYPES: Array<{ a: Stat; b: Stat; names: string[] }> = [
-  { a: "str", b: "con", names: ["Warlord", "Juggernaut", "Fortress"] },
-  { a: "str", b: "dex", names: ["Raider", "Blademaster", "Skirmisher"] },
-  { a: "dex", b: "int", names: ["Spellblade", "Hexrunner", "Arcstrider"] },
-  { a: "wis", b: "con", names: ["Guardian", "Justicar", "Oathbound"] },
-  { a: "int", b: "wis", names: ["Mystic", "Oracle", "Seer"] },
-  { a: "cha", b: "wis", names: ["Prophet", "Hierophant", "Luminary"] },
-  { a: "cha", b: "dex", names: ["Troubadour", "Duelist", "Shadowcourt"] },
-  { a: "cha", b: "str", names: ["Champion", "Sovereign", "Lionguard"] },
+/**
+ * 8 hybrid pairs. Each pair has 2 directional archetype names: which one is
+ * used depends on which stat dominates in the item's stat block. Both variants
+ * are seeded as separate items in the catalog so the forge browse list shows
+ * the player a side-by-side choice once they own the matching hybrid gem.
+ */
+const HYBRID_ARCHETYPES: Array<{ a: Stat; b: Stat; nameA: string; nameB: string }> = [
+  { a: "str", b: "con", nameA: "Warlord",     nameB: "Fortress" },
+  { a: "str", b: "dex", nameA: "Blademaster", nameB: "Skirmisher" },
+  { a: "dex", b: "wis", nameA: "Stalker",     nameB: "Pathfinder" },
+  { a: "wis", b: "con", nameA: "Justicar",    nameB: "Oathbound" },
+  { a: "int", b: "wis", nameA: "Mystic",      nameB: "Oracle" },
+  { a: "cha", b: "wis", nameA: "Prophet",     nameB: "Hierophant" },
+  { a: "cha", b: "dex", nameA: "Troubadour",  nameB: "Duelist" },
+  { a: "cha", b: "str", nameA: "Sovereign",   nameB: "Champion" },
 ];
 
 // Slot noun pools, biased per primary stat
@@ -138,14 +145,8 @@ function pickSlotNoun(slot: string, primary: Stat): string {
   if (!pool) return "Item";
   return (pool[primary] ?? pool.default)[0];
 }
-function pickPrimaryArchetype(primary: Stat, idx: number): string {
-  const list = PRIMARY_ARCHETYPES[primary];
-  return list[idx % list.length];
-}
-function pickHybridArchetype(a: Stat, b: Stat, idx: number): string | null {
-  const found = HYBRID_ARCHETYPES.find(h => (h.a === a && h.b === b) || (h.a === b && h.b === a));
-  if (!found) return null;
-  return found.names[idx % found.names.length];
+function pickPrimaryArchetype(primary: Stat): string {
+  return PRIMARY_ARCHETYPES[primary];
 }
 
 function distributeCommon(level: number, primary: Stat, hands: number): Record<string, number> {
@@ -213,11 +214,13 @@ function buildCatalog(): SeedItem[] {
     const level = band.min;
     const prefix = band.prefix;
 
-    // PRIMARY archetypes — common only (uncommon tier reserved for hybrids)
-    PRIMARIES.forEach((primary, pi) => {
+    // PRIMARY archetypes — common only (uncommon tier reserved for hybrids).
+    // One archetype per stat × every armor slot + every weapon variant for that stat.
+    PRIMARIES.forEach((primary) => {
+      const archetype = pickPrimaryArchetype(primary);
+
       // Armor slots
-      ARMOR_SLOTS.forEach((slot, si) => {
-        const archetype = pickPrimaryArchetype(primary, pi + si);
+      ARMOR_SLOTS.forEach((slot) => {
         const noun = pickSlotNoun(slot, primary);
         const name = `${prefix} ${archetype} ${noun}`;
         const stats = distributeCommon(level, primary, 1);
@@ -238,9 +241,8 @@ function buildCatalog(): SeedItem[] {
         });
       });
 
-      // Weapons (one per archetype's preferred weapon list)
-      WEAPON_BY_STAT[primary].forEach((w, wi) => {
-        const archetype = pickPrimaryArchetype(primary, pi + wi);
+      // Weapons (every preferred weapon for this stat)
+      WEAPON_BY_STAT[primary].forEach((w) => {
         const name = `${prefix} ${archetype} ${w.noun}`;
         const stats = distributeCommon(level, primary, w.hands);
         out.push({
@@ -261,65 +263,72 @@ function buildCatalog(): SeedItem[] {
       });
     });
 
-    // HYBRID archetypes — uncommon only, key slots
-    HYBRID_ARCHETYPES.forEach((h, hi) => {
-      const archetype = h.names[hi % h.names.length];
-      // chest
-      {
-        const noun = pickSlotNoun("chest", h.a);
-        out.push({
-          name: `${prefix} ${archetype} ${noun}`,
-          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} blending ${h.a.toUpperCase()} and ${h.b.toUpperCase()}.`,
-          item_type: "equipment",
-          rarity: "uncommon",
-          slot: "chest",
-          level,
-          hands: null,
-          weapon_tag: null,
-          stats: distributeUncommon(level, h.a, h.b, 1),
-          value: suggestGold(level, "uncommon"),
-          max_durability: 100,
-          world_drop: true,
-          origin_type: "archetype_seed",
-        });
-      }
-      // head
-      {
-        const noun = pickSlotNoun("head", h.a);
-        out.push({
-          name: `${prefix} ${archetype} ${noun}`,
-          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${noun.toLowerCase()} blending ${h.a.toUpperCase()} and ${h.b.toUpperCase()}.`,
-          item_type: "equipment",
-          rarity: "uncommon",
-          slot: "head",
-          level,
-          hands: null,
-          weapon_tag: null,
-          stats: distributeUncommon(level, h.a, h.b, 1),
-          value: suggestGold(level, "uncommon"),
-          max_durability: 100,
-          world_drop: true,
-          origin_type: "archetype_seed",
-        });
-      }
-      // weapon (use primary's first weapon)
-      {
-        const w = WEAPON_BY_STAT[h.a][0];
-        out.push({
-          name: `${prefix} ${archetype} ${w.noun}`,
-          description: `A ${prefix.toLowerCase()} ${archetype.toLowerCase()} ${w.noun.toLowerCase()} blending ${h.a.toUpperCase()} and ${h.b.toUpperCase()}.`,
-          item_type: "equipment",
-          rarity: "uncommon",
-          slot: "main_hand",
-          level,
-          hands: w.hands,
-          weapon_tag: w.tag,
-          stats: distributeUncommon(level, h.a, h.b, w.hands),
-          value: suggestGold(level, "uncommon"),
-          max_durability: 100,
-          world_drop: true,
-          origin_type: "archetype_seed",
-        });
+    // HYBRID archetypes — uncommon only. Emit BOTH directional variants per
+    // pair so the forge offers a side-by-side choice when the player owns the
+    // matching hybrid gem.
+    HYBRID_ARCHETYPES.forEach((h) => {
+      const variants: Array<{ archetype: string; primary: Stat; secondary: Stat }> = [
+        { archetype: h.nameA, primary: h.a, secondary: h.b },
+        { archetype: h.nameB, primary: h.b, secondary: h.a },
+      ];
+      for (const v of variants) {
+        // chest
+        {
+          const noun = pickSlotNoun("chest", v.primary);
+          out.push({
+            name: `${prefix} ${v.archetype} ${noun}`,
+            description: `A ${prefix.toLowerCase()} ${v.archetype.toLowerCase()} ${noun.toLowerCase()} blending ${v.primary.toUpperCase()} and ${v.secondary.toUpperCase()}.`,
+            item_type: "equipment",
+            rarity: "uncommon",
+            slot: "chest",
+            level,
+            hands: null,
+            weapon_tag: null,
+            stats: distributeUncommon(level, v.primary, v.secondary, 1),
+            value: suggestGold(level, "uncommon"),
+            max_durability: 100,
+            world_drop: true,
+            origin_type: "archetype_seed",
+          });
+        }
+        // head
+        {
+          const noun = pickSlotNoun("head", v.primary);
+          out.push({
+            name: `${prefix} ${v.archetype} ${noun}`,
+            description: `A ${prefix.toLowerCase()} ${v.archetype.toLowerCase()} ${noun.toLowerCase()} blending ${v.primary.toUpperCase()} and ${v.secondary.toUpperCase()}.`,
+            item_type: "equipment",
+            rarity: "uncommon",
+            slot: "head",
+            level,
+            hands: null,
+            weapon_tag: null,
+            stats: distributeUncommon(level, v.primary, v.secondary, 1),
+            value: suggestGold(level, "uncommon"),
+            max_durability: 100,
+            world_drop: true,
+            origin_type: "archetype_seed",
+          });
+        }
+        // weapon (use primary's first weapon)
+        {
+          const w = WEAPON_BY_STAT[v.primary][0];
+          out.push({
+            name: `${prefix} ${v.archetype} ${w.noun}`,
+            description: `A ${prefix.toLowerCase()} ${v.archetype.toLowerCase()} ${w.noun.toLowerCase()} blending ${v.primary.toUpperCase()} and ${v.secondary.toUpperCase()}.`,
+            item_type: "equipment",
+            rarity: "uncommon",
+            slot: "main_hand",
+            level,
+            hands: w.hands,
+            weapon_tag: w.tag,
+            stats: distributeUncommon(level, v.primary, v.secondary, w.hands),
+            value: suggestGold(level, "uncommon"),
+            max_durability: 100,
+            world_drop: true,
+            origin_type: "archetype_seed",
+          });
+        }
       }
     });
   }
@@ -338,13 +347,13 @@ function buildCatalog(): SeedItem[] {
 /* ───────── Starting gear ───────── */
 
 const CLASS_STARTERS: Record<string, { archetype: string; noun: string; tag: string; hands: 1 | 2; primary: Stat }> = {
-  warrior: { archetype: "Vanguard", noun: "Sword", tag: "sword", hands: 1, primary: "str" },
-  rogue:   { archetype: "Shadow",   noun: "Dagger", tag: "dagger", hands: 1, primary: "dex" },
-  ranger:  { archetype: "Hunter",   noun: "Bow", tag: "bow", hands: 2, primary: "dex" },
-  wizard:  { archetype: "Sage",     noun: "Staff", tag: "staff", hands: 2, primary: "int" },
-  healer:  { archetype: "Devout",   noun: "Mace", tag: "mace", hands: 1, primary: "wis" },
-  bard:    { archetype: "Bardic",   noun: "Wand", tag: "wand", hands: 1, primary: "cha" },
-  templar: { archetype: "Templar",  noun: "Mace", tag: "mace", hands: 1, primary: "wis" },
+  warrior: { archetype: "Vanguard",   noun: "Sword",  tag: "sword",  hands: 1, primary: "str" },
+  rogue:   { archetype: "Shadow",     noun: "Dagger", tag: "dagger", hands: 1, primary: "dex" },
+  ranger:  { archetype: "Shadow",     noun: "Bow",    tag: "bow",    hands: 2, primary: "dex" },
+  wizard:  { archetype: "Spellwoven", noun: "Staff",  tag: "staff",  hands: 2, primary: "int" },
+  healer:  { archetype: "Sanctified", noun: "Mace",   tag: "mace",   hands: 1, primary: "wis" },
+  bard:    { archetype: "Crowned",    noun: "Wand",   tag: "wand",   hands: 1, primary: "cha" },
+  templar: { archetype: "Sanctified", noun: "Mace",   tag: "mace",   hands: 1, primary: "wis" },
 };
 
 /* ───────── Handler ───────── */
