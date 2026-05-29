@@ -71,6 +71,7 @@ import {
   getMaxHp as calcMaxHp,
 } from "../_shared/formulas/resources.ts";
 import { getXpForLevel as xpForLevel } from "../_shared/formulas/xp.ts";
+import { getEffectiveCombatMod } from "../_shared/formulas/effective.ts";
 
 // ── Boss crit flavor selection (weighted random) ────────────────
 function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
@@ -821,7 +822,9 @@ Deno.serve(async (req) => {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
         const dexMod = sm(effDex);
-        let dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+        // Soft-scaled STR contribution (profile 'dot') — mirrors client preview.
+        const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
+        let dmgPerTick = Math.max(1, Math.floor((effStrDot * 1.5 + 2) * 0.67));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
@@ -1184,7 +1187,9 @@ Deno.serve(async (req) => {
             // forever and the DoT would never deal damage.
             const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
             const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
-            const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
+            // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
+            const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
+            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
               session_id: null, effect_type: 'poison',
@@ -1352,7 +1357,9 @@ Deno.serve(async (req) => {
         // so wizards genuinely benefit from both primaries.
         const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-        const dmgPerTick = Math.max(1, Math.floor(wisMod * 0.7 * 0.67));
+        // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
+        const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
+        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67));
         const duration = Math.min(45000, 30000 + wisMod * 1000);
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
