@@ -23,24 +23,31 @@ const TIER_PREFIXES: Array<{ min: number; max: number; prefix: string }> = [
 
 type Stat = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
-const PRIMARY_ARCHETYPES: Record<Stat, string[]> = {
-  str: ["Vanguard", "Iron", "Brutal", "Warborn", "Tyrant"],
-  dex: ["Shadow", "Swift", "Hunter", "Ashen", "Nightstalker"],
-  con: ["Warden", "Stoneguard", "Bulwark", "Bastion", "Stalwart", "Earthshaper", "Ironroot"],
-  int: ["Sage", "Arcane", "Spellwoven", "Astral", "Runed"],
-  wis: ["Devout", "Sanctified", "Templar", "Enlightened", "Dawnbringer"],
-  cha: ["Regal", "Noble", "Bardic", "Silvertongue", "Crowned", "Majestic", "Virtuoso"],
+// One archetype name per primary stat — no collisions with TIER_PREFIXES.
+const PRIMARY_ARCHETYPES: Record<Stat, string> = {
+  str: "Vanguard",
+  dex: "Shadow",
+  con: "Stoneguard",
+  int: "Spellwoven",
+  wis: "Sanctified",
+  cha: "Crowned",
 };
 
-const HYBRID_ARCHETYPES: Array<{ a: Stat; b: Stat; names: string[] }> = [
-  { a: "str", b: "con", names: ["Warlord", "Juggernaut", "Fortress"] },
-  { a: "str", b: "dex", names: ["Raider", "Blademaster", "Skirmisher"] },
-  { a: "dex", b: "int", names: ["Spellblade", "Hexrunner", "Arcstrider"] },
-  { a: "wis", b: "con", names: ["Guardian", "Justicar", "Oathbound"] },
-  { a: "int", b: "wis", names: ["Mystic", "Oracle", "Seer"] },
-  { a: "cha", b: "wis", names: ["Prophet", "Hierophant", "Luminary"] },
-  { a: "cha", b: "dex", names: ["Troubadour", "Duelist", "Shadowcourt"] },
-  { a: "cha", b: "str", names: ["Champion", "Sovereign", "Lionguard"] },
+/**
+ * 8 hybrid pairs. Each pair has 2 directional archetype names: which one is
+ * used depends on which stat dominates in the item's stat block. Both variants
+ * are seeded as separate items in the catalog so the forge browse list shows
+ * the player a side-by-side choice once they own the matching hybrid gem.
+ */
+const HYBRID_ARCHETYPES: Array<{ a: Stat; b: Stat; nameA: string; nameB: string }> = [
+  { a: "str", b: "con", nameA: "Warlord",     nameB: "Fortress" },
+  { a: "str", b: "dex", nameA: "Blademaster", nameB: "Skirmisher" },
+  { a: "dex", b: "wis", nameA: "Stalker",     nameB: "Pathfinder" },
+  { a: "wis", b: "con", nameA: "Justicar",    nameB: "Oathbound" },
+  { a: "int", b: "wis", nameA: "Mystic",      nameB: "Oracle" },
+  { a: "cha", b: "wis", nameA: "Prophet",     nameB: "Hierophant" },
+  { a: "cha", b: "dex", nameA: "Troubadour",  nameB: "Duelist" },
+  { a: "cha", b: "str", nameA: "Sovereign",   nameB: "Champion" },
 ];
 
 // Slot noun pools, biased per primary stat
@@ -138,14 +145,8 @@ function pickSlotNoun(slot: string, primary: Stat): string {
   if (!pool) return "Item";
   return (pool[primary] ?? pool.default)[0];
 }
-function pickPrimaryArchetype(primary: Stat, idx: number): string {
-  const list = PRIMARY_ARCHETYPES[primary];
-  return list[idx % list.length];
-}
-function pickHybridArchetype(a: Stat, b: Stat, idx: number): string | null {
-  const found = HYBRID_ARCHETYPES.find(h => (h.a === a && h.b === b) || (h.a === b && h.b === a));
-  if (!found) return null;
-  return found.names[idx % found.names.length];
+function pickPrimaryArchetype(primary: Stat): string {
+  return PRIMARY_ARCHETYPES[primary];
 }
 
 function distributeCommon(level: number, primary: Stat, hands: number): Record<string, number> {
