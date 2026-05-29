@@ -2,16 +2,22 @@
  * gems.ts — Gem catalog & helpers.
  *
  * 6 primary gems (one per attribute) gate common forging.
- * 6 hybrid gems (one per attribute pair) gate uncommon forging.
+ * 8 hybrid gems (one per archetype pair) gate uncommon forging.
  * Hybrids never drop — they're crafted by combining 2 matching primaries.
  *
+ * The 8 hybrid pairs match the uncommon archetype catalog exactly. Each pair
+ * has TWO directional archetype variants in the item catalog (e.g. INT+WIS gem
+ * unlocks both "Mystic" INT-heavy and "Oracle" WIS-heavy items); the player
+ * picks the variant they want from the forge browse list.
+ *
  * CANONICAL OWNER for: GEM_CATALOG, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS,
- * gemForItem, hybridRecipe, gemRequirementForItem.
+ * gemForItem, hybridRecipe.
  */
 
 export type GemKey =
   | 'garnet' | 'topaz' | 'emerald' | 'sapphire' | 'pearl' | 'amethyst'
-  | 'citrine' | 'jade' | 'aquamarine' | 'opal' | 'moonstone' | 'sunstone';
+  | 'citrine' | 'bloodstone' | 'sunstone' | 'jade' | 'heliodor'
+  | 'aquamarine' | 'opal' | 'moonstone';
 
 export type AttrKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
@@ -26,25 +32,29 @@ export interface GemDef {
 }
 
 export const GEM_CATALOG: Record<GemKey, GemDef> = {
+  // Primary gems — one per attribute. Drop randomly from kills.
   garnet:    { key: 'garnet',    name: 'Garnet',    color: 'hsl(0, 70%, 50%)',    stats: ['str'],         isHybrid: false },
   topaz:     { key: 'topaz',     name: 'Topaz',     color: 'hsl(50, 90%, 55%)',   stats: ['dex'],         isHybrid: false },
   emerald:   { key: 'emerald',   name: 'Emerald',   color: 'hsl(140, 60%, 40%)',  stats: ['con'],         isHybrid: false },
   sapphire:  { key: 'sapphire',  name: 'Sapphire',  color: 'hsl(220, 70%, 50%)',  stats: ['int'],         isHybrid: false },
   pearl:     { key: 'pearl',     name: 'Pearl',     color: 'hsl(40, 30%, 90%)',   stats: ['wis'],         isHybrid: false },
   amethyst:  { key: 'amethyst',  name: 'Amethyst',  color: 'hsl(280, 60%, 55%)',  stats: ['cha'],         isHybrid: false },
+  // Hybrid gems — one per archetype pair (8 total). Crafted by fusing 2 primaries.
   citrine:    { key: 'citrine',    name: 'Citrine',    color: 'hsl(30, 90%, 55%)',  stats: ['str', 'dex'], isHybrid: true },
-  jade:       { key: 'jade',       name: 'Jade',       color: 'hsl(160, 50%, 45%)', stats: ['dex', 'con'], isHybrid: true },
-  aquamarine: { key: 'aquamarine', name: 'Aquamarine', color: 'hsl(190, 70%, 55%)', stats: ['con', 'int'], isHybrid: true },
-  opal:       { key: 'opal',       name: 'Opal',       color: 'hsl(250, 40%, 70%)', stats: ['int', 'wis'], isHybrid: true },
-  moonstone:  { key: 'moonstone',  name: 'Moonstone',  color: 'hsl(210, 20%, 80%)', stats: ['wis', 'cha'], isHybrid: true },
+  bloodstone: { key: 'bloodstone', name: 'Bloodstone', color: 'hsl(355, 55%, 38%)', stats: ['str', 'con'], isHybrid: true },
   sunstone:   { key: 'sunstone',   name: 'Sunstone',   color: 'hsl(20, 85%, 60%)',  stats: ['cha', 'str'], isHybrid: true },
+  jade:       { key: 'jade',       name: 'Jade',       color: 'hsl(150, 35%, 45%)', stats: ['dex', 'wis'], isHybrid: true },
+  heliodor:   { key: 'heliodor',   name: 'Heliodor',   color: 'hsl(48, 90%, 60%)',  stats: ['cha', 'dex'], isHybrid: true },
+  aquamarine: { key: 'aquamarine', name: 'Aquamarine', color: 'hsl(190, 70%, 55%)', stats: ['wis', 'con'], isHybrid: true },
+  opal:       { key: 'opal',       name: 'Opal',       color: 'hsl(250, 40%, 70%)', stats: ['int', 'wis'], isHybrid: true },
+  moonstone:  { key: 'moonstone',  name: 'Moonstone',  color: 'hsl(210, 20%, 80%)', stats: ['cha', 'wis'], isHybrid: true },
 };
 
 export const PRIMARY_GEM_KEYS: GemKey[] =
   ['garnet', 'topaz', 'emerald', 'sapphire', 'pearl', 'amethyst'];
 
 export const HYBRID_GEM_KEYS: GemKey[] =
-  ['citrine', 'jade', 'aquamarine', 'opal', 'moonstone', 'sunstone'];
+  ['citrine', 'bloodstone', 'sunstone', 'jade', 'heliodor', 'aquamarine', 'opal', 'moonstone'];
 
 /** Map a single attribute to its primary gem. */
 export function gemForAttr(attr: AttrKey): GemKey {
@@ -77,7 +87,7 @@ export function hybridRecipe(hybridKey: GemKey): [GemKey, GemKey] | null {
 
 const ATTR_KEYS: AttrKey[] = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
-/** Pick the dominant attribute(s) from an item's stats. Returns top-1 sorted by value. */
+/** Pick the dominant attribute(s) from an item's stats. Returns top-N sorted by value. */
 function topAttrs(stats: Record<string, number> | null | undefined, count: number): AttrKey[] {
   if (!stats) return [];
   const entries = ATTR_KEYS
@@ -90,10 +100,8 @@ function topAttrs(stats: Record<string, number> | null | undefined, count: numbe
 /**
  * The gem required to forge a given item.
  * - common: primary gem matching the dominant attribute
- * - uncommon: hybrid gem matching the top-2 attribute pair
- *   Returns null if the item has fewer than 2 attribute stats — uncommon items
- *   are hybrid by design, so a single-stat uncommon indicates corrupt data and
- *   should not be forgeable.
+ * - uncommon: hybrid gem matching the top-2 attribute pair. Returns null if the
+ *   item's pair isn't in the catalog (corrupt/legacy data) or has <2 attrs.
  * - other rarities (rare/unique/soulforged) are not forgeable here → null
  */
 export function gemForItem(stats: Record<string, number> | null | undefined, rarity: string): GemKey | null {
