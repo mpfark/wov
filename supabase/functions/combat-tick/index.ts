@@ -771,7 +771,10 @@ Deno.serve(async (req) => {
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        let dmg = Math.max(1, 5 + 2 * mod + Math.floor((c.level || 1) / 3));
+        // Soft-scaled primary stat (profile 'damage') — late-game stacking has
+        // reduced marginal gain past softCap=20; no hard ceiling.
+        const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
+        let dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
