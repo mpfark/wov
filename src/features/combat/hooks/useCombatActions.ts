@@ -406,7 +406,10 @@ export function useCombatActions(params: UseCombatActionsParams) {
       if (!creature || !creature.is_alive || creature.hp <= 0) { p.addLog(`${ability.emoji} No valid target for Rend.`); return; }
       const strMod = getStatModifier(p.character.str + (p.equipmentBonuses.str || 0));
       const dexMod = getStatModifier(p.character.dex + (p.equipmentBonuses.dex || 0));
-      const dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+      // Soft-scaled: STR contribution tapers past softCap (profile 'dot') so late-game
+      // stat stacking yields reduced marginal gain without a hard ceiling.
+      const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
+      const dmgPerTick = Math.max(1, Math.floor((effStrDot * 1.5 + 2) * 0.67));
       // Dual-primary split: damage = STR (the wound), duration = DEX (precision keeps it open).
       const durationMs = Math.min(30000, 20000 + Math.max(0, dexMod) * 1000);
       const intervalMs = 2000;

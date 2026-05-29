@@ -71,6 +71,7 @@ import {
   getMaxHp as calcMaxHp,
 } from "../_shared/formulas/resources.ts";
 import { getXpForLevel as xpForLevel } from "../_shared/formulas/xp.ts";
+import { getEffectiveCombatMod } from "../_shared/formulas/effective.ts";
 
 // ── Boss crit flavor selection (weighted random) ────────────────
 function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
@@ -706,10 +707,15 @@ Deno.serve(async (req) => {
         const dexMod = sm(effDex);
         const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
-        const baseDmg = 4 + 2 * dexMod + Math.floor((c.level || 1) / 3);
-        const perStackBonus = Math.min(0.65, 0.50 + Math.max(0, chaMod) * 0.02);
+        // Soft-scaled: DEX base via 'damage' profile, CHA per-stack rider via
+        // 'stacking' profile. The old hard +0.65/stack ceiling is replaced by
+        // reduced marginal gain — high CHA still climbs, just slower.
+        const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
+        const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
+        const baseDmg = 4 + 2 * effDexDmg + Math.floor((c.level || 1) / 3);
+        const perStackBonus = 0.50 + effChaStack * 0.02;
         const multiplier = 1 + perStackBonus * stacks;
-        const finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
+        const finalDmg = Math.max(Math.round(baseDmg * multiplier), 1);
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id });
@@ -727,7 +733,10 @@ Deno.serve(async (req) => {
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
-        const baseDmg = 4 + 2 * intMod + Math.floor((c.level || 1) / 3);
+        // Soft-scaled INT base (profile 'burst'). Per-stack bonus already uses
+        // diminishingFloat in getConflagratePerStack, so no additional scaling there.
+        const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
+        const baseDmg = Math.round(4 + 2 * effIntBurst + Math.floor((c.level || 1) / 3));
         const perStackBonus = getConflagratePerStack(intMod);
         const multiplier = 1 + perStackBonus * stacks;
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
@@ -770,7 +779,10 @@ Deno.serve(async (req) => {
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
-        let dmg = Math.max(1, 5 + 2 * mod + Math.floor((c.level || 1) / 3));
+        // Soft-scaled primary stat (profile 'damage') — late-game stacking has
+        // reduced marginal gain past softCap=20; no hard ceiling.
+        const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
+        let dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
@@ -797,8 +809,11 @@ Deno.serve(async (req) => {
         const effInt = (c.int || 10) + (eb.int || 0);
         const chaMod = sm(effCha);
         const intMod = sm(effInt);
-        const baseDmg = Math.max(8, chaMod * 4 + Math.floor(c.level * 1.5));
-        let damage = baseDmg + rollDmg(1, Math.max(1, chaMod * 2));
+        // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
+        // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
+        const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
+        const baseDmg = Math.max(8, Math.round(effChaBurst * 4 + Math.floor(c.level * 1.5)));
+        let damage = baseDmg + rollDmg(1, Math.max(1, Math.round(effChaBurst * 2)));
         // INT crit-edge: d20 vs crit threshold lowered by floor(intMod/2). Floor 17.
         const critRoll = rollD20();
         const critThreshold = Math.max(17, 20 - Math.floor(Math.max(0, intMod) / 2));
@@ -821,7 +836,9 @@ Deno.serve(async (req) => {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
         const dexMod = sm(effDex);
-        let dmgPerTick = Math.max(1, Math.floor((strMod * 1.5 + 2) * 0.67));
+        // Soft-scaled STR contribution (profile 'dot') — mirrors client preview.
+        const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
+        let dmgPerTick = Math.max(1, Math.floor((effStrDot * 1.5 + 2) * 0.67));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
@@ -985,9 +1002,10 @@ Deno.serve(async (req) => {
           const seen = holyShieldHitThisTick[targetId] || (holyShieldHitThisTick[targetId] = new Set<string>());
           if (!seen.has(creature.id)) {
             seen.add(creature.id);
-            const wisModForReturn = Math.max(0, sm(effectiveWis));
-            const conKicker = Math.max(0, mb.holy_shield.con_mod ?? 0);
-            const returnDmg = Math.max(1, 2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4));
+            // Soft-scaled WIS + CON kickers (profile 'damage') for Holy Shield retaliation.
+            const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
+            const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
+            const returnDmg = Math.max(1, Math.round(2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4)));
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
@@ -1184,7 +1202,9 @@ Deno.serve(async (req) => {
             // forever and the DoT would never deal damage.
             const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'poison');
             const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
-            const dmgPerTick = Math.max(1, Math.floor(dexMod * 1.2 * 0.67));
+            // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
+            const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
+            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
               session_id: null, effect_type: 'poison',
@@ -1352,7 +1372,9 @@ Deno.serve(async (req) => {
         // so wizards genuinely benefit from both primaries.
         const existing = activeEffects.find(e => e.source_id === m.id && e.target_id === target.id && e.effect_type === 'ignite');
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
-        const dmgPerTick = Math.max(1, Math.floor(wisMod * 0.7 * 0.67));
+        // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
+        const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
+        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67));
         const duration = Math.min(45000, 30000 + wisMod * 1000);
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
