@@ -347,13 +347,13 @@ function buildCatalog(): SeedItem[] {
 /* ───────── Starting gear ───────── */
 
 const CLASS_STARTERS: Record<string, { archetype: string; noun: string; tag: string; hands: 1 | 2; primary: Stat }> = {
-  warrior: { archetype: "Vanguard", noun: "Sword", tag: "sword", hands: 1, primary: "str" },
-  rogue:   { archetype: "Shadow",   noun: "Dagger", tag: "dagger", hands: 1, primary: "dex" },
-  ranger:  { archetype: "Hunter",   noun: "Bow", tag: "bow", hands: 2, primary: "dex" },
-  wizard:  { archetype: "Sage",     noun: "Staff", tag: "staff", hands: 2, primary: "int" },
-  healer:  { archetype: "Devout",   noun: "Mace", tag: "mace", hands: 1, primary: "wis" },
-  bard:    { archetype: "Bardic",   noun: "Wand", tag: "wand", hands: 1, primary: "cha" },
-  templar: { archetype: "Templar",  noun: "Mace", tag: "mace", hands: 1, primary: "wis" },
+  warrior: { archetype: "Vanguard",   noun: "Sword",  tag: "sword",  hands: 1, primary: "str" },
+  rogue:   { archetype: "Shadow",     noun: "Dagger", tag: "dagger", hands: 1, primary: "dex" },
+  ranger:  { archetype: "Shadow",     noun: "Bow",    tag: "bow",    hands: 2, primary: "dex" },
+  wizard:  { archetype: "Spellwoven", noun: "Staff",  tag: "staff",  hands: 2, primary: "int" },
+  healer:  { archetype: "Sanctified", noun: "Mace",   tag: "mace",   hands: 1, primary: "wis" },
+  bard:    { archetype: "Crowned",    noun: "Wand",   tag: "wand",   hands: 1, primary: "cha" },
+  templar: { archetype: "Sanctified", noun: "Mace",   tag: "mace",   hands: 1, primary: "wis" },
 };
 
 /* ───────── Handler ───────── */
