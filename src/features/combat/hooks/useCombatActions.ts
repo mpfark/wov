@@ -25,6 +25,8 @@ import {
   getDisengageMult,
   getDivineChallengeReduction,
 } from '@/shared/formulas/abilities';
+import { getEffectiveCombatMod } from '@/shared/formulas/effective';
+
 import {
   getStanceForAbility,
   isStanceActive,
