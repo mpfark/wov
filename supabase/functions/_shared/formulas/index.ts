@@ -14,3 +14,4 @@ export * from './items.ts';
 export * from './creatures.ts';
 export * from './economy.ts';
 export * from './abilities.ts';
+export * from './effective.ts';
