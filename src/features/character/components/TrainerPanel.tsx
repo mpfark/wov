@@ -25,7 +25,7 @@ function getTrainingCost(rank: number): number {
   return 10 * (rank + 1);
 }
 function getSuccessChance(rank: number): number {
-  return Math.max(1, 95 - rank * 15);
+  return Math.max(5, 95 - rank * 10);
 }
 
 interface LeaderRow {
