@@ -11,7 +11,32 @@ interface ItemLike extends DisplayItem {
   stats?: Record<string, number> | null;
   value?: number | null;
   illustration_url?: string | null;
+  procs?: any;
 }
+
+// Subtle, non-revealing flavor lines for items with chance-on-hit procs.
+const PROC_FLAVOR_LINES = [
+  'Something about this weapon feels… unsettlingly alive.',
+  'A faint hum resonates from within, as if waiting for blood.',
+  'Its edge seems to hunger for more than mere flesh.',
+  'You catch a whisper on the wind each time it strikes true.',
+  'The metal warms in your grip when combat stirs.',
+];
+
+function hasProcs(procs: any): boolean {
+  if (!procs) return false;
+  if (Array.isArray(procs)) return procs.length > 0;
+  if (typeof procs === 'object') return Object.keys(procs).length > 0;
+  return false;
+}
+
+function procFlavorFor(item: { id?: string | number | null; name?: string | null }): string {
+  const seed = String(item.id ?? item.name ?? '');
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return PROC_FLAVOR_LINES[Math.abs(h) % PROC_FLAVOR_LINES.length];
+}
+
 
 const RARITY_COLORS: Record<string, string> = {
   common: 'text-foreground',
