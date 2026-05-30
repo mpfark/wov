@@ -86,7 +86,9 @@ export default function ItemTooltipCard({
 
   const hasStatsBlock = isWeapon || statEntries.length > 0 || (comparison && comparison.diffs.length > 0);
   const hasMetaBlock = durabilityPct != null || (showValue && item.value != null) || (qty && qty > 1) || isBroken;
-  const hasFlavorBlock = !!(flavorText || item.description);
+  const effectiveFlavor = flavorText ?? (hasProcs(item.procs) ? procFlavorFor(item) : null);
+  const hasFlavorBlock = !!(effectiveFlavor || item.description);
+
 
   return (
     <div className="tooltip-scroll gap-group max-w-xs">
