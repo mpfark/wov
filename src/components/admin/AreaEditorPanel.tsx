@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Sparkles, Loader2, Trash2 } from 'lucide-react';
 import { useAreaTypes } from '@/features/world';
 import IllustrationEditor from './IllustrationEditor';
+import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions } from './common';
 
 interface Region {
