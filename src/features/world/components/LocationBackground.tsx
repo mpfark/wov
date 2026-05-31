@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 
 interface WithIllustration {
   illustration_url?: string;
@@ -7,13 +8,17 @@ interface WithIllustration {
 
 interface LocationBackgroundProps {
   node?: WithIllustration | null;
-  area?: WithIllustration | null;
+  area?: (WithIllustration & { area_type?: string | null }) | null;
   region?: WithIllustration | null;
   allNodes?: WithIllustration[];
 }
 
 export default function LocationBackground({ node, area, region }: LocationBackgroundProps) {
-  const resolvedUrl = node?.illustration_url || area?.illustration_url || region?.illustration_url || '';
+  const resolvedUrl =
+    node?.illustration_url ||
+    area?.illustration_url ||
+    region?.illustration_url ||
+    (area ? areaTypePlaceholderUrl(area.area_type) : '');
   const [loadedUrl, setLoadedUrl] = useState('');
   const [visible, setVisible] = useState(false);
   const prevUrlRef = useRef('');

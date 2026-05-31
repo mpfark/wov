@@ -16,6 +16,7 @@ import NodePicker from './NodePicker';
 import CreaturePicker from './CreaturePicker';
 import ItemPicker from './ItemPicker';
 import IllustrationEditor from './IllustrationEditor';
+import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 import { AdminEditorHeader, AdminStickyActions } from './common';
 
 interface VendorEntry {
@@ -1070,13 +1071,15 @@ export default function NodeEditorPanel({
                   const area = allAreas.find(a => a.id === form.area_id);
                   if ((area as any)?.illustration_url) return (area as any).illustration_url;
                   const region = regions.find(r => r.id === selectedRegionId);
-                  return (region as any)?.illustration_url || '';
+                  if ((region as any)?.illustration_url) return (region as any).illustration_url;
+                  return area ? areaTypePlaceholderUrl((area as any).area_type) : '';
                 })()}
                 inheritedSource={(() => {
                   const area = allAreas.find(a => a.id === form.area_id);
                   if ((area as any)?.illustration_url) return 'Area';
                   const region = regions.find(r => r.id === selectedRegionId);
-                  return (region as any)?.illustration_url ? 'Region' : '';
+                  if ((region as any)?.illustration_url) return 'Region';
+                  return area ? `Area type "${(area as any).area_type}"` : '';
                 })()}
               />
 

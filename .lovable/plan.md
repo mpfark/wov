@@ -1,58 +1,55 @@
-## What's there today
+## What's actually wrong
 
-In the `background-images` bucket I found 14 `area-type-*.jpg` files sitting in the root (camp, cave, coast, desert, dungeon, forest, hideout, mountain, other, plains, ruins, swamp, town, trail).
+Two separate problems caused by the previous placeholder migration:
 
-In the `areas` table (51 rows):
-- 12 areas have real AI illustrations
-- 19 areas point at one of these `area-type-*.jpg` placeholders
-- 20 areas have no illustration at all
+1. **The 14 `placeholders/area-type-*.jpg` files are physically gone from storage.** The previous migration renamed the rows in `storage.objects` with a SQL `UPDATE` — but renaming a row in the DB does not move the underlying object in the storage backend. Both the old root path and the new `placeholders/` path now return `404 Not found`. That's why every area / node renders "Image failed to load" and the in-game background is blank.
 
-The drain function currently treats any non-null `illustration_url` as "done", so placeholder-using areas are skipped forever.
+2. **The `BEFORE INSERT OR UPDATE` trigger silently re-fills `illustration_url`** with the (broken) placeholder URL whenever the field is cleared. So pressing the X to clear, then Save, just writes the placeholder URL back. From the admin's point of view, clearing/removing the illustration looks like a no-op.
 
-## Goals
+Update (real images) works in principle — but if the user uploaded a new file, the URL would point at a freshly uploaded object that does exist. The "can't update" feeling is likely the same trigger story: any half-typed/cleared state gets stomped back to the placeholder URL on save.
 
-1. Move all `area-type-*.jpg` files into their own folder so they're clearly marked as placeholders.
-2. Make every area automatically show its area-type placeholder when it has no real illustration — areas and named nodes alike.
-3. Make the monthly scene drain treat a placeholder the same as "missing", so those areas/nodes still get a real generation later.
+## Fix approach
 
-## Plan
+Switch from "store placeholder URL in the row" to "store nothing, fall back in code." This is simpler, makes clearing work, and means broken placeholder URLs never end up in the DB again.
 
-### 1. Storage cleanup
-- Copy the 14 `area-type-*.jpg` files from `background-images/` root into `background-images/placeholders/area-type-*.jpg` (same bucket, new prefix — keeps the existing public-read policy).
-- Delete the originals from the root after the copy succeeds.
+### 1. Database — undo the trigger + placeholder URL writes
 
-### 2. DB: auto-fill placeholders by area type
-- Add a small helper `public.area_type_placeholder_url(area_type)` that returns the new `…/placeholders/area-type-<type>.jpg` URL.
-- Add an `area_placeholder` column / flag — simplest: store the placeholder URL in `areas.illustration_url` and mark it in `areas.illustration_metadata` as `{ "is_placeholder": true, "source": "area-type-fallback" }` so we can distinguish it from real art.
-- One-time data fix:
-  - For the 19 areas currently pointing at the old `…/area-type-<type>.jpg`, rewrite the URL to the new `…/placeholders/area-type-<type>.jpg` path and stamp `illustration_metadata.is_placeholder = true`.
-  - For the 20 areas with `NULL` illustration_url, set them to the placeholder for their `area_type` and stamp `is_placeholder = true`.
-- Add a trigger on `areas` so that on INSERT, when `illustration_url` is null/empty, it auto-fills with the area-type placeholder and marks `is_placeholder = true`. (Same on UPDATE only if cleared.)
+New migration:
+- `DROP TRIGGER trg_areas_fill_placeholder ON public.areas;`
+- `DROP FUNCTION public.areas_fill_placeholder();`
+- Keep `public.area_type_placeholder_url(text)` (harmless; used by code/types).
+- One-time data scrub on `public.areas`:
+  - For every row whose `illustration_metadata->>'is_placeholder' = 'true'`, set `illustration_url = NULL` and strip the `is_placeholder` and `source: area-type-fallback` keys from `illustration_metadata`.
+  - This makes the admin URL field correctly show "empty" for placeholder-only areas, so the X button and Save actually clear it.
+- The monthly-scene-drain query already treats both `illustration_url IS NULL` and `is_placeholder = true` as "missing", so it keeps working unchanged.
 
-Named nodes are left alone in storage; they don't have area-type placeholders today, and the existing fallback chain in `LocationBackground` (`node → area → region`) means an unnamed/illustration-less node will already render its parent area's placeholder.
+### 2. Frontend — compute the placeholder at render time
 
-### 3. Drain function update
-Update `supabase/functions/monthly-scene-drain/index.ts` so the "missing illustration" filter for both areas and named nodes also catches placeholders:
+`src/features/world/components/LocationBackground.tsx` already does `node → area → region`. Extend the resolver so when all three are empty, it computes a placeholder URL from the area's `area_type` (small helper that mirrors `area_type_placeholder_url`). Result: in-game background still shows a sensible image for areas that haven't been illustrated yet, without ever writing that URL to the DB.
 
-```
-illustration_url IS NULL
-  OR illustration_url = ''
-  OR illustration_metadata->>'is_placeholder' = 'true'
-```
+Admin `IllustrationEditor` already shows an inherited URL via `inheritedUrl`; pass the same computed area-type fallback as the lowest-priority inherited URL so the "Effective Background" preview still shows something. The "Local Illustration" / URL field stays empty, so clearing it works.
 
-When the drain saves a real illustration, it already overwrites `illustration_metadata` with the generation info (no `is_placeholder` flag), so the area/node automatically drops out of the "missing" set afterwards.
+### 3. Storage — restore the missing placeholder files
 
-The hard cap of 10 per run and the area-first / named-node-second ordering stay exactly as they are.
+The 14 `area-type-*.jpg` files are not in the repo and not in S3 anymore, so they cannot be auto-recovered. Two options for the user — I'll do whichever they pick:
 
-## Technical details
+- **A. Re-upload from local.** User drops the 14 original `.jpg` files into a folder; I add a one-shot script that uploads them via the storage API to `background-images/placeholders/area-type-<type>.jpg`.
+- **B. Regenerate via AI.** I add a tiny admin button (or one-shot edge function) that uses the existing AI image gateway to generate one neutral placeholder per area type and uploads it to the same paths. Cheaper than waiting for the monthly drain and gives every area type a fallback today.
 
-- Storage move is done via the storage REST API from a one-shot migration/script using the service role key — copy then delete each of the 14 objects. Public URL stays on the same bucket; only the path changes.
-- New URL pattern: `https://<ref>.supabase.co/storage/v1/object/public/background-images/placeholders/area-type-<type>.jpg` (note: today's stored URLs have a double slash `/background-images//area-type-…` — the rewrite will also clean that up).
-- The `is_placeholder` flag lives in `illustration_metadata` (already a `jsonb` column on `areas`), so no schema change needed beyond the trigger + helper function.
-- Frontend `LocationBackground.tsx` needs no changes — it just reads `illustration_url`.
-- Admin UI that uploads a real area illustration should clear the placeholder flag; if there's such a code path, I'll make sure it overwrites `illustration_metadata` (it likely already does).
+Without restored files, the in-game fallback will still 404 — the code change in step 2 only matters once the files exist again.
 
-## Out of scope
+### Out of scope
 
-- Renaming or reorganising `node-illustrations` / `item-illustrations` / `area-illustrations` buckets.
-- Generating any new artwork — that's still the drain's job on its next run.
+- No changes to `nodes` (it never had a trigger; named nodes will just inherit the area's effective background, which is the desired behaviour anyway).
+- No changes to `area-illustrations` / `node-illustrations` / `item-illustrations` buckets.
+- Drain function logic stays as-is.
+
+## Technical notes
+
+- The trigger drop is what unblocks "remove" and "update" in the admin — that's the most important change. Even before placeholder files are restored, the admin will behave correctly.
+- After step 1, areas that currently show the broken `placeholders/area-type-*.jpg` URL will go back to "no illustration" in the DB. Until step 3 is done, those areas show no background in-game (same blank state as before the placeholder system existed). That's the same situation as today's broken 404, just cleaner.
+- Single migration file; no schema changes beyond dropping the trigger and clearing flagged rows.
+
+## Decision needed
+
+For step 3 — restore the placeholder files via **A) re-upload your local copies**, or **B) AI-regenerate one per area type**?
