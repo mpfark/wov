@@ -206,13 +206,41 @@ const HYBRID_BY_NAME: Record<string, { primary: Stat; secondary: Stat }> = {
 };
 
 const PRIMARY_BY_NAME: Record<string, Stat> = {
-  Vanguard: "str", Iron: "str", Brutal: "str", Warborn: "str", Tyrant: "str",
-  Shadow: "dex", Swift: "dex", Hunter: "dex", Ashen: "dex", Nightstalker: "dex",
-  Stoneguard: "con", Warden: "con", Bulwark: "con", Bastion: "con", Stalwart: "con", Earthshaper: "con", Ironroot: "con",
-  Spellwoven: "int", Sage: "int", Arcane: "int", Astral: "int", Runed: "int",
-  Sanctified: "wis", Devout: "wis", Templar: "wis", Enlightened: "wis", Dawnbringer: "wis",
-  Crowned: "cha", Regal: "cha", Noble: "cha", Bardic: "cha", Silvertongue: "cha", Majestic: "cha", Virtuoso: "cha",
+  Vanguard: "str",
+  Shadow: "dex",
+  Stoneguard: "con",
+  Spellwoven: "int",
+  Sanctified: "wis",
+  Crowned: "cha",
 };
+
+/**
+ * Legacy archetype tokens that were retired when the canonical 6-common /
+ * 16-uncommon name list was locked in. Rows are RENAMED in place to the
+ * canonical token so naming + stats stay aligned. IDs are preserved so
+ * inventory / marketplace / loot tables remain valid.
+ */
+const LEGACY_COMMON_RENAME: Record<string, string> = {
+  Tyrant: "Vanguard",        // STR
+  Ironroot: "Stoneguard",    // CON
+  Enlightened: "Sanctified", // WIS
+  Bardic: "Crowned",         // CHA
+};
+
+const LEGACY_UNCOMMON_RENAME: Record<string, string> = {
+  Arcstrider: "Stalker",     // DEX+WIS (no canonical DEX+INT pair exists)
+};
+
+function applyLegacyRename(name: string, rarity: string): { newName: string; renamed: boolean } {
+  const map = rarity === "uncommon" ? LEGACY_UNCOMMON_RENAME : LEGACY_COMMON_RENAME;
+  const tokens = name.split(/\s+/);
+  let renamed = false;
+  const out = tokens.map((t) => {
+    if (t in map) { renamed = true; return map[t]; }
+    return t;
+  });
+  return { newName: out.join(" "), renamed };
+}
 
 function inferFromName(name: string): { primary?: Stat; secondary?: Stat; isHybrid?: boolean } {
   const tokens = name.split(/\s+/);
@@ -230,12 +258,9 @@ function inferFromName(name: string): { primary?: Stat; secondary?: Stat; isHybr
 
 /* ───────── Per-row rewrite ───────── */
 
-function inferPrimarySecondary(item: any): { primary: Stat; secondary?: Stat } | null {
-  // Name-only inference. Old logic that fell back to the highest existing stat
-  // is intentionally gone — it let pre-squish INT spillover masquerade as the
-  // "real" primary on wis archetypes (e.g. Sanctified → INT-dominant rewrites).
-  const nameInfo = inferFromName(item.name || "");
-  if (item.rarity === "uncommon") {
+function inferPrimarySecondary(name: string, rarity: string): { primary: Stat; secondary?: Stat } | null {
+  const nameInfo = inferFromName(name);
+  if (rarity === "uncommon") {
     if (!nameInfo.primary || !nameInfo.secondary) return null;
     return { primary: nameInfo.primary, secondary: nameInfo.secondary };
   }
@@ -282,6 +307,7 @@ Deno.serve(async (req) => {
     let processed = 0;
     let updated = 0;
     let skipped = 0;
+    let renamedCount = 0;
     const samples: Array<{ id: string; name: string; before: any; after: any }> = [];
     const unmatched: Array<{ id: string; name: string; level: number; rarity: string }> = [];
 
@@ -298,7 +324,12 @@ Deno.serve(async (req) => {
 
       for (const row of rows) {
         processed++;
-        const inferred = inferPrimarySecondary(row);
+
+        // Step 1: legacy archetype rename (Tyrant→Vanguard, Arcstrider→Stalker, ...)
+        const { newName, renamed } = applyLegacyRename(row.name || "", row.rarity);
+
+        // Step 2: name-based stat inference (uses post-rename name)
+        const inferred = inferPrimarySecondary(newName, row.rarity);
         if (!inferred) {
           unmatched.push({ id: row.id, name: row.name, level: row.level || 1, rarity: row.rarity });
           skipped++;
@@ -323,18 +354,21 @@ Deno.serve(async (req) => {
         }
 
         if (samples.length < 10) {
-          samples.push({ id: row.id, name: row.name, before: row.stats, after: newStats });
+          samples.push({ id: row.id, name: renamed ? `${row.name} → ${newName}` : row.name, before: row.stats, after: newStats });
         }
 
         if (dryRun) {
           updated++;
+          if (renamed) renamedCount++;
           continue;
         }
 
         const newValue = suggestGold(row.level || 1, row.rarity);
+        const patch: Record<string, any> = { stats: newStats, value: newValue };
+        if (renamed) patch.name = newName;
         const { error: updErr } = await admin
           .from("items")
-          .update({ stats: newStats, value: newValue })
+          .update(patch)
           .eq("id", row.id);
         if (updErr) {
           console.error(`update failed for ${row.id}:`, updErr);
@@ -342,6 +376,7 @@ Deno.serve(async (req) => {
           continue;
         }
         updated++;
+        if (renamed) renamedCount++;
       }
 
       if (rows.length < PAGE) break;
@@ -349,7 +384,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, dry_run: dryRun, processed, updated, skipped, unmatched_count: unmatched.length, unmatched: unmatched.slice(0, 50), samples }),
+      JSON.stringify({ ok: true, dry_run: dryRun, processed, updated, renamed: renamedCount, skipped, unmatched_count: unmatched.length, unmatched: unmatched.slice(0, 50), samples }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e: any) {
