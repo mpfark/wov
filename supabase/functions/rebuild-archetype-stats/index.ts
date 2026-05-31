@@ -231,23 +231,16 @@ function inferFromName(name: string): { primary?: Stat; secondary?: Stat; isHybr
 /* ───────── Per-row rewrite ───────── */
 
 function inferPrimarySecondary(item: any): { primary: Stat; secondary?: Stat } | null {
-  const stats = item.stats || {};
-  const ranked = ATTRS
-    .map((a) => ({ attr: a, val: stats[a] ?? 0 }))
-    .filter((x) => x.val > 0)
-    .sort((a, b) => b.val - a.val);
-  // Try inferred-from-name first; fall back to current stats.
+  // Name-only inference. Old logic that fell back to the highest existing stat
+  // is intentionally gone — it let pre-squish INT spillover masquerade as the
+  // "real" primary on wis archetypes (e.g. Sanctified → INT-dominant rewrites).
   const nameInfo = inferFromName(item.name || "");
   if (item.rarity === "uncommon") {
-    let primary = nameInfo.primary ?? ranked[0]?.attr;
-    let secondary = nameInfo.secondary ?? ranked.find((r) => r.attr !== primary)?.attr;
-    if (!primary || !secondary) return null;
-    return { primary, secondary };
-  } else {
-    const primary = nameInfo.primary ?? ranked[0]?.attr;
-    if (!primary) return null;
-    return { primary };
+    if (!nameInfo.primary || !nameInfo.secondary) return null;
+    return { primary: nameInfo.primary, secondary: nameInfo.secondary };
   }
+  if (!nameInfo.primary) return null;
+  return { primary: nameInfo.primary };
 }
 
 Deno.serve(async (req) => {
