@@ -156,8 +156,8 @@ SLOT: ${slotInstruction}
 RARITY: ${rarityInstruction}
 STATS FOCUS: ${statsFocusInstruction}
 
-STAT BUDGET FORMULA (mirrors seed catalog — late-game compression applied):
-- raw = 2 + (level - 1) × 0.3 × rarity_multiplier × hands_multiplier
+STAT BUDGET FORMULA (mirrors seed catalog — squish v2 + late-game compression):
+- raw = 2 + (level - 1) × 0.24 × rarity_multiplier × hands_multiplier
 - taper = 1.0 (L≤30) / 0.90 (L31–35) / 0.80 (L36–40) / 0.72 (L41+)
 - hybrid_bonus = +1 if rarity = uncommon AND level ≥ 30, else 0
 - Equipment budget = max(2, floor(raw × taper) + hybrid_bonus)
@@ -165,11 +165,14 @@ STAT BUDGET FORMULA (mirrors seed catalog — late-game compression applied):
 - Rarity: common=1.0, uncommon=1.5. Hands: 1.0 (1H) / 1.5 (2H, main_hand only).
 - Pick a level between ${level_min} and ${level_max} for each item.
 
-STAT DISTRIBUTION:
-- COMMON: ~70% to primary stat, remainder spillover into a single minor stat. Single archetype = single primary.
-- UNCOMMON: ~55% primary, ~35% secondary, ~10% tertiary spillover (hp for tank-leaning, wis otherwise). Both archetype stats MUST appear.
-- Spend the FULL budget. Never leave points unallocated.
-- Equipment must have ≥2 different stat keys.
+STAT DISTRIBUTION (3-stat split to fight single-attribute stacking):
+- COMMON: 70% primary archetype stat / 20% minor stat (existing pairing rule) / 10% flavor sprinkle in hp. All three ≥1 when budget ≥ 3.
+  - Minor pairing: STR/CON→con, DEX→str, INT/WIS→wis, CHA→dex. Pick another stat if minor collides with primary.
+  - At budget < 3, fall back to 2-stat (primary + minor only).
+- UNCOMMON: 50% primary / 30% secondary / 20% tertiary spillover. All three ≥1 when budget ≥ 3.
+  - Tertiary = hp if primary or secondary is con, or primary is str (tank-leaning); otherwise wis.
+  - At budget < 3, fall back to 2-stat (primary + secondary). Both archetype stats MUST appear.
+- Spend the FULL budget. Never leave points unallocated. Equipment must have ≥2 different stat keys.
 
 STAT KEYS & COSTS:
 - Equipment: str/dex/con/int/wis/cha=1pt, ac=3pts, hp=0.5pts, hp_regen=2pts
@@ -204,7 +207,7 @@ Call the generate_items tool with the structured output.`;
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. IMPORTANT: Calculate the stat budget for each item using the formula and spend ALL of it across multiple stats. A level 10 uncommon item has budget floor(1+9*0.3*1.5)=5, so its stats should total ~5 points spread across 2-3 keys. Never leave budget unspent.` },
+          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. IMPORTANT: Calculate the stat budget for each item using the formula and spend ALL of it across 3 stat keys when budget ≥ 3. Example: a level 10 uncommon item has budget floor(1+9*0.24*1.5)=4, split as primary≈2 / secondary≈1 / tertiary≈1 (hp=2 if tertiary is hp). Never leave budget unspent.` },
         ],
         tools: [
           {
@@ -284,7 +287,7 @@ Call the generate_items tool with the structured output.`;
       const mult = RARITY_MULT[rarity] || 1;
       const handsMult = hands === 2 ? (rarity === "unique" ? 1.35 : 1.5) : 1;
       const taper = level <= 30 ? 1.0 : level <= 35 ? 0.90 : level <= 40 ? 0.80 : 0.72;
-      const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
+      const raw = 2 + (level - 1) * 0.24 * mult * handsMult;
       const hybridBonus = rarity === "uncommon" && level >= 30 ? 1 : 0;
       return Math.max(2, Math.floor(raw * taper) + hybridBonus);
     }

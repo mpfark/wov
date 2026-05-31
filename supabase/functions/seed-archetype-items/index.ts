@@ -94,7 +94,8 @@ function statBudget(level: number, rarity: string, hands = 1): number {
   const m = RARITY_MULT[rarity] || 1;
   const h = handsMultiplier(rarity, hands);
   const t = levelTaper(level);
-  const raw = 2 + (level - 1) * 0.3 * m * h;
+  // Slope 0.24 = squish v2 (−20% per-level growth, applied 2026-05).
+  const raw = 2 + (level - 1) * 0.24 * m * h;
   // Uncommon hybrids get +1 budget point at L30+ ("hybrid efficiency bonus").
   const hybridBonus = rarity === "uncommon" && level >= 30 ? 1 : 0;
   return Math.max(2, Math.floor(raw * t) + hybridBonus);
@@ -149,40 +150,90 @@ function pickPrimaryArchetype(primary: Stat): string {
   return PRIMARY_ARCHETYPES[primary];
 }
 
+/* ── 3-stat distributions (squish v2, 2026-05) ──
+ * Goal: reduce single-attribute stacking by spreading points across 3 stats.
+ *  - Common  : 70% primary / 20% minor / 10% hp flavor sprinkle
+ *  - Uncommon: 50% primary / 30% secondary / 20% tertiary (hp tank-leaning, wis otherwise)
+ * Falls back to 2-stat when budget < 3 so early-game items stay sensible.
+ */
+
+function rebalance(parts: number[], budget: number): number[] {
+  const out = parts.slice();
+  // Trim from largest non-1 slot until total ≤ budget
+  while (out.reduce((a, b) => a + b, 0) > budget) {
+    let idx = -1, max = 1;
+    for (let i = 0; i < out.length; i++) {
+      if (out[i] > max) { max = out[i]; idx = i; }
+    }
+    if (idx === -1) break;
+    out[idx]--;
+  }
+  return out;
+}
+
 function distributeCommon(level: number, primary: Stat, hands: number): Record<string, number> {
   const budget = statBudget(level, "common", hands);
   const stats: Record<string, number> = {};
-  // 70% to primary
-  const primaryAmt = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.7)));
-  stats[primary] = primaryAmt;
-  // minor stat: prefer con for melee, dex for caster
+  // Existing minor pairing rule.
   const minor: Stat = primary === "str" || primary === "con" ? "con" : primary === "dex" ? "str" : primary === "int" || primary === "wis" ? "wis" : "dex";
-  const m = minor === primary ? "con" : minor;
-  // Spillover: primary, then minor
-  spillover(stats, level, budget, [primary, m]);
+  const m: Stat = minor === primary ? "con" : minor;
+
+  if (budget < 3) {
+    // Tiny budgets — 2-stat fallback.
+    stats[primary] = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.7)));
+    spillover(stats, level, budget, [primary, m]);
+    return stats;
+  }
+
+  // 70 / 20 / 10 with point shares; flavor = +2 hp (= 1pt, since hp costs 0.5)
+  let pPts = Math.max(1, Math.round(budget * 0.7));
+  let mPts = Math.max(1, Math.round(budget * 0.2));
+  let fPts = Math.max(1, budget - pPts - mPts);
+  [pPts, mPts, fPts] = rebalance([pPts, mPts, fPts], budget);
+
+  stats[primary] = Math.min(statCap(primary, level), pPts);
+  stats[m] = Math.min(statCap(m, level), mPts);
+  stats.hp = Math.min(statCap("hp", level), fPts * 2);
+  spillover(stats, level, budget, [primary, m, "hp"]);
   return stats;
 }
+
 function distributeUncommon(level: number, primary: Stat, secondary: Stat | null, hands: number): Record<string, number> {
   if (!secondary || secondary === primary) {
     throw new Error(`distributeUncommon requires a distinct secondary stat (got primary=${primary}, secondary=${secondary})`);
   }
   const budget = statBudget(level, "uncommon", hands);
   const stats: Record<string, number> = {};
-  const primaryAmt = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.55)));
-  const secondaryAmt = Math.max(1, Math.min(statCap(secondary, level), Math.round(budget * 0.35)));
-  stats[primary] = primaryAmt;
-  stats[secondary] = secondaryAmt;
   const tertiary: string = (primary === "con" || secondary === "con" || primary === "str") ? "hp" : "wis";
-  // Spillover order: primary, secondary, tertiary
+
+  if (budget < 3) {
+    // Tiny budgets — 2-stat fallback (still hybrid by definition).
+    stats[primary] = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.6)));
+    stats[secondary] = Math.max(1, Math.min(statCap(secondary, level), Math.round(budget * 0.4)));
+    spillover(stats, level, budget, [primary, secondary]);
+    if ((stats[secondary] ?? 0) < 1) {
+      if ((stats[primary] ?? 0) > 1) { stats[primary]--; stats[secondary] = 1; } else { stats[secondary] = 1; }
+    }
+    return stats;
+  }
+
+  // 50 / 30 / 20 point shares
+  let pPts = Math.max(1, Math.round(budget * 0.5));
+  let sPts = Math.max(1, Math.round(budget * 0.3));
+  let tPts = Math.max(1, budget - pPts - sPts);
+  [pPts, sPts, tPts] = rebalance([pPts, sPts, tPts], budget);
+
+  stats[primary] = Math.min(statCap(primary, level), pPts);
+  stats[secondary] = Math.min(statCap(secondary, level), sPts);
+  if (tertiary === "hp") {
+    stats.hp = Math.min(statCap("hp", level), tPts * 2);
+  } else {
+    stats[tertiary] = Math.min(statCap(tertiary, level), tPts);
+  }
   spillover(stats, level, budget, [primary, secondary, tertiary]);
   // Floor: guarantee secondary stat is at least 1 (steal from primary if caps clipped it).
   if ((stats[secondary] ?? 0) < 1) {
-    if ((stats[primary] ?? 0) > 1) {
-      stats[primary]--;
-      stats[secondary] = 1;
-    } else {
-      stats[secondary] = 1;
-    }
+    if ((stats[primary] ?? 0) > 1) { stats[primary]--; stats[secondary] = 1; } else { stats[secondary] = 1; }
   }
   return stats;
 }
