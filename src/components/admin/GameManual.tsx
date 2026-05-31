@@ -578,8 +578,10 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Stat Budget:</strong> max(2, floor(2 + (level − 1) × 0.3 × rarity_mult × hands_mult)) — floor of 2 even at L1, so every item has at least primary + minor.</p>
-                <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5</p>
+                <p><strong className="text-foreground">Stat Budget:</strong> max(2, floor((2 + (level − 1) × 0.24 × rarity_mult × hands_mult) × taper) + hybrid_bonus) — slope 0.24 (−20% squish v2).</p>
+                <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5 (unique 2h = 1.35)</p>
+                <p><strong className="text-foreground">Late-game taper:</strong> 1.0 (L≤30) · 0.90 (L31–35) · 0.80 (L36–40) · 0.72 (L41–42)</p>
+                <p><strong className="text-foreground">Hybrid bonus:</strong> +1 budget point on uncommon items at L30+</p>
                 <p><strong className="text-foreground">Repair Cost:</strong> ceil((100 − cur_dur) × value × rarity_mult / 100)</p>
                 <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Unique items are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
