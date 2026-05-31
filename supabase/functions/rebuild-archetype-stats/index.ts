@@ -283,6 +283,7 @@ Deno.serve(async (req) => {
     let updated = 0;
     let skipped = 0;
     const samples: Array<{ id: string; name: string; before: any; after: any }> = [];
+    const unmatched: Array<{ id: string; name: string; level: number; rarity: string }> = [];
 
     while (true) {
       const { data: rows, error: selErr } = await admin
