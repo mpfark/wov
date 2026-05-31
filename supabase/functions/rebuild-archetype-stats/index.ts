@@ -323,7 +323,12 @@ Deno.serve(async (req) => {
 
       for (const row of rows) {
         processed++;
-        const inferred = inferPrimarySecondary(row);
+
+        // Step 1: legacy archetype rename (Tyrant→Vanguard, Arcstrider→Stalker, ...)
+        const { newName, renamed } = applyLegacyRename(row.name || "", row.rarity);
+
+        // Step 2: name-based stat inference (uses post-rename name)
+        const inferred = inferPrimarySecondary(newName, row.rarity);
         if (!inferred) {
           unmatched.push({ id: row.id, name: row.name, level: row.level || 1, rarity: row.rarity });
           skipped++;
@@ -348,18 +353,21 @@ Deno.serve(async (req) => {
         }
 
         if (samples.length < 10) {
-          samples.push({ id: row.id, name: row.name, before: row.stats, after: newStats });
+          samples.push({ id: row.id, name: renamed ? `${row.name} → ${newName}` : row.name, before: row.stats, after: newStats });
         }
 
         if (dryRun) {
           updated++;
+          if (renamed) renamedCount++;
           continue;
         }
 
         const newValue = suggestGold(row.level || 1, row.rarity);
+        const patch: Record<string, any> = { stats: newStats, value: newValue };
+        if (renamed) patch.name = newName;
         const { error: updErr } = await admin
           .from("items")
-          .update({ stats: newStats, value: newValue })
+          .update(patch)
           .eq("id", row.id);
         if (updErr) {
           console.error(`update failed for ${row.id}:`, updErr);
@@ -367,6 +375,7 @@ Deno.serve(async (req) => {
           continue;
         }
         updated++;
+        if (renamed) renamedCount++;
       }
 
       if (rows.length < PAGE) break;
