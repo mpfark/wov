@@ -40,11 +40,12 @@ export function getItemStatBudget(level: number, rarity: string, hands: number =
   const handsMult = getItemHandsMultiplier(rarity, hands);
   // Consumables skip the late-game taper so potions keep scaling past L29.
   if (itemType === 'consumable') {
-    const rawC = 2 + (level - 1) * 0.3 * mult * handsMult;
+    const rawC = 2 + (level - 1) * 0.24 * mult * handsMult;
     return Math.max(2, Math.floor(rawC)) * 3;
   }
   const taper = getItemLevelTaper(level);
-  const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
+  // Slope 0.24 = squish v2 (−20% per-level growth, applied 2026-05).
+  const raw = 2 + (level - 1) * 0.24 * mult * handsMult;
   const hybridBonus = rarity === 'uncommon' && level >= 30 ? 1 : 0;
   return Math.max(2, Math.floor(raw * taper) + hybridBonus);
 }
