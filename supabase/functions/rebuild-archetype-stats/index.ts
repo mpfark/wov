@@ -307,6 +307,7 @@ Deno.serve(async (req) => {
     let processed = 0;
     let updated = 0;
     let skipped = 0;
+    let renamedCount = 0;
     const samples: Array<{ id: string; name: string; before: any; after: any }> = [];
     const unmatched: Array<{ id: string; name: string; level: number; rarity: string }> = [];
 
