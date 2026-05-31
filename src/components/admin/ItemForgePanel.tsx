@@ -323,6 +323,37 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
               </div>
             )}
 
+            {/* Steward/Overlord: Rewrite existing common/uncommon stats in place */}
+            <div className="rounded border border-elvish/30 bg-elvish/5 p-2 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-elvish" />
+                <span className="text-[10px] font-display text-elvish uppercase tracking-wider">Rewrite Stats (Squish v2)</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Rewrites every existing common/uncommon equipment item in place using the new −20% budget and 3-stat distribution (70/20/10 common, 50/30/20 uncommon). Names, slots and IDs are preserved. Uniques, soulforged and consumables are untouched.
+              </p>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={rebuilding} className="w-full text-[11px] h-7">
+                    {rebuilding ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Rewriting…</> : <><Sparkles className="w-3 h-3 mr-1" />Rewrite Existing Stats</>}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Rewrite all existing common & uncommon stats?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This updates the stat block on every common and uncommon equipment item to match the new squish-v2 budget and 3-stat distribution. Player-equipped items will pick up the new stats on their next resource sync. Idempotent — safe to re-run.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={rebuildStats}>Rewrite Stats</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
+
             {/* Forge Mode */}
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-display flex items-center gap-1">
