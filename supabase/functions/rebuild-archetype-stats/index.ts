@@ -300,6 +300,7 @@ Deno.serve(async (req) => {
         processed++;
         const inferred = inferPrimarySecondary(row);
         if (!inferred) {
+          unmatched.push({ id: row.id, name: row.name, level: row.level || 1, rarity: row.rarity });
           skipped++;
           continue;
         }
