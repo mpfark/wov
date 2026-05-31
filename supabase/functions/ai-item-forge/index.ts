@@ -327,6 +327,12 @@ Call the generate_items tool with the structured output.`;
       let stats = (item.stats && Object.keys(item.stats).length > 0) ? { ...item.stats } : {};
 
       if (item.item_type === "equipment") {
+        // Strip hp/hp_regen from common/uncommon equipment — those use 3 attribute
+        // stats only (squish v3). The AI sometimes still adds hp filler.
+        if (item.rarity === "common" || item.rarity === "uncommon") {
+          delete stats.hp;
+          delete stats.hp_regen;
+        }
         const budget = calcBudget(item.level || 1, item.rarity, item.hands || 1);
         let spent = calcStatCost(stats);
 
