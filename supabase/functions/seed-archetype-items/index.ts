@@ -94,7 +94,8 @@ function statBudget(level: number, rarity: string, hands = 1): number {
   const m = RARITY_MULT[rarity] || 1;
   const h = handsMultiplier(rarity, hands);
   const t = levelTaper(level);
-  const raw = 2 + (level - 1) * 0.3 * m * h;
+  // Slope 0.24 = squish v2 (−20% per-level growth, applied 2026-05).
+  const raw = 2 + (level - 1) * 0.24 * m * h;
   // Uncommon hybrids get +1 budget point at L30+ ("hybrid efficiency bonus").
   const hybridBonus = rarity === "uncommon" && level >= 30 ? 1 : 0;
   return Math.max(2, Math.floor(raw * t) + hybridBonus);
