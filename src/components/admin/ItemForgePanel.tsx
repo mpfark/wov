@@ -257,6 +257,26 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
     }
   };
 
+  /* ── Rewrite existing common/uncommon gear in place (squish v2) ── */
+  const rebuildStats = async () => {
+    setRebuilding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('rebuild-archetype-stats', {
+        body: {},
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(
+        `Stats rewritten — processed ${data.processed}, updated ${data.updated}, skipped ${data.skipped}.`
+      );
+      onDataChanged?.();
+    } catch (e: any) {
+      toast.error(e.message || 'Rebuild failed');
+    } finally {
+      setRebuilding(false);
+    }
+  };
+
   /* ─── Render ─────────────────────────────────────────── */
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
