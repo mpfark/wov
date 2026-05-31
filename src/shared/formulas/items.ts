@@ -53,11 +53,14 @@ export function getItemStatBudget(level: number, rarity: string, hands: number =
   // Consumables skip the late-game taper/hybrid bonus so potions keep
   // scaling linearly with level past L29 instead of plateauing at 30 points.
   if (itemType === 'consumable') {
-    const rawC = 2 + (level - 1) * 0.3 * mult * handsMult;
+    const rawC = 2 + (level - 1) * 0.24 * mult * handsMult;
     return Math.max(2, Math.floor(rawC)) * 3;
   }
   const taper = getItemLevelTaper(level);
-  const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
+  // Slope 0.24 (squish v2, 2026-05): −20% per-level growth vs the original 0.3
+  // to fight gear overshadowing base stats. Stacks multiplicatively with the
+  // existing late-game taper.
+  const raw = 2 + (level - 1) * 0.24 * mult * handsMult;
   // Hybrid efficiency: uncommons get +1 budget point at L30+ so they stay
   // attractive vs pure-primary commons after the taper kicks in.
   const hybridBonus = rarity === 'uncommon' && level >= 30 ? 1 : 0;
