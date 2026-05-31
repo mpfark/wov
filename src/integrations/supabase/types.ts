@@ -1794,6 +1794,10 @@ export type Database = {
         Args: { _character_id: string }
         Returns: Json
       }
+      area_type_placeholder_url: {
+        Args: { _area_type: string }
+        Returns: string
+      }
       award_party_member:
         | {
             Args: { _character_id: string; _gold: number; _xp: number }
