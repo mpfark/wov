@@ -206,13 +206,41 @@ const HYBRID_BY_NAME: Record<string, { primary: Stat; secondary: Stat }> = {
 };
 
 const PRIMARY_BY_NAME: Record<string, Stat> = {
-  Vanguard: "str", Iron: "str", Brutal: "str", Warborn: "str", Tyrant: "str",
-  Shadow: "dex", Swift: "dex", Hunter: "dex", Ashen: "dex", Nightstalker: "dex",
-  Stoneguard: "con", Warden: "con", Bulwark: "con", Bastion: "con", Stalwart: "con", Earthshaper: "con", Ironroot: "con",
-  Spellwoven: "int", Sage: "int", Arcane: "int", Astral: "int", Runed: "int",
-  Sanctified: "wis", Devout: "wis", Templar: "wis", Enlightened: "wis", Dawnbringer: "wis",
-  Crowned: "cha", Regal: "cha", Noble: "cha", Bardic: "cha", Silvertongue: "cha", Majestic: "cha", Virtuoso: "cha",
+  Vanguard: "str",
+  Shadow: "dex",
+  Stoneguard: "con",
+  Spellwoven: "int",
+  Sanctified: "wis",
+  Crowned: "cha",
 };
+
+/**
+ * Legacy archetype tokens that were retired when the canonical 6-common /
+ * 16-uncommon name list was locked in. Rows are RENAMED in place to the
+ * canonical token so naming + stats stay aligned. IDs are preserved so
+ * inventory / marketplace / loot tables remain valid.
+ */
+const LEGACY_COMMON_RENAME: Record<string, string> = {
+  Tyrant: "Vanguard",        // STR
+  Ironroot: "Stoneguard",    // CON
+  Enlightened: "Sanctified", // WIS
+  Bardic: "Crowned",         // CHA
+};
+
+const LEGACY_UNCOMMON_RENAME: Record<string, string> = {
+  Arcstrider: "Stalker",     // DEX+WIS (no canonical DEX+INT pair exists)
+};
+
+function applyLegacyRename(name: string, rarity: string): { newName: string; renamed: boolean } {
+  const map = rarity === "uncommon" ? LEGACY_UNCOMMON_RENAME : LEGACY_COMMON_RENAME;
+  const tokens = name.split(/\s+/);
+  let renamed = false;
+  const out = tokens.map((t) => {
+    if (t in map) { renamed = true; return map[t]; }
+    return t;
+  });
+  return { newName: out.join(" "), renamed };
+}
 
 function inferFromName(name: string): { primary?: Stat; secondary?: Stat; isHybrid?: boolean } {
   const tokens = name.split(/\s+/);
@@ -230,12 +258,9 @@ function inferFromName(name: string): { primary?: Stat; secondary?: Stat; isHybr
 
 /* ───────── Per-row rewrite ───────── */
 
-function inferPrimarySecondary(item: any): { primary: Stat; secondary?: Stat } | null {
-  // Name-only inference. Old logic that fell back to the highest existing stat
-  // is intentionally gone — it let pre-squish INT spillover masquerade as the
-  // "real" primary on wis archetypes (e.g. Sanctified → INT-dominant rewrites).
-  const nameInfo = inferFromName(item.name || "");
-  if (item.rarity === "uncommon") {
+function inferPrimarySecondary(name: string, rarity: string): { primary: Stat; secondary?: Stat } | null {
+  const nameInfo = inferFromName(name);
+  if (rarity === "uncommon") {
     if (!nameInfo.primary || !nameInfo.secondary) return null;
     return { primary: nameInfo.primary, secondary: nameInfo.secondary };
   }
