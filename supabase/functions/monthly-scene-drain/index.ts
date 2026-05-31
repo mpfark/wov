@@ -116,22 +116,26 @@ serve(async (req) => {
   let notes = "";
 
   try {
-    // 1) Areas missing illustration (priority — whole-area look)
+    // "Missing" includes: null, empty, or flagged as a placeholder in metadata.
+    const MISSING_OR_PLACEHOLDER =
+      "illustration_url.is.null,illustration_url.eq.,illustration_metadata->>is_placeholder.eq.true";
+
+    // 1) Areas missing illustration or only using a placeholder (priority)
     const { data: areasMissing, error: aErr } = await admin
       .from("areas")
-      .select("id, name, description, flavor_text, creature_types, region_id")
-      .or("illustration_url.is.null,illustration_url.eq.")
+      .select("id, name, description, flavor_text, creature_types, region_id, illustration_metadata")
+      .or(MISSING_OR_PLACEHOLDER)
       .limit(HARD_CAP);
     if (aErr) throw new Error(`Area query failed: ${aErr.message}`);
 
-    // 2) Named nodes missing illustration (skip unnamed — area art covers them)
+    // 2) Named nodes missing illustration or placeholder-only (skip unnamed — area art covers them)
     const remaining = Math.max(0, HARD_CAP - (areasMissing?.length || 0));
     let namedNodes: any[] = [];
     if (remaining > 0) {
       const { data: nodesMissing, error: nErr } = await admin
         .from("nodes")
-        .select("id, name, description, area_id, region_id")
-        .or("illustration_url.is.null,illustration_url.eq.")
+        .select("id, name, description, area_id, region_id, illustration_metadata")
+        .or(MISSING_OR_PLACEHOLDER)
         .not("name", "is", null)
         .neq("name", "")
         .limit(remaining);
