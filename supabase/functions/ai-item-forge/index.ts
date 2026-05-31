@@ -165,14 +165,15 @@ STAT BUDGET FORMULA (mirrors seed catalog — squish v2 + late-game compression)
 - Rarity: common=1.0, uncommon=1.5. Hands: 1.0 (1H) / 1.5 (2H, main_hand only).
 - Pick a level between ${level_min} and ${level_max} for each item.
 
-STAT DISTRIBUTION (3-stat split to fight single-attribute stacking):
-- COMMON: 70% primary archetype stat / 20% minor stat (existing pairing rule) / 10% flavor sprinkle in hp. All three ≥1 when budget ≥ 3.
-  - Minor pairing: STR/CON→con, DEX→str, INT/WIS→wis, CHA→dex. Pick another stat if minor collides with primary.
-  - At budget < 3, fall back to 2-stat (primary + minor only).
-- UNCOMMON: 50% primary / 30% secondary / 20% tertiary spillover. All three ≥1 when budget ≥ 3.
-  - Tertiary = hp if primary or secondary is con, or primary is str (tank-leaning); otherwise wis.
+STAT DISTRIBUTION (3 ATTRIBUTE stats — no hp filler on equipment commons/uncommons):
+- COMMON: 70% primary / 20% secondary / 10% tertiary (all attributes, not hp). All three ≥1 when budget ≥ 3.
+  - Triplet per primary (use EXACTLY these three keys, in this order of magnitude):
+    STR → str/con/dex · DEX → dex/str/wis · CON → con/str/wis · INT → int/wis/cha · WIS → wis/con/int · CHA → cha/wis/dex
+  - At budget < 3 (L1 only), use primary + secondary only.
+- UNCOMMON: 50% primary / 30% secondary / 20% tertiary (all attributes, not hp). All three ≥1 when budget ≥ 3.
+  - Tertiary per hybrid pair: STR+CON→dex · STR+DEX→con · DEX+WIS→con · WIS+CON→int · INT+WIS→cha · CHA+WIS→int · CHA+DEX→wis · CHA+STR→wis
   - At budget < 3, fall back to 2-stat (primary + secondary). Both archetype stats MUST appear.
-- Spend the FULL budget. Never leave points unallocated. Equipment must have ≥2 different stat keys.
+- Spend the FULL budget. Never leave points unallocated. Equipment never uses hp or hp_regen on commons/uncommons.
 
 STAT KEYS & COSTS:
 - Equipment: str/dex/con/int/wis/cha=1pt, ac=3pts, hp=0.5pts, hp_regen=2pts
@@ -326,6 +327,12 @@ Call the generate_items tool with the structured output.`;
       let stats = (item.stats && Object.keys(item.stats).length > 0) ? { ...item.stats } : {};
 
       if (item.item_type === "equipment") {
+        // Strip hp/hp_regen from common/uncommon equipment — those use 3 attribute
+        // stats only (squish v3). The AI sometimes still adds hp filler.
+        if (item.rarity === "common" || item.rarity === "uncommon") {
+          delete stats.hp;
+          delete stats.hp_regen;
+        }
         const budget = calcBudget(item.level || 1, item.rarity, item.hands || 1);
         let spent = calcStatCost(stats);
 

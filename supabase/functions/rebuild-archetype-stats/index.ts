@@ -85,6 +85,37 @@ function spillover(stats: Record<string, number>, level: number, budget: number,
   return stats;
 }
 
+/* ── 3-attribute distributions (squish v3, 2026-05) — mirror of seed-archetype-items ── */
+
+const COMMON_TRIPLE: Record<Stat, [Stat, Stat]> = {
+  str: ["con", "dex"],
+  dex: ["str", "wis"],
+  con: ["str", "wis"],
+  int: ["wis", "cha"],
+  wis: ["con", "int"],
+  cha: ["wis", "dex"],
+};
+
+const UNCOMMON_TERTIARY: Array<{ pair: [Stat, Stat]; tertiary: Stat }> = [
+  { pair: ["str", "con"], tertiary: "dex" },
+  { pair: ["str", "dex"], tertiary: "con" },
+  { pair: ["dex", "wis"], tertiary: "con" },
+  { pair: ["wis", "con"], tertiary: "int" },
+  { pair: ["int", "wis"], tertiary: "cha" },
+  { pair: ["cha", "wis"], tertiary: "int" },
+  { pair: ["cha", "dex"], tertiary: "wis" },
+  { pair: ["cha", "str"], tertiary: "wis" },
+];
+
+function pickUncommonTertiary(primary: Stat, secondary: Stat): Stat {
+  for (const { pair, tertiary } of UNCOMMON_TERTIARY) {
+    if ((pair[0] === primary && pair[1] === secondary) || (pair[0] === secondary && pair[1] === primary)) {
+      return tertiary;
+    }
+  }
+  return ATTRS.find((a) => a !== primary && a !== secondary) ?? "wis";
+}
+
 function rebalance(parts: number[], budget: number): number[] {
   const out = parts.slice();
   while (out.reduce((a, b) => a + b, 0) > budget) {
@@ -100,29 +131,34 @@ function rebalance(parts: number[], budget: number): number[] {
 
 function distributeCommon(level: number, primary: Stat, hands: number): Record<string, number> {
   const budget = statBudget(level, "common", hands);
+  const [secondary, tertiary] = COMMON_TRIPLE[primary];
   const stats: Record<string, number> = {};
-  const minor: Stat = primary === "str" || primary === "con" ? "con" : primary === "dex" ? "str" : primary === "int" || primary === "wis" ? "wis" : "dex";
-  const m: Stat = minor === primary ? "con" : minor;
+  if (budget < 2) { stats[primary] = 1; return stats; }
   if (budget < 3) {
-    stats[primary] = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.7)));
-    spillover(stats, level, budget, [primary, m]);
+    stats[primary] = Math.max(1, Math.min(statCap(primary, level), budget - 1));
+    stats[secondary] = 1;
     return stats;
   }
   let pPts = Math.max(1, Math.round(budget * 0.7));
-  let mPts = Math.max(1, Math.round(budget * 0.2));
-  let fPts = Math.max(1, budget - pPts - mPts);
-  [pPts, mPts, fPts] = rebalance([pPts, mPts, fPts], budget);
+  let sPts = Math.max(1, Math.round(budget * 0.2));
+  let tPts = Math.max(1, budget - pPts - sPts);
+  [pPts, sPts, tPts] = rebalance([pPts, sPts, tPts], budget);
   stats[primary] = Math.min(statCap(primary, level), pPts);
-  stats[m] = Math.min(statCap(m, level), mPts);
-  stats.hp = Math.min(statCap("hp", level), fPts * 2);
-  spillover(stats, level, budget, [primary, m, "hp"]);
+  stats[secondary] = Math.min(statCap(secondary, level), sPts);
+  stats[tertiary] = Math.min(statCap(tertiary, level), tPts);
+  spillover(stats, level, budget, [primary, secondary, tertiary]);
+  for (const k of [secondary, tertiary] as Stat[]) {
+    if ((stats[k] ?? 0) < 1) {
+      if ((stats[primary] ?? 0) > 1) { stats[primary]--; stats[k] = 1; } else { stats[k] = 1; }
+    }
+  }
   return stats;
 }
 
 function distributeUncommon(level: number, primary: Stat, secondary: Stat, hands: number): Record<string, number> {
   const budget = statBudget(level, "uncommon", hands);
+  const tertiary = pickUncommonTertiary(primary, secondary);
   const stats: Record<string, number> = {};
-  const tertiary: string = (primary === "con" || secondary === "con" || primary === "str") ? "hp" : "wis";
   if (budget < 3) {
     stats[primary] = Math.max(1, Math.min(statCap(primary, level), Math.round(budget * 0.6)));
     stats[secondary] = Math.max(1, Math.min(statCap(secondary, level), Math.round(budget * 0.4)));
@@ -138,14 +174,12 @@ function distributeUncommon(level: number, primary: Stat, secondary: Stat, hands
   [pPts, sPts, tPts] = rebalance([pPts, sPts, tPts], budget);
   stats[primary] = Math.min(statCap(primary, level), pPts);
   stats[secondary] = Math.min(statCap(secondary, level), sPts);
-  if (tertiary === "hp") {
-    stats.hp = Math.min(statCap("hp", level), tPts * 2);
-  } else {
-    stats[tertiary] = Math.min(statCap(tertiary, level), tPts);
-  }
+  stats[tertiary] = Math.min(statCap(tertiary, level), tPts);
   spillover(stats, level, budget, [primary, secondary, tertiary]);
-  if ((stats[secondary] ?? 0) < 1) {
-    if ((stats[primary] ?? 0) > 1) { stats[primary]--; stats[secondary] = 1; } else { stats[secondary] = 1; }
+  for (const k of [secondary, tertiary] as Stat[]) {
+    if ((stats[k] ?? 0) < 1) {
+      if ((stats[primary] ?? 0) > 1) { stats[primary]--; stats[k] = 1; } else { stats[k] = 1; }
+    }
   }
   return stats;
 }
@@ -197,23 +231,16 @@ function inferFromName(name: string): { primary?: Stat; secondary?: Stat; isHybr
 /* ───────── Per-row rewrite ───────── */
 
 function inferPrimarySecondary(item: any): { primary: Stat; secondary?: Stat } | null {
-  const stats = item.stats || {};
-  const ranked = ATTRS
-    .map((a) => ({ attr: a, val: stats[a] ?? 0 }))
-    .filter((x) => x.val > 0)
-    .sort((a, b) => b.val - a.val);
-  // Try inferred-from-name first; fall back to current stats.
+  // Name-only inference. Old logic that fell back to the highest existing stat
+  // is intentionally gone — it let pre-squish INT spillover masquerade as the
+  // "real" primary on wis archetypes (e.g. Sanctified → INT-dominant rewrites).
   const nameInfo = inferFromName(item.name || "");
   if (item.rarity === "uncommon") {
-    let primary = nameInfo.primary ?? ranked[0]?.attr;
-    let secondary = nameInfo.secondary ?? ranked.find((r) => r.attr !== primary)?.attr;
-    if (!primary || !secondary) return null;
-    return { primary, secondary };
-  } else {
-    const primary = nameInfo.primary ?? ranked[0]?.attr;
-    if (!primary) return null;
-    return { primary };
+    if (!nameInfo.primary || !nameInfo.secondary) return null;
+    return { primary: nameInfo.primary, secondary: nameInfo.secondary };
   }
+  if (!nameInfo.primary) return null;
+  return { primary: nameInfo.primary };
 }
 
 Deno.serve(async (req) => {
@@ -256,6 +283,7 @@ Deno.serve(async (req) => {
     let updated = 0;
     let skipped = 0;
     const samples: Array<{ id: string; name: string; before: any; after: any }> = [];
+    const unmatched: Array<{ id: string; name: string; level: number; rarity: string }> = [];
 
     while (true) {
       const { data: rows, error: selErr } = await admin
@@ -272,6 +300,7 @@ Deno.serve(async (req) => {
         processed++;
         const inferred = inferPrimarySecondary(row);
         if (!inferred) {
+          unmatched.push({ id: row.id, name: row.name, level: row.level || 1, rarity: row.rarity });
           skipped++;
           continue;
         }
@@ -320,7 +349,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, dry_run: dryRun, processed, updated, skipped, samples }),
+      JSON.stringify({ ok: true, dry_run: dryRun, processed, updated, skipped, unmatched_count: unmatched.length, unmatched: unmatched.slice(0, 50), samples }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e: any) {
