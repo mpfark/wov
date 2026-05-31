@@ -1,6 +1,6 @@
 ---
 name: AI Item Forge
-description: Gemini rules for batch item generation — archetype naming grammar (mirrors seed catalog), budget floor 2, common=primary uncommon=hybrid only
+description: Gemini rules for batch item generation — archetype naming grammar (mirrors seed catalog), 3-attribute distribution (no HP filler on commons/uncommons), budget floor 2
 type: feature
 ---
 
@@ -13,34 +13,40 @@ The AI Item Forge (admin tool, Google Gemini Flash) generates batches of common/
 **Tier prefix by level band:** 1–5 Worn · 6–10 Sturdy · 11–15 Fine · 16–20 Engraved · 21–25 Runed · 26–30 High · 31–35 Mythic · 36–40 Ancient · 41–42 Astral.
 
 **Common = primary archetype** (single dominant stat):
-- STR Vanguard/Iron/Brutal/Warborn/Tyrant · DEX Shadow/Swift/Hunter/Ashen/Nightstalker
-- CON Warden/Stoneguard/Bulwark/Bastion/Stalwart/Earthshaper/Ironroot · INT Sage/Arcane/Spellwoven/Astral/Runed
-- WIS Devout/Sanctified/Templar/Enlightened/Dawnbringer · CHA Regal/Noble/Bardic/Silvertongue/Crowned/Majestic/Virtuoso
+- STR Vanguard · DEX Shadow · CON Stoneguard · INT Spellwoven · WIS Sanctified · CHA Crowned
 
-**Uncommon = HYBRID archetype only** (two stats):
-- STR+CON Warlord/Juggernaut/Fortress · STR+DEX Raider/Blademaster/Skirmisher · DEX+INT Spellblade/Hexrunner/Arcstrider
-- WIS+CON Guardian/Justicar/Oathbound · INT+WIS Mystic/Oracle/Seer · CHA+WIS Prophet/Hierophant/Luminary
-- CHA+DEX Troubadour/Duelist/Shadowcourt · CHA+STR Champion/Sovereign/Lionguard
+**Uncommon = HYBRID archetype only** (two stats, 8 pairs):
+- STR+CON Warlord/Fortress · STR+DEX Blademaster/Skirmisher · DEX+WIS Stalker/Pathfinder · WIS+CON Justicar/Oathbound · INT+WIS Mystic/Oracle · CHA+WIS Prophet/Hierophant · CHA+DEX Troubadour/Duelist · CHA+STR Sovereign/Champion
 
 Forbidden in common/uncommon: proper nouns, place names, factions, "of the X" titles, lyrical names. Those belong to Unique/Soulforged tiers only.
 
 ## Stat Budget
 
-`max(2, floor(2 + (level - 1) × 0.3 × rarity_mult × hands_mult))` — minimum 2 even at L1 so every item has primary + minor.
+`max(2, floor((2 + (level − 1) × 0.24 × rarity_mult × hands_mult) × taper) + hybrid_bonus)`
 - Rarity: common=1.0, uncommon=1.5 · Hands: 1.0 (1H) / 1.5 (2H, main_hand)
+- Late-game taper: 1.0 (L≤30) / 0.90 / 0.80 / 0.72
+- Hybrid bonus: +1 to uncommon budget at L30+
 - Consumables: budget × 3, hp/hp_regen only.
 
-## Stat Distribution
+## Stat Distribution (3 attributes, no HP filler)
 
-- **Common**: ~70% to single primary stat, remainder spillover into a minor stat.
-- **Uncommon**: ~55% primary / ~35% secondary / ~10% tertiary spillover (hp for tank-leaning hybrids, wis otherwise). Both archetype stats must appear.
-- After AI returns, server-side spillover loop tops up any leftover budget into existing stats (primary first), respecting caps. Guarantees full budget spend.
+Every common/uncommon equipment item carries 3 real attribute stats — never `hp` or `hp_regen`.
+
+- **Common (70 / 20 / 10)** — primary / secondary / tertiary triplet:
+  - STR → str/con/dex · DEX → dex/str/wis · CON → con/str/wis
+  - INT → int/wis/cha · WIS → wis/con/int · CHA → cha/wis/dex
+- **Uncommon (50 / 30 / 20)** — primary / secondary / tertiary per hybrid pair:
+  - STR+CON→dex · STR+DEX→con · DEX+WIS→con · WIS+CON→int
+  - INT+WIS→cha · CHA+WIS→int · CHA+DEX→wis · CHA+STR→wis
+
+After AI returns, server-side spillover loop tops up any leftover budget into the same three attribute keys (primary first), respecting caps. `hp`/`hp_regen` are stripped from common/uncommon equipment before spillover.
 
 ## Stat Costs and Caps
 
 - Costs: str/dex/con/int/wis/cha = 1pt, ac = 3pts, hp = 0.5pts, hp_regen = 2pts
-- Primary cap: `4 + floor(level/4)` · AC: `2 + floor(level/10)` · HP: `6 + floor(level/5)*2` · hp_regen: `2 + floor(level/10)`
+- Primary cap: linear `4 + floor(level/4)` to L28, then `11 + floor((level − 28)/6)` to L40, ceilings at 13.
+- AC: `2 + floor(level/10)` · HP: `6 + floor(level/5)*2` · hp_regen: `2 + floor(level/10)`
 
 ## Source of Truth
 
-The deterministic seed function `seed-archetype-items` defines the canonical grammar/budget. This forge mirrors it for AI top-ups; any rule change should be made in both places.
+`seed-archetype-items` is canonical. `ai-item-forge` and `rebuild-archetype-stats` mirror its `COMMON_TRIPLE` / `UNCOMMON_TERTIARY` tables. Any change happens in all three.
