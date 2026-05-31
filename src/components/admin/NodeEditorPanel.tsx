@@ -16,6 +16,7 @@ import NodePicker from './NodePicker';
 import CreaturePicker from './CreaturePicker';
 import ItemPicker from './ItemPicker';
 import IllustrationEditor from './IllustrationEditor';
+import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 import { AdminEditorHeader, AdminStickyActions } from './common';
 
 interface VendorEntry {
