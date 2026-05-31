@@ -104,6 +104,7 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
   const { user } = useAuth();
   const { isValar } = useRole(user);
   const [seeding, setSeeding] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
 
   /* Forge mode */
   const [forgeMode, setForgeMode] = useState<'batch' | 'single'>('batch');
