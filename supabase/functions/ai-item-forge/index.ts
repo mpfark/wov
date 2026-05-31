@@ -287,7 +287,7 @@ Call the generate_items tool with the structured output.`;
       const mult = RARITY_MULT[rarity] || 1;
       const handsMult = hands === 2 ? (rarity === "unique" ? 1.35 : 1.5) : 1;
       const taper = level <= 30 ? 1.0 : level <= 35 ? 0.90 : level <= 40 ? 0.80 : 0.72;
-      const raw = 2 + (level - 1) * 0.3 * mult * handsMult;
+      const raw = 2 + (level - 1) * 0.24 * mult * handsMult;
       const hybridBonus = rarity === "uncommon" && level >= 30 ? 1 : 0;
       return Math.max(2, Math.floor(raw * taper) + hybridBonus);
     }
