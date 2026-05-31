@@ -197,11 +197,11 @@ export default function AreaEditorPanel({ areaId, isNew, regions, areas, initial
               onMetadataChange={m => setForm(f => ({ ...f, illustration_metadata: m }))}
               inheritedUrl={(() => {
                 const region = regions.find(r => r.id === form.region_id);
-                return (region as any)?.illustration_url || '';
+                return (region as any)?.illustration_url || areaTypePlaceholderUrl(form.area_type);
               })()}
               inheritedSource={(() => {
                 const region = regions.find(r => r.id === form.region_id);
-                return (region as any)?.illustration_url ? 'Region' : '';
+                return (region as any)?.illustration_url ? 'Region' : `Area type "${form.area_type}"`;
               })()}
             />
           </AdminFormSection>
