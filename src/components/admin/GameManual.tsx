@@ -578,8 +578,10 @@ export default function GameManual() {
             </AccordionTrigger>
             <AccordionContent className="px-4 space-y-3">
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong className="text-foreground">Stat Budget:</strong> max(2, floor(2 + (level − 1) × 0.3 × rarity_mult × hands_mult)) — floor of 2 even at L1, so every item has at least primary + minor.</p>
-                <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5</p>
+                <p><strong className="text-foreground">Stat Budget:</strong> max(2, floor((2 + (level − 1) × 0.24 × rarity_mult × hands_mult) × taper) + hybrid_bonus) — slope 0.24 (−20% squish v2).</p>
+                <p><strong className="text-foreground">hands_mult:</strong> 1h = 1.0, 2h = 1.5 (unique 2h = 1.35)</p>
+                <p><strong className="text-foreground">Late-game taper:</strong> 1.0 (L≤30) · 0.90 (L31–35) · 0.80 (L36–40) · 0.72 (L41–42)</p>
+                <p><strong className="text-foreground">Hybrid bonus:</strong> +1 budget point on uncommon items at L30+</p>
                 <p><strong className="text-foreground">Repair Cost:</strong> ceil((100 − cur_dur) × value × rarity_mult / 100)</p>
                 <p><strong className="text-foreground">Durability:</strong> All items have 100 max durability. Common/Uncommon can be repaired; Unique items are destroyed at 0.</p>
                 <p><strong className="text-foreground">Gold Value:</strong> round(level × 2.5 × rarity²)</p>
@@ -610,30 +612,31 @@ export default function GameManual() {
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-display text-foreground mb-1">Common = Primary Archetype (single dominant stat)</p>
+                    <p className="text-[10px] font-display text-foreground mb-1">Common = Primary Archetype (one canonical name per stat)</p>
                     <div className="text-[10px] text-muted-foreground space-y-0.5">
-                      <p><span className="text-foreground">STR:</span> Vanguard, Iron, Brutal, Warborn, Tyrant</p>
-                      <p><span className="text-foreground">DEX:</span> Shadow, Swift, Hunter, Ashen, Nightstalker</p>
-                      <p><span className="text-foreground">CON:</span> Warden, Stoneguard, Bulwark, Bastion, Stalwart, Earthshaper, Ironroot</p>
-                      <p><span className="text-foreground">INT:</span> Sage, Arcane, Spellwoven, Astral, Runed</p>
-                      <p><span className="text-foreground">WIS:</span> Devout, Sanctified, Templar, Enlightened, Dawnbringer</p>
-                      <p><span className="text-foreground">CHA:</span> Regal, Noble, Bardic, Silvertongue, Crowned, Majestic, Virtuoso</p>
+                      <p><span className="text-foreground">STR:</span> Vanguard · <span className="text-foreground">DEX:</span> Shadow · <span className="text-foreground">CON:</span> Stoneguard</p>
+                      <p><span className="text-foreground">INT:</span> Spellwoven · <span className="text-foreground">WIS:</span> Sanctified · <span className="text-foreground">CHA:</span> Crowned</p>
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-display text-elvish mb-1">Uncommon = Hybrid Archetype Only (two stats)</p>
+                    <p className="text-[10px] font-display text-elvish mb-1">Uncommon = Hybrid Archetype (8 pairs · 2 directional variants — dominant stat picks the name)</p>
                     <div className="text-[10px] text-muted-foreground space-y-0.5">
-                      <p><span className="text-foreground">STR+CON:</span> Warlord, Juggernaut, Fortress · <span className="text-foreground">STR+DEX:</span> Raider, Blademaster, Skirmisher</p>
-                      <p><span className="text-foreground">DEX+INT:</span> Spellblade, Hexrunner, Arcstrider · <span className="text-foreground">WIS+CON:</span> Guardian, Justicar, Oathbound</p>
-                      <p><span className="text-foreground">INT+WIS:</span> Mystic, Oracle, Seer · <span className="text-foreground">CHA+WIS:</span> Prophet, Hierophant, Luminary</p>
-                      <p><span className="text-foreground">CHA+DEX:</span> Troubadour, Duelist, Shadowcourt · <span className="text-foreground">CHA+STR:</span> Champion, Sovereign, Lionguard</p>
+                      <p><span className="text-foreground">STR+CON:</span> Warlord / Fortress · <span className="text-foreground">STR+DEX:</span> Blademaster / Skirmisher</p>
+                      <p><span className="text-foreground">DEX+WIS:</span> Stalker / Pathfinder · <span className="text-foreground">WIS+CON:</span> Justicar / Oathbound</p>
+                      <p><span className="text-foreground">INT+WIS:</span> Mystic / Oracle · <span className="text-foreground">CHA+WIS:</span> Prophet / Hierophant</p>
+                      <p><span className="text-foreground">CHA+DEX:</span> Troubadour / Duelist · <span className="text-foreground">CHA+STR:</span> Sovereign / Champion</p>
                     </div>
                   </div>
 
-                  <p className="text-[10px] text-muted-foreground/80">
-                    <span className="text-foreground">Stat distribution:</span> common ≈ 70% primary + minor spillover; uncommon ≈ 55% primary / 35% secondary / 10% tertiary spillover. A spillover loop guarantees the full budget is spent.
-                  </p>
+                  <div>
+                    <p className="text-[10px] font-display text-foreground mb-1">Stat Distribution (3 real attributes — no HP filler on common/uncommon equipment)</p>
+                    <div className="text-[10px] text-muted-foreground space-y-0.5">
+                      <p><span className="text-foreground">Common 70 / 20 / 10:</span> STR→str/con/dex · DEX→dex/str/wis · CON→con/str/wis · INT→int/wis/cha · WIS→wis/con/int · CHA→cha/wis/dex</p>
+                      <p><span className="text-foreground">Uncommon 50 / 30 / 20:</span> STR+CON→dex · STR+DEX→con · DEX+WIS→con · WIS+CON→int · INT+WIS→cha · CHA+WIS→int · CHA+DEX→wis · CHA+STR→wis</p>
+                      <p className="text-muted-foreground/80">A spillover loop tops up any leftover budget into the same three keys, respecting per-stat caps.</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
