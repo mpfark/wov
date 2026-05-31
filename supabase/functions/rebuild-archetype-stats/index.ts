@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, dry_run: dryRun, processed, updated, skipped, samples }),
+      JSON.stringify({ ok: true, dry_run: dryRun, processed, updated, skipped, unmatched_count: unmatched.length, unmatched: unmatched.slice(0, 50), samples }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e: any) {
