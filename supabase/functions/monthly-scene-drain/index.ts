@@ -11,13 +11,38 @@ const HARD_CAP = 10;
 const STYLE_SUFFIX =
   "Dark fantasy painterly scene illustration, dramatic chiaroscuro lighting, atmospheric, parchment-aged color palette, no text, no watermark, no border, no characters, environmental hero shot, square 1:1 composition.";
 
-function buildPrompt(node: any, area: any, region: any): string {
+type TargetKind = "area" | "node";
+interface Target {
+  kind: TargetKind;
+  id: string;
+  name: string;
+  description: string;
+  area_id?: string | null;
+  region_id?: string | null;
+}
+
+function buildAreaPrompt(area: any, region: any): string {
+  const parts: string[] = [];
+  parts.push(`A scene illustration of "${area?.name || "an unnamed area"}".`);
+  if (area?.description) parts.push(`Area: ${area.description}`);
+  if (area?.flavor_text) parts.push(area.flavor_text);
+  if (area?.creature_types) parts.push(`Known inhabitants: ${area.creature_types}.`);
+  if (region) {
+    const r: string[] = [];
+    if (region.name) r.push(`within the region "${region.name}"`);
+    if (region.description) r.push(region.description);
+    if (r.length) parts.push(`Region mood: ${r.join(". ")}.`);
+  }
+  parts.push(`Style: ${STYLE_SUFFIX}`);
+  return parts.join(" ");
+}
+
+function buildNodePrompt(node: any, area: any, region: any): string {
   const parts: string[] = [];
   const nodeName = (node?.name || "an unnamed place").toString().trim();
   const nodeDesc = (node?.description || "").toString().trim();
   parts.push(`A scene illustration of "${nodeName}".`);
   if (nodeDesc) parts.push(`Location: ${nodeDesc}`);
-
   if (area) {
     const a: string[] = [];
     if (area.name) a.push(`part of the area "${area.name}"`);
@@ -26,14 +51,12 @@ function buildPrompt(node: any, area: any, region: any): string {
     if (area.creature_types) a.push(`Known inhabitants: ${area.creature_types}.`);
     if (a.length) parts.push(`Area context: ${a.join(". ")}.`);
   }
-
   if (region) {
     const r: string[] = [];
     if (region.name) r.push(`within the region "${region.name}"`);
     if (region.description) r.push(region.description);
     if (r.length) parts.push(`Region mood: ${r.join(". ")}.`);
   }
-
   parts.push(`Style: ${STYLE_SUFFIX}`);
   return parts.join(" ");
 }
@@ -52,7 +75,6 @@ function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; contentType: stri
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Secret-header auth (cron-only)
   const supplied = req.headers.get("x-drain-secret");
   const expected = Deno.env.get("DRAIN_CRON_SECRET");
   if (!expected || !supplied || supplied !== expected) {
@@ -75,7 +97,6 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Open run-level log
   const { data: runRow, error: runErr } = await admin
     .from("ai_credit_drain_log")
     .insert({ cap: HARD_CAP, stop_reason: "in_progress" })
@@ -95,19 +116,53 @@ serve(async (req) => {
   let notes = "";
 
   try {
-    const { data: targets, error: tErr } = await admin
-      .from("nodes")
-      .select("id, name, description, area_id, region_id")
+    // 1) Areas missing illustration (priority — whole-area look)
+    const { data: areasMissing, error: aErr } = await admin
+      .from("areas")
+      .select("id, name, description, flavor_text, creature_types, region_id")
       .or("illustration_url.is.null,illustration_url.eq.")
       .limit(HARD_CAP);
-    if (tErr) throw new Error(`Target query failed: ${tErr.message}`);
+    if (aErr) throw new Error(`Area query failed: ${aErr.message}`);
 
-    if (!targets || targets.length === 0) {
+    // 2) Named nodes missing illustration (skip unnamed — area art covers them)
+    const remaining = Math.max(0, HARD_CAP - (areasMissing?.length || 0));
+    let namedNodes: any[] = [];
+    if (remaining > 0) {
+      const { data: nodesMissing, error: nErr } = await admin
+        .from("nodes")
+        .select("id, name, description, area_id, region_id")
+        .or("illustration_url.is.null,illustration_url.eq.")
+        .not("name", "is", null)
+        .neq("name", "")
+        .limit(remaining);
+      if (nErr) throw new Error(`Node query failed: ${nErr.message}`);
+      namedNodes = nodesMissing || [];
+    }
+
+    const targets: Target[] = [
+      ...(areasMissing || []).map((a: any) => ({
+        kind: "area" as const,
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        region_id: a.region_id,
+      })),
+      ...namedNodes.map((n: any) => ({
+        kind: "node" as const,
+        id: n.id,
+        name: n.name,
+        description: n.description,
+        area_id: n.area_id,
+        region_id: n.region_id,
+      })),
+    ];
+
+    if (targets.length === 0) {
       stopReason = "no_targets";
     } else {
-      // Pre-fetch areas & regions
-      const areaIds = Array.from(new Set(targets.map((n) => n.area_id).filter(Boolean)));
-      const regionIds = Array.from(new Set(targets.map((n) => n.region_id).filter(Boolean)));
+      // Pre-fetch parent areas (for node prompts) and regions
+      const areaIds = Array.from(new Set(targets.map((t) => t.area_id).filter(Boolean))) as string[];
+      const regionIds = Array.from(new Set(targets.map((t) => t.region_id).filter(Boolean))) as string[];
       const [{ data: areas }, { data: regions }] = await Promise.all([
         areaIds.length
           ? admin.from("areas").select("id, name, description, flavor_text, creature_types").in("id", areaIds)
@@ -119,14 +174,30 @@ serve(async (req) => {
       const areaMap = new Map((areas || []).map((a: any) => [a.id, a]));
       const regionMap = new Map((regions || []).map((r: any) => [r.id, r]));
 
-      for (const node of targets) {
+      for (const t of targets) {
         if (generated >= HARD_CAP) {
           stopReason = "cap_hit";
           break;
         }
-        const area = node.area_id ? areaMap.get(node.area_id) : null;
-        const region = node.region_id ? regionMap.get(node.region_id) : null;
-        const prompt = buildPrompt(node, area, region);
+
+        const region = t.region_id ? regionMap.get(t.region_id) : null;
+        let prompt: string;
+        if (t.kind === "area") {
+          prompt = buildAreaPrompt(
+            { name: t.name, description: t.description, flavor_text: (areasMissing || []).find((x: any) => x.id === t.id)?.flavor_text, creature_types: (areasMissing || []).find((x: any) => x.id === t.id)?.creature_types },
+            region,
+          );
+        } else {
+          const area = t.area_id ? areaMap.get(t.area_id) : null;
+          prompt = buildNodePrompt({ name: t.name, description: t.description }, area, region);
+        }
+
+        const logBase = {
+          run_id: runId,
+          target_type: t.kind,
+          node_id: t.kind === "node" ? t.id : null,
+          area_id: t.kind === "area" ? t.id : null,
+        };
 
         try {
           const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -146,8 +217,7 @@ serve(async (req) => {
             await aiResp.text();
             stopReason = "credits_exhausted";
             await admin.from("ai_credit_drain_item_log").insert({
-              run_id: runId,
-              node_id: node.id,
+              ...logBase,
               status: "error",
               error: "Credits exhausted (402)",
             });
@@ -156,8 +226,7 @@ serve(async (req) => {
           if (!aiResp.ok) {
             const txt = await aiResp.text();
             await admin.from("ai_credit_drain_item_log").insert({
-              run_id: runId,
-              node_id: node.id,
+              ...logBase,
               status: "error",
               error: `AI ${aiResp.status}: ${txt.slice(0, 300)}`,
             });
@@ -169,18 +238,24 @@ serve(async (req) => {
           if (!dataUrl) throw new Error("AI returned no image");
           const { bytes, contentType } = dataUrlToBytes(dataUrl);
           const ext = contentType.includes("jpeg") ? "jpg" : "png";
-          const path = `${node.id}-${Date.now()}.${ext}`;
+          const bucket = t.kind === "area" ? "area-illustrations" : "node-illustrations";
+          const path = `${t.id}-${Date.now()}.${ext}`;
 
-          const { error: upErr } = await admin.storage
-            .from("node-illustrations")
-            .upload(path, bytes, { contentType, upsert: true });
+          // Try preferred bucket, fall back to node-illustrations if the area bucket doesn't exist
+          let useBucket = bucket;
+          let upErr = (await admin.storage.from(useBucket).upload(path, bytes, { contentType, upsert: true })).error;
+          if (upErr && t.kind === "area") {
+            useBucket = "node-illustrations";
+            upErr = (await admin.storage.from(useBucket).upload(path, bytes, { contentType, upsert: true })).error;
+          }
           if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
 
-          const { data: pub } = admin.storage.from("node-illustrations").getPublicUrl(path);
+          const { data: pub } = admin.storage.from(useBucket).getPublicUrl(path);
           const publicUrl = pub.publicUrl;
 
+          const table = t.kind === "area" ? "areas" : "nodes";
           const { error: updErr } = await admin
-            .from("nodes")
+            .from(table)
             .update({
               illustration_url: publicUrl,
               illustration_metadata: {
@@ -190,21 +265,19 @@ serve(async (req) => {
                 prompt,
               },
             })
-            .eq("id", node.id);
-          if (updErr) throw new Error(`Node update failed: ${updErr.message}`);
+            .eq("id", t.id);
+          if (updErr) throw new Error(`${table} update failed: ${updErr.message}`);
 
           generated += 1;
           await admin.from("ai_credit_drain_item_log").insert({
-            run_id: runId,
-            node_id: node.id,
+            ...logBase,
             status: "success",
           });
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          console.error("Node generation failed", node.id, msg);
+          console.error(`${t.kind} generation failed`, t.id, msg);
           await admin.from("ai_credit_drain_item_log").insert({
-            run_id: runId,
-            node_id: node.id,
+            ...logBase,
             status: "error",
             error: msg.slice(0, 500),
           });

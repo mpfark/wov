@@ -99,28 +99,34 @@ export type Database = {
       }
       ai_credit_drain_item_log: {
         Row: {
+          area_id: string | null
           created_at: string
           error: string | null
           id: string
-          node_id: string
+          node_id: string | null
           run_id: string
           status: string
+          target_type: string
         }
         Insert: {
+          area_id?: string | null
           created_at?: string
           error?: string | null
           id?: string
-          node_id: string
+          node_id?: string | null
           run_id: string
           status: string
+          target_type?: string
         }
         Update: {
+          area_id?: string | null
           created_at?: string
           error?: string | null
           id?: string
-          node_id?: string
+          node_id?: string | null
           run_id?: string
           status?: string
+          target_type?: string
         }
         Relationships: [
           {
