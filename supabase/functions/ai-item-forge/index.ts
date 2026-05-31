@@ -207,7 +207,7 @@ Call the generate_items tool with the structured output.`;
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. IMPORTANT: Calculate the stat budget for each item using the formula and spend ALL of it across multiple stats. A level 10 uncommon item has budget floor(1+9*0.3*1.5)=5, so its stats should total ~5 points spread across 2-3 keys. Never leave budget unspent.` },
+          { role: "user", content: `Generate exactly ${count} items for level ${level_min}–${level_max}. IMPORTANT: Calculate the stat budget for each item using the formula and spend ALL of it across 3 stat keys when budget ≥ 3. Example: a level 10 uncommon item has budget floor(1+9*0.24*1.5)=4, split as primary≈2 / secondary≈1 / tertiary≈1 (hp=2 if tertiary is hp). Never leave budget unspent.` },
         ],
         tools: [
           {
