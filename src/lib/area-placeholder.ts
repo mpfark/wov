@@ -6,7 +6,10 @@
 const BASE_URL =
   'https://gpclaklkaolyzfnooajt.supabase.co/storage/v1/object/public/background-images/placeholders';
 
+// Bump this when placeholder images are re-uploaded to bust the CDN/browser cache.
+const PLACEHOLDER_VERSION = '20260531-2';
+
 export function areaTypePlaceholderUrl(areaType?: string | null): string {
   const type = (areaType || '').trim() || 'other';
-  return `${BASE_URL}/area-type-${type}.jpg`;
+  return `${BASE_URL}/area-type-${type}.jpg?v=${PLACEHOLDER_VERSION}`;
 }
