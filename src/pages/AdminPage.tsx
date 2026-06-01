@@ -392,10 +392,15 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <ItemManager />;
       case 'loot-tables':
         return <LootTableManager />;
+      case 'tools':
       case 'item-forge':
-        return <ItemForgePanel onDataChanged={loadData} />;
       case 'item-coverage':
-        return <ItemCoverageAnalyzer />;
+      case 'unique-reclaim':
+      case 'credit-drain': {
+        const toolTab =
+          activeTab === 'tools' ? 'item-forge' : activeTab;
+        return <ToolsPanel onDataChanged={loadData} defaultTab={toolTab} />;
+      }
       case 'races-classes':
         return <RaceClassManager />;
       case 'xp-boost':
