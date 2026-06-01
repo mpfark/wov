@@ -13,8 +13,7 @@ import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
-import ItemForgePanel from '@/components/admin/ItemForgePanel';
-import ItemCoverageAnalyzer from '@/components/admin/ItemCoverageAnalyzer';
+import ToolsPanel from '@/components/admin/ToolsPanel';
 
 import GameManual from '@/components/admin/GameManual';
 import CreditDrainHistory from '@/components/admin/CreditDrainHistory';
