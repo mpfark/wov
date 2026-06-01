@@ -19,7 +19,6 @@ import {
   User,
   Swords,
   Dice3,
-  Hammer,
   Users,
   Dna,
   Zap,
@@ -28,9 +27,7 @@ import {
   BookOpen,
   BookText,
   Store,
-  Crown,
-  BarChart3,
-  Sparkles,
+  Wrench,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
