@@ -22,7 +22,7 @@ import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
 import MarketplaceManager from '@/components/admin/MarketplaceManager';
-import UniqueReclaimManager from '@/components/admin/UniqueReclaimManager';
+
 import AdminChatWidget from '@/components/admin/AdminChatWidget';
 import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
 import AreaEditorPanel from '@/components/admin/AreaEditorPanel';
