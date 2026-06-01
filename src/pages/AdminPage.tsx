@@ -13,17 +13,16 @@ import RaceClassManager from '@/components/admin/RaceClassManager';
 import RoadmapManager from '@/components/admin/RoadmapManager';
 import NPCManager from '@/components/admin/NPCManager';
 import LootTableManager from '@/components/admin/LootTableManager';
-import ItemForgePanel from '@/components/admin/ItemForgePanel';
-import ItemCoverageAnalyzer from '@/components/admin/ItemCoverageAnalyzer';
+import ToolsPanel from '@/components/admin/ToolsPanel';
 
 import GameManual from '@/components/admin/GameManual';
-import CreditDrainHistory from '@/components/admin/CreditDrainHistory';
+
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
 import IssueReportManager from '@/components/admin/IssueReportManager';
 import MarketplaceManager from '@/components/admin/MarketplaceManager';
-import UniqueReclaimManager from '@/components/admin/UniqueReclaimManager';
+
 import AdminChatWidget from '@/components/admin/AdminChatWidget';
 import RegionEditorPanel from '@/components/admin/RegionEditorPanel';
 import AreaEditorPanel from '@/components/admin/AreaEditorPanel';
@@ -393,10 +392,15 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <ItemManager />;
       case 'loot-tables':
         return <LootTableManager />;
+      case 'tools':
       case 'item-forge':
-        return <ItemForgePanel onDataChanged={loadData} />;
       case 'item-coverage':
-        return <ItemCoverageAnalyzer />;
+      case 'unique-reclaim':
+      case 'credit-drain': {
+        const toolTab =
+          activeTab === 'tools' ? 'item-forge' : activeTab;
+        return <ToolsPanel onDataChanged={loadData} defaultTab={toolTab} />;
+      }
       case 'races-classes':
         return <RaceClassManager />;
       case 'xp-boost':
@@ -411,16 +415,12 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <IssueReportManager />;
       case 'marketplace':
         return <MarketplaceManager />;
-      case 'unique-reclaim':
-        return <UniqueReclaimManager />;
       case 'roadmap':
         return <RoadmapManager />;
       case 'rulebook':
         return <WorldBuilderRulebook />;
       case 'manual':
         return <GameManual />;
-      case 'credit-drain':
-        return <CreditDrainHistory />;
       default:
         return <AdminDashboard onNavigate={setActiveTab} />;
     }

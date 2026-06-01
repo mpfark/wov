@@ -19,7 +19,6 @@ import {
   User,
   Swords,
   Dice3,
-  Hammer,
   Users,
   Dna,
   Zap,
@@ -28,9 +27,7 @@ import {
   BookOpen,
   BookText,
   Store,
-  Crown,
-  BarChart3,
-  Sparkles,
+  Wrench,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -53,8 +50,6 @@ const NAV_GROUPS = [
       { key: 'npcs', label: 'NPCs', icon: User },
       { key: 'items', label: 'Items', icon: Swords },
       { key: 'loot-tables', label: 'Loot Tables', icon: Dice3 },
-      { key: 'item-forge', label: 'Item Forge', icon: Hammer },
-      { key: 'item-coverage', label: 'Item Coverage', icon: BarChart3 },
     ],
   },
   {
@@ -73,11 +68,10 @@ const NAV_GROUPS = [
   {
     label: 'Operations',
     items: [
+      { key: 'tools', label: 'Tools', icon: Wrench },
       { key: 'issues', label: 'Issues', icon: Bug },
       { key: 'marketplace', label: 'Marketplace', icon: Store },
-      { key: 'unique-reclaim', label: 'Unique Reclaim', icon: Crown },
       { key: 'roadmap', label: 'Roadmap', icon: MapPin },
-      { key: 'credit-drain', label: 'Credit Drain', icon: Sparkles },
     ],
   },
   {
