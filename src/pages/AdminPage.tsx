@@ -415,16 +415,12 @@ export default function AdminPage({ isValar }: AdminPageProps) {
         return <IssueReportManager />;
       case 'marketplace':
         return <MarketplaceManager />;
-      case 'unique-reclaim':
-        return <UniqueReclaimManager />;
       case 'roadmap':
         return <RoadmapManager />;
       case 'rulebook':
         return <WorldBuilderRulebook />;
       case 'manual':
         return <GameManual />;
-      case 'credit-drain':
-        return <CreditDrainHistory />;
       default:
         return <AdminDashboard onNavigate={setActiveTab} />;
     }
