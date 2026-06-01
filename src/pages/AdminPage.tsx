@@ -16,7 +16,7 @@ import LootTableManager from '@/components/admin/LootTableManager';
 import ToolsPanel from '@/components/admin/ToolsPanel';
 
 import GameManual from '@/components/admin/GameManual';
-import CreditDrainHistory from '@/components/admin/CreditDrainHistory';
+
 import XpBoostPanel from '@/components/admin/XpBoostPanel';
 import WorldBuilderRulebook from '@/components/admin/WorldBuilderRulebook';
 import PopulatePanel from '@/components/admin/PopulatePanel';
