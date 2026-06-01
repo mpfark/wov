@@ -366,7 +366,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Event bus subscribers ──────────────────────────────────────
   useGameEvent(bus, 'log', ({ message }) => {
     const displayMsg = message.replace('[INSPIRE_BUFF]', '').trim();
-    setEventLog(prev => [...prev.slice(-49), displayMsg]);
+    setEventLog(prev => [...prev.slice(-99), displayMsg]);
   });
   useGameEvent(bus, 'log', ({ message }) => {
     (async () => {
@@ -378,7 +378,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     })();
   });
   useGameEvent(bus, 'log:local', ({ message }) => {
-    setEventLog(prev => [...prev.slice(-49), message]);
+    setEventLog(prev => [...prev.slice(-99), message]);
   });
   useGameEvent(bus, 'creature:damage', (payload) => {
     broadcastDamage(payload.creatureId, payload.newHp, payload.damage, payload.attackerName, payload.killed);
@@ -457,10 +457,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     }
     if (msg.includes('[INSPIRE_BUFF]')) {
       const cleanMsg = msg.replace('[INSPIRE_BUFF]', '').trim();
-      setEventLog(prev => [...prev.slice(-49), cleanMsg]);
+      setEventLog(prev => [...prev.slice(-99), cleanMsg]);
       return;
     }
-    setEventLog(prev => [...prev.slice(-49), msg]);
+    setEventLog(prev => [...prev.slice(-99), msg]);
   }, [character.current_node_id]);
 
 
@@ -793,7 +793,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [character.current_node_id]);
 
   const handleChatMessage = useCallback((formatted: string) => {
-    setEventLog(prev => [...prev.slice(-49), formatted]);
+    setEventLog(prev => [...prev.slice(-99), formatted]);
   }, []);
 
   const { sendSay, sendWhisper } = useChat({
@@ -814,7 +814,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const whisperMatch = text.match(/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i);
     if (whisperMatch) {
       const err = await sendWhisper(whisperMatch[1], whisperMatch[2]);
-      if (err) setEventLog(prev => [...prev.slice(-49), `⚠️ ${err}`]);
+      if (err) setEventLog(prev => [...prev.slice(-99), `⚠️ ${err}`]);
       return;
     }
 
