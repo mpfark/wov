@@ -18,6 +18,7 @@ import {
   PawPrint,
   User,
   Swords,
+  Hammer,
   Dice3,
   Users,
   Dna,
@@ -29,6 +30,7 @@ import {
   Store,
   Wrench,
 } from 'lucide-react';
+
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -49,9 +51,11 @@ const NAV_GROUPS = [
       { key: 'creatures', label: 'Creatures', icon: PawPrint },
       { key: 'npcs', label: 'NPCs', icon: User },
       { key: 'items', label: 'Items', icon: Swords },
+      { key: 'item-forge', label: 'Item Forge', icon: Hammer },
       { key: 'loot-tables', label: 'Loot Tables', icon: Dice3 },
     ],
   },
+
   {
     label: 'Players',
     items: [

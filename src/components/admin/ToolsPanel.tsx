@@ -1,40 +1,71 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Wrench } from 'lucide-react';
-import { AdminEntityToolbar } from './common';
-import ItemForgePanel from './ItemForgePanel';
+import { useState } from 'react';
+import { Wrench, BarChart3, Hammer, Crown, Sparkles } from 'lucide-react';
+import AdminPageShell from './common/AdminPageShell';
 import ItemCoverageAnalyzer from './ItemCoverageAnalyzer';
 import UniqueReclaimManager from './UniqueReclaimManager';
 import CreditDrainHistory from './CreditDrainHistory';
+import ArchetypeMaintenancePanel from './tools/ArchetypeMaintenancePanel';
+import { cn } from '@/lib/utils';
 
 interface ToolsPanelProps {
   onDataChanged?: () => void;
-  defaultTab?: string;
+  defaultTool?: string;
 }
 
-export default function ToolsPanel({ onDataChanged, defaultTab = 'item-forge' }: ToolsPanelProps) {
+const TOOLS = [
+  { key: 'item-coverage', label: 'Item Coverage', icon: BarChart3 },
+  { key: 'archetype-maintenance', label: 'Archetype Maintenance', icon: Hammer },
+  { key: 'unique-reclaim', label: 'Unique Reclaim', icon: Crown },
+  { key: 'credit-drain', label: 'Credit Drain', icon: Sparkles },
+] as const;
+
+export default function ToolsPanel({ onDataChanged, defaultTool = 'item-coverage' }: ToolsPanelProps) {
+  const [active, setActive] = useState<string>(defaultTool);
+
+  const renderTool = () => {
+    switch (active) {
+      case 'item-coverage':
+        return <div className="h-full overflow-auto"><ItemCoverageAnalyzer /></div>;
+      case 'archetype-maintenance':
+        return <div className="h-full overflow-auto"><ArchetypeMaintenancePanel onDataChanged={onDataChanged} /></div>;
+      case 'unique-reclaim':
+        return <div className="h-full overflow-auto"><UniqueReclaimManager /></div>;
+      case 'credit-drain':
+        return <div className="h-full overflow-auto"><CreditDrainHistory /></div>;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="h-full flex flex-col min-h-0">
-      <AdminEntityToolbar icon={<Wrench className="w-4 h-4" />} title="Tools" />
-      <Tabs defaultValue={defaultTab} className="flex-1 flex flex-col min-h-0">
-        <TabsList className="shrink-0 mx-3 mt-2">
-          <TabsTrigger value="item-forge" className="text-xs">🔨 Item Forge</TabsTrigger>
-          <TabsTrigger value="item-coverage" className="text-xs">📊 Item Coverage</TabsTrigger>
-          <TabsTrigger value="unique-reclaim" className="text-xs">👑 Unique Reclaim</TabsTrigger>
-          <TabsTrigger value="credit-drain" className="text-xs">✨ Credit Drain</TabsTrigger>
-        </TabsList>
-        <TabsContent value="item-forge" className="flex-1 min-h-0 overflow-hidden mt-0">
-          <ItemForgePanel onDataChanged={onDataChanged} />
-        </TabsContent>
-        <TabsContent value="item-coverage" className="flex-1 min-h-0 overflow-auto mt-0">
-          <ItemCoverageAnalyzer />
-        </TabsContent>
-        <TabsContent value="unique-reclaim" className="flex-1 min-h-0 overflow-auto mt-0">
-          <UniqueReclaimManager />
-        </TabsContent>
-        <TabsContent value="credit-drain" className="flex-1 min-h-0 overflow-auto mt-0">
-          <CreditDrainHistory />
-        </TabsContent>
-      </Tabs>
-    </div>
+    <AdminPageShell
+      icon={<Wrench className="w-4 h-4" />}
+      title="Tools"
+      tools={
+        <nav className="p-2 space-y-1">
+          {TOOLS.map((t) => {
+            const Icon = t.icon;
+            const isActive = active === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setActive(t.key)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-left transition-colors',
+                  isActive
+                    ? 'bg-primary/10 text-primary'
+                    : 'hover:bg-muted/50 text-foreground',
+                )}
+              >
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      }
+    >
+      {renderTool()}
+    </AdminPageShell>
   );
 }
