@@ -1,44 +1,67 @@
-## What I found
+## Goal
 
-- The live database has **936 common/uncommon equipment rows**.
-- **72 rows still use legacy archetype names** that the current tools no longer understand:
-  - Common belt-only legacy archetypes: `Bardic`, `Enlightened`, `Ironroot`, `Tyrant` — 9 rows each.
-  - Uncommon legacy hybrid: `Arcstrider` — 27 rows.
-- Several L21/L41 rows still have stale INT-heavy stats such as `{cha:1,int:4,wis:1}` or `{int:8,wis:4}` even when the name implies something else. This is why Sanctified and other archetypes can still look wrong.
-- The previous rewrite failed because it only trusted canonical names; legacy names were skipped or mis-inferred.
+Eliminate horizontal tab bars in the admin shell (only the Manual's accordion remains). Reorganize so each tool has a clear home, and admin pages use **left column → main pane** layouts (the `AdminPageShell` pattern), not top tabs.
 
-## Proposed fix
+## Sidebar changes
 
-1. **Add a legacy alias map to the rewrite function**
-   - Teach `rebuild-archetype-stats` to recognize old archetypes and map them safely:
-     - `Tyrant` -> `Vanguard` / STR common
-     - `Ironroot` -> `Stoneguard` / CON common
-     - `Enlightened` -> `Sanctified` / WIS common
-     - `Bardic` -> `Crowned` / CHA common
-     - `Arcstrider` -> `Stalker` / DEX+WIS uncommon
-   - Keep canonical names as the primary source of truth.
-   - Return a clear report: `renamed`, `restatted`, `legacy_mapped`, `unmatched`.
+`src/components/admin/AdminSidebar.tsx`
 
-2. **Fix the live item data**
-   - Rename the 72 legacy rows in `items` to canonical archetypes while preserving IDs, slots, levels, inventory references, marketplace references, and loot references.
-   - Recompute stats for **all common/uncommon equipment rows**, not just renamed rows, so stale L21/L41 stat blobs are replaced.
-   - Keep unique, soulforged, consumables, and quest items untouched.
+- **Content** group: `Creatures, NPCs, Items, Item Forge (restored), Loot Tables`
+- **Operations** group: `Tools, Issues, Marketplace, Roadmap`
+- Tools stays a single sidebar entry.
 
-3. **Protect against this happening again**
-   - Update the admin/tool docs and memory to list the legacy alias policy.
-   - Update the Game Manual if needed so it only shows the current canonical names.
-   - Keep the rewrite tool capable of repairing old names if more legacy rows appear later.
+## Item Forge
 
-4. **Validate after repair**
-   - Query live `items` after the update to confirm:
-     - No `Arcstrider`, `Bardic`, `Enlightened`, `Ironroot`, or `Tyrant` rows remain.
-     - Sanctified rows use WIS/CON/INT with WIS dominant.
-     - Common/uncommon equipment has no HP filler.
-     - Known canonical archetypes have expected attribute keys and dominance.
+- Restore `item-forge` as its own sidebar route → renders `ItemForgePanel` directly (as it did before).
+- **Remove** the "Rewrite Stats (Squish v2)" and "Purge & Seed Catalog" action cards from `ItemForgePanel`. Extract them into a new component `src/components/admin/tools/ArchetypeMaintenancePanel.tsx` (two simple cards calling the same `rebuild-archetype-stats` / `seed-archetype-items` edge functions, identical confirm dialogs and toasts).
+- Item Forge then only contains the AI generation / preview / save flow.
 
-## Technical notes
+## Tools page — flatten to columns
 
-- This is a **data repair plus edge-function hardening** task, not a schema migration.
-- Data updates should use the existing `items` table only.
-- No database structure changes are needed.
-- Existing item IDs must stay stable so player inventory and loot references remain valid.
+Rewrite `src/components/admin/ToolsPanel.tsx` using `AdminPageShell`:
+
+- **Left column (tool list):** Item Coverage Analyzer, Archetype Maintenance (Squish v2 + Purge & Seed), Unique Reclaim, Credit Drain. Selecting one renders it in the main pane.
+- **No top tab bar.** State held locally (`useState`) for the active tool.
+- Preserve `defaultTab` prop semantics via a `defaultTool` so deep links still work.
+
+Tool list (final):
+- Item Coverage Analyzer (`ItemCoverageAnalyzer`)
+- Archetype Maintenance (`ArchetypeMaintenancePanel` — new, extracted)
+- Unique Reclaim (`UniqueReclaimManager`)
+- Credit Drain (`CreditDrainHistory`)
+
+## Loot Tables — flatten to columns
+
+Rewrite `src/components/admin/LootTableManager.tsx` using `AdminPageShell`:
+
+- **Left column:** Pool Rules, Item Pool, Legacy Tables, Creature Modes.
+- **Main pane:** the selected tab's existing component, unchanged.
+- Remove the `Tabs`/`TabsList` chrome.
+
+## Manual
+
+No change — the three inline Overlord Tuning widgets (`WeaponProgressionTab`, `XpBoostPanel`, `PoolRulesTab`) stay embedded next to their explanatory text in `GameManual.tsx`. The Manual becomes the single home for tuning; Tools is purely operational.
+
+## AdminPage route map
+
+`src/pages/AdminPage.tsx`
+
+- Add `item-forge` case → `<ItemForgePanel onDataChanged={…} />` (separate route again).
+- `tools` case → `<ToolsPanel defaultTool={…} />` with the new tool keys (`item-coverage`, `archetype-maintenance`, `unique-reclaim`, `credit-drain`).
+- Global search / deep-link entries that previously targeted `tools?tab=item-forge` should now route to the `item-forge` sidebar entry.
+
+## Files touched
+
+- `src/components/admin/AdminSidebar.tsx` — move Item Forge to Content.
+- `src/components/admin/ItemForgePanel.tsx` — remove the two maintenance cards.
+- `src/components/admin/tools/ArchetypeMaintenancePanel.tsx` — **new**, holds the extracted cards.
+- `src/components/admin/ToolsPanel.tsx` — replace tabs with `AdminPageShell` + left list.
+- `src/components/admin/LootTableManager.tsx` — replace tabs with `AdminPageShell` + left list.
+- `src/pages/AdminPage.tsx` — route map updates.
+- `src/components/admin/AdminGlobalSearch.tsx` — update any search entries pointing at the old tool keys (verify on implementation).
+
+## Out of scope
+
+- No backend / edge function changes.
+- No changes to other admin pages that already use `AdminPageShell` (Users, Items, Creatures, etc.).
+- No changes to the Manual's content or accordions.
