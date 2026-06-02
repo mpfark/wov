@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+
 import { toast } from 'sonner';
 import {
   Loader2, Wand2, Check, Package, Sword, Sparkles,
@@ -96,7 +96,7 @@ interface ItemForgePanelProps {
 }
 
 export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = {}) {
-  const { user } = useAuth();
+
 
 
 
