@@ -97,7 +97,7 @@ interface ItemForgePanelProps {
 
 export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = {}) {
   const { user } = useAuth();
-  const { isValar } = useRole(user);
+
 
 
 
