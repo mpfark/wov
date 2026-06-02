@@ -103,8 +103,8 @@ interface ItemForgePanelProps {
 export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = {}) {
   const { user } = useAuth();
   const { isValar } = useRole(user);
-  const [seeding, setSeeding] = useState(false);
-  const [rebuilding, setRebuilding] = useState(false);
+
+
 
   /* Forge mode */
   const [forgeMode, setForgeMode] = useState<'batch' | 'single'>('batch');
@@ -237,45 +237,8 @@ export default function ItemForgePanel({ onDataChanged }: ItemForgePanelProps = 
   };
 
   /* ── Seed full archetype catalog (overlord only) ── */
-  const seedCatalog = async () => {
-    setSeeding(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('seed-archetype-items', {
-        body: { purge: true },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success(
-        `Catalog rebuilt — purged ${data.purged}, inserted ${data.inserted}, ` +
-        `${data.starting_gear_attached} starter items wired.`
-      );
-      onDataChanged?.();
-    } catch (e: any) {
-      toast.error(e.message || 'Seed failed');
-    } finally {
-      setSeeding(false);
-    }
-  };
 
-  /* ── Rewrite existing common/uncommon gear in place (squish v2) ── */
-  const rebuildStats = async () => {
-    setRebuilding(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('rebuild-archetype-stats', {
-        body: {},
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success(
-        `Stats rewritten — processed ${data.processed}, updated ${data.updated}, skipped ${data.skipped}.`
-      );
-      onDataChanged?.();
-    } catch (e: any) {
-      toast.error(e.message || 'Rebuild failed');
-    } finally {
-      setRebuilding(false);
-    }
-  };
+
 
   /* ─── Render ─────────────────────────────────────────── */
   return (
