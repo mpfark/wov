@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Wrench, BarChart3, Hammer, Crown, Sparkles } from 'lucide-react';
+import { Wrench, BarChart3, Hammer, Crown, Sparkles, Shield } from 'lucide-react';
 import AdminPageShell from './common/AdminPageShell';
 import ItemCoverageAnalyzer from './ItemCoverageAnalyzer';
 import UniqueReclaimManager from './UniqueReclaimManager';
 import CreditDrainHistory from './CreditDrainHistory';
 import ArchetypeMaintenancePanel from './tools/ArchetypeMaintenancePanel';
+import ClassBondsInspector from './tools/ClassBondsInspector';
 import { cn } from '@/lib/utils';
 
 interface ToolsPanelProps {
@@ -15,6 +16,7 @@ interface ToolsPanelProps {
 const TOOLS = [
   { key: 'item-coverage', label: 'Item Coverage', icon: BarChart3 },
   { key: 'archetype-maintenance', label: 'Archetype Maintenance', icon: Hammer },
+  { key: 'class-bonds', label: 'Class Bonds', icon: Shield },
   { key: 'unique-reclaim', label: 'Unique Reclaim', icon: Crown },
   { key: 'credit-drain', label: 'Credit Drain', icon: Sparkles },
 ] as const;
