@@ -30,6 +30,8 @@ export default function ToolsPanel({ onDataChanged, defaultTool = 'item-coverage
         return <div className="h-full overflow-auto"><ItemCoverageAnalyzer /></div>;
       case 'archetype-maintenance':
         return <div className="h-full overflow-auto"><ArchetypeMaintenancePanel onDataChanged={onDataChanged} /></div>;
+      case 'class-bonds':
+        return <div className="h-full overflow-auto"><ClassBondsInspector /></div>;
       case 'unique-reclaim':
         return <div className="h-full overflow-auto"><UniqueReclaimManager /></div>;
       case 'credit-drain':
