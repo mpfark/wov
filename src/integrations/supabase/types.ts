@@ -302,6 +302,35 @@ export type Database = {
           },
         ]
       }
+      character_class_bonds: {
+        Row: {
+          bond: number
+          character_id: string
+          class: Database["public"]["Enums"]["character_class"]
+          updated_at: string
+        }
+        Insert: {
+          bond?: number
+          character_id: string
+          class: Database["public"]["Enums"]["character_class"]
+          updated_at?: string
+        }
+        Update: {
+          bond?: number
+          character_id?: string
+          class?: Database["public"]["Enums"]["character_class"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_class_bonds_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       character_inventory: {
         Row: {
           belt_slot: number | null
@@ -433,6 +462,7 @@ export type Database = {
           hp: number
           id: string
           int: number
+          is_classless: boolean
           last_online: string
           level: number
           max_cp: number
@@ -473,6 +503,7 @@ export type Database = {
           hp?: number
           id?: string
           int?: number
+          is_classless?: boolean
           last_online?: string
           level?: number
           max_cp?: number
@@ -513,6 +544,7 @@ export type Database = {
           hp?: number
           id?: string
           int?: number
+          is_classless?: boolean
           last_online?: string
           level?: number
           max_cp?: number
@@ -1217,6 +1249,7 @@ export type Database = {
       nodes: {
         Row: {
           area_id: string | null
+          class_hall: Database["public"]["Enums"]["character_class"] | null
           connections: Json
           created_at: string
           description: string
@@ -1240,6 +1273,7 @@ export type Database = {
         }
         Insert: {
           area_id?: string | null
+          class_hall?: Database["public"]["Enums"]["character_class"] | null
           connections?: Json
           created_at?: string
           description?: string
@@ -1263,6 +1297,7 @@ export type Database = {
         }
         Update: {
           area_id?: string | null
+          class_hall?: Database["public"]["Enums"]["character_class"] | null
           connections?: Json
           created_at?: string
           description?: string
@@ -1798,6 +1833,14 @@ export type Database = {
         Args: { _area_type: string }
         Returns: string
       }
+      award_class_bond: {
+        Args: {
+          _amount: number
+          _character_id: string
+          _class: Database["public"]["Enums"]["character_class"]
+        }
+        Returns: number
+      }
       award_party_member:
         | {
             Args: { _character_id: string; _gold: number; _xp: number }
@@ -1940,6 +1983,13 @@ export type Database = {
       is_party_mate: { Args: { _character_id: string }; Returns: boolean }
       is_party_member: { Args: { _party_id: string }; Returns: boolean }
       is_steward_or_overlord: { Args: never; Returns: boolean }
+      join_order: {
+        Args: {
+          _character_id: string
+          _class: Database["public"]["Enums"]["character_class"]
+        }
+        Returns: Json
+      }
       list_unique_item: {
         Args: {
           p_character_id: string
@@ -1985,6 +2035,13 @@ export type Database = {
       sell_item: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
+      }
+      switch_order: {
+        Args: {
+          _character_id: string
+          _class: Database["public"]["Enums"]["character_class"]
+        }
+        Returns: Json
       }
       sync_character_resources: {
         Args: { p_character_id: string }
