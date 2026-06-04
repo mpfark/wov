@@ -18,6 +18,7 @@ import ItemPicker from './ItemPicker';
 import IllustrationEditor from './IllustrationEditor';
 import { areaTypePlaceholderUrl } from '@/lib/area-placeholder';
 import { AdminEditorHeader, AdminStickyActions } from './common';
+import { CLASS_LABELS } from '@/shared/formulas/classes';
 
 interface VendorEntry {
   id: string;
@@ -536,6 +537,7 @@ export default function NodeEditorPanel({
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
     illustration_url: '', illustration_metadata: {} as Record<string, string>,
+    class_hall: '' as string,
   });
   const [generatingNpc, setGeneratingNpc] = useState(false);
   const [selectedRegionId, setSelectedRegionId] = useState(initialRegionId);
@@ -630,7 +632,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {} });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {}, class_hall: '' });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -658,6 +660,7 @@ export default function NodeEditorPanel({
         area_id: (data as any).area_id || '',
         illustration_url: (data as any).illustration_url || '',
         illustration_metadata: (data as any).illustration_metadata || {},
+        class_hall: (data as any).class_hall || '',
       });
       setSelectedRegionId(data.region_id);
     }
@@ -843,6 +846,7 @@ export default function NodeEditorPanel({
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
+        class_hall: form.class_hall || null,
       } as any).eq('id', activeNodeId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('Node updated');
@@ -870,6 +874,7 @@ export default function NodeEditorPanel({
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
+        class_hall: form.class_hall || null,
         x: newX, y: newY,
       } as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
@@ -1060,6 +1065,25 @@ export default function NodeEditorPanel({
                     Enable Blacksmith above to allow Soulforge.
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-1 pt-2 border-t border-border">
+                <label className="text-[10px] text-muted-foreground font-display">🏰 Order Hall (recruits for class)</label>
+                <Select
+                  value={form.class_hall || 'none'}
+                  onValueChange={v => setForm(f => ({ ...f, class_hall: v === 'none' ? '' : v }))}
+                >
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50">
+                    <SelectItem value="none" className="text-xs">None (not a hall)</SelectItem>
+                    {Object.entries(CLASS_LABELS).map(([k, label]) => (
+                      <SelectItem key={k} value={k} className="text-xs">🏰 {label} Hall</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground/70">
+                  When set, a Recruiter NPC here can induct visitors into this class (creates/maintains their bond).
+                </p>
               </div>
 
               <IllustrationEditor

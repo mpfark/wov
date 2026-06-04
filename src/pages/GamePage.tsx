@@ -21,6 +21,7 @@ import { useCreatureBroadcast, useMergedCreatureHpOverrides } from '@/features/c
 import { usePartyBroadcast } from '@/features/party';
 import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
+import OrderRecruiterDialog from '@/features/character/components/OrderRecruiterDialog';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
 import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
@@ -287,9 +288,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       setTrainerOpen(true);
       return;
     }
+    if (npc.service_role === 'recruiter' && (currentNode as any)?.class_hall) {
+      setActiveServiceNpc(npc);
+      setRecruiterOpen(true);
+      return;
+    }
     setTalkingToNPC(npc);
   };
   const [trainerOpen, setTrainerOpen] = useState(false);
+  const [recruiterOpen, setRecruiterOpen] = useState(false);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
   const [abilityTargetId, setAbilityTargetId] = useState<string | null>(null);
   const { groundLoot, pickUpItem, dropItemToGround, fetchGroundLoot } = useGroundLoot(nodeChannel, character.current_node_id, character.id);
@@ -1354,6 +1361,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       ) : (
         <NPCDialogPanel npc={talkingToNPC} open={!!talkingToNPC} onClose={() => setTalkingToNPC(null)} />
       )}
+
+      <OrderRecruiterDialog
+        open={recruiterOpen}
+        onClose={() => { setRecruiterOpen(false); setActiveServiceNpc(null); }}
+        npc={activeServiceNpc?.service_role === 'recruiter' ? activeServiceNpc : null}
+        hallClass={(currentNode as any)?.class_hall ?? null}
+        characterId={character.id}
+        currentClass={character.class}
+        onJoined={() => { refetchCharacters?.(); }}
+      />
 
       {/* Death Overlay */}
       {isDead && (

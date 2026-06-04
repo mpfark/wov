@@ -268,6 +268,8 @@ export default function NPCManager() {
                       <SelectItem value="vendor" className="text-xs">🪙 Vendor</SelectItem>
                       <SelectItem value="blacksmith" className="text-xs">🔨 Blacksmith</SelectItem>
                       <SelectItem value="trainer" className="text-xs">🏛️ Renown Trainer</SelectItem>
+                      <SelectItem value="jewelcrafter" className="text-xs">💎 Jewelcrafter</SelectItem>
+                      <SelectItem value="recruiter" className="text-xs">🏰 Order Recruiter</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-[10px] text-muted-foreground mt-1">
