@@ -36,6 +36,8 @@ export interface GameNode {
   y: number;
   illustration_url?: string;
   illustration_metadata?: Record<string, string>;
+  /** When set, this node is an Order hall that recruits for the given class. */
+  class_hall?: string | null;
 }
 
 export interface Region {
