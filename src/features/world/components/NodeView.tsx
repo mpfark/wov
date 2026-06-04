@@ -216,6 +216,17 @@ export default function NodeView({
                         🏛️
                       </span>
                     )}
+                    {node.class_hall && (() => {
+                      const hasRecruiter = npcs.some(n => n.service_role === 'recruiter');
+                      return (
+                        <span
+                          className={`text-[10px] ${hasRecruiter ? 'text-glow' : 'opacity-70'}`}
+                          title={hasRecruiter ? `Order Hall — recruits ${node.class_hall}` : `Order Hall (${node.class_hall}) — no recruiter on duty`}
+                        >
+                          🏰
+                        </span>
+                      );
+                    })()}
                   </>
                 );
               })()}
@@ -380,11 +391,13 @@ export default function NodeView({
                       : npc.service_role === 'blacksmith' ? '🔨'
                       : npc.service_role === 'jewelcrafter' ? '💎'
                       : npc.service_role === 'trainer' ? '🏛️'
+                      : npc.service_role === 'recruiter' ? '🏰'
                       : '💬';
                     const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
                       : npc.service_role === 'blacksmith' ? 'Forge'
                       : npc.service_role === 'jewelcrafter' ? 'Craft'
                       : npc.service_role === 'trainer' ? 'Train'
+                      : npc.service_role === 'recruiter' ? 'Speak'
                       : 'Talk';
                     return (
                       <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
