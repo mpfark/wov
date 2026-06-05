@@ -6,8 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Dices, Loader2 } from 'lucide-react';
 import {
-  RACE_LABELS, CLASS_LABELS, RACE_DESCRIPTIONS, CLASS_DESCRIPTIONS,
-  STAT_LABELS, RACE_STATS, CLASS_STATS, CLASS_BASE_HP, CLASS_BASE_AC,
+  RACE_LABELS, RACE_DESCRIPTIONS, STAT_LABELS, RACE_STATS,
   calculateStats, calculateHP, calculateAC, getMaxCp,
 } from '@/lib/game-data';
 
@@ -18,51 +17,23 @@ interface Props {
   onBack?: () => void;
 }
 
-/** Recommended classes per race (stat synergy). 'all' renders as "Any". */
-const RACE_RECOMMENDED_CLASSES: Record<string, string[] | 'all'> = {
-  human: 'all',
-  elf: ['wizard', 'ranger'],
-  dwarf: ['warrior', 'templar'],
-  halfling: ['rogue', 'ranger'],
-  edain: ['warrior', 'templar', 'healer'],
-  half_elf: ['bard', 'healer'],
-};
-
-function recommendedLabel(raceKey: string): string {
-  const rec = RACE_RECOMMENDED_CLASSES[raceKey];
-  if (!rec) return '';
-  if (rec === 'all') return 'Any';
-  return rec.map(c => CLASS_LABELS[c]).join(', ');
-}
-
-function isRecommendedFor(raceKey: string, classKey: string): boolean {
-  const rec = RACE_RECOMMENDED_CLASSES[raceKey];
-  if (!rec) return false;
-  if (rec === 'all') return true;
-  return rec.includes(classKey);
-}
+const STARTING_CLASS = 'classless';
 
 export default function CharacterCreation({ onCreateCharacter, onCharacterReady, startingNodeId, onBack }: Props) {
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [race, setRace] = useState('');
-  const [charClass, setCharClass] = useState('');
   const [hoverRace, setHoverRace] = useState<string | null>(null);
-  const [hoverClass, setHoverClass] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [rolling, setRolling] = useState(false);
 
-  // Effective race/class for the live preview — hover trumps committed.
   const effectiveRace = hoverRace ?? race;
-  const effectiveClass = hoverClass ?? charClass;
-  const previewStats = effectiveRace && effectiveClass ? calculateStats(effectiveRace, effectiveClass) : null;
-  const previewHp = previewStats && effectiveClass ? calculateHP(effectiveClass, previewStats.con) : 0;
-  const previewAc = previewStats && effectiveClass ? calculateAC(effectiveClass, previewStats.dex) : 0;
+  const previewStats = effectiveRace ? calculateStats(effectiveRace, STARTING_CLASS) : null;
+  const previewHp = previewStats ? calculateHP(STARTING_CLASS, previewStats.con) : 0;
+  const previewAc = previewStats ? calculateAC(STARTING_CLASS, previewStats.dex) : 0;
 
-  // Committed (used for create).
-  const stats = race && charClass ? calculateStats(race, charClass) : null;
-
-  const canCreate = !!(name.trim() && gender && race && charClass && stats);
+  const stats = race ? calculateStats(race, STARTING_CLASS) : null;
+  const canCreate = !!(name.trim() && gender && race && stats);
 
   const handleReroll = async () => {
     setRolling(true);
@@ -86,19 +57,20 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
     setLoading(true);
     try {
       const maxCp = getMaxCp(1, stats.wis);
-      const hp = calculateHP(charClass, stats.con);
-      const ac = calculateAC(charClass, stats.dex);
+      const hp = calculateHP(STARTING_CLASS, stats.con);
+      const ac = calculateAC(STARTING_CLASS, stats.dex);
       const char = await onCreateCharacter({
-        name, gender, race, class: charClass,
+        name, gender, race, class: STARTING_CLASS,
         ...stats, hp, max_hp: hp, ac,
         current_node_id: startingNodeId,
         cp: maxCp, max_cp: maxCp,
+        is_classless: true,
       });
       if (char?.id) {
         await supabase.rpc('grant_starting_gear' as any, { p_character_id: char.id });
         onCharacterReady?.(char.id);
       }
-      toast.success(`${name} has begun their adventure!`);
+      toast.success(`${name} sets out into the world as a Classless Adventurer.`);
     } catch (err: any) {
       if (err.message?.includes('characters_name_unique') || err.code === '23505') {
         toast.error(`The name "${name}" is already taken. Choose a different name.`);
@@ -121,8 +93,10 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
               </Button>
             </div>
           )}
-          <h1 className="font-display text-2xl text-primary text-glow">Forge Your Hero</h1>
-          <p className="text-sm text-muted-foreground">Choose name, gender, race and class</p>
+          <h1 className="font-display text-2xl text-primary text-glow">Begin Your Adventure</h1>
+          <p className="text-sm text-muted-foreground">
+            Choose name, gender and race — your <span className="text-primary">order</span> awaits you in the world.
+          </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
@@ -199,60 +173,23 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                       </span>
                     ))}
                   </div>
-                  <div className="text-[11px] italic text-muted-foreground mt-2">
-                    Best: {recommendedLabel(key)}
-                  </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Class grid */}
-          <div className="space-y-2">
-            <h2 className="font-display text-lg text-primary text-glow">Class</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {Object.entries(CLASS_LABELS).map(([key, label]) => {
-                const isSelected = charClass === key;
-                const isRecommended = race && isRecommendedFor(race, key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setCharClass(key)}
-                    onMouseEnter={() => setHoverClass(key)}
-                    onMouseLeave={() => setHoverClass(prev => (prev === key ? null : prev))}
-                    disabled={rolling}
-                    className={`p-3 rounded-md border text-left transition-all hover:border-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border ${
-                      isSelected ? 'border-primary bg-primary/10' : 'border-border bg-card'
-                    } ${isRecommended && !isSelected ? 'ring-1 ring-primary/40' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="font-display text-sm text-foreground">{label}</div>
-                      {isRecommended && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded font-display bg-primary/15 text-primary">
-                          ★ Synergy
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1 leading-snug">{CLASS_DESCRIPTIONS[key]}</div>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {Object.entries(CLASS_STATS[key] || {}).filter(([, v]) => v !== 0).map(([stat, val]) => (
-                        <span key={stat} className={`text-[10px] px-1.5 py-0.5 rounded font-display ${
-                          (val as number) > 0 ? 'bg-primary/15 text-primary' : 'bg-destructive/15 text-destructive'
-                        }`}>
-                          {(val as number) > 0 ? '+' : ''}{val as number} {STAT_LABELS[stat]}
-                        </span>
-                      ))}
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-display bg-destructive/15 text-blood">
-                        HP {CLASS_BASE_HP[key]}
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-display bg-muted text-muted-foreground">
-                        AC {CLASS_BASE_AC[key]}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+          {/* Classless adventurer info card */}
+          <div className="p-4 rounded-md border border-primary/40 bg-primary/5">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🧭</span>
+              <div className="space-y-1">
+                <h3 className="font-display text-sm text-primary text-glow">You begin as a Classless Adventurer</h3>
+                <p className="text-xs text-muted-foreground leading-snug">
+                  No order claims you yet. You start with a sturdy frame (18 HP, 10 AC) and balanced stats, ready
+                  to learn the world at your own pace. Travel to one of the seven Order Halls and speak to its
+                  Recruiter to swear yourself to a class — you can switch later at any other hall.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -283,16 +220,16 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                   disabled={!canCreate || loading || rolling}
                   className="font-display whitespace-nowrap"
                 >
-                  {loading ? 'Creating...' : rolling ? 'Suggesting name...' : 'Create Character'}
+                  {loading ? 'Creating...' : rolling ? 'Suggesting name...' : 'Begin as Adventurer'}
                 </Button>
               </div>
             ) : (
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <p className="text-sm text-muted-foreground italic">
-                  Choose a race and class to preview your hero's stats.
+                  Choose a race to preview your hero's stats.
                 </p>
                 <Button disabled className="font-display whitespace-nowrap">
-                  Create Character
+                  Begin as Adventurer
                 </Button>
               </div>
             )}

@@ -2078,6 +2078,7 @@ export type Database = {
         | "healer"
         | "bard"
         | "templar"
+        | "classless"
       character_gender: "male" | "female"
       character_race:
         | "human"
@@ -2250,6 +2251,7 @@ export const Constants = {
         "healer",
         "bard",
         "templar",
+        "classless",
       ],
       character_gender: ["male", "female"],
       character_race: [
