@@ -190,6 +190,7 @@ export function useCharacter(user: User | null) {
     name: string; race: string; class: string;
     str: number; dex: number; con: number; int: number; wis: number; cha: number;
     hp: number; max_hp: number; ac: number; current_node_id: string;
+    is_classless?: boolean;
   }) => {
     if (!user) return null;
     const { data, error } = await supabase
@@ -203,6 +204,7 @@ export function useCharacter(user: User | null) {
         hp: charData.hp, max_hp: charData.max_hp, ac: charData.ac,
         current_node_id: charData.current_node_id,
         user_id: user.id,
+        is_classless: charData.is_classless ?? false,
       })
       .select()
       .single();
