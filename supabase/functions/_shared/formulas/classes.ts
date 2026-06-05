@@ -13,10 +13,12 @@
 
 export const CLASS_BASE_HP: Record<string, number> = {
   warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16, templar: 22,
+  classless: 18,
 };
 
 export const CLASS_BASE_AC: Record<string, number> = {
   warrior: 12, wizard: 9, ranger: 10, rogue: 10, healer: 9, bard: 9, templar: 12,
+  classless: 10,
 };
 
 /** Class-based stat bonuses awarded every 3 levels */
@@ -28,11 +30,13 @@ export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
   healer:  { wis: 1, con: 1 },
   bard:    { cha: 1, int: 1 },
   templar: { wis: 1, con: 1 },
+  classless: {},
 };
 
 export const CLASS_LABELS: Record<string, string> = {
   warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger',
   rogue: 'Rogue', healer: 'Healer', bard: 'Bard', templar: 'Templar',
+  classless: 'Classless Adventurer',
 };
 
 export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
