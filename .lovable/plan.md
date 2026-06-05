@@ -124,9 +124,9 @@ Resolve the five open questions above. One short follow-up conversation.
 **Phase 2 — Halls in the world**
 - Mark 7 nodes as `class_hall` with recruiter NPCs.
 - Recruiter dialog calls `join_order`/`switch_order`.
-- Classless kit + tutorial node.
-- Character creation UI: remove class picker, add "Begin as Adventurer" copy.
-- Existing characters unaffected.
+- Classless kit + tutorial node. ✅ (Phase 2b shipped: `classless` enum, classless creation flow, Classless Adventurer kit defaults, in-world tutorial banner listing all seven halls.)
+- Character creation UI: remove class picker, add "Begin as Adventurer" copy. ✅
+- Existing characters unaffected. ✅
 
 **Phase 3 — Bond actually matters**
 - Turn on bond → ability tier multiplier.
