@@ -238,6 +238,8 @@ export default function NodeView({
           <p className="text-sm text-foreground/90 leading-relaxed italic">
             {getNodeDisplayDescription(node, area) || 'A quiet corner of the world...'}
           </p>
+
+          {(character as any).is_classless && <ClasslessTutorialBanner />}
         </div>
 
         <div className="relative z-10">
