@@ -52,6 +52,8 @@ export interface Character {
   portrait_metadata?: Record<string, unknown>;
   /** Timestamp of the last portrait generation (24h cooldown). */
   portrait_generated_at?: string | null;
+  /** True until the player visits a hall and joins an Order. */
+  is_classless?: boolean;
 }
 
 export function useCharacter(user: User | null) {
