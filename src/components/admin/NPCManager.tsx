@@ -283,6 +283,17 @@ export default function NPCManager() {
                   </p>
                 </AdminFormSection>
 
+                <AdminFormSection title="Dialogue Topics">
+                  <TopicsEditor
+                    topics={form.dialogue_topics}
+                    onChange={(next) => setForm(f => ({ ...f, dialogue_topics: next }))}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Topics appear as clickable questions in the dialog. Use <strong>Class Hall Directions</strong> for a single class, or <strong>Class Hall Menu</strong> to auto-list every known order hall.
+                  </p>
+                </AdminFormSection>
+
+
                 <AdminFormSection title="Location">
                   <NodePicker
                     nodes={nodes}
