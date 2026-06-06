@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -6,6 +6,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 import { NPC } from '@/features/creatures';
+import {
+  expandTopics,
+  parseTopics,
+  resolveTopic,
+  type ResolverContext,
+} from '@/features/creatures/utils/dialogue-topics';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  npc: NPC | null;
+  hallClass: string | null;
+  characterId: string;
+  currentClass: string;
+  onJoined?: () => void;
+  worldContext?: ResolverContext;
+}
 
 interface Props {
   open: boolean;
