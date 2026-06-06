@@ -94,13 +94,40 @@ export default function OrderRecruiterDialog({
           )}
         </DialogHeader>
 
-        {npc?.dialogue && (
+        {(npc?.dialogue || activeTopic) && (
           <div className="p-3 bg-background/50 rounded border border-border">
             <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
-              {npc.dialogue}
+              {activeTopic?.response ?? npc?.dialogue}
             </p>
           </div>
         )}
+
+        {topics.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-display">
+              Ask about
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {topics.map(t => (
+                <Button
+                  key={t.id}
+                  variant={activeTopicId === t.id ? 'secondary' : 'outline'}
+                  size="sm"
+                  className="justify-start text-left h-auto py-2 font-normal"
+                  onClick={() => setActiveTopicId(t.id)}
+                >
+                  <span className="text-xs">“{t.label}”</span>
+                </Button>
+              ))}
+              {activeTopicId && (
+                <Button variant="ghost" size="sm" className="self-end text-xs" onClick={() => setActiveTopicId(null)}>
+                  ← Back
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
 
         <div className="space-y-3">
           <div className="space-y-1">
