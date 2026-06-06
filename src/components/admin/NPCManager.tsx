@@ -75,7 +75,7 @@ export default function NPCManager() {
       supabase.from('regions').select('id, name'),
       supabase.from('areas').select('id, name'),
     ]);
-    if (n.data) setNPCs(n.data as NPC[]);
+    if (n.data) setNPCs(n.data as unknown as NPC[]);
     if (r.data) setNpcRegions(r.data as RegionOption[]);
     if (a.data) setNpcAreas(a.data as AreaOption[]);
     if (nd.data && r.data) {
@@ -151,9 +151,9 @@ export default function NPCManager() {
     setLoading(false);
     const { data: refreshed } = await supabase.from('npcs').select('*').order('name');
     if (refreshed) {
-      setNPCs(refreshed as NPC[]);
+      setNPCs(refreshed as unknown as NPC[]);
       const updated = refreshed.find((n: any) => n.id === savedId);
-      if (updated) openEdit(updated as NPC);
+      if (updated) openEdit(updated as unknown as NPC);
     }
   };
 
