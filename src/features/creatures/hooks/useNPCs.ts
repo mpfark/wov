@@ -12,6 +12,8 @@ export interface NPC {
   created_at: string;
   /** When set, talking to this NPC opens the matching service panel directly. */
   service_role: NPCServiceRole | null;
+  /** Branching dialogue topics authored by admins. */
+  dialogue_topics?: import('@/features/creatures/utils/dialogue-topics').DialogueTopic[];
 }
 
 export function useNPCs(nodeId: string | null) {
