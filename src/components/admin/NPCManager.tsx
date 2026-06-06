@@ -142,11 +142,11 @@ export default function NPCManager() {
 
     let savedId = selectedId;
     if (selectedId) {
-      const { error } = await supabase.from('npcs').update(payload).eq('id', selectedId);
+      const { error } = await supabase.from('npcs').update(payload as any).eq('id', selectedId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('NPC updated');
     } else {
-      const { data, error } = await supabase.from('npcs').insert(payload).select().single();
+      const { data, error } = await supabase.from('npcs').insert(payload as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('NPC created');
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
