@@ -318,3 +318,119 @@ export default function NPCManager() {
     </AdminPageShell>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Topics editor — small inline component for authoring dialogue_topics.
+// ─────────────────────────────────────────────────────────────────────────
+
+const KIND_LABELS: Record<TopicKind, string> = {
+  text: 'Text',
+  class_hall_dir: 'Class Hall Directions',
+  class_hall_menu: 'Class Hall Menu (auto-lists all)',
+};
+
+const CLASS_KEYS = Object.keys(CLASS_LABELS).filter(k => k !== 'classless');
+
+function slugId(label: string): string {
+  return (label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'topic')
+    + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+function TopicsEditor({
+  topics,
+  onChange,
+}: {
+  topics: DialogueTopic[];
+  onChange: (next: DialogueTopic[]) => void;
+}) {
+  const update = (idx: number, patch: Partial<DialogueTopic>) => {
+    onChange(topics.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
+  };
+  const remove = (idx: number) => onChange(topics.filter((_, i) => i !== idx));
+  const move = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir;
+    if (j < 0 || j >= topics.length) return;
+    const next = topics.slice();
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
+  const add = () => {
+    onChange([
+      ...topics,
+      { id: slugId('new'), label: 'New topic', kind: 'text', response: '' },
+    ]);
+  };
+
+  return (
+    <div className="space-y-2">
+      {topics.length === 0 && (
+        <p className="text-[10px] text-muted-foreground italic">No topics yet.</p>
+      )}
+      {topics.map((t, idx) => (
+        <div key={t.id + idx} className="border border-border rounded p-2 space-y-1.5 bg-background/30">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-7 text-xs flex-1"
+              placeholder="Player question (e.g. Where is the Templar Hall?)"
+              value={t.label}
+              maxLength={120}
+              onChange={e => update(idx, { label: e.target.value })}
+            />
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => move(idx, -1)} title="Move up">↑</Button>
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => move(idx, 1)} title="Move down">↓</Button>
+            <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => remove(idx)} title="Remove">
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+
+          <Select
+            value={t.kind}
+            onValueChange={v => update(idx, { kind: v as TopicKind })}
+          >
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-popover border-border z-50">
+              {Object.entries(KIND_LABELS).map(([k, label]) => (
+                <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {t.kind === 'text' && (
+            <Textarea
+              className="text-xs"
+              placeholder="What the NPC says when this topic is chosen"
+              value={t.response ?? ''}
+              maxLength={1000}
+              rows={3}
+              onChange={e => update(idx, { response: e.target.value })}
+            />
+          )}
+
+          {t.kind === 'class_hall_dir' && (
+            <Select
+              value={String(t.params?.class ?? '')}
+              onValueChange={v => update(idx, { params: { ...(t.params ?? {}), class: v } })}
+            >
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pick class" /></SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50">
+                {CLASS_KEYS.map(k => (
+                  <SelectItem key={k} value={k} className="text-xs">{CLASS_LABELS[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {t.kind === 'class_hall_menu' && (
+            <p className="text-[10px] text-muted-foreground italic">
+              Expands automatically into one question per known order hall.
+            </p>
+          )}
+        </div>
+      ))}
+      <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={add}>
+        <Plus className="w-3 h-3 mr-1" /> Add topic
+      </Button>
+    </div>
+  );
+}
+
