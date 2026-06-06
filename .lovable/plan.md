@@ -1,161 +1,87 @@
+# NPC Dialogue Topics System
 
-# Guild & Order Progression — Architecture & Rollout
+Upgrade NPCs from a single greeting blob to a **greeting + branching topic menu**. Each topic is a button the player can click to ask about something specific. The system is data-driven so admins can author dialogue without code, and the same structure will later carry quests, rumors, and lore.
 
-A staged plan. Nothing is built yet. Each phase ships independently and is reversible.
+## Data model
 
----
+Add a `dialogue_topics` JSONB column to `npcs` (the existing `dialogue` column stays as the greeting). Each topic is an object:
 
-## 1. Recommendations (answers to your planner questions)
-
-**Fully classless start — viable?** Yes, but only if the Classless kit is genuinely playable. We give every new character: autoattack, basic movement, 1 universal "Focus Strike" CP ability, and access to a tutorial node that points at the seven halls. Without that, the first 30 minutes feel empty.
-
-**Bond scaling — recommended model:** A single `bond` integer per (character, class), 0–100, earned from class-tagged actions while that class is active. XP-shaped curve so 0→25 is fast (≈1 evening), 75→100 is long-tail. Ability effectiveness scales in 5 tiers (T0 25% / T1 50% / T2 75% / T3 90% / T4 100%) keyed off bond breakpoints 0/25/50/75/100. This gives you a knob per ability without rewriting any ability handler — they read a `bondMultiplier` from context.
-
-**Class stat bonuses vs. attribute points — recommended:** Keep class identity in HP/AC base (`CLASS_BASE_HP`, `CLASS_BASE_AC`) and keep the every-3-levels class stat bonus (`CLASS_LEVEL_BONUSES`) so switching classes still feels distinct. Add **+1 free attribute point per level** on top (currently `unspent_stat_points` already exists). This preserves build identity without making classless characters stat-starved and avoids a destructive respec migration. Full replacement of class stat growth is a bigger swing and not recommended in v1.
-
-**Class switching:** Allowed at any class hall, free, instant. Strips active class abilities, swaps the `class` enum on the character, restores reserved buffs to 0, recalculates max HP/CP/MP/AC via `sync_character_resources`. Bond per class persists in a separate table. No cooldown in v1; add one only if it becomes a combat exploit.
-
-**Data model:** One new table `character_class_bonds (character_id, class, bond, updated_at)`, one new enum/column on `nodes` for `class_hall` (which class the hall recruits for), and one new column `characters.is_classless boolean`. Nothing destructive.
-
-**Migration path for current characters:** Existing characters keep their class and are seeded with `bond = 100` for that class (full mastery, no nerf). They can visit other halls to start new bonds at 0. No one loses power.
-
-**Orders = new system or evolution?** Evolution. The `class` enum stays as the source of truth for ability sets. Orders are a UX/world layer (halls + bond + recruitment dialog) on top.
-
----
-
-## 2. Data Model
-
-New table:
-```text
-character_class_bonds
-  character_id uuid  (FK characters, on delete cascade)
-  class        app_class enum
-  bond         int    default 0   (0..100)
-  updated_at   timestamptz
-  PRIMARY KEY (character_id, class)
+```jsonc
+{
+  "id": "templar_hall",          // stable key
+  "label": "Where is the Templar Hall?",  // button text the player sees
+  "response": "Head east past the river, then north at the old shrine.",
+  "kind": "text",                // text | class_hall_dir | quest_hook (future)
+  "params": { "class": "templar" }, // optional, used by dynamic kinds
+  "requires": { /* future: quest flags, bond level, class, etc. */ },
+  "follow_up": []                // future: nested topics
+}
 ```
-RLS: owner read/write own rows; service_role full. Standard GRANTs.
 
-Column additions:
-- `characters.is_classless boolean default false` — true only for newly-created chars before they join a hall.
-- `nodes.class_hall app_class nullable` — marks a node as a recruitment hall.
-- `npcs` reuses existing structure; halls get a "recruiter" NPC whose dialog calls a new `join_order(_character_id, _class)` RPC.
+`kind` lets us mix hand-written answers with **dynamic** ones the engine resolves at runtime. Phase 1 ships two kinds:
 
-New RPC `join_order(_character_id, _class)`:
-- Verify owner.
-- Set `characters.class = _class`, `is_classless = false`.
-- Upsert `character_class_bonds` row at bond 0 if missing.
-- Call `sync_character_resources` to recompute HP/CP/MP/AC.
-- Clear `reserved_buffs`.
-- Log to `activity_log` (`event_type='general'`, message like "Joined the Order of Iron").
+- `text` — static `response` string (fully admin-authored).
+- `class_hall_dir` — engine looks up the node tagged `class_hall = params.class`, computes the compass direction from the NPC's node, and renders a sentence like *"The Templar Hall lies to the north-east, in the Verdant Marches."* Admin only picks the class; no manual upkeep when halls move.
 
-New RPC `switch_order(_character_id, _class)`: same as above, but requires existing bond row (must have visited that hall before? open question — see §6).
+A small built-in helper topic `kind: "class_hall_menu"` expands into one auto-button per known order hall — so a recruiter or innkeeper can offer "Tell me about the orders" without listing seven topics by hand.
 
-Bond award helper `award_class_bond(_character_id, _amount)` called from kill-resolver, exploration triggers, and bounty completion. Caps at 100.
+## Admin authoring (NPC Manager)
 
----
+In the NPC editor, below the existing Dialogue field, add a **Topics** section:
 
-## 3. Classless Adventurer Kit
+- List of topic rows with drag-to-reorder.
+- Each row: Label input, Kind dropdown (Text / Class Hall Directions / Class Hall Menu), and a Response textarea or a Class picker depending on kind.
+- "Add topic" button; trash icon to remove.
+- Stored as the `dialogue_topics` JSONB array on save.
 
-- HP base: 18, AC base: 10 (between healer and warrior).
-- No `CLASS_LEVEL_BONUSES` entries — pure player allocation via existing `unspent_stat_points`.
-- One built-in CP ability ("Focus Strike", 5 CP, DEX-scaled, ~1d6) so combat isn't just autoattacks.
-- Starting gear: universal_starting_gear only (already exists); no `class_starting_gear` granted until they join an order.
-- Cannot equip class-restricted items (already enforced by item rules where applicable).
+No migration of existing NPCs needed — empty array means "no topics, behaves exactly like today."
 
----
+## Player UX (NPCDialogPanel)
 
-## 4. Bond Earning & Tiers
+Rework the dialog so it always shows:
 
-Bond is earned only by the **currently active class**. Sources:
-- Creature kill: +1 bond per CR above 0 (cap +5/kill), scaled down past bond 50.
-- Boss kill: +5–15 bond.
-- Bounty / quest completion: explicit bond payout in the quest.
-- Exploration of a new node: +1 bond (small but steady).
-- Daily soft cap to avoid grinding: e.g. +30 bond/day, fades over the day.
+1. NPC name + description (unchanged).
+2. The current spoken line in the parchment box — starts as `npc.dialogue` (greeting).
+3. Below it, a vertical list of topic buttons built from `dialogue_topics`.
+4. Clicking a topic replaces the spoken line with that topic's resolved response and keeps the menu visible so the player can ask more.
+5. A "Back" affordance returns to the greeting.
 
-Tiers (applied as multiplier on ability damage/heal/duration where applicable):
-- 0–24: T0 (50%)
-- 25–49: T1 (70%)
-- 50–74: T2 (85%)
-- 75–99: T3 (95%)
-- 100: T4 (100%)
+Service-role NPCs (recruiter, vendor, etc.) keep their primary action button; topics render alongside it, so a Templar recruiter can both enlist you AND answer "where is the Wizard Hall?".
 
-Autoattacks are **not** affected — they're identity-level, always 100%. Only class abilities scale. This keeps the floor playable and the ceiling meaningful.
+## Direction resolver (shared util)
 
----
+New pure helper `src/features/world/utils/directions.ts`:
 
-## 5. Hall Locations (initial seven)
+- Input: from-node, to-node, regions, areas.
+- Output: `{ compass: 'north-east', distance: 'nearby' | 'far', region_name, area_name }` using the existing `x/y` grid already used by the world map.
+- Used by `class_hall_dir` and reusable for future "where is the marketplace?" topics.
 
-Placed across existing regions so each is a destination:
-- Order of Iron — Warrior
-- College of Stars — Wizard
-- Wardens of the Wild — Ranger
-- Whispered Veil — Rogue
-- Choir of Echoes — Bard
-- Order of Dawn — Templar
-- Circle of Grace — Healer
+Resolution happens client-side using already-loaded `useNodes` data — no extra DB calls.
 
-Each hall is one existing-or-new node with `class_hall` set, a recruiter NPC, and (optionally later) a trainer NPC for bond-gated content. Exact placement = world-build task, not part of this engineering plan.
+## Forward compatibility (no code yet, just shape)
 
----
+The same `dialogue_topics` schema is intentionally enough to host:
 
-## 6. Open Design Questions (call out before build)
+- **Quest hooks** — `kind: "quest_offer"`, `params: { quest_id }`, gated by `requires`.
+- **Rumors** — `kind: "text"` with `requires: { min_level: 10 }` so they appear only when relevant.
+- **Conditional lore** — `requires: { has_item, class, bond_gte }`.
 
-1. **Switching cost:** free, or small gold/renown sink? Recommendation: free in v1.
-2. **Visit-to-unlock:** must a player physically visit a hall once to start earning bond there, or does bond start ticking the moment they switch in? Recommendation: must visit (gives halls meaning).
-3. **Soulbound items on switch:** wizard staff stays soulbound to the character regardless of class — confirm OK.
-4. **Stat respec on switch:** none in v1 — attributes are the player's, not the class's.
-5. **Renown vs. Bond:** distinct systems. Renown = lifetime account-wide rep. Bond = per-class mastery on this character.
+Phase 1 ignores `requires` and `follow_up`; they're reserved keys so we can add them later without another migration.
 
----
+## Rollout
 
-## 7. Rollout Phases
+1. Migration: add `dialogue_topics jsonb not null default '[]'` to `npcs`.
+2. Types regen.
+3. NPC Manager: topic editor UI.
+4. Shared `directions.ts` helper + small unit test.
+5. NPCDialogPanel: greeting + topic buttons + resolver for `text` / `class_hall_dir` / `class_hall_menu`.
+6. OrderRecruiterDialog: render the same topic list under the existing Join/Switch controls so recruiters can also give directions to other halls.
+7. Seed a few example topics on Knut so you can try it immediately.
 
-**Phase 0 — Spec lock (no code)**
-Resolve the five open questions above. One short follow-up conversation.
+## Technical notes
 
-**Phase 1 — Bond plumbing, dark-launched**
-- Migration: `character_class_bonds` + `nodes.class_hall` + `characters.is_classless` + `join_order`/`switch_order`/`award_class_bond` RPCs.
-- Seed all existing characters with bond 100 in their current class.
-- Wire `award_class_bond` calls into kill-resolver and exploration, but **bond multiplier is forced to 1.0 in all ability handlers** (no gameplay change yet).
-- Admin Tools panel: "Class Bonds" inspector to set/view bond per character.
+- Resolver is a pure function; kinds are dispatched through a small `topicResolvers` map so adding a new kind later is one entry.
+- All compass/direction strings come from the existing world-geography conventions to stay consistent with movement keys.
+- No new RLS needed — topics live inside `npcs`, which already has policies.
 
-**Phase 2 — Halls in the world**
-- Mark 7 nodes as `class_hall` with recruiter NPCs.
-- Recruiter dialog calls `join_order`/`switch_order`.
-- Classless kit + tutorial node. ✅ (Phase 2b shipped: `classless` enum, classless creation flow, Classless Adventurer kit defaults, in-world tutorial banner listing all seven halls.)
-- Character creation UI: remove class picker, add "Begin as Adventurer" copy. ✅
-- Existing characters unaffected. ✅
-
-**Phase 3 — Bond actually matters**
-- Turn on bond → ability tier multiplier.
-- Tune curves with live data; halve or double earn rates from the admin panel without redeploys (store rates in a config row, similar to `weapon_progression_config`).
-- Manual page entries explaining Bond and Orders.
-
-**Phase 4 — Polish & systems on top (future)**
-- Bond-gated trainer abilities, class bounties, hall-exclusive vendors, reputation tiers, cosmetic titles.
-
-Each phase is shippable on its own; phases 1 and 2 are invisible-to-gameplay safety nets before phase 3 changes any combat numbers.
-
----
-
-## 8. Risk & Reversibility
-
-- All schema additions are additive; no column drops, no enum rewrites.
-- Seeding existing characters at bond 100 means the live balance does not shift on launch day.
-- Bond multiplier is a single number read in one place per ability; reverting phase 3 = hardcode 1.0 and ship.
-- Class switching cannot create gear duplication (no class-locked rewards are minted in the switch path).
-- No edge function ownership of HP/CP is changed — `sync_character_resources` already handles recompute.
-
----
-
-## 9. Out of Scope for This Plan
-
-- New ability content per class.
-- Guild quests, bounties, reputation tiers (Phase 4).
-- Visual hall illustrations (separate art task).
-- Account-wide / cross-character bond sharing.
-- Removing existing `CLASS_LEVEL_BONUSES` — explicitly kept.
-
-If you approve the recommendations in §1 and answer the five questions in §6, I'll move to Phase 1 in build mode.
+Approve and I'll implement.
