@@ -25,7 +25,7 @@ export function useNPCs(nodeId: string | null) {
       .from('npcs')
       .select('*')
       .eq('node_id', nodeId);
-    if (data) setNPCs(data as NPC[]);
+    if (data) setNPCs(data as unknown as NPC[]);
   }, [nodeId]);
 
   useEffect(() => {
