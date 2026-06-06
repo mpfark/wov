@@ -118,6 +118,7 @@ export default function NPCManager() {
       dialogue: npc.dialogue,
       node_id: npc.node_id,
       service_role: (npc.service_role ?? 'none') as 'none' | NPCServiceRole,
+      dialogue_topics: Array.isArray(npc.dialogue_topics) ? npc.dialogue_topics : [],
     });
   };
 
@@ -136,6 +137,7 @@ export default function NPCManager() {
       dialogue: form.dialogue.trim(),
       node_id: form.node_id || null,
       service_role: form.service_role === 'none' ? null : form.service_role,
+      dialogue_topics: form.dialogue_topics,
     };
 
     let savedId = selectedId;
