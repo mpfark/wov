@@ -22,6 +22,7 @@ interface NPC {
   node_id: string | null;
   created_at: string;
   service_role: NPCServiceRole | null;
+  dialogue_topics?: DialogueTopic[] | null;
 }
 
 interface NodeOption {
