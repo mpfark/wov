@@ -24,24 +24,26 @@ interface Props {
   worldContext?: ResolverContext;
 }
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-  npc: NPC | null;
-  hallClass: string | null;
-  characterId: string;
-  currentClass: string;
-  onJoined?: () => void;
-}
-
 interface BondRow { class: string; bond: number }
 
 export default function OrderRecruiterDialog({
-  open, onClose, npc, hallClass, characterId, currentClass, onJoined,
+  open, onClose, npc, hallClass, characterId, currentClass, onJoined, worldContext,
 }: Props) {
   const [bonds, setBonds] = useState<BondRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [acting, setActing] = useState(false);
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
+
+  const topics = useMemo(() => {
+    if (!npc || !worldContext) return [];
+    return expandTopics(parseTopics(npc.dialogue_topics), worldContext);
+  }, [npc, worldContext]);
+
+  const activeTopic = useMemo(() => {
+    if (!activeTopicId || !worldContext) return null;
+    const t = topics.find(x => x.id === activeTopicId);
+    return t ? resolveTopic(t, worldContext) : null;
+  }, [activeTopicId, topics, worldContext]);
 
   useEffect(() => {
     if (!open || !characterId) return;
