@@ -54,6 +54,7 @@ const defaultForm = () => ({
   dialogue: '',
   node_id: '' as string | null,
   service_role: 'none' as 'none' | NPCServiceRole,
+  dialogue_topics: [] as DialogueTopic[],
 });
 
 export default function NPCManager() {
