@@ -9,8 +9,10 @@ import { toast } from 'sonner';
 import { Plus, Trash2, MessageCircle } from 'lucide-react';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import NodePicker from './NodePicker';
+import { CLASS_LABELS } from '@/shared/formulas/classes';
+import type { DialogueTopic, TopicKind } from '@/features/creatures/utils/dialogue-topics';
 
-type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer';
+type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter';
 
 interface NPC {
   id: string;
