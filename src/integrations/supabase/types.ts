@@ -1334,6 +1334,7 @@ export type Database = {
           created_at: string
           description: string
           dialogue: string
+          dialogue_topics: Json
           id: string
           name: string
           node_id: string | null
@@ -1343,6 +1344,7 @@ export type Database = {
           created_at?: string
           description?: string
           dialogue?: string
+          dialogue_topics?: Json
           id?: string
           name: string
           node_id?: string | null
@@ -1352,6 +1354,7 @@ export type Database = {
           created_at?: string
           description?: string
           dialogue?: string
+          dialogue_topics?: Json
           id?: string
           name?: string
           node_id?: string | null

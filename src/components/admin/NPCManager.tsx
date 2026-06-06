@@ -9,8 +9,10 @@ import { toast } from 'sonner';
 import { Plus, Trash2, MessageCircle } from 'lucide-react';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import NodePicker from './NodePicker';
+import { CLASS_LABELS } from '@/shared/formulas/classes';
+import type { DialogueTopic, TopicKind } from '@/features/creatures/utils/dialogue-topics';
 
-type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer';
+type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter';
 
 interface NPC {
   id: string;
@@ -20,6 +22,7 @@ interface NPC {
   node_id: string | null;
   created_at: string;
   service_role: NPCServiceRole | null;
+  dialogue_topics?: DialogueTopic[] | null;
 }
 
 interface NodeOption {
@@ -51,6 +54,7 @@ const defaultForm = () => ({
   dialogue: '',
   node_id: '' as string | null,
   service_role: 'none' as 'none' | NPCServiceRole,
+  dialogue_topics: [] as DialogueTopic[],
 });
 
 export default function NPCManager() {
@@ -72,7 +76,7 @@ export default function NPCManager() {
       supabase.from('regions').select('id, name'),
       supabase.from('areas').select('id, name'),
     ]);
-    if (n.data) setNPCs(n.data as NPC[]);
+    if (n.data) setNPCs(n.data as unknown as NPC[]);
     if (r.data) setNpcRegions(r.data as RegionOption[]);
     if (a.data) setNpcAreas(a.data as AreaOption[]);
     if (nd.data && r.data) {
@@ -114,6 +118,7 @@ export default function NPCManager() {
       dialogue: npc.dialogue,
       node_id: npc.node_id,
       service_role: (npc.service_role ?? 'none') as 'none' | NPCServiceRole,
+      dialogue_topics: Array.isArray(npc.dialogue_topics) ? npc.dialogue_topics : [],
     });
   };
 
@@ -132,15 +137,16 @@ export default function NPCManager() {
       dialogue: form.dialogue.trim(),
       node_id: form.node_id || null,
       service_role: form.service_role === 'none' ? null : form.service_role,
+      dialogue_topics: form.dialogue_topics,
     };
 
     let savedId = selectedId;
     if (selectedId) {
-      const { error } = await supabase.from('npcs').update(payload).eq('id', selectedId);
+      const { error } = await supabase.from('npcs').update(payload as any).eq('id', selectedId);
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('NPC updated');
     } else {
-      const { data, error } = await supabase.from('npcs').insert(payload).select().single();
+      const { data, error } = await supabase.from('npcs').insert(payload as any).select().single();
       if (error) { toast.error(error.message); setLoading(false); return; }
       toast.success('NPC created');
       if (data) { savedId = data.id; setSelectedId(data.id); setIsNew(false); }
@@ -148,9 +154,9 @@ export default function NPCManager() {
     setLoading(false);
     const { data: refreshed } = await supabase.from('npcs').select('*').order('name');
     if (refreshed) {
-      setNPCs(refreshed as NPC[]);
+      setNPCs(refreshed as unknown as NPC[]);
       const updated = refreshed.find((n: any) => n.id === savedId);
-      if (updated) openEdit(updated as NPC);
+      if (updated) openEdit(updated as unknown as NPC);
     }
   };
 
@@ -277,6 +283,17 @@ export default function NPCManager() {
                   </p>
                 </AdminFormSection>
 
+                <AdminFormSection title="Dialogue Topics">
+                  <TopicsEditor
+                    topics={form.dialogue_topics}
+                    onChange={(next) => setForm(f => ({ ...f, dialogue_topics: next }))}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Topics appear as clickable questions in the dialog. Use <strong>Class Hall Directions</strong> for a single class, or <strong>Class Hall Menu</strong> to auto-list every known order hall.
+                  </p>
+                </AdminFormSection>
+
+
                 <AdminFormSection title="Location">
                   <NodePicker
                     nodes={nodes}
@@ -301,3 +318,119 @@ export default function NPCManager() {
     </AdminPageShell>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Topics editor — small inline component for authoring dialogue_topics.
+// ─────────────────────────────────────────────────────────────────────────
+
+const KIND_LABELS: Record<TopicKind, string> = {
+  text: 'Text',
+  class_hall_dir: 'Class Hall Directions',
+  class_hall_menu: 'Class Hall Menu (auto-lists all)',
+};
+
+const CLASS_KEYS = Object.keys(CLASS_LABELS).filter(k => k !== 'classless');
+
+function slugId(label: string): string {
+  return (label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'topic')
+    + '_' + Math.random().toString(36).slice(2, 6);
+}
+
+function TopicsEditor({
+  topics,
+  onChange,
+}: {
+  topics: DialogueTopic[];
+  onChange: (next: DialogueTopic[]) => void;
+}) {
+  const update = (idx: number, patch: Partial<DialogueTopic>) => {
+    onChange(topics.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
+  };
+  const remove = (idx: number) => onChange(topics.filter((_, i) => i !== idx));
+  const move = (idx: number, dir: -1 | 1) => {
+    const j = idx + dir;
+    if (j < 0 || j >= topics.length) return;
+    const next = topics.slice();
+    [next[idx], next[j]] = [next[j], next[idx]];
+    onChange(next);
+  };
+  const add = () => {
+    onChange([
+      ...topics,
+      { id: slugId('new'), label: 'New topic', kind: 'text', response: '' },
+    ]);
+  };
+
+  return (
+    <div className="space-y-2">
+      {topics.length === 0 && (
+        <p className="text-[10px] text-muted-foreground italic">No topics yet.</p>
+      )}
+      {topics.map((t, idx) => (
+        <div key={t.id + idx} className="border border-border rounded p-2 space-y-1.5 bg-background/30">
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-7 text-xs flex-1"
+              placeholder="Player question (e.g. Where is the Templar Hall?)"
+              value={t.label}
+              maxLength={120}
+              onChange={e => update(idx, { label: e.target.value })}
+            />
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => move(idx, -1)} title="Move up">↑</Button>
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => move(idx, 1)} title="Move down">↓</Button>
+            <Button size="sm" variant="destructive" className="h-7 w-7 p-0" onClick={() => remove(idx)} title="Remove">
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+
+          <Select
+            value={t.kind}
+            onValueChange={v => update(idx, { kind: v as TopicKind })}
+          >
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-popover border-border z-50">
+              {Object.entries(KIND_LABELS).map(([k, label]) => (
+                <SelectItem key={k} value={k} className="text-xs">{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {t.kind === 'text' && (
+            <Textarea
+              className="text-xs"
+              placeholder="What the NPC says when this topic is chosen"
+              value={t.response ?? ''}
+              maxLength={1000}
+              rows={3}
+              onChange={e => update(idx, { response: e.target.value })}
+            />
+          )}
+
+          {t.kind === 'class_hall_dir' && (
+            <Select
+              value={String(t.params?.class ?? '')}
+              onValueChange={v => update(idx, { params: { ...(t.params ?? {}), class: v } })}
+            >
+              <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Pick class" /></SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50">
+                {CLASS_KEYS.map(k => (
+                  <SelectItem key={k} value={k} className="text-xs">{CLASS_LABELS[k]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {t.kind === 'class_hall_menu' && (
+            <p className="text-[10px] text-muted-foreground italic">
+              Expands automatically into one question per known order hall.
+            </p>
+          )}
+        </div>
+      ))}
+      <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={add}>
+        <Plus className="w-3 h-3 mr-1" /> Add topic
+      </Button>
+    </div>
+  );
+}
+

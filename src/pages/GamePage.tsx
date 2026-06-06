@@ -1359,7 +1359,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           onForged={() => { fetchInventory(); }}
         />
       ) : (
-        <NPCDialogPanel npc={talkingToNPC} open={!!talkingToNPC} onClose={() => setTalkingToNPC(null)} />
+        <NPCDialogPanel
+          npc={talkingToNPC}
+          open={!!talkingToNPC}
+          onClose={() => setTalkingToNPC(null)}
+          worldContext={{ fromNode: currentNode, nodes, regions, areas }}
+        />
       )}
 
       <OrderRecruiterDialog
@@ -1370,6 +1375,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         characterId={character.id}
         currentClass={character.class}
         onJoined={() => { refetchCharacters?.(); }}
+        worldContext={{ fromNode: currentNode, nodes, regions, areas }}
       />
 
       {/* Death Overlay */}
