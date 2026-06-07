@@ -1678,6 +1678,21 @@ Deno.serve(async (req) => {
       await Promise.all(gemPromises);
     }
 
+    // Apply class-bond gains. The RPC reads the recipient's active class
+    // and is a no-op for classless characters. Failures are logged but
+    // never block the tick response.
+    if (bondGainQueue.length > 0) {
+      await Promise.all(bondGainQueue.map(bg =>
+        db.rpc('award_class_bond_for_kill', {
+          _character_id: bg.memberId,
+          _creature_level: bg.creatureLevel,
+          _is_boss: bg.isBoss,
+        }).then((r: any) => {
+          if (r?.error) console.error('award_class_bond_for_kill failed', r.error);
+        })
+      ));
+    }
+
     // Batch effect upsert after cleanup to avoid conflicts
     if (liveEffects.length > 0) {
       const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
