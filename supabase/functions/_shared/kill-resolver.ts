@@ -64,6 +64,15 @@ export interface GemDropAward {
   gemKey: GemKey;
 }
 
+export interface BondGainAward {
+  memberId: string;
+  /** Bond points to award to the recipient's active class (caller calls RPC). */
+  amount: number;
+  /** Pass-through hint so caller can decide RPC signature. */
+  creatureLevel: number;
+  isBoss: boolean;
+}
+
 export interface KillOutcome {
   memberRewards: MemberReward[];
   /** The recipient used for log-display values (XP/gold each lines). */
