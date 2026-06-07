@@ -392,6 +392,16 @@ Deno.serve(async (req) => {
             });
           }
 
+          // Apply class-bond gains for the killer's party (no-op for classless).
+          for (const bg of outcome.bondGains) {
+            const { error: bondErr } = await db.rpc('award_class_bond_for_kill', {
+              _character_id: bg.memberId,
+              _creature_level: bg.creatureLevel,
+              _is_boss: bg.isBoss,
+            });
+            if (bondErr) console.error('award_class_bond_for_kill failed', bondErr);
+          }
+
           // Display values for HTTP response + broadcasts (uses shared resolver's
           // chosen display recipient — first uncapped, else first member).
           const displayReward = outcome.memberRewards.find(r => r.memberId === outcome.displayMemberId)!;
