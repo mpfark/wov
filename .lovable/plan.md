@@ -1,87 +1,79 @@
-# NPC Dialogue Topics System
+# Phase 3 — Activate the Bond Multiplier
 
-Upgrade NPCs from a single greeting blob to a **greeting + branching topic menu**. Each topic is a button the player can click to ask about something specific. The system is data-driven so admins can author dialogue without code, and the same structure will later carry quests, rumors, and lore.
+Mastery (Bond 0–100, per class) becomes a real combat scalar. The table and `award_class_bond` RPC already exist; this phase wires them into kill rewards, applies the multiplier in shared ability math, and surfaces Bond in the UI.
 
-## Data model
+## Design choices (from your answers)
+- **Curve:** Gentle. `bondMult(bond) = 1.00 + (bond / 100) * 0.15` → cap at 1.15×.
+- **Scales:** Direct damage, DoT/HoT magnitudes, utility magnitudes. **Not** durations.
+- **Gain:** Per kill, XP-shaped — see formula below.
+- **Switch cost:** Old class bond **reset to 0** when switching orders. Joining from classless costs nothing.
 
-Add a `dialogue_topics` JSONB column to `npcs` (the existing `dialogue` column stays as the greeting). Each topic is an object:
+## Bond gain formula
+On a successful kill (live or offscreen), award the killer's *active* class:
 
-```jsonc
-{
-  "id": "templar_hall",          // stable key
-  "label": "Where is the Templar Hall?",  // button text the player sees
-  "response": "Head east past the river, then north at the old shrine.",
-  "kind": "text",                // text | class_hall_dir | quest_hook (future)
-  "params": { "class": "templar" }, // optional, used by dynamic kinds
-  "requires": { /* future: quest flags, bond level, class, etc. */ },
-  "follow_up": []                // future: nested topics
+```
+bondGain = clamp(round(creature.level * 0.5 + isBoss * 5), 1, 25)
+```
+
+Roughly: ~50 even-level kills carry you 1 → 100; bosses jump you several points. Classless characters earn nothing (no class to bond with). Bond is capped at 100 by `award_class_bond`.
+
+Party members each get bond for their own active class on shared kills (same trigger point as XP).
+
+## Bond multiplier — where it applies
+
+Single helper in `src/shared/formulas/bond.ts` (mirrored to `_shared/formulas/bond.ts`):
+
+```ts
+export function bondMultiplier(bond: number): number {
+  return 1 + Math.max(0, Math.min(100, bond)) * 0.0015; // 1.00 → 1.15
 }
 ```
 
-`kind` lets us mix hand-written answers with **dynamic** ones the engine resolves at runtime. Phase 1 ships two kinds:
+Apply at the **final magnitude step** of the existing pipelines so it stacks cleanly *after* `getEffectiveCombatMod`:
 
-- `text` — static `response` string (fully admin-authored).
-- `class_hall_dir` — engine looks up the node tagged `class_hall = params.class`, computes the compass direction from the NPC's node, and renders a sentence like *"The Templar Hall lies to the north-east, in the Verdant Marches."* Admin only picks the class; no manual upkeep when halls move.
+- **Direct damage** — `combat-resolver` final damage line (autoattacks + ability direct hits).
+- **DoT/HoT** — per-tick magnitude in `active_effects` application sites (Rend, Ignite burn, Envenom, Consecrate, Purifying Light, Transfer Health tick).
+- **Utility** — Sunder armor reduction, Nature's Snare root strength, debuff potency numbers (anything currently fed through `effective.utility`).
 
-A small built-in helper topic `kind: "class_hall_menu"` expands into one auto-button per known order hall — so a recruiter or innkeeper can offer "Tell me about the orders" without listing seven topics by hand.
+**Explicitly not touched:** durations, cooldowns, CP/MP costs, hit chance, AC, autoattack speed, weapon-proc magnitudes (those are item-driven, not class-driven).
 
-## Admin authoring (NPC Manager)
+The multiplier reads bond for the character's **current** class only. Classless = 1.00× pass-through.
 
-In the NPC editor, below the existing Dialogue field, add a **Topics** section:
+## Switch cost wiring
 
-- List of topic rows with drag-to-reorder.
-- Each row: Label input, Kind dropdown (Text / Class Hall Directions / Class Hall Menu), and a Response textarea or a Class picker depending on kind.
-- "Add topic" button; trash icon to remove.
-- Stored as the `dialogue_topics` JSONB array on save.
+Update `join_order` RPC: when switching from one class to another (i.e., `OLD.class IS NOT NULL AND OLD.class <> _class AND OLD.is_classless = false`), zero out the prior class row before upserting the new one. Joining from classless leaves nothing to wipe. Add a one-line confirmation in `OrderRecruiterDialog` so players see the cost before they confirm a switch.
 
-No migration of existing NPCs needed — empty array means "no topics, behaves exactly like today."
+## UI surfacing
 
-## Player UX (NPCDialogPanel)
+- **CharacterPanel → Attributes tab:** small "Bond" row under class — progress bar `bond / 100` with current multiplier (`×1.07`) next to it. Reuse existing parchment styling.
+- **OrderRecruiterDialog (switch path):** add a warning line "Switching will reset your {oldClass} Bond ({n} → 0)." with the standard destructive-action button color.
+- **Activity log:** `general` event "Bond with {class} deepens (+{n}, now {total})." emitted from the bond-award site, throttled so we don't spam (only log when crossing each 10-point threshold).
 
-Rework the dialog so it always shows:
+No combat log changes — the multiplier is invisible in numbers, players feel it through pacing.
 
-1. NPC name + description (unchanged).
-2. The current spoken line in the parchment box — starts as `npc.dialogue` (greeting).
-3. Below it, a vertical list of topic buttons built from `dialogue_topics`.
-4. Clicking a topic replaces the spoken line with that topic's resolved response and keeps the menu visible so the player can ask more.
-5. A "Back" affordance returns to the greeting.
+## Technical details
 
-Service-role NPCs (recruiter, vendor, etc.) keep their primary action button; topics render alongside it, so a Templar recruiter can both enlist you AND answer "where is the Wizard Hall?".
-
-## Direction resolver (shared util)
-
-New pure helper `src/features/world/utils/directions.ts`:
-
-- Input: from-node, to-node, regions, areas.
-- Output: `{ compass: 'north-east', distance: 'nearby' | 'far', region_name, area_name }` using the existing `x/y` grid already used by the world map.
-- Used by `class_hall_dir` and reusable for future "where is the marketplace?" topics.
-
-Resolution happens client-side using already-loaded `useNodes` data — no extra DB calls.
-
-## Forward compatibility (no code yet, just shape)
-
-The same `dialogue_topics` schema is intentionally enough to host:
-
-- **Quest hooks** — `kind: "quest_offer"`, `params: { quest_id }`, gated by `requires`.
-- **Rumors** — `kind: "text"` with `requires: { min_level: 10 }` so they appear only when relevant.
-- **Conditional lore** — `requires: { has_item, class, bond_gte }`.
-
-Phase 1 ignores `requires` and `follow_up`; they're reserved keys so we can add them later without another migration.
+- **New SQL function** `award_class_bond_for_kill(_character_id, _creature_level, _is_boss)` — wraps the formula + `award_class_bond` + the threshold-crossing log, server-side so live and offscreen paths can't disagree.
+- **Call site (live):** in the kill-resolver reward block where `award_party_member` is invoked today, add a sibling call per recipient.
+- **Call site (offscreen):** same module already centralizes this — one edit covers both.
+- **`join_order` patch:** delete prior-class bond row in the same transaction as the class swap so it's atomic.
+- **Shared formula parity:** add `bond.ts` to both `src/shared/formulas/` and `supabase/functions/_shared/formulas/` and include it in the existing `formula-parity.test.ts`.
+- **Unit tests:** `bond.test.ts` covering `bondMultiplier(0)=1`, `bondMultiplier(100)=1.15`, clamp on negatives/overshoot. Extend an existing combat resolver test to assert a 100-bond character deals exactly `floor(base * 1.15)` direct damage.
+- **Types regen** after the migration; then update `useCharacter` to expose the active-class bond row for the UI.
 
 ## Rollout
 
-1. Migration: add `dialogue_topics jsonb not null default '[]'` to `npcs`.
-2. Types regen.
-3. NPC Manager: topic editor UI.
-4. Shared `directions.ts` helper + small unit test.
-5. NPCDialogPanel: greeting + topic buttons + resolver for `text` / `class_hall_dir` / `class_hall_menu`.
-6. OrderRecruiterDialog: render the same topic list under the existing Join/Switch controls so recruiters can also give directions to other halls.
-7. Seed a few example topics on Knut so you can try it immediately.
+1. Migration: `award_class_bond_for_kill` SQL function; patch `join_order` to reset prior bond.
+2. Shared `bond.ts` (src + edge mirror) + unit test + parity test.
+3. Wire `bondMultiplier` into damage / DoT / utility application sites in `combat-resolver` and ability files.
+4. Wire `award_class_bond_for_kill` into the kill-resolver reward block (covers live + offscreen).
+5. Surface Bond row in CharacterPanel Attributes tab; add switch warning to `OrderRecruiterDialog`.
+6. Activity log entry on threshold crossings.
+7. Update `.lovable/plan.md` and the relevant memory files (progression-system, class-progression).
 
-## Technical notes
-
-- Resolver is a pure function; kinds are dispatched through a small `topicResolvers` map so adding a new kind later is one entry.
-- All compass/direction strings come from the existing world-geography conventions to stay consistent with movement keys.
-- No new RLS needed — topics live inside `npcs`, which already has policies.
+## Out of scope (deferred)
+- Bond-gated abilities or perks (e.g. "ability X unlocks at Bond 50").
+- Bond-driven cosmetic titles.
+- Cross-class Bond synergies.
 
 Approve and I'll implement.
