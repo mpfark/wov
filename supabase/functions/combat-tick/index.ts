@@ -808,6 +808,7 @@ Deno.serve(async (req) => {
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         let { emoji, verb } = T0_LABEL[pa.ability_type];
         // Templars share the 'smite' handler with healers but flavor it as Judgment.
