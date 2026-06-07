@@ -259,6 +259,15 @@ export function resolveCreatureKill(
     }
   }
 
+  // ── 7. Bond gains (per recipient; class is read server-side by the RPC) ─
+  const isBoss = creature.rarity === 'boss';
+  const bondGains: BondGainAward[] = recipients.map(r => ({
+    memberId: r.id,
+    amount: bondGainForKill(creature.level, isBoss),
+    creatureLevel: creature.level,
+    isBoss,
+  }));
+
   return {
     memberRewards: result.memberRewards,
     displayMemberId: displayRecipient.id,
@@ -266,6 +275,7 @@ export function resolveCreatureKill(
     lootQueue,
     bossDeathCryText,
     gemDrops,
+    bondGains,
     totalGoldRolled: result.totalGoldRolled,
     baseXp: result.baseXp,
     partyBonus: result.partyBonus,
