@@ -72,6 +72,7 @@ import {
 } from "../_shared/formulas/resources.ts";
 import { getXpForLevel as xpForLevel } from "../_shared/formulas/xp.ts";
 import { getEffectiveCombatMod } from "../_shared/formulas/effective.ts";
+import { bondMultiplier } from "../_shared/formulas/bond.ts";
 
 // ── Boss crit flavor selection (weighted random) ────────────────
 function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
@@ -323,7 +324,7 @@ Deno.serve(async (req) => {
     // ── Parallel fetch: equipment, creatures, effects, xp_boost ──
     const charIds = members.map(m => m.id);
     const combatNodeId = session.node_id;
-    const [equipRes, creaturesRes, effectsRes, xpRes, weaponCfgRes] = await Promise.all([
+    const [equipRes, creaturesRes, effectsRes, xpRes, weaponCfgRes, bondsRes] = await Promise.all([
       db.from('character_inventory')
         .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs, level)')
         .in('character_id', charIds)
@@ -332,6 +333,7 @@ Deno.serve(async (req) => {
       db.from('active_effects').select('*').eq('node_id', combatNodeId),
       db.from('xp_boost').select('multiplier, expires_at').limit(1).single(),
       db.from('weapon_progression_config').select('tier1_level, tier2_level, tier3_level').eq('id', 1).maybeSingle(),
+      db.from('character_class_bonds').select('character_id, class, bond').in('character_id', charIds),
     ]);
 
     const allEquip = equipRes.data;
@@ -339,6 +341,17 @@ Deno.serve(async (req) => {
     const activeEffectsRaw = effectsRes.data;
     const xpB = xpRes.data;
     const weaponProgression = weaponCfgRes.data ?? undefined;
+
+    // Per-member bond multiplier for the *active* class. Classless = 1.00×.
+    // Used to scale direct damage and DoT/HoT magnitudes (NOT durations).
+    const mBondMult: Record<string, number> = {};
+    for (const m of members) {
+      const activeClass = (m.c as any).class;
+      const isClassless = !!(m.c as any).is_classless;
+      const row = (bondsRes.data || []).find((b: any) => b.character_id === m.id && b.class === activeClass);
+      const bond = isClassless ? 0 : (row?.bond ?? 0);
+      mBondMult[m.id] = bondMultiplier(bond);
+    }
 
     // ── Process equipment bonuses ────────────────────────────────
     const eq: Record<string, Record<string, number>> = {};
@@ -426,6 +439,7 @@ Deno.serve(async (req) => {
     const clearedDots: { character_id: string; creature_id: string; dot_type: string }[] = [];
     const lootQueue: LootQueueEntry[] = [];
     const gemDropQueue: { memberId: string; gemKey: string }[] = [];
+    const bondGainQueue: { memberId: string; creatureLevel: number; isBoss: boolean }[] = [];
     const consumedAbilityStacks: { character_id: string; creature_id: string; stack_type: string }[] = [];
     const killedCreatureIds = new Set<string>();
 
@@ -591,6 +605,11 @@ Deno.serve(async (req) => {
 
       // Queue gem drops (applied via add_material into character_materials)
       for (const gd of outcome.gemDrops) gemDropQueue.push(gd);
+
+      // Queue class-bond gains (applied via award_class_bond_for_kill RPC)
+      for (const bg of outcome.bondGains) bondGainQueue.push({
+        memberId: bg.memberId, creatureLevel: bg.creatureLevel, isBoss: bg.isBoss,
+      });
     };
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
@@ -662,6 +681,7 @@ Deno.serve(async (req) => {
             if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
+            arrowDmg = Math.max(1, Math.floor(arrowDmg * mBondMult[member.id]));
             totalDmg += arrowDmg;
             cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
             events.push({
@@ -715,7 +735,7 @@ Deno.serve(async (req) => {
         const baseDmg = 4 + 2 * effDexDmg + Math.floor((c.level || 1) / 3);
         const perStackBonus = 0.50 + effChaStack * 0.02;
         const multiplier = 1 + perStackBonus * stacks;
-        const finalDmg = Math.max(Math.round(baseDmg * multiplier), 1);
+        const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id });
@@ -742,6 +762,7 @@ Deno.serve(async (req) => {
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
         if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
@@ -787,6 +808,7 @@ Deno.serve(async (req) => {
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         let { emoji, verb } = T0_LABEL[pa.ability_type];
         // Templars share the 'smite' handler with healers but flavor it as Judgment.
@@ -821,6 +843,7 @@ Deno.serve(async (req) => {
         if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
@@ -842,6 +865,7 @@ Deno.serve(async (req) => {
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        dmgPerTick = Math.max(1, Math.floor(dmgPerTick * mBondMult[member.id])); // Bond mastery scalar
         const durationMs = Math.min(30000, 20000 + Math.max(0, dexMod) * 1000);
 
         const existing = activeEffects.find(e => e.source_id === member.id && e.target_id === target.id && e.effect_type === 'bleed');
@@ -1005,7 +1029,8 @@ Deno.serve(async (req) => {
             // Soft-scaled WIS + CON kickers (profile 'damage') for Holy Shield retaliation.
             const wisModForReturn = getEffectiveCombatMod(Math.max(0, sm(effectiveWis)), 'damage');
             const conKicker = getEffectiveCombatMod(Math.max(0, mb.holy_shield.con_mod ?? 0), 'damage');
-            const returnDmg = Math.max(1, Math.round(2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4)));
+            const returnDmgBase = Math.max(1, Math.round(2 + wisModForReturn + conKicker + Math.floor((targetC.level || 1) / 4)));
+            const returnDmg = Math.max(1, Math.floor(returnDmgBase * (mBondMult[targetId] ?? 1)));
             cHp[creature.id] = Math.max(cHp[creature.id] - returnDmg, 0);
             events.push({
               type: 'holy_shield_return',
@@ -1058,8 +1083,9 @@ Deno.serve(async (req) => {
         if (!cons || (cons.expires_at ?? 0) <= tickTime) continue;
 
         const consWis = Math.max(0, cons.wis_mod ?? 0);
-        const healAmt = Math.max(1, 2 + consWis);
-        const burnAmt = Math.max(1, 2 + consWis);
+        const bm = mBondMult[m.id] ?? 1;
+        const healAmt = Math.max(1, Math.floor((2 + consWis) * bm));
+        const burnAmt = Math.max(1, Math.floor((2 + consWis) * bm));
 
         // Heal all alive members on this node (members[] is already filtered)
         for (const ally of members) {
@@ -1174,6 +1200,9 @@ Deno.serve(async (req) => {
           if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
           if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
 
+          // Bond multiplier (mastery scalar; class-only, 1.00–1.15×).
+          dmg = Math.max(1, Math.floor(dmg * mBondMult[m.id]));
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
@@ -1204,7 +1233,7 @@ Deno.serve(async (req) => {
             const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
             // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
             const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
-            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67));
+            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67 * (mBondMult[m.id] ?? 1)));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
               session_id: null, effect_type: 'poison',
@@ -1304,6 +1333,9 @@ Deno.serve(async (req) => {
           if (quality2 === 'glancing') dmg2 = Math.min(dmg2, GLANCING_WEAK_CAP);
           if (quality2 === 'weak' && margin2 < -2) dmg2 = Math.min(dmg2, GLANCING_WEAK_CAP);
 
+          // Bond multiplier (class-only mastery scalar).
+          dmg2 = Math.max(1, Math.floor(dmg2 * mBondMult[m.id]));
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
             type: 'offhand_hit',
@@ -1364,6 +1396,7 @@ Deno.serve(async (req) => {
         // Direct pulse damage = INT (the spark / blast).
         let pulseDmg = Math.max(1, 2 + intMod);
         if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
 
         cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
 
@@ -1374,7 +1407,7 @@ Deno.serve(async (req) => {
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
         // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
         const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
-        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67));
+        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67 * (mBondMult[m.id] ?? 1)));
         const duration = Math.min(45000, 30000 + wisMod * 1000);
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
@@ -1670,6 +1703,21 @@ Deno.serve(async (req) => {
         );
       }
       await Promise.all(gemPromises);
+    }
+
+    // Apply class-bond gains. The RPC reads the recipient's active class
+    // and is a no-op for classless characters. Failures are logged but
+    // never block the tick response.
+    if (bondGainQueue.length > 0) {
+      await Promise.all(bondGainQueue.map(bg =>
+        db.rpc('award_class_bond_for_kill', {
+          _character_id: bg.memberId,
+          _creature_level: bg.creatureLevel,
+          _is_boss: bg.isBoss,
+        }).then((r: any) => {
+          if (r?.error) console.error('award_class_bond_for_kill failed', r.error);
+        })
+      ));
     }
 
     // Batch effect upsert after cleanup to avoid conflicts

@@ -36,6 +36,7 @@ import {
 } from "./reward-calculator.ts";
 import type { LootQueueEntry } from "./combat-resolver.ts";
 import { GEM_DROP_CHANCE, PRIMARY_GEM_KEYS, type GemKey } from "./formulas/gems.ts";
+import { bondGainForKill } from "./formulas/bond.ts";
 
 export interface KillCreatureInput {
   id: string;
@@ -63,6 +64,15 @@ export interface GemDropAward {
   gemKey: GemKey;
 }
 
+export interface BondGainAward {
+  memberId: string;
+  /** Bond points to award to the recipient's active class (caller calls RPC). */
+  amount: number;
+  /** Pass-through hint so caller can decide RPC signature. */
+  creatureLevel: number;
+  isBoss: boolean;
+}
+
 export interface KillOutcome {
   memberRewards: MemberReward[];
   /** The recipient used for log-display values (XP/gold each lines). */
@@ -75,6 +85,8 @@ export interface KillOutcome {
   bossDeathCryText: string | null;
   /** Per-recipient gem drops; applied via add_material into character_materials. */
   gemDrops: GemDropAward[];
+  /** Per-recipient class-bond gains; apply via award_class_bond_for_kill RPC. */
+  bondGains: BondGainAward[];
   /** Raw totals for diagnostics / broadcast payloads. */
   totalGoldRolled: number;
   baseXp: number;
@@ -247,6 +259,15 @@ export function resolveCreatureKill(
     }
   }
 
+  // ── 7. Bond gains (per recipient; class is read server-side by the RPC) ─
+  const isBoss = creature.rarity === 'boss';
+  const bondGains: BondGainAward[] = recipients.map(r => ({
+    memberId: r.id,
+    amount: bondGainForKill(creature.level, isBoss),
+    creatureLevel: creature.level,
+    isBoss,
+  }));
+
   return {
     memberRewards: result.memberRewards,
     displayMemberId: displayRecipient.id,
@@ -254,6 +275,7 @@ export function resolveCreatureKill(
     lootQueue,
     bossDeathCryText,
     gemDrops,
+    bondGains,
     totalGoldRolled: result.totalGoldRolled,
     baseXp: result.baseXp,
     partyBonus: result.partyBonus,

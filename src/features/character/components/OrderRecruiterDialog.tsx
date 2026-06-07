@@ -159,11 +159,23 @@ export default function OrderRecruiterDialog({
           )}
         </div>
 
+        {currentClass && !isCurrent && (() => {
+          const oldLabel = CLASS_LABELS[currentClass] ?? currentClass;
+          const oldBond = bonds.find(b => b.class === currentClass)?.bond ?? 0;
+          return (
+            <div className="rounded border border-destructive/40 bg-destructive/10 p-2 text-xs">
+              <p className="text-destructive font-display">⚠ Switching resets your {oldLabel} Bond ({oldBond} → 0).</p>
+              <p className="text-[10px] text-muted-foreground mt-1">The old order will remember you no more.</p>
+            </div>
+          );
+        })()}
+
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose} disabled={acting}>Leave</Button>
           <Button
             onClick={handleJoin}
             disabled={acting || loading || isCurrent}
+            variant={currentClass && !isCurrent ? 'destructive' : 'default'}
             className="font-display"
           >
             {isCurrent ? `Already a ${hallLabel}` : currentClass ? `Switch to ${hallLabel}` : `Join the ${hallLabel} Order`}
