@@ -762,6 +762,7 @@ Deno.serve(async (req) => {
         let finalDmg = Math.max(Math.floor(baseDmg * multiplier), 1);
         // Arcane Surge empowers all wizard damage
         if (buffs[member.id]?.damage_buff) finalDmg = Math.max(Math.floor(finalDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        finalDmg = Math.max(1, Math.floor(finalDmg * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} detonates ${stacks} burn stack${stacks > 1 ? 's' : ''} on ${target.name}! [${finalDmg}]`, character_id: member.id });
