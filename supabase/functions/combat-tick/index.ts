@@ -1396,6 +1396,7 @@ Deno.serve(async (req) => {
         // Direct pulse damage = INT (the spark / blast).
         let pulseDmg = Math.max(1, 2 + intMod);
         if (mb.damage_buff) pulseDmg = Math.max(Math.floor(pulseDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        pulseDmg = Math.max(1, Math.floor(pulseDmg * (mBondMult[m.id] ?? 1)));
 
         cHp[target.id] = Math.max(cHp[target.id] - pulseDmg, 0);
 
