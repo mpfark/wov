@@ -1233,7 +1233,7 @@ Deno.serve(async (req) => {
             const newStacks = existing ? Math.min(existing.stacks + 1, envenomMaxStacks) : 1;
             // Soft-scaled DEX contribution (profile 'dot') — per-tick poison damage.
             const effDexDot = getEffectiveCombatMod(Math.max(0, dexMod), 'dot');
-            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67));
+            const dmgPerTick = Math.max(1, Math.floor(effDexDot * 1.2 * 0.67 * (mBondMult[m.id] ?? 1)));
             const effData = {
               node_id: combatNodeId, target_id: target.id, source_id: m.id,
               session_id: null, effect_type: 'poison',
