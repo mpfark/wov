@@ -735,7 +735,7 @@ Deno.serve(async (req) => {
         const baseDmg = 4 + 2 * effDexDmg + Math.floor((c.level || 1) / 3);
         const perStackBonus = 0.50 + effChaStack * 0.02;
         const multiplier = 1 + perStackBonus * stacks;
-        const finalDmg = Math.max(Math.round(baseDmg * multiplier), 1);
+        const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
           events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id });
