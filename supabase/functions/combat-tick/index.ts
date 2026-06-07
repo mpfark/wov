@@ -843,6 +843,7 @@ Deno.serve(async (req) => {
         if (isFinaleCrit) damage = damage * 2;
         // Damage buffs (e.g. Arcane Surge, future bardic empowerments) scale Grand Finale.
         if (buffs[member.id]?.damage_buff) damage = Math.max(Math.floor(damage * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
+        damage = Math.max(1, Math.floor(damage * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - damage, 0);
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
