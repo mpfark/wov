@@ -592,6 +592,11 @@ Deno.serve(async (req) => {
 
       // Queue gem drops (applied via add_material into character_materials)
       for (const gd of outcome.gemDrops) gemDropQueue.push(gd);
+
+      // Queue class-bond gains (applied via award_class_bond_for_kill RPC)
+      for (const bg of outcome.bondGains) bondGainQueue.push({
+        memberId: bg.memberId, creatureLevel: bg.creatureLevel, isBoss: bg.isBoss,
+      });
     };
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
