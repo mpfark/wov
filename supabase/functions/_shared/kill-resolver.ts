@@ -85,6 +85,8 @@ export interface KillOutcome {
   bossDeathCryText: string | null;
   /** Per-recipient gem drops; applied via add_material into character_materials. */
   gemDrops: GemDropAward[];
+  /** Per-recipient class-bond gains; apply via award_class_bond_for_kill RPC. */
+  bondGains: BondGainAward[];
   /** Raw totals for diagnostics / broadcast payloads. */
   totalGoldRolled: number;
   baseXp: number;
