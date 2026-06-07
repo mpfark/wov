@@ -1193,6 +1193,9 @@ Deno.serve(async (req) => {
           if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
           if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
 
+          // Bond multiplier (mastery scalar; class-only, 1.00–1.15×).
+          dmg = Math.max(1, Math.floor(dmg * mBondMult[m.id]));
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
           events.push({
             type: 'attack_hit',
