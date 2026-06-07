@@ -681,6 +681,7 @@ Deno.serve(async (req) => {
             if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
             arrowDmg = Math.max(arrowDmg, 1);
+            arrowDmg = Math.max(1, Math.floor(arrowDmg * mBondMult[member.id]));
             totalDmg += arrowDmg;
             cHp[t.id] = Math.max(cHp[t.id] - arrowDmg, 0);
             events.push({
