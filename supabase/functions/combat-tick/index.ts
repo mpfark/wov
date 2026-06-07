@@ -72,6 +72,7 @@ import {
 } from "../_shared/formulas/resources.ts";
 import { getXpForLevel as xpForLevel } from "../_shared/formulas/xp.ts";
 import { getEffectiveCombatMod } from "../_shared/formulas/effective.ts";
+import { bondMultiplier } from "../_shared/formulas/bond.ts";
 
 // ── Boss crit flavor selection (weighted random) ────────────────
 function pickBossFlavor(raw: any): { name: string; text: string; emoji: string; damage_type?: string } | null {
