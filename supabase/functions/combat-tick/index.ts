@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
     // ── Parallel fetch: equipment, creatures, effects, xp_boost ──
     const charIds = members.map(m => m.id);
     const combatNodeId = session.node_id;
-    const [equipRes, creaturesRes, effectsRes, xpRes, weaponCfgRes] = await Promise.all([
+    const [equipRes, creaturesRes, effectsRes, xpRes, weaponCfgRes, bondsRes] = await Promise.all([
       db.from('character_inventory')
         .select('character_id, equipped_slot, item:items(stats, weapon_tag, hands, procs, level)')
         .in('character_id', charIds)
@@ -332,6 +332,7 @@ Deno.serve(async (req) => {
       db.from('active_effects').select('*').eq('node_id', combatNodeId),
       db.from('xp_boost').select('multiplier, expires_at').limit(1).single(),
       db.from('weapon_progression_config').select('tier1_level, tier2_level, tier3_level').eq('id', 1).maybeSingle(),
+      db.from('character_class_bonds').select('character_id, class, bond').in('character_id', charIds),
     ]);
 
     const allEquip = equipRes.data;
