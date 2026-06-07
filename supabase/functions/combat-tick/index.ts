@@ -1407,7 +1407,7 @@ Deno.serve(async (req) => {
         const newStacks = existing ? Math.min(existing.stacks + 1, 5) : 1;
         // Soft-scaled WIS contribution (profile 'dot') — burn per-tick damage.
         const effWisDot = getEffectiveCombatMod(Math.max(0, wisMod), 'dot');
-        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67));
+        const dmgPerTick = Math.max(1, Math.floor(effWisDot * 0.7 * 0.67 * (mBondMult[m.id] ?? 1)));
         const duration = Math.min(45000, 30000 + wisMod * 1000);
         const effData = {
           node_id: combatNodeId, target_id: target.id, source_id: m.id,
