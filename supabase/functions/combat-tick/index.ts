@@ -1332,6 +1332,9 @@ Deno.serve(async (req) => {
           if (quality2 === 'glancing') dmg2 = Math.min(dmg2, GLANCING_WEAK_CAP);
           if (quality2 === 'weak' && margin2 < -2) dmg2 = Math.min(dmg2, GLANCING_WEAK_CAP);
 
+          // Bond multiplier (class-only mastery scalar).
+          dmg2 = Math.max(1, Math.floor(dmg2 * mBondMult[m.id]));
+
           cHp[target.id] = Math.max(cHp[target.id] - dmg2, 0);
           events.push({
             type: 'offhand_hit',
