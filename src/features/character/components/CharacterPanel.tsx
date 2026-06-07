@@ -19,6 +19,7 @@ import { GemPouch } from '@/features/inventory/components/GemPouch';
 import { MaterialsSection } from '@/features/inventory/components/MaterialsSection';
 import { useOwnedGems } from '@/features/inventory/hooks/useOwnedGems';
 import PortraitTab from './PortraitTab';
+import ClassBondRow from './ClassBondRow';
 
 interface Props {
   character: Character;
