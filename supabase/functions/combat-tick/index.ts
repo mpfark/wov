@@ -1082,8 +1082,9 @@ Deno.serve(async (req) => {
         if (!cons || (cons.expires_at ?? 0) <= tickTime) continue;
 
         const consWis = Math.max(0, cons.wis_mod ?? 0);
-        const healAmt = Math.max(1, 2 + consWis);
-        const burnAmt = Math.max(1, 2 + consWis);
+        const bm = mBondMult[m.id] ?? 1;
+        const healAmt = Math.max(1, Math.floor((2 + consWis) * bm));
+        const burnAmt = Math.max(1, Math.floor((2 + consWis) * bm));
 
         // Heal all alive members on this node (members[] is already filtered)
         for (const ally of members) {
