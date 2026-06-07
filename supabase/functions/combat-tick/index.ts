@@ -341,6 +341,17 @@ Deno.serve(async (req) => {
     const xpB = xpRes.data;
     const weaponProgression = weaponCfgRes.data ?? undefined;
 
+    // Per-member bond multiplier for the *active* class. Classless = 1.00×.
+    // Used to scale direct damage and DoT/HoT magnitudes (NOT durations).
+    const mBondMult: Record<string, number> = {};
+    for (const m of members) {
+      const activeClass = (m.c as any).class;
+      const isClassless = !!(m.c as any).is_classless;
+      const row = (bondsRes.data || []).find((b: any) => b.character_id === m.id && b.class === activeClass);
+      const bond = isClassless ? 0 : (row?.bond ?? 0);
+      mBondMult[m.id] = bondMultiplier(bond);
+    }
+
     // ── Process equipment bonuses ────────────────────────────────
     const eq: Record<string, Record<string, number>> = {};
     const mainHandTag: Record<string, string | null> = {};
