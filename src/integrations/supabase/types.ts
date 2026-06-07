@@ -1844,6 +1844,14 @@ export type Database = {
         }
         Returns: number
       }
+      award_class_bond_for_kill: {
+        Args: {
+          _character_id: string
+          _creature_level: number
+          _is_boss?: boolean
+        }
+        Returns: number
+      }
       award_party_member:
         | {
             Args: { _character_id: string; _gold: number; _xp: number }
