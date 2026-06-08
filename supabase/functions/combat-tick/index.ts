@@ -1162,7 +1162,9 @@ Deno.serve(async (req) => {
 
         let creatureAc = target.ac;
         if (mb.sunder_target === target.id && mb.sunder_reduction) {
-          creatureAc = Math.max(creatureAc - mb.sunder_reduction, 0);
+          // Bond multiplier scales the AC-reduction magnitude (utility).
+          const sunderAmt = Math.max(0, Math.round(mb.sunder_reduction * (mBondMult[m.id] ?? 1)));
+          creatureAc = Math.max(creatureAc - sunderAmt, 0);
         }
 
         const roll = rollD20();
