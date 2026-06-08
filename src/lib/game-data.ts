@@ -87,7 +87,7 @@ export const CLASS_DESCRIPTIONS: Record<string, string> = {
   healer: 'Divine support. WIS & CON gains stack CP pool and HP, letting you sustain the party with mace or staff in hand.',
   bard: 'Loremaster and dealmaker. CHA & INT gains boost arcane accuracy, vendor prices and gold drops — a flexible support class.',
   templar: 'Holy defender, sword-and-shield. WIS & CON gains every 3 levels deepen the CP pool and HP. Reactive holy strikes, guaranteed blocks, consecrated ground and pure damage reduction make the Templar the realm\'s living bulwark.',
-  classless: 'A wanderer without an order. Begin your tale untethered — find a hall in the world and swear yourself to its calling.',
+  classless: 'Wayfarer — a wanderer sworn to no order. Walk the realm at your own pace, then seek an Order Hall when a calling stirs you.',
 };
 
 export const STAT_LABELS: Record<string, string> = {

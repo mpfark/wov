@@ -36,7 +36,7 @@ export const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
 export const CLASS_LABELS: Record<string, string> = {
   warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger',
   rogue: 'Rogue', healer: 'Healer', bard: 'Bard', templar: 'Templar',
-  classless: 'Classless Adventurer',
+  classless: 'Wayfarer',
 };
 
 export const CLASS_WEAPON_AFFINITY: Record<string, string[]> = {
