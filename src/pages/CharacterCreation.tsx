@@ -70,7 +70,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
         await supabase.rpc('grant_starting_gear' as any, { p_character_id: char.id });
         onCharacterReady?.(char.id);
       }
-      toast.success(`${name} sets out into the world as a Classless Adventurer.`);
+      toast.success(`${name} sets out into the world as a Wayfarer.`);
     } catch (err: any) {
       if (err.message?.includes('characters_name_unique') || err.code === '23505') {
         toast.error(`The name "${name}" is already taken. Choose a different name.`);
@@ -178,16 +178,16 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
             </div>
           </div>
 
-          {/* Classless adventurer info card */}
+          {/* Wayfarer info card */}
           <div className="p-4 rounded-md border border-primary/40 bg-primary/5">
             <div className="flex items-start gap-3">
               <span className="text-2xl">🧭</span>
               <div className="space-y-1">
-                <h3 className="font-display text-sm text-primary text-glow">You begin as a Classless Adventurer</h3>
+                <h3 className="font-display text-sm text-primary text-glow">You begin as a Wayfarer</h3>
                 <p className="text-xs text-muted-foreground leading-snug">
                   No order claims you yet. You start with a sturdy frame (18 HP, 10 AC) and balanced stats, ready
-                  to learn the world at your own pace. Travel to one of the seven Order Halls and speak to its
-                  Recruiter to swear yourself to a class — you can switch later at any other hall.
+                  to learn the world at your own pace. Ask the folk you meet about the Order Halls — their Recruiters
+                  will swear you to a class, and you can switch later at any other hall.
                 </p>
               </div>
             </div>

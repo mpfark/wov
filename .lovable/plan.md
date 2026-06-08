@@ -1,27 +1,51 @@
-# Phase 3 — Bond Multiplier (Shipped)
+## Goal
 
-Mastery (Bond 0–100, per class) is now a real combat scalar. Bond is earned per kill, scales magnitudes only (not durations), and resets on order switch.
+- A character without an order is presented as a **Wayfarer** everywhere the player sees text.
+- The central **Classless Tutorial Banner** (the big info box listing the seven Order Halls) is removed from the node view; finding orders happens via NPC dialogue only.
+- **No new abilities** for Wayfarers — they keep weapon autoattacks only (existing behavior).
 
-## What landed
+Internal keys (`classless` enum value, `is_classless` flag, DB columns) stay untouched. This is a label-only rename — lowest risk, no migration.
 
-- **Formula** (`src/shared/formulas/bond.ts`, mirrored to edge): `bondMultiplier(bond) = 1 + bond * 0.0015` → 1.00× at 0 / 1.15× at 100. `bondGainForKill(level, isBoss) = clamp(round(level*0.5 + isBoss*5), 1, 25)`.
-- **Server RPC** `award_class_bond_for_kill` — wraps the gain formula + `award_class_bond` + logs an activity entry only when crossing a 10-point milestone.
-- **Switch reset** — `join_order` now deletes the prior class's `character_class_bonds` row when switching classes (joining from classless costs nothing).
-- **Kill awards** — wired through `resolveCreatureKill.bondGains`; combat-tick (live) and combat-catchup (offscreen) both call the RPC per recipient.
-- **Multiplier applied** — autoattacks (main + offhand), Barrage arrows, Eviscerate, Conflagrate, T0 abilities (fireball/power_strike/aimed_shot/backstab/smite/cutting_words), Grand Finale, Holy Shield retaliation, Consecrate burn+heal, Ignite orb pulse + burn DoT, Envenom poison DoT, Rend bleed DoT. **Skipped per design:** item procs, durations, cooldowns, hit chance, AC, costs.
-- **UI** — Bond row in Attributes tab (live; subscribes to `character_class_bonds`); destructive switch warning in Order Recruiter dialog.
-- **Tests** — `bond.test.ts` covers curve + clamps + gain formula.
+## Changes
 
-## Notes & deliberate scope decisions
+### 1. Rename to "Wayfarer" (UI + log copy)
 
-- Bond gains are POST-RPC; classless characters get nothing (RPC short-circuits).
-- The multiplier reads the character's *active* class only. Other-class bonds sit dormant but are wiped on switch.
-- Activity log throttles to one entry per 10-point milestone to avoid spam.
-- DoT magnitudes bake the multiplier in at apply time (single value persisted on `active_effects.damage_per_tick`); ticking does not re-multiply.
+- `src/shared/formulas/classes.ts` and `supabase/functions/_shared/formulas/classes.ts`
+  - `CLASS_LABELS.classless`: `'Classless Adventurer'` → `'Wayfarer'`.
+- `src/lib/game-data.ts`
+  - `CLASS_DESCRIPTIONS.classless`: tighten the copy and replace "Classless Adventurer" framing with Wayfarer voice. Existing "find a hall in the world" wording stays.
+- `src/pages/CharacterCreation.tsx`
+  - Toast: "…sets out into the world as a **Wayfarer**."
+  - Info card heading: "You begin as a **Wayfarer**" (card itself stays — it's the creation-screen card, not the in-world banner).
+- `src/features/character/components/ClassBondRow.tsx`
+  - Doc comment: "Wayfarers render nothing".
+- Any code-comment occurrences of "classless" in `combat-tick` / `combat-catchup` / plan / memory left as-is (internal, references the flag/enum, not user-facing).
 
-## Future / out of scope
+### 2. Remove the central tutorial banner
 
-- Bond-gated abilities or perks.
-- Bond-driven titles or cosmetics.
-- Cross-class Bond synergies.
-- Per-ability-use gain (currently per-kill only).
+- `src/features/world/components/NodeView.tsx`
+  - Remove the `ClasslessTutorialBanner` import and the `{(character as any).is_classless && <ClasslessTutorialBanner />}` render at line 242.
+- `src/features/world/components/ClasslessTutorialBanner.tsx`
+  - Delete the file (no other consumers).
+- `src/features/world/utils/directions.ts` is still used by NPC dialogue topics — leave it.
+
+### 3. Wayfarer abilities
+
+- **No changes.** Wayfarers keep weapon autoattacks. Ability bar already gates on a real class via `is_classless`.
+
+### 4. Memory + plan touch-ups
+
+- Update `.lovable/plan.md` Phase 2b section: replace "Classless Adventurer" wording with "Wayfarer" and note that the in-world banner has been retired in favor of NPC-only discovery.
+
+## Out of scope
+
+- DB enum rename (would require migration + edge-function updates with no player-facing benefit).
+- New Wayfarer abilities or kit changes.
+- NPC dialogue rewrites — existing Order-Hall topics already cover all seven halls.
+
+## Verification
+
+- Create a new character → toast says "Wayfarer", creation card heading says "Wayfarer".
+- Enter the world → no central banner; Knut and other Order-Hall NPCs still answer "where is the X hall?" questions.
+- Character Panel → Attributes tab shows no Bond row for Wayfarers (unchanged behavior).
+- Existing classed characters unaffected.

@@ -19,7 +19,7 @@ import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
-import ClasslessTutorialBanner from './ClasslessTutorialBanner';
+
 
 
 interface Props {
@@ -239,7 +239,7 @@ export default function NodeView({
             {getNodeDisplayDescription(node, area) || 'A quiet corner of the world...'}
           </p>
 
-          {(character as any).is_classless && <ClasslessTutorialBanner />}
+          
         </div>
 
         <div className="relative z-10">

@@ -13,7 +13,7 @@ interface Props {
 /**
  * Compact Bond row for the Attributes tab. Shows current Bond + the live
  * damage/DoT/utility multiplier it grants for the character's active class.
- * Classless characters render nothing (no class to bond with).
+ * Wayfarers (no order) render nothing (no class to bond with).
  */
 export default function ClassBondRow({ characterId, characterClass, isClassless }: Props) {
   const [bond, setBond] = useState<number>(0);
