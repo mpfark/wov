@@ -517,7 +517,9 @@ Deno.serve(async (req) => {
           // new session, then preserve it for the rest of the fight.
           // Pool cap = WIS (sustained ward). Regen rate (in apply_force_shield_regen SQL)
           // remains INT-scaled — INT shapes the spark, WIS shapes the ward.
-          const shieldCap = Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5));
+          // Bond multiplier scales the ward magnitude as a utility shield pool.
+          const shieldCapRaw = Math.max(1, wisMod + Math.floor((m.c.level || 1) * 0.5));
+          const shieldCap = Math.max(1, Math.floor(shieldCapRaw * (mBondMult[m.id] ?? 1)));
           let current = mb.absorb_buff?.shield_hp;
           if (current === undefined) {
             const persisted = (m.c.stance_state && typeof m.c.stance_state === 'object')
@@ -952,13 +954,15 @@ Deno.serve(async (req) => {
         // amount on top of the base DEX/STR formulas (chance clamped to 95%).
         if (hasShield) {
           const sw = mb.shield_wall_stance;
+          const bondM = mBondMult[targetId] ?? 1;
           let blockChance = getShieldBlockChance(effectiveDex);
           if (sw) {
             blockChance = Math.min(0.95, blockChance + (sw.chance_bonus ?? 0));
           }
           if (Math.random() < blockChance) {
             const baseAmt = getShieldBlockAmount(effectiveStr);
-            const bonusAmt = sw ? (sw.amount_bonus ?? 0) : 0;
+            // Bond multiplier scales the Shield Wall stance's block-amount bonus (utility magnitude).
+            const bonusAmt = sw ? Math.floor((sw.amount_bonus ?? 0) * bondM) : 0;
             const blockAmt = Math.min(baseAmt + bonusAmt, dmg);
             const preDmg = dmg;
             dmg = Math.max(dmg - blockAmt, 0);
@@ -980,18 +984,22 @@ Deno.serve(async (req) => {
           if (dmg <= 0) return;
         }
 
-        // 7. Battle Cry damage reduction
+        // 7. Battle Cry damage reduction — bond multiplier scales the DR
+        // magnitude (utility), clamped to 0.95 to never produce zero damage.
         if (mb.battle_cry_dr) {
-          let dr = mb.battle_cry_dr.reduction || 0;
-          if (isCrit) dr += mb.battle_cry_dr.crit_reduction || 0;
+          const bondM = mBondMult[targetId] ?? 1;
+          let dr = (mb.battle_cry_dr.reduction || 0) * bondM;
+          if (isCrit) dr += (mb.battle_cry_dr.crit_reduction || 0) * bondM;
+          dr = Math.min(0.95, dr);
           const preDmg = dmg;
           dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
           events.push({ type: 'battle_cry_dr', message: `📯 ${targetName}'s war cry softens the blow! [${preDmg - dmg}]` });
         }
 
-        // 7b. Divine Challenge (Templar) — flat 30% damage reduction.
+        // 7b. Divine Challenge (Templar) — bond multiplier scales DR.
         if (mb.divine_challenge && (mb.divine_challenge.expires_at ?? 0) > now) {
-          const dr = mb.divine_challenge.reduction || 0.30;
+          const bondM = mBondMult[targetId] ?? 1;
+          const dr = Math.min(0.95, (mb.divine_challenge.reduction || 0.30) * bondM);
           const preDmg = dmg;
           dmg = Math.max(Math.floor(dmg * (1 - dr)), 1);
           events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
@@ -1154,7 +1162,9 @@ Deno.serve(async (req) => {
 
         let creatureAc = target.ac;
         if (mb.sunder_target === target.id && mb.sunder_reduction) {
-          creatureAc = Math.max(creatureAc - mb.sunder_reduction, 0);
+          // Bond multiplier scales the AC-reduction magnitude (utility).
+          const sunderAmt = Math.max(0, Math.round(mb.sunder_reduction * (mBondMult[m.id] ?? 1)));
+          creatureAc = Math.max(creatureAc - sunderAmt, 0);
         }
 
         const roll = rollD20();
@@ -1305,7 +1315,9 @@ Deno.serve(async (req) => {
 
         let creatureAc2 = target.ac;
         if (mb2.sunder_target === target.id && mb2.sunder_reduction) {
-          creatureAc2 = Math.max(creatureAc2 - mb2.sunder_reduction, 0);
+          // Bond multiplier scales the AC-reduction magnitude (utility).
+          const sunderAmt2 = Math.max(0, Math.round(mb2.sunder_reduction * (mBondMult[m.id] ?? 1)));
+          creatureAc2 = Math.max(creatureAc2 - sunderAmt2, 0);
         }
 
         const roll2 = rollD20();
