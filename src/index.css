@@ -380,6 +380,15 @@
   animation: combat-start-glow 0.4s ease-out;
 }
 
+/* Soulforge ring whisper — slow fade in/out loop */
+@keyframes soulforge-whisper-pulse {
+  0%, 100% { opacity: 0.0; }
+  45%, 55% { opacity: 1.0; }
+}
+.soulforge-whisper {
+  animation: soulforge-whisper-pulse 6s ease-in-out infinite;
+}
+
 /* ═══════════════════════════════════════
    Event Log line layout
    ═══════════════════════════════════════ */
