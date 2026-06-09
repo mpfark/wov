@@ -515,17 +515,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, new_total: (char.respec_points || 0) + amount });
     }
 
-    if (action === "set-password") {
-      const body = await req.json();
-      const { email, password } = body;
-      if (!email || !password) throw { message: "email and password required", status: 400 };
-      const { data: users } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const user = users?.users?.find((u: any) => u.email === email);
-      if (!user) throw { message: "User not found", status: 404 };
-      const { error } = await adminClient.auth.admin.updateUserById(user.id, { password });
-      if (error) throw error;
-      return jsonResponse({ success: true });
-    }
+    // 'set-password' action removed: admins can only trigger password reset emails
+    // via the 'reset-password' action. Directly setting passwords would allow
+    // account takeover (including of other admins).
 
     return jsonResponse({ error: "Unknown action" }, 400);
   } catch (err: any) {
