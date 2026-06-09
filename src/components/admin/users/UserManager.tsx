@@ -236,6 +236,15 @@ export default function UserManager({ isValar }: Props) {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleGrantGold = async (characterId: string) => {
+    if (!grantGoldAmount || grantGoldAmount <= 0) return;
+    try {
+      const data = await callAdmin('grant-gold', 'POST', { character_id: characterId, amount: grantGoldAmount });
+      toast.success(`Granted ${grantGoldAmount} gold (total: ${data.new_total})`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
   const selectedChar = selectedUser?.characters.find(c => c.id === selectedCharId) || null;
 
