@@ -35,6 +35,7 @@ export default function UserManager({ isValar }: Props) {
   const [grantXpAmount, setGrantXpAmount] = useState<number>(100);
   const [grantRespecAmount, setGrantRespecAmount] = useState<number>(1);
   const [grantSalvageAmount, setGrantSalvageAmount] = useState<number>(100);
+  const [grantGoldAmount, setGrantGoldAmount] = useState<number>(100);
   const [removeItemId, setRemoveItemId] = useState<string>('');
 
   const callAdmin = useCallback(async (action: string, method: string, body?: any) => {
@@ -235,6 +236,15 @@ export default function UserManager({ isValar }: Props) {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const handleGrantGold = async (characterId: string) => {
+    if (!grantGoldAmount || grantGoldAmount <= 0) return;
+    try {
+      const data = await callAdmin('grant-gold', 'POST', { character_id: characterId, amount: grantGoldAmount });
+      toast.success(`Granted ${grantGoldAmount} gold (total: ${data.new_total})`);
+      loadUsers();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   const selectedUser = users.find(u => u.id === selectedUserId) || null;
   const selectedChar = selectedUser?.characters.find(c => c.id === selectedCharId) || null;
 
@@ -280,6 +290,8 @@ export default function UserManager({ isValar }: Props) {
           setGrantRespecAmount={setGrantRespecAmount}
           grantSalvageAmount={grantSalvageAmount}
           setGrantSalvageAmount={setGrantSalvageAmount}
+          grantGoldAmount={grantGoldAmount}
+          setGrantGoldAmount={setGrantGoldAmount}
           removeItemId={removeItemId}
           setRemoveItemId={setRemoveItemId}
           onGiveItem={handleGiveItem}
@@ -287,6 +299,7 @@ export default function UserManager({ isValar }: Props) {
           onGrantXp={handleGrantXp}
           onGrantRespec={handleGrantRespec}
           onGrantSalvage={handleGrantSalvage}
+          onGrantGold={handleGrantGold}
           onRevive={handleRevive}
           onResetStats={handleResetStats}
           onRemoveItem={handleRemoveItem}

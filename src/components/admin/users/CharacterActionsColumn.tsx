@@ -7,7 +7,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
+import { Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw, Coins } from 'lucide-react';
 import { AdminFormSection, AdminEmptyState } from '../common';
 import ItemPicker from '../ItemPicker';
 import NodePicker from '../NodePicker';
@@ -32,6 +32,8 @@ interface Props {
   setGrantRespecAmount: (n: number) => void;
   grantSalvageAmount: number;
   setGrantSalvageAmount: (n: number) => void;
+  grantGoldAmount: number;
+  setGrantGoldAmount: (n: number) => void;
   removeItemId: string;
   setRemoveItemId: (id: string) => void;
   onGiveItem: (charId: string) => void;
@@ -39,6 +41,7 @@ interface Props {
   onGrantXp: (charId: string) => void;
   onGrantRespec: (charId: string) => void;
   onGrantSalvage: (charId: string) => void;
+  onGrantGold: (charId: string) => void;
   onRevive: (charId: string) => void;
   onResetStats: (charId: string) => void;
   onRemoveItem: () => void;
@@ -51,8 +54,9 @@ export default function CharacterActionsColumn({
   grantXpAmount, setGrantXpAmount,
   grantRespecAmount, setGrantRespecAmount,
   grantSalvageAmount, setGrantSalvageAmount,
+  grantGoldAmount, setGrantGoldAmount,
   removeItemId, setRemoveItemId,
-  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage,
+  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage, onGrantGold,
   onRevive, onResetStats, onRemoveItem,
 }: Props) {
   const nodeName = selectedChar?.current_node_id
@@ -155,6 +159,16 @@ export default function CharacterActionsColumn({
                 <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
                   disabled={grantSalvageAmount <= 0} onClick={() => onGrantSalvage(selectedChar.id)}>
                   🔩 Grant Salvage
+                </Button>
+              </div>
+
+              <div className="flex gap-1">
+                <Input type="number" min={1} value={grantGoldAmount}
+                  onChange={e => setGrantGoldAmount(parseInt(e.target.value) || 0)}
+                  className="h-7 text-[10px] w-20" placeholder="Gold" />
+                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
+                  disabled={grantGoldAmount <= 0} onClick={() => onGrantGold(selectedChar.id)}>
+                  <Coins className="w-3 h-3" /> Grant Gold
                 </Button>
               </div>
             </div>
