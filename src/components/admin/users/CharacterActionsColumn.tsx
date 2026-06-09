@@ -161,6 +161,16 @@ export default function CharacterActionsColumn({
                   🔩 Grant Salvage
                 </Button>
               </div>
+
+              <div className="flex gap-1">
+                <Input type="number" min={1} value={grantGoldAmount}
+                  onChange={e => setGrantGoldAmount(parseInt(e.target.value) || 0)}
+                  className="h-7 text-[10px] w-20" placeholder="Gold" />
+                <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 flex-1"
+                  disabled={grantGoldAmount <= 0} onClick={() => onGrantGold(selectedChar.id)}>
+                  <Coins className="w-3 h-3" /> Grant Gold
+                </Button>
+              </div>
             </div>
           </AdminFormSection>
 
