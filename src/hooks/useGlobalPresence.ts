@@ -8,6 +8,8 @@ export interface OnlinePlayer {
   class: string;
   level: number;
   gender: 'male' | 'female';
+  /** True while the player holds the King/Queen title (Aldric killing blow). */
+  is_king_slayer?: boolean;
 }
 
 interface PresenceCharacter {
@@ -17,6 +19,7 @@ interface PresenceCharacter {
   class: string;
   level: number;
   gender: 'male' | 'female';
+  is_king_slayer?: boolean;
 }
 
 export function useGlobalPresence(character?: PresenceCharacter | null) {
@@ -24,8 +27,8 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
 
   const charData = useMemo(() => {
     if (!character) return null;
-    return { id: character.id, name: character.name, race: character.race, class: character.class, level: character.level, gender: character.gender };
-  }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender]);
+    return { id: character.id, name: character.name, race: character.race, class: character.class, level: character.level, gender: character.gender, is_king_slayer: !!character.is_king_slayer };
+  }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender, character?.is_king_slayer]);
 
   // Keep a ref to the latest charData for the heartbeat interval
   const charDataRef = useRef(charData);
@@ -49,6 +52,7 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
           class: data.class,
           level: data.level,
           gender: data.gender,
+          is_king_slayer: data.is_king_slayer,
         });
       } catch (e) {
         console.warn('[global-presence] track failed, will retry', e);
@@ -62,7 +66,7 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
         for (const [, presences] of Object.entries(state)) {
           const p = (presences as any[])[0];
           if (p?.id && p?.name) {
-            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male' });
+            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male', is_king_slayer: !!p.is_king_slayer });
           }
         }
         players.sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));

@@ -15,7 +15,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
-export type GlobalBroadcastKind = 'market_listed' | 'player_death' | 'boss_death';
+export type GlobalBroadcastKind = 'market_listed' | 'player_death' | 'boss_death' | 'king_crowned';
 
 export interface GlobalBroadcastPayload {
   kind: GlobalBroadcastKind;

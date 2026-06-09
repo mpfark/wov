@@ -45,6 +45,7 @@ interface PlayerInfo {
   race?: string;
   class?: string;
   gender?: string;
+  is_king_slayer?: boolean;
 }
 
 interface Props {
@@ -122,14 +123,14 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
 
   const getItem = (slot: string) => items.find(i => i.slot === slot);
   const isTwoHanded = getItem('main_hand')?.hands === 2;
-  const title = getCharacterTitle(player.level, player.gender as 'male' | 'female' | undefined);
+  const title = getCharacterTitle(player.level, player.gender as 'male' | 'female' | undefined, !!player.is_king_slayer);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2 text-base">
-            {title && <span className="text-primary/60 text-xs">{title}</span>}
+            {title && <span className={`text-xs ${player.is_king_slayer ? 'text-soulforged text-glow-soulforged' : 'text-primary/60'}`}>{title}</span>}
             {player.name}
             <Badge variant="secondary" className="ml-auto text-[10px]">
               L{player.level} {CLASS_LABELS[player.class ?? ''] ?? ''} {RACE_LABELS[player.race ?? ''] ?? ''}

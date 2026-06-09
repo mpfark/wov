@@ -120,22 +120,64 @@ export function calculateHP(charClass: string, con: number) {
   return baseHP + getStatModifier(con);
 }
 
-// ── Nobility titles by level (every 2 levels from 28–42) ────────
+// ── Nobility titles by level (every ~3 levels from 25–42; cap = Prince/Princess) ─
+// King/Queen is reserved for the player who lands the killing blow on King Aldric.
 
 const MILESTONE_TITLES: { level: number; male: string; female: string }[] = [
-  { level: 42, male: 'Emperor', female: 'Empress' },
-  { level: 40, male: 'King', female: 'Queen' },
-  { level: 38, male: 'Prince', female: 'Princess' },
-  { level: 36, male: 'Duke', female: 'Duchess' },
-  { level: 34, male: 'Marquis', female: 'Marquise' },
-  { level: 32, male: 'Count', female: 'Countess' },
-  { level: 30, male: 'Baron', female: 'Baroness' },
-  { level: 28, male: 'Lord', female: 'Lady' },
+  { level: 42, male: 'Prince',    female: 'Princess' },
+  { level: 40, male: 'Duke',      female: 'Duchess' },
+  { level: 37, male: 'Marquis',   female: 'Marquise' },
+  { level: 34, male: 'Viscount',  female: 'Viscountess' },
+  { level: 31, male: 'Count',     female: 'Countess' },
+  { level: 28, male: 'Baron',     female: 'Baroness' },
+  { level: 25, male: 'Lord',      female: 'Lady' },
 ];
 
-export function getCharacterTitle(level: number, gender: 'male' | 'female' = 'male'): string | null {
+/**
+ * @param isKingSlayer When true (player landed the killing blow on King Aldric
+ *   and has not been offline > 30 min), overrides the milestone ladder with
+ *   the King/Queen title.
+ */
+export function getCharacterTitle(
+  level: number,
+  gender: 'male' | 'female' = 'male',
+  isKingSlayer: boolean = false,
+): string | null {
+  if (isKingSlayer) return gender === 'female' ? 'Queen' : 'King';
   for (const m of MILESTONE_TITLES) {
     if (level >= m.level) return gender === 'female' ? m.female : m.male;
   }
   return null;
 }
+
+// ── Soulforged Ring (5 tiers, gained at L30 then re-forged at 33/36/39/42) ─
+
+export const SOULRING_TIER_LEVELS = [30, 33, 36, 39, 42] as const;
+
+export const SOULRING_TIER_NAMES = [
+  'Soulforged Ring',
+  'Tempered Soulforged Ring',
+  'Refined Soulforged Ring',
+  'Masterwork Soulforged Ring',
+  'Ascended Soulforged Ring',
+] as const;
+
+/** Returns the next-tier index (1–5) and required level the player can forge,
+ *  or null when fully Ascended or below L30. */
+export function getNextSoulringStep(level: number, tier: number): { nextTier: number; requiredLevel: number; name: string } | null {
+  const t = Math.max(0, Math.min(5, tier || 0));
+  if (t >= 5) return null;
+  const nextTier = t + 1;
+  const requiredLevel = SOULRING_TIER_LEVELS[nextTier - 1];
+  if (level < requiredLevel) return null;
+  return { nextTier, requiredLevel, name: SOULRING_TIER_NAMES[nextTier - 1] };
+}
+
+/** True when the player still holds the King/Queen title — set on Aldric kill,
+ *  cleared after 30 min offline (matches unique-item return rule). */
+export function isKingSlayerActive(kingSlayerAt: string | null | undefined, lastOnline?: string | null): boolean {
+  if (!kingSlayerAt) return false;
+  if (!lastOnline) return true; // active session; janitor handles offline cleanup
+  return Date.now() - new Date(lastOnline).getTime() < 30 * 60 * 1000;
+}
+

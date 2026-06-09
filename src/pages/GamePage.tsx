@@ -23,6 +23,7 @@ import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import OrderRecruiterDialog from '@/features/character/components/OrderRecruiterDialog';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
+import SoulforgeWhisper from '@/features/inventory/components/SoulforgeWhisper';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
 import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
 import { useInventory } from '@/features/inventory';
@@ -112,9 +113,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     };
   }, []);
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
-  const nodeChannel = useNodeChannel(character.current_node_id, character);
+  const characterWithKing = character
+    ? { ...character, is_king_slayer: !!character.king_slayer_at }
+    : character;
+  const nodeChannel = useNodeChannel(character.current_node_id, characterWithKing);
   const { playersHere } = nodeChannel;
-  const { onlinePlayers } = useGlobalPresence(character);
+  const { onlinePlayers } = useGlobalPresence(characterWithKing);
   const currentNodeForPrefetch = getNode(character.current_node_id || '');
   const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
     if (!rewards || rewards.length === 0) return;
@@ -1266,6 +1270,14 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           npcFlavor={activeServiceNpc?.service_role === 'blacksmith' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
+
+      {/* Soulforge ring whisper — slowly fades while a re-forge is available */}
+      <SoulforgeWhisper
+        character={character}
+        atSoulforge={(currentNode as any)?.is_soulforge === true}
+      />
+
+
 
       {/* Jewelcrafter Dialog */}
       {(currentNode as any).is_jewelcrafter && (

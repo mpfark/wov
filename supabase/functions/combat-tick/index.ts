@@ -539,7 +539,13 @@ Deno.serve(async (req) => {
     // shared `resolveCreatureKill` helper. This function only handles the
     // tick-loop-local bookkeeping (effects purge, session engagement, kill set)
     // and applies the resolver's outputs to the local accumulators.
-    const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0) => {
+    // King Aldric Vael, the Unbroken — killing-blow slayer earns the temporary
+    // King/Queen title (cleared after 30 min offline by the expire_king_slayer
+    // janitor). At most one king world-wide at any time.
+    const KING_ALDRIC_ID = 'e1789e02-aa86-49a2-af02-148ac53503bc';
+    const kingCrownings: { characterId: string; characterName: string; gender: string }[] = [];
+
+    const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0, killerCharacterId?: string) => {
       cKilled.add(creature.id);
       sessionEngaged.delete(creature.id);
       // Purge all active_effects targeting this creature (and track for client)
@@ -612,6 +618,18 @@ Deno.serve(async (req) => {
       for (const bg of outcome.bondGains) bondGainQueue.push({
         memberId: bg.memberId, creatureLevel: bg.creatureLevel, isBoss: bg.isBoss,
       });
+
+      // King Aldric → queue a crowning for the killing-blow attacker.
+      if (creature.id === KING_ALDRIC_ID && killerCharacterId) {
+        const slayer = members.find(mm => mm.id === killerCharacterId);
+        if (slayer) {
+          kingCrownings.push({
+            characterId: killerCharacterId,
+            characterName: slayer.c.name,
+            gender: slayer.c.gender || 'male',
+          });
+        }
+      }
     };
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
@@ -709,7 +727,7 @@ Deno.serve(async (req) => {
             });
           }
           if (cHp[t.id] <= 0 && !cKilled.has(t.id)) {
-            handleCreatureKill(t, c.name, (c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(t, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
           }
         }
         // Consume stealth/disengage once per Barrage cast (parity with autoattacks)
@@ -746,7 +764,7 @@ Deno.serve(async (req) => {
           events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]`, character_id: member.id });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
       } else if (pa.ability_type === 'ignite_consume') {
         // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
@@ -773,7 +791,7 @@ Deno.serve(async (req) => {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
       } else if (
         pa.ability_type === 'fireball' ||
@@ -824,7 +842,7 @@ Deno.serve(async (req) => {
           character_id: member.id,
         });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
       } else if (pa.ability_type === 'burst_damage') {
         // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
@@ -850,7 +868,7 @@ Deno.serve(async (req) => {
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, effCha);
+          handleCreatureKill(target, c.name, effCha, member.id);
         }
       } else if (pa.ability_type === 'dot_debuff') {
         // Server-side Rend/bleed: create persistent active_effects row
@@ -1047,7 +1065,7 @@ Deno.serve(async (req) => {
               creature_id: creature.id,
             });
             if (cHp[creature.id] <= 0 && !cKilled.has(creature.id)) {
-              handleCreatureKill(creature, targetName, (targetC.cha || 10) + (targetEq.cha || 0));
+              handleCreatureKill(creature, targetName, (targetC.cha || 10) + (targetEq.cha || 0), targetId);
             }
           }
         }
@@ -1123,7 +1141,7 @@ Deno.serve(async (req) => {
           });
           if (cHp[cr.id] <= 0 && !cKilled.has(cr.id)) {
             const eb = eq[m.id] || {};
-            handleCreatureKill(cr, m.c.name, (m.c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(cr, m.c.name, (m.c.cha || 10) + (eb.cha || 0), m.id);
           }
         }
       }
@@ -1270,7 +1288,7 @@ Deno.serve(async (req) => {
           }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
           }
         } else {
           events.push({
@@ -1369,7 +1387,7 @@ Deno.serve(async (req) => {
           }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
           }
         } else {
           events.push({
@@ -1459,7 +1477,7 @@ Deno.serve(async (req) => {
         });
 
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
         }
       }
 
@@ -1792,6 +1810,33 @@ Deno.serve(async (req) => {
         buffSync[cid] = { absorb_remaining: mb.absorb_buff.shield_hp };
       }
     }
+
+    // ── King Aldric crowning + world broadcast ──────────────────
+    // Only the killing-blow attacker is crowned. If multiple parallel kills
+    // are queued in the same tick (extreme edge case), the last one wins —
+    // crown_king_slayer is atomic and always leaves at most one king.
+    if (kingCrownings.length > 0) {
+      const slayer = kingCrownings[kingCrownings.length - 1];
+      try {
+        await db.rpc('crown_king_slayer', { _character_id: slayer.characterId });
+        const titleWord = slayer.gender === 'female' ? 'Queen' : 'King';
+        const worldChannel = db.channel('world-global');
+        await worldChannel.send({
+          type: 'broadcast',
+          event: 'world',
+          payload: {
+            kind: 'king_crowned',
+            icon: '👑',
+            text: `King Aldric Vael has fallen. ${slayer.characterName} is now ${titleWord} of Varneth.`,
+            actor: slayer.characterName,
+            nonce: `aldric:${Date.now()}`,
+          },
+        });
+      } catch (e) {
+        console.error('[combat-tick] king crowning failed', e);
+      }
+    }
+
 
     return json({
       events, creature_states, member_states: memberStates,

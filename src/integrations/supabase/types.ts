@@ -463,6 +463,7 @@ export type Database = {
           id: string
           int: number
           is_classless: boolean
+          king_slayer_at: string | null
           last_online: string
           level: number
           max_cp: number
@@ -478,6 +479,8 @@ export type Database = {
           respec_points: number
           rp_total_earned: number
           soulforged_item_created: boolean
+          soulring_inventory_id: string | null
+          soulring_tier: number
           stance_state: Json
           str: number
           unspent_stat_points: number
@@ -504,6 +507,7 @@ export type Database = {
           id?: string
           int?: number
           is_classless?: boolean
+          king_slayer_at?: string | null
           last_online?: string
           level?: number
           max_cp?: number
@@ -519,6 +523,8 @@ export type Database = {
           respec_points?: number
           rp_total_earned?: number
           soulforged_item_created?: boolean
+          soulring_inventory_id?: string | null
+          soulring_tier?: number
           stance_state?: Json
           str?: number
           unspent_stat_points?: number
@@ -545,6 +551,7 @@ export type Database = {
           id?: string
           int?: number
           is_classless?: boolean
+          king_slayer_at?: string | null
           last_online?: string
           level?: number
           max_cp?: number
@@ -560,6 +567,8 @@ export type Database = {
           respec_points?: number
           rp_total_earned?: number
           soulforged_item_created?: boolean
+          soulring_inventory_id?: string | null
+          soulring_tier?: number
           stance_state?: Json
           str?: number
           unspent_stat_points?: number
@@ -1898,6 +1907,7 @@ export type Database = {
         Args: { _character_id: string; _delta: number; _key: string }
         Returns: boolean
       }
+      crown_king_slayer: { Args: { _character_id: string }; Returns: undefined }
       damage_creature: {
         Args: { _creature_id: string; _killed?: boolean; _new_hp: number }
         Returns: undefined
@@ -1927,8 +1937,13 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_king_slayer: { Args: never; Returns: undefined }
       expire_marketplace_listings: { Args: never; Returns: number }
       find_character_id_by_name: { Args: { _name: string }; Returns: string }
+      forge_soulring: {
+        Args: { p_character_id: string; p_stats: Json }
+        Returns: Json
+      }
       get_app_secret: { Args: { _key: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
       get_renown_leaderboard: {
