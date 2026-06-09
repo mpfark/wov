@@ -149,3 +149,35 @@ export function getCharacterTitle(
   }
   return null;
 }
+
+// ── Soulforged Ring (5 tiers, gained at L30 then re-forged at 33/36/39/42) ─
+
+export const SOULRING_TIER_LEVELS = [30, 33, 36, 39, 42] as const;
+
+export const SOULRING_TIER_NAMES = [
+  'Soulforged Ring',
+  'Tempered Soulforged Ring',
+  'Refined Soulforged Ring',
+  'Masterwork Soulforged Ring',
+  'Ascended Soulforged Ring',
+] as const;
+
+/** Returns the next-tier index (1–5) and required level the player can forge,
+ *  or null when fully Ascended or below L30. */
+export function getNextSoulringStep(level: number, tier: number): { nextTier: number; requiredLevel: number; name: string } | null {
+  const t = Math.max(0, Math.min(5, tier || 0));
+  if (t >= 5) return null;
+  const nextTier = t + 1;
+  const requiredLevel = SOULRING_TIER_LEVELS[nextTier - 1];
+  if (level < requiredLevel) return null;
+  return { nextTier, requiredLevel, name: SOULRING_TIER_NAMES[nextTier - 1] };
+}
+
+/** True when the player still holds the King/Queen title — set on Aldric kill,
+ *  cleared after 30 min offline (matches unique-item return rule). */
+export function isKingSlayerActive(kingSlayerAt: string | null | undefined, lastOnline?: string | null): boolean {
+  if (!kingSlayerAt) return false;
+  if (!lastOnline) return true; // active session; janitor handles offline cleanup
+  return Date.now() - new Date(lastOnline).getTime() < 30 * 60 * 1000;
+}
+
