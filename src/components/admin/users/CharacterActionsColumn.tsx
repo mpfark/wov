@@ -7,7 +7,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw } from 'lucide-react';
+import { Gift, MapPin, Sparkles, Heart, Trash2, RotateCcw, Coins } from 'lucide-react';
 import { AdminFormSection, AdminEmptyState } from '../common';
 import ItemPicker from '../ItemPicker';
 import NodePicker from '../NodePicker';
