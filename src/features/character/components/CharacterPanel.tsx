@@ -348,9 +348,13 @@ export default function CharacterPanel({
         {/* Name & Identity */}
         <div className="text-center gap-row">
           <h2 className="t-display-lg text-lg">{character.name}</h2>
-          {getCharacterTitle(character.level, character.gender) && (
-            <p className="t-label text-primary/70">{getCharacterTitle(character.level, character.gender)}</p>
-          )}
+          {(() => {
+            const isKing = !!character.king_slayer_at;
+            const title = getCharacterTitle(character.level, character.gender, isKing);
+            return title ? (
+              <p className={`t-label ${isKing ? 'text-soulforged text-glow-soulforged' : 'text-primary/70'}`}>{title}</p>
+            ) : null;
+          })()}
           <p className="t-meta">
             {RACE_LABELS[character.race]} {CLASS_LABELS[character.class]} — Lvl {character.level}
           </p>

@@ -59,20 +59,23 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId, comp
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {onlinePlayers.map(p => (
-                  <TableRow key={p.id} className={p.id === myCharacterId ? 'bg-primary/5' : ''}>
-                    <TableCell className="text-[10px] font-display text-primary/70 tracking-widest uppercase">
-                      {getCharacterTitle(p.level, p.gender) || '—'}
-                    </TableCell>
-                    <TableCell className="text-xs font-display">
-                      {p.name}
-                      {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
-                    </TableCell>
-                    <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>
-                    <TableCell className="text-xs">{CLASS_LABELS[p.class] || p.class}</TableCell>
-                    <TableCell className="text-xs text-right font-display">{p.level}</TableCell>
-                  </TableRow>
-                ))}
+                {onlinePlayers.map(p => {
+                  const title = getCharacterTitle(p.level, p.gender, !!p.is_king_slayer);
+                  return (
+                    <TableRow key={p.id} className={p.id === myCharacterId ? 'bg-primary/5' : ''}>
+                      <TableCell className={`text-[10px] font-display tracking-widest uppercase ${p.is_king_slayer ? 'text-soulforged text-glow-soulforged' : 'text-primary/70'}`}>
+                        {title || '—'}
+                      </TableCell>
+                      <TableCell className="text-xs font-display">
+                        {p.name}
+                        {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
+                      </TableCell>
+                      <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>
+                      <TableCell className="text-xs">{CLASS_LABELS[p.class] || p.class}</TableCell>
+                      <TableCell className="text-xs text-right font-display">{p.level}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
