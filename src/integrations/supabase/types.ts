@@ -2018,6 +2018,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      move_follower: {
+        Args: { _character_id: string; _node_id: string }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -2046,6 +2050,16 @@ export type Database = {
       sell_item: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number
+      }
+      stonebinder_commit_fuse: {
+        Args: {
+          p_ascended_item_id: string
+          p_character_id: string
+          p_durability: number
+          p_source_inv_a: string
+          p_source_inv_b: string
+        }
+        Returns: string
       }
       switch_order: {
         Args: {

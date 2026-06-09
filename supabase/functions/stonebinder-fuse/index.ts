@@ -171,46 +171,37 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'No ascended stone matches that essence pair.' }, 400);
     }
 
-    // World-uniqueness check: the ascended item must not exist anywhere else.
-    const [invHit, marketHit, groundHit] = await Promise.all([
-      supabase.from('character_inventory').select('id', { head: true, count: 'exact' }).eq('item_id', ascended.id),
-      supabase.from('marketplace_listings').select('id', { head: true, count: 'exact' }).eq('item_id', ascended.id).eq('status', 'active'),
-      supabase.from('node_ground_loot').select('id', { head: true, count: 'exact' }).eq('item_id', ascended.id),
-    ]);
-    const exists =
-      (invHit.count ?? 0) > 0 ||
-      (marketHit.count ?? 0) > 0 ||
-      (groundHit.count ?? 0) > 0;
-    if (exists) {
-      return jsonResponse({ error: 'That ascended stone already exists in the world.' }, 409);
-    }
-
     if (mode === 'preview') {
+      // Best-effort uniqueness peek for the preview UI (race-safe check happens on commit).
+      const [invHit, marketHit, groundHit] = await Promise.all([
+        supabase.from('character_inventory').select('id', { head: true, count: 'exact' }).eq('item_id', ascended.id),
+        supabase.from('marketplace_listings').select('id', { head: true, count: 'exact' }).eq('item_id', ascended.id).eq('status', 'active'),
+        supabase.from('node_ground_loot').select('id', { head: true, count: 'exact' }).eq('item_id', ascended.id),
+      ]);
+      const exists =
+        (invHit.count ?? 0) > 0 ||
+        (marketHit.count ?? 0) > 0 ||
+        (groundHit.count ?? 0) > 0;
+      if (exists) {
+        return jsonResponse({ error: 'That ascended stone already exists in the world.' }, 409);
+      }
       return jsonResponse({ item: ascended, consumed: [a.item, b.item] });
     }
 
-    // === fuse ===
-    // Re-check the inventory rows are still present and unequipped at write time.
-    const { error: delErr } = await supabase
-      .from('character_inventory')
-      .delete()
-      .in('id', [a.id, b.id])
-      .is('equipped_slot', null);
-    if (delErr) return jsonResponse({ error: delErr.message }, 500);
-
-    const { data: inserted, error: insErr } = await supabase
-      .from('character_inventory')
-      .insert({
-        character_id,
-        item_id: ascended.id,
-        equipped_slot: null,
-        current_durability: ascended.max_durability ?? 100,
-      })
-      .select('id')
-      .maybeSingle();
-    if (insErr) {
-      return jsonResponse({ error: insErr.message }, 500);
+    // === fuse (atomic under advisory lock via RPC) ===
+    const { data: newInvId, error: fuseErr } = await supabase.rpc('stonebinder_commit_fuse', {
+      p_character_id: character_id,
+      p_source_inv_a: a.id,
+      p_source_inv_b: b.id,
+      p_ascended_item_id: ascended.id,
+      p_durability: ascended.max_durability ?? 100,
+    });
+    if (fuseErr) {
+      const msg = fuseErr.message || 'Fuse failed';
+      const isExists = /already exists/i.test(msg);
+      return jsonResponse({ error: msg }, isExists ? 409 : 500);
     }
+    const inserted = { id: newInvId as string | null };
 
     // Activity log (deterministic ritual flavor)
     await supabase.rpc('log_activity', {
