@@ -23,6 +23,7 @@ import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import OrderRecruiterDialog from '@/features/character/components/OrderRecruiterDialog';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
+import SoulforgeWhisper from '@/features/inventory/components/SoulforgeWhisper';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
 import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
 import { useInventory } from '@/features/inventory';
@@ -1266,6 +1267,14 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           npcFlavor={activeServiceNpc?.service_role === 'blacksmith' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
         />
       )}
+
+      {/* Soulforge ring whisper — slowly fades while a re-forge is available */}
+      <SoulforgeWhisper
+        character={character}
+        atSoulforge={(currentNode as any)?.is_soulforge === true}
+      />
+
+
 
       {/* Jewelcrafter Dialog */}
       {(currentNode as any).is_jewelcrafter && (
