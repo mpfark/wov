@@ -113,11 +113,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     };
   }, []);
   const { regions, nodes, areas, loading: nodesLoading, getNode, getRegion, getNodeArea } = useNodes(true);
-  const nodeChannel = useNodeChannel(character.current_node_id, character);
+  const characterWithKing = character
+    ? { ...character, is_king_slayer: !!character.king_slayer_at }
+    : character;
+  const nodeChannel = useNodeChannel(character.current_node_id, characterWithKing);
   const { playersHere } = nodeChannel;
-  const { onlinePlayers } = useGlobalPresence(
-    character ? { ...character, is_king_slayer: !!character.king_slayer_at } : character,
-  );
+  const { onlinePlayers } = useGlobalPresence(characterWithKing);
   const currentNodeForPrefetch = getNode(character.current_node_id || '');
   const handleCatchupRewards = useCallback((rewards: Array<{ creature_name: string; xp_each: number; gold_each: number; salvage_each: number; bhp_each: number; creature_rarity: string }>) => {
     if (!rewards || rewards.length === 0) return;

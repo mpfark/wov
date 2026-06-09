@@ -45,6 +45,7 @@ interface PlayerInfo {
   race?: string;
   class?: string;
   gender?: string;
+  is_king_slayer?: boolean;
 }
 
 interface Props {
@@ -122,7 +123,7 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
 
   const getItem = (slot: string) => items.find(i => i.slot === slot);
   const isTwoHanded = getItem('main_hand')?.hands === 2;
-  const title = getCharacterTitle(player.level, player.gender as 'male' | 'female' | undefined);
+  const title = getCharacterTitle(player.level, player.gender as 'male' | 'female' | undefined, !!player.is_king_slayer);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
