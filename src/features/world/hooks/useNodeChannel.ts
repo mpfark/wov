@@ -8,6 +8,8 @@ export interface PlayerPresence {
   class: string;
   level: number;
   gender: 'male' | 'female';
+  /** True while the player holds the King/Queen title (Aldric killing blow). */
+  is_king_slayer?: boolean;
 }
 
 export interface NodeChannelHandle {
@@ -40,6 +42,7 @@ interface PresenceCharacter {
   class: string;
   level: number;
   gender: 'male' | 'female';
+  is_king_slayer?: boolean;
 }
 
 /**
@@ -76,8 +79,9 @@ export function useNodeChannel(
       class: character.class,
       level: character.level,
       gender: character.gender,
+      is_king_slayer: !!character.is_king_slayer,
     };
-  }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender]);
+  }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender, character?.is_king_slayer]);
 
   useEffect(() => {
     if (!nodeId || !charData) {
@@ -100,7 +104,7 @@ export function useNodeChannel(
           if (key === charData.id) continue;
           const p = (presences as any[])[0];
           if (p?.id && p?.name) {
-            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male' });
+            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male', is_king_slayer: !!p.is_king_slayer });
           }
         }
         setPlayersHere(players);
@@ -169,6 +173,7 @@ export function useNodeChannel(
             class: charData.class,
             level: charData.level,
             gender: charData.gender,
+            is_king_slayer: charData.is_king_slayer,
           });
         }
       });
