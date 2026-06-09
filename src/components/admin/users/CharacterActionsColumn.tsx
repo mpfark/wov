@@ -41,6 +41,7 @@ interface Props {
   onGrantXp: (charId: string) => void;
   onGrantRespec: (charId: string) => void;
   onGrantSalvage: (charId: string) => void;
+  onGrantGold: (charId: string) => void;
   onRevive: (charId: string) => void;
   onResetStats: (charId: string) => void;
   onRemoveItem: () => void;
@@ -53,8 +54,9 @@ export default function CharacterActionsColumn({
   grantXpAmount, setGrantXpAmount,
   grantRespecAmount, setGrantRespecAmount,
   grantSalvageAmount, setGrantSalvageAmount,
+  grantGoldAmount, setGrantGoldAmount,
   removeItemId, setRemoveItemId,
-  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage,
+  onGiveItem, onTeleport, onGrantXp, onGrantRespec, onGrantSalvage, onGrantGold,
   onRevive, onResetStats, onRemoveItem,
 }: Props) {
   const nodeName = selectedChar?.current_node_id
