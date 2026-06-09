@@ -727,7 +727,7 @@ Deno.serve(async (req) => {
             });
           }
           if (cHp[t.id] <= 0 && !cKilled.has(t.id)) {
-            handleCreatureKill(t, c.name, (c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(t, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
           }
         }
         // Consume stealth/disengage once per Barrage cast (parity with autoattacks)
@@ -764,7 +764,7 @@ Deno.serve(async (req) => {
           events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]`, character_id: member.id });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
       } else if (pa.ability_type === 'ignite_consume') {
         // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
@@ -791,7 +791,7 @@ Deno.serve(async (req) => {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
       } else if (
         pa.ability_type === 'fireball' ||
@@ -842,7 +842,7 @@ Deno.serve(async (req) => {
           character_id: member.id,
         });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
       } else if (pa.ability_type === 'burst_damage') {
         // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
@@ -868,7 +868,7 @@ Deno.serve(async (req) => {
         const finaleLabel = isFinaleCrit ? ' CRIT!' : '';
         events.push({ type: 'ability_hit', message: `🎵💥 Grand Finale!${finaleLabel} ${c.name} unleashes a devastating blast of sound at ${target.name}! [${damage}]`, character_id: member.id });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, effCha);
+          handleCreatureKill(target, c.name, effCha, member.id);
         }
       } else if (pa.ability_type === 'dot_debuff') {
         // Server-side Rend/bleed: create persistent active_effects row
@@ -1065,7 +1065,7 @@ Deno.serve(async (req) => {
               creature_id: creature.id,
             });
             if (cHp[creature.id] <= 0 && !cKilled.has(creature.id)) {
-              handleCreatureKill(creature, targetName, (targetC.cha || 10) + (targetEq.cha || 0));
+              handleCreatureKill(creature, targetName, (targetC.cha || 10) + (targetEq.cha || 0), targetId);
             }
           }
         }
@@ -1141,7 +1141,7 @@ Deno.serve(async (req) => {
           });
           if (cHp[cr.id] <= 0 && !cKilled.has(cr.id)) {
             const eb = eq[m.id] || {};
-            handleCreatureKill(cr, m.c.name, (m.c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(cr, m.c.name, (m.c.cha || 10) + (eb.cha || 0), m.id);
           }
         }
       }
@@ -1288,7 +1288,7 @@ Deno.serve(async (req) => {
           }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
           }
         } else {
           events.push({
@@ -1387,7 +1387,7 @@ Deno.serve(async (req) => {
           }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+            handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
           }
         } else {
           events.push({
@@ -1477,7 +1477,7 @@ Deno.serve(async (req) => {
         });
 
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
-          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0));
+          handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
         }
       }
 
