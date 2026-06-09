@@ -180,11 +180,31 @@ export default function NPCManager() {
     return nodes.find(n => n.id === nodeId)?.region_name || '';
   };
 
+  const getNodeAreaId = (nodeId: string | null) => {
+    if (!nodeId) return null;
+    return nodes.find(n => n.id === nodeId)?.area_id || null;
+  };
+
+  // Areas available depend on selected region
+  const areasForRegion = regionFilter === 'all'
+    ? npcAreas
+    : (() => {
+        const regionId = npcRegions.find(r => r.name === regionFilter)?.id;
+        if (!regionId) return [] as AreaOption[];
+        const areaIds = new Set(nodes.filter(n => n.region_id === regionId).map(n => n.area_id).filter(Boolean) as string[]);
+        return npcAreas.filter(a => areaIds.has(a.id));
+      })();
+
   const filtered = npcs.filter(n => {
     const matchesText = n.name.toLowerCase().includes(filter.toLowerCase()) ||
       getNodeName(n.node_id).toLowerCase().includes(filter.toLowerCase());
     const matchesRegion = regionFilter === 'all' || getNodeRegion(n.node_id) === regionFilter;
-    return matchesText && matchesRegion;
+    const matchesArea = areaFilter === 'all' || getNodeAreaId(n.node_id) === areaFilter;
+    const matchesService = serviceFilter === 'all'
+      || (serviceFilter === 'none' ? !n.service_role : n.service_role === serviceFilter);
+    const matchesAssignment = assignmentFilter === 'all'
+      || (assignmentFilter === 'assigned' ? !!n.node_id : !n.node_id);
+    return matchesText && matchesRegion && matchesArea && matchesService && matchesAssignment;
   });
 
   const tools = (
@@ -196,13 +216,48 @@ export default function NPCManager() {
         </Button>
       </AdminToolSection>
       <AdminToolSection title="Region">
-        <Select value={regionFilter} onValueChange={setRegionFilter}>
+        <Select value={regionFilter} onValueChange={(v) => { setRegionFilter(v); setAreaFilter('all'); }}>
           <SelectTrigger className="w-full h-7 text-xs"><SelectValue placeholder="Region" /></SelectTrigger>
           <SelectContent className="bg-popover border-border z-50 max-h-60">
             <SelectItem value="all" className="text-xs">All Regions</SelectItem>
             {regionNames.map(r => (
               <SelectItem key={r} value={r!} className="text-xs">{r}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </AdminToolSection>
+      <AdminToolSection title="Area">
+        <Select value={areaFilter} onValueChange={setAreaFilter}>
+          <SelectTrigger className="w-full h-7 text-xs"><SelectValue placeholder="Area" /></SelectTrigger>
+          <SelectContent className="bg-popover border-border z-50 max-h-60">
+            <SelectItem value="all" className="text-xs">All Areas</SelectItem>
+            {areasForRegion.map(a => (
+              <SelectItem key={a.id} value={a.id} className="text-xs">{a.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </AdminToolSection>
+      <AdminToolSection title="Service Role">
+        <Select value={serviceFilter} onValueChange={(v) => setServiceFilter(v as typeof serviceFilter)}>
+          <SelectTrigger className="w-full h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-popover border-border z-50">
+            <SelectItem value="all" className="text-xs">All Roles</SelectItem>
+            <SelectItem value="none" className="text-xs">None (regular)</SelectItem>
+            <SelectItem value="vendor" className="text-xs">🪙 Vendor</SelectItem>
+            <SelectItem value="blacksmith" className="text-xs">🔨 Blacksmith</SelectItem>
+            <SelectItem value="trainer" className="text-xs">🏛️ Trainer</SelectItem>
+            <SelectItem value="jewelcrafter" className="text-xs">💎 Jewelcrafter</SelectItem>
+            <SelectItem value="recruiter" className="text-xs">🏰 Recruiter</SelectItem>
+          </SelectContent>
+        </Select>
+      </AdminToolSection>
+      <AdminToolSection title="Assignment">
+        <Select value={assignmentFilter} onValueChange={(v) => setAssignmentFilter(v as typeof assignmentFilter)}>
+          <SelectTrigger className="w-full h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-popover border-border z-50">
+            <SelectItem value="all" className="text-xs">All</SelectItem>
+            <SelectItem value="assigned" className="text-xs">Assigned to node</SelectItem>
+            <SelectItem value="unassigned" className="text-xs">Unassigned</SelectItem>
           </SelectContent>
         </Select>
       </AdminToolSection>
