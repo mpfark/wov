@@ -120,20 +120,30 @@ export function calculateHP(charClass: string, con: number) {
   return baseHP + getStatModifier(con);
 }
 
-// ── Nobility titles by level (every 2 levels from 28–42) ────────
+// ── Nobility titles by level (every ~3 levels from 25–42; cap = Prince/Princess) ─
+// King/Queen is reserved for the player who lands the killing blow on King Aldric.
 
 const MILESTONE_TITLES: { level: number; male: string; female: string }[] = [
-  { level: 42, male: 'Emperor', female: 'Empress' },
-  { level: 40, male: 'King', female: 'Queen' },
-  { level: 38, male: 'Prince', female: 'Princess' },
-  { level: 36, male: 'Duke', female: 'Duchess' },
-  { level: 34, male: 'Marquis', female: 'Marquise' },
-  { level: 32, male: 'Count', female: 'Countess' },
-  { level: 30, male: 'Baron', female: 'Baroness' },
-  { level: 28, male: 'Lord', female: 'Lady' },
+  { level: 42, male: 'Prince',    female: 'Princess' },
+  { level: 40, male: 'Duke',      female: 'Duchess' },
+  { level: 37, male: 'Marquis',   female: 'Marquise' },
+  { level: 34, male: 'Viscount',  female: 'Viscountess' },
+  { level: 31, male: 'Count',     female: 'Countess' },
+  { level: 28, male: 'Baron',     female: 'Baroness' },
+  { level: 25, male: 'Lord',      female: 'Lady' },
 ];
 
-export function getCharacterTitle(level: number, gender: 'male' | 'female' = 'male'): string | null {
+/**
+ * @param isKingSlayer When true (player landed the killing blow on King Aldric
+ *   and has not been offline > 30 min), overrides the milestone ladder with
+ *   the King/Queen title.
+ */
+export function getCharacterTitle(
+  level: number,
+  gender: 'male' | 'female' = 'male',
+  isKingSlayer: boolean = false,
+): string | null {
+  if (isKingSlayer) return gender === 'female' ? 'Queen' : 'King';
   for (const m of MILESTONE_TITLES) {
     if (level >= m.level) return gender === 'female' ? m.female : m.male;
   }
