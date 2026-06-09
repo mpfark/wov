@@ -490,6 +490,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true, new_total: newTotal });
     }
 
+    // GRANT GOLD
+    if (action === "grant-gold" && req.method === "POST") {
+      const { character_id, amount } = await req.json();
+      if (!character_id || !amount || amount < 1 || amount > 1000000) {
+        throw { message: "character_id and amount (1..1000000) required", status: 400 };
+      }
+      const { data: char, error: fetchErr } = await adminClient.from("characters").select("gold").eq("id", character_id).single();
+      if (fetchErr || !char) throw { message: "Character not found", status: 404 };
+      const newTotal = (char.gold || 0) + amount;
+      const { error } = await adminClient.from("characters").update({ gold: newTotal }).eq("id", character_id);
+      if (error) throw error;
+      return jsonResponse({ success: true, new_total: newTotal });
+    }
+
     if (action === "grant-respec") {
       const body = await req.json();
       const { character_id, amount } = body;

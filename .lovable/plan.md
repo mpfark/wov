@@ -1,51 +1,26 @@
-## Goal
+# Admin: Grant Gold like Grant Salvage
 
-- A character without an order is presented as a **Wayfarer** everywhere the player sees text.
-- The central **Classless Tutorial Banner** (the big info box listing the seven Order Halls) is removed from the node view; finding orders happens via NPC dialogue only.
-- **No new abilities** for Wayfarers — they keep weapon autoattacks only (existing behavior).
-
-Internal keys (`classless` enum value, `is_classless` flag, DB columns) stay untouched. This is a label-only rename — lowest risk, no migration.
+Today, admins change a character's gold only by entering the edit panel and overwriting the absolute value through `update-character`. The user wants the same one-click additive flow that already exists for salvage: type an amount, press a button, gold is added on top of current.
 
 ## Changes
 
-### 1. Rename to "Wayfarer" (UI + log copy)
+### 1. Edge function — `supabase/functions/admin-users/index.ts`
+Add a new action `grant-gold` modeled after `grant-salvage`:
+- Validate `character_id` and positive integer `amount` (cap at 1,000,000 to match existing gold validation).
+- Fetch current `gold`, update to `gold + amount` using the admin client (service role bypasses the leader-restriction trigger, so the `app.trusted_rpc` flag is not needed).
+- Return `{ success: true, new_total }`.
 
-- `src/shared/formulas/classes.ts` and `supabase/functions/_shared/formulas/classes.ts`
-  - `CLASS_LABELS.classless`: `'Classless Adventurer'` → `'Wayfarer'`.
-- `src/lib/game-data.ts`
-  - `CLASS_DESCRIPTIONS.classless`: tighten the copy and replace "Classless Adventurer" framing with Wayfarer voice. Existing "find a hall in the world" wording stays.
-- `src/pages/CharacterCreation.tsx`
-  - Toast: "…sets out into the world as a **Wayfarer**."
-  - Info card heading: "You begin as a **Wayfarer**" (card itself stays — it's the creation-screen card, not the in-world banner).
-- `src/features/character/components/ClassBondRow.tsx`
-  - Doc comment: "Wayfarers render nothing".
-- Any code-comment occurrences of "classless" in `combat-tick` / `combat-catchup` / plan / memory left as-is (internal, references the flag/enum, not user-facing).
+### 2. UI state — `src/components/admin/users/UserManager.tsx`
+- Add `grantGoldAmount` state (default `100`) and setter.
+- Add `handleGrantGold(characterId)` mirroring `handleGrantSalvage`: calls `callAdmin('grant-gold', 'POST', { character_id, amount })`, toasts `Granted N gold (total: X)`, then `loadUsers()`.
+- Pass both into `CharacterActionsColumn`.
 
-### 2. Remove the central tutorial banner
+### 3. UI row — `src/components/admin/users/CharacterActionsColumn.tsx`
+- Add `grantGoldAmount`, `setGrantGoldAmount`, `onGrantGold` to props.
+- Add a row in the **Progression** section (right above or below Salvage) with a number input and a "Grant Gold" button using a coin/gold icon (e.g. the existing `🪙` glyph or `Coins` lucide icon for consistency with salvage's emoji style).
 
-- `src/features/world/components/NodeView.tsx`
-  - Remove the `ClasslessTutorialBanner` import and the `{(character as any).is_classless && <ClasslessTutorialBanner />}` render at line 242.
-- `src/features/world/components/ClasslessTutorialBanner.tsx`
-  - Delete the file (no other consumers).
-- `src/features/world/utils/directions.ts` is still used by NPC dialogue topics — leave it.
-
-### 3. Wayfarer abilities
-
-- **No changes.** Wayfarers keep weapon autoattacks. Ability bar already gates on a real class via `is_classless`.
-
-### 4. Memory + plan touch-ups
-
-- Update `.lovable/plan.md` Phase 2b section: replace "Classless Adventurer" wording with "Wayfarer" and note that the in-world banner has been retired in favor of NPC-only discovery.
+No DB migration needed; the existing leader-restriction trigger already permits service-role updates.
 
 ## Out of scope
-
-- DB enum rename (would require migration + edge-function updates with no player-facing benefit).
-- New Wayfarer abilities or kit changes.
-- NPC dialogue rewrites — existing Order-Hall topics already cover all seven halls.
-
-## Verification
-
-- Create a new character → toast says "Wayfarer", creation card heading says "Wayfarer".
-- Enter the world → no central banner; Knut and other Order-Hall NPCs still answer "where is the X hall?" questions.
-- Character Panel → Attributes tab shows no Bond row for Wayfarers (unchanged behavior).
-- Existing classed characters unaffected.
+- The absolute-value `gold` field in the character edit form stays as-is (still useful for setting exact values).
+- No change to starting gold or other gold flows.
