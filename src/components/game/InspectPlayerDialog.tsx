@@ -130,7 +130,7 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2 text-base">
-            {title && <span className="text-primary/60 text-xs">{title}</span>}
+            {title && <span className={`text-xs ${player.is_king_slayer ? 'text-soulforged text-glow-soulforged' : 'text-primary/60'}`}>{title}</span>}
             {player.name}
             <Badge variant="secondary" className="ml-auto text-[10px]">
               L{player.level} {CLASS_LABELS[player.class ?? ''] ?? ''} {RACE_LABELS[player.race ?? ''] ?? ''}
