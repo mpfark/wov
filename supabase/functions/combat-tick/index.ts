@@ -1811,6 +1811,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── King Aldric crowning + world broadcast ──────────────────
+    // Only the killing-blow attacker is crowned. If multiple parallel kills
+    // are queued in the same tick (extreme edge case), the last one wins —
+    // crown_king_slayer is atomic and always leaves at most one king.
+    if (kingCrownings.length > 0) {
+      const slayer = kingCrownings[kingCrownings.length - 1];
+      try {
+        await db.rpc('crown_king_slayer', { _character_id: slayer.characterId });
+        const titleWord = slayer.gender === 'female' ? 'Queen' : 'King';
+        const worldChannel = db.channel('world-global');
+        await worldChannel.send({
+          type: 'broadcast',
+          event: 'world',
+          payload: {
+            kind: 'king_crowned',
+            icon: '👑',
+            text: `King Aldric Vael has fallen. ${slayer.characterName} is now ${titleWord} of Varneth.`,
+            actor: slayer.characterName,
+            nonce: `aldric:${Date.now()}`,
+          },
+        });
+      } catch (e) {
+        console.error('[combat-tick] king crowning failed', e);
+      }
+    }
+
+
     return json({
       events, creature_states, member_states: memberStates,
       consumed_buffs: consumedBuffsList, cleared_dots: clearedDots,
