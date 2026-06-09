@@ -40,8 +40,18 @@ export interface Character {
   bhp_trained: Record<string, number>;
   /** Lifetime Renown earned (never decreases). Used by the Renown Board. */
   rp_total_earned: number;
+  /** @deprecated Pre-Soulforged-Ring legacy flag. Always false on new chars. */
   soulforged_item_created?: boolean;
+  /** @deprecated Pre-Soulforged-Ring legacy flag. Always false on new chars. */
   crown_item_created?: boolean;
+  /** Soulforged Ring upgrade tier (0 = not yet forged, 1–5 = current ring). */
+  soulring_tier?: number;
+  /** Inventory row holding the current Soulforged Ring (NULL if no ring). */
+  soulring_inventory_id?: string | null;
+  /** Timestamp of the last King Aldric killing blow. Active while < 30 min offline. */
+  king_slayer_at?: string | null;
+  /** Last time the player was seen online (used to time out the King title). */
+  last_online?: string | null;
   /** Active CP-reservation stances (key → entry). Wiped on character load + death. */
   reserved_buffs?: any;
   /** Persistent stance values (e.g. Force Shield ward HP across combats). */
