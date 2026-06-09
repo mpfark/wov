@@ -299,6 +299,7 @@ export default function UserManager({ isValar }: Props) {
           onGrantXp={handleGrantXp}
           onGrantRespec={handleGrantRespec}
           onGrantSalvage={handleGrantSalvage}
+          onGrantGold={handleGrantGold}
           onRevive={handleRevive}
           onResetStats={handleResetStats}
           onRemoveItem={handleRemoveItem}
