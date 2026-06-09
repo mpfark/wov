@@ -539,7 +539,13 @@ Deno.serve(async (req) => {
     // shared `resolveCreatureKill` helper. This function only handles the
     // tick-loop-local bookkeeping (effects purge, session engagement, kill set)
     // and applies the resolver's outputs to the local accumulators.
-    const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0) => {
+    // King Aldric Vael, the Unbroken — killing-blow slayer earns the temporary
+    // King/Queen title (cleared after 30 min offline by the expire_king_slayer
+    // janitor). At most one king world-wide at any time.
+    const KING_ALDRIC_ID = 'e1789e02-aa86-49a2-af02-148ac53503bc';
+    const kingCrownings: { characterId: string; characterName: string; gender: string }[] = [];
+
+    const handleCreatureKill = (creature: any, killerLabel: string, _chaForGold: number = 0, killerCharacterId?: string) => {
       cKilled.add(creature.id);
       sessionEngaged.delete(creature.id);
       // Purge all active_effects targeting this creature (and track for client)
@@ -612,6 +618,18 @@ Deno.serve(async (req) => {
       for (const bg of outcome.bondGains) bondGainQueue.push({
         memberId: bg.memberId, creatureLevel: bg.creatureLevel, isBoss: bg.isBoss,
       });
+
+      // King Aldric → queue a crowning for the killing-blow attacker.
+      if (creature.id === KING_ALDRIC_ID && killerCharacterId) {
+        const slayer = members.find(mm => mm.id === killerCharacterId);
+        if (slayer) {
+          kingCrownings.push({
+            characterId: killerCharacterId,
+            characterName: slayer.c.name,
+            gender: slayer.c.gender || 'male',
+          });
+        }
+      }
     };
 
     // ── Process pending abilities BEFORE the tick loop (immediate) ──
