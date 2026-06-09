@@ -144,7 +144,7 @@ async function moveFollowers(
   const toMove = filterFollowingOnly ? coLocated.filter(m => m.is_following) : coLocated;
   if (toMove.length > 0) {
     await Promise.all(toMove.map(f =>
-      supabase.from('characters').update({ current_node_id: targetNodeId }).eq('id', f.character_id)
+      supabase.rpc('move_follower', { _character_id: f.character_id, _node_id: targetNodeId })
     ));
     // Record node discovery for followers so their world maps update
     await Promise.all(toMove.map(f =>
