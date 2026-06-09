@@ -65,6 +65,9 @@ export default function NPCManager() {
   const [form, setForm] = useState(defaultForm());
   const [filter, setFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
+  const [areaFilter, setAreaFilter] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState<'all' | 'none' | NPCServiceRole>('all');
+  const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
   const [loading, setLoading] = useState(false);
   const [npcRegions, setNpcRegions] = useState<RegionOption[]>([]);
   const [npcAreas, setNpcAreas] = useState<AreaOption[]>([]);
