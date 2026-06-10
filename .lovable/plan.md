@@ -1,48 +1,52 @@
-# Dynamic Chat Column — Fills Space Right of Game Panels
+## Goal
+Constrain the center game panel's max width so it's just wide enough to fit the widest class's ability bar in a single row, with a small wiggle margin. The remaining horizontal space in the 1920px game row goes to the right gutter (which already feeds the dynamic chat column).
 
-Make the chat/online column extend from the right edge of the fixed game-panel area all the way to the browser edge, with no drag handle. If the available space is below the readable threshold (320px), collapse to the small chat-icon button (current behaviour) which slides the column out on click.
+## Widest class — analysis
+Summing label characters across each class's 5 ability buttons (the dominant width contributor at `text-[10px] px-2`):
 
-## UX
+- healer:  Smite / Heal / Transfer Health / Purifying Light / Divine Aegis = 51
+- warrior: Power Strike / Second Wind / Battle Cry / Rend / Sunder Armor = 49
+- ranger:  Aimed Shot / Eagle Eye / Barrage / Nature's Snare / Disengage = 49
+- bard:    Cutting Words / Inspire / Dissonance / Crescendo / Grand Finale = 51
+- rogue:   Backstab / Shadowstep / Envenom / Eviscerate / Cloak of Shadows = 51
+- wizard:  Fireball / Force Shield / Arcane Surge / Ignite / Conflagrate = 50
+- **templar: Judgment / Holy Shield / Shield Wall / Consecrate / Divine Challenge = 56  ← widest**
 
-- The three game panels (Character / Center / Map) stay at their current widths and remain centered up to a fixed cap (the existing 1920px `max-w` of the inner row).
-- The chat column lives **outside** that capped row, anchored to the right side of the viewport, taking all remaining horizontal space between the game-panel area's right edge and the window edge.
-- Minimum readable chat width: **320px**.
-  - If remaining space ≥ 320px → chat column is shown, filling that space (no upper cap; on ultra-wide it gets wider, which is fine for the Online tab).
-  - If remaining space < 320px → chat column auto-collapses. The thin reopen strip (with the online-count badge) is shown instead, exactly as today's collapsed state. Clicking it opens chat as a floating overlay anchored to the right edge at 320px, dimming/over-laying the rightmost part of the map panel, until the user closes it again.
-- The existing manual collapse toggle (the X / MessageCircle button in the chat header) still works and is persisted in `localStorage` (`chatPanelOpen`).
-- `chatPanelWidth` and the drag handle are removed — width is purely derived from layout.
+"Divine Challenge" (16 chars) is the single longest label in the game and makes templar the widest bar.
 
-## Files
+## Approach — dynamic measurement (preferred over a hardcoded px value)
 
-- `src/pages/GamePage.tsx`
-  - Restructure the outermost game container:
-    - Outer wrapper becomes full-width (`w-full`), no `max-w-[1920px]`.
-    - Inside it, a horizontal flex row with two children:
-      1. **Game area** (`flex-1` + `max-w-[1920px]` + `mx-auto` for centering when there's slack): contains CharacterPanel / Center / MapPanel exactly as today.
-      2. **Chat slot** (`shrink-0`): width driven by a `ResizeObserver` on the window / outer wrapper.
-  - Replace `chatPanelWidth` state and drag handle with:
-    - `availableChatWidth` derived from `window.innerWidth - <game-area-rendered-width>` via a `ResizeObserver` attached to the game-area ref.
-    - `canFitChat = availableChatWidth >= 320`.
-  - Rendering rules (desktop, `!isTablet`):
-    - `chatPanelOpen && canFitChat` → render chat inline at width `availableChatWidth`.
-    - `chatPanelOpen && !canFitChat` → render chat as a fixed-position overlay (`fixed right-0 top-<header> bottom-0 w-[320px] z-40` with `ornate-border` + backdrop shadow). User can still close via the header button.
-    - `!chatPanelOpen` → render the thin reopen strip with the online-count badge (current behaviour).
-  - Remove all `chatPanelWidth` localStorage logic.
+Hardcoding a number drifts the moment a label, font, padding, or keybind hint changes. Instead, measure the templar bar at runtime once on mount and apply that width (+ wiggle) as a max-width on the middle column.
 
-- `src/features/chat/components/ChatPanel.tsx`
-  - No structural changes. Already `w-full` and content scrolls. Keep it as-is.
+### Implementation
 
-- `.lovable/plan.md`
-  - Replace the previous resizable-panel plan with this one.
+1. **New component `AbilityBarMeasurer`** (`src/features/combat/components/AbilityBarMeasurer.tsx`)
+   - Renders an absolutely-positioned, visually hidden (`opacity-0 pointer-events-none -z-10`), `whitespace-nowrap` flex row containing one disabled `<Button>` per templar ability — same classes as the real bar (`font-display text-[10px] h-6 px-2`), including a fake `[1]`–`[5]` keybind suffix so width matches the worst-case rendered case.
+   - Uses `ResizeObserver` on its inner row to report `width` via an `onMeasure(width: number)` callback.
+   - Pulls labels from `CLASS_ABILITIES.templar` so it stays in sync with future ability edits.
 
-## Technical notes
+2. **GamePage wires the measurement**
+   - Add `const [abilityBarWidth, setAbilityBarWidth] = useState<number>(720)` (fallback ≈ templar estimate).
+   - Mount `<AbilityBarMeasurer onMeasure={setAbilityBarWidth} />` once near the root of the returned tree (sibling of the main game row).
+   - Compute `const centerMaxWidth = abilityBarWidth + 64;` (32 px wiggle on each side).
+   - Apply to the middle column wrapper:
+     ```tsx
+     <div
+       className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col"
+       style={{ maxWidth: centerMaxWidth }}
+     >
+     ```
+   - Keep `flex-1` so the column still shrinks on narrower viewports; the cap only kicks in once the gutter exists.
 
-- The ResizeObserver watches the game-area `div` (not the window) so the calculation also reacts to character/map panels being toggled.
-- Use `useLayoutEffect` to read width synchronously after mount, so initial render doesn't flash a wrong state.
-- The capped game-area row keeps `mx-auto`: on screens narrower than 1920px the game area touches the left edge and the chat column gets whatever's on the right; on screens wider than 1920+320, the chat is wider than 320; below that threshold the overlay fallback kicks in.
-- No backend, presence, or formatting changes.
+3. **Right gutter / chat behavior — unchanged**
+   - The existing `gutterWidth = max(0, (vw − usedGameAreaWidth) / 2)` logic stays. With the center column now capped, `gutterWidth` will be larger on wide screens, so the inline chat will fit (≥ 320 px) at smaller viewports than before — exactly the intended outcome.
+   - The collapse-to-icon fallback remains for narrow screens.
 
-## Out of scope
+### Files
 
-- Manual resize handle (removed).
-- Whisper-from-list shortcut, member sorting/filters, mobile chat redesign.
+- **New:** `src/features/combat/components/AbilityBarMeasurer.tsx`
+- **Edit:** `src/pages/GamePage.tsx` — import the measurer, add `abilityBarWidth` state, render measurer, apply `style={{ maxWidth }}` to the middle column.
+
+### Out of scope
+
+- No formula/balance changes, no ability label edits, no character-panel or map-panel width changes, no chat redesign.
