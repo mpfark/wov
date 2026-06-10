@@ -1316,6 +1316,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
       )}
 
+      {/* Heraldry Dialog */}
+      {(currentNode as any).is_heraldry && (
+        <HeraldryPanel
+          open={heraldryOpen}
+          onClose={() => { setHeraldryOpen(false); setActiveServiceNpc(null); }}
+          characterId={character.id}
+          currentFamilyName={(character as any).family_name ?? null}
+          familyChangedAfterCreation={!!(character as any).family_changed_after_creation}
+          userId={character.user_id}
+          npcName={activeServiceNpc?.service_role === 'heraldry' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'heraldry' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
+          onFamilyChanged={() => refetchCharacters?.()}
+        />
+      )}
+
+
+
       {/* Marketplace Dialog */}
       {(currentNode as any).is_marketplace && (
         <MarketplacePanel
