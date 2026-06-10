@@ -21,6 +21,12 @@ const STARTING_CLASS = 'classless';
 
 export default function CharacterCreation({ onCreateCharacter, onCharacterReady, startingNodeId, onBack }: Props) {
   const [name, setName] = useState('');
+  const [familyName, setFamilyName] = useState('');
+  const [familyStatus, setFamilyStatus] = useState<{
+    status: 'available' | 'founder' | 'member' | 'needs_request' | 'request_pending' | 'reserved' | 'invalid';
+    founder_display_name?: string;
+  } | null>(null);
+  const [familyChecking, setFamilyChecking] = useState(false);
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [race, setRace] = useState('');
   const [hoverRace, setHoverRace] = useState<string | null>(null);
@@ -33,7 +39,9 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
   const previewAc = previewStats ? calculateAC(STARTING_CLASS, previewStats.dex) : 0;
 
   const stats = race ? calculateStats(race, STARTING_CLASS) : null;
-  const canCreate = !!(name.trim() && gender && race && stats);
+  const familyOk = !familyName.trim()
+    || (familyStatus && ['available', 'founder', 'member'].includes(familyStatus.status));
+  const canCreate = !!(name.trim() && gender && race && stats && familyOk && !familyChecking);
 
   const handleReroll = async () => {
     setRolling(true);
