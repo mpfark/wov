@@ -52,6 +52,12 @@ export interface Character {
   king_slayer_at?: string | null;
   /** Last time the player was seen online (used to time out the King title). */
   last_online?: string | null;
+  /** Optional family/house display name (e.g. "Stark"). NULL when none. */
+  family_name?: string | null;
+  /** FK to families.id. NULL when the character has no family. */
+  family_id?: string | null;
+  /** True if the player has already used their post-creation Heraldry change. */
+  family_changed_after_creation?: boolean;
   /** Active CP-reservation stances (key → entry). Wiped on character load + death. */
   reserved_buffs?: any;
   /** Persistent stance values (e.g. Force Shield ward HP across combats). */
