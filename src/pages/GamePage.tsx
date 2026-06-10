@@ -94,23 +94,21 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const stored = localStorage.getItem('chatPanelOpen');
     return stored !== null ? stored === 'true' : true;
   });
-  // Chat slot fills space right of the game panels. Width is derived from
-  // its container; if there's not enough room for a readable column we
-  // collapse and fall back to an icon-triggered overlay.
-  const chatSlotRef = useRef<HTMLDivElement | null>(null);
-  const [chatSlotWidth, setChatSlotWidth] = useState(0);
+  // Chat lives in the right viewport gutter outside the centered game area.
+  // Gutter width = max(0, (vw - 1920) / 2). If < 320 we collapse to an icon
+  // pinned to the right edge that opens chat as a fixed 320px overlay.
+  const GAME_MAX_WIDTH = 1920;
   const CHAT_MIN_WIDTH = 320;
-  const canFitChat = chatSlotWidth >= CHAT_MIN_WIDTH;
+  const [gutterWidth, setGutterWidth] = useState(() =>
+    typeof window === 'undefined' ? 0 : Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2)
+  );
   useEffect(() => {
-    const el = chatSlotRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) setChatSlotWidth(entry.contentRect.width);
-    });
-    ro.observe(el);
-    setChatSlotWidth(el.getBoundingClientRect().width);
-    return () => ro.disconnect();
+    const onResize = () => setGutterWidth(Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2));
+    window.addEventListener('resize', onResize);
+    onResize();
+    return () => window.removeEventListener('resize', onResize);
   }, []);
+  const canFitChat = gutterWidth >= CHAT_MIN_WIDTH;
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
@@ -1114,10 +1112,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }
 
   return (
-    <div className="h-screen flex flex-col parchment-bg w-full">
+    <div className="h-screen flex flex-col parchment-bg w-full relative">
 
-      {/* Main Content */}
-      <div className="flex-1 min-h-0 flex">
+      {/* Main Content — centered game area, max 1920 */}
+      <div className="flex-1 min-h-0 flex max-w-[1920px] w-full mx-auto">
         {/* Left: Character Panel — desktop: fixed sidebar, tablet: sheet overlay */}
         {isTablet ? (
           <Sheet open={charPanelOpen} onOpenChange={setCharPanelOpen}>
@@ -1141,7 +1139,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         )}
 
         {/* Middle: Node + Event Log */}
-        <div className="h-full flex-1 min-w-0 max-w-[1120px] ornate-border bg-card/60 flex flex-col">
+        <div className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col">
           <div className="flex-[2] min-h-0">
             <NodeView
               node={currentNode}
@@ -1235,49 +1233,52 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
         )}
 
-        {/* Wide-screen Chat slot — fills remaining space right of game panels.
-            Inline when ≥ 320px; otherwise a thin icon strip that opens an
-            overlay panel on click. */}
-        {isWideScreen && !isTablet && (
-          <div ref={chatSlotRef} className="h-full flex-1 min-w-0 flex">
-            {chatPanelOpen && canFitChat ? (
-              <ChatPanel
-                messages={chatMessages}
-                onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
-                onlinePlayers={onlinePlayers}
-                myCharacterId={character.id}
-              />
-            ) : (
-              <Button
-                size="icon"
-                className="h-full w-8 shrink-0 rounded-none border-l border-border bg-card/60 hover:bg-accent/60 relative ml-auto"
-                variant="ghost"
-                onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
-                title="Open chat panel"
-              >
-                <MessageCircle className="w-4 h-4" />
-                {onlinePlayers.length > 0 && (
-                  <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
-                    {onlinePlayers.length}
-                  </span>
-                )}
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Overlay fallback: chat is open but slot is too narrow for inline. */}
-        {isWideScreen && !isTablet && chatPanelOpen && !canFitChat && (
-          <div className="fixed right-0 top-0 bottom-0 w-[320px] z-40 shadow-2xl">
-            <ChatPanel
-              messages={chatMessages}
-              onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
-              onlinePlayers={onlinePlayers}
-              myCharacterId={character.id}
-            />
-          </div>
-        )}
       </div>
+
+      {/* Chat lives in the right viewport gutter, outside the centered game area. */}
+      {isWideScreen && !isTablet && chatPanelOpen && canFitChat && (
+        <div
+          className="absolute top-0 bottom-0 right-0 z-30"
+          style={{ width: gutterWidth }}
+        >
+          <ChatPanel
+            messages={chatMessages}
+            onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
+            onlinePlayers={onlinePlayers}
+            myCharacterId={character.id}
+          />
+        </div>
+      )}
+
+      {/* Overlay fallback when the gutter is too narrow for inline chat. */}
+      {isWideScreen && !isTablet && chatPanelOpen && !canFitChat && (
+        <div className="fixed right-0 top-0 bottom-0 w-[320px] z-40 shadow-2xl">
+          <ChatPanel
+            messages={chatMessages}
+            onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
+            onlinePlayers={onlinePlayers}
+            myCharacterId={character.id}
+          />
+        </div>
+      )}
+
+      {/* Collapsed chat icon — pinned to right edge of viewport. */}
+      {isWideScreen && !isTablet && !chatPanelOpen && (
+        <Button
+          size="icon"
+          className="fixed right-0 top-0 bottom-0 h-full w-8 z-30 rounded-none border-l border-border bg-card/60 hover:bg-accent/60"
+          variant="ghost"
+          onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
+          title="Open chat panel"
+        >
+          <MessageCircle className="w-4 h-4" />
+          {onlinePlayers.length > 0 && (
+            <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
+              {onlinePlayers.length}
+            </span>
+          )}
+        </Button>
+      )}
 
       {/* Vendor Dialog */}
       {currentNode.is_vendor && (
