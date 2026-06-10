@@ -80,6 +80,7 @@ function getNodeLabel(node: any, areas: any[]): string {
   if (node?.is_jewelcrafter) flags.push('Jewelcrafter');
   if (node?.is_teleport) flags.push('Teleport');
   if (node?.is_trainer) flags.push('Trainer');
+  if ((node as any)?.is_heraldry) flags.push('Heraldry');
   const area = node?.area_id ? areas.find((a: any) => a.id === node.area_id) : null;
   const areaName = area?.name || 'Unknown';
   const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
@@ -733,10 +734,10 @@ export default function NodeEditorPanel({
   };
 
   /* ── Generate AI service NPC ── */
-  const generateServiceNpc = async (role?: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer') => {
+  const generateServiceNpc = async (role?: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer' | 'heraldry') => {
     if (!activeNodeId) return;
-    if (!form.is_vendor && !form.is_blacksmith && !form.is_jewelcrafter && !form.is_trainer) {
-      toast.error('Node must be a vendor, blacksmith, jewelcrafter, or trainer');
+    if (!form.is_vendor && !form.is_blacksmith && !form.is_jewelcrafter && !form.is_trainer && !(form as any).is_heraldry) {
+      toast.error('Node must be a vendor, blacksmith, jewelcrafter, trainer, or heraldry');
       return;
     }
     setGeneratingNpc(true);
@@ -1237,11 +1238,13 @@ export default function NodeEditorPanel({
               const hasBlacksmithNpc = npcs.some(n => n.service_role === 'blacksmith');
               const hasJewelcrafterNpc = npcs.some(n => n.service_role === 'jewelcrafter');
               const hasTrainerNpc = npcs.some(n => n.service_role === 'trainer');
-              const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer'; enabled: boolean; has: boolean; label: string; desc: string }> = [
+              const hasHeraldryNpc = npcs.some(n => n.service_role === 'heraldry');
+              const roleConfigs: Array<{ key: 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer' | 'heraldry'; enabled: boolean; has: boolean; label: string; desc: string }> = [
                 { key: 'vendor', enabled: form.is_vendor, has: hasVendorNpc, label: 'Shopkeeper', desc: 'Generates a named shopkeeper that fits this node\u2019s tone.' },
                 { key: 'blacksmith', enabled: form.is_blacksmith, has: hasBlacksmithNpc, label: 'Smith', desc: 'Generates a named smith that fits this node\u2019s tone.' },
                 { key: 'jewelcrafter', enabled: form.is_jewelcrafter, has: hasJewelcrafterNpc, label: 'Jeweler', desc: 'Generates a refined jeweler / lapidary suited to this node.' },
                 { key: 'trainer', enabled: form.is_trainer, has: hasTrainerNpc, label: 'Renown Trainer', desc: 'Generates a hardened mentor who trains heroes\u2019 attributes for Renown.' },
+                { key: 'heraldry', enabled: !!(form as any).is_heraldry, has: hasHeraldryNpc, label: 'Herald', desc: 'Generates a herald who records family names and lineages.' },
               ];
               const anyEnabled = roleConfigs.some(r => r.enabled);
               return (
