@@ -12,7 +12,7 @@ import NodePicker from './NodePicker';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 import type { DialogueTopic, TopicKind } from '@/features/creatures/utils/dialogue-topics';
 
-type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter';
+type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter' | 'heraldry';
 
 interface NPC {
   id: string;
