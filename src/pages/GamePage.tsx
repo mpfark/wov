@@ -94,23 +94,21 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const stored = localStorage.getItem('chatPanelOpen');
     return stored !== null ? stored === 'true' : true;
   });
-  // Chat slot fills space right of the game panels. Width is derived from
-  // its container; if there's not enough room for a readable column we
-  // collapse and fall back to an icon-triggered overlay.
-  const chatSlotRef = useRef<HTMLDivElement | null>(null);
-  const [chatSlotWidth, setChatSlotWidth] = useState(0);
+  // Chat lives in the right viewport gutter outside the centered game area.
+  // Gutter width = max(0, (vw - 1920) / 2). If < 320 we collapse to an icon
+  // pinned to the right edge that opens chat as a fixed 320px overlay.
+  const GAME_MAX_WIDTH = 1920;
   const CHAT_MIN_WIDTH = 320;
-  const canFitChat = chatSlotWidth >= CHAT_MIN_WIDTH;
+  const [gutterWidth, setGutterWidth] = useState(() =>
+    typeof window === 'undefined' ? 0 : Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2)
+  );
   useEffect(() => {
-    const el = chatSlotRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) setChatSlotWidth(entry.contentRect.width);
-    });
-    ro.observe(el);
-    setChatSlotWidth(el.getBoundingClientRect().width);
-    return () => ro.disconnect();
+    const onResize = () => setGutterWidth(Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2));
+    window.addEventListener('resize', onResize);
+    onResize();
+    return () => window.removeEventListener('resize', onResize);
   }, []);
+  const canFitChat = gutterWidth >= CHAT_MIN_WIDTH;
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
