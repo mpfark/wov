@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface OnlinePlayer {
   id: string;
   name: string;
+  family_name?: string | null;
   race: string;
   class: string;
   level: number;
@@ -15,6 +16,7 @@ export interface OnlinePlayer {
 interface PresenceCharacter {
   id: string;
   name: string;
+  family_name?: string | null;
   race: string;
   class: string;
   level: number;
