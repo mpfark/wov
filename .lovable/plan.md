@@ -1,51 +1,48 @@
-# Integrate Online Players into a Resizable Chat Panel
+# Dynamic Chat Column — Fills Space Right of Game Panels
 
-The right-side chat column will host both **Chat** and **Online** as tabs, and become user-resizable so the player can decide how much horizontal space it eats.
+Make the chat/online column extend from the right edge of the fixed game-panel area all the way to the browser edge, with no drag handle. If the available space is below the readable threshold (320px), collapse to the small chat-icon button (current behaviour) which slides the column out on click.
 
 ## UX
 
-- One right-side column with a tab header: `Chat` and `Online (N)`.
-  - **Chat** tab: existing message list.
-  - **Online** tab: compact, scrollable list of online adventurers (title, name, race, class, level), "you" highlighted, king-slayer styling preserved. Same data as today's popup.
-- Column is **resizable** via a draggable vertical handle between the main game area and the chat column.
-  - Default width: ~320px.
-  - Min: ~280px (keeps tabs and list readable).
-  - Max: ~560px (don't let it eat the world view).
-  - Persist chosen width in `localStorage` (`chatPanelWidth`).
-- Existing collapse/expand toggle stays. When collapsed, the thin reopen strip shows a small "N" badge so online count is still visible.
-- Tab choice persisted in `localStorage` (`chatPanelTab`); default `Chat`.
-- The "X Online" button in the MapPanel header is removed (no longer needed).
-- Tablet and mobile layouts unchanged (chat column is desktop-only today).
+- The three game panels (Character / Center / Map) stay at their current widths and remain centered up to a fixed cap (the existing 1920px `max-w` of the inner row).
+- The chat column lives **outside** that capped row, anchored to the right side of the viewport, taking all remaining horizontal space between the game-panel area's right edge and the window edge.
+- Minimum readable chat width: **320px**.
+  - If remaining space ≥ 320px → chat column is shown, filling that space (no upper cap; on ultra-wide it gets wider, which is fine for the Online tab).
+  - If remaining space < 320px → chat column auto-collapses. The thin reopen strip (with the online-count badge) is shown instead, exactly as today's collapsed state. Clicking it opens chat as a floating overlay anchored to the right edge at 320px, dimming/over-laying the rightmost part of the map panel, until the user closes it again.
+- The existing manual collapse toggle (the X / MessageCircle button in the chat header) still works and is persisted in `localStorage` (`chatPanelOpen`).
+- `chatPanelWidth` and the drag handle are removed — width is purely derived from layout.
 
 ## Files
 
-- `src/features/chat/components/ChatPanel.tsx`
-  - Add props: `onlinePlayers`, `myCharacterId`.
-  - Add shadcn `Tabs` header (`Chat` / `Online (N)`), persist active tab.
-  - Render online list inline (reuse `formatCharacterName`, `getCharacterTitle`, race/class label maps from `OnlinePlayersDialog`).
-  - Remove the fixed `w-[320px]`; let the parent control width via the resizable panel.
-
 - `src/pages/GamePage.tsx`
-  - Wrap the main game area + chat column in `ResizablePanelGroup` (horizontal) using `@/components/ui/resizable`, only when `isWideScreen && !isTablet && chatPanelOpen`.
-    - Left panel: existing main content, `defaultSize` derived from remaining space.
-    - `ResizableHandle withHandle`.
-    - Right panel: `ChatPanel`, `defaultSize` from `localStorage` (fallback 320px → percentage), `minSize`/`maxSize` mapped from 280/560px.
-  - On `onLayout`, persist the right panel size to `localStorage`.
-  - When chat is collapsed, keep current single-row layout (no panel group) and add the online-count badge to the reopen button.
-  - Pass `onlinePlayers` and `myCharacterId` into `<ChatPanel>`.
+  - Restructure the outermost game container:
+    - Outer wrapper becomes full-width (`w-full`), no `max-w-[1920px]`.
+    - Inside it, a horizontal flex row with two children:
+      1. **Game area** (`flex-1` + `max-w-[1920px]` + `mx-auto` for centering when there's slack): contains CharacterPanel / Center / MapPanel exactly as today.
+      2. **Chat slot** (`shrink-0`): width driven by a `ResizeObserver` on the window / outer wrapper.
+  - Replace `chatPanelWidth` state and drag handle with:
+    - `availableChatWidth` derived from `window.innerWidth - <game-area-rendered-width>` via a `ResizeObserver` attached to the game-area ref.
+    - `canFitChat = availableChatWidth >= 320`.
+  - Rendering rules (desktop, `!isTablet`):
+    - `chatPanelOpen && canFitChat` → render chat inline at width `availableChatWidth`.
+    - `chatPanelOpen && !canFitChat` → render chat as a fixed-position overlay (`fixed right-0 top-<header> bottom-0 w-[320px] z-40` with `ornate-border` + backdrop shadow). User can still close via the header button.
+    - `!chatPanelOpen` → render the thin reopen strip with the online-count badge (current behaviour).
+  - Remove all `chatPanelWidth` localStorage logic.
 
-- `src/features/world/components/MapPanel.tsx`
-  - Remove the `OnlinePlayersDialog` import and the header trigger at line ~299. Keep `summonOnlinePlayers` flowing to the summon panel untouched.
+- `src/features/chat/components/ChatPanel.tsx`
+  - No structural changes. Already `w-full` and content scrolls. Keep it as-is.
 
-- `src/components/game/OnlinePlayersDialog.tsx`
-  - Delete (no remaining references after MapPanel change).
+- `.lovable/plan.md`
+  - Replace the previous resizable-panel plan with this one.
 
 ## Technical notes
 
-- `ResizablePanelGroup` works in percentages. Convert the saved px width to a percentage of the current container width at mount, and clamp to min/max. Re-clamp on window resize via the panel group's built-in behavior.
-- Keep `min-w-0` on the left panel so the game area can shrink correctly when the chat column grows.
+- The ResizeObserver watches the game-area `div` (not the window) so the calculation also reacts to character/map panels being toggled.
+- Use `useLayoutEffect` to read width synchronously after mount, so initial render doesn't flash a wrong state.
+- The capped game-area row keeps `mx-auto`: on screens narrower than 1920px the game area touches the left edge and the chat column gets whatever's on the right; on screens wider than 1920+320, the chat is wider than 320; below that threshold the overlay fallback kicks in.
 - No backend, presence, or formatting changes.
 
 ## Out of scope
 
+- Manual resize handle (removed).
 - Whisper-from-list shortcut, member sorting/filters, mobile chat redesign.

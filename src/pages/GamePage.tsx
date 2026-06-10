@@ -94,15 +94,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const stored = localStorage.getItem('chatPanelOpen');
     return stored !== null ? stored === 'true' : true;
   });
-  const [chatPanelWidth, setChatPanelWidthState] = useState<number>(() => {
-    const stored = Number(localStorage.getItem('chatPanelWidth'));
-    if (!stored || Number.isNaN(stored)) return 320;
-    return Math.min(560, Math.max(280, stored));
-  });
-  const setChatPanelWidth = (n: number) => {
-    setChatPanelWidthState(n);
-    localStorage.setItem('chatPanelWidth', String(Math.round(n)));
-  };
+  // Chat slot fills space right of the game panels. Width is derived from
+  // its container; if there's not enough room for a readable column we
+  // collapse and fall back to an icon-triggered overlay.
+  const chatSlotRef = useRef<HTMLDivElement | null>(null);
+  const [chatSlotWidth, setChatSlotWidth] = useState(0);
+  const CHAT_MIN_WIDTH = 320;
+  const canFitChat = chatSlotWidth >= CHAT_MIN_WIDTH;
+  useEffect(() => {
+    const el = chatSlotRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) setChatSlotWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    setChatSlotWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
@@ -1106,7 +1114,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }
 
   return (
-    <div className="h-screen flex flex-col parchment-bg max-w-[1920px] mx-auto w-full">
+    <div className="h-screen flex flex-col parchment-bg w-full">
 
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex">
@@ -1133,7 +1141,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         )}
 
         {/* Middle: Node + Event Log */}
-        <div className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col">
+        <div className="h-full flex-1 min-w-0 max-w-[1120px] ornate-border bg-card/60 flex flex-col">
           <div className="flex-[2] min-h-0">
             <NodeView
               node={currentNode}
@@ -1227,59 +1235,46 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
         )}
 
-        {/* Wide-screen Chat Panel toggle button (collapsed state) */}
-        {isWideScreen && !isTablet && !chatPanelOpen && (
-          <Button
-            size="icon"
-            className="h-full w-8 shrink-0 rounded-none border-l border-border bg-card/60 hover:bg-accent/60 relative"
-            variant="ghost"
-            onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
-            title="Open chat panel"
-          >
-            <MessageCircle className="w-4 h-4" />
-            {onlinePlayers.length > 0 && (
-              <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
-                {onlinePlayers.length}
-              </span>
-            )}
-          </Button>
-        )}
-
-        {/* Wide-screen Chat Panel — resizable 4th column */}
-        {isWideScreen && !isTablet && chatPanelOpen && (
-          <div className="h-full shrink-0 flex" style={{ width: chatPanelWidth }}>
-            {/* Drag handle on the left edge */}
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                const startX = e.clientX;
-                const startW = chatPanelWidth;
-                const onMove = (ev: PointerEvent) => {
-                  const next = Math.min(560, Math.max(280, startW + (startX - ev.clientX)));
-                  setChatPanelWidth(next);
-                };
-                const onUp = () => {
-                  window.removeEventListener('pointermove', onMove);
-                  window.removeEventListener('pointerup', onUp);
-                  document.body.style.cursor = '';
-                };
-                document.body.style.cursor = 'col-resize';
-                window.addEventListener('pointermove', onMove);
-                window.addEventListener('pointerup', onUp);
-              }}
-              className="w-1.5 shrink-0 cursor-col-resize bg-border hover:bg-primary/50 transition-colors"
-              title="Drag to resize chat panel"
-            />
-            <div className="flex-1 min-w-0">
+        {/* Wide-screen Chat slot — fills remaining space right of game panels.
+            Inline when ≥ 320px; otherwise a thin icon strip that opens an
+            overlay panel on click. */}
+        {isWideScreen && !isTablet && (
+          <div ref={chatSlotRef} className="h-full flex-1 min-w-0 flex">
+            {chatPanelOpen && canFitChat ? (
               <ChatPanel
                 messages={chatMessages}
-                onClose={() => setChatPanelOpen(false)}
+                onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
                 onlinePlayers={onlinePlayers}
                 myCharacterId={character.id}
               />
-            </div>
+            ) : (
+              <Button
+                size="icon"
+                className="h-full w-8 shrink-0 rounded-none border-l border-border bg-card/60 hover:bg-accent/60 relative ml-auto"
+                variant="ghost"
+                onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
+                title="Open chat panel"
+              >
+                <MessageCircle className="w-4 h-4" />
+                {onlinePlayers.length > 0 && (
+                  <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
+                    {onlinePlayers.length}
+                  </span>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Overlay fallback: chat is open but slot is too narrow for inline. */}
+        {isWideScreen && !isTablet && chatPanelOpen && !canFitChat && (
+          <div className="fixed right-0 top-0 bottom-0 w-[320px] z-40 shadow-2xl">
+            <ChatPanel
+              messages={chatMessages}
+              onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
+              onlinePlayers={onlinePlayers}
+              myCharacterId={character.id}
+            />
           </div>
         )}
       </div>
