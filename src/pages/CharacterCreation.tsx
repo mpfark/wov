@@ -60,6 +60,37 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
     }
   };
 
+  const checkFamily = async (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) { setFamilyStatus(null); return; }
+    if (!/^[A-Za-z]{2,20}$/.test(trimmed)) {
+      setFamilyStatus({ status: 'invalid' });
+      return;
+    }
+    setFamilyChecking(true);
+    try {
+      const { data, error } = await supabase.rpc('check_family_name', { _display: trimmed });
+      if (error) throw error;
+      setFamilyStatus(data as any);
+    } catch (err: any) {
+      console.warn('check_family_name failed', err);
+      setFamilyStatus(null);
+    } finally {
+      setFamilyChecking(false);
+    }
+  };
+
+  const handleRequestJoin = async () => {
+    try {
+      const { error } = await supabase.rpc('request_family_membership', { _display: familyName.trim() });
+      if (error) throw error;
+      toast.success(`Request sent to the ${familyName.trim()} founder.`);
+      setFamilyStatus(prev => prev ? { ...prev, status: 'request_pending' } : prev);
+    } catch (err: any) {
+      toast.error(err.message || 'Could not send request');
+    }
+  };
+
   const handleCreate = async () => {
     if (!stats) return;
     setLoading(true);
@@ -76,9 +107,16 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
       });
       if (char?.id) {
         await supabase.rpc('grant_starting_gear' as any, { p_character_id: char.id });
+        const family = familyName.trim();
+        if (family) {
+          const { error: famErr } = await supabase.rpc('apply_family_to_character', {
+            _character_id: char.id, _display: family,
+          });
+          if (famErr) toast.error(famErr.message || 'Family name could not be applied');
+        }
         onCharacterReady?.(char.id);
       }
-      toast.success(`${name} sets out into the world as a Wayfarer.`);
+      toast.success(`${name}${familyName.trim() ? ' ' + familyName.trim() : ''} sets out into the world as a Wayfarer.`);
     } catch (err: any) {
       if (err.message?.includes('characters_name_unique') || err.code === '23505') {
         toast.error(`The name "${name}" is already taken. Choose a different name.`);
