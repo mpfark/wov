@@ -103,12 +103,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [gutterWidth, setGutterWidth] = useState(() =>
     typeof window === 'undefined' ? 0 : Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2)
   );
+  // Center panel max width is derived from the widest class's ability bar
+  // (measured at runtime by AbilityBarMeasurer). Fallback ≈ Templar estimate.
+  const [abilityBarWidth, setAbilityBarWidth] = useState<number>(720);
+  const centerMaxWidth = Math.ceil(abilityBarWidth) + 64; // 32px wiggle each side
+  const rowMaxWidth = Math.min(GAME_MAX_WIDTH, 400 + centerMaxWidth + 400);
   useEffect(() => {
-    const onResize = () => setGutterWidth(Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2));
+    const onResize = () => setGutterWidth(Math.max(0, (window.innerWidth - rowMaxWidth) / 2));
     window.addEventListener('resize', onResize);
     onResize();
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [rowMaxWidth]);
   const canFitChat = gutterWidth >= CHAT_MIN_WIDTH;
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
