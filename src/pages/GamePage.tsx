@@ -94,15 +94,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const stored = localStorage.getItem('chatPanelOpen');
     return stored !== null ? stored === 'true' : true;
   });
-  const [chatPanelWidth, setChatPanelWidthState] = useState<number>(() => {
-    const stored = Number(localStorage.getItem('chatPanelWidth'));
-    if (!stored || Number.isNaN(stored)) return 320;
-    return Math.min(560, Math.max(280, stored));
-  });
-  const setChatPanelWidth = (n: number) => {
-    setChatPanelWidthState(n);
-    localStorage.setItem('chatPanelWidth', String(Math.round(n)));
-  };
+  // Chat slot fills space right of the game panels. Width is derived from
+  // its container; if there's not enough room for a readable column we
+  // collapse and fall back to an icon-triggered overlay.
+  const chatSlotRef = useRef<HTMLDivElement | null>(null);
+  const [chatSlotWidth, setChatSlotWidth] = useState(0);
+  const CHAT_MIN_WIDTH = 320;
+  const canFitChat = chatSlotWidth >= CHAT_MIN_WIDTH;
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
