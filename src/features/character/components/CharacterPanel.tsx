@@ -347,7 +347,7 @@ export default function CharacterPanel({
       <div className="h-full flex flex-col p-3 gap-section overflow-y-auto">
         {/* Name & Identity */}
         <div className="text-center gap-row">
-          <h2 className="t-display-lg text-lg">{character.name}</h2>
+          <h2 className="t-display-lg text-lg">{character.name}{character.family_name ? ` ${character.family_name}` : ''}</h2>
           {(() => {
             const isKing = !!character.king_slayer_at;
             const title = getCharacterTitle(character.level, character.gender, isKing);
