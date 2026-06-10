@@ -69,7 +69,7 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
         for (const [, presences] of Object.entries(state)) {
           const p = (presences as any[])[0];
           if (p?.id && p?.name) {
-            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male', is_king_slayer: !!p.is_king_slayer });
+            players.push({ id: p.id, name: p.name, family_name: p.family_name ?? null, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male', is_king_slayer: !!p.is_king_slayer });
           }
         }
         players.sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));
