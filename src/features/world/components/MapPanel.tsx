@@ -292,15 +292,7 @@ export default function MapPanel({
               </Popover>
             )}
 
-            {/* Online Players */}
-            {summonOnlinePlayers && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span><OnlinePlayersDialog onlinePlayers={summonOnlinePlayers} myCharacterId={myCharacterId} compact /></span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom"><p className="text-xs">Online Players ({summonOnlinePlayers.length})</p></TooltipContent>
-              </Tooltip>
-            )}
+            {/* Online players list now lives in the right-side Chat panel (Online tab). */}
 
             {/* Admin (admin only) */}
             {isAdmin && onOpenAdmin && (
