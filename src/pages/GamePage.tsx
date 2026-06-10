@@ -102,6 +102,16 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const CHAT_MIN_WIDTH = 320;
   const canFitChat = chatSlotWidth >= CHAT_MIN_WIDTH;
   useEffect(() => {
+    const el = chatSlotRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) setChatSlotWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    setChatSlotWidth(el.getBoundingClientRect().width);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
     const wideMql = window.matchMedia('(min-width: 1600px)');
