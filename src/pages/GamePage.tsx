@@ -94,6 +94,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const stored = localStorage.getItem('chatPanelOpen');
     return stored !== null ? stored === 'true' : true;
   });
+  const [chatPanelWidth, setChatPanelWidthState] = useState<number>(() => {
+    const stored = Number(localStorage.getItem('chatPanelWidth'));
+    if (!stored || Number.isNaN(stored)) return 320;
+    return Math.min(560, Math.max(280, stored));
+  });
+  const setChatPanelWidth = (n: number) => {
+    setChatPanelWidthState(n);
+    localStorage.setItem('chatPanelWidth', String(Math.round(n)));
+  };
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
