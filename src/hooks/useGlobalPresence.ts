@@ -29,8 +29,8 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
 
   const charData = useMemo(() => {
     if (!character) return null;
-    return { id: character.id, name: character.name, race: character.race, class: character.class, level: character.level, gender: character.gender, is_king_slayer: !!character.is_king_slayer };
-  }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender, character?.is_king_slayer]);
+    return { id: character.id, name: character.name, family_name: character.family_name ?? null, race: character.race, class: character.class, level: character.level, gender: character.gender, is_king_slayer: !!character.is_king_slayer };
+  }, [character?.id, character?.name, character?.family_name, character?.race, character?.class, character?.level, character?.gender, character?.is_king_slayer]);
 
   // Keep a ref to the latest charData for the heartbeat interval
   const charDataRef = useRef(charData);
