@@ -54,6 +54,7 @@ import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 import MovementPad from '@/features/world/components/MovementPad';
 import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
+import { AbilityBarMeasurer } from '@/features/combat/components/AbilityBarMeasurer';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
@@ -102,12 +103,17 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [gutterWidth, setGutterWidth] = useState(() =>
     typeof window === 'undefined' ? 0 : Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2)
   );
+  // Center panel max width is derived from the widest class's ability bar
+  // (measured at runtime by AbilityBarMeasurer). Fallback ≈ Templar estimate.
+  const [abilityBarWidth, setAbilityBarWidth] = useState<number>(720);
+  const centerMaxWidth = Math.ceil(abilityBarWidth) + 64; // 32px wiggle each side
+  const rowMaxWidth = Math.min(GAME_MAX_WIDTH, 400 + centerMaxWidth + 400);
   useEffect(() => {
-    const onResize = () => setGutterWidth(Math.max(0, (window.innerWidth - GAME_MAX_WIDTH) / 2));
+    const onResize = () => setGutterWidth(Math.max(0, (window.innerWidth - rowMaxWidth) / 2));
     window.addEventListener('resize', onResize);
     onResize();
     return () => window.removeEventListener('resize', onResize);
-  }, []);
+  }, [rowMaxWidth]);
   const canFitChat = gutterWidth >= CHAT_MIN_WIDTH;
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
@@ -1113,9 +1119,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
+      <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
-      {/* Main Content — centered game area, max 1920 */}
-      <div className="flex-1 min-h-0 flex max-w-[1920px] w-full mx-auto">
+      {/* Main Content — centered game area; row width caps to fit widest ability bar */}
+      <div className="flex-1 min-h-0 flex w-full mx-auto" style={{ maxWidth: rowMaxWidth }}>
         {/* Left: Character Panel — desktop: fixed sidebar, tablet: sheet overlay */}
         {isTablet ? (
           <Sheet open={charPanelOpen} onOpenChange={setCharPanelOpen}>
@@ -1139,7 +1146,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         )}
 
         {/* Middle: Node + Event Log */}
-        <div className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col">
+        <div className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col" style={{ maxWidth: centerMaxWidth }}>
           <div className="flex-[2] min-h-0">
             <NodeView
               node={currentNode}
