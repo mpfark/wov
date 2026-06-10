@@ -80,6 +80,7 @@ function getNodeLabel(node: any, areas: any[]): string {
   if (node?.is_jewelcrafter) flags.push('Jewelcrafter');
   if (node?.is_teleport) flags.push('Teleport');
   if (node?.is_trainer) flags.push('Trainer');
+  if ((node as any)?.is_heraldry) flags.push('Heraldry');
   const area = node?.area_id ? areas.find((a: any) => a.id === node.area_id) : null;
   const areaName = area?.name || 'Unknown';
   const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
