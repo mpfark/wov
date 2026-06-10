@@ -68,7 +68,7 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId, comp
                         {title || '—'}
                       </TableCell>
                       <TableCell className="text-xs font-display">
-                        {p.name}
+                        {formatCharacterName(p)}
                         {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
                       </TableCell>
                       <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>
