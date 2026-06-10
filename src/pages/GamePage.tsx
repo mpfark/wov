@@ -1233,49 +1233,52 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
         )}
 
-        {/* Wide-screen Chat slot — fills remaining space right of game panels.
-            Inline when ≥ 320px; otherwise a thin icon strip that opens an
-            overlay panel on click. */}
-        {isWideScreen && !isTablet && (
-          <div ref={chatSlotRef} className="h-full flex-1 min-w-0 flex">
-            {chatPanelOpen && canFitChat ? (
-              <ChatPanel
-                messages={chatMessages}
-                onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
-                onlinePlayers={onlinePlayers}
-                myCharacterId={character.id}
-              />
-            ) : (
-              <Button
-                size="icon"
-                className="h-full w-8 shrink-0 rounded-none border-l border-border bg-card/60 hover:bg-accent/60 relative ml-auto"
-                variant="ghost"
-                onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
-                title="Open chat panel"
-              >
-                <MessageCircle className="w-4 h-4" />
-                {onlinePlayers.length > 0 && (
-                  <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
-                    {onlinePlayers.length}
-                  </span>
-                )}
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Overlay fallback: chat is open but slot is too narrow for inline. */}
-        {isWideScreen && !isTablet && chatPanelOpen && !canFitChat && (
-          <div className="fixed right-0 top-0 bottom-0 w-[320px] z-40 shadow-2xl">
-            <ChatPanel
-              messages={chatMessages}
-              onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
-              onlinePlayers={onlinePlayers}
-              myCharacterId={character.id}
-            />
-          </div>
-        )}
       </div>
+
+      {/* Chat lives in the right viewport gutter, outside the centered game area. */}
+      {isWideScreen && !isTablet && chatPanelOpen && canFitChat && (
+        <div
+          className="absolute top-0 bottom-0 right-0 z-30"
+          style={{ width: gutterWidth }}
+        >
+          <ChatPanel
+            messages={chatMessages}
+            onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
+            onlinePlayers={onlinePlayers}
+            myCharacterId={character.id}
+          />
+        </div>
+      )}
+
+      {/* Overlay fallback when the gutter is too narrow for inline chat. */}
+      {isWideScreen && !isTablet && chatPanelOpen && !canFitChat && (
+        <div className="fixed right-0 top-0 bottom-0 w-[320px] z-40 shadow-2xl">
+          <ChatPanel
+            messages={chatMessages}
+            onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
+            onlinePlayers={onlinePlayers}
+            myCharacterId={character.id}
+          />
+        </div>
+      )}
+
+      {/* Collapsed chat icon — pinned to right edge of viewport. */}
+      {isWideScreen && !isTablet && !chatPanelOpen && (
+        <Button
+          size="icon"
+          className="fixed right-0 top-0 bottom-0 h-full w-8 z-30 rounded-none border-l border-border bg-card/60 hover:bg-accent/60"
+          variant="ghost"
+          onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
+          title="Open chat panel"
+        >
+          <MessageCircle className="w-4 h-4" />
+          {onlinePlayers.length > 0 && (
+            <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
+              {onlinePlayers.length}
+            </span>
+          )}
+        </Button>
+      )}
 
       {/* Vendor Dialog */}
       {currentNode.is_vendor && (
