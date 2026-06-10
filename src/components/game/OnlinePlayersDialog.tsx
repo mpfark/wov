@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Users } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getCharacterTitle } from '@/lib/game-data';
+import { formatCharacterName } from '@/lib/character-name';
 
 const RACE_LABELS: Record<string, string> = {
   human: 'Human', elf: 'Elf', dwarf: 'Dwarf', halfling: 'Halfling', edain: 'Edain', half_elf: 'Half-Elf',
@@ -67,7 +68,7 @@ export default function OnlinePlayersDialog({ onlinePlayers, myCharacterId, comp
                         {title || '—'}
                       </TableCell>
                       <TableCell className="text-xs font-display">
-                        {p.name}
+                        {formatCharacterName(p)}
                         {p.id === myCharacterId && <span className="text-muted-foreground ml-1">(you)</span>}
                       </TableCell>
                       <TableCell className="text-xs">{RACE_LABELS[p.race] || p.race}</TableCell>

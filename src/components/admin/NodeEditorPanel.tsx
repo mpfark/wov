@@ -533,7 +533,7 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection, nodePositions,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false,
+    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
     illustration_url: '', illustration_metadata: {} as Record<string, string>,
@@ -632,7 +632,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {}, class_hall: '' });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {}, class_hall: '' });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -655,6 +655,7 @@ export default function NodeEditorPanel({
         is_trainer: (data as any).is_trainer ?? false,
         is_marketplace: (data as any).is_marketplace ?? false,
         is_soulforge: (data as any).is_soulforge ?? false,
+        is_heraldry: (data as any).is_heraldry ?? false,
         connections: JSON.stringify(data.connections, null, 2),
         searchable_items: Array.isArray(data.searchable_items) ? data.searchable_items as any : [],
         area_id: (data as any).area_id || '',
@@ -842,7 +843,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, is_heraldry: (form as any).is_heraldry, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -870,7 +871,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, is_heraldry: (form as any).is_heraldry, connections, searchable_items,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -1048,6 +1049,11 @@ export default function NodeEditorPanel({
                   <input type="checkbox" checked={form.is_marketplace}
                     onChange={e => setForm(f => ({ ...f, is_marketplace: e.target.checked }))} />
                   🏷️ Is Marketplace (player marketplace for unique items)
+                </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={(form as any).is_heraldry}
+                    onChange={e => setForm(f => ({ ...f, is_heraldry: e.target.checked } as any))} />
+                  📜 Is Heraldry (claim or change family names)
                 </label>
                 <label className={`flex items-center gap-2 text-xs ${form.is_blacksmith ? 'text-muted-foreground' : 'text-muted-foreground/50 cursor-not-allowed'}`}>
                   <input type="checkbox" checked={form.is_soulforge}

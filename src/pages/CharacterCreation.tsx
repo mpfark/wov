@@ -21,6 +21,12 @@ const STARTING_CLASS = 'classless';
 
 export default function CharacterCreation({ onCreateCharacter, onCharacterReady, startingNodeId, onBack }: Props) {
   const [name, setName] = useState('');
+  const [familyName, setFamilyName] = useState('');
+  const [familyStatus, setFamilyStatus] = useState<{
+    status: 'available' | 'founder' | 'member' | 'needs_request' | 'request_pending' | 'reserved' | 'invalid';
+    founder_display_name?: string;
+  } | null>(null);
+  const [familyChecking, setFamilyChecking] = useState(false);
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [race, setRace] = useState('');
   const [hoverRace, setHoverRace] = useState<string | null>(null);
@@ -33,7 +39,9 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
   const previewAc = previewStats ? calculateAC(STARTING_CLASS, previewStats.dex) : 0;
 
   const stats = race ? calculateStats(race, STARTING_CLASS) : null;
-  const canCreate = !!(name.trim() && gender && race && stats);
+  const familyOk = !familyName.trim()
+    || (familyStatus && ['available', 'founder', 'member'].includes(familyStatus.status));
+  const canCreate = !!(name.trim() && gender && race && stats && familyOk && !familyChecking);
 
   const handleReroll = async () => {
     setRolling(true);
@@ -49,6 +57,37 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
       toast.error(msg);
     } finally {
       setRolling(false);
+    }
+  };
+
+  const checkFamily = async (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) { setFamilyStatus(null); return; }
+    if (!/^[A-Za-z]{2,20}$/.test(trimmed)) {
+      setFamilyStatus({ status: 'invalid' });
+      return;
+    }
+    setFamilyChecking(true);
+    try {
+      const { data, error } = await supabase.rpc('check_family_name', { _display: trimmed });
+      if (error) throw error;
+      setFamilyStatus(data as any);
+    } catch (err: any) {
+      console.warn('check_family_name failed', err);
+      setFamilyStatus(null);
+    } finally {
+      setFamilyChecking(false);
+    }
+  };
+
+  const handleRequestJoin = async () => {
+    try {
+      const { error } = await supabase.rpc('request_family_membership', { _display: familyName.trim() });
+      if (error) throw error;
+      toast.success(`Request sent to the ${familyName.trim()} founder.`);
+      setFamilyStatus(prev => prev ? { ...prev, status: 'request_pending' } : prev);
+    } catch (err: any) {
+      toast.error(err.message || 'Could not send request');
     }
   };
 
@@ -68,9 +107,16 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
       });
       if (char?.id) {
         await supabase.rpc('grant_starting_gear' as any, { p_character_id: char.id });
+        const family = familyName.trim();
+        if (family) {
+          const { error: famErr } = await supabase.rpc('apply_family_to_character', {
+            _character_id: char.id, _display: family,
+          });
+          if (famErr) toast.error(famErr.message || 'Family name could not be applied');
+        }
         onCharacterReady?.(char.id);
       }
-      toast.success(`${name} sets out into the world as a Wayfarer.`);
+      toast.success(`${name}${familyName.trim() ? ' ' + familyName.trim() : ''} sets out into the world as a Wayfarer.`);
     } catch (err: any) {
       if (err.message?.includes('characters_name_unique') || err.code === '23505') {
         toast.error(`The name "${name}" is already taken. Choose a different name.`);
@@ -123,6 +169,51 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                 >
                   {rolling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Dices className="h-4 w-4" />}
                 </Button>
+              </div>
+              <div className="space-y-1">
+                <Input
+                  value={familyName}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^A-Za-z]/g, '').slice(0, 20);
+                    setFamilyName(v);
+                    setFamilyStatus(null);
+                  }}
+                  onBlur={(e) => checkFamily(e.target.value)}
+                  placeholder="Family name (optional, e.g. Stormwind)"
+                  className="bg-input border-border text-sm"
+                  maxLength={20}
+                />
+                {familyName && (
+                  <div className="text-[11px] leading-tight min-h-[16px]">
+                    {familyChecking && <span className="text-muted-foreground italic">Checking…</span>}
+                    {!familyChecking && familyStatus?.status === 'invalid' && (
+                      <span className="text-destructive">Letters only, 2–20 characters.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'reserved' && (
+                      <span className="text-destructive">That name is reserved.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'available' && (
+                      <span className="text-elvish">Available — you'll found this family.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'founder' && (
+                      <span className="text-primary">Your family.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'member' && (
+                      <span className="text-primary">Member — you may use this.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'needs_request' && (
+                      <span className="text-muted-foreground">
+                        Founded by <span className="text-primary">{familyStatus.founder_display_name}</span>.{' '}
+                        <button type="button" onClick={handleRequestJoin} className="underline text-primary hover:text-primary/80">
+                          Request to join
+                        </button>
+                      </span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'request_pending' && (
+                      <span className="text-muted-foreground italic">Request pending founder's approval.</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

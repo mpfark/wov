@@ -457,6 +457,9 @@ export type Database = {
           crown_item_created: boolean
           current_node_id: string | null
           dex: number
+          family_changed_after_creation: boolean
+          family_id: string | null
+          family_name: string | null
           gender: Database["public"]["Enums"]["character_gender"]
           gold: number
           hp: number
@@ -501,6 +504,9 @@ export type Database = {
           crown_item_created?: boolean
           current_node_id?: string | null
           dex?: number
+          family_changed_after_creation?: boolean
+          family_id?: string | null
+          family_name?: string | null
           gender?: Database["public"]["Enums"]["character_gender"]
           gold?: number
           hp?: number
@@ -545,6 +551,9 @@ export type Database = {
           crown_item_created?: boolean
           current_node_id?: string | null
           dex?: number
+          family_changed_after_creation?: boolean
+          family_id?: string | null
+          family_name?: string | null
           gender?: Database["public"]["Enums"]["character_gender"]
           gold?: number
           hp?: number
@@ -583,6 +592,13 @@ export type Database = {
             columns: ["current_node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "characters_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
             referencedColumns: ["id"]
           },
         ]
@@ -856,6 +872,91 @@ export type Database = {
           used_at?: string | null
         }
         Relationships: []
+      }
+      families: {
+        Row: {
+          created_at: string
+          display_name: string
+          founder_user_id: string
+          id: string
+          key: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          founder_user_id: string
+          id?: string
+          key: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          founder_user_id?: string
+          id?: string
+          key?: string
+        }
+        Relationships: []
+      }
+      family_members: {
+        Row: {
+          family_id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          family_id: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          family_id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_members_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_requests: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          requester_user_id: string
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          requester_user_id: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          requester_user_id?: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_requests_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       forge_pool: {
         Row: {
@@ -1266,6 +1367,7 @@ export type Database = {
           illustration_metadata: Json | null
           illustration_url: string | null
           is_blacksmith: boolean
+          is_heraldry: boolean
           is_inn: boolean
           is_jewelcrafter: boolean
           is_marketplace: boolean
@@ -1290,6 +1392,7 @@ export type Database = {
           illustration_metadata?: Json | null
           illustration_url?: string | null
           is_blacksmith?: boolean
+          is_heraldry?: boolean
           is_inn?: boolean
           is_jewelcrafter?: boolean
           is_marketplace?: boolean
@@ -1314,6 +1417,7 @@ export type Database = {
           illustration_metadata?: Json | null
           illustration_url?: string | null
           is_blacksmith?: boolean
+          is_heraldry?: boolean
           is_inn?: boolean
           is_jewelcrafter?: boolean
           is_marketplace?: boolean
@@ -1819,6 +1923,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _family_name_is_reserved: { Args: { _key: string }; Returns: boolean }
       accept_party_invite: {
         Args: { _membership_id: string }
         Returns: undefined
@@ -1836,6 +1941,10 @@ export type Database = {
       admin_teleport: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
+      }
+      apply_family_to_character: {
+        Args: { _character_id: string; _display: string }
+        Returns: Json
       }
       apply_force_shield_regen: {
         Args: { _character_id: string }
@@ -1893,10 +2002,16 @@ export type Database = {
             }
             Returns: boolean
           }
+      cancel_family_request: { Args: { _request_id: string }; Returns: Json }
       cancel_unique_listing: {
         Args: { p_character_id: string; p_listing_id: string }
         Returns: boolean
       }
+      change_family_at_heraldry: {
+        Args: { _character_id: string; _display: string }
+        Returns: Json
+      }
+      check_family_name: { Args: { _display: string }; Returns: Json }
       cleanup_ground_loot: { Args: never; Returns: undefined }
       clear_stances: { Args: { p_character_id: string }; Returns: Json }
       collect_marketplace_payouts: {
@@ -2016,6 +2131,7 @@ export type Database = {
         }
         Returns: Json
       }
+      leave_family: { Args: { _family_id: string }; Returns: Json }
       list_unique_item: {
         Args: {
           p_character_id: string
@@ -2060,8 +2176,17 @@ export type Database = {
         }[]
       }
       regen_creature_hp: { Args: never; Returns: undefined }
+      request_family_membership: { Args: { _display: string }; Returns: Json }
+      resolve_family_request: {
+        Args: { _approve: boolean; _request_id: string }
+        Returns: Json
+      }
       respawn_creatures: { Args: never; Returns: undefined }
       return_unique_items: { Args: never; Returns: undefined }
+      revoke_family_membership: {
+        Args: { _family_id: string; _user_id: string }
+        Returns: Json
+      }
       sell_item: {
         Args: { p_character_id: string; p_inventory_id: string }
         Returns: number

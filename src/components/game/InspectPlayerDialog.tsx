@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { RACE_LABELS, CLASS_LABELS, getCharacterTitle } from '@/lib/game-data';
+import { formatCharacterName } from '@/lib/character-name';
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 
@@ -41,6 +42,7 @@ interface EquippedItem {
 interface PlayerInfo {
   id: string;
   name: string;
+  family_name?: string | null;
   level: number;
   race?: string;
   class?: string;
@@ -131,7 +133,7 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-2 text-base">
             {title && <span className={`text-xs ${player.is_king_slayer ? 'text-soulforged text-glow-soulforged' : 'text-primary/60'}`}>{title}</span>}
-            {player.name}
+            {formatCharacterName(player)}
             <Badge variant="secondary" className="ml-auto text-[10px]">
               L{player.level} {CLASS_LABELS[player.class ?? ''] ?? ''} {RACE_LABELS[player.race ?? ''] ?? ''}
             </Badge>

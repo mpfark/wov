@@ -93,7 +93,7 @@ export default function PartyPanel({
                     {isMemberTank && <Shield className="w-3 h-3 text-chart-2 shrink-0" />}
                     {m.is_following && <Footprints className="w-3 h-3 text-muted-foreground shrink-0" />}
                     <span className={`font-display truncate ${isMe ? 'text-primary' : 'text-foreground'}`}>
-                      {m.character.name}
+                      {m.character.name}{(m.character as any).family_name ? ` ${(m.character as any).family_name}` : ''}
                     </span>
                     <span className="text-muted-foreground text-[10px]">L{m.character.level}</span>
                     {getCharacterTitle(m.character.level, m.character.gender) && (

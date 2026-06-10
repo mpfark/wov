@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface OnlinePlayer {
   id: string;
   name: string;
+  family_name?: string | null;
   race: string;
   class: string;
   level: number;
@@ -15,6 +16,7 @@ export interface OnlinePlayer {
 interface PresenceCharacter {
   id: string;
   name: string;
+  family_name?: string | null;
   race: string;
   class: string;
   level: number;
@@ -27,8 +29,8 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
 
   const charData = useMemo(() => {
     if (!character) return null;
-    return { id: character.id, name: character.name, race: character.race, class: character.class, level: character.level, gender: character.gender, is_king_slayer: !!character.is_king_slayer };
-  }, [character?.id, character?.name, character?.race, character?.class, character?.level, character?.gender, character?.is_king_slayer]);
+    return { id: character.id, name: character.name, family_name: character.family_name ?? null, race: character.race, class: character.class, level: character.level, gender: character.gender, is_king_slayer: !!character.is_king_slayer };
+  }, [character?.id, character?.name, character?.family_name, character?.race, character?.class, character?.level, character?.gender, character?.is_king_slayer]);
 
   // Keep a ref to the latest charData for the heartbeat interval
   const charDataRef = useRef(charData);
@@ -48,6 +50,7 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
         await channel.track({
           id: data.id,
           name: data.name,
+          family_name: data.family_name,
           race: data.race,
           class: data.class,
           level: data.level,
@@ -66,7 +69,7 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
         for (const [, presences] of Object.entries(state)) {
           const p = (presences as any[])[0];
           if (p?.id && p?.name) {
-            players.push({ id: p.id, name: p.name, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male', is_king_slayer: !!p.is_king_slayer });
+            players.push({ id: p.id, name: p.name, family_name: p.family_name ?? null, race: p.race, class: p.class, level: p.level, gender: p.gender || 'male', is_king_slayer: !!p.is_king_slayer });
           }
         }
         players.sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));

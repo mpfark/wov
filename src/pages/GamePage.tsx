@@ -8,6 +8,7 @@ import VendorPanel from '@/features/inventory/components/VendorPanel';
 import BlacksmithPanel from '@/features/inventory/components/BlacksmithPanel';
 import JewelcrafterPanel from '@/features/inventory/components/JewelcrafterPanel';
 import StonebinderPanel from '@/features/inventory/components/StonebinderPanel';
+import HeraldryPanel from '@/features/character/components/HeraldryPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
@@ -263,6 +264,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [jewelcrafterOpen, setJewelcrafterOpen] = useState(false);
   const [stonebinderOpen, setStonebinderOpen] = useState(false);
+  const [heraldryOpen, setHeraldryOpen] = useState(false);
   /** Service NPC currently framing the open Vendor/Blacksmith panel (subtitle). */
   const [activeServiceNpc, setActiveServiceNpc] = useState<NPC | null>(null);
 
@@ -295,6 +297,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     if (npc.service_role === 'recruiter' && (currentNode as any)?.class_hall) {
       setActiveServiceNpc(npc);
       setRecruiterOpen(true);
+      return;
+    }
+    if (npc.service_role === 'heraldry' && (currentNode as any)?.is_heraldry) {
+      setActiveServiceNpc(npc);
+      setHeraldryOpen(true);
       return;
     }
     setTalkingToNPC(npc);
@@ -1308,6 +1315,23 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           addLog={addLog}
         />
       )}
+
+      {/* Heraldry Dialog */}
+      {(currentNode as any).is_heraldry && (
+        <HeraldryPanel
+          open={heraldryOpen}
+          onClose={() => { setHeraldryOpen(false); setActiveServiceNpc(null); }}
+          characterId={character.id}
+          currentFamilyName={(character as any).family_name ?? null}
+          familyChangedAfterCreation={!!(character as any).family_changed_after_creation}
+          userId={character.user_id}
+          npcName={activeServiceNpc?.service_role === 'heraldry' ? activeServiceNpc.name : undefined}
+          npcFlavor={activeServiceNpc?.service_role === 'heraldry' ? (activeServiceNpc.dialogue || activeServiceNpc.description) : undefined}
+          onFamilyChanged={() => refetchCharacters?.()}
+        />
+      )}
+
+
 
       {/* Marketplace Dialog */}
       {(currentNode as any).is_marketplace && (

@@ -82,7 +82,7 @@ export default function NodeView({
 }: Props) {
   const otherPlayers = players.filter(p => p.id !== character.id);
   const [areaOpen, setAreaOpen] = useState(true);
-  const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; level: number; race?: string; class?: string; gender?: string; is_king_slayer?: boolean } | null>(null);
+  const [inspectPlayer, setInspectPlayer] = useState<{ id: string; name: string; family_name?: string | null; level: number; race?: string; class?: string; gender?: string; is_king_slayer?: boolean } | null>(null);
 
   // ── Combat start flash ──
   const prevInCombatRef = useRef(false);
@@ -199,6 +199,9 @@ export default function NodeView({
                     )}
                     {(node as any).is_stonebinder && (
                       <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Turning Stones">⚜</span>
+                    )}
+                    {(node as any).is_heraldry && (
+                      <span className="text-[10px]" title="Heraldry — claim or change family names">📜</span>
                     )}
                     {node.is_vendor && (
                       <span
@@ -395,12 +398,14 @@ export default function NodeView({
                       : npc.service_role === 'jewelcrafter' ? '💎'
                       : npc.service_role === 'trainer' ? '🏛️'
                       : npc.service_role === 'recruiter' ? '🏰'
+                      : npc.service_role === 'heraldry' ? '📜'
                       : '💬';
                     const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
                       : npc.service_role === 'blacksmith' ? 'Forge'
                       : npc.service_role === 'jewelcrafter' ? 'Craft'
                       : npc.service_role === 'trainer' ? 'Train'
                       : npc.service_role === 'recruiter' ? 'Speak'
+                      : npc.service_role === 'heraldry' ? 'Petition'
                       : 'Talk';
                     return (
                       <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
@@ -419,14 +424,14 @@ export default function NodeView({
                         <div className="flex items-center gap-1.5">
                           <button
                             className="text-xs font-display text-primary truncate text-left hover:underline cursor-pointer"
-                            onClick={() => setInspectPlayer({ id: p.id, name: p.name, level: p.level, race: p.race, class: p.class, gender: p.gender, is_king_slayer: (p as any).is_king_slayer })}
+                            onClick={() => setInspectPlayer({ id: p.id, name: p.name, family_name: (p as any).family_name ?? null, level: p.level, race: p.race, class: p.class, gender: p.gender, is_king_slayer: (p as any).is_king_slayer })}
                           >
                             {(() => {
                               const isKing = !!(p as any).is_king_slayer;
                               const t = getCharacterTitle(p.level, p.gender, isKing);
                               return t ? <span className={`text-[9px] mr-0.5 ${isKing ? 'text-soulforged text-glow-soulforged' : 'text-primary/60'}`}>{t}</span> : null;
                             })()}
-                            {p.name}
+                            {p.name}{(p as any).family_name ? ` ${(p as any).family_name}` : ''}
                           </button>
                           <span className="text-[10px] text-muted-foreground">L{p.level}</span>
                           {isPartyMate && hpData && (

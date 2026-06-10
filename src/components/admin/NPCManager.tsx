@@ -12,7 +12,7 @@ import NodePicker from './NodePicker';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 import type { DialogueTopic, TopicKind } from '@/features/creatures/utils/dialogue-topics';
 
-type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter';
+type NPCServiceRole = 'vendor' | 'blacksmith' | 'trainer' | 'jewelcrafter' | 'recruiter' | 'heraldry';
 
 interface NPC {
   id: string;
@@ -248,6 +248,7 @@ export default function NPCManager() {
             <SelectItem value="trainer" className="text-xs">🏛️ Trainer</SelectItem>
             <SelectItem value="jewelcrafter" className="text-xs">💎 Jewelcrafter</SelectItem>
             <SelectItem value="recruiter" className="text-xs">🏰 Recruiter</SelectItem>
+            <SelectItem value="heraldry" className="text-xs">📜 Herald</SelectItem>
           </SelectContent>
         </Select>
       </AdminToolSection>
@@ -334,6 +335,7 @@ export default function NPCManager() {
                       <SelectItem value="trainer" className="text-xs">🏛️ Renown Trainer</SelectItem>
                       <SelectItem value="jewelcrafter" className="text-xs">💎 Jewelcrafter</SelectItem>
                       <SelectItem value="recruiter" className="text-xs">🏰 Order Recruiter</SelectItem>
+                      <SelectItem value="heraldry" className="text-xs">📜 Herald</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-[10px] text-muted-foreground mt-1">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type NPCServiceRole = 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer' | 'recruiter';
+export type NPCServiceRole = 'vendor' | 'blacksmith' | 'jewelcrafter' | 'trainer' | 'recruiter' | 'heraldry';
 
 export interface NPC {
   id: string;
