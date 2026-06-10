@@ -200,6 +200,9 @@ export default function NodeView({
                     {(node as any).is_stonebinder && (
                       <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Turning Stones">⚜</span>
                     )}
+                    {(node as any).is_heraldry && (
+                      <span className="text-[10px]" title="Heraldry — claim or change family names">📜</span>
+                    )}
                     {node.is_vendor && (
                       <span
                         className={`text-[10px] ${hasVendorNpc ? 'text-glow' : 'opacity-70'}`}
