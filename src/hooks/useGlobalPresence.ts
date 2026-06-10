@@ -50,6 +50,7 @@ export function useGlobalPresence(character?: PresenceCharacter | null) {
         await channel.track({
           id: data.id,
           name: data.name,
+          family_name: data.family_name,
           race: data.race,
           class: data.class,
           level: data.level,
