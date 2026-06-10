@@ -94,6 +94,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     const stored = localStorage.getItem('chatPanelOpen');
     return stored !== null ? stored === 'true' : true;
   });
+  const [chatPanelWidth, setChatPanelWidthState] = useState<number>(() => {
+    const stored = Number(localStorage.getItem('chatPanelWidth'));
+    if (!stored || Number.isNaN(stored)) return 320;
+    return Math.min(560, Math.max(280, stored));
+  });
+  const setChatPanelWidth = (n: number) => {
+    setChatPanelWidthState(n);
+    localStorage.setItem('chatPanelWidth', String(Math.round(n)));
+  };
   useEffect(() => {
     const tabletMql = window.matchMedia('(max-width: 1024px)');
     const mobileMql = window.matchMedia('(max-width: 768px)');
@@ -1218,25 +1227,60 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
         )}
 
-        {/* Wide-screen Chat Panel toggle button */}
+        {/* Wide-screen Chat Panel toggle button (collapsed state) */}
         {isWideScreen && !isTablet && !chatPanelOpen && (
           <Button
             size="icon"
-            className="h-full w-8 shrink-0 rounded-none border-l border-border bg-card/60 hover:bg-accent/60"
+            className="h-full w-8 shrink-0 rounded-none border-l border-border bg-card/60 hover:bg-accent/60 relative"
             variant="ghost"
             onClick={() => { setChatPanelOpen(true); localStorage.setItem('chatPanelOpen', 'true'); }}
             title="Open chat panel"
           >
             <MessageCircle className="w-4 h-4" />
+            {onlinePlayers.length > 0 && (
+              <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
+                {onlinePlayers.length}
+              </span>
+            )}
           </Button>
         )}
 
-        {/* Wide-screen Chat Panel — 4th column */}
+        {/* Wide-screen Chat Panel — resizable 4th column */}
         {isWideScreen && !isTablet && chatPanelOpen && (
-          <ChatPanel
-            messages={chatMessages}
-            onClose={() => setChatPanelOpen(false)}
-          />
+          <div className="h-full shrink-0 flex" style={{ width: chatPanelWidth }}>
+            {/* Drag handle on the left edge */}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startW = chatPanelWidth;
+                const onMove = (ev: PointerEvent) => {
+                  const next = Math.min(560, Math.max(280, startW + (startX - ev.clientX)));
+                  setChatPanelWidth(next);
+                };
+                const onUp = () => {
+                  window.removeEventListener('pointermove', onMove);
+                  window.removeEventListener('pointerup', onUp);
+                  document.body.style.cursor = '';
+                };
+                document.body.style.cursor = 'col-resize';
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
+              }}
+              className="w-1.5 shrink-0 cursor-col-resize bg-border hover:bg-primary/50 transition-colors"
+              title="Drag to resize chat panel"
+            />
+            <div className="flex-1 min-w-0">
+              <ChatPanel
+                messages={chatMessages}
+                onClose={() => setChatPanelOpen(false)}
+                onlinePlayers={onlinePlayers}
+                myCharacterId={character.id}
+              />
+            </div>
+          </div>
         )}
       </div>
 

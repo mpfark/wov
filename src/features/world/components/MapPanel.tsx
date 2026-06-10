@@ -14,7 +14,7 @@ import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/h
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import OnlinePlayersDialog from '@/components/game/OnlinePlayersDialog';
+
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
 import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/features/world';
 
@@ -292,15 +292,7 @@ export default function MapPanel({
               </Popover>
             )}
 
-            {/* Online Players */}
-            {summonOnlinePlayers && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span><OnlinePlayersDialog onlinePlayers={summonOnlinePlayers} myCharacterId={myCharacterId} compact /></span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom"><p className="text-xs">Online Players ({summonOnlinePlayers.length})</p></TooltipContent>
-              </Tooltip>
-            )}
+            {/* Online players list now lives in the right-side Chat panel (Online tab). */}
 
             {/* Admin (admin only) */}
             {isAdmin && onOpenAdmin && (
