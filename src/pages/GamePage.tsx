@@ -1119,9 +1119,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   return (
     <div className="h-screen flex flex-col parchment-bg w-full relative">
+      <AbilityBarMeasurer onMeasure={setAbilityBarWidth} />
 
-      {/* Main Content — centered game area, max 1920 */}
-      <div className="flex-1 min-h-0 flex max-w-[1920px] w-full mx-auto">
+      {/* Main Content — centered game area; row width caps to fit widest ability bar */}
+      <div className="flex-1 min-h-0 flex w-full mx-auto" style={{ maxWidth: rowMaxWidth }}>
         {/* Left: Character Panel — desktop: fixed sidebar, tablet: sheet overlay */}
         {isTablet ? (
           <Sheet open={charPanelOpen} onOpenChange={setCharPanelOpen}>
