@@ -398,12 +398,14 @@ export default function NodeView({
                       : npc.service_role === 'jewelcrafter' ? '💎'
                       : npc.service_role === 'trainer' ? '🏛️'
                       : npc.service_role === 'recruiter' ? '🏰'
+                      : npc.service_role === 'heraldry' ? '📜'
                       : '💬';
                     const buttonLabel = npc.service_role === 'vendor' ? 'Trade'
                       : npc.service_role === 'blacksmith' ? 'Forge'
                       : npc.service_role === 'jewelcrafter' ? 'Craft'
                       : npc.service_role === 'trainer' ? 'Train'
                       : npc.service_role === 'recruiter' ? 'Speak'
+                      : npc.service_role === 'heraldry' ? 'Petition'
                       : 'Talk';
                     return (
                       <div key={npc.id} className="flex items-center justify-between p-1.5 bg-background/50 rounded border border-elvish/30">
