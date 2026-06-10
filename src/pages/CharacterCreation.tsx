@@ -219,9 +219,6 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
 
             <div className="space-y-2">
               <label className="font-display text-sm text-foreground">Gender</label>
-
-            <div className="space-y-2">
-              <label className="font-display text-sm text-foreground">Gender</label>
               <div className="grid grid-cols-2 gap-2">
                 {(['male', 'female'] as const).map(g => (
                   <button
