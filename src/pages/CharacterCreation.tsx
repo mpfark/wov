@@ -170,7 +170,55 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
                   {rolling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Dices className="h-4 w-4" />}
                 </Button>
               </div>
+              <div className="space-y-1">
+                <Input
+                  value={familyName}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^A-Za-z]/g, '').slice(0, 20);
+                    setFamilyName(v);
+                    setFamilyStatus(null);
+                  }}
+                  onBlur={(e) => checkFamily(e.target.value)}
+                  placeholder="Family name (optional, e.g. Stormwind)"
+                  className="bg-input border-border text-sm"
+                  maxLength={20}
+                />
+                {familyName && (
+                  <div className="text-[11px] leading-tight min-h-[16px]">
+                    {familyChecking && <span className="text-muted-foreground italic">Checking…</span>}
+                    {!familyChecking && familyStatus?.status === 'invalid' && (
+                      <span className="text-destructive">Letters only, 2–20 characters.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'reserved' && (
+                      <span className="text-destructive">That name is reserved.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'available' && (
+                      <span className="text-elvish">Available — you'll found this family.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'founder' && (
+                      <span className="text-primary">Your family.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'member' && (
+                      <span className="text-primary">Member — you may use this.</span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'needs_request' && (
+                      <span className="text-muted-foreground">
+                        Founded by <span className="text-primary">{familyStatus.founder_display_name}</span>.{' '}
+                        <button type="button" onClick={handleRequestJoin} className="underline text-primary hover:text-primary/80">
+                          Request to join
+                        </button>
+                      </span>
+                    )}
+                    {!familyChecking && familyStatus?.status === 'request_pending' && (
+                      <span className="text-muted-foreground italic">Request pending founder's approval.</span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="font-display text-sm text-foreground">Gender</label>
 
             <div className="space-y-2">
               <label className="font-display text-sm text-foreground">Gender</label>
