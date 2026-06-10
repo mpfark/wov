@@ -1049,6 +1049,11 @@ export default function NodeEditorPanel({
                     onChange={e => setForm(f => ({ ...f, is_marketplace: e.target.checked }))} />
                   🏷️ Is Marketplace (player marketplace for unique items)
                 </label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={(form as any).is_heraldry}
+                    onChange={e => setForm(f => ({ ...f, is_heraldry: e.target.checked } as any))} />
+                  📜 Is Heraldry (claim or change family names)
+                </label>
                 <label className={`flex items-center gap-2 text-xs ${form.is_blacksmith ? 'text-muted-foreground' : 'text-muted-foreground/50 cursor-not-allowed'}`}>
                   <input type="checkbox" checked={form.is_soulforge}
                     disabled={!form.is_blacksmith}
