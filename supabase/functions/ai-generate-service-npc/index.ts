@@ -89,7 +89,7 @@ serve(async (req) => {
     // Fetch node + area + region context
     const { data: node, error: nodeErr } = await admin
       .from("nodes")
-      .select("id, name, description, is_vendor, is_blacksmith, is_jewelcrafter, is_trainer, area_id, region_id")
+      .select("id, name, description, is_vendor, is_blacksmith, is_jewelcrafter, is_trainer, is_heraldry, area_id, region_id")
       .eq("id", nodeId)
       .single();
     if (nodeErr || !node) {
@@ -98,26 +98,29 @@ serve(async (req) => {
       });
     }
 
-    if (!node.is_vendor && !node.is_blacksmith && !node.is_jewelcrafter && !node.is_trainer) {
-      return new Response(JSON.stringify({ error: "Node is not a vendor, blacksmith, jewelcrafter, or trainer" }), {
+    if (!node.is_vendor && !node.is_blacksmith && !node.is_jewelcrafter && !node.is_trainer && !(node as any).is_heraldry) {
+      return new Response(JSON.stringify({ error: "Node is not a vendor, blacksmith, jewelcrafter, trainer, or heraldry" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    let serviceRole: "vendor" | "blacksmith" | "jewelcrafter" | "trainer";
+    let serviceRole: "vendor" | "blacksmith" | "jewelcrafter" | "trainer" | "heraldry";
     if (requestedRole === "vendor" && node.is_vendor) serviceRole = "vendor";
     else if (requestedRole === "blacksmith" && node.is_blacksmith) serviceRole = "blacksmith";
     else if (requestedRole === "jewelcrafter" && node.is_jewelcrafter) serviceRole = "jewelcrafter";
     else if (requestedRole === "trainer" && node.is_trainer) serviceRole = "trainer";
+    else if (requestedRole === "heraldry" && (node as any).is_heraldry) serviceRole = "heraldry";
     else if (node.is_trainer) serviceRole = "trainer";
     else if (node.is_jewelcrafter) serviceRole = "jewelcrafter";
     else if (node.is_blacksmith) serviceRole = "blacksmith";
-    else serviceRole = "vendor";
+    else if (node.is_vendor) serviceRole = "vendor";
+    else serviceRole = "heraldry";
 
     const roleLabel =
       serviceRole === "vendor" ? "shopkeeper / merchant"
       : serviceRole === "blacksmith" ? "blacksmith / smith"
       : serviceRole === "jewelcrafter" ? "jeweler / lapidary (a refined artisan who crafts rings, amulets, and trinkets)"
+      : serviceRole === "heraldry" ? "herald / loremaster of names (a learned keeper of family names and lineages who helps adventurers claim, change, or register a family name)"
       : "renown trainer / master-at-arms (a hardened mentor who trains heroes' core attributes for Renown)";
 
     const [areaRes, regionRes] = await Promise.all([
