@@ -1,52 +1,30 @@
 ## Goal
-Constrain the center game panel's max width so it's just wide enough to fit the widest class's ability bar in a single row, with a small wiggle margin. The remaining horizontal space in the 1920px game row goes to the right gutter (which already feeds the dynamic chat column).
+Flip the Event Log so the newest entry appears at the top, tightening the visual connection between the ability bar / status bars and the most recent combat feedback.
 
-## Widest class — analysis
-Summing label characters across each class's 5 ability buttons (the dominant width contributor at `text-[10px] px-2`):
+## Scope
+- Event Log only (`src/features/combat/components/EventLogPanel.tsx`).
+- Chat panel unchanged (standard chat convention: newest at bottom).
+- No new user toggle, no preference storage — single direction.
 
-- healer:  Smite / Heal / Transfer Health / Purifying Light / Divine Aegis = 51
-- warrior: Power Strike / Second Wind / Battle Cry / Rend / Sunder Armor = 49
-- ranger:  Aimed Shot / Eagle Eye / Barrage / Nature's Snare / Disengage = 49
-- bard:    Cutting Words / Inspire / Dissonance / Crescendo / Grand Finale = 51
-- rogue:   Backstab / Shadowstep / Envenom / Eviscerate / Cloak of Shadows = 51
-- wizard:  Fireball / Force Shield / Arcane Surge / Ignite / Conflagrate = 50
-- **templar: Judgment / Holy Shield / Shield Wall / Consecrate / Divine Challenge = 56  ← widest**
+## Changes
 
-"Divine Challenge" (16 chars) is the single longest label in the game and makes templar the widest bar.
+**`src/features/combat/components/EventLogPanel.tsx`**
+1. Render `filteredEventLog` in reverse order (`[...filteredEventLog].reverse().map(...)`), preserving original indices for stable React keys.
+2. Remove the `logEndRef` sentinel `<div>` at the bottom — no longer needed since new entries land at the top of an already-scrolled-to-top container.
+3. Keep the scroll container scrolled to `scrollTop: 0` on new entries (natural default when content grows at the top, but we'll add a small effect to force it in case the user has scrolled down to read history — TBD: see open question).
 
-## Approach — dynamic measurement (preferred over a hardcoded px value)
+**`src/pages/GamePage.tsx`** (or wherever `logEndRef` is created/passed)
+- Stop creating/passing `logEndRef` to `EventLogPanel`. Remove the `scrollIntoView` effect that currently keeps the bottom anchored. Leave any chat-related scroll anchors alone.
 
-Hardcoding a number drifts the moment a label, font, padding, or keybind hint changes. Instead, measure the templar bar at runtime once on mount and apply that width (+ wiggle) as a max-width on the middle column.
+## Out of scope
+- Chat panel direction.
+- Tick divider styling (keeps working as-is, just appears between the tick's entries with the newer tick above the older one).
+- Combat log display mode toggle (F / F+N) — unchanged.
+- No formula, balance, or wording changes.
 
-### Implementation
+## Open question (will ask before building)
+When the user has scrolled down to read older entries and a new entry arrives, should we:
+- **A.** Auto-jump back to the top (always show newest), or
+- **B.** Stay put and let them finish reading (newest waits at top until they scroll back up)?
 
-1. **New component `AbilityBarMeasurer`** (`src/features/combat/components/AbilityBarMeasurer.tsx`)
-   - Renders an absolutely-positioned, visually hidden (`opacity-0 pointer-events-none -z-10`), `whitespace-nowrap` flex row containing one disabled `<Button>` per templar ability — same classes as the real bar (`font-display text-[10px] h-6 px-2`), including a fake `[1]`–`[5]` keybind suffix so width matches the worst-case rendered case.
-   - Uses `ResizeObserver` on its inner row to report `width` via an `onMeasure(width: number)` callback.
-   - Pulls labels from `CLASS_ABILITIES.templar` so it stays in sync with future ability edits.
-
-2. **GamePage wires the measurement**
-   - Add `const [abilityBarWidth, setAbilityBarWidth] = useState<number>(720)` (fallback ≈ templar estimate).
-   - Mount `<AbilityBarMeasurer onMeasure={setAbilityBarWidth} />` once near the root of the returned tree (sibling of the main game row).
-   - Compute `const centerMaxWidth = abilityBarWidth + 64;` (32 px wiggle on each side).
-   - Apply to the middle column wrapper:
-     ```tsx
-     <div
-       className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col"
-       style={{ maxWidth: centerMaxWidth }}
-     >
-     ```
-   - Keep `flex-1` so the column still shrinks on narrower viewports; the cap only kicks in once the gutter exists.
-
-3. **Right gutter / chat behavior — unchanged**
-   - The existing `gutterWidth = max(0, (vw − usedGameAreaWidth) / 2)` logic stays. With the center column now capped, `gutterWidth` will be larger on wide screens, so the inline chat will fit (≥ 320 px) at smaller viewports than before — exactly the intended outcome.
-   - The collapse-to-icon fallback remains for narrow screens.
-
-### Files
-
-- **New:** `src/features/combat/components/AbilityBarMeasurer.tsx`
-- **Edit:** `src/pages/GamePage.tsx` — import the measurer, add `abilityBarWidth` state, render measurer, apply `style={{ maxWidth }}` to the middle column.
-
-### Out of scope
-
-- No formula/balance changes, no ability label edits, no character-panel or map-panel width changes, no chat redesign.
+B is friendlier; A matches the current "always show newest" behavior. I lean B.
