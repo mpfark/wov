@@ -1,5 +1,8 @@
 /**
- * Owns: event/combat log list rendering, scroll anchor, display mode toggle.
+ * Owns: event/combat log list rendering, display mode toggle.
+ *
+ * Newest-at-top ordering — the freshest entry appears directly under the
+ * header so it sits visually close to the ability bar / status bars above.
  *
  * Visual styling is data-driven — every entry is classified into a category
  * (event-log-styles) and rendered as icon + body + number spans with the
@@ -22,7 +25,54 @@ import {
 interface EventLogPanelProps {
   filteredEventLog: string[];
 }
-...
+
+const MODE_LABELS: Record<CombatLogDisplayMode, string> = {
+  flavor: 'F',
+  flavor_numbers: 'F+N',
+};
+
+const MODE_TITLES: Record<CombatLogDisplayMode, string> = {
+  flavor: 'Flavor — narrative text only',
+  flavor_numbers: 'Flavor + Numbers — narrative text with damage values',
+};
+
+const MODE_CYCLE: CombatLogDisplayMode[] = ['flavor', 'flavor_numbers'];
+
+export default function EventLogPanel({
+  filteredEventLog,
+}: EventLogPanelProps) {
+  const [displayMode, setDisplayMode] = useState<CombatLogDisplayMode>(getStoredDisplayMode);
+
+  const cycleMode = useCallback(() => {
+    setDisplayMode(prev => {
+      const idx = MODE_CYCLE.indexOf(prev);
+      const next = MODE_CYCLE[(idx + 1) % MODE_CYCLE.length];
+      setStoredDisplayMode(next);
+      return next;
+    });
+  }, []);
+
+  // Newest first; preserve original index in the key so React keys stay stable.
+  const reversedLog = useMemo(
+    () => filteredEventLog.map((rawLog, i) => ({ rawLog, key: i })).reverse(),
+    [filteredEventLog],
+  );
+
+  return (
+    <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
+      <div className="flex items-center justify-between mb-1 shrink-0">
+        <h3 className="font-display text-xs text-muted-foreground">Event Log</h3>
+        <button
+          onClick={cycleMode}
+          title={MODE_TITLES[displayMode]}
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-background/50 text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors"
+        >
+          {MODE_LABELS[displayMode]}
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto p-2 surface-row rounded">
+        {reversedLog.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
         ) : (
           reversedLog.map(({ rawLog, key }) => {
             if (rawLog === '---tick---') {
