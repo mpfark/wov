@@ -220,7 +220,7 @@ export function useKeyboardMovement({ currentNode, nodes: _nodes, onMove, disabl
           return;
         }
       }
-
+    };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
