@@ -427,59 +427,6 @@ export default function CharacterPanel({
               {/* Belt-potion system removed with the belt slot. */}
 
 
-              {/* Belt Potions */}
-              {beltCapacity > 0 && (
-                <div className="mt-2">
-                  <h3 className="t-label mb-1.5">
-                    Belt Potions <span className="t-numeric text-xs ml-1">{beltedPotions.length}/{beltCapacity}</span>
-                  </h3>
-                  <div className="gap-row">
-                    {Array.from({ length: beltCapacity }, (_, i) => {
-                      const slot = i + 1;
-                      const potion = beltedPotions.find(p => p.belt_slot === slot);
-                      return (
-                        <div key={slot} className="flex items-center justify-between p-1.5 rounded surface-row text-xs">
-                          <span className="text-muted-foreground text-[9px] w-4">
-                            {actionBindings?.[`potion${slot}`]?.[0]
-                              ? `[${actionBindings[`potion${slot}`][0]}]`
-                              : `${slot}.`}
-                          </span>
-                          {potion ? (
-                            <>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={`font-display truncate flex-1 cursor-help ${getItemColor(potion.item)}`}>
-                                    {potion.item.name}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
-                                  <ItemTooltipCard item={potion.item as any} />
-                                </TooltipContent>
-                              </Tooltip>
-                              <div className="flex gap-0.5 shrink-0 ml-1">
-                                {onUseConsumable && (
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                                    onClick={() => onUseConsumable(potion.id)}>
-                                    <Heart className="w-3 h-3 text-blood" />
-                                  </Button>
-                                )}
-                                {!inCombat && onUnbeltPotion && (
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                                    onClick={() => onUnbeltPotion(potion.id)}>
-                                    <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
-                                  </Button>
-                                )}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground/50 flex-1">Empty</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
 
               {/* Materials (salvage + gems + future) */}
               <div className="mt-2 gap-group rounded surface-row p-2">
@@ -492,7 +439,7 @@ export default function CharacterPanel({
 
               {/* Consumables & Quest Items */}
               {(() => {
-                const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                const bagItems = unequipped;
                 const consumableAndQuestItems = bagItems.filter(i => i.item.item_type === 'consumable' || i.item.item_type === 'quest');
                 if (consumableAndQuestItems.length === 0) return null;
                 const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];
