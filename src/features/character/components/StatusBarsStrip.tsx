@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 
 import { getCpDisplay } from '@/features/combat/utils/cp-display';
-import { useMaterials } from '@/features/inventory/hooks/useMaterials';
+
 
 // Duration constants for buff background calculation (in ms).
 // `Inspire` is intentionally absent — its duration is variable (INT-scaled), so
@@ -218,11 +218,10 @@ export default function StatusBarsStrip({
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
 
-  // Realtime gem totals from character_materials. Salvage is no longer
-  // shown in the status strip — see Equipment → Material Pouch and the
-  // Blacksmith / Jewelcrafter panels for salvage counts.
-  const { byCategory } = useMaterials(character.id);
-  const gemCount = byCategory('gem').reduce((sum, m) => sum + m.count, 0);
+  // Salvage and gem counts are no longer shown in the status strip —
+  // see Equipment → Material Pouch and the Blacksmith / Jewelcrafter
+  // panels for breakdowns.
+
 
   // ── Force Shield stance shield (persistent ward) ─────────────────
   // While the Force Shield stance is reserved, derive the bar from the
@@ -413,14 +412,6 @@ export default function StatusBarsStrip({
         <div className="flex justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground">XP</span>
           <div className="flex items-center gap-2">
-            {gemCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="t-numeric text-primary text-[9px] cursor-help">💠 {gemCount}</span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">Gems in pouch — see Character panel for breakdown.</TooltipContent>
-              </Tooltip>
-            )}
             {((character.rp_total_earned || 0) > 0 || character.level >= 30) && (
               <span className="t-numeric text-gold text-[9px]">🏛️ {character.bhp || 0} RP</span>
             )}

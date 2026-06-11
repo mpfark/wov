@@ -492,7 +492,7 @@ export default function CharacterPanel({
                   🧰 Material Pouch
                 </div>
                 <MaterialsSection characterId={character.id} />
-                <GemPouch owned={ownedGems} />
+                <GemPouch owned={ownedGems} showEmpty={false} />
               </div>
 
               {/* Consumables & Quest Items */}
