@@ -772,9 +772,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     handleUseAbility(index, abilityTargetId ?? selectedTargetId ?? undefined);
   }, [handleUseAbility, abilityTargetId, selectedTargetId]);
 
-  const handleBeltPotionKey = useCallback((index: number) => {
-    if (beltedPotions[index]) handleUseConsumable(beltedPotions[index].id);
-  }, [beltedPotions, handleUseConsumable]);
+  // Belt-potion hotkeys removed with the belt slot.
+  const handleBeltPotionKey = useCallback((_index: number) => { /* no-op */ }, []);
 
   const handlePickUpFirst = useCallback(async () => {
     if (isDead) return;
@@ -964,10 +963,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     onUseConsumable: handleUseConsumable,
     isAtInn: currentNode?.is_inn ?? false,
     regenTick,
-    beltedPotions,
-    beltCapacity,
-    onBeltPotion: beltPotion,
-    onUnbeltPotion: unbeltPotion,
     inCombat,
     actionBindings: keyboardMovement.actionBindings,
     baseRegen,
@@ -986,7 +981,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }), [
     character, equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
     handleDropItem, dropItem, togglePin, handleUseConsumable, currentNode?.is_inn,
-    regenTick, beltedPotions, beltCapacity, beltPotion, unbeltPotion,
+    regenTick,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
     damageBuff, partyRegenBuff, inspireBuff,
