@@ -255,8 +255,8 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
       {/* Equipment — Paper Doll Layout */}
       <div>
         <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
-        <div className="relative flex flex-col items-center gap-1">
-          <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
+        <div className="relative flex flex-col items-center gap-2">
+          <div className="grid grid-cols-3 gap-2 w-full justify-items-center relative z-10">
             {/* Row 1: Trinket - Head - empty */}
             <AdminEquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} />
             <AdminEquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} />
