@@ -218,11 +218,10 @@ export default function StatusBarsStrip({
   const xpForNext = getXpForLevel(character.level);
   const xpPercent = Math.round((character.xp / xpForNext) * 100);
 
-  // Realtime gem totals from character_materials. Salvage is no longer
-  // shown in the status strip — see Equipment → Material Pouch and the
-  // Blacksmith / Jewelcrafter panels for salvage counts.
-  const { byCategory } = useMaterials(character.id);
-  const gemCount = byCategory('gem').reduce((sum, m) => sum + m.count, 0);
+  // Salvage and gem counts are no longer shown in the status strip —
+  // see Equipment → Material Pouch and the Blacksmith / Jewelcrafter
+  // panels for breakdowns.
+
 
   // ── Force Shield stance shield (persistent ward) ─────────────────
   // While the Force Shield stance is reserved, derive the bar from the
