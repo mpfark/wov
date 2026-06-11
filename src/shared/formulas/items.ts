@@ -56,7 +56,10 @@ export function getItemStatBudget(level: number, rarity: string, hands: number =
     const rawC = 2 + (level - 1) * 0.24 * mult * handsMult;
     return Math.max(2, Math.floor(rawC)) * 3;
   }
-  const taper = getItemLevelTaper(level);
+  // Soulforged items (player-forged endgame, e.g. the Soulforged Ring tier
+  // chain at L30/33/36/39/42) skip the late-game taper so each tier upgrade
+  // actually grants more stat budget. Per-stat caps still apply.
+  const taper = rarity === 'soulforged' ? 1.0 : getItemLevelTaper(level);
   // Slope 0.24 (squish v2, 2026-05): −20% per-level growth vs the original 0.3
   // to fight gear overshadowing base stats. Stacks multiplicatively with the
   // existing late-game taper.
