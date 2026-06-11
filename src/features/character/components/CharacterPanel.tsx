@@ -48,11 +48,6 @@ interface Props {
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
-  // Belt potion system
-  beltedPotions?: InventoryItem[];
-  beltCapacity?: number;
-  onBeltPotion?: (inventoryId: string) => void;
-  onUnbeltPotion?: (inventoryId: string) => void;
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
   // Stat allocation, respec, and Renown training are now handled exclusively
@@ -83,9 +78,8 @@ const STAT_DESCRIPTIONS: Record<string, string> = {
 
 const SLOT_LABELS: Record<string, string> = {
   main_hand: 'Main Hand', off_hand: 'Off Hand',
-  head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
-  gloves: 'Gloves', belt: 'Belt', pants: 'Pants', ring: 'Ring', trinket: 'Trinket',
-  boots: 'Boots',
+  head: 'Head', chest: 'Chest', gloves: 'Gloves', pants: 'Pants',
+  ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
 };
 
 function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression }: {
@@ -324,8 +318,8 @@ export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
   isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
-  beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
-  actionBindings,
+  inCombat = false,
+  actionBindings: _actionBindings,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();
