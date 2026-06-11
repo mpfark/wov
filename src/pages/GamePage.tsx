@@ -773,7 +773,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [handleUseAbility, abilityTargetId, selectedTargetId]);
 
   // Belt-potion hotkeys removed with the belt slot.
-  const handleBeltPotionKey = useCallback((_index: number) => { /* no-op */ }, []);
 
   const handlePickUpFirst = useCallback(async () => {
     if (isDead) return;
@@ -924,7 +923,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     currentNode, nodes,
     onMove: handleMove, disabled: isDead,
     onAttackFirst: handleAttackFirst, onSearch: handleSearch,
-    onUseAbility: handleAbilityKey, onUseBeltPotion: handleBeltPotionKey,
+    onUseAbility: handleAbilityKey,
     onPickUpLoot: handlePickUpFirst, onOpenChat: handleOpenChat,
     onCycleTarget: handleCycleTarget,
   });
