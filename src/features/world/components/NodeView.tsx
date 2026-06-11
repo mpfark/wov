@@ -19,6 +19,7 @@ import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
+import OrderRosterPanel from './OrderRosterPanel';
 
 
 
