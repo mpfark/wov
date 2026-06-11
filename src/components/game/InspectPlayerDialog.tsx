@@ -151,25 +151,17 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
                 <InspectSlot slot="trinket" item={getItem('trinket')} classKey={player.class} />
                 <InspectSlot slot="head" item={getItem('head')} classKey={player.class} />
                 <div />
-                {/* Row 2: empty - Amulet - empty */}
-                <div />
-                <InspectSlot slot="amulet" item={getItem('amulet')} classKey={player.class} />
-                <div />
-                {/* Row 3: Shoulders - Chest - Gloves */}
-                <InspectSlot slot="shoulders" item={getItem('shoulders')} classKey={player.class} />
+                {/* Row 2: Ring - Chest - Gloves */}
+                <InspectSlot slot="ring" item={getItem('ring')} classKey={player.class} />
                 <InspectSlot slot="chest" item={getItem('chest')} classKey={player.class} />
                 <InspectSlot slot="gloves" item={getItem('gloves')} classKey={player.class} />
-                {/* Row 4: Main Hand - Belt - Off Hand */}
+                {/* Row 3: Main Hand - Pants - Off Hand */}
                 <InspectSlot slot="main_hand" item={getItem('main_hand')} classKey={player.class} />
-                <InspectSlot slot="belt" item={getItem('belt')} classKey={player.class} />
-                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} classKey={player.class} />
-                {/* Row 5: Ring - Pants - empty */}
-                <InspectSlot slot="ring" item={getItem('ring')} classKey={player.class} />
                 <InspectSlot slot="pants" item={getItem('pants')} classKey={player.class} />
+                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} classKey={player.class} />
+                {/* Row 4: empty - Ring - empty */}
                 <div />
-                {/* Row 6: empty - Boots - empty */}
-                <div />
-                <InspectSlot slot="boots" item={getItem('boots')} classKey={player.class} />
+                <InspectSlot slot="ring_2" item={getItem('ring_2')} classKey={player.class} />
                 <div />
               </div>
             </div>
