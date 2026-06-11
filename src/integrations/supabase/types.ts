@@ -2253,18 +2253,14 @@ export type Database = {
       item_rarity: "common" | "uncommon" | "unique" | "soulforged"
       item_slot:
         | "head"
-        | "amulet"
-        | "shoulders"
         | "chest"
         | "gloves"
-        | "belt"
         | "pants"
         | "ring"
+        | "ring_2"
         | "trinket"
         | "main_hand"
         | "off_hand"
-        | "boots"
-        | "ring_2"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2429,18 +2425,14 @@ export const Constants = {
       item_rarity: ["common", "uncommon", "unique", "soulforged"],
       item_slot: [
         "head",
-        "amulet",
-        "shoulders",
         "chest",
         "gloves",
-        "belt",
         "pants",
         "ring",
+        "ring_2",
         "trinket",
         "main_hand",
         "off_hand",
-        "boots",
-        "ring_2",
       ],
     },
   },
