@@ -29,13 +29,9 @@ function StatBadge({ value }: { value: number }) {
 
 const EQUIP_SLOTS = [
   { key: 'head', label: 'Head' },
-  { key: 'amulet', label: 'Amulet' },
-  { key: 'shoulders', label: 'Shoulders' },
   { key: 'chest', label: 'Chest' },
   { key: 'gloves', label: 'Gloves' },
-  { key: 'belt', label: 'Belt' },
   { key: 'pants', label: 'Pants' },
-  { key: 'boots', label: 'Boots' },
   { key: 'ring', label: 'Ring' },
   { key: 'trinket', label: 'Trinket' },
   { key: 'off_hand', label: 'Off Hand' },

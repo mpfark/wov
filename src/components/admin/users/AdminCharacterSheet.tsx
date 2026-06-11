@@ -257,23 +257,21 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
         <h3 className="font-display text-xs text-muted-foreground mb-1.5">Equipment</h3>
         <div className="relative flex flex-col items-center gap-1">
           <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
+            {/* Row 1: Trinket - Head - empty */}
             <AdminEquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} />
             <AdminEquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} />
             <div />
-            <div />
-            <AdminEquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} />
-            <div />
-            <AdminEquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} />
+            {/* Row 2: Ring - Chest - Gloves */}
+            <AdminEquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} />
             <AdminEquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} />
             <AdminEquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} />
+            {/* Row 3: Main Hand - Pants - Off Hand */}
             <AdminEquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} />
-            <AdminEquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} />
-            <AdminEquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} />
-            <AdminEquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} />
             <AdminEquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} />
+            <AdminEquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} />
+            {/* Row 4: empty - Ring - empty */}
             <div />
-            <div />
-            <AdminEquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} />
+            <AdminEquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} />
             <div />
           </div>
         </div>

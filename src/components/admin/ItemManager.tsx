@@ -44,7 +44,7 @@ interface Item {
 }
 
 const RARITIES = ['common', 'uncommon', 'unique', 'soulforged'];
-const SLOTS = ['head', 'amulet', 'shoulders', 'chest', 'gloves', 'belt', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand', 'boots'];
+const SLOTS = ['head', 'chest', 'gloves', 'pants', 'ring', 'trinket', 'main_hand', 'off_hand'];
 const ITEM_TYPES = ['equipment', 'consumable', 'quest'];
 const STAT_KEYS = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'ac', 'hp', 'hp_regen'];
 

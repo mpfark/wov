@@ -51,12 +51,8 @@ const SLOT_GROUPS = [
   { label: 'Off Hand', value: 'off_hand' },
   { label: 'Head', value: 'head' },
   { label: 'Chest', value: 'chest' },
-  { label: 'Shoulders', value: 'shoulders' },
   { label: 'Gloves', value: 'gloves' },
-  { label: 'Belt', value: 'belt' },
   { label: 'Pants', value: 'pants' },
-  { label: 'Boots', value: 'boots' },
-  { label: 'Amulet', value: 'amulet' },
   { label: 'Ring', value: 'ring' },
   { label: 'Trinket', value: 'trinket' },
 ];
