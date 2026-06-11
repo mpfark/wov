@@ -379,8 +379,8 @@ export default function CharacterPanel({
           <div>
             {/* Equipment */}
             <TabsContent value="equipment" className="mt-0">
-              <div className="relative flex flex-col items-center gap-1">
-                <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
+              <div className="relative flex flex-col items-center gap-2">
+                <div className="grid grid-cols-3 gap-2 w-full justify-items-center relative z-10">
                   {/* Row 1: Trinket — Head — (empty) */}
                   <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
