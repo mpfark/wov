@@ -18,7 +18,7 @@ import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS, hybridRecipe, G
 
 type JewelcrafterTab = 'repair' | 'forge' | 'gems';
 
-const JEWELRY_SLOTS = new Set(['ring', 'amulet', 'trinket']);
+const JEWELRY_SLOTS = new Set(['ring', 'trinket']);
 
 interface Props {
   open: boolean;
@@ -48,7 +48,6 @@ const getItemColor = (item: { rarity: string; is_soulbound?: boolean }) =>
 
 const FORGE_SLOTS = [
   { value: 'ring', label: 'Ring' },
-  { value: 'amulet', label: 'Amulet' },
   { value: 'trinket', label: 'Trinket' },
 ];
 
