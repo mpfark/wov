@@ -648,6 +648,17 @@ export default function CharacterPanel({
                               <TooltipContent side="top" className="text-xs">Equip Off Hand</TooltipContent>
                             </Tooltip>
                           )}
+                          {!isBroken && !inCombat && inv.item.slot === 'ring' && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
+                                  onClick={() => onEquip(all[0].id, 'ring_2')}>
+                                  <Shield className="w-3 h-3 text-accent-foreground" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">Equip Ring 2</TooltipContent>
+                            </Tooltip>
+                          )}
                           {!inv.item.is_soulbound && onTogglePin && (
                             <Tooltip>
                               <TooltipTrigger asChild>

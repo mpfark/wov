@@ -32,8 +32,6 @@ interface UseInventoryOptions {
   onResourcesSynced?: () => void;
 }
 
-/** Slots that accept any item whose item.slot === 'ring'. */
-const RING_SLOTS = ['ring', 'ring_2'] as const;
 
 export function useInventory(characterId: string | null, options: UseInventoryOptions = {}) {
   const { onResourcesSynced } = options;
@@ -72,9 +70,11 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
     if (itemToEquip && itemToEquip.current_durability <= 0) return;
 
     // Rings: item.slot === 'ring' but can occupy 'ring' or 'ring_2'.
-    // If caller didn't pick a specific ring slot, fall back to first open.
+    // If caller passed the generic 'ring' slot, auto-pick the first open ring slot
+    // (so equipping a second ring fills ring_2 instead of replacing ring).
+    // Explicit 'ring_2' is always respected.
     let targetSlot = slot;
-    if (itemToEquip?.item.slot === 'ring' && !(RING_SLOTS as readonly string[]).includes(targetSlot)) {
+    if (itemToEquip?.item.slot === 'ring' && targetSlot !== 'ring_2') {
       const ring1Taken = inventory.some(i => i.equipped_slot === 'ring');
       const ring2Taken = inventory.some(i => i.equipped_slot === 'ring_2');
       targetSlot = !ring1Taken ? 'ring' : !ring2Taken ? 'ring_2' : 'ring';
