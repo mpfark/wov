@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ALL_SLOTS = ["ring", "amulet", "trinket"] as const;
+const ALL_SLOTS = ["ring", "trinket"] as const;
 
 async function getItemPool(db: any, slot: string, level: number, ownedGems: Record<string, number>) {
   const baseQuery = () => db
