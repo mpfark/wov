@@ -230,7 +230,7 @@ Call the generate_items tool with the structured output.`;
                         rarity: { type: "string", enum: ["common", "uncommon"] },
                         slot: {
                           type: "string",
-                          enum: ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"],
+                          enum: ["main_hand", "off_hand", "head", "chest", "gloves", "pants", "ring", "trinket"],
                           description: "null for consumables",
                         },
                         level: { type: "integer" },
