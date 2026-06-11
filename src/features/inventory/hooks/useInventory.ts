@@ -32,8 +32,6 @@ interface UseInventoryOptions {
   onResourcesSynced?: () => void;
 }
 
-/** Slots that accept any item whose item.slot === 'ring'. */
-const RING_SLOTS = ['ring', 'ring_2'] as const;
 
 export function useInventory(characterId: string | null, options: UseInventoryOptions = {}) {
   const { onResourcesSynced } = options;
