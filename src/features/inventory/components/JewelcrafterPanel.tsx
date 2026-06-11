@@ -287,7 +287,7 @@ export default function JewelcrafterPanel({
 
   const repairRight = (
     <div className="gap-section text-[11px] text-muted-foreground">
-      <p>The jeweler refurbishes <span className="text-elvish font-display">rings, amulets, and trinkets</span> only. For weapons and armor, visit a blacksmith.</p>
+      <p>The jeweler refurbishes <span className="text-elvish font-display">rings and trinkets</span> only. For weapons and armor, visit a blacksmith.</p>
       <p>Refurbish cost scales with the item's <span className="text-primary font-display">value</span> and <span className="text-elvish font-display">rarity</span>.</p>
       <p className="text-destructive">⚠️ Unique items cannot be refurbished — they are destroyed at 0% durability.</p>
       {repairableCount > 0 && (
