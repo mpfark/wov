@@ -106,7 +106,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Center panel max width is derived from the widest class's ability bar
   // (measured at runtime by AbilityBarMeasurer). Fallback ≈ Templar estimate.
   const [abilityBarWidth, setAbilityBarWidth] = useState<number>(720);
-  const centerMaxWidth = Math.ceil(abilityBarWidth) + 128; // 64px wiggle each side
+  const centerMaxWidth = Math.ceil(abilityBarWidth) + 256; // 128px wiggle each side
   const rowMaxWidth = Math.min(GAME_MAX_WIDTH, 400 + centerMaxWidth + 400);
   useEffect(() => {
     const onResize = () => setGutterWidth(Math.max(0, (window.innerWidth - rowMaxWidth) / 2));
