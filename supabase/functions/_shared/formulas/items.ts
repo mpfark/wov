@@ -43,7 +43,9 @@ export function getItemStatBudget(level: number, rarity: string, hands: number =
     const rawC = 2 + (level - 1) * 0.24 * mult * handsMult;
     return Math.max(2, Math.floor(rawC)) * 3;
   }
-  const taper = getItemLevelTaper(level);
+  // Soulforged items skip the late-game taper so tiered upgrades
+  // (Soulforged Ring at L30/33/36/39/42) keep growing in budget.
+  const taper = rarity === 'soulforged' ? 1.0 : getItemLevelTaper(level);
   // Slope 0.24 = squish v2 (−20% per-level growth, applied 2026-05).
   const raw = 2 + (level - 1) * 0.24 * mult * handsMult;
   const hybridBonus = rarity === 'uncommon' && level >= 30 ? 1 : 0;
