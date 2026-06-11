@@ -1,11 +1,14 @@
 /**
- * Owns: event/combat log list rendering, scroll anchor, display mode toggle.
+ * Owns: event/combat log list rendering, display mode toggle.
+ *
+ * Newest-at-top ordering — the freshest entry appears directly under the
+ * header so it sits visually close to the ability bar / status bars above.
  *
  * Visual styling is data-driven — every entry is classified into a category
  * (event-log-styles) and rendered as icon + body + number spans with the
  * category's color/emphasis. Wording is preserved byte-for-byte.
  */
-import { RefObject, useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import {
   type CombatLogDisplayMode,
@@ -21,7 +24,6 @@ import {
 
 interface EventLogPanelProps {
   filteredEventLog: string[];
-  logEndRef: RefObject<HTMLDivElement>;
 }
 
 const MODE_LABELS: Record<CombatLogDisplayMode, string> = {
@@ -37,7 +39,7 @@ const MODE_TITLES: Record<CombatLogDisplayMode, string> = {
 const MODE_CYCLE: CombatLogDisplayMode[] = ['flavor', 'flavor_numbers'];
 
 export default function EventLogPanel({
-  filteredEventLog, logEndRef,
+  filteredEventLog,
 }: EventLogPanelProps) {
   const [displayMode, setDisplayMode] = useState<CombatLogDisplayMode>(getStoredDisplayMode);
 
@@ -49,6 +51,12 @@ export default function EventLogPanel({
       return next;
     });
   }, []);
+
+  // Newest first; preserve original index in the key so React keys stay stable.
+  const reversedLog = useMemo(
+    () => filteredEventLog.map((rawLog, i) => ({ rawLog, key: i })).reverse(),
+    [filteredEventLog],
+  );
 
   return (
     <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
@@ -63,12 +71,12 @@ export default function EventLogPanel({
         </button>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto p-2 surface-row rounded">
-        {filteredEventLog.length === 0 ? (
+        {reversedLog.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
         ) : (
-          filteredEventLog.map((rawLog, i) => {
+          reversedLog.map(({ rawLog, key }) => {
             if (rawLog === '---tick---') {
-              return <div key={i} className="divider-hairline my-2" />;
+              return <div key={key} className="divider-hairline my-2" />;
             }
             // Flavor mode: strip the trailing canonical [N] suffix server lines emit.
             const log = displayMode === 'flavor' ? stripFlavorNumber(rawLog) : rawLog;
@@ -77,7 +85,7 @@ export default function EventLogPanel({
             const { icon, body, number } = splitLogTokens(log);
             return (
               <p
-                key={i}
+                key={key}
                 className={cn(
                   'event-log-line',
                   style.textClass,
@@ -94,7 +102,6 @@ export default function EventLogPanel({
             );
           })
         )}
-        <div ref={logEndRef} />
       </div>
     </div>
   );
