@@ -54,11 +54,8 @@ const FORGE_SLOTS = [
   { value: 'off_hand', label: 'Off Hand' },
   { value: 'head', label: 'Head' },
   { value: 'chest', label: 'Chest' },
-  { value: 'shoulders', label: 'Shoulders' },
   { value: 'gloves', label: 'Gloves' },
-  { value: 'belt', label: 'Belt' },
   { value: 'pants', label: 'Pants' },
-  { value: 'boots', label: 'Boots' },
 ];
 
 const STAT_LABELS: Record<string, string> = {

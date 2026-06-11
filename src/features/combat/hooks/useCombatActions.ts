@@ -153,7 +153,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
           await supabase.from('character_inventory').delete().eq('id', item.id);
         } else {
           p.addLog(`💔 Your ${item.item.name} has broken! Visit a blacksmith to repair it.`);
-          await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null, belt_slot: null } as any).eq('id', item.id);
+          await supabase.from('character_inventory').update({ current_durability: 0, equipped_slot: null } as any).eq('id', item.id);
         }
       } else {
         await supabase.from('character_inventory').update({ current_durability: newDur }).eq('id', item.id);

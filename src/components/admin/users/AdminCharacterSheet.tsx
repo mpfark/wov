@@ -21,7 +21,7 @@ export default function AdminCharacterSheet({ c, isEditing, charEdits, setCharEd
   const inventory = c.inventory || [];
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
-  const bagItems = unequipped.filter(i => (i as any).belt_slot === null || (i as any).belt_slot === undefined);
+  const bagItems = unequipped;
 
   const equipmentBonuses = equipped.reduce((acc, item) => {
     const stats = item.item.stats || {};
