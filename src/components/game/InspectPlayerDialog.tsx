@@ -9,9 +9,9 @@ import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 
 const SLOT_LABELS: Record<string, string> = {
-  head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
-  gloves: 'Gloves', belt: 'Belt', pants: 'Pants', boots: 'Boots',
-  ring: 'Ring', trinket: 'Trinket', main_hand: 'Main Hand', off_hand: 'Off Hand',
+  head: 'Head', chest: 'Chest', gloves: 'Gloves', pants: 'Pants',
+  ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
+  main_hand: 'Main Hand', off_hand: 'Off Hand',
 };
 
 const RARITY_COLORS: Record<string, string> = {
