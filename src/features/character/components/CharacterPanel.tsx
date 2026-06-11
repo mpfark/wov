@@ -478,12 +478,6 @@ export default function CharacterPanel({
                                   <Heart className="w-3 h-3 text-blood" />
                                 </Button>
                               )}
-                              {!isBroken && inv.item.item_type === 'consumable' && !inCombat && onBeltPotion && beltCapacity > 0 && beltedPotions.length < beltCapacity && (
-                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                                  onClick={() => onBeltPotion(all[0].id)}>
-                                  <ArrowUpFromLine className="w-3 h-3 text-primary" />
-                                </Button>
-                              )}
                               {!inv.item.is_soulbound && onTogglePin && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -521,7 +515,7 @@ export default function CharacterPanel({
               <div className="flex flex-col">
                 <div className="flex items-center justify-between mb-1.5">
                   {(() => {
-                    const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                    const bagItems = unequipped;
                     const inventoryItems = bagItems.filter(i => i.item.item_type !== 'consumable' && i.item.item_type !== 'quest');
                     const bagWeight = getBagWeight(bagItems);
                     const effectiveStr = character.str + (equipmentBonuses.str || 0);
@@ -544,7 +538,7 @@ export default function CharacterPanel({
                 </div>
                 <div className="gap-row">
                   {(() => {
-                    const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                    const bagItems = unequipped;
                     const inventoryItems = bagItems.filter(i => i.item.item_type !== 'consumable' && i.item.item_type !== 'quest');
                     if (inventoryItems.length === 0) return <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>;
                     const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];
