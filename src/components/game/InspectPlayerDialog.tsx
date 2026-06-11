@@ -145,8 +145,8 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground italic text-center py-6">No equipment visible.</p>
           ) : (
-            <div className="flex flex-col items-center gap-1">
-              <div className="grid grid-cols-3 gap-1 w-full justify-items-center">
+            <div className="flex flex-col items-center gap-2">
+              <div className="grid grid-cols-3 gap-2 w-full justify-items-center">
                 {/* Row 1: Trinket - Head - empty */}
                 <InspectSlot slot="trinket" item={getItem('trinket')} classKey={player.class} />
                 <InspectSlot slot="head" item={getItem('head')} classKey={player.class} />
