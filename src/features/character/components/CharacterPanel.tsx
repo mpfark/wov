@@ -82,34 +82,40 @@ const SLOT_LABELS: Record<string, string> = {
   ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
 };
 
-function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression }: {
+function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression, badge }: {
   slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void; locked?: boolean;
   classKey?: string; weaponProgression?: import('@/shared/formulas/combat').WeaponProgressionConfig;
+  badge?: React.ReactNode;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center transition-colors ${
-            locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          className={`w-full flex items-center gap-2 px-2 py-1 border rounded transition-colors ${
+            locked ? 'cursor-not-allowed opacity-60' : item && !blocked ? 'cursor-pointer' : ''
           } ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
             item ? 'border-primary/50 bg-primary/5' : 'surface-row'
           }`}
           onClick={() => item && !blocked && !locked && onUnequip(item.id)}
         >
-          <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>
+          <div className="text-[10px] text-muted-foreground capitalize w-16 shrink-0">{SLOT_LABELS[slot]}</div>
           {blocked ? (
-            <div className="text-[10px] text-muted-foreground/50">2H</div>
+            <div className="text-[10px] text-muted-foreground/50 flex-1">2H — blocked</div>
           ) : item ? (
             <>
-              <div className={`text-[10px] font-display truncate ${getItemColor(item.item)}`}>
+              <div className={`text-[11px] font-display truncate flex-1 ${getItemColor(item.item)}`}>
                 {item.item.name}
+                {item.item.hands === 2 && <span className="text-[9px] text-muted-foreground ml-1">(2H)</span>}
               </div>
-              <div className="text-[9px] text-muted-foreground">{item.current_durability}%</div>
+              {badge}
+              <div className="text-[10px] text-muted-foreground tabular-nums shrink-0">{item.current_durability}%</div>
             </>
           ) : (
-            <div className="text-[10px] text-muted-foreground/50">Empty</div>
+            <>
+              {badge}
+              <div className="text-[10px] text-muted-foreground/50 flex-1 text-right">Empty</div>
+            </>
           )}
         </div>
       </TooltipTrigger>
@@ -379,49 +385,38 @@ export default function CharacterPanel({
           <div>
             {/* Equipment */}
             <TabsContent value="equipment" className="mt-0">
-              <div className="relative flex flex-col items-center gap-2">
-                <div className="grid grid-cols-3 gap-2 w-full justify-items-center relative z-10">
-                  {/* Row 1: Trinket — Head — (empty) */}
-                  <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <div />
-                  {/* Row 2: Ring — Chest — Gloves */}
-                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  {/* Row 3: Main Hand — Pants — Off Hand */}
-                  <div className="relative">
-                    <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                    {isProficient && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-display bg-primary/20 text-primary border border-primary/30 rounded px-1 whitespace-nowrap cursor-help">
-                            Proficient
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">+1 Hit, +10% Damage ({WEAPON_TAG_LABELS[mainHandTag!] || mainHandTag})</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <div className="relative">
-                    <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                    {offHandIsShield && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-display bg-accent/20 text-accent-foreground border border-accent/30 rounded px-1 whitespace-nowrap cursor-help">
-                            🛡️ Shield
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">+1 AC, +5% Crit Resistance, Block chance</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
-                  {/* Row 4: (empty) — Ring — (empty) */}
-                  <div />
-                  <EquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <div />
-                </div>
+              <div className="flex flex-col gap-1">
+                <EquipSlot
+                  slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false}
+                  onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression}
+                  badge={isProficient ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-[9px] font-display bg-primary/20 text-primary border border-primary/30 rounded px-1 whitespace-nowrap cursor-help shrink-0">Proficient</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="text-xs">+1 Hit, +10% Damage ({WEAPON_TAG_LABELS[mainHandTag!] || mainHandTag})</TooltipContent>
+                    </Tooltip>
+                  ) : undefined}
+                />
+                <EquipSlot
+                  slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded}
+                  onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression}
+                  badge={offHandIsShield ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-[9px] font-display bg-accent/20 text-accent-foreground border border-accent/30 rounded px-1 whitespace-nowrap cursor-help shrink-0">🛡️ Shield</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="text-xs">+1 AC, +5% Crit Resistance, Block chance</TooltipContent>
+                    </Tooltip>
+                  ) : undefined}
+                />
+                <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
               </div>
 
               {/* Belt-potion system removed with the belt slot. */}
