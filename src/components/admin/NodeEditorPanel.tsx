@@ -1029,7 +1029,7 @@ export default function NodeEditorPanel({
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_jewelcrafter}
                     onChange={e => setForm(f => ({ ...f, is_jewelcrafter: e.target.checked }))} />
-                  💎 Is Jewelcrafter (forge rings, amulets, trinkets)
+                  💎 Is Jewelcrafter (forge rings and trinkets)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_stonebinder}

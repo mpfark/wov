@@ -18,9 +18,8 @@ const ITEM_TYPE_LABEL: Record<string, string> = {
 
 const SLOT_LABEL: Record<string, string> = {
   main_hand: 'Main Hand', off_hand: 'Off Hand',
-  head: 'Helm', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
-  gloves: 'Gloves', belt: 'Belt', pants: 'Legs', ring: 'Ring',
-  trinket: 'Trinket', boots: 'Boots',
+  head: 'Helm', chest: 'Chest', gloves: 'Gloves', pants: 'Legs',
+  ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
 };
 
 export function handsLabel(hands?: number | null): string {

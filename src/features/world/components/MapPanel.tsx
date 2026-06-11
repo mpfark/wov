@@ -275,14 +275,8 @@ export default function MapPanel({
                         {renderActionKey('search')}
                         {renderActionKey('pickup')}
                       </div>
-                      <div className="grid grid-cols-4 gap-1">
-                        {(['ability1', 'ability2', 'ability3', 'ability4'] as ActionName[]).map(name => renderActionKey(name))}
-                      </div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {(['potion1', 'potion2', 'potion3'] as ActionName[]).map(name => renderActionKey(name))}
-                      </div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {(['potion4', 'potion5', 'potion6'] as ActionName[]).map(name => renderActionKey(name))}
+                      <div className="grid grid-cols-5 gap-1">
+                        {(['ability1', 'ability2', 'ability3', 'ability4', 'ability5'] as ActionName[]).map(name => renderActionKey(name))}
                       </div>
                     </div>
 

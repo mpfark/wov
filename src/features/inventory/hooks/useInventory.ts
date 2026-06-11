@@ -7,7 +7,6 @@ export interface InventoryItem {
   item_id: string;
   equipped_slot: string | null;
   current_durability: number;
-  belt_slot: number | null;
   is_pinned: boolean;
   item: {
     id: string;
@@ -30,12 +29,11 @@ export interface InventoryItem {
 }
 
 interface UseInventoryOptions {
-  /** Called after sync_character_resources runs (equip / unequip).
-   *  Wire this to refetchCharacters() so the new gear-adjusted
-   *  max_hp/max_cp/max_mp lands in local state immediately, without
-   *  waiting for the realtime echo. */
   onResourcesSynced?: () => void;
 }
+
+/** Slots that accept any item whose item.slot === 'ring'. */
+const RING_SLOTS = ['ring', 'ring_2'] as const;
 
 export function useInventory(characterId: string | null, options: UseInventoryOptions = {}) {
   const { onResourcesSynced } = options;
@@ -56,15 +54,12 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
 
   useEffect(() => {
     fetchInventory();
-    // No realtime subscription — every inventory mutation already calls fetchInventory()
   }, [characterId, fetchInventory]);
 
   const syncResources = useCallback(async () => {
     if (!characterId) return;
     try {
       await supabase.rpc('sync_character_resources' as any, { p_character_id: characterId });
-      // Pull the freshly-synced max_hp/max_cp/max_mp into local state right
-      // away — don't wait for the realtime echo (which can be delayed).
       onResourcesSynced?.();
     } catch (e) {
       console.error('Failed to sync character resources after gear change:', e);
@@ -74,50 +69,45 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
   const equipItem = useCallback(async (inventoryId: string, slot: string) => {
     if (!characterId) return;
     const itemToEquip = inventory.find(i => i.id === inventoryId);
-    // Prevent equipping broken items
     if (itemToEquip && itemToEquip.current_durability <= 0) return;
-    
-    // If equipping a 2h weapon to main_hand, also unequip off_hand
-    if (itemToEquip && slot === 'main_hand' && itemToEquip.item.hands === 2) {
+
+    // Rings: item.slot === 'ring' but can occupy 'ring' or 'ring_2'.
+    // If caller didn't pick a specific ring slot, fall back to first open.
+    let targetSlot = slot;
+    if (itemToEquip?.item.slot === 'ring' && !(RING_SLOTS as readonly string[]).includes(targetSlot)) {
+      const ring1Taken = inventory.some(i => i.equipped_slot === 'ring');
+      const ring2Taken = inventory.some(i => i.equipped_slot === 'ring_2');
+      targetSlot = !ring1Taken ? 'ring' : !ring2Taken ? 'ring_2' : 'ring';
+    }
+
+    if (itemToEquip && targetSlot === 'main_hand' && itemToEquip.item.hands === 2) {
       const offHand = inventory.find(i => i.equipped_slot === 'off_hand');
       if (offHand) {
         await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', offHand.id);
       }
     }
-    // Prevent equipping off_hand if main_hand has a 2h weapon
-    if (slot === 'off_hand') {
+    if (targetSlot === 'off_hand') {
       const mainHand = inventory.find(i => i.equipped_slot === 'main_hand');
       if (mainHand && mainHand.item.hands === 2) return;
     }
-    // Unequip anything in that slot first
-    const existing = inventory.find(i => i.equipped_slot === slot);
+    const existing = inventory.find(i => i.equipped_slot === targetSlot);
     if (existing) {
       await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', existing.id);
     }
-    await supabase.from('character_inventory').update({ equipped_slot: slot as any }).eq('id', inventoryId);
+    await supabase.from('character_inventory').update({ equipped_slot: targetSlot as any }).eq('id', inventoryId);
     await syncResources();
     fetchInventory();
   }, [characterId, inventory, fetchInventory, syncResources]);
 
   const unequipItem = useCallback(async (inventoryId: string) => {
-    // If unequipping a belt, clear all belt_slot assignments
-    const item = inventory.find(i => i.id === inventoryId);
-    if (item?.equipped_slot === 'belt') {
-      const beltedIds = inventory.filter(i => i.belt_slot !== null && i.belt_slot !== undefined).map(i => i.id);
-      if (beltedIds.length > 0) {
-        await Promise.all(beltedIds.map(id =>
-          supabase.from('character_inventory').update({ belt_slot: null } as any).eq('id', id)
-        ));
-      }
-    }
     await supabase.from('character_inventory').update({ equipped_slot: null }).eq('id', inventoryId);
     await syncResources();
     fetchInventory();
-  }, [inventory, fetchInventory, syncResources]);
+  }, [fetchInventory, syncResources]);
 
   const dropItem = useCallback(async (inventoryId: string) => {
     const item = inventory.find(i => i.id === inventoryId);
-    if (item?.item.is_soulbound) return; // Cannot drop soulbound items
+    if (item?.item.is_soulbound) return;
     await supabase.from('character_inventory').delete().eq('id', inventoryId);
     fetchInventory();
   }, [inventory, fetchInventory]);
@@ -140,7 +130,6 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
   const equipped = inventory.filter(i => i.equipped_slot);
   const unequipped = inventory.filter(i => !i.equipped_slot);
 
-  // Calculate total stat bonuses from equipped items
   const equipmentBonuses = equipped.filter(i => i.current_durability > 0).reduce((acc, item) => {
     const stats = item.item.stats || {};
     for (const [key, val] of Object.entries(stats)) {
@@ -149,33 +138,6 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
     return acc;
   }, {} as Record<string, number>);
 
-  // Belt potion system
-  const equippedBelt = equipped.find(i => i.equipped_slot === 'belt');
-  const beltCapacity = equippedBelt
-    ? ((equippedBelt.item.stats?.potion_slots as number) ?? 0)
-    : 0;
-  const beltedPotions = inventory.filter(i => i.belt_slot !== null && i.belt_slot !== undefined);
-
-  const beltPotion = useCallback(async (inventoryId: string) => {
-    if (!characterId || beltCapacity <= 0) return;
-    const item = inventory.find(i => i.id === inventoryId);
-    if (item && item.current_durability <= 0) return;
-    // Find the next open slot
-    const usedSlots = new Set(beltedPotions.map(i => i.belt_slot));
-    let openSlot: number | null = null;
-    for (let s = 1; s <= beltCapacity; s++) {
-      if (!usedSlots.has(s)) { openSlot = s; break; }
-    }
-    if (openSlot === null) return;
-    await supabase.from('character_inventory').update({ belt_slot: openSlot } as any).eq('id', inventoryId);
-    fetchInventory();
-  }, [characterId, beltCapacity, beltedPotions, fetchInventory]);
-
-  const unbeltPotion = useCallback(async (inventoryId: string) => {
-    await supabase.from('character_inventory').update({ belt_slot: null } as any).eq('id', inventoryId);
-    fetchInventory();
-  }, [fetchInventory]);
-
   const togglePin = useCallback(async (inventoryId: string) => {
     const item = inventory.find(i => i.id === inventoryId);
     if (!item) return;
@@ -183,5 +145,5 @@ export function useInventory(characterId: string | null, options: UseInventoryOp
     fetchInventory();
   }, [inventory, fetchInventory]);
 
-  return { inventory, equipped, unequipped, equipmentBonuses, loading, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin };
+  return { inventory, equipped, unequipped, equipmentBonuses, loading, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, togglePin };
 }

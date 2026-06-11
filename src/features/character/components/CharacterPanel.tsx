@@ -10,7 +10,7 @@ import { getClassCritRange } from '@/shared/formulas/classes';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Shield, Trash2, Heart, ArrowUpFromLine, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
+import { Shield, Trash2, Heart, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from 'lucide-react';
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 // StatPlannerDialog has moved into the Trainer service panel.
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
@@ -48,11 +48,6 @@ interface Props {
   absorbBuff?: { shieldHp: number; expiresAt: number } | null;
   partyRegenBuff?: { healPerTick: number; expiresAt: number } | null;
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
-  // Belt potion system
-  beltedPotions?: InventoryItem[];
-  beltCapacity?: number;
-  onBeltPotion?: (inventoryId: string) => void;
-  onUnbeltPotion?: (inventoryId: string) => void;
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
   // Stat allocation, respec, and Renown training are now handled exclusively
@@ -83,9 +78,8 @@ const STAT_DESCRIPTIONS: Record<string, string> = {
 
 const SLOT_LABELS: Record<string, string> = {
   main_hand: 'Main Hand', off_hand: 'Off Hand',
-  head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
-  gloves: 'Gloves', belt: 'Belt', pants: 'Pants', ring: 'Ring', trinket: 'Trinket',
-  boots: 'Boots',
+  head: 'Head', chest: 'Chest', gloves: 'Gloves', pants: 'Pants',
+  ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
 };
 
 function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression }: {
@@ -324,8 +318,8 @@ export default function CharacterPanel({
   character, equipped, unequipped, equipmentBonuses, onEquip, onUnequip, onDrop, onDestroy, onUseConsumable, onTogglePin,
   isAtInn, regenTick: _regenTick, baseRegen: _baseRegen = 1, itemHpRegen = 0, foodBuff, critBuff, battleCryBuff,
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
-  beltedPotions = [], beltCapacity = 0, onBeltPotion, onUnbeltPotion, inCombat = false,
-  actionBindings,
+  inCombat = false,
+  actionBindings: _actionBindings,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();
@@ -387,15 +381,15 @@ export default function CharacterPanel({
             <TabsContent value="equipment" className="mt-0">
               <div className="relative flex flex-col items-center gap-1">
                 <div className="grid grid-cols-3 gap-1 w-full justify-items-center relative z-10">
+                  {/* Row 1: Trinket — Head — (empty) */}
                   <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <EquipSlot slot="head" item={getEquippedInSlot('head')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
-                  <div />
-                  <EquipSlot slot="amulet" item={getEquippedInSlot('amulet')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <div />
-                  <EquipSlot slot="shoulders" item={getEquippedInSlot('shoulders')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  {/* Row 2: Ring — Chest — Gloves */}
+                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <EquipSlot slot="chest" item={getEquippedInSlot('chest')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  {/* Row 3: Main Hand — Pants — Off Hand */}
                   <div className="relative">
                     <EquipSlot slot="main_hand" item={getEquippedInSlot('main_hand')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                     {isProficient && (
@@ -409,7 +403,7 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="belt" item={getEquippedInSlot('belt')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div className="relative">
                     <EquipSlot slot="off_hand" item={getEquippedInSlot('off_hand')} blocked={!!isTwoHanded} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                     {offHandIsShield && (
@@ -423,68 +417,16 @@ export default function CharacterPanel({
                       </Tooltip>
                     )}
                   </div>
-                  <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                  <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  {/* Row 4: (empty) — Ring — (empty) */}
                   <div />
-                  <div />
-                  <EquipSlot slot="boots" item={getEquippedInSlot('boots')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                  <EquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                   <div />
                 </div>
               </div>
 
-              {/* Belt Potions */}
-              {beltCapacity > 0 && (
-                <div className="mt-2">
-                  <h3 className="t-label mb-1.5">
-                    Belt Potions <span className="t-numeric text-xs ml-1">{beltedPotions.length}/{beltCapacity}</span>
-                  </h3>
-                  <div className="gap-row">
-                    {Array.from({ length: beltCapacity }, (_, i) => {
-                      const slot = i + 1;
-                      const potion = beltedPotions.find(p => p.belt_slot === slot);
-                      return (
-                        <div key={slot} className="flex items-center justify-between p-1.5 rounded surface-row text-xs">
-                          <span className="text-muted-foreground text-[9px] w-4">
-                            {actionBindings?.[`potion${slot}`]?.[0]
-                              ? `[${actionBindings[`potion${slot}`][0]}]`
-                              : `${slot}.`}
-                          </span>
-                          {potion ? (
-                            <>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={`font-display truncate flex-1 cursor-help ${getItemColor(potion.item)}`}>
-                                    {potion.item.name}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent className="z-50 !bg-transparent !border-0 !shadow-none !p-0">
-                                  <ItemTooltipCard item={potion.item as any} />
-                                </TooltipContent>
-                              </Tooltip>
-                              <div className="flex gap-0.5 shrink-0 ml-1">
-                                {onUseConsumable && (
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                                    onClick={() => onUseConsumable(potion.id)}>
-                                    <Heart className="w-3 h-3 text-blood" />
-                                  </Button>
-                                )}
-                                {!inCombat && onUnbeltPotion && (
-                                  <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                                    onClick={() => onUnbeltPotion(potion.id)}>
-                                    <ArrowDownToLine className="w-3 h-3 text-muted-foreground" />
-                                  </Button>
-                                )}
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground/50 flex-1">Empty</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* Belt-potion system removed with the belt slot. */}
+
+
 
               {/* Materials (salvage + gems + future) */}
               <div className="mt-2 gap-group rounded surface-row p-2">
@@ -497,7 +439,7 @@ export default function CharacterPanel({
 
               {/* Consumables & Quest Items */}
               {(() => {
-                const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                const bagItems = unequipped;
                 const consumableAndQuestItems = bagItems.filter(i => i.item.item_type === 'consumable' || i.item.item_type === 'quest');
                 if (consumableAndQuestItems.length === 0) return null;
                 const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];
@@ -534,12 +476,6 @@ export default function CharacterPanel({
                                 <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
                                   onClick={() => onUseConsumable(all[0].id)}>
                                   <Heart className="w-3 h-3 text-blood" />
-                                </Button>
-                              )}
-                              {!isBroken && inv.item.item_type === 'consumable' && !inCombat && onBeltPotion && beltCapacity > 0 && beltedPotions.length < beltCapacity && (
-                                <Button size="sm" variant="ghost" className="h-5 w-5 p-0"
-                                  onClick={() => onBeltPotion(all[0].id)}>
-                                  <ArrowUpFromLine className="w-3 h-3 text-primary" />
                                 </Button>
                               )}
                               {!inv.item.is_soulbound && onTogglePin && (
@@ -579,7 +515,7 @@ export default function CharacterPanel({
               <div className="flex flex-col">
                 <div className="flex items-center justify-between mb-1.5">
                   {(() => {
-                    const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                    const bagItems = unequipped;
                     const inventoryItems = bagItems.filter(i => i.item.item_type !== 'consumable' && i.item.item_type !== 'quest');
                     const bagWeight = getBagWeight(bagItems);
                     const effectiveStr = character.str + (equipmentBonuses.str || 0);
@@ -602,7 +538,7 @@ export default function CharacterPanel({
                 </div>
                 <div className="gap-row">
                   {(() => {
-                    const bagItems = unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+                    const bagItems = unequipped;
                     const inventoryItems = bagItems.filter(i => i.item.item_type !== 'consumable' && i.item.item_type !== 'quest');
                     if (inventoryItems.length === 0) return <p className="text-[10px] text-muted-foreground/50 italic">Empty</p>;
                     const grouped: { representative: InventoryItem; all: InventoryItem[] }[] = [];

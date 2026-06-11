@@ -99,9 +99,8 @@ export const STAT_DESCRIPTIONS: Record<string, string> = {
 
 export const SLOT_LABELS: Record<string, string> = {
   main_hand: 'Main Hand', off_hand: 'Off Hand',
-  head: 'Head', amulet: 'Amulet', shoulders: 'Shoulders', chest: 'Chest',
-  gloves: 'Gloves', belt: 'Belt', pants: 'Pants', ring: 'Ring', trinket: 'Trinket',
-  boots: 'Boots',
+  head: 'Head', chest: 'Chest', gloves: 'Gloves', pants: 'Pants',
+  ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
 };
 
 export const EVENT_TYPE_ICONS: Record<string, string> = {
