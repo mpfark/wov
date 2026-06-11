@@ -172,7 +172,7 @@ export interface UseMovementActionsParams {
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   addLog: (msg: string) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
-  unequipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; belt_slot: number | null; [k: string]: any }[];
+  unequipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; [k: string]: any }[];
   equipmentBonuses: Record<string, number>;
   getNode: (id: string) => any;
   getRegion: (id: string) => any;
@@ -243,7 +243,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
 
     // ── MP / encumbrance check ──
     const effectiveStr = p.character.str + (p.equipmentBonuses.str || 0);
-    const bagItems = p.unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined);
+    const bagItems = p.unequipped;
     const bagWeight = getBagWeight(bagItems);
     const moveCost = getMoveCost(bagWeight, effectiveStr);
     if ((p.character.mp ?? 100) < moveCost) {

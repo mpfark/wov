@@ -184,7 +184,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { xpMultiplier, xpBoostExpiresAt } = useXpBoost();
   const [talkingToNPC, setTalkingToNPC] = useState<NPC | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, beltedPotions, beltCapacity, beltPotion, unbeltPotion, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
+  const { equipped, unequipped, equipmentBonuses, fetchInventory, equipItem, unequipItem, dropItem, useConsumable, togglePin } = useInventory(character.id, { onResourcesSynced: refetchCharacters });
   const {
     party, members: partyMembers, pendingInvites, isLeader, isTank, myMembership,
     createParty, invitePlayer, acceptInvite, declineInvite,
@@ -1181,7 +1181,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               partyMemberHp={party ? new Map(mergedPartyMembers.filter(m => m.status === 'accepted').map(m => [m.character_id, { hp: m.character.hp, max_hp: m.character.max_hp }])) : undefined}
               statusBarsProps={{
                 equipmentBonuses,
-                inventoryCount: getBagWeight(unequipped.filter(i => i.belt_slot === null || i.belt_slot === undefined)),
+                inventoryCount: getBagWeight(unequipped),
                 isAtInn: currentNode?.is_inn ?? false,
                 regenTick, baseRegen, itemHpRegen, foodBuff, critBuff, battleCryBuff,
                 poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, stealthBuff,
