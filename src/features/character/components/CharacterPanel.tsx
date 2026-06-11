@@ -82,34 +82,40 @@ const SLOT_LABELS: Record<string, string> = {
   ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
 };
 
-function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression }: {
+function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression, badge }: {
   slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void; locked?: boolean;
   classKey?: string; weaponProgression?: import('@/shared/formulas/combat').WeaponProgressionConfig;
+  badge?: React.ReactNode;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          className={`w-[6.5rem] h-[3.25rem] p-1 border rounded text-center transition-colors ${
-            locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          className={`w-full flex items-center gap-2 px-2 py-1 border rounded transition-colors ${
+            locked ? 'cursor-not-allowed opacity-60' : item && !blocked ? 'cursor-pointer' : ''
           } ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
             item ? 'border-primary/50 bg-primary/5' : 'surface-row'
           }`}
           onClick={() => item && !blocked && !locked && onUnequip(item.id)}
         >
-          <div className="text-[9px] text-muted-foreground capitalize">{SLOT_LABELS[slot]}</div>
+          <div className="text-[10px] text-muted-foreground capitalize w-16 shrink-0">{SLOT_LABELS[slot]}</div>
           {blocked ? (
-            <div className="text-[10px] text-muted-foreground/50">2H</div>
+            <div className="text-[10px] text-muted-foreground/50 flex-1">2H — blocked</div>
           ) : item ? (
             <>
-              <div className={`text-[10px] font-display truncate ${getItemColor(item.item)}`}>
+              <div className={`text-[11px] font-display truncate flex-1 ${getItemColor(item.item)}`}>
                 {item.item.name}
+                {item.item.hands === 2 && <span className="text-[9px] text-muted-foreground ml-1">(2H)</span>}
               </div>
-              <div className="text-[9px] text-muted-foreground">{item.current_durability}%</div>
+              {badge}
+              <div className="text-[10px] text-muted-foreground tabular-nums shrink-0">{item.current_durability}%</div>
             </>
           ) : (
-            <div className="text-[10px] text-muted-foreground/50">Empty</div>
+            <>
+              {badge}
+              <div className="text-[10px] text-muted-foreground/50 flex-1 text-right">Empty</div>
+            </>
           )}
         </div>
       </TooltipTrigger>
