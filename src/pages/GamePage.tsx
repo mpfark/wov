@@ -1207,7 +1207,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
           <EventLogPanel
             filteredEventLog={filteredEventLog}
-            logEndRef={logEndRef}
           />
           <CommandInputBar
             chatInput={chatInput}
