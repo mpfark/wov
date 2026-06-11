@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { getXpForLevel, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 
 import { getCpDisplay } from '@/features/combat/utils/cp-display';
-import { useMaterials } from '@/features/inventory/hooks/useMaterials';
+
 
 // Duration constants for buff background calculation (in ms).
 // `Inspire` is intentionally absent — its duration is variable (INT-scaled), so
