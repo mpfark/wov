@@ -243,6 +243,10 @@ export default function NodeView({
             {getNodeDisplayDescription(node, area) || 'A quiet corner of the world...'}
           </p>
 
+          {node.class_hall && (
+            <OrderRosterPanel hallClass={node.class_hall} selfCharacterId={character.id} />
+          )}
+
           
         </div>
 
