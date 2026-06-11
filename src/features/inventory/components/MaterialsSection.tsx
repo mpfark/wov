@@ -7,7 +7,7 @@ import { useMaterials, type MaterialEntry } from '@/features/inventory/hooks/use
  */
 export function MaterialsSection({ characterId }: { characterId: string }) {
   const { entries } = useMaterials(characterId);
-  const nonGem = entries.filter(e => e.category !== 'gem');
+  const nonGem = entries.filter(e => e.category !== 'gem' && e.count > 0);
 
   if (nonGem.length === 0) {
     return (
