@@ -148,25 +148,16 @@ export default function InspectPlayerDialog({ player, open, onOpenChange }: Prop
           ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground italic text-center py-6">No equipment visible.</p>
           ) : (
-            <div className="flex flex-col items-center gap-2">
-              <div className="grid grid-cols-3 gap-2 w-full justify-items-center">
-                {/* Row 1: Trinket - Head - empty */}
-                <InspectSlot slot="trinket" item={getItem('trinket')} classKey={player.class} />
-                <InspectSlot slot="head" item={getItem('head')} classKey={player.class} />
-                <div />
-                {/* Row 2: Ring - Chest - Gloves */}
-                <InspectSlot slot="ring" item={getItem('ring')} classKey={player.class} />
-                <InspectSlot slot="chest" item={getItem('chest')} classKey={player.class} />
-                <InspectSlot slot="gloves" item={getItem('gloves')} classKey={player.class} />
-                {/* Row 3: Main Hand - Pants - Off Hand */}
-                <InspectSlot slot="main_hand" item={getItem('main_hand')} classKey={player.class} />
-                <InspectSlot slot="pants" item={getItem('pants')} classKey={player.class} />
-                <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} classKey={player.class} />
-                {/* Row 4: empty - Ring - empty */}
-                <div />
-                <InspectSlot slot="ring_2" item={getItem('ring_2')} classKey={player.class} />
-                <div />
-              </div>
+            <div className="flex flex-col gap-1">
+              <InspectSlot slot="main_hand" item={getItem('main_hand')} classKey={player.class} />
+              <InspectSlot slot="off_hand" item={isTwoHanded ? undefined : getItem('off_hand')} classKey={player.class} blocked={isTwoHanded} />
+              <InspectSlot slot="head" item={getItem('head')} classKey={player.class} />
+              <InspectSlot slot="chest" item={getItem('chest')} classKey={player.class} />
+              <InspectSlot slot="gloves" item={getItem('gloves')} classKey={player.class} />
+              <InspectSlot slot="pants" item={getItem('pants')} classKey={player.class} />
+              <InspectSlot slot="trinket" item={getItem('trinket')} classKey={player.class} />
+              <InspectSlot slot="ring" item={getItem('ring')} classKey={player.class} />
+              <InspectSlot slot="ring_2" item={getItem('ring_2')} classKey={player.class} />
             </div>
           )}
         </TooltipProvider>
