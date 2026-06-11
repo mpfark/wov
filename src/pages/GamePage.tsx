@@ -397,7 +397,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     });
   }, [character.current_node_id, nodeChannel]);
 
-  const logEndRef = useRef<HTMLDivElement>(null);
+  
   const [chatInput, setChatInput] = useState('');
   const chatInputRef = useRef<HTMLInputElement>(null);
   const ownLogIdsRef = useRef<Set<string>>(new Set());
@@ -514,14 +514,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     }
   }, [broadcastLogEntries, party, processIncomingLog]);
 
-  // Debounced scroll — prevent layout thrashing on rapid log updates
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = setTimeout(() => {
-      logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  }, [eventLog]);
 
   // Update last_online periodically
   useEffect(() => {
