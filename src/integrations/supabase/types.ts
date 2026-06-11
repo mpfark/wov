@@ -2058,6 +2058,17 @@ export type Database = {
       }
       get_app_secret: { Args: { _key: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
+      get_order_roster: {
+        Args: { _class: Database["public"]["Enums"]["character_class"] }
+        Returns: {
+          bond: number
+          character_id: string
+          class: Database["public"]["Enums"]["character_class"]
+          family_name: string
+          level: number
+          name: string
+        }[]
+      }
       get_renown_leaderboard: {
         Args: { _limit?: number }
         Returns: {

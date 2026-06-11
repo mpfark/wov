@@ -19,6 +19,7 @@ import InspectPlayerDialog from '@/components/game/InspectPlayerDialog';
 import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
+import OrderRosterPanel from './OrderRosterPanel';
 
 
 
@@ -241,6 +242,10 @@ export default function NodeView({
           <p className="text-sm text-foreground/90 leading-relaxed italic">
             {getNodeDisplayDescription(node, area) || 'A quiet corner of the world...'}
           </p>
+
+          {node.class_hall && (
+            <OrderRosterPanel hallClass={node.class_hall} selfCharacterId={character.id} />
+          )}
 
           
         </div>
