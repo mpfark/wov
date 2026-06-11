@@ -413,14 +413,6 @@ export default function StatusBarsStrip({
         <div className="flex justify-between text-[9px] mb-0.5">
           <span className="text-muted-foreground">XP</span>
           <div className="flex items-center gap-2">
-            {gemCount > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="t-numeric text-primary text-[9px] cursor-help">💠 {gemCount}</span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">Gems in pouch — see Character panel for breakdown.</TooltipContent>
-              </Tooltip>
-            )}
             {((character.rp_total_earned || 0) > 0 || character.level >= 30) && (
               <span className="t-numeric text-gold text-[9px]">🏛️ {character.bhp || 0} RP</span>
             )}
