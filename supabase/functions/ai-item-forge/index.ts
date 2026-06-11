@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ALL_SLOTS = ["main_hand", "off_hand", "head", "chest", "gloves", "belt", "pants", "ring", "trinket", "boots", "amulet", "shoulders"] as const;
+const ALL_SLOTS = ["main_hand", "off_hand", "head", "chest", "gloves", "pants", "ring", "trinket"] as const;
 
 // In-memory rate limiter: max 10 requests per 60 seconds per user
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -76,8 +76,8 @@ Deno.serve(async (req) => {
 
     // Build slot constraint
     const weaponSlots = ["main_hand", "off_hand"];
-    const armorSlots = ["head", "chest", "gloves", "belt", "pants", "boots", "shoulders"];
-    const accessorySlots = ["ring", "trinket", "amulet"];
+    const armorSlots = ["head", "chest", "gloves", "pants"];
+    const accessorySlots = ["ring", "trinket"];
 
     let slotInstruction = "";
     if (slot === "random") {
