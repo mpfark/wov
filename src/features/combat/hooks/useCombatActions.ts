@@ -106,6 +106,8 @@ function resolveCreatureTarget(
 export interface UseCombatActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
+  /** State-only mirror — must be used for fields the server already persisted (e.g. reserved_buffs via stance RPCs) to avoid racing redundant DB writes. */
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   addLog: (msg: string) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   equipmentBonuses: Record<string, number>;
@@ -208,7 +210,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         }
         // Optimistically reflect the new reserved_buffs map immediately so the
         // CP bar / pip row updates without waiting for a full character refetch.
-        p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
+        p.updateCharacterLocal?.({ reserved_buffs: (data as any) ?? {} } as any);
         p.addLog(getStanceDropFlavor(stanceDef.key));
         return;
       }
@@ -237,7 +239,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         return;
       }
       // Optimistic reflect — RPC returns the full reserved_buffs map.
-      p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
+      p.updateCharacterLocal?.({ reserved_buffs: (data as any) ?? {} } as any);
       p.addLog(getStanceActivateFlavor(stanceDef.key, cost));
       return;
     }
