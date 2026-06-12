@@ -107,7 +107,7 @@ export interface UseCombatActionsParams {
   character: Character;
   updateCharacter: (updates: Partial<Character>) => Promise<void>;
   /** State-only mirror — must be used for fields the server already persisted (e.g. reserved_buffs via stance RPCs) to avoid racing redundant DB writes. */
-  updateCharacterLocal: (updates: Partial<Character>) => void;
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
   addLog: (msg: string) => void;
   equipped: { id: string; item_id: string; item: { stats: any; name: string; rarity: string; item_type: string; [k: string]: any }; current_durability: number; [k: string]: any }[];
   equipmentBonuses: Record<string, number>;
