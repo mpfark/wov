@@ -210,7 +210,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         }
         // Optimistically reflect the new reserved_buffs map immediately so the
         // CP bar / pip row updates without waiting for a full character refetch.
-        p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
+        p.updateCharacterLocal({ reserved_buffs: (data as any) ?? {} } as any);
         p.addLog(getStanceDropFlavor(stanceDef.key));
         return;
       }
