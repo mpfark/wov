@@ -239,7 +239,7 @@ export function useCombatActions(params: UseCombatActionsParams) {
         return;
       }
       // Optimistic reflect — RPC returns the full reserved_buffs map.
-      p.updateCharacter({ reserved_buffs: (data as any) ?? {} } as any);
+      p.updateCharacterLocal({ reserved_buffs: (data as any) ?? {} } as any);
       p.addLog(getStanceActivateFlavor(stanceDef.key, cost));
       return;
     }
