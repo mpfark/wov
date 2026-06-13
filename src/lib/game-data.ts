@@ -4,19 +4,11 @@
  * gameplay formula.
  *
  * Formula ownership lives under `src/shared/formulas/`. This module keeps
- * the historic `@/lib/game-data` import path alive for the ~30 call sites
+ * the historic `@/lib/game-data` import path alive for the call sites
  * across the app, but new code should generally import formulas directly
  * from their canonical module:
  *
  *   import { getMaxHp } from '@/shared/formulas/resources';
- *
- * What stays in this file:
- *   - RACE_STATS / CLASS_STATS         (character creation stat math)
- *   - RACE_LABELS / CLASS_LABELS       (UI display)  ← CLASS_LABELS also re-exported via formulas/classes
- *   - RACE_DESCRIPTIONS / CLASS_DESCRIPTIONS / STAT_LABELS
- *   - WEAPON_TAGS / WEAPON_TAG_LABELS  (admin UI)
- *   - MILESTONE_TITLES + getCharacterTitle
- *   - calculateStats, calculateHP, calculateAC (legacy convenience wrappers)
  */
 
 // ── Barrel re-export of canonical formulas ──────────────────────
@@ -29,19 +21,7 @@ export * from '@/shared/formulas/items';
 export * from '@/shared/formulas/creatures';
 export * from '@/shared/formulas/economy';
 
-// ── Deprecated compatibility shim (still used by CharacterPanel.tsx) ─
-import { getWisAntiCrit } from '@/shared/formulas/combat';
-
-/** @deprecated Renamed to `getWisAntiCrit`. WIS no longer grants outright dodge.
- *  Migrate `CharacterPanel.tsx` and remove. */
-export function getWisDodgeChance(wis: number): number {
-  return getWisAntiCrit(wis);
-}
-
 // ── Static data: races / classes ────────────────────────────────
-
-import { CLASS_BASE_HP } from '@/shared/formulas/classes';
-import { getStatModifier } from '@/shared/formulas/stats';
 
 /** D&D-style stat modifiers by race */
 export const RACE_STATS: Record<string, Record<string, number>> = {
@@ -114,11 +94,6 @@ export function calculateStats(race: string, charClass: string) {
   return stats;
 }
 
-/** @deprecated Use getMaxHp(charClass, con, level) for the full level-aware value. */
-export function calculateHP(charClass: string, con: number) {
-  const baseHP = CLASS_BASE_HP[charClass] || 18;
-  return baseHP + getStatModifier(con);
-}
 
 // ── Nobility titles by level (every ~3 levels from 25–42; cap = Prince/Princess) ─
 // King/Queen is reserved for the player who lands the killing blow on King Aldric.

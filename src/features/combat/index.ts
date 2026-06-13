@@ -17,8 +17,7 @@ export { useMergedCreatureHpOverrides } from './hooks/useMergedCreatureState';
 export { predictConservativeDamage, applyPredictedDamage } from './utils/combat-predictor';
 export type { PredictionContext, PredictionResult } from './utils/combat-predictor';
 
-// Combat math utilities
-export * from './utils/combat-math';
+// Combat math utilities — import directly from '@/shared/formulas/*' in new code.
 
 // Combat resolver (client-side mirror of server logic)
 export { resolveEffectTicks } from './utils/combat-resolver';
