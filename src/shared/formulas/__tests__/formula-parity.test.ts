@@ -14,10 +14,9 @@
  *   - Both XP penalty curves (solo + party) and creature XP base
  *   - Item stat budget at representative rarities/levels
  *   - Creature stat generation at representative rarities/levels
- *   - Cross-check that the legacy barrels (`@/lib/game-data` and
- *     `@/features/combat/utils/combat-math`) re-export identical values to
- *     the canonical modules — guards against a future drift if anyone
- *     accidentally re-defines a formula in one of the barrels.
+ *   - Cross-check that the legacy barrel (`@/lib/game-data`) re-exports
+ *     identical values to the canonical modules — guards against a future
+ *     drift if anyone accidentally re-defines a formula in the barrel.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -39,9 +38,8 @@ import {
 import { getItemStatBudget } from '@/shared/formulas/items';
 import { generateCreatureStats } from '@/shared/formulas/creatures';
 
-// Barrels (must match canonical)
+// Barrel (must match canonical)
 import * as gameData from '@/lib/game-data';
-import * as clientCombat from '@/features/combat/utils/combat-math';
 
 describe('Resource caps — fixed snapshots', () => {
   it('HP', () => {
@@ -184,10 +182,10 @@ describe('Barrels re-export the canonical implementation', () => {
   it('@/lib/game-data forwards getXpPenalty identically', () => {
     expect(gameData.getXpPenalty(20, 10)).toBe(getXpPenalty(20, 10));
   });
-  it('@/features/combat/utils/combat-math forwards calculateAC identically', () => {
-    expect(clientCombat.calculateAC('rogue', 16)).toBe(calculateAC('rogue', 16));
+  it('@/lib/game-data forwards calculateAC identically', () => {
+    expect(gameData.calculateAC('rogue', 16)).toBe(calculateAC('rogue', 16));
   });
-  it('@/features/combat/utils/combat-math forwards getWisAntiCrit identically', () => {
-    expect(clientCombat.getWisAntiCrit(20)).toBe(getWisAntiCrit(20));
+  it('@/lib/game-data forwards getWisAntiCrit identically', () => {
+    expect(gameData.getWisAntiCrit(20)).toBe(getWisAntiCrit(20));
   });
 });

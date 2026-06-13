@@ -14,7 +14,7 @@ import {
   getIntHitBonus,
   getWeaponAffinityBonus,
   getWeaponDieForItem,
-} from './combat-math';
+} from '@/shared/formulas';
 
 export interface PredictionContext {
   classKey: string;

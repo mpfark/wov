@@ -21,10 +21,10 @@ import {
   getStrDamageFloor,
   getDexCritBonus,
   getIntHitBonus,
-  getWisDodgeChance,
   getChaBuyDiscount,
   getChaSellMultiplier,
 } from '@/lib/game-data';
+import { getWisAntiCrit } from '@/shared/formulas/combat';
 
 export type StatKey = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha';
 
@@ -87,7 +87,7 @@ export const STAT_CONTRIBUTIONS: Record<StatKey, {
     short: 'Perception, CP pool, reduces incoming crit chance',
     effects: [
       { label: 'Max CP', value: (e, lvl) => `${getMaxCp(lvl, e)}` },
-      { label: 'Crit Resistance', value: e => fmtPct(getWisDodgeChance(e)) },
+      { label: 'Crit Resistance', value: e => fmtPct(getWisAntiCrit(e)) },
     ],
   },
   cha: {
@@ -122,7 +122,7 @@ if (import.meta.env.DEV) {
       ['STR → Damage floor', () => getStrDamageFloor(20)],
       ['DEX → Crit bonus', () => getDexCritBonus(20)],
       ['INT → Hit bonus', () => getIntHitBonus(20)],
-      ['WIS → Anti-crit', () => getWisDodgeChance(20)],
+      ['WIS → Anti-crit', () => getWisAntiCrit(20)],
       ['CHA → Buy discount', () => getChaBuyDiscount(20)],
       ['CHA → Sell mult', () => getChaSellMultiplier(20)],
     ];
