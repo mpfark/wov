@@ -839,7 +839,7 @@ export default function CharacterPanel({
                   const critStanceActive = eagleEyeActive || !!critBuffActive;
                   const critBonusAmount = eagleEyeActive ? eagleEyeBonus : (critBuffActive ? critBuff!.bonus : 0);
                   const effectiveCrit = baseCritRange - critBonusAmount;
-                  const wisAntiCritChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
+                  const wisAntiCritChance = getWisAntiCrit(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);
