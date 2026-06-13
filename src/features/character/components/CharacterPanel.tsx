@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 // Allocation/respec confirmation dialogs removed — handled in TrainerPanel.
 import { Character } from '@/features/character';
 import { InventoryItem } from '@/features/inventory';
-import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getIntHitBonus, getDexCritBonus, getWisDodgeChance, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
-import { SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount, getShieldWallChanceBonus, getShieldWallAmountBonus } from '@/features/combat';
+import { RACE_LABELS, CLASS_LABELS, getStatModifier, getCharacterTitle, getCarryCapacity, getBagWeight, getStatRegen, getCpRegen, getMpRegenRate, getIntHitBonus, getDexCritBonus, getChaSellMultiplier, getChaBuyDiscount, getStrDamageFloor, CLASS_LEVEL_BONUSES, calculateStats, CLASS_WEAPON_AFFINITY, WEAPON_TAG_LABELS, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp, getEffectiveAC } from '@/lib/game-data';
+import { getWisAntiCrit, SHIELD_AC_BONUS, SHIELD_ANTI_CRIT_BONUS, OFFHAND_DAMAGE_MULT, isShield, isOffhandWeapon, getCreatureAttackBonus, getShieldBlockChance, getShieldBlockAmount, getShieldWallChanceBonus, getShieldWallAmountBonus } from '@/shared/formulas';
 import { getWeaponDieForItem } from '@/shared/formulas/combat';
 import { useWeaponProgression } from '@/features/combat/hooks/useWeaponProgression';
 import { getClassCritRange } from '@/shared/formulas/classes';
@@ -17,7 +17,7 @@ import ItemTooltipCard from '@/components/items/ItemTooltipCard';
 import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 import { GemPouch } from '@/features/inventory/components/GemPouch';
 import { MaterialsSection } from '@/features/inventory/components/MaterialsSection';
-import { useOwnedGems } from '@/features/inventory/hooks/useOwnedGems';
+import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 import PortraitTab from './PortraitTab';
 import ClassBondRow from './ClassBondRow';
 
@@ -329,7 +329,12 @@ export default function CharacterPanel({
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();
-  const { owned: ownedGems } = useOwnedGems(character.id);
+  const { byCategory } = useMaterials(character.id);
+  const ownedGems = (() => {
+    const m: Record<string, number> = {};
+    for (const e of byCategory('gem')) if (e.count > 0) m[e.key] = e.count;
+    return m;
+  })();
   const getEquippedInSlot = (slot: string) => equipped.find(i => i.equipped_slot === slot);
   const mainHandItem = getEquippedInSlot('main_hand');
   const isTwoHanded = mainHandItem && mainHandItem.item.hands === 2;
@@ -834,7 +839,7 @@ export default function CharacterPanel({
                   const critStanceActive = eagleEyeActive || !!critBuffActive;
                   const critBonusAmount = eagleEyeActive ? eagleEyeBonus : (critBuffActive ? critBuff!.bonus : 0);
                   const effectiveCrit = baseCritRange - critBonusAmount;
-                  const wisAntiCritChance = getWisDodgeChance(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
+                  const wisAntiCritChance = getWisAntiCrit(eWis) + (offHandIsShield ? SHIELD_ANTI_CRIT_BONUS : 0);
                   const strFloor = getStrDamageFloor(character.str + (equipmentBonuses.str || 0));
                   const sellMult = getChaSellMultiplier(eCha);
                   const buyDisc = getChaBuyDiscount(eCha);

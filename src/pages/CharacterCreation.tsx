@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Dices, Loader2 } from 'lucide-react';
 import {
   RACE_LABELS, RACE_DESCRIPTIONS, STAT_LABELS, RACE_STATS,
-  calculateStats, calculateHP, calculateAC, getMaxCp,
+  calculateStats, calculateAC, getMaxCp, getMaxHp,
 } from '@/lib/game-data';
 
 interface Props {
@@ -35,7 +35,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
 
   const effectiveRace = hoverRace ?? race;
   const previewStats = effectiveRace ? calculateStats(effectiveRace, STARTING_CLASS) : null;
-  const previewHp = previewStats ? calculateHP(STARTING_CLASS, previewStats.con) : 0;
+  const previewHp = previewStats ? getMaxHp(STARTING_CLASS, previewStats.con, 1) : 0;
   const previewAc = previewStats ? calculateAC(STARTING_CLASS, previewStats.dex) : 0;
 
   const stats = race ? calculateStats(race, STARTING_CLASS) : null;
@@ -96,7 +96,7 @@ export default function CharacterCreation({ onCreateCharacter, onCharacterReady,
     setLoading(true);
     try {
       const maxCp = getMaxCp(1, stats.wis);
-      const hp = calculateHP(STARTING_CLASS, stats.con);
+      const hp = getMaxHp(STARTING_CLASS, stats.con, 1);
       const ac = calculateAC(STARTING_CLASS, stats.dex);
       const char = await onCreateCharacter({
         name, gender, race, class: STARTING_CLASS,

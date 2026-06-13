@@ -2,14 +2,12 @@
  * Guards the gear-adjusted "effective max" formulas against drift.
  *
  * The same numbers must come out of:
- *   - getMaxHp / getMaxCp / getMaxMp                 (src/lib/game-data.ts)
- *   - getMaxHp                                       (src/features/combat/utils/combat-math.ts mirror)
+ *   - getMaxHp / getMaxCp / getMaxMp                 (@/shared/formulas/resources)
  *   - sync_character_resources()                     (SQL RPC)
  *   - calcMaxHp / calcMaxCp / calcMaxMp              (combat-tick edge function)
  *
- * If you change a formula in any of those files, this test must continue to pass
- * for the canonical formula in `game-data.ts` AND a matching update is required
- * in every mirror.
+ * If you change a formula here, the matching SQL RPC and edge-function mirrors
+ * must be updated too.
  *
  * NOTE: As of the WIS-only CP refactor, getMaxCp(level, wis) ignores INT/CHA.
  * Pool scales with WIS only; INT now drives regen via getCpRegen.
@@ -18,8 +16,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getMaxHp, getMaxCp, getMaxMp,
   getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp,
-} from '@/lib/game-data';
-import { getMaxHp as getMaxHpMirror } from '@/features/combat/utils/combat-math';
+} from '@/shared/formulas';
 
 describe('Base max formulas — fixed snapshots (drift guard)', () => {
   it('warrior L1 con=10 → 24 HP', () => {
@@ -43,18 +40,6 @@ describe('Base max formulas — fixed snapshots (drift guard)', () => {
   it('MP L10 dex=16 → 100 + 30 + 18 = 148', () => {
     expect(getMaxMp(10, 16)).toBe(148);
   });
-});
-
-describe('combat-math.ts mirror matches game-data.ts', () => {
-  for (const cls of ['warrior', 'wizard', 'ranger', 'rogue', 'healer', 'bard']) {
-    for (const lvl of [1, 5, 20, 42]) {
-      for (const con of [8, 10, 16, 20]) {
-        it(`${cls} L${lvl} con=${con}`, () => {
-          expect(getMaxHpMirror(cls, con, lvl)).toBe(getMaxHp(cls, con, lvl));
-        });
-      }
-    }
-  }
 });
 
 describe('Gear-effective caps add bonuses correctly', () => {
