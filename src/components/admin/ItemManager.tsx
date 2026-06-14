@@ -12,6 +12,8 @@ import { formatProcMessage } from '@shared/proc-log-format';
 import { AdminEditorHeader, AdminFormSection, AdminStickyActions, AdminEmptyState, AdminPageShell, AdminToolSection } from './common';
 import { getItemStatBudget, calculateItemStatCost, getItemStatCap, suggestItemGoldValue, CONSUMABLE_ALLOWED_STATS, WEAPON_TAGS, WEAPON_TAG_LABELS } from '@/lib/game-data';
 import ItemIllustrationMetadataEditor from './ItemIllustrationMetadataEditor';
+import { ProcExpectancyPanel } from './ProcExpectancyPanel';
+
 
 interface ProcEntry {
   type: string;
