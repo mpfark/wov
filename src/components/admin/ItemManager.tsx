@@ -989,8 +989,10 @@ export default function ItemManager() {
                     onClick={() => setForm(f => ({ ...f, procs: [...(f.procs || []), { type: 'lifesteal', chance: 0.1, value: 5, emoji: '💚', text: 'drains life from' }] }))}>
                     <Plus className="w-3 h-3 mr-1" /> Add Proc
                   </Button>
+                  <ProcExpectancyPanel procs={form.procs} />
                 </AdminFormSection>
               )}
+
 
               {selectedId && itemUsage && (itemUsage.creatures.length > 0 || itemUsage.searchNodes.length > 0 || itemUsage.vendors.length > 0 || itemUsage.lootTables.length > 0) && (
                 <div className="space-y-2 border-t border-border pt-3">
