@@ -444,6 +444,14 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // Self-echo is skipped via `actor === character.name`.
   const sendGlobal = useGlobalBroadcastSender();
   useGlobalBroadcastListener((p) => {
+    // King crowning: the slayer themselves needs to refresh their character row
+    // so the King/Queen title appears immediately (the realtime UPDATE on
+    // characters.king_slayer_at can lag behind this broadcast). Skip the log
+    // for the slayer but still trigger the refetch.
+    if (p.kind === 'king_crowned' && p.actor && p.actor === character.name) {
+      refetchCharacters?.();
+      return;
+    }
     if (p.actor && p.actor === character.name) return;
     addLocalLog(`${p.icon} ${p.text}`);
   });
