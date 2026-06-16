@@ -387,7 +387,9 @@ const KIND_LABELS: Record<TopicKind, string> = {
   text: 'Text',
   class_hall_dir: 'Class Hall Directions',
   class_hall_menu: 'Class Hall Menu (auto-lists all)',
+  hunt_dir: 'Hunting Grounds (auto, level-matched)',
 };
+
 
 const CLASS_KEYS = Object.keys(CLASS_LABELS).filter(k => k !== 'classless');
 
@@ -485,6 +487,13 @@ function TopicsEditor({
               Expands automatically into one question per known order hall.
             </p>
           )}
+
+          {t.kind === 'hunt_dir' && (
+            <p className="text-[10px] text-muted-foreground italic">
+              Auto-picks an area whose level range covers the asking character's level, preferring the player's current region.
+            </p>
+          )}
+
         </div>
       ))}
       <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={add}>

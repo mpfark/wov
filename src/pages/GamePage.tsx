@@ -1431,7 +1431,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           npc={talkingToNPC}
           open={!!talkingToNPC}
           onClose={() => setTalkingToNPC(null)}
-          worldContext={{ fromNode: currentNode, nodes, regions, areas }}
+          worldContext={{ fromNode: currentNode, nodes, regions, areas, characterLevel: character.level }}
+
         />
       )}
 
@@ -1443,7 +1444,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         characterId={character.id}
         currentClass={character.class}
         onJoined={() => { refetchCharacters?.(); }}
-        worldContext={{ fromNode: currentNode, nodes, regions, areas }}
+        worldContext={{ fromNode: currentNode, nodes, regions, areas, characterLevel: character.level }}
       />
 
       {/* Death Overlay */}

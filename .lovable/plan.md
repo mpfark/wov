@@ -1,44 +1,45 @@
-## Proc Damage Readout — Item Editor
+## Goal
 
-Add a small, read-only "Proc Expectancy" panel on the Item editor so you can see at a glance what each chance-on-hit entry contributes to a weapon, without leaving the form.
+Add a new NPC dialogue topic kind, `hunt_dir`, that works like `class_hall_dir` but points the player toward an **area whose level range matches their character's level**. Admins can attach it to any NPC (innkeeper, guard, hunter) so wandering players always have an in-world hint about where to grind next.
 
-### What it shows
-For each entry in the item's `procs` array, one row:
+## Behavior
 
-- **Emoji + type** (e.g. 🩸 lifesteal)
-- **Chance** as a percentage (`chance × 100`)
-- **Value** (raw number, or % for `weaken`)
-- **EV per hit** = `chance × value`, rounded to 2 decimals
-  - For `weaken`, EV is shown as `chance × value × 100%` mitigation (labelled differently so it isn't confused with damage)
-  - For `lifesteal` / `heal_pulse`, EV is labelled "HP/hit" not "dmg/hit"
-  - For `burst_damage`, EV is labelled "dmg/hit"
+When the player clicks the topic, the NPC responds with one sentence like:
 
-Plus a footer total: **Σ EV damage per hit** and **Σ EV healing per hit** (weaken excluded from both sums; shown separately).
+> "If it's prey near your measure, try the **Whispering Fens** — head south, two days' walk, here in Hearthvale Reach."
 
-No attacker context, no DPS conversion — pure item math, matching the resolution in `combat-tick` (`Math.random() >= proc.chance` gate, then `value` applied).
+Selection rules (resolver, in order):
+1. Filter areas where `min_level ≤ char.level ≤ max_level`.
+2. Prefer areas in the player's **current region**; if none, fall back to any region.
+3. Pick the area whose midpoint `(min+max)/2` is closest to the player's level (ties → lowest min_level → alphabetical).
+4. Pick a representative node inside that area (first node by name) to anchor the direction sentence — reusing the existing `describeDirection` / `directionSentence` helpers.
+5. Edge cases: no character level available → generic line; no matching area → "I know no fitting hunting ground for one of your measure."
 
-### Where it lives
-Inline in `src/components/admin/ItemManager.tsx`, in the same area as the existing item-editor fields. Renders only when `item.procs` is a non-empty array. Collapsible header so it doesn't clutter non-proc items.
+The topic is a **single entry** (not a menu) since the answer is dynamic per player. Admins add it once and it auto-tailors.
 
-### Implementation
+## Technical changes
 
-```text
-src/components/admin/ItemManager.tsx
-  └── <ProcExpectancyPanel procs={item.procs} />   ← new
+**`src/features/creatures/utils/dialogue-topics.ts`**
+- Extend `TopicKind` with `'hunt_dir'`.
+- Add `characterLevel?: number` to `ResolverContext`.
+- New `huntResponse(ctx)` helper implementing the selection rules above.
+- Wire `resolveTopic` switch case. `expandTopics` passes it through unchanged.
 
-src/components/admin/ProcExpectancyPanel.tsx       ← new, ~60 lines
-  - Pure presentational component
-  - Imports formatProcMessage type if useful, but does its own labelling
-  - No data fetching, no edits — reads procs prop only
-```
+**`src/features/creatures/components/NPCDialogPanel.tsx`** and **`src/features/character/components/OrderRecruiterDialog.tsx`**
+- Pull `character.level` from `useGameContext()` and include it in the `worldContext` passed down (or accept it as a prop from the existing caller that builds `worldContext` — whichever matches current wiring). No UI changes.
 
-Reuses the proc-type taxonomy already defined in `supabase/functions/_shared/proc-log-format.ts` (`lifesteal`, `heal_pulse`, `burst_damage`, `weaken`) so labels stay in sync with the resolver. If a new proc type is added later, the panel falls back to a generic "EV: chance × value" row.
+**`src/components/admin/NPCManager.tsx`** (topics editor)
+- Add a third option in the topic-kind selector: `Hunting grounds (auto)`. No params required — selecting the kind is enough.
 
-### Out of scope
-- DPS / per-second math (would need weapon speed assumptions)
-- Attacker level/stat scaling
-- Standalone Admin → Tools page
-- Editing procs from this panel (read-only readout only)
+## Out of scope
 
-### Verification
-Open Item editor on a known proc weapon (e.g. a lifesteal unique). Confirm the row matches `chance × value` by hand for at least one item. Confirm the panel is hidden for items with no procs.
+- No DB migration (uses existing `npcs.l` JSONB column and existing area `min_level`/`max_level`).
+- No creature-by-creature targeting; we direct to areas, not specific mob spawns.
+- No party-aware level averaging — uses the asking character's level only.
+- No "scaling" hints (under/over-leveled). The XP penalty system already discourages over-leveling.
+
+## Verification
+
+1. Create/edit an NPC in admin, add a `Hunting grounds` topic, save.
+2. As a level-N character, open the NPC: confirm the response names an area whose level range covers N and gives a sensible direction sentence from the current node.
+3. As a much higher-level character with no fitting area in-region, confirm fallback line or cross-region pick.
