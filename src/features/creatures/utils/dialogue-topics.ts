@@ -73,6 +73,55 @@ function hallResponse(ctx: ResolverContext, klass: string): string {
   return `The ${label} Hall ${directionSentence(hint)}, ${where}${areaClause}.`;
 }
 
+function huntResponse(ctx: ResolverContext): string {
+  const level = ctx.characterLevel;
+  if (!level || level < 1) {
+    return "Come back when you've cut your teeth a little. I can't measure prey for one with no measure of their own.";
+  }
+  // Areas that have valid level bounds and cover this character's level.
+  const matches = ctx.areas.filter(
+    a => typeof a.min_level === 'number' && typeof a.max_level === 'number'
+      && level >= (a.min_level as number) && level <= (a.max_level as number),
+  );
+  if (matches.length === 0) {
+    return `I know no fitting hunting ground for one of your measure (level ${level}). Perhaps no such reach has been charted yet.`;
+  }
+  // Prefer same region if possible.
+  const fromRegion = ctx.fromNode?.region_id;
+  const sameRegion = fromRegion ? matches.filter(a => {
+    const node = ctx.nodes.find(n => n.area_id === a.id);
+    return node?.region_id === fromRegion;
+  }) : [];
+  const pool = sameRegion.length > 0 ? sameRegion : matches;
+  // Pick area whose midpoint is closest to the character's level.
+  pool.sort((a, b) => {
+    const am = ((a.min_level as number) + (a.max_level as number)) / 2;
+    const bm = ((b.min_level as number) + (b.max_level as number)) / 2;
+    const d = Math.abs(am - level) - Math.abs(bm - level);
+    if (d !== 0) return d;
+    if ((a.min_level as number) !== (b.min_level as number)) {
+      return (a.min_level as number) - (b.min_level as number);
+    }
+    return a.name.localeCompare(b.name);
+  });
+  const area = pool[0];
+  // Anchor: a node belonging to this area, picked deterministically by name.
+  const anchorNodes = ctx.nodes
+    .filter(n => n.area_id === area.id)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const anchor = anchorNodes[0];
+  const region = ctx.regions.find(r => r.id === (anchor?.region_id ?? ''));
+  const regionClause = region ? `, in ${region.name}` : '';
+  if (!ctx.fromNode || !anchor) {
+    return `If it's prey near your measure, try **${area.name}** (levels ${area.min_level}–${area.max_level})${regionClause}.`;
+  }
+  if (anchor.id === ctx.fromNode.id) {
+    return `If it's prey near your measure, you're already standing in **${area.name}** — sharpen your blade and look around.`;
+  }
+  const hint = describeDirection(ctx.fromNode, anchor);
+  return `If it's prey near your measure, try **${area.name}** (levels ${area.min_level}–${area.max_level}) — it ${directionSentence(hint)}${regionClause}.`;
+}
+
 /** Resolve a topic into a player-facing label + response string. */
 export function resolveTopic(topic: DialogueTopic, ctx: ResolverContext): ResolvedTopic {
   switch (topic.kind) {
@@ -89,10 +138,13 @@ export function resolveTopic(topic: DialogueTopic, ctx: ResolverContext): Resolv
         label: topic.label,
         response: 'Which order would you like to hear about?',
       };
+    case 'hunt_dir':
+      return { id: topic.id, label: topic.label, response: huntResponse(ctx) };
     default:
       return { id: topic.id, label: topic.label, response: topic.response ?? '...' };
   }
 }
+
 
 /**
  * Expand author-authored topics into the final clickable list.
