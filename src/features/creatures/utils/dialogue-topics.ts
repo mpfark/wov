@@ -12,7 +12,7 @@ import type { GameNode, Region, Area } from '@/features/world/hooks/useNodes';
 import { describeDirection, directionSentence } from '@/features/world/utils/directions';
 import { CLASS_LABELS } from '@/shared/formulas/classes';
 
-export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu';
+export type TopicKind = 'text' | 'class_hall_dir' | 'class_hall_menu' | 'hunt_dir';
 
 export interface DialogueTopic {
   id: string;
@@ -37,7 +37,10 @@ export interface ResolverContext {
   nodes: GameNode[];
   regions: Region[];
   areas: Area[];
+  /** Asking character's level — required for level-aware topics like hunt_dir. */
+  characterLevel?: number;
 }
+
 
 function regionName(regions: Region[], id: string): string {
   return regions.find(r => r.id === id)?.name ?? 'an unknown region';
