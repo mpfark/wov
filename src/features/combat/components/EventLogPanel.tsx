@@ -38,16 +38,49 @@ const MODE_TITLES: Record<CombatLogDisplayMode, string> = {
 
 const MODE_CYCLE: CombatLogDisplayMode[] = ['flavor', 'flavor_numbers'];
 
+type FontSize = 'S' | 'M' | 'L';
+const FONT_SIZE_KEY = 'eventLog.fontSize';
+const FONT_SIZE_CYCLE: FontSize[] = ['S', 'M', 'L'];
+const FONT_SIZE_CLASS: Record<FontSize, string> = {
+  S: 'text-xs',
+  M: 'text-sm',
+  L: 'text-base',
+};
+const FONT_SIZE_TITLE: Record<FontSize, string> = {
+  S: 'Text size: Small (click for Medium)',
+  M: 'Text size: Medium (click for Large)',
+  L: 'Text size: Large (click for Small)',
+};
+
+function getStoredFontSize(): FontSize {
+  if (typeof window === 'undefined') return 'S';
+  const v = window.localStorage.getItem(FONT_SIZE_KEY);
+  return v === 'M' || v === 'L' || v === 'S' ? v : 'S';
+}
+
+
 export default function EventLogPanel({
   filteredEventLog,
 }: EventLogPanelProps) {
   const [displayMode, setDisplayMode] = useState<CombatLogDisplayMode>(getStoredDisplayMode);
+  const [fontSize, setFontSize] = useState<FontSize>(getStoredFontSize);
 
   const cycleMode = useCallback(() => {
     setDisplayMode(prev => {
       const idx = MODE_CYCLE.indexOf(prev);
       const next = MODE_CYCLE[(idx + 1) % MODE_CYCLE.length];
       setStoredDisplayMode(next);
+      return next;
+    });
+  }, []);
+
+  const cycleFontSize = useCallback(() => {
+    setFontSize(prev => {
+      const idx = FONT_SIZE_CYCLE.indexOf(prev);
+      const next = FONT_SIZE_CYCLE[(idx + 1) % FONT_SIZE_CYCLE.length];
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(FONT_SIZE_KEY, next);
+      }
       return next;
     });
   }, []);
@@ -62,15 +95,25 @@ export default function EventLogPanel({
     <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
       <div className="flex items-center justify-between mb-1 shrink-0">
         <h3 className="font-display text-xs text-muted-foreground">Event Log</h3>
-        <button
-          onClick={cycleMode}
-          title={MODE_TITLES[displayMode]}
-          className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-background/50 text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors"
-        >
-          {MODE_LABELS[displayMode]}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={cycleFontSize}
+            title={FONT_SIZE_TITLE[fontSize]}
+            className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-background/50 text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors"
+          >
+            {`Aa·${fontSize}`}
+          </button>
+          <button
+            onClick={cycleMode}
+            title={MODE_TITLES[displayMode]}
+            className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-border bg-background/50 text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors"
+          >
+            {MODE_LABELS[displayMode]}
+          </button>
+        </div>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-2 surface-row rounded">
+      <div className={cn('flex-1 min-h-0 overflow-y-auto p-2 surface-row rounded', FONT_SIZE_CLASS[fontSize])}>
+
         {reversedLog.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">Your journey begins...</p>
         ) : (
