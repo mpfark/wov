@@ -387,7 +387,9 @@ const KIND_LABELS: Record<TopicKind, string> = {
   text: 'Text',
   class_hall_dir: 'Class Hall Directions',
   class_hall_menu: 'Class Hall Menu (auto-lists all)',
+  hunt_dir: 'Hunting Grounds (auto, level-matched)',
 };
+
 
 const CLASS_KEYS = Object.keys(CLASS_LABELS).filter(k => k !== 'classless');
 
