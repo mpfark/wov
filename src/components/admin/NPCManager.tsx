@@ -487,6 +487,13 @@ function TopicsEditor({
               Expands automatically into one question per known order hall.
             </p>
           )}
+
+          {t.kind === 'hunt_dir' && (
+            <p className="text-[10px] text-muted-foreground italic">
+              Auto-picks an area whose level range covers the asking character's level, preferring the player's current region.
+            </p>
+          )}
+
         </div>
       ))}
       <Button size="sm" variant="outline" className="h-7 text-xs w-full" onClick={add}>
