@@ -38,6 +38,27 @@ const MODE_TITLES: Record<CombatLogDisplayMode, string> = {
 
 const MODE_CYCLE: CombatLogDisplayMode[] = ['flavor', 'flavor_numbers'];
 
+type FontSize = 'S' | 'M' | 'L';
+const FONT_SIZE_KEY = 'eventLog.fontSize';
+const FONT_SIZE_CYCLE: FontSize[] = ['S', 'M', 'L'];
+const FONT_SIZE_CLASS: Record<FontSize, string> = {
+  S: 'text-xs',
+  M: 'text-sm',
+  L: 'text-base',
+};
+const FONT_SIZE_TITLE: Record<FontSize, string> = {
+  S: 'Text size: Small (click for Medium)',
+  M: 'Text size: Medium (click for Large)',
+  L: 'Text size: Large (click for Small)',
+};
+
+function getStoredFontSize(): FontSize {
+  if (typeof window === 'undefined') return 'S';
+  const v = window.localStorage.getItem(FONT_SIZE_KEY);
+  return v === 'M' || v === 'L' || v === 'S' ? v : 'S';
+}
+
+
 export default function EventLogPanel({
   filteredEventLog,
 }: EventLogPanelProps) {
