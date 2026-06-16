@@ -193,10 +193,12 @@ export default function ItemTooltipCard({
       {hasFlavorBlock && (
         <>
           <Divider />
-          {effectiveFlavor
-            ? <p className="t-meta italic">"{effectiveFlavor}"</p>
-            : <p className="t-meta">{item.description}</p>}
-
+          {effectiveFlavor && (
+            <p className="t-meta italic">"{effectiveFlavor}"</p>
+          )}
+          {item.description && (
+            <p className="t-meta">{item.description}</p>
+          )}
         </>
       )}
     </div>
