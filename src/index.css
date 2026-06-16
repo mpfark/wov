@@ -395,7 +395,7 @@
 
 .event-log-line {
   display: block;
-  font-size: 0.75rem;
+  font-size: inherit;
   line-height: 1.35;
   padding: 1px 0 1px 6px;
   border-left: 1px solid hsl(var(--border-subtle) / 0.5);
