@@ -434,7 +434,7 @@ export default function NodeView({
                             {(() => {
                               const isKing = !!(p as any).is_king_slayer;
                               const t = getCharacterTitle(p.level, p.gender, isKing);
-                              return t ? <span className={`text-[9px] mr-0.5 ${isKing ? 'text-soulforged text-glow-soulforged' : 'text-primary/60'}`}>{t}</span> : null;
+                              return t ? <span className={`text-xs mr-1 ${isKing ? 'text-soulforged text-glow-soulforged' : 'text-primary/60'}`}>{t}</span> : null;
                             })()}
                             {p.name}{(p as any).family_name ? ` ${(p as any).family_name}` : ''}
                           </button>
