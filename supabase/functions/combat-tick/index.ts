@@ -1179,9 +1179,15 @@ Deno.serve(async (req) => {
           }
         }
 
+        // ── Buff-on-taken (defensive procs: AC / attribute / DR) ──
+        if ((memberProcs[targetId] || []).length > 0 && mHp[targetId] > 0) {
+          resolveBuffProcs(memberProcs[targetId], targetId, targetName, 'on_taken', activeEffects, memberBuffActive, events, combatNodeId, now);
+        }
+
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
+
       } else {
         const cabMiss = creatureAtkBonus(creature.level);
         events.push({ type: 'creature_miss', message: `👹 ${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses!`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
