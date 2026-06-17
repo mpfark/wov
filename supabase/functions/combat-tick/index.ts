@@ -131,6 +131,79 @@ function resolveProcs(
   }
 }
 
+// ── Buff-on-trigger resolver (item_buff:* effects) ─────────────
+// Procs whose `type` starts with `buff_` apply a self-buff to the wearer
+// via an `active_effects` row of effect_type `item_buff:<sub>` where
+// <sub> ∈ ac | dr | str | dex | con | int | wis | cha.
+// "Ignore while active": if the wearer already has the same sub-effect
+// running, the proc no-ops.
+function resolveBuffProcs(
+  procs: any[],
+  wearerId: string,
+  wearerName: string,
+  trigger: 'on_hit' | 'on_taken',
+  activeEffects: any[],
+  memberBuffActive: Record<string, Set<string>>,
+  events: any[],
+  combatNodeId: string,
+  nowMs: number,
+) {
+  if (!Array.isArray(procs) || procs.length === 0) return;
+  for (const p of procs) {
+    if (!p?.type || typeof p.type !== 'string' || !p.type.startsWith('buff_')) continue;
+    const procTrigger = (p.trigger === 'on_taken' ? 'on_taken' : 'on_hit');
+    if (procTrigger !== trigger) continue;
+    if (Math.random() >= (p.chance ?? 0)) continue;
+
+    let sub: string | null = null;
+    if (p.type === 'buff_ac') sub = 'ac';
+    else if (p.type === 'buff_resist') sub = 'dr';
+    else if (p.type === 'buff_attribute') {
+      const a = String(p.attribute || '').toLowerCase();
+      if (['str','dex','con','int','wis','cha'].includes(a)) sub = a;
+    }
+    if (!sub) continue;
+
+    const effectType = `item_buff:${sub}`;
+    const active = (memberBuffActive[wearerId] ??= new Set());
+    if (active.has(effectType)) continue; // ignore while active
+
+    const durSec = Math.max(5, Math.min(600, Math.round(p.duration_sec || 30)));
+    const magnitude = sub === 'dr'
+      ? Math.max(1, Math.min(95, Math.round((p.value || 0) * 100)))
+      : Math.max(1, Math.round(p.value || 0));
+
+    activeEffects.push({
+      id: crypto.randomUUID(),
+      node_id: combatNodeId,
+      target_id: wearerId,
+      source_id: wearerId,
+      session_id: null,
+      effect_type: effectType,
+      stacks: magnitude,
+      damage_per_tick: 0,
+      next_tick_at: nowMs + durSec * 1000,
+      expires_at: nowMs + durSec * 1000,
+      tick_rate_ms: 2000,
+    });
+    active.add(effectType);
+
+    const suffix = sub === 'dr'
+      ? `${magnitude}% DR, ${durSec}s`
+      : sub === 'ac'
+        ? `+${magnitude} AC, ${durSec}s`
+        : `+${magnitude} ${sub.toUpperCase()}, ${durSec}s`;
+    const interpolated = String(p.text || 'is empowered')
+      .replace(/%a/g, wearerName)
+      .replace(/%v/g, String(magnitude));
+    events.push({
+      type: 'buff_proc',
+      message: `${p.emoji || '✨'} ${wearerName} — ${interpolated} (${suffix})`,
+      character_id: wearerId,
+    });
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -407,6 +480,31 @@ Deno.serve(async (req) => {
     const dotTargetIds = new Set<string>();
     const activeEffects: any[] = activeEffectsRaw || [];
     for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
+
+    // ── Fold active item_buff:* effects into per-member stats ────
+    // Buff procs persist in `active_effects` with effect_type `item_buff:<sub>`
+    // and `stacks` carrying the magnitude. While active, the buff's bonus
+    // is added to that member's equipment bonus map (so all existing AC /
+    // attribute reads pick it up automatically). DR is tracked separately
+    // and applied as a damage-pipeline step.
+    const memberDR: Record<string, number> = {}; // percent points 1..95
+    const memberBuffActive: Record<string, Set<string>> = {};
+    for (const eff of activeEffects) {
+      if (typeof eff.effect_type !== 'string' || !eff.effect_type.startsWith('item_buff:')) continue;
+      if ((eff.expires_at ?? 0) <= now) { eff._expired = true; continue; }
+      const cid = eff.target_id;
+      if (!eq[cid]) continue;
+      const sub = eff.effect_type.slice('item_buff:'.length);
+      const mag = Number(eff.stacks) || 0;
+      if (mag <= 0) continue;
+      (memberBuffActive[cid] ??= new Set()).add(eff.effect_type);
+      if (sub === 'ac') eq[cid].ac = (eq[cid].ac || 0) + mag;
+      else if (sub === 'dr') memberDR[cid] = (memberDR[cid] || 0) + mag;
+      else if (['str','dex','con','int','wis','cha'].includes(sub)) {
+        eq[cid][sub] = (eq[cid][sub] || 0) + mag;
+      }
+    }
+
     for (const pa of pendingAbilities) {
       if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
     }
@@ -1022,10 +1120,22 @@ Deno.serve(async (req) => {
           events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
         }
 
+        // 7c. Item-buff damage reduction (from buff_resist procs)
+        const itemDR = memberDR[targetId] || 0;
+        if (itemDR > 0 && dmg > 0) {
+          const drFrac = Math.min(95, itemDR) / 100;
+          const preDmg = dmg;
+          dmg = Math.max(Math.floor(dmg * (1 - drFrac)), 1);
+          if (preDmg !== dmg) {
+            events.push({ type: 'item_buff_dr', message: `🛡️ ${targetName}'s warding turns the blow! [${preDmg - dmg}]`, character_id: targetId });
+          }
+        }
+
         // 8. Caps and clamps
         dmg = Math.max(dmg, 1);
         if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
         if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+
 
         mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
         degradeSet.add(targetId);
@@ -1069,9 +1179,15 @@ Deno.serve(async (req) => {
           }
         }
 
+        // ── Buff-on-taken (defensive procs: AC / attribute / DR) ──
+        if ((memberProcs[targetId] || []).length > 0 && mHp[targetId] > 0) {
+          resolveBuffProcs(memberProcs[targetId], targetId, targetName, 'on_taken', activeEffects, memberBuffActive, events, combatNodeId, now);
+        }
+
         if (mHp[targetId] <= 0) {
           events.push({ type: 'member_death', message: `💀 ${targetName} has been defeated...`, character_id: targetId });
         }
+
       } else {
         const cabMiss = creatureAtkBonus(creature.level);
         events.push({ type: 'creature_miss', message: `👹 ${creature.name} attacks ${targetName}${tankLabel ? ' (Tank)' : ''} — misses!`, attacker_name: creature.name, target_name: targetName, damage: 0, is_crit: false, is_humanoid: creature.is_humanoid, creature_id: creature.id, character_id: targetId, hit_quality: 'miss' as HitQuality });
@@ -1285,6 +1401,10 @@ Deno.serve(async (req) => {
           if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
             resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
           }
+          // ── Buff-on-hit (self-buff procs) ──
+          if ((memberProcs[m.id] || []).length > 0) {
+            resolveBuffProcs(memberProcs[m.id], m.id, c.name, 'on_hit', activeEffects, memberBuffActive, events, combatNodeId, now);
+          }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
             handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
@@ -1383,6 +1503,10 @@ Deno.serve(async (req) => {
           // ── Proc-on-hit (off hand) ──
           if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
             resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
+          }
+          // ── Buff-on-hit (self-buff procs, off-hand swing) ──
+          if ((memberProcs[m.id] || []).length > 0) {
+            resolveBuffProcs(memberProcs[m.id], m.id, c.name, 'on_hit', activeEffects, memberBuffActive, events, combatNodeId, now);
           }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
@@ -1754,6 +1878,14 @@ Deno.serve(async (req) => {
       const rows = liveEffects.map(e => { const { _expired, ...row } = e; return row; });
       await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
     }
+
+    // Cleanup expired item_buff:* rows (own expiry path — combat-resolver
+    // skips them because target_id is a player, not a creature in cHp).
+    await db.from('active_effects')
+      .delete()
+      .like('effect_type', 'item_buff:%')
+      .lte('expires_at', now);
+
 
     // ── Check if session should end ─────────────────────────────
     // Session ends when no alive engaged creatures remain.

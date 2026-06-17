@@ -922,7 +922,7 @@ export default function ItemManager() {
                             <ChevronDown className="w-3 h-3" />
                           </Button>
                         </div>
-                        <div className="w-[110px]">
+                        <div className="w-[130px]">
                           <label className="text-[9px] text-muted-foreground">Type</label>
                           <Select value={proc.type} onValueChange={v => {
                             const procs = [...form.procs];
@@ -931,12 +931,56 @@ export default function ItemManager() {
                           }}>
                             <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
                             <SelectContent className="bg-popover border-border z-50">
-                              {['lifesteal', 'burst_damage', 'weaken', 'heal_pulse'].map(t => (
-                                <SelectItem key={t} value={t} className="text-[10px] capitalize">{t.replace('_', ' ')}</SelectItem>
+                              {['lifesteal', 'burst_damage', 'weaken', 'heal_pulse', 'buff_ac', 'buff_attribute', 'buff_resist'].map(t => (
+                                <SelectItem key={t} value={t} className="text-[10px] capitalize">{t.replace(/_/g, ' ')}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
+                        {String(proc.type || '').startsWith('buff_') && (
+                          <>
+                            <div className="w-[90px]">
+                              <label className="text-[9px] text-muted-foreground">Trigger</label>
+                              <Select value={(proc as any).trigger || 'on_hit'} onValueChange={v => {
+                                const procs = [...form.procs];
+                                procs[idx] = { ...procs[idx], trigger: v } as any;
+                                setForm(f => ({ ...f, procs }));
+                              }}>
+                                <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                                <SelectContent className="bg-popover border-border z-50">
+                                  <SelectItem value="on_hit" className="text-[10px]">on hit</SelectItem>
+                                  <SelectItem value="on_taken" className="text-[10px]">on taken</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="w-[70px]">
+                              <label className="text-[9px] text-muted-foreground">Dur (s)</label>
+                              <Input type="number" min={5} max={600} value={(proc as any).duration_sec ?? 30}
+                                onChange={e => {
+                                  const procs = [...form.procs];
+                                  procs[idx] = { ...procs[idx], duration_sec: Math.max(5, Math.min(600, +e.target.value || 30)) } as any;
+                                  setForm(f => ({ ...f, procs }));
+                                }} className="h-7 text-[10px]" />
+                            </div>
+                            {proc.type === 'buff_attribute' && (
+                              <div className="w-[80px]">
+                                <label className="text-[9px] text-muted-foreground">Attr</label>
+                                <Select value={(proc as any).attribute || 'str'} onValueChange={v => {
+                                  const procs = [...form.procs];
+                                  procs[idx] = { ...procs[idx], attribute: v } as any;
+                                  setForm(f => ({ ...f, procs }));
+                                }}>
+                                  <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="bg-popover border-border z-50">
+                                    {['str','dex','con','int','wis','cha'].map(a => (
+                                      <SelectItem key={a} value={a} className="text-[10px] uppercase">{a}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </>
+                        )}
                         <div className="w-16">
                           <label className="text-[9px] text-muted-foreground">Chance %</label>
                           <Input type="number" min={1} max={100} value={Math.round(proc.chance * 100)}
