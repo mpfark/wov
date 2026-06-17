@@ -1401,6 +1401,10 @@ Deno.serve(async (req) => {
           if ((memberProcs[m.id] || []).length > 0 && cHp[target.id] > 0 && !cKilled.has(target.id)) {
             resolveProcs(memberProcs[m.id], c.name, m.id, target.name, target.id, mHp, cHp, c.max_hp, events, cKilled);
           }
+          // ── Buff-on-hit (self-buff procs) ──
+          if ((memberProcs[m.id] || []).length > 0) {
+            resolveBuffProcs(memberProcs[m.id], m.id, c.name, 'on_hit', activeEffects, memberBuffActive, events, combatNodeId, now);
+          }
 
           if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
             handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), m.id);
