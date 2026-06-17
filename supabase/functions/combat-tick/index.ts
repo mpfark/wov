@@ -131,6 +131,79 @@ function resolveProcs(
   }
 }
 
+// ── Buff-on-trigger resolver (item_buff:* effects) ─────────────
+// Procs whose `type` starts with `buff_` apply a self-buff to the wearer
+// via an `active_effects` row of effect_type `item_buff:<sub>` where
+// <sub> ∈ ac | dr | str | dex | con | int | wis | cha.
+// "Ignore while active": if the wearer already has the same sub-effect
+// running, the proc no-ops.
+function resolveBuffProcs(
+  procs: any[],
+  wearerId: string,
+  wearerName: string,
+  trigger: 'on_hit' | 'on_taken',
+  activeEffects: any[],
+  memberBuffActive: Record<string, Set<string>>,
+  events: any[],
+  combatNodeId: string,
+  nowMs: number,
+) {
+  if (!Array.isArray(procs) || procs.length === 0) return;
+  for (const p of procs) {
+    if (!p?.type || typeof p.type !== 'string' || !p.type.startsWith('buff_')) continue;
+    const procTrigger = (p.trigger === 'on_taken' ? 'on_taken' : 'on_hit');
+    if (procTrigger !== trigger) continue;
+    if (Math.random() >= (p.chance ?? 0)) continue;
+
+    let sub: string | null = null;
+    if (p.type === 'buff_ac') sub = 'ac';
+    else if (p.type === 'buff_resist') sub = 'dr';
+    else if (p.type === 'buff_attribute') {
+      const a = String(p.attribute || '').toLowerCase();
+      if (['str','dex','con','int','wis','cha'].includes(a)) sub = a;
+    }
+    if (!sub) continue;
+
+    const effectType = `item_buff:${sub}`;
+    const active = (memberBuffActive[wearerId] ??= new Set());
+    if (active.has(effectType)) continue; // ignore while active
+
+    const durSec = Math.max(5, Math.min(600, Math.round(p.duration_sec || 30)));
+    const magnitude = sub === 'dr'
+      ? Math.max(1, Math.min(95, Math.round((p.value || 0) * 100)))
+      : Math.max(1, Math.round(p.value || 0));
+
+    activeEffects.push({
+      id: crypto.randomUUID(),
+      node_id: combatNodeId,
+      target_id: wearerId,
+      source_id: wearerId,
+      session_id: null,
+      effect_type: effectType,
+      stacks: magnitude,
+      damage_per_tick: 0,
+      next_tick_at: nowMs + durSec * 1000,
+      expires_at: nowMs + durSec * 1000,
+      tick_rate_ms: 2000,
+    });
+    active.add(effectType);
+
+    const suffix = sub === 'dr'
+      ? `${magnitude}% DR, ${durSec}s`
+      : sub === 'ac'
+        ? `+${magnitude} AC, ${durSec}s`
+        : `+${magnitude} ${sub.toUpperCase()}, ${durSec}s`;
+    const interpolated = String(p.text || 'is empowered')
+      .replace(/%a/g, wearerName)
+      .replace(/%v/g, String(magnitude));
+    events.push({
+      type: 'buff_proc',
+      message: `${p.emoji || '✨'} ${wearerName} — ${interpolated} (${suffix})`,
+      character_id: wearerId,
+    });
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
