@@ -1879,6 +1879,14 @@ Deno.serve(async (req) => {
       await db.from('active_effects').upsert(rows, { onConflict: 'source_id,target_id,effect_type' });
     }
 
+    // Cleanup expired item_buff:* rows (own expiry path — combat-resolver
+    // skips them because target_id is a player, not a creature in cHp).
+    await db.from('active_effects')
+      .delete()
+      .like('effect_type', 'item_buff:%')
+      .lte('expires_at', now);
+
+
     // ── Check if session should end ─────────────────────────────
     // Session ends when no alive engaged creatures remain.
     // Effects persist independently in active_effects and are reconciled by combat-catchup.
