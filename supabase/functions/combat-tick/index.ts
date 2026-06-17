@@ -1120,10 +1120,22 @@ Deno.serve(async (req) => {
           events.push({ type: 'divine_challenge_dr', message: `⚜️ ${targetName}'s Divine Challenge mitigates the strike! [${preDmg - dmg}]`, character_id: targetId });
         }
 
+        // 7c. Item-buff damage reduction (from buff_resist procs)
+        const itemDR = memberDR[targetId] || 0;
+        if (itemDR > 0 && dmg > 0) {
+          const drFrac = Math.min(95, itemDR) / 100;
+          const preDmg = dmg;
+          dmg = Math.max(Math.floor(dmg * (1 - drFrac)), 1);
+          if (preDmg !== dmg) {
+            events.push({ type: 'item_buff_dr', message: `🛡️ ${targetName}'s warding turns the blow! [${preDmg - dmg}]`, character_id: targetId });
+          }
+        }
+
         // 8. Caps and clamps
         dmg = Math.max(dmg, 1);
         if (quality === 'glancing') dmg = Math.min(dmg, GLANCING_WEAK_CAP);
         if (quality === 'weak' && margin < -2) dmg = Math.min(dmg, GLANCING_WEAK_CAP);
+
 
         mHp[targetId] = Math.max(mHp[targetId] - dmg, 0);
         degradeSet.add(targetId);
