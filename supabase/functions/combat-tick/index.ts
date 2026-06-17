@@ -480,6 +480,31 @@ Deno.serve(async (req) => {
     const dotTargetIds = new Set<string>();
     const activeEffects: any[] = activeEffectsRaw || [];
     for (const eff of activeEffects) dotTargetIds.add(eff.target_id);
+
+    // ── Fold active item_buff:* effects into per-member stats ────
+    // Buff procs persist in `active_effects` with effect_type `item_buff:<sub>`
+    // and `stacks` carrying the magnitude. While active, the buff's bonus
+    // is added to that member's equipment bonus map (so all existing AC /
+    // attribute reads pick it up automatically). DR is tracked separately
+    // and applied as a damage-pipeline step.
+    const memberDR: Record<string, number> = {}; // percent points 1..95
+    const memberBuffActive: Record<string, Set<string>> = {};
+    for (const eff of activeEffects) {
+      if (typeof eff.effect_type !== 'string' || !eff.effect_type.startsWith('item_buff:')) continue;
+      if ((eff.expires_at ?? 0) <= now) { eff._expired = true; continue; }
+      const cid = eff.target_id;
+      if (!eq[cid]) continue;
+      const sub = eff.effect_type.slice('item_buff:'.length);
+      const mag = Number(eff.stacks) || 0;
+      if (mag <= 0) continue;
+      (memberBuffActive[cid] ??= new Set()).add(eff.effect_type);
+      if (sub === 'ac') eq[cid].ac = (eq[cid].ac || 0) + mag;
+      else if (sub === 'dr') memberDR[cid] = (memberDR[cid] || 0) + mag;
+      else if (['str','dex','con','int','wis','cha'].includes(sub)) {
+        eq[cid][sub] = (eq[cid][sub] || 0) + mag;
+      }
+    }
+
     for (const pa of pendingAbilities) {
       if (pa.target_creature_id) dotTargetIds.add(pa.target_creature_id);
     }
