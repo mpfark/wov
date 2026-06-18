@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
         (marketHit.count ?? 0) > 0 ||
         (groundHit.count ?? 0) > 0;
       if (exists) {
-        return jsonResponse({ error: 'That ascended stone already exists in the world.' }, 409);
+        return jsonResponse({ error: 'That vibrating stone already exists in the world.' }, 409);
       }
       return jsonResponse({ item: ascended, consumed: [a.item, b.item] });
     }
