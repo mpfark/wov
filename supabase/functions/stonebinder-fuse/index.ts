@@ -49,13 +49,13 @@ function primaryKeysOf(stats: Stats): string[] {
   return Object.keys(stats || {}).filter((k) => PRIMARY_STATS.has(k));
 }
 
-function isPrimaryTurningStone(item: ItemRow): boolean {
+function isPrimaryIounStone(item: ItemRow): boolean {
   if (!item) return false;
   if (item.rarity !== 'unique') return false;
   if (item.slot !== 'trinket') return false;
   if (item.item_type !== 'equipment') return false;
-  if (!/^Turning Stone of /i.test(item.name)) return false;
-  if (/^Ascended/i.test(item.name)) return false;
+  if (!/^Ioun Stone of /i.test(item.name)) return false;
+  if (/^Vibrating /i.test(item.name)) return false;
   // Stat shape: exactly one primary stat key (hp/hp_regen are filler).
   const keys = Object.keys(item.stats || {}).filter((k) => !SECONDARY_STATS.has(k));
   if (keys.length !== 1) return false;
