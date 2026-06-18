@@ -1,14 +1,14 @@
-// Stonebinder fuse — combine two different primary Turning Stones into the
-// matching Ascended Turning Stone. Recipes are derived from item stat shape
+// Stonebinder fuse — combine two different primary Ioun Stones into the
+// matching Vibrating Ioun Stone. Recipes are derived from item stat shape
 // (not names): the single non-(hp/hp_regen) stat key on each primary forms a
-// sorted pair → ascended item id.
+// sorted pair → vibrating item id.
 //
 // Modes:
 //   { mode: "preview", character_id, stone_a_inv_id, stone_b_inv_id }
 //   { mode: "fuse",    character_id, stone_a_inv_id, stone_b_inv_id }
 //
 // Validation rejects same-stat fusion, equipped stones, foreign-owned stones,
-// and any case where the resulting ascended already exists in the world
+// and any case where the resulting vibrating stone already exists in the world
 // (character inventory, active marketplace listing, or ground loot).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -49,13 +49,13 @@ function primaryKeysOf(stats: Stats): string[] {
   return Object.keys(stats || {}).filter((k) => PRIMARY_STATS.has(k));
 }
 
-function isPrimaryTurningStone(item: ItemRow): boolean {
+function isPrimaryIounStone(item: ItemRow): boolean {
   if (!item) return false;
   if (item.rarity !== 'unique') return false;
   if (item.slot !== 'trinket') return false;
   if (item.item_type !== 'equipment') return false;
-  if (!/^Turning Stone of /i.test(item.name)) return false;
-  if (/^Ascended/i.test(item.name)) return false;
+  if (!/^Ioun Stone of /i.test(item.name)) return false;
+  if (/^Vibrating /i.test(item.name)) return false;
   // Stat shape: exactly one primary stat key (hp/hp_regen are filler).
   const keys = Object.keys(item.stats || {}).filter((k) => !SECONDARY_STATS.has(k));
   if (keys.length !== 1) return false;
@@ -140,8 +140,8 @@ Deno.serve(async (req) => {
     if (a.equipped_slot || b.equipped_slot) {
       return jsonResponse({ error: 'Unequip both stones before binding.' }, 400);
     }
-    if (!isPrimaryTurningStone(a.item) || !isPrimaryTurningStone(b.item)) {
-      return jsonResponse({ error: 'Only primary Turning Stones can be bound.' }, 400);
+    if (!isPrimaryIounStone(a.item) || !isPrimaryIounStone(b.item)) {
+      return jsonResponse({ error: 'Only primary Ioun Stones can be bound.' }, 400);
     }
 
     const [aStat] = primaryKeysOf(a.item.stats);
@@ -150,11 +150,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'The two stones must carry different essences.' }, 400);
     }
 
-    // Build ascended recipe map keyed by sorted stat-pair → ascended item.
+    // Build vibrating recipe map keyed by sorted stat-pair → vibrating item.
     const { data: ascendeds, error: ascErr } = await supabase
       .from('items')
       .select('id, name, description, rarity, slot, item_type, stats, value, max_durability, level')
-      .ilike('name', 'Ascended Turning Stone of %')
+      .ilike('name', 'Vibrating Ioun Stone of %')
       .eq('rarity', 'unique')
       .eq('slot', 'trinket');
     if (ascErr) return jsonResponse({ error: ascErr.message }, 500);
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
 
     const ascended = recipeMap.get(pairKey(aStat, bStat));
     if (!ascended) {
-      return jsonResponse({ error: 'No ascended stone matches that essence pair.' }, 400);
+      return jsonResponse({ error: 'No vibrating stone matches that essence pair.' }, 400);
     }
 
     if (mode === 'preview') {
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
         (marketHit.count ?? 0) > 0 ||
         (groundHit.count ?? 0) > 0;
       if (exists) {
-        return jsonResponse({ error: 'That ascended stone already exists in the world.' }, 409);
+        return jsonResponse({ error: 'That vibrating stone already exists in the world.' }, 409);
       }
       return jsonResponse({ item: ascended, consumed: [a.item, b.item] });
     }

@@ -22,17 +22,17 @@ interface Props {
   addLog: (msg: string) => void;
 }
 
-/** A primary Turning Stone has rarity=unique, slot=trinket, name starting
- *  with "Turning Stone of " (not "Ascended"), and exactly ONE primary stat
+/** A primary Ioun Stone has rarity=unique, slot=trinket, name starting
+ *  with "Ioun Stone of " (not "Vibrating"), and exactly ONE primary stat
  *  key after dropping hp / hp_regen. Mirrors the server check exactly. */
-function isPrimaryTurningStone(inv: InventoryItem): boolean {
+function isPrimaryIounStone(inv: InventoryItem): boolean {
   const it = inv.item;
   if (!it) return false;
   if (it.rarity !== 'unique') return false;
   if (it.slot !== 'trinket') return false;
   if (it.item_type !== 'equipment') return false;
-  if (!/^Turning Stone of /i.test(it.name)) return false;
-  if (/^Ascended/i.test(it.name)) return false;
+  if (!/^Ioun Stone of /i.test(it.name)) return false;
+  if (/^Vibrating /i.test(it.name)) return false;
   const keys = Object.keys(it.stats || {}).filter((k) => !SECONDARY_STATS.has(k));
   return keys.length === 1 && PRIMARY_STATS.has(keys[0]);
 }
@@ -78,7 +78,7 @@ export default function StonebinderPanel({
   const stones = useMemo(
     () => inventory
       .filter((i) => !i.equipped_slot)
-      .filter(isPrimaryTurningStone)
+      .filter(isPrimaryIounStone)
       .sort((a, b) => a.item.name.localeCompare(b.item.name)),
     [inventory],
   );
@@ -150,7 +150,7 @@ export default function StonebinderPanel({
   };
 
   const left = stones.length === 0 ? (
-    <ServicePanelEmpty>You carry no primary Turning Stones.</ServicePanelEmpty>
+    <ServicePanelEmpty>You carry no primary Ioun Stones.</ServicePanelEmpty>
   ) : (
     <div className="gap-row">
       {stones.map((inv) => {
@@ -248,7 +248,7 @@ export default function StonebinderPanel({
       title="Stonebinder"
       subtitle={<span>Two stones, one bound essence.</span>}
       left={left}
-      leftTitle="Primary Turning Stones"
+      leftTitle="Primary Ioun Stones"
       right={right}
       rightTitle="The Binding"
       footer={footer}

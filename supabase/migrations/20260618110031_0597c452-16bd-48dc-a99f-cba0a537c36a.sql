@@ -1,0 +1,2 @@
+UPDATE public.items SET name = replace(name, 'Ascended Turning Stone of ', 'Vibrating Ioun Stone of ') WHERE name LIKE 'Ascended Turning Stone of %';
+UPDATE public.items SET name = replace(name, 'Turning Stone of ', 'Ioun Stone of ') WHERE name LIKE 'Turning Stone of %';

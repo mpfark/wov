@@ -199,7 +199,7 @@ export default function NodeView({
                       <span className="text-[10px] text-soulforged text-glow-soulforged" title="Soulforge-capable forge">⚒️</span>
                     )}
                     {(node as any).is_stonebinder && (
-                      <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Turning Stones">⚜</span>
+                      <span className="text-[10px] text-primary text-glow" title="Stonebinder — bind Ioun Stones">⚜</span>
                     )}
                     {(node as any).is_heraldry && (
                       <span className="text-[10px]" title="Heraldry — claim or change family names">📜</span>

@@ -1,72 +1,52 @@
+# Rename Turning Stones → Ioun Stones
 
-## Goal
+User-facing item rename only. The Stonebinder service (node flag, edge function, RPC, panel filename, prop names) stays as-is per your choice.
 
-Extend the proc-on-hit system so items can grant a **temporary self-buff** when they trigger — bonuses to AC, primary attributes (STR/DEX/CON/INT/WIS/CHA), and/or % damage reduction. Buff procs are admin/unique-only for now (not rollable by AI Forge).
+## Name mapping
 
-## Behavior
+- `Turning Stone of <X>` → `Ioun Stone of <X>` (6 primary stones)
+- `Ascended Turning Stone of <X> and <Y>` → `Vibrating Ioun Stone of <X> and <Y>` (15 ascended stones)
 
-- **Trigger sides**
-  - `on_hit` (existing) — fires when the wearer lands an autoattack hit.
-  - `on_taken` (new) — fires when the wearer is struck by a creature. Lets defensive items (chest, shield, rings) grant reactive buffs.
-- **Stacking**: *Ignore while active.* If the same proc's buff is already on the player, a re-trigger does nothing (no refresh, no stack). Once it expires, it can proc again.
-- **Duration**: per-proc `duration_sec` field (default 30s, in line with existing debuff visibility convention).
-- **Scope**: buff is **self-only** on the wearer. No party-wide buffs in this pass.
+## Database (one migration)
 
-## Proc shape
+Update `items.name` for all 21 rows:
 
-New proc `type` values, stored on `items.procs` JSON:
-
-```
-{ type: "buff_ac",        chance, value,            duration_sec, trigger, emoji, text }
-{ type: "buff_attribute", chance, value, attribute, duration_sec, trigger, emoji, text }
-{ type: "buff_resist",    chance, value,            duration_sec, trigger, emoji, text }   // value = 0.10 for 10% DR
+```sql
+UPDATE items SET name = replace(name, 'Ascended Turning Stone of ', 'Vibrating Ioun Stone of ')
+  WHERE name LIKE 'Ascended Turning Stone of %';
+UPDATE items SET name = replace(name, 'Turning Stone of ', 'Ioun Stone of ')
+  WHERE name LIKE 'Turning Stone of %';
 ```
 
-Where:
-- `attribute` ∈ `str | dex | con | int | wis | cha`
-- `trigger` ∈ `on_hit | on_taken` (defaults to `on_hit` for back-compat with existing damage/heal procs)
+Also update any `items.description` / lore text that says "Turning Stone" or "Ascended Turning Stone" with the same replacements (verified during execution).
 
-## Storage & effective stats
+## Code — update name-matching predicates and copy
 
-- Buffs live in `active_effects` as a new `kind = 'item_buff'` row with `meta` carrying `{ proc_type, attribute?, value, source_item_id }` and `expires_at = now + duration_sec`.
-- The shared effective-stat layer (`supabase/functions/_shared/formulas/effective.ts` + mirrored `src/shared/formulas/effective.ts`) folds active `item_buff` rows into AC, attributes, and an incoming-damage multiplier.
-- Damage pipeline in combat-tick applies the resist multiplier as a new step right before final HP write (keeps the 8-step canonical pipeline intact, just parameterised).
-- "Ignore while active" check: before inserting, query whether an `item_buff` row already exists for `(character_id, source_item_id, proc_type, attribute)` and is not expired.
+These places hardcode the strings "Turning Stone" / "Ascended" and must be updated to the new names:
 
-## Combat-tick wiring
+1. **`supabase/functions/stonebinder-fuse/index.ts`**
+   - `isPrimaryTurningStone`: change regex `/^Turning Stone of /i` → `/^Ioun Stone of /i`, exclusion `/^Ascended/i` → `/^Vibrating /i`. Rename the helper to `isPrimaryIounStone` (internal only).
+   - `.ilike('name', 'Ascended Turning Stone of %')` → `.ilike('name', 'Vibrating Ioun Stone of %')`.
+   - Update comments and error strings ("primary Ioun Stones", "vibrating ioun stone", "No vibrating stone matches that essence pair.", "already exists in the world").
+   - Activity-log message still uses dynamic item names (no change needed beyond comment polish).
 
-1. After the autoattack hit path resolves damage and existing on-hit procs, run a new `resolveBuffProcs(..., 'on_hit')` pass against the attacker's equipped procs (already collected from all slots).
-2. In the creature-attacks-player path, after damage is applied, run `resolveBuffProcs(..., 'on_taken')` against the defender's equipped procs.
-3. Both pushes a `proc` event with the formatted message so it shows in the event log.
-4. New rows in `active_effects` are picked up by the existing realtime sync so the UI shows the buff icon/countdown.
+2. **`src/features/inventory/components/StonebinderPanel.tsx`**
+   - `isPrimaryTurningStone` regexes → match `/^Ioun Stone of /i` and exclude `/^Vibrating /i`. Rename helper to `isPrimaryIounStone`.
+   - Update visible copy: `leftTitle="Primary Ioun Stones"`, empty-state `"You carry no primary Ioun Stones."`, the "The Stonebinder studies the essences..." line stays (Stonebinder service name unchanged).
 
-## UI
+3. **`src/features/world/components/NodeView.tsx`** (line ~202)
+   - Tooltip `"Stonebinder — bind Turning Stones"` → `"Stonebinder — bind Ioun Stones"`.
 
-- Tooltip (`ItemTooltipCard`) already renders proc text — extend the proc-line formatter in `proc-log-format.ts` so buff procs read e.g. `🛡 Aegis flares (+2 AC, 30s)` / `(+3 STR, 30s)` / `(10% DR, 30s)`.
-- Buff debuff strip (existing buff/ignite/poison renderer) gets a small generic `item_buff` chip variant.
+4. **`supabase/functions/combat-tick/index.ts`** — verified the only `turning` match is an unrelated comment ("immediately processes"); no change.
 
-## Forge / authoring
+5. **Memory file `.lovable/memory/game/stonebinder.md`** — update content references to Ioun Stone / Vibrating Ioun Stone so future sessions use the new terminology. Index entry summary updated to match.
 
-- AI Item Forge prompt and budget tables are **not** changed — buff procs stay off the generation menu.
-- Admin item editor's proc editor gets the new types in its dropdown plus the `trigger`, `duration_sec`, and (for attribute buffs) `attribute` fields. Used for unique/world-drop items hand-authored by admins.
+## Unchanged (intentionally)
 
-## Files touched
+- `is_stonebinder` column, `stonebinder-fuse` edge function name, `stonebinder_commit_fuse` RPC, `StonebinderPanel` component name, `onOpenStonebinder` prop, the ⚜ Stonebinder service label and tooltip.
+- AI Item Forge, gem system, item rarity/slot logic — none of these reference the stone names.
 
-```text
-supabase/functions/combat-tick/index.ts            new resolveBuffProcs + on_taken hook
-supabase/functions/_shared/proc-log-format.ts      buff suffix formatting
-supabase/functions/_shared/formulas/effective.ts   fold item_buff into AC/attrs/DR
-src/shared/formulas/effective.ts                   mirror
-src/components/items/ItemTooltipCard.tsx           buff proc line rendering (via formatter)
-src/components/admin/...ItemEditor                 admin proc editor: new types & fields
-src/features/combat/... buff strip                 generic item_buff chip
-```
+## Verification
 
-No schema migration is required — `active_effects` already stores arbitrary `kind` + `meta`.
-
-## Out of scope
-
-- Party-wide / aura buffs
-- Refresh / stacking magnitude
-- AI Forge rolling buff procs
-- New trigger types beyond `on_hit` / `on_taken` (e.g. on-kill, on-crit, on-low-hp)
+- Confirm 21 items renamed via a follow-up `SELECT name FROM items WHERE name ILIKE '%ioun%' ORDER BY name`.
+- Open Stonebinder panel in preview: existing stones (now Ioun) should still be detected; preview/fuse should still find the matching Vibrating Ioun Stone recipe.
