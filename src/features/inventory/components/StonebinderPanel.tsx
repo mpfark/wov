@@ -78,7 +78,7 @@ export default function StonebinderPanel({
   const stones = useMemo(
     () => inventory
       .filter((i) => !i.equipped_slot)
-      .filter(isPrimaryTurningStone)
+      .filter(isPrimaryIounStone)
       .sort((a, b) => a.item.name.localeCompare(b.item.name)),
     [inventory],
   );
