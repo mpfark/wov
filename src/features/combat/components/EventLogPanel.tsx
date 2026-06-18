@@ -92,7 +92,7 @@ export default function EventLogPanel({
   );
 
   return (
-    <div className="flex-[1] min-h-0 border-t border-border px-3 py-2 flex flex-col">
+    <div className="flex-[3] min-h-0 border-t border-border px-3 py-2 flex flex-col">
       <div className="flex items-center justify-between mb-1 shrink-0">
         <h3 className="font-display text-xs text-muted-foreground">Event Log</h3>
         <div className="flex items-center gap-1">
