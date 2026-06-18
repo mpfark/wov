@@ -140,8 +140,8 @@ Deno.serve(async (req) => {
     if (a.equipped_slot || b.equipped_slot) {
       return jsonResponse({ error: 'Unequip both stones before binding.' }, 400);
     }
-    if (!isPrimaryTurningStone(a.item) || !isPrimaryTurningStone(b.item)) {
-      return jsonResponse({ error: 'Only primary Turning Stones can be bound.' }, 400);
+    if (!isPrimaryIounStone(a.item) || !isPrimaryIounStone(b.item)) {
+      return jsonResponse({ error: 'Only primary Ioun Stones can be bound.' }, 400);
     }
 
     const [aStat] = primaryKeysOf(a.item.stats);
@@ -150,11 +150,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'The two stones must carry different essences.' }, 400);
     }
 
-    // Build ascended recipe map keyed by sorted stat-pair → ascended item.
+    // Build vibrating recipe map keyed by sorted stat-pair → vibrating item.
     const { data: ascendeds, error: ascErr } = await supabase
       .from('items')
       .select('id, name, description, rarity, slot, item_type, stats, value, max_durability, level')
-      .ilike('name', 'Ascended Turning Stone of %')
+      .ilike('name', 'Vibrating Ioun Stone of %')
       .eq('rarity', 'unique')
       .eq('slot', 'trinket');
     if (ascErr) return jsonResponse({ error: ascErr.message }, 500);
@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
 
     const ascended = recipeMap.get(pairKey(aStat, bStat));
     if (!ascended) {
-      return jsonResponse({ error: 'No ascended stone matches that essence pair.' }, 400);
+      return jsonResponse({ error: 'No vibrating stone matches that essence pair.' }, 400);
     }
 
     if (mode === 'preview') {
