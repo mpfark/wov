@@ -150,7 +150,7 @@ export default function StonebinderPanel({
   };
 
   const left = stones.length === 0 ? (
-    <ServicePanelEmpty>You carry no primary Turning Stones.</ServicePanelEmpty>
+    <ServicePanelEmpty>You carry no primary Ioun Stones.</ServicePanelEmpty>
   ) : (
     <div className="gap-row">
       {stones.map((inv) => {
