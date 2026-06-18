@@ -248,7 +248,7 @@ export default function StonebinderPanel({
       title="Stonebinder"
       subtitle={<span>Two stones, one bound essence.</span>}
       left={left}
-      leftTitle="Primary Turning Stones"
+      leftTitle="Primary Ioun Stones"
       right={right}
       rightTitle="The Binding"
       footer={footer}
