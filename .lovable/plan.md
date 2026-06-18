@@ -1,52 +1,81 @@
-# Rename Turning Stones → Ioun Stones
+# Fix: Non-aggressive creatures stay flagged "aggressive" after combat
 
-User-facing item rename only. The Stonebinder service (node flag, edge function, RPC, panel filename, prop names) stays as-is per your choice.
+## What's happening
 
-## Name mapping
-
-- `Turning Stone of <X>` → `Ioun Stone of <X>` (6 primary stones)
-- `Ascended Turning Stone of <X> and <Y>` → `Vibrating Ioun Stone of <X> and <Y>` (15 ascended stones)
-
-## Database (one migration)
-
-Update `items.name` for all 21 rows:
+Yes — the creature itself gets flipped to aggressive by combat, not by how we engage it. The culprit is the `damage_creature` SQL RPC. Every non-lethal damage tick runs:
 
 ```sql
-UPDATE items SET name = replace(name, 'Ascended Turning Stone of ', 'Vibrating Ioun Stone of ')
-  WHERE name LIKE 'Ascended Turning Stone of %';
-UPDATE items SET name = replace(name, 'Turning Stone of ', 'Ioun Stone of ')
-  WHERE name LIKE 'Turning Stone of %';
+UPDATE creatures SET hp = _new_hp, is_aggressive = true WHERE id = _creature_id;
 ```
 
-Also update any `items.description` / lore text that says "Turning Stone" or "Ascended Turning Stone" with the same replacements (verified during execution).
+It unconditionally sets `is_aggressive = true` on any hit. The kill branch only writes `hp = 0, is_alive = false` and never resets the flag. The only place `is_aggressive` is restored to its baseline (`base_aggressive`) is inside `respawn_creatures()`.
 
-## Code — update name-matching predicates and copy
+So for King Aldric (created with `base_aggressive = false`, likely no/long respawn as a unique boss):
+1. First hit → DB sets `is_aggressive = true`
+2. Kill tick → leaves the flag `true`
+3. Admin Creature panel reads the live row → shows the ⚔️ icon
 
-These places hardcode the strings "Turning Stone" / "Ascended" and must be updated to the new names:
+The client-side "You start attacking …" log is just text; it doesn't write state.
 
-1. **`supabase/functions/stonebinder-fuse/index.ts`**
-   - `isPrimaryTurningStone`: change regex `/^Turning Stone of /i` → `/^Ioun Stone of /i`, exclusion `/^Ascended/i` → `/^Vibrating /i`. Rename the helper to `isPrimaryIounStone` (internal only).
-   - `.ilike('name', 'Ascended Turning Stone of %')` → `.ilike('name', 'Vibrating Ioun Stone of %')`.
-   - Update comments and error strings ("primary Ioun Stones", "vibrating ioun stone", "No vibrating stone matches that essence pair.", "already exists in the world").
-   - Activity-log message still uses dynamic item names (no change needed beyond comment polish).
+## Fix
 
-2. **`src/features/inventory/components/StonebinderPanel.tsx`**
-   - `isPrimaryTurningStone` regexes → match `/^Ioun Stone of /i` and exclude `/^Vibrating /i`. Rename helper to `isPrimaryIounStone`.
-   - Update visible copy: `leftTitle="Primary Ioun Stones"`, empty-state `"You carry no primary Ioun Stones."`, the "The Stonebinder studies the essences..." line stays (Stonebinder service name unchanged).
+Two small changes, both server-side, no UI work.
 
-3. **`src/features/world/components/NodeView.tsx`** (line ~202)
-   - Tooltip `"Stonebinder — bind Turning Stones"` → `"Stonebinder — bind Ioun Stones"`.
+### 1. Migration: stop damage from persisting an aggression flip; reset on kill
 
-4. **`supabase/functions/combat-tick/index.ts`** — verified the only `turning` match is an unrelated comment ("immediately processes"); no change.
+Rewrite `public.damage_creature` so:
+- Non-lethal branch updates `hp` only. Aggro is already handled live in `combat-tick` via `useCombatAggroEffects` / engagement logic — we don't need to persist a permanent flag just because a creature took a hit.
+- Kill branch additionally resets `is_aggressive = base_aggressive` so the corpse/respawn-pending row reflects the designer's baseline.
 
-5. **Memory file `.lovable/memory/game/stonebinder.md`** — update content references to Ioun Stone / Vibrating Ioun Stone so future sessions use the new terminology. Index entry summary updated to match.
+```sql
+CREATE OR REPLACE FUNCTION public.damage_creature(
+  _creature_id uuid, _new_hp integer, _killed boolean DEFAULT false
+) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF _killed THEN
+    UPDATE creatures
+       SET hp = 0,
+           is_alive = false,
+           died_at = now(),
+           is_aggressive = base_aggressive
+     WHERE id = _creature_id;
+  ELSE
+    UPDATE creatures
+       SET hp = _new_hp
+     WHERE id = _creature_id;
+  END IF;
+END;
+$$;
+```
 
-## Unchanged (intentionally)
+### 2. One-time data cleanup
 
-- `is_stonebinder` column, `stonebinder-fuse` edge function name, `stonebinder_commit_fuse` RPC, `StonebinderPanel` component name, `onOpenStonebinder` prop, the ⚜ Stonebinder service label and tooltip.
-- AI Item Forge, gem system, item rarity/slot logic — none of these reference the stone names.
+For existing rows that were corrupted by the old behavior (King Aldric and any other named/unique creatures that got stuck aggressive), reset to baseline:
+
+```sql
+UPDATE public.creatures
+   SET is_aggressive = base_aggressive
+ WHERE is_aggressive <> base_aggressive;
+```
+
+(Safe — `base_aggressive` was seeded from `is_aggressive` at the time that column was added, and is the designer-authored truth thereafter.)
+
+## Why this is safe
+
+- Live aggro behavior during a fight is driven by the in-memory `is_aggressive` value `combat-tick` already loaded, plus `useCombatAggroEffects` (initial / mid-fight / re-engage). It doesn't depend on persisting `true` back to the DB mid-fight.
+- `respawn_creatures()` still resets to `base_aggressive` on respawn — unchanged.
+- Admin Creature panel will now reflect the designer's intent for dead/respawning creatures.
+
+## Out of scope
+
+- No changes to `useCombatAggroEffects`, `combat-tick` engagement logic, client UI, or the `base_aggressive` column.
+- No rename or schema additions.
 
 ## Verification
 
-- Confirm 21 items renamed via a follow-up `SELECT name FROM items WHERE name ILIKE '%ioun%' ORDER BY name`.
-- Open Stonebinder panel in preview: existing stones (now Ioun) should still be detected; preview/fuse should still find the matching Vibrating Ioun Stone recipe.
+1. Apply migration.
+2. Confirm King Aldric: `SELECT name, is_aggressive, base_aggressive, is_alive FROM creatures WHERE name ILIKE '%aldric%';` → `is_aggressive = false`.
+3. Spawn/find a non-aggressive creature, hit it once (don't kill), check DB row → `is_aggressive` stays `false`. Admin panel no longer shows ⚔️.
+4. Kill an aggressive (base_aggressive=true) creature → row shows `is_aggressive = true` (matches baseline), then after respawn still `true`. ✓
+5. Kill a non-aggressive creature → row shows `is_aggressive = false`. ✓
