@@ -1,14 +1,14 @@
-// Stonebinder fuse — combine two different primary Turning Stones into the
-// matching Ascended Turning Stone. Recipes are derived from item stat shape
+// Stonebinder fuse — combine two different primary Ioun Stones into the
+// matching Vibrating Ioun Stone. Recipes are derived from item stat shape
 // (not names): the single non-(hp/hp_regen) stat key on each primary forms a
-// sorted pair → ascended item id.
+// sorted pair → vibrating item id.
 //
 // Modes:
 //   { mode: "preview", character_id, stone_a_inv_id, stone_b_inv_id }
 //   { mode: "fuse",    character_id, stone_a_inv_id, stone_b_inv_id }
 //
 // Validation rejects same-stat fusion, equipped stones, foreign-owned stones,
-// and any case where the resulting ascended already exists in the world
+// and any case where the resulting vibrating stone already exists in the world
 // (character inventory, active marketplace listing, or ground loot).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
