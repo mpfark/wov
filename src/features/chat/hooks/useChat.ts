@@ -91,6 +91,17 @@ export function useChat({ handle, nodeId: _nodeId, characterId, characterName, o
     const targetChannel = supabase.channel(`chat-whisper-${target.id}`);
     tempChannelsRef.current.add(targetChannel);
 
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      tempChannelsRef.current.delete(targetChannel);
+      supabase.removeChannel(targetChannel);
+    };
+    // Hard safety: tear the channel down after 5s regardless of subscribe status
+    // so TIMED_OUT/CHANNEL_ERROR/CLOSED paths don't leak Realtime channels.
+    const safety = setTimeout(cleanup, 5000);
+
     targetChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         targetChannel.send({
@@ -99,10 +110,10 @@ export function useChat({ handle, nodeId: _nodeId, characterId, characterName, o
           payload: { senderId: characterId, senderName: characterName, text },
         });
         logBroadcast('out', `chat-whisper`, 'whisper');
-        setTimeout(() => {
-          tempChannelsRef.current.delete(targetChannel);
-          supabase.removeChannel(targetChannel);
-        }, 2000);
+        setTimeout(() => { clearTimeout(safety); cleanup(); }, 2000);
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        clearTimeout(safety);
+        cleanup();
       }
     });
 
