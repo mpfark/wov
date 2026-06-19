@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
+import { EmailVerificationGate } from '@/components/EmailVerificationGate';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
+
 
   const navigate = useNavigate();
   const [syncing, setSyncing] = useState(false);
