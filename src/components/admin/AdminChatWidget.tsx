@@ -119,8 +119,6 @@ export default function AdminChatWidget() {
       const msg = parts.slice(spaceIdx + 1).trim();
       if (!msg) return;
 
-      // We don't have full online players list, so just send blindly
-      supabase.channel(`chat-whisper-search-${targetName}-${Date.now()}`);
       // We need to find the character id by name
       (async () => {
         const { data } = await supabase
@@ -134,6 +132,14 @@ export default function AdminChatWidget() {
           return;
         }
         const ch = supabase.channel(`chat-whisper-${data.id}`);
+        let cleaned = false;
+        const cleanup = () => {
+          if (cleaned) return;
+          cleaned = true;
+          supabase.removeChannel(ch);
+        };
+        // Hard safety: tear down after 5s no matter what (covers TIMED_OUT/CLOSED/CHANNEL_ERROR).
+        const safety = setTimeout(cleanup, 5000);
         ch.subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             ch.send({
@@ -141,7 +147,10 @@ export default function AdminChatWidget() {
               event: 'whisper',
               payload: { senderId: charId, senderName: charName, text: msg },
             });
-            setTimeout(() => supabase.removeChannel(ch), 2000);
+            setTimeout(() => { clearTimeout(safety); cleanup(); }, 2000);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            clearTimeout(safety);
+            cleanup();
           }
         });
         addMsg(`🤫 To ${targetName}: ${msg}`);
