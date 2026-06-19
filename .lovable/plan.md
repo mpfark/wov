@@ -1,39 +1,88 @@
-## Goal
+# Phase 1 — Pre-Launch Hardening
 
-Split the current combined right-side panel into two independent gutter panels:
-- **Right gutter** → Chat only (as today, minus the Online tab)
-- **Left gutter** → Online Players only (new), mirroring the chat panel's behavior
+Focused on the critical/high items that protect player data, prevent exploits, and keep the game from crashing for new users. Each fix is scoped so existing play (combat, parties, chat, marketplace, movement) keeps working unchanged.
 
-## Changes
+---
 
-### 1. New `OnlinePanel` component
-`src/features/chat/components/OnlinePanel.tsx` — anchored to the left viewport gutter. Same structural shell as `ChatPanel`:
-- Header bar with a title ("Online N") and a collapse button (uses a Users icon).
-- Body = the existing online-players list (extracted from `ChatPanel`).
-- Collapses to a thin left-edge icon strip with the online count badge.
+## 1. Gate AI edge functions behind admin role
 
-### 2. Simplify `ChatPanel`
-`src/features/chat/components/ChatPanel.tsx`:
-- Remove the Tabs + Online tab + `onlinePlayers` / `myCharacterId` props.
-- Keep the header (title "Chat" + collapse button) and the messages list only.
-- Remove `chatPanelTab` localStorage key.
+**Files:** `supabase/functions/ai-item-forge/index.ts`, `ai-suggest-character-name/index.ts`, `ai-name-suggest/index.ts`, `ai-generate-service-npc/index.ts`
 
-### 3. Wire the new panel in `GamePage.tsx`
-`src/pages/GamePage.tsx` (around lines 94–117 and 1239–1282):
-- Add an `onlinePanelOpen` state, persisted in localStorage as `onlinePanelOpen` (default open).
-- Mirror the existing right-gutter logic for the left side:
-  - When the left gutter is wide enough (`gutterWidth >= 320`) → render `OnlinePanel` absolutely positioned on the left (`left-0`, width = `gutterWidth`).
-  - Otherwise, fixed 320px overlay on the left edge.
-  - When collapsed → thin left-edge icon button (mirror of the right-edge chat button), showing the online-count badge.
-- Remove `onlinePlayers` / `myCharacterId` from the `ChatPanel` render.
-- Both panels share the same `gutterWidth` / `canFit` calculation (the gutter math is symmetric, so no change to the existing resize effect is required).
+Add the same `is_steward_or_overlord()` check that `ai-item-illustration` and `ai-item-rebalance` already use. Return 403 for non-admins.
 
-### 4. Behavior
-- Independent open/closed state — collapsing chat does not affect the online panel, and vice versa.
-- On screens where the right side falls back to the overlay (`!canFitChat`), the left online panel uses the same overlay fallback.
-- No changes to tablet/mobile flow (≤1024px still uses the existing sheet behavior; left panel is desktop-only just like chat).
+**Player-impact check:** these endpoints are admin tools — confirmed by reading existing call sites before edit. If `ai-suggest-character-name` is actually called from the player-facing onboarding flow, we leave it open to authenticated users but keep the admin gate off (will verify during implementation by grepping call sites).
 
-## Out of scope
+**Note on rate limits:** the platform doesn't have a standard rate-limiting primitive, so I will **not** add ad-hoc per-function DB counters in Phase 1. Role-gating is the durable protection. If you later want a custom rate-limit table we can add it as a separate, opt-in change.
 
-- No changes to presence data, styling tokens, or the event log layout.
-- No changes to the center-column flex ratios.
+## 2. Harden `grant_searched_item` RPC
+
+**Migration:** modify the existing function so it validates the item is in `nodes.search_loot_pool` for the character's current node. Caller no longer needs to pass a trustworthy item ID — but we keep the signature so `useMovementActions.ts` doesn't break.
+
+```sql
+-- inside the function, after owns_character check:
+SELECT current_node_id INTO _node_id FROM characters WHERE id = p_character_id;
+IF NOT EXISTS (
+  SELECT 1 FROM nodes
+  WHERE id = _node_id
+    AND p_item_id::text = ANY(
+      ARRAY(SELECT jsonb_array_elements_text(search_loot_pool))
+    )
+) THEN
+  RAISE EXCEPTION 'Item not available at this node';
+END IF;
+```
+
+**Player-impact check:** legitimate searches already pass an item from the node's pool, so they continue to succeed. Only fabricated calls fail.
+
+## 3. Harden `move_follower` RPC adjacency
+
+**Migration:** add a check that `_node_id` is in the follower's current node's `connections` array. Preserves the existing party-leader auth check.
+
+**Player-impact check:** normal party movement uses one of the connected directions, so it still passes. Teleporting followers to arbitrary nodes (the exploit) is blocked. We'll verify by reading the current RPC and confirming `connections` is the right column.
+
+## 4. Add top-level React Error Boundary
+
+**Files:** new `src/components/ErrorBoundary.tsx`; wrap `<Outlet />` (or the game tree) inside `src/pages/GameRoute.tsx`.
+
+Fallback UI: short apology, "Reload" button, "Sign out" button. Logs the error to console + `activity_log` (best-effort) so we can see crashes from real players.
+
+**Player-impact check:** boundary only activates on uncaught render errors — no behavior change in the happy path.
+
+## 5. Consolidate `profiles` SELECT policy
+
+**Migration:** drop the older permissive policy, keep only `auth.uid() = user_id OR is_steward_or_overlord()`. Before writing the migration I'll `supabase--read_query` `pg_policies` to enumerate exactly what's there.
+
+**Player-impact check:** `useMarketplace` already reads seller names from `characters`, not `profiles`. Other reads of `profiles` are scoped to `auth.uid()` in `GameContext` — both still work under the consolidated policy.
+
+## 6. Email verification gate
+
+**Change:** in `src/pages/GameRoute.tsx` (or `OnboardingGatePage`), check `user.email_confirmed_at`. If null, show a "Confirm your email to enter the game" screen with a "Resend email" button (`supabase.auth.resend({ type: 'signup', email })`).
+
+Also call `supabase--configure_auth` to ensure email confirmations are enabled at the project level.
+
+**Player-impact check:** existing confirmed accounts (everyone currently playing) are unaffected. New signups must click the link before reaching the game.
+
+## 7. `.env` hygiene
+
+Verify `.env` is gitignored. The Supabase URL + publishable key are not secrets, but I'll confirm before sharing the repo more broadly. No code change needed if `.gitignore` already covers it. (No key rotation — anon keys are designed to be public.)
+
+---
+
+## Out of scope for Phase 1 (will revisit after approval)
+
+- Marketplace pagination + incremental realtime updates (item 5/12 of the audit)
+- Password complexity, onboarding name validation (items 11, 16)
+- `as any` cleanup, console error sanitization (items 17, 18)
+- Hook hygiene, version footer, reset-password UX (items 13–15, 19–21)
+
+---
+
+## Order of execution
+
+1. Read each target file/RPC to confirm exact current contents.
+2. Migrations first (RPCs + policy), in one approval round each so you can review the SQL.
+3. Edge function role gates (parallel writes).
+4. Error boundary + email-verification gate (frontend, parallel writes).
+5. Quick smoke check via preview: log in, move, fight, chat, list/buy marketplace item, party movement.
+
+Approve and I'll start with reading the target files and drafting the first migration.
