@@ -7,8 +7,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "@/contexts/GameContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+
 
 const GameRoute = lazy(() => import("./pages/GameRoute"));
 const AdminRoute = lazy(() => import("./pages/AdminRoute"));
@@ -32,18 +34,21 @@ const App = () => (
       <UpdateAvailableBanner />
       <BrowserRouter>
         <GameProvider>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/game" element={<GameRoute />} />
-              <Route path="/admin" element={<AdminRoute />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/gallery" element={<GalleryPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/game" element={<GameRoute />} />
+                <Route path="/admin" element={<AdminRoute />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/gallery" element={<GalleryPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </GameProvider>
       </BrowserRouter>
+
     </TooltipProvider>
   </QueryClientProvider>
 );

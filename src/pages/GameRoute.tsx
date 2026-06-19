@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
+import { EmailVerificationGate } from '@/components/EmailVerificationGate';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
+
 
   const navigate = useNavigate();
   const [syncing, setSyncing] = useState(false);
@@ -46,6 +48,14 @@ export default function GameRoute() {
     navigate('/', { replace: true });
     return null;
   }
+
+  // Email verification gate. Users created via OAuth (Google) have an email_confirmed_at
+  // set automatically. Email/password signups must click the confirmation link before
+  // entering the world.
+  if (user.email && !user.email_confirmed_at) {
+    return <EmailVerificationGate email={user.email} onSignOut={signOut} />;
+  }
+
 
   return (
     <GamePage
