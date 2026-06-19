@@ -53,17 +53,23 @@ export function UpdateAvailableBanner() {
       }
     };
 
-    // Initial check shortly after load, then on a slow interval and on focus.
+    // Initial check shortly after load, then on a slow interval, on focus,
+    // and when the tab becomes visible again (covers PWA resume from background).
     const initialTimer = setTimeout(check, 15_000);
     const interval = setInterval(check, CHECK_INTERVAL_MS);
     const onFocus = () => check();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") check();
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       cancelled = true;
       clearTimeout(initialTimer);
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
 
