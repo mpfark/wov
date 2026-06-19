@@ -1,81 +1,39 @@
-# Fix: Non-aggressive creatures stay flagged "aggressive" after combat
+## Goal
 
-## What's happening
+Split the current combined right-side panel into two independent gutter panels:
+- **Right gutter** → Chat only (as today, minus the Online tab)
+- **Left gutter** → Online Players only (new), mirroring the chat panel's behavior
 
-Yes — the creature itself gets flipped to aggressive by combat, not by how we engage it. The culprit is the `damage_creature` SQL RPC. Every non-lethal damage tick runs:
+## Changes
 
-```sql
-UPDATE creatures SET hp = _new_hp, is_aggressive = true WHERE id = _creature_id;
-```
+### 1. New `OnlinePanel` component
+`src/features/chat/components/OnlinePanel.tsx` — anchored to the left viewport gutter. Same structural shell as `ChatPanel`:
+- Header bar with a title ("Online N") and a collapse button (uses a Users icon).
+- Body = the existing online-players list (extracted from `ChatPanel`).
+- Collapses to a thin left-edge icon strip with the online count badge.
 
-It unconditionally sets `is_aggressive = true` on any hit. The kill branch only writes `hp = 0, is_alive = false` and never resets the flag. The only place `is_aggressive` is restored to its baseline (`base_aggressive`) is inside `respawn_creatures()`.
+### 2. Simplify `ChatPanel`
+`src/features/chat/components/ChatPanel.tsx`:
+- Remove the Tabs + Online tab + `onlinePlayers` / `myCharacterId` props.
+- Keep the header (title "Chat" + collapse button) and the messages list only.
+- Remove `chatPanelTab` localStorage key.
 
-So for King Aldric (created with `base_aggressive = false`, likely no/long respawn as a unique boss):
-1. First hit → DB sets `is_aggressive = true`
-2. Kill tick → leaves the flag `true`
-3. Admin Creature panel reads the live row → shows the ⚔️ icon
+### 3. Wire the new panel in `GamePage.tsx`
+`src/pages/GamePage.tsx` (around lines 94–117 and 1239–1282):
+- Add an `onlinePanelOpen` state, persisted in localStorage as `onlinePanelOpen` (default open).
+- Mirror the existing right-gutter logic for the left side:
+  - When the left gutter is wide enough (`gutterWidth >= 320`) → render `OnlinePanel` absolutely positioned on the left (`left-0`, width = `gutterWidth`).
+  - Otherwise, fixed 320px overlay on the left edge.
+  - When collapsed → thin left-edge icon button (mirror of the right-edge chat button), showing the online-count badge.
+- Remove `onlinePlayers` / `myCharacterId` from the `ChatPanel` render.
+- Both panels share the same `gutterWidth` / `canFit` calculation (the gutter math is symmetric, so no change to the existing resize effect is required).
 
-The client-side "You start attacking …" log is just text; it doesn't write state.
-
-## Fix
-
-Two small changes, both server-side, no UI work.
-
-### 1. Migration: stop damage from persisting an aggression flip; reset on kill
-
-Rewrite `public.damage_creature` so:
-- Non-lethal branch updates `hp` only. Aggro is already handled live in `combat-tick` via `useCombatAggroEffects` / engagement logic — we don't need to persist a permanent flag just because a creature took a hit.
-- Kill branch additionally resets `is_aggressive = base_aggressive` so the corpse/respawn-pending row reflects the designer's baseline.
-
-```sql
-CREATE OR REPLACE FUNCTION public.damage_creature(
-  _creature_id uuid, _new_hp integer, _killed boolean DEFAULT false
-) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF _killed THEN
-    UPDATE creatures
-       SET hp = 0,
-           is_alive = false,
-           died_at = now(),
-           is_aggressive = base_aggressive
-     WHERE id = _creature_id;
-  ELSE
-    UPDATE creatures
-       SET hp = _new_hp
-     WHERE id = _creature_id;
-  END IF;
-END;
-$$;
-```
-
-### 2. One-time data cleanup
-
-For existing rows that were corrupted by the old behavior (King Aldric and any other named/unique creatures that got stuck aggressive), reset to baseline:
-
-```sql
-UPDATE public.creatures
-   SET is_aggressive = base_aggressive
- WHERE is_aggressive <> base_aggressive;
-```
-
-(Safe — `base_aggressive` was seeded from `is_aggressive` at the time that column was added, and is the designer-authored truth thereafter.)
-
-## Why this is safe
-
-- Live aggro behavior during a fight is driven by the in-memory `is_aggressive` value `combat-tick` already loaded, plus `useCombatAggroEffects` (initial / mid-fight / re-engage). It doesn't depend on persisting `true` back to the DB mid-fight.
-- `respawn_creatures()` still resets to `base_aggressive` on respawn — unchanged.
-- Admin Creature panel will now reflect the designer's intent for dead/respawning creatures.
+### 4. Behavior
+- Independent open/closed state — collapsing chat does not affect the online panel, and vice versa.
+- On screens where the right side falls back to the overlay (`!canFitChat`), the left online panel uses the same overlay fallback.
+- No changes to tablet/mobile flow (≤1024px still uses the existing sheet behavior; left panel is desktop-only just like chat).
 
 ## Out of scope
 
-- No changes to `useCombatAggroEffects`, `combat-tick` engagement logic, client UI, or the `base_aggressive` column.
-- No rename or schema additions.
-
-## Verification
-
-1. Apply migration.
-2. Confirm King Aldric: `SELECT name, is_aggressive, base_aggressive, is_alive FROM creatures WHERE name ILIKE '%aldric%';` → `is_aggressive = false`.
-3. Spawn/find a non-aggressive creature, hit it once (don't kill), check DB row → `is_aggressive` stays `false`. Admin panel no longer shows ⚔️.
-4. Kill an aggressive (base_aggressive=true) creature → row shows `is_aggressive = true` (matches baseline), then after respawn still `true`. ✓
-5. Kill a non-aggressive creature → row shows `is_aggressive = false`. ✓
+- No changes to presence data, styling tokens, or the event log layout.
+- No changes to the center-column flex ratios.
