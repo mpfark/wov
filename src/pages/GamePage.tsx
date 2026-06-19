@@ -1141,7 +1141,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
         {/* Middle: Node + Event Log */}
         <div className="h-full flex-1 min-w-0 ornate-border bg-card/60 flex flex-col" style={{ maxWidth: centerMaxWidth }}>
-          <div className="flex-[2] min-h-0">
+          <div className="flex-[45] min-h-0">
             <NodeView
               node={currentNode}
               region={currentRegion}
@@ -1201,6 +1201,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
           <EventLogPanel
             filteredEventLog={filteredEventLog}
+            className="flex-[55]"
           />
           <CommandInputBar
             chatInput={chatInput}
