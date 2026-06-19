@@ -128,7 +128,14 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={6}
+                  minLength={isLogin ? 6 : 10}
+                  className="mt-1 gateway-input"
+                />
+                {!isLogin && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    At least 10 characters, with letters and numbers.
+                  </p>
+                )}
                   className="mt-1 gateway-input"
                 />
               </div>
