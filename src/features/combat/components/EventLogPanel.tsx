@@ -24,6 +24,7 @@ import {
 
 interface EventLogPanelProps {
   filteredEventLog: string[];
+  className?: string;
 }
 
 const MODE_LABELS: Record<CombatLogDisplayMode, string> = {
@@ -61,6 +62,7 @@ function getStoredFontSize(): FontSize {
 
 export default function EventLogPanel({
   filteredEventLog,
+  className,
 }: EventLogPanelProps) {
   const [displayMode, setDisplayMode] = useState<CombatLogDisplayMode>(getStoredDisplayMode);
   const [fontSize, setFontSize] = useState<FontSize>(getStoredFontSize);
@@ -92,7 +94,7 @@ export default function EventLogPanel({
   );
 
   return (
-    <div className="flex-[3] min-h-0 border-t border-border px-3 py-2 flex flex-col">
+    <div className={cn("min-h-0 border-t border-border px-3 py-2 flex flex-col", className || "flex-[3]")}>
       <div className="flex items-center justify-between mb-1 shrink-0">
         <h3 className="font-display text-xs text-muted-foreground">Event Log</h3>
         <div className="flex items-center gap-1">
