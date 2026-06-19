@@ -53,13 +53,16 @@ export function useMarketplace(
   const [uncollectedSales, setUncollectedSales] = useState<MarketplaceListing[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const MAX_LISTINGS = 200;
+
   const fetchListings = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('marketplace_listings' as any)
       .select('*')
       .eq('status', 'active')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(MAX_LISTINGS);
     if (!error && data) {
       const rows = data as unknown as MarketplaceListing[];
       // Resolve seller names in a single batched query
