@@ -7,11 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import logo from '@/assets/logo.png';
 
+function validateNewPassword(pw: string): string | null {
+  if (pw.length < 10) return 'Password must be at least 10 characters.';
+  if (!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) {
+    return 'Password must include both letters and numbers.';
+  }
+  return null;
+}
+
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  const [linkExpired, setLinkExpired] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,7 +37,17 @@ export default function ResetPasswordPage() {
       if (session) setReady(true);
     });
 
-    return () => subscription.unsubscribe();
+    // If no recovery session has materialised after ~6s, the link was almost
+    // certainly expired or already used. Show a clear path forward instead of
+    // leaving the user staring at a perpetual "Verifying..." spinner.
+    const expiredTimer = setTimeout(() => {
+      setLinkExpired((prev) => prev || true);
+    }, 6000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(expiredTimer);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,8 +56,9 @@ export default function ResetPasswordPage() {
       toast.error('Passwords do not match');
       return;
     }
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    const pwError = validateNewPassword(password);
+    if (pwError) {
+      toast.error(pwError);
       return;
     }
     setLoading(true);
@@ -58,7 +78,19 @@ export default function ResetPasswordPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center parchment-bg p-4">
         <img src={logo} alt="Wayfarers of Varneth" className="w-28 h-28 mb-4 drop-shadow-[0_0_15px_rgba(218,165,32,0.4)]" />
-        <p className="font-display text-primary text-glow animate-pulse">Verifying recovery link...</p>
+        {linkExpired ? (
+          <div className="text-center max-w-sm">
+            <p className="font-display text-primary text-glow mb-2">Recovery link expired</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              This password reset link is no longer valid. Request a fresh one from the sign-in page.
+            </p>
+            <Button onClick={() => navigate('/')} className="font-display">
+              Back to sign in
+            </Button>
+          </div>
+        ) : (
+          <p className="font-display text-primary text-glow animate-pulse">Verifying recovery link...</p>
+        )}
       </div>
     );
   }
@@ -81,9 +113,12 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                minLength={6}
+                minLength={10}
                 className="mt-1 bg-input border-border"
               />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                At least 10 characters, with letters and numbers.
+              </p>
             </div>
             <div>
               <label className="text-sm font-display text-foreground">Confirm Password</label>
@@ -93,7 +128,7 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                minLength={6}
+                minLength={10}
                 className="mt-1 bg-input border-border"
               />
             </div>
