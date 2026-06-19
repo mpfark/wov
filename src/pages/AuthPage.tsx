@@ -136,8 +136,6 @@ export default function AuthPage() {
                     At least 10 characters, with letters and numbers.
                   </p>
                 )}
-                  className="mt-1 gateway-input"
-                />
               </div>
             )}
             <Button
