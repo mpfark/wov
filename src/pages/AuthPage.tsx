@@ -14,6 +14,14 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp, resetPassword } = useAuth();
 
+  const validatePassword = (pw: string): string | null => {
+    if (pw.length < 10) return 'Password must be at least 10 characters.';
+    if (!/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) {
+      return 'Password must include both letters and numbers.';
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -27,6 +35,8 @@ export default function AuthPage() {
         const { error } = await signIn(email, password);
         if (error) throw error;
       } else {
+        const pwError = validatePassword(password);
+        if (pwError) throw new Error(pwError);
         const { error } = await signUp(email, password);
         if (error) throw error;
         toast.success('Check your email to confirm your account!');
