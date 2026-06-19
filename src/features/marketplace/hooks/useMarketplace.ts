@@ -109,12 +109,21 @@ export function useMarketplace(
       if (data) for (const r of data as any[]) seenSoldIdsRef.current.add(r.id);
     })();
 
+    const refetchTimerRef = { current: null as number | null };
+    const scheduleRefetch = () => {
+      if (refetchTimerRef.current != null) return;
+      refetchTimerRef.current = window.setTimeout(() => {
+        refetchTimerRef.current = null;
+        fetchListings();
+        fetchUncollectedSales();
+      }, 750);
+    };
+
     const ch = supabase
       .channel('marketplace-listings-sub')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'marketplace_listings' }, (payload: any) => {
-        fetchListings();
-        fetchUncollectedSales();
-        // Detect "my listing just sold" → fire one-time notification
+        scheduleRefetch();
+        // Detect "my listing just sold" → fire one-time notification (immediate, not debounced)
         const row = payload?.new;
         if (
           characterId &&
@@ -134,7 +143,10 @@ export function useMarketplace(
         }
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      if (refetchTimerRef.current != null) window.clearTimeout(refetchTimerRef.current);
+      supabase.removeChannel(ch);
+    };
   }, [fetchListings, fetchUncollectedSales, characterId]);
 
   // Periodically expire listings (every 5 min) and on focus
