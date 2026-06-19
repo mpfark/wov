@@ -49,6 +49,14 @@ export default function GameRoute() {
     return null;
   }
 
+  // Email verification gate. Users created via OAuth (Google) have an email_confirmed_at
+  // set automatically. Email/password signups must click the confirmation link before
+  // entering the world.
+  if (user.email && !user.email_confirmed_at) {
+    return <EmailVerificationGate email={user.email} onSignOut={signOut} />;
+  }
+
+
   return (
     <GamePage
       character={character}
