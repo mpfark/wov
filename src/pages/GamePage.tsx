@@ -36,7 +36,7 @@ import { CLASS_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { User, Map as MapIconLucide, MessageCircle } from 'lucide-react';
+import { User, Map as MapIconLucide, MessageCircle, Users } from 'lucide-react';
 
 import { useKeyboardMovement } from '@/features/world';
 
@@ -56,6 +56,7 @@ import { useStatAllocation } from '@/features/character/hooks/useStatAllocation'
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
 import { AbilityBarMeasurer } from '@/features/combat/components/AbilityBarMeasurer';
 import ChatPanel from '@/features/chat/components/ChatPanel';
+import OnlinePanel from '@/features/chat/components/OnlinePanel';
 import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
 import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/useGlobalBroadcast';
@@ -93,6 +94,10 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const [isWideScreen, setIsWideScreen] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(() => {
     const stored = localStorage.getItem('chatPanelOpen');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [onlinePanelOpen, setOnlinePanelOpen] = useState(() => {
+    const stored = localStorage.getItem('onlinePanelOpen');
     return stored !== null ? stored === 'true' : true;
   });
   // Chat lives in the right viewport gutter outside the centered game area.
@@ -1245,8 +1250,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           <ChatPanel
             messages={chatMessages}
             onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
-            onlinePlayers={onlinePlayers}
-            myCharacterId={character.id}
           />
         </div>
       )}
@@ -1257,8 +1260,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           <ChatPanel
             messages={chatMessages}
             onClose={() => { setChatPanelOpen(false); localStorage.setItem('chatPanelOpen', 'false'); }}
-            onlinePlayers={onlinePlayers}
-            myCharacterId={character.id}
           />
         </div>
       )}
@@ -1273,8 +1274,46 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           title="Open chat panel"
         >
           <MessageCircle className="w-4 h-4" />
+        </Button>
+      )}
+
+      {/* Online players live in the left viewport gutter, mirroring the chat panel. */}
+      {isWideScreen && !isTablet && onlinePanelOpen && canFitChat && (
+        <div
+          className="absolute top-0 bottom-0 left-0 z-30"
+          style={{ width: gutterWidth }}
+        >
+          <OnlinePanel
+            onlinePlayers={onlinePlayers}
+            myCharacterId={character.id}
+            onClose={() => { setOnlinePanelOpen(false); localStorage.setItem('onlinePanelOpen', 'false'); }}
+          />
+        </div>
+      )}
+
+      {/* Overlay fallback when the gutter is too narrow for inline online panel. */}
+      {isWideScreen && !isTablet && onlinePanelOpen && !canFitChat && (
+        <div className="fixed left-0 top-0 bottom-0 w-[320px] z-40 shadow-2xl">
+          <OnlinePanel
+            onlinePlayers={onlinePlayers}
+            myCharacterId={character.id}
+            onClose={() => { setOnlinePanelOpen(false); localStorage.setItem('onlinePanelOpen', 'false'); }}
+          />
+        </div>
+      )}
+
+      {/* Collapsed online players icon — pinned to left edge of viewport. */}
+      {isWideScreen && !isTablet && !onlinePanelOpen && (
+        <Button
+          size="icon"
+          className="fixed left-0 top-0 bottom-0 h-full w-8 z-30 rounded-none border-r border-border bg-card/60 hover:bg-accent/60"
+          variant="ghost"
+          onClick={() => { setOnlinePanelOpen(true); localStorage.setItem('onlinePanelOpen', 'true'); }}
+          title="Open online players panel"
+        >
+          <Users className="w-4 h-4" />
           {onlinePlayers.length > 0 && (
-            <span className="absolute top-1 right-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
+            <span className="absolute top-1 left-1 text-[9px] bg-primary text-primary-foreground rounded-full min-w-4 h-4 px-1 flex items-center justify-center font-display">
               {onlinePlayers.length}
             </span>
           )}
