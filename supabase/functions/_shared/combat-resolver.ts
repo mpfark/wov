@@ -439,14 +439,20 @@ export async function writeCreatureState(
   cHp: Record<string, number>,
   cKilled: Set<string>,
 ): Promise<void> {
-  const promises = creatures.map((cr) => {
+  const promises: Promise<any>[] = [];
+  const turnAggressiveIds: string[] = [];
+  for (const cr of creatures) {
     if (cKilled.has(cr.id)) {
-      return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: 0, _killed: true });
+      promises.push(db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: 0, _killed: true }));
     } else if (cHp[cr.id] !== cr.hp) {
-      return db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: cHp[cr.id] });
+      promises.push(db.rpc('damage_creature', { _creature_id: cr.id, _new_hp: cHp[cr.id] }));
+      // Any creature damaged by a player and surviving becomes aggressive until killed.
+      if (!cr.is_aggressive && cHp[cr.id] < cr.hp) turnAggressiveIds.push(cr.id);
     }
-    return Promise.resolve();
-  });
+  }
+  if (turnAggressiveIds.length > 0) {
+    promises.push(db.from('creatures').update({ is_aggressive: true }).in('id', turnAggressiveIds));
+  }
   await Promise.all(promises);
 }
 
