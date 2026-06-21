@@ -60,6 +60,7 @@ import OnlinePanel from '@/features/chat/components/OnlinePanel';
 import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
 import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/useGlobalBroadcast';
+import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 
 
 interface Props {
