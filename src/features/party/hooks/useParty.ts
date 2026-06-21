@@ -134,19 +134,31 @@ export function useParty(characterId: string | null) {
     return () => { supabase.removeChannel(channel); };
   }, [characterId, fetchParty]);
 
-  // Polling fallback — safety net for missed realtime/broadcast events (10s interval)
-  // Polling fallback — safety net for missed realtime/broadcast events (5s interval)
+  // Realtime subscription for the active party: refresh member roster on any
+  // party_members INSERT/UPDATE/DELETE within this party (catches accepts,
+  // leaves, kicks, follow-toggles for other members). Member stats like HP
+  // and current_node_id flow through usePartyBroadcast / move broadcasts —
+  // we don't poll for those. We keep one cheap safety-net refetch on
+  // visibilitychange→visible and a 60s timer for missed events.
   useEffect(() => {
-    if (!party) return;
-    let active = true;
-    let timeoutId: ReturnType<typeof setTimeout>;
-    const poll = () => {
-      if (!active) return;
-      fetchMemberStatsCore();
-      timeoutId = setTimeout(poll, 5000);
+    if (!party?.id) return;
+    const channel = supabase
+      .channel(`party-roster-${party.id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'party_members',
+        filter: `party_id=eq.${party.id}`,
+      }, () => fetchMemberStatsCore())
+      .subscribe();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchMemberStatsCore();
     };
-    timeoutId = setTimeout(poll, 5000);
-    return () => { active = false; clearTimeout(timeoutId); };
+    document.addEventListener('visibilitychange', onVisible);
+    const safetyInterval = setInterval(fetchMemberStatsCore, 60_000);
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', onVisible);
+      clearInterval(safetyInterval);
+    };
   }, [party?.id, fetchMemberStatsCore]);
 
   const createParty = useCallback(async () => {
