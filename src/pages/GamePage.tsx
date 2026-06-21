@@ -528,14 +528,35 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   }, [broadcastLogEntries, party, processIncomingLog]);
 
 
-  // Update last_online periodically
+  // Update last_online periodically — but only while the tab is visible,
+  // plus one final write when the tab is hidden / unloaded. This cuts the
+  // heartbeat write rate dramatically for backgrounded tabs without
+  // hurting "last seen" precision (all readers use ≥30 min granularity).
   useEffect(() => {
     const updateOnline = () => {
       supabase.from('characters').update({ last_online: new Date().toISOString() } as any).eq('id', character.id).then(() => {});
     };
-    updateOnline();
-    const interval = setInterval(updateOnline, 60000);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (interval !== null) return;
+      updateOnline();
+      interval = setInterval(updateOnline, 60000);
+    };
+    const stop = () => {
+      if (interval !== null) { clearInterval(interval); interval = null; }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') start();
+      else { updateOnline(); stop(); }
+    };
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', updateOnline);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', updateOnline);
+    };
   }, [character.id]);
 
   // When a party reward broadcast arrives for this character, refetch character data
