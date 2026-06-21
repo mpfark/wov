@@ -1387,6 +1387,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         atSoulforge={(currentNode as any)?.is_soulforge === true}
       />
 
+      <BlacksmithIntroWhisper
+        character={character}
+        atBlacksmith={(currentNode as any)?.is_blacksmith === true}
+      />
+
 
 
       {/* Jewelcrafter Dialog */}
