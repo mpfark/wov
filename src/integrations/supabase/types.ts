@@ -2157,6 +2157,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_activity_batch: { Args: { _entries: Json }; Returns: undefined }
       move_follower: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
