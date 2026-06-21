@@ -25,6 +25,7 @@ import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import OrderRecruiterDialog from '@/features/character/components/OrderRecruiterDialog';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
 import SoulforgeWhisper from '@/features/inventory/components/SoulforgeWhisper';
+import BlacksmithIntroWhisper from '@/features/inventory/components/BlacksmithIntroWhisper';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
 import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
 import { useInventory } from '@/features/inventory';
