@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/hooks/useActivityLog';
 import { getCachedItemAsync } from '@/features/inventory';
 import { preheatNode } from '@/features/creatures/hooks/useCreatures';
+import { markNodeVisited } from '@/features/world/utils/visitedNodesCache';
 import type { BuffState, BuffSetters } from '@/features/combat/hooks/useBuffState';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -148,10 +149,7 @@ async function moveFollowers(
     ));
     // Record node discovery for followers so their world maps update
     await Promise.all(toMove.map(f =>
-      supabase.from('character_visited_nodes').upsert(
-        { character_id: f.character_id, node_id: targetNodeId },
-        { onConflict: 'character_id,node_id' }
-      )
+      markNodeVisited(f.character_id, targetNodeId)
     ));
     if (broadcastMove) {
       for (const f of toMove) {
@@ -318,10 +316,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       }
       await p.updateCharacter({ current_node_id: nodeId, mp: Math.max((p.character.mp ?? 100) - moveCost, 0) });
       p.broadcastMove(p.character.id, p.character.name, nodeId, p.character.current_node_id!);
-      supabase.from('character_visited_nodes').upsert(
-        { character_id: p.character.id, node_id: nodeId },
-        { onConflict: 'character_id,node_id' }
-      ).then();
+      void markNodeVisited(p.character.id, nodeId);
       const dirNames: Record<string, string> = { N: 'North', S: 'South', E: 'East', W: 'West', NE: 'Northeast', NW: 'Northwest', SE: 'Southeast', SW: 'Southwest' };
       const dirLabel = direction ? (dirNames[direction] || direction) : null;
       const targetArea = p.getNodeArea(targetNode);
@@ -352,10 +347,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: nodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, nodeId, prevNodeId);
-    supabase.from('character_visited_nodes').upsert(
-      { character_id: p.character.id, node_id: nodeId },
-      { onConflict: 'character_id,node_id' }
-    ).then();
+    void markNodeVisited(p.character.id, nodeId);
     p.addLog(`🌀 You teleport to ${targetNode.name} for ${cpCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Teleported to ${targetNode.name}`, { node_id: nodeId, cpCost });
     setTeleportOpen(false);
@@ -378,10 +370,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
     const prevNodeId = p.character.current_node_id!;
     const leaderMove = p.updateCharacter({ current_node_id: waymarkNodeId, cp: (p.character.cp ?? 0) - cpCost });
     p.broadcastMove(p.character.id, p.character.name, waymarkNodeId, prevNodeId);
-    supabase.from('character_visited_nodes').upsert(
-      { character_id: p.character.id, node_id: waymarkNodeId },
-      { onConflict: 'character_id,node_id' }
-    ).then();
+    void markNodeVisited(p.character.id, waymarkNodeId);
     p.addLog(`📍 You return to your waymark at ${waymarkNode.name} for ${cpCost} CP.`);
     logActivity(p.character.user_id, p.character.id, 'teleport', `Returned to waymark at ${waymarkNode.name}`, { node_id: waymarkNodeId, cpCost });
     setWaymarkNodeId(null);
