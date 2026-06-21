@@ -4,6 +4,7 @@ import { getAreaFillColor, getAreaStrokeColor } from '@/features/world/utils/are
 import { computeRegionOutline, type Circle } from '@/features/world/utils/outline-geometry';
 import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
+import { markNodeVisited, primeVisitedNodes } from '@/features/world/utils/visitedNodesCache';
 
 interface NodeCreatureInfo {
   hasCreatures: boolean;
@@ -197,13 +198,15 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
         .select('node_id')
         .eq('character_id', characterId);
       if (data) {
-        setVisitedNodeIds(new Set(data.map(d => d.node_id)));
+        const ids = data.map(d => d.node_id);
+        setVisitedNodeIds(new Set(ids));
+        primeVisitedNodes(characterId, ids);
       }
     };
     fetchVisited();
   }, [characterId]);
 
-  // Accumulate current node into visited set + upsert to DB
+  // Accumulate current node into visited set + upsert to DB (dedup via cache)
   useEffect(() => {
     if (!characterId) return;
     setVisitedNodeIds(prev => {
@@ -212,10 +215,7 @@ export default function PlayerGraphView({ currentNodeId, nodes, onNodeClick, par
       next.add(currentNodeId);
       return next;
     });
-    supabase.from('character_visited_nodes').upsert(
-      { character_id: characterId, node_id: currentNodeId },
-      { onConflict: 'character_id,node_id' }
-    ).then();
+    void markNodeVisited(characterId, currentNodeId);
   }, [characterId, currentNodeId]);
 
   // Fetch creature presence for all visible nodes (batched query)
