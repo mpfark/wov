@@ -116,50 +116,109 @@ export function useParty(characterId: string | null) {
     }, 500);
   }, [fetchMemberStatsCore]);
 
-  useEffect(() => {
-    fetchParty();
-    if (!characterId) return;
+  // Helper: create a self-healing realtime channel. Re-subscribes with
+  // exponential backoff on CHANNEL_ERROR/TIMED_OUT/CLOSED, and runs
+  // `onResync` on every successful (re)subscribe to catch up on missed events.
+  const useResilientChannel = (
+    enabled: boolean,
+    build: () => ReturnType<typeof supabase.channel>,
+    onResync: () => void,
+    deps: unknown[],
+  ) => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+      if (!enabled) return;
+      let cancelled = false;
+      let attempt = 0;
+      let retryTimer: ReturnType<typeof setTimeout> | null = null;
+      let currentChannel: ReturnType<typeof supabase.channel> | null = null;
 
-    // Subscribe to party_members changes filtered to our character (for invites)
-    // and to parties table for structure changes. When we know the party_id, filter on that too.
-    const channel = supabase
+      const connect = () => {
+        if (cancelled) return;
+        const ch = build();
+        currentChannel = ch;
+        ch.subscribe((status) => {
+          if (cancelled) return;
+          if (status === 'SUBSCRIBED') {
+            attempt = 0;
+            onResync();
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            if (currentChannel) {
+              supabase.removeChannel(currentChannel);
+              currentChannel = null;
+            }
+            const delay = Math.min(30_000, 1000 * Math.pow(2, attempt));
+            attempt += 1;
+            retryTimer = setTimeout(connect, delay);
+          }
+        });
+      };
+
+      const forceReconnect = () => {
+        if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+        if (currentChannel) {
+          supabase.removeChannel(currentChannel);
+          currentChannel = null;
+        }
+        attempt = 0;
+        connect();
+      };
+
+      const onOnline = () => forceReconnect();
+      const onVisible = () => {
+        if (document.visibilityState === 'visible') forceReconnect();
+      };
+      window.addEventListener('online', onOnline);
+      document.addEventListener('visibilitychange', onVisible);
+
+      connect();
+
+      return () => {
+        cancelled = true;
+        if (retryTimer) clearTimeout(retryTimer);
+        if (currentChannel) supabase.removeChannel(currentChannel);
+        window.removeEventListener('online', onOnline);
+        document.removeEventListener('visibilitychange', onVisible);
+      };
+    }, deps);
+  };
+
+  // Per-character channel: invites + parties structure changes
+  useResilientChannel(
+    !!characterId,
+    () => supabase
       .channel(`party-${characterId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'party_members',
         filter: `character_id=eq.${characterId}`,
       }, () => fetchParty())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'parties' }, () => fetchParty())
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parties' }, () => fetchParty()),
+    () => fetchParty(),
+    [characterId, fetchParty],
+  );
 
-    return () => { supabase.removeChannel(channel); };
-  }, [characterId, fetchParty]);
-
-  // Realtime subscription for the active party: refresh member roster on any
-  // party_members INSERT/UPDATE/DELETE within this party (catches accepts,
-  // leaves, kicks, follow-toggles for other members). Member stats like HP
-  // and current_node_id flow through usePartyBroadcast / move broadcasts —
-  // we don't poll for those. We keep one cheap safety-net refetch on
-  // visibilitychange→visible and a 60s timer for missed events.
-  useEffect(() => {
-    if (!party?.id) return;
-    const channel = supabase
-      .channel(`party-roster-${party.id}`)
+  // Per-party roster channel: refreshes member list on any party_members change
+  // within this party (accepts, leaves, kicks, follow-toggles). Member HP &
+  // current_node_id flow through usePartyBroadcast — not polled here. 60s
+  // safety-net interval remains as final backstop.
+  useResilientChannel(
+    !!party?.id,
+    () => supabase
+      .channel(`party-roster-${party!.id}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'party_members',
-        filter: `party_id=eq.${party.id}`,
-      }, () => fetchMemberStatsCore())
-      .subscribe();
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') fetchMemberStatsCore();
-    };
-    document.addEventListener('visibilitychange', onVisible);
+        filter: `party_id=eq.${party!.id}`,
+      }, () => fetchMemberStatsCore()),
+    () => fetchMemberStatsCore(),
+    [party?.id, fetchMemberStatsCore],
+  );
+
+  useEffect(() => {
+    if (!party?.id) return;
     const safetyInterval = setInterval(fetchMemberStatsCore, 60_000);
-    return () => {
-      supabase.removeChannel(channel);
-      document.removeEventListener('visibilitychange', onVisible);
-      clearInterval(safetyInterval);
-    };
+    return () => clearInterval(safetyInterval);
   }, [party?.id, fetchMemberStatsCore]);
+
 
   const createParty = useCallback(async () => {
     if (!characterId || party) return;
