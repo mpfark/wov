@@ -4,6 +4,7 @@ import { ServicePanelShell } from '@/components/ui/ServicePanelShell';
 import { GameNode, Region, Area, getNodeDisplayName } from '@/features/world';
 import { PartyMember } from '@/features/party';
 import { supabase } from '@/integrations/supabase/client';
+import { primeVisitedNodes } from '@/features/world/utils/visitedNodesCache';
 
 interface TeleportDestination {
   node: GameNode;
@@ -51,7 +52,11 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
     if (!open || !characterId) return;
     supabase.from('character_visited_nodes').select('node_id').eq('character_id', characterId)
       .then(({ data }) => {
-        if (data) setVisitedIds(new Set(data.map(r => r.node_id)));
+        if (data) {
+          const ids = data.map(r => r.node_id);
+          setVisitedIds(new Set(ids));
+          primeVisitedNodes(characterId, ids);
+        }
       });
   }, [open, characterId]);
 

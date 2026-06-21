@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Locate } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { primeVisitedNodes } from '@/features/world/utils/visitedNodesCache';
 import { GameNode, Region, Area } from '@/features/world';
 import { useAreaTypes } from '@/features/world';
 import { getAreaFillColor, getAreaStrokeColor } from '@/features/world';
@@ -92,7 +93,11 @@ export default function PlayerWorldMapDialog({ open, onOpenChange, characterId, 
     setLoading(true);
     supabase.from('character_visited_nodes').select('node_id').eq('character_id', characterId)
       .then(({ data }) => {
-        if (data) setVisitedIds(new Set(data.map(r => r.node_id)));
+        if (data) {
+          const ids = data.map(r => r.node_id);
+          setVisitedIds(new Set(ids));
+          primeVisitedNodes(characterId, ids);
+        }
         setLoading(false);
       });
   }, [open, characterId]);
