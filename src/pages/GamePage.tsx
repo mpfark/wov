@@ -1534,6 +1534,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
       {/* Movement Pad — tablet only */}
       {isTablet && <MovementPad currentNode={currentNode} onMove={handleMove} disabled={isDead} unlockedConnections={unlockedConnections} />}
+
+      {/* First-time hint pointing at the keyboard shortcuts button */}
+      {!isMobile && !isTablet && character && (
+        <OnboardingCoachmark
+          targetId="keyboard-shortcuts"
+          title="Keyboard Shortcuts"
+          body="Open this panel to see and customize movement (QWE/ASD/ZXC), attack, abilities, and more."
+        />
+      )}
     </div>
   );
 }
