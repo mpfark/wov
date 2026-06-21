@@ -209,7 +209,7 @@ export default function MapPanel({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-onboarding="keyboard-shortcuts">
                         <Keyboard className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
