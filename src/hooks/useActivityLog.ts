@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { enqueueActivityLog } from './activityLogBatcher';
 
 export interface ActivityLogEntry {
   id: string;
@@ -13,6 +14,9 @@ export interface ActivityLogEntry {
 
 /**
  * Log a player activity event. Fire-and-forget — errors are silently ignored.
+ *
+ * Entries are buffered for up to 250 ms (or 20 entries) and flushed in a
+ * single batched RPC. See activityLogBatcher.ts.
  */
 export async function logActivity(
   _userId: string,
@@ -21,12 +25,12 @@ export async function logActivity(
   message: string,
   metadata: Record<string, any> = {},
 ) {
-  await supabase.rpc('log_activity', {
-    _character_id: characterId,
-    _event_type: eventType,
-    _message: message,
-    _metadata: metadata,
-  } as any);
+  enqueueActivityLog({
+    character_id: characterId,
+    event_type: eventType,
+    message,
+    metadata,
+  });
 }
 
 /**
