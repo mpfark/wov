@@ -169,7 +169,9 @@ export default function JewelcrafterPanel({
       onInventoryChange();
       const gemUsed: GemKey | undefined = data.gem_used;
       const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
-      addLog(`💎 The jeweler crafted: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!`);
+      const xpNote = data.xp_awarded > 0 ? ` (+${data.xp_awarded} XP)` : '';
+      addLog(`💎 The jeweler crafted: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!${xpNote}`);
+      try { localStorage.setItem(`onboarding.blacksmith-intro.${characterId}.crafted.v1`, '1'); } catch {}
       if (forgeSlot) browseSlot(forgeSlot);
       setSelectedForgeItem(null);
     } catch (e: any) {
