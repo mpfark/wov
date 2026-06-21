@@ -122,8 +122,13 @@ serve(async (req) => {
       throw new Error("You lack the gem required to craft this item");
     }
 
+    // Small static crafting XP (skipped at cap). See blacksmith-forge for rationale.
+    const CRAFT_XP = 25;
+    const xpAwarded = char.level < 42 ? CRAFT_XP : 0;
+
     await db.from("characters").update({
       gold: char.gold - goldCost,
+      xp: (char.xp ?? 0) + xpAwarded,
     }).eq("id", character_id);
 
     await db.from("character_inventory").insert({
@@ -136,6 +141,7 @@ serve(async (req) => {
       item: template,
       gold_remaining: char.gold - goldCost,
       gem_used: gemKey,
+      xp_awarded: xpAwarded,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
