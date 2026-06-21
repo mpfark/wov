@@ -60,6 +60,7 @@ import OnlinePanel from '@/features/chat/components/OnlinePanel';
 import CommandInputBar from '@/features/chat/components/CommandInputBar';
 import { useSummonRequests } from '@/features/world/hooks/useSummonRequests';
 import { useGlobalBroadcastSender, useGlobalBroadcastListener } from '@/hooks/useGlobalBroadcast';
+import { OnboardingCoachmark } from '@/components/OnboardingCoachmark';
 
 
 interface Props {
@@ -1534,6 +1535,15 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
       {/* Movement Pad — tablet only */}
       {isTablet && <MovementPad currentNode={currentNode} onMove={handleMove} disabled={isDead} unlockedConnections={unlockedConnections} />}
+
+      {/* First-time hint pointing at the keyboard shortcuts button */}
+      {!isMobile && !isTablet && character && (
+        <OnboardingCoachmark
+          targetId="keyboard-shortcuts"
+          title="Keyboard Shortcuts"
+          body="Open this panel to see and customize movement (QWE/ASD/ZXC), attack, abilities, and more."
+        />
+      )}
     </div>
   );
 }
