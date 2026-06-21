@@ -1,47 +1,50 @@
-# Realtime Reconnect Resilience for Party Updates
+# Plan: Blacksmith Onboarding Whisper + Crafting XP
 
-## Goal
-Ensure `party_members` realtime updates keep flowing after transient network drops (Wi-Fi blips, tab sleep, server-side socket resets). Today both `party-${characterId}` and `party-roster-${party.id}` channels call `.subscribe()` with no status handler, so a `CHANNEL_ERROR` / `TIMED_OUT` / `CLOSED` event silently kills the stream until the component remounts. The 60s safety-net poll masks but does not fix it.
+Two small, independent additions.
 
-## Scope
-Only `src/features/party/hooks/useParty.ts`. No DB, no broadcast changes. (`usePartyBroadcast` is a separate concern — broadcast channels are short-lived per-combat and out of scope.)
+## 1. "Visit the Blacksmith" whisper (new player nudge)
 
-## Changes
+New component `BlacksmithIntroWhisper.tsx`, modeled directly on the existing `SoulforgeWhisper` (same fixed bottom-center fade style — feels consistent, no new visual language).
 
-### 1. Status-aware subscribe with auto-rejoin
-Wrap the existing two `.subscribe()` calls with a status callback:
+Behavior:
+- Shows for a character only if **all** of these are true:
+  - Character `level <= 3` (i.e. truly new — won't pester a returning veteran on a fresh alt forever).
+  - Character has never crafted (see below) AND has never visited a blacksmith node.
+  - Currently NOT standing at a blacksmith node.
+  - Not dismissed.
+- Copy: *"💍 A gruff voice whispers: 'When you've a coin to spare, come see me at the forge in Hearthvale — north-east of the square.'"*
+- Dismissal persists in `localStorage` under `onboarding.blacksmith-intro.${characterId}.dismissed.v1` (same pattern as `OnboardingCoachmark`). Click to dismiss; auto-hides permanently the first time the character stands on any `is_blacksmith` node.
 
-```ts
-.subscribe((status, err) => {
-  if (status === 'SUBSCRIBED') {
-    // Reconnect path: pull fresh state to cover events missed while disconnected
-    fetchParty();           // for invite channel
-    fetchMemberStatsCore(); // for roster channel
-  } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-    // Tear down + rejoin after backoff; supabase-js does not auto-resubscribe
-    scheduleReconnect();
-  }
-});
-```
+Mounted from `GamePage.tsx` next to the existing `SoulforgeWhisper`, fed `character`, current node's `is_blacksmith` flag, and a `hasCrafted` boolean (see §2 — same flag the XP code touches).
 
-`scheduleReconnect` uses exponential backoff (1s → 2s → 5s → 10s, cap 30s) with a per-channel timer ref, cleared on successful `SUBSCRIBED`.
+No DB schema change — the "has visited blacksmith" + "has crafted" signals are stored in `localStorage` keyed per character. This matches how the keyboard-shortcuts coachmark and Soulforge whisper already work (pure client-side onboarding state). If we later want this cross-device, we can promote the flag to `characters` in a follow-up.
 
-### 2. Window-level reconnect triggers
-Add a single effect that listens to `window` `online` and `document` `visibilitychange→visible` and forces both channels to tear down and rejoin (cheap, ensures we recover quickly when the user returns or Wi-Fi comes back). Replaces the existing visibility-only refetch.
+## 2. Small static crafting XP
 
-### 3. Keep the 60s safety net
-Leave the existing `setInterval(fetchMemberStatsCore, 60_000)` as the final backstop in case all of the above fails.
+Award a flat **25 XP** every successful craft, in these edge functions:
+- `blacksmith-forge` (forge mode)
+- `jewelcrafter-forge` (forge mode)
+- `stonebinder-fuse` (successful fusion)
 
-## Files
-- `src/features/party/hooks/useParty.ts` — add status handlers, reconnect scheduler, online listener; refetch on every successful (re)subscribe.
+Rationale: 25 XP is ~2.5 kills at L1 (meaningful nudge for a first-time crafter), and by L10+ it's a rounding error — exactly the shape you asked for. Static, no level scaling.
 
-## Out of Scope
-- `usePartyBroadcast` channels
-- Other realtime subscriptions (chat, marketplace, node) — can follow the same pattern in a later pass if needed
-- No new dependencies, no migration
+Rules:
+- Skipped silently when `character.level >= 42` (level cap — matches existing XP-grant pattern).
+- Added to `characters.xp` in the same update that already writes gold/inventory, so it's atomic with the craft.
+- Returned in the function response as `xp_awarded: 25` so the client can show a small log line: *"🔩 The blacksmith forged: X! (+25 XP)"*.
+- Does **not** trigger level-up math here — XP threshold/level-up is already handled centrally on next character refresh. (Confirm during build by checking how `xp_boost` / kill rewards currently grant XP; reuse that path so a craft that crosses a level boundary still levels the player up properly.)
 
-## Verification
-1. Join a party with two clients.
-2. In one client, toggle offline in DevTools for ~10s, then back online. Within ~2s the roster should re-sync (visible via a Follow toggle on the other client).
-3. Background the tab for 1 minute, switch back — roster should be current immediately, no 60s wait.
-4. Network log should show one new realtime websocket connection per drop, not a tight reconnect loop.
+No new tables, no schema migration, no formula module changes.
+
+## Files touched
+
+- **New:** `src/features/inventory/components/BlacksmithIntroWhisper.tsx`
+- **Edited:** `src/pages/GamePage.tsx` (mount the whisper, pass `is_blacksmith` for current node)
+- **Edited:** `supabase/functions/blacksmith-forge/index.ts`, `supabase/functions/jewelcrafter-forge/index.ts`, `supabase/functions/stonebinder-fuse/index.ts` (add 25 XP grant on success, return `xp_awarded`)
+- **Edited:** `BlacksmithPanel.tsx`, `JewelcrafterPanel.tsx`, `StonebinderPanel.tsx` (append `(+25 XP)` to the success log, and set the `crafted` localStorage flag the whisper reads)
+
+## Out of scope
+
+- No promotion of the onboarding flag to the database.
+- No XP for `ai-item-forge` (admin tool) or vendor/marketplace flows.
+- No change to crafting costs or item stats.

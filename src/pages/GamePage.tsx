@@ -25,6 +25,7 @@ import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import OrderRecruiterDialog from '@/features/character/components/OrderRecruiterDialog';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
 import SoulforgeWhisper from '@/features/inventory/components/SoulforgeWhisper';
+import BlacksmithIntroWhisper from '@/features/inventory/components/BlacksmithIntroWhisper';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
 import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
 import { useInventory } from '@/features/inventory';
@@ -1384,6 +1385,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
       <SoulforgeWhisper
         character={character}
         atSoulforge={(currentNode as any)?.is_soulforge === true}
+      />
+
+      <BlacksmithIntroWhisper
+        character={character}
+        atBlacksmith={(currentNode as any)?.is_blacksmith === true}
       />
 
 

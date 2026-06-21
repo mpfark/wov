@@ -139,7 +139,9 @@ export default function StonebinderPanel({
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      addLog(`⚜ The Stonebinder binds ${a.item.name} and ${b.item.name} into ${data.item.name}.`);
+      const xpNote = data.xp_awarded > 0 ? ` (+${data.xp_awarded} XP)` : '';
+      addLog(`⚜ The Stonebinder binds ${a.item.name} and ${b.item.name} into ${data.item.name}.${xpNote}`);
+      try { localStorage.setItem(`onboarding.blacksmith-intro.${characterId}.crafted.v1`, '1'); } catch {}
       setStoneA(null); setStoneB(null); setPreview(null);
       onInventoryChange();
     } catch (e: any) {

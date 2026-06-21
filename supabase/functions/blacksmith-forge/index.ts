@@ -132,9 +132,17 @@ serve(async (req) => {
       throw new Error("You lack the gem required to forge this item");
     }
 
-    // Deduct gold (still on characters until economy refactor).
+    // Award a small, static crafting XP bonus (skipped at level cap).
+    // Static by design: meaningful at L1 (~2.5 kills), trivial later. No
+    // level-up math here — the next combat-tick's threshold check will
+    // promote the character if this xp tipped them over.
+    const CRAFT_XP = 25;
+    const xpAwarded = char.level < 42 ? CRAFT_XP : 0;
+
+    // Deduct gold (still on characters until economy refactor) + add xp.
     await db.from("characters").update({
       gold: char.gold - goldCost,
+      xp: (char.xp ?? 0) + xpAwarded,
     }).eq("id", character_id);
 
     // Add item to inventory
@@ -148,6 +156,7 @@ serve(async (req) => {
       item: template,
       gold_remaining: char.gold - goldCost,
       gem_used: gemKey,
+      xp_awarded: xpAwarded,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

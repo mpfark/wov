@@ -173,7 +173,9 @@ export default function BlacksmithPanel({
       onInventoryChange();
       const gemUsed: GemKey | undefined = data.gem_used;
       const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
-      addLog(`🔩 The blacksmith forged: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!`);
+      const xpNote = data.xp_awarded > 0 ? ` (+${data.xp_awarded} XP)` : '';
+      addLog(`🔩 The blacksmith forged: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!${xpNote}`);
+      try { localStorage.setItem(`onboarding.blacksmith-intro.${characterId}.crafted.v1`, '1'); } catch {}
       // Re-browse to refresh available items based on remaining gems
       if (forgeSlot) browseSlot(forgeSlot);
       setSelectedForgeItem(null);

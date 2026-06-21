@@ -203,6 +203,21 @@ Deno.serve(async (req) => {
     }
     const inserted = { id: newInvId as string | null };
 
+    // Small static crafting XP (skipped at cap).
+    const CRAFT_XP = 25;
+    let xpAwarded = 0;
+    {
+      const { data: charLvl } = await supabase
+        .from('characters').select('level, xp').eq('id', character_id).single();
+      if (charLvl && charLvl.level < 42) {
+        xpAwarded = CRAFT_XP;
+        await supabase
+          .from('characters')
+          .update({ xp: (charLvl.xp ?? 0) + CRAFT_XP })
+          .eq('id', character_id);
+      }
+    }
+
     // Activity log (deterministic ritual flavor)
     await supabase.rpc('log_activity', {
       _character_id: character_id,
@@ -220,6 +235,7 @@ Deno.serve(async (req) => {
       item: ascended,
       consumed: [a.item, b.item],
       new_inventory_id: inserted?.id ?? null,
+      xp_awarded: xpAwarded,
     });
   } catch (e: any) {
     console.error('stonebinder-fuse error', e);
