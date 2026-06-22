@@ -83,15 +83,18 @@ export default function CommandInputBar({
 
   return (
     <div className={wrapper}>
-      <Input
-        ref={chatInputRef}
-        value={chatInput}
-        onChange={e => onChatInputChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Type a command or message... (/w name to whisper)"
-        className="h-7 text-xs bg-background/50 border-border"
-        autoComplete="off"
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          ref={chatInputRef}
+          value={chatInput}
+          onChange={e => onChatInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a command or message... (/w name to whisper)"
+          className="h-7 text-xs bg-background/50 border-border flex-1 min-w-0"
+          autoComplete="off"
+        />
+        {trailing}
+      </div>
     </div>
   );
 }
