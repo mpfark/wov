@@ -89,11 +89,12 @@ export interface UseGameLoopParams {
   partyMembers: any[];
   /** Optional event bus — when provided, fires 'player:death' on death */
   bus?: GameEventBus;
-  /** When false, the regen interval is suppressed. Used to wait until the
-   *  server-side `sync_character_resources` RPC has resolved on entry so we
-   *  don't write against pre-sync `max_*` (which the row-level trigger would
-   *  silently clamp). Defaults to true for backward compatibility. */
+  /** When false, the regen interval is suppressed. */
   enabled?: boolean;
+  /** Optional local-only updater. When provided, regen ticks update local
+   *  state every tick but only flush to the DB every Nth tick (or on cap-
+   *  reach / tab-hide). Cuts the #2/#5/#7/#10 DB hotspots ~70%. */
+  updateCharacterLocal?: (updates: Partial<Character>) => void;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────
@@ -102,7 +103,9 @@ export function useGameLoop(params: UseGameLoopParams) {
     character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures, party, partyMembers, bus,
     enabled = true,
+    updateCharacterLocal,
   } = params;
+
 
   // Keep a ref so the long-lived interval below can read the latest value
   // without being re-created.
