@@ -328,6 +328,7 @@ export default function CharacterPanel({
   poisonBuff, damageBuff, evasionBuff, igniteBuff, absorbBuff, partyRegenBuff, inspireBuff,
   inCombat = false,
   actionBindings: _actionBindings,
+  soulringGlow = false,
 }: Props) {
   const [inventorySort, setInventorySort] = useState<'default' | 'name' | 'rarity' | 'type'>('default');
   const weaponProgression = useWeaponProgression();
