@@ -2033,6 +2033,10 @@ export type Database = {
         Args: { _character_id: string }
         Returns: undefined
       }
+      delete_character_cascade: {
+        Args: { _character_id: string }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

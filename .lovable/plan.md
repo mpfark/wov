@@ -1,57 +1,76 @@
-## Problem
+# Character Deletion: Truly Purge or Not?
 
-On world entry the event log shows only the empty-state placeholder "Your journey begins…" instead of the wakeup sequence (or the "Welcome back, Wayfarer!" line for returning characters).
+**FK** stands for **Foreign Key**. It is a database constraint that links a column in one table (e.g. `character_id` in `character_inventory`) to a unique identifier in another table (the `id` in `characters`). This relationship ensures data integrity, but if it is not configured to "cascade" (automatically delete linked data when the parent is deleted), deletion will either fail or leave orphaned data behind.
 
-## Root cause
+Based on your preferences:
+1. **Activity Log**: Hard-deleted along with the character.
+2. **Marketplace Listings**: Hard-deleted along with the character (the escrowed item/gold is lost with the character).
 
-`useFirstEntryWelcome` is wired to `addLog` in `src/pages/GamePage.tsx`:
+---
 
-```ts
-useFirstEntryWelcome(character?.id, addLog);
+## Technical Details
+
+### 1. New DB migration — security-definer RPC `delete_character_cascade(_character_id uuid)`
+We will create a single transactional database function to safely delete everything associated with a character in one go:
+
+```sql
+CREATE OR REPLACE FUNCTION public.delete_character_cascade(_character_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    _user_id uuid;
+BEGIN
+    -- 1. Security Check: verify caller owns the character or is steward/overlord
+    SELECT user_id INTO _user_id FROM public.characters WHERE id = _character_id;
+    IF NOT (
+        _user_id = auth.uid() 
+        OR public.has_role(auth.uid(), 'steward') 
+        OR public.has_role(auth.uid(), 'overlord')
+    ) THEN
+        RAISE EXCEPTION 'Not authorized';
+    END IF;
+
+    -- 2. Delete Marketplace Listings (hard-delete as requested)
+    DELETE FROM public.marketplace_listings 
+    WHERE seller_character_id = _character_id OR buyer_character_id = _character_id;
+
+    -- 3. Delete active buffs/DoTs
+    DELETE FROM public.active_effects 
+    WHERE target_id = _character_id OR source_id = _character_id;
+
+    -- 4. Delete map/character data in other tables
+    DELETE FROM public.node_ground_loot WHERE dropped_by = _character_id;
+    DELETE FROM public.character_visited_nodes WHERE character_id = _character_id;
+    DELETE FROM public.character_class_bonds WHERE character_id = _character_id;
+    DELETE FROM public.character_materials WHERE character_id = _character_id;
+    DELETE FROM public.combat_sessions WHERE character_id = _character_id;
+    DELETE FROM public.activity_log WHERE character_id = _character_id;
+    DELETE FROM public.issue_reports WHERE character_id = _character_id;
+    DELETE FROM public.character_inventory WHERE character_id = _character_id;
+    DELETE FROM public.party_members WHERE character_id = _character_id;
+
+    -- 5. Finally delete the character
+    DELETE FROM public.characters WHERE id = _character_id;
+
+    RETURN _character_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.delete_character_cascade(uuid) TO authenticated;
 ```
 
-`addLog` does **not** push to the local event log. It emits `bus.emit('log', …)`, whose handler:
-
-1. Writes the message to the shared `party_combat_log` table.
-2. Broadcasts it to other players on the same node.
-
-The local event-log panel is populated by `bus.emit('log:local', …)` (via `addLocalLog`) and by **incoming** party-log broadcasts from other players. The incoming-log handler in `GamePage.tsx` explicitly skips the player's own echoes:
-
+### 2. Client change — `src/features/character/hooks/useCharacter.ts`
+We will replace the sequential client-side deletion calls in `deleteCharacter`:
 ```ts
-if (ownLogIdsRef.current.has(entry.id)) continue;
+// Old client logic:
+await supabase.from('character_inventory').delete().eq('character_id', id);
+await supabase.from('party_members').delete().eq('character_id', id);
+const { error } = await supabase.from('characters').delete().eq('id', id);
+
+// New client logic:
+const { error } = await supabase.rpc('delete_character_cascade', { _character_id: id });
 ```
-
-Result: the welcome lines get persisted/broadcast as party chatter (wrong channel for personal narrative) and are filtered out of the sender's own panel — so the panel stays empty and renders the placeholder.
-
-The same bug also affects the `useSoulringGlow` whisper, which is wired to `addLog` in the same spot.
-
-## Fix
-
-Switch both hooks to the local-only emitter. They are personal, single-player narrative — no need to persist them to the party log or broadcast them to nearby players.
-
-**Edit `src/pages/GamePage.tsx` (lines 440–443):**
-
-```ts
-// First-entry immersive welcome (staggered) or short returning greeting.
-useFirstEntryWelcome(character?.id, addLocalLog);
-// Whisper + transient ring glow when soulring tier increases.
-const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLocalLog);
-```
-
-(`addLocalLog` is already defined one line above on line 437.)
-
-No changes needed inside the hooks themselves — they already take an `emit` callback and don't care which bus event it targets.
-
-## Why this also makes the StrictMode-style remount fix from the previous turn unnecessary to revisit
-
-The `useFirstEntryWelcome` hook still keeps its module-level `handledThisPageLoad` guard and late flag write, so the "Welcome back" branch will only fire on genuine subsequent entries — not as a fallback during the create→sync handoff.
-
-## Files touched
-
-- `src/pages/GamePage.tsx` — change two arguments (`addLog` → `addLocalLog`) on the two hook calls.
-
-## Out of scope
-
-- No DB schema changes.
-- No changes to the welcome text or stagger timing.
-- No changes to combat or chat broadcast paths.
+This guarantees character deletion is single-transaction atomic and leaves zero orphan rows in the database.
