@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 import CharacterPanel from '@/features/character/components/CharacterPanel';
 import NodeView from '@/features/world/components/NodeView';
@@ -1134,11 +1135,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── Rendering ──────────────────────────────────────────────────
   if (nodesLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center parchment-bg">
-        <p className="font-display text-sm text-muted-foreground animate-pulse">Loading world...</p>
-      </div>
-    );
+    return <LoadingScreen message="Loading world..." />;
   }
 
   if (!currentNode) {

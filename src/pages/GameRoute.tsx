@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import GamePage from './GamePage';
 import { EmailVerificationGate } from '@/components/EmailVerificationGate';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 export default function GameRoute() {
   const { user, authLoading, character, charLoading, nodesLoading, updateCharacter, updateCharacterLocal, clearCharacterFields, signOut, isAdmin, nodes, startingNode, clearSelectedCharacter, refetchCharacters } = useGameContext();
@@ -37,11 +38,7 @@ export default function GameRoute() {
   }, [character?.id, refetchCharacters]);
 
   if (authLoading || charLoading || nodesLoading || syncing) {
-    return (
-      <div className="flex min-h-screen items-center justify-center parchment-bg">
-        <p className="font-display text-primary text-glow animate-pulse">Loading your adventure...</p>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user || !character) {
