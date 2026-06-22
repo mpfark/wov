@@ -17,7 +17,7 @@ interface CommandInputBarProps {
 }
 
 export default function CommandInputBar({
-  chatInput, onChatInputChange, onChatSubmit, chatInputRef, isMobile,
+  chatInput, onChatInputChange, onChatSubmit, chatInputRef, isMobile, trailing,
 }: CommandInputBarProps) {
   const [history] = useState<string[]>(() => []);
   const historyIndexRef = useRef(-1);
