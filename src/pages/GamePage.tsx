@@ -437,6 +437,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const addLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
   const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
 
+  // First-entry immersive welcome (staggered) or short returning greeting.
+  useFirstEntryWelcome(character?.id, addLog);
+  // Whisper + transient ring glow when soulring tier increases.
+  const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLog);
+
   // Sale-completed alert: fires whenever one of this character's listings sells,
   // whether or not the marketplace panel is open. Tells the seller to go collect.
   useMarketplaceSaleAlerts(character.id, (sale) => {
