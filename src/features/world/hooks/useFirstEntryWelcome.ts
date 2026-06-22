@@ -4,6 +4,17 @@
  * short "Welcome back" line on every subsequent entry.
  *
  * Onboarding state is per-character in localStorage; no DB change.
+ *
+ * Robustness notes:
+ *  - A module-level `handledThisPageLoad` set prevents the welcome from
+ *    re-firing if GamePage unmounts/remounts during the create→sync flow
+ *    (which would otherwise reset the component-local ref and, because the
+ *    flag is already in localStorage, fall through to "Welcome back").
+ *  - We hold `emit` in a ref so staggered lines still reach the *current*
+ *    event bus even if the component remounts mid-sequence.
+ *  - The localStorage flag is written only after every line has been
+ *    scheduled to emit, so a race during the opening seconds cannot strand
+ *    a new character on the short greeting.
  */
 import { useEffect, useRef } from 'react';
 
@@ -22,27 +33,36 @@ const key = (cid: string) => `entry.first-welcome.${cid}.v1`;
 
 type Emit = (msg: string) => void;
 
+// Survives remounts within the same page load so we don't double-fire (or,
+// worse, flip from first-entry to "Welcome back" on a remount).
+const handledThisPageLoad = new Set<string>();
+
 export function useFirstEntryWelcome(characterId: string | undefined, emit: Emit) {
-  const firedFor = useRef<string | null>(null);
+  const emitRef = useRef(emit);
+  emitRef.current = emit;
 
   useEffect(() => {
     if (!characterId) return;
-    if (firedFor.current === characterId) return;
-    firedFor.current = characterId;
+    if (handledThisPageLoad.has(characterId)) return;
+    handledThisPageLoad.add(characterId);
 
     const hasEntered = !!localStorage.getItem(key(characterId));
-    const timers: number[] = [];
 
     if (!hasEntered) {
       FIRST_LINES.forEach((line, i) => {
-        const t = window.setTimeout(() => emit(line), i * STAGGER_MS);
-        timers.push(t);
+        window.setTimeout(() => emitRef.current(line), i * STAGGER_MS);
       });
-      localStorage.setItem(key(characterId), '1');
+      // Mark complete only after the last line has been scheduled to emit,
+      // so any remount during the opening seconds still treats this as
+      // first entry on retry rather than collapsing to "Welcome back".
+      window.setTimeout(
+        () => { localStorage.setItem(key(characterId), '1'); },
+        FIRST_LINES.length * STAGGER_MS,
+      );
     } else {
-      emit('Welcome back, Wayfarer!');
+      emitRef.current('Welcome back, Wayfarer!');
     }
-
-    return () => { timers.forEach(t => window.clearTimeout(t)); };
-  }, [characterId, emit]);
+    // No cleanup: scheduled timers are intentionally allowed to fire even if
+    // the component briefly unmounts (emit is captured via ref).
+  }, [characterId]);
 }
