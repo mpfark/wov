@@ -50,6 +50,8 @@ interface Props {
   inspireBuff?: { hpPerTick: number; cpPerTick: number; expiresAt: number; durationMs: number; casterId: string } | null;
   inCombat?: boolean;
   actionBindings?: Record<string, string[]>;
+  /** Transient soft glow on equipped Soulforged ring slots (fires on tier-up). */
+  soulringGlow?: boolean;
   // Stat allocation, respec, and Renown training are now handled exclusively
   // at trainer nodes via TrainerPanel. CharacterPanel only displays balances.
 
