@@ -192,10 +192,8 @@ export function useCharacter(user: User | null) {
     // Optimistically remove from UI immediately
     setCharacters(prev => prev.filter(c => c.id !== id));
     setSelectedCharacterId(prev => prev === id ? null : prev);
-    // Clean up related data first
-    await supabase.from('character_inventory').delete().eq('character_id', id);
-    await supabase.from('party_members').delete().eq('character_id', id);
-    const { error } = await supabase.from('characters').delete().eq('id', id);
+    // Fully purge the character and all related rows in a single transaction
+    const { error } = await supabase.rpc('delete_character_cascade', { _character_id: id });
     if (error) {
       // Revert on failure — refetch
       const { data } = await supabase.from('characters').select('*').eq('user_id', user!.id).order('created_at', { ascending: true });
