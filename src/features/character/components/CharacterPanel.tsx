@@ -424,8 +424,8 @@ export default function CharacterPanel({
                 <EquipSlot slot="gloves" item={getEquippedInSlot('gloves')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                 <EquipSlot slot="pants" item={getEquippedInSlot('pants')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
                 <EquipSlot slot="trinket" item={getEquippedInSlot('trinket')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
-                <EquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} />
+                <EquipSlot slot="ring" item={getEquippedInSlot('ring')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} glow={soulringGlow && !!getEquippedInSlot('ring')?.item?.is_soulbound} />
+                <EquipSlot slot="ring_2" item={getEquippedInSlot('ring_2')} blocked={false} onUnequip={onUnequip} locked={inCombat} classKey={character.class} weaponProgression={weaponProgression} glow={soulringGlow && !!getEquippedInSlot('ring_2')?.item?.is_soulbound} />
               </div>
 
               {/* Belt-potion system removed with the belt slot. */}
