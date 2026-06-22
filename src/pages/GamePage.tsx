@@ -1231,6 +1231,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
           <EventLogPanel
             filteredEventLog={filteredEventLog}
+            display={eventLogDisplay}
             className="flex-[55]"
           />
           <CommandInputBar
@@ -1239,6 +1240,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
             onChatSubmit={handleChatSubmit}
             chatInputRef={chatInputRef}
             isMobile={isMobile}
+            trailing={<EventLogControls display={eventLogDisplay} />}
           />
         </div>
 
