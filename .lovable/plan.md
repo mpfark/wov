@@ -1,87 +1,57 @@
-## Goal
+## Problem
 
-Make world entry immersive with a typed welcome, drop the overlay whispers (blacksmith + soulforge), and replace the soulforge nag with an event-log whisper that fires only when the ring is actually acquired/upgraded.
+On world entry the event log shows only the empty-state placeholder "Your journey begins…" instead of the wakeup sequence (or the "Welcome back, Wayfarer!" line for returning characters).
 
-I'll do this in three phases — small, independent, easy to ship one at a time.
+## Root cause
 
----
+`useFirstEntryWelcome` is wired to `addLog` in `src/pages/GamePage.tsx`:
 
-## Phase 1 — Immersive entry text
+```ts
+useFirstEntryWelcome(character?.id, addLog);
+```
 
-**Detect first entry per character** with a `localStorage` flag `entry.first-welcome.${characterId}.v1` (same pattern as our other onboarding flags; no DB change).
+`addLog` does **not** push to the local event log. It emits `bus.emit('log', …)`, whose handler:
 
-In `src/pages/GamePage.tsx`, replace the static `['Welcome, Wayfarer!']` initial event-log seed with logic that runs once on mount per character:
+1. Writes the message to the shared `party_combat_log` table.
+2. Broadcasts it to other players on the same node.
 
-- **First time** (flag missing): push the long welcome as a sequence of separate event-log lines, then set the flag. Each line lands as its own log entry so it reads like the world telling the story:
-  1. *You awaken from a wandering daydream, as though your mind had drifted far beyond the waking world. The thought that held your attention is gone now, lost like mist in the morning sun.*
-  2. *As your senses return, you find yourself standing in Hearthvale Square. Familiar voices mingle with the scent of fresh bread and woodsmoke. In your pockets are a few gems and bits of salvaged material gathered from your recent travels.*
-  3. *From somewhere to the northeast comes the rhythmic song of hammer against anvil.*
-  4. *Clang... clang... clang...*
-  5. *Ah, of course.*
-  6. *You were on your way to see the blacksmith.*
-  7. *What happens next is up to you. Welcome to Wayfarers of Varneth.*
+The local event-log panel is populated by `bus.emit('log:local', …)` (via `addLocalLog`) and by **incoming** party-log broadcasts from other players. The incoming-log handler in `GamePage.tsx` explicitly skips the player's own echoes:
 
-  Lines are pushed with a small stagger (~600 ms between lines) using `setTimeout` chained off the existing event bus, so the player visibly sees them appear one at a time — the closest thing to "typed out" without building a new typewriter component.
+```ts
+if (ownLogIdsRef.current.has(entry.id)) continue;
+```
 
-- **Returning** (flag present): seed with the single line *Welcome back, Wayfarer!*
+Result: the welcome lines get persisted/broadcast as party chatter (wrong channel for personal narrative) and are filtered out of the sender's own panel — so the panel stays empty and renders the placeholder.
 
-Implementation lives in a tiny new hook `useFirstEntryWelcome(character, bus)` in `src/features/world/hooks/` so `GamePage.tsx` stays clean. The hook fires once per character per device.
+The same bug also affects the `useSoulringGlow` whisper, which is wired to `addLog` in the same spot.
 
-**Also in Phase 1:** delete the blacksmith overlay.
-- Remove the `<BlacksmithIntroWhisper …>` mount from `GamePage.tsx` and its import.
-- Delete `src/features/inventory/components/BlacksmithIntroWhisper.tsx`.
-- The "crafted" / "visited" localStorage flags the whisper wrote remain harmless; no cleanup needed. The `craftedKey` export is unused elsewhere (only the deleted file referenced it via the import the panels never used).
+## Fix
 
----
+Switch both hooks to the local-only emitter. They are personal, single-player narrative — no need to persist them to the party log or broadcast them to nearby players.
 
-## Phase 2 — Soulforge whisper moves to the event log
+**Edit `src/pages/GamePage.tsx` (lines 440–443):**
 
-Remove the floating overlay and replace it with an in-log whisper that only fires when the player actually **gains or upgrades** a Soulforged Ring tier.
+```ts
+// First-entry immersive welcome (staggered) or short returning greeting.
+useFirstEntryWelcome(character?.id, addLocalLog);
+// Whisper + transient ring glow when soulring tier increases.
+const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLocalLog);
+```
 
-**Detection:** watch `character.soulring_tier`. Keep the last-seen tier in a `useRef` (seeded on first render so we don't fire a fake "upgrade" at login). When it increases:
-- Emit one styled event-log line via the existing `bus.emit('log', { message })`:
-  *"💍 You feel a warmth at your hand — your Soulforged Ring hums with new power. Return to the Soulforge when you are ready."*
-- The ring item already exists in inventory; for the "soft glow" feedback, add a brief CSS pulse on the equipped ring slot in the paper-doll (or the inventory tile) for ~6 s, triggered by the same tier-change effect. This reuses the existing `soulforge-whisper` keyframes in `index.css` — just toggle a class via state.
+(`addLocalLog` is already defined one line above on line 437.)
 
-**Remove the overlay:**
-- Delete the `<SoulforgeWhisper …>` mount in `GamePage.tsx` and its import.
-- Delete `src/features/inventory/components/SoulforgeWhisper.tsx`.
+No changes needed inside the hooks themselves — they already take an `emit` callback and don't care which bus event it targets.
 
-**Where the ring-glow lives:** the equipped paper-doll slot in `CharacterPanel.tsx`'s Equipment tab (slot `ring`/`ring_2`). The effect is purely visual — a temporary `ring-soulforge-pulse` class added by a small `useSoulringGlow(character)` hook that returns whether the pulse is active. The hook owns the timer.
+## Why this also makes the StrictMode-style remount fix from the previous turn unnecessary to revisit
 
-**Edge case:** if a player levels through a threshold offline and `soulring_tier` is still behind (re-forge isn't auto), the whisper won't fire — that's correct under the new "only when acquired" rule. The old overlay's role of nagging at the threshold is intentionally gone.
-
----
-
-## Phase 3 — Polish / cleanup
-
-- Audit the two deleted whisper components for any stray imports (`rg`). Remove the now-orphaned `soulforge-whisper` CSS class if nothing else uses it (the new ring-glow gets its own class to keep concerns separate).
-- Verify the new entry text renders correctly on mobile (each line is short enough; the event log already wraps).
-- Confirm `useFirstEntryWelcome` doesn't double-fire under React Strict Mode (guard with a `ref` in addition to the localStorage check).
-
----
+The `useFirstEntryWelcome` hook still keeps its module-level `handledThisPageLoad` guard and late flag write, so the "Welcome back" branch will only fire on genuine subsequent entries — not as a fallback during the create→sync handoff.
 
 ## Files touched
 
-**Phase 1**
-- New: `src/features/world/hooks/useFirstEntryWelcome.ts`
-- Edited: `src/pages/GamePage.tsx` (replace seed, mount hook, remove `BlacksmithIntroWhisper`)
-- Deleted: `src/features/inventory/components/BlacksmithIntroWhisper.tsx`
-
-**Phase 2**
-- New: `src/features/inventory/hooks/useSoulringGlow.ts` (tier-change watcher → log whisper + transient glow flag)
-- Edited: `src/pages/GamePage.tsx` (mount the hook, remove `SoulforgeWhisper`)
-- Edited: `src/features/character/components/CharacterPanel.tsx` (apply pulse class to ring slots when glow active)
-- Edited: `src/index.css` (add `ring-soulforge-pulse` keyframes/class; optionally drop the now-unused overlay class)
-- Deleted: `src/features/inventory/components/SoulforgeWhisper.tsx`
-
-**Phase 3**
-- Cleanup-only edits as discovered.
-
----
+- `src/pages/GamePage.tsx` — change two arguments (`addLog` → `addLocalLog`) on the two hook calls.
 
 ## Out of scope
 
-- No DB schema changes (entry flag stays in localStorage).
-- No change to soulforge/blacksmith crafting mechanics or XP rewards.
-- No new typewriter animation engine — the per-line stagger is enough to feel paced without new infrastructure.
+- No DB schema changes.
+- No changes to the welcome text or stagger timing.
+- No changes to combat or chat broadcast paths.

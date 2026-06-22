@@ -438,9 +438,12 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
 
   // First-entry immersive welcome (staggered) or short returning greeting.
-  useFirstEntryWelcome(character?.id, addLog);
-  // Whisper + transient ring glow when soulring tier increases.
-  const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLog);
+  // Uses the local-only emitter — these are personal narrative and must not
+  // be persisted to the party log or broadcast to nearby players.
+  useFirstEntryWelcome(character?.id, addLocalLog);
+  // Whisper + transient ring glow when soulring tier increases. Local-only
+  // for the same reason as the welcome above.
+  const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLocalLog);
 
   // Sale-completed alert: fires whenever one of this character's listings sells,
   // whether or not the marketplace panel is open. Tells the seller to go collect.
