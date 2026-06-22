@@ -2,7 +2,7 @@
  * Owns: the unified command/chat input bar, rendered below the event log.
  * Supports command history navigation with ArrowUp/Down and draft preservation.
  */
-import { RefObject, useState, useRef, useCallback } from 'react';
+import { ReactNode, RefObject, useState, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 
 const MAX_HISTORY = 20;
@@ -13,6 +13,7 @@ interface CommandInputBarProps {
   onChatSubmit: () => void;
   chatInputRef: RefObject<HTMLInputElement>;
   isMobile?: boolean;
+  trailing?: ReactNode;
 }
 
 export default function CommandInputBar({
