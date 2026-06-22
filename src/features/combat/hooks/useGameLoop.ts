@@ -234,15 +234,61 @@ export function useGameLoop(params: UseGameLoopParams) {
       }
 
       if (Object.keys(updates).length > 0) {
-        updateCharRegenRef.current(updates, {
+        const caps = {
           maxHp: effectiveMaxHp,
           maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.wis, eqB),
           maxMp: effectiveMaxMp,
-        });
+        };
+
+        // Throttle DB writes: apply optimistically to local state every tick,
+        // but only persist every 3rd tick (~12s) — or immediately if any
+        // resource reached its cap (so the persisted row is at full).
+        regenTickCountRef.current += 1;
+        const reachedCap =
+          (updates.hp !== undefined && updates.hp >= caps.maxHp) ||
+          (updates.cp !== undefined && updates.cp >= caps.maxCp) ||
+          (updates.mp !== undefined && updates.mp >= caps.maxMp);
+        const shouldFlush = !updateCharLocalRef.current || regenTickCountRef.current >= 3 || reachedCap;
+
+        if (shouldFlush) {
+          regenTickCountRef.current = 0;
+          pendingRegenFlushRef.current = null;
+          updateCharRegenRef.current(updates, caps);
+        } else {
+          updateCharLocalRef.current(updates);
+          // Track latest pending values so tab-hide / cleanup can flush them.
+          pendingRegenFlushRef.current = { ...(pendingRegenFlushRef.current ?? {}), ...updates };
+        }
       }
     }, 4000);
-    return () => clearInterval(interval);
+
+    // Flush any pending local-only regen on tab hide / unload so the
+    // persisted row catches up.
+    const flushPending = () => {
+      if (pendingRegenFlushRef.current && Object.keys(pendingRegenFlushRef.current).length > 0) {
+        const eqB = equipmentBonusesRef.current;
+        const caps = {
+          maxHp: getEffectiveMaxHp(regenCharRef.current.class, regenCharRef.current.con, regenCharRef.current.level, eqB),
+          maxCp: getEffectiveMaxCp(cpCharRef.current.level, cpCharRef.current.wis, eqB),
+          maxMp: getEffectiveMaxMp(regenCharRef.current.level, regenCharRef.current.dex, eqB),
+        };
+        updateCharRegenRef.current(pendingRegenFlushRef.current, caps);
+        pendingRegenFlushRef.current = null;
+        regenTickCountRef.current = 0;
+      }
+    };
+    const onVis = () => { if (document.visibilityState === 'hidden') flushPending(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', flushPending);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', flushPending);
+      flushPending();
+    };
   }, []);
+
 
   // ── Death detection & respawn ──────────────────────────────
   const deathGoldRef = useRef(character.gold);
