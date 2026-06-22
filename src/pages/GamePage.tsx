@@ -1020,6 +1020,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     damageBuff,
     partyRegenBuff,
     inspireBuff,
+    soulringGlow,
     // Stat allocation moved to TrainerPanel; CharacterPanel only displays balances now.
   }), [
     character, equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
@@ -1027,7 +1028,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     regenTick,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
-    damageBuff, partyRegenBuff, inspireBuff,
+    damageBuff, partyRegenBuff, inspireBuff, soulringGlow,
   ]);
 
   const activeBuffs = useMemo(() => ({
