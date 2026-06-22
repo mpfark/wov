@@ -408,6 +408,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   
   const [chatInput, setChatInput] = useState('');
+  const eventLogDisplay = useEventLogDisplay();
   const chatInputRef = useRef<HTMLInputElement>(null);
   const ownLogIdsRef = useRef<Set<string>>(new Set());
 
