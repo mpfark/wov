@@ -84,10 +84,11 @@ const SLOT_LABELS: Record<string, string> = {
   ring: 'Ring', ring_2: 'Ring', trinket: 'Trinket',
 };
 
-function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression, badge }: {
+function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponProgression, badge, glow }: {
   slot: string; item: InventoryItem | undefined; blocked: boolean; onUnequip: (id: string) => void; locked?: boolean;
   classKey?: string; weaponProgression?: import('@/shared/formulas/combat').WeaponProgressionConfig;
   badge?: React.ReactNode;
+  glow?: boolean;
 }) {
   return (
     <Tooltip>
@@ -98,7 +99,7 @@ function EquipSlot({ slot, item, blocked, onUnequip, locked, classKey, weaponPro
           } ${
             blocked ? 'border-border/30 bg-background/10 opacity-50' :
             item ? 'border-primary/50 bg-primary/5' : 'surface-row'
-          }`}
+          } ${glow ? 'soulring-glow' : ''}`}
           onClick={() => item && !blocked && !locked && onUnequip(item.id)}
         >
           <div className="text-[10px] text-muted-foreground capitalize w-16 shrink-0">{SLOT_LABELS[slot]}</div>
