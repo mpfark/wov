@@ -130,17 +130,26 @@ export function useGameLoop(params: UseGameLoopParams) {
   const inspireBuffRef = useRef(inspireBuff);
   const getNodeRef = useRef(getNode);
   const updateCharRegenRef = useRef(updateCharacter);
+  const updateCharLocalRef = useRef(updateCharacterLocal);
   const equippedRef = useRef(equipped);
   const inCombatRegenRef = useRef(false);
   const equipmentBonusesRef = useRef(equipmentBonuses);
+  /** Tick counter so we can flush regen to the DB every Nth tick instead
+   *  of every tick. ~70% fewer character UPDATE writes. */
+  const regenTickCountRef = useRef(0);
+  /** Pending local-only regen deltas we still owe the DB (so a tab-hide
+   *  flush or cap-reach can persist them). */
+  const pendingRegenFlushRef = useRef<Partial<Character> | null>(null);
 
   useEffect(() => { regenCharRef.current = { hp: character.hp, max_hp: character.max_hp, current_node_id: character.current_node_id, con: character.con, level: character.level, mp: character.mp ?? 100, max_mp: character.max_mp ?? 100, dex: character.dex, class: character.class }; }, [character.hp, character.max_hp, character.current_node_id, character.con, character.level, character.mp, character.max_mp, character.dex, character.class]);
   useEffect(() => { foodBuffRef.current = foodBuff; }, [foodBuff]);
   useEffect(() => { inspireBuffRef.current = inspireBuff; }, [inspireBuff]);
   useEffect(() => { getNodeRef.current = getNode; }, [getNode]);
   useEffect(() => { updateCharRegenRef.current = updateCharacter; }, [updateCharacter]);
+  useEffect(() => { updateCharLocalRef.current = updateCharacterLocal; }, [updateCharacterLocal]);
   useEffect(() => { equippedRef.current = equipped; }, [equipped]);
   useEffect(() => { equipmentBonusesRef.current = equipmentBonuses; }, [equipmentBonuses]);
+
 
   // ── Computed values ────────────────────────────────────────
   const itemHpRegen = equipped.reduce((sum, inv) => sum + ((inv.item.stats as any)?.hp_regen || 0), 0);
