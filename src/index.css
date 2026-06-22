@@ -380,13 +380,19 @@
   animation: combat-start-glow 0.4s ease-out;
 }
 
-/* Soulforge ring whisper — slow fade in/out loop */
-@keyframes soulforge-whisper-pulse {
-  0%, 100% { opacity: 0.0; }
-  45%, 55% { opacity: 1.0; }
+/* Soulring slot soft pulse — fires briefly when a Soulforged Ring tier increases. */
+@keyframes soulring-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 hsl(var(--soulforged) / 0);
+    border-color: hsl(var(--soulforged) / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 14px 2px hsl(var(--soulforged) / 0.6);
+    border-color: hsl(var(--soulforged) / 0.9);
+  }
 }
-.soulforge-whisper {
-  animation: soulforge-whisper-pulse 6s ease-in-out infinite;
+.soulring-glow {
+  animation: soulring-glow-pulse 2.2s ease-in-out infinite;
 }
 
 /* ═══════════════════════════════════════

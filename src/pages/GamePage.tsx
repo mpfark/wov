@@ -24,8 +24,8 @@ import { useNPCs, NPC } from '@/features/creatures';
 import NPCDialogPanel from '@/features/creatures/components/NPCDialogPanel';
 import OrderRecruiterDialog from '@/features/character/components/OrderRecruiterDialog';
 import SoulforgeDialog from '@/features/inventory/components/SoulforgeDialog';
-import SoulforgeWhisper from '@/features/inventory/components/SoulforgeWhisper';
-import BlacksmithIntroWhisper from '@/features/inventory/components/BlacksmithIntroWhisper';
+import { useFirstEntryWelcome } from '@/features/world/hooks/useFirstEntryWelcome';
+import { useSoulringGlow } from '@/features/inventory/hooks/useSoulringGlow';
 import MarketplacePanel from '@/features/marketplace/components/MarketplacePanel';
 import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarketplaceSaleAlerts';
 import { useInventory } from '@/features/inventory';
@@ -289,7 +289,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     }
   }, [partyMoveEvents, character?.id, character?.current_node_id, updateCharacterLocal, myMembership?.is_following, isLeader, partyMembers, party?.leader_id, toggleFollow, bus]);
 
-  const [eventLog, setEventLog] = useState<string[]>(['Welcome, Wayfarer!']);
+  const [eventLog, setEventLog] = useState<string[]>([]);
   const [vendorOpen, setVendorOpen] = useState(false);
   const [blacksmithOpen, setBlacksmithOpen] = useState(false);
   const [jewelcrafterOpen, setJewelcrafterOpen] = useState(false);
@@ -436,6 +436,11 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // ── Log emitters ───────────────────────────────────────────────
   const addLocalLog = useCallback((msg: string) => { bus.emit('log:local', { message: msg }); }, [bus]);
   const addLog = useCallback((msg: string) => { bus.emit('log', { message: msg }); }, [bus]);
+
+  // First-entry immersive welcome (staggered) or short returning greeting.
+  useFirstEntryWelcome(character?.id, addLog);
+  // Whisper + transient ring glow when soulring tier increases.
+  const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLog);
 
   // Sale-completed alert: fires whenever one of this character's listings sells,
   // whether or not the marketplace panel is open. Tells the seller to go collect.
@@ -1015,6 +1020,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     damageBuff,
     partyRegenBuff,
     inspireBuff,
+    soulringGlow,
     // Stat allocation moved to TrainerPanel; CharacterPanel only displays balances now.
   }), [
     character, equipped, unequipped, equipmentBonuses, equipItem, unequipItem,
@@ -1022,7 +1028,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     regenTick,
     inCombat, keyboardMovement.actionBindings, baseRegen, itemHpRegen,
     foodBuff, critBuff, battleCryBuff, poisonBuff, evasionBuff, igniteBuff, absorbBuff,
-    damageBuff, partyRegenBuff, inspireBuff,
+    damageBuff, partyRegenBuff, inspireBuff, soulringGlow,
   ]);
 
   const activeBuffs = useMemo(() => ({
@@ -1386,16 +1392,6 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
         />
       )}
 
-      {/* Soulforge ring whisper — slowly fades while a re-forge is available */}
-      <SoulforgeWhisper
-        character={character}
-        atSoulforge={(currentNode as any)?.is_soulforge === true}
-      />
-
-      <BlacksmithIntroWhisper
-        character={character}
-        atBlacksmith={(currentNode as any)?.is_blacksmith === true}
-      />
 
 
 
