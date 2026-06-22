@@ -55,6 +55,8 @@ import BroadcastDebugOverlay from '@/components/game/BroadcastDebugOverlay';
 import MovementPad from '@/features/world/components/MovementPad';
 import { useStatAllocation } from '@/features/character/hooks/useStatAllocation';
 import EventLogPanel from '@/features/combat/components/EventLogPanel';
+import EventLogControls from '@/features/combat/components/EventLogControls';
+import { useEventLogDisplay } from '@/features/combat/hooks/useEventLogDisplay';
 import { AbilityBarMeasurer } from '@/features/combat/components/AbilityBarMeasurer';
 import ChatPanel from '@/features/chat/components/ChatPanel';
 import OnlinePanel from '@/features/chat/components/OnlinePanel';
@@ -406,6 +408,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   
   const [chatInput, setChatInput] = useState('');
+  const eventLogDisplay = useEventLogDisplay();
   const chatInputRef = useRef<HTMLInputElement>(null);
   const ownLogIdsRef = useRef<Set<string>>(new Set());
 
@@ -1229,6 +1232,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           </div>
           <EventLogPanel
             filteredEventLog={filteredEventLog}
+            display={eventLogDisplay}
             className="flex-[55]"
           />
           <CommandInputBar
@@ -1237,6 +1241,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
             onChatSubmit={handleChatSubmit}
             chatInputRef={chatInputRef}
             isMobile={isMobile}
+            trailing={<EventLogControls display={eventLogDisplay} />}
           />
         </div>
 

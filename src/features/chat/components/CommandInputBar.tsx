@@ -2,7 +2,7 @@
  * Owns: the unified command/chat input bar, rendered below the event log.
  * Supports command history navigation with ArrowUp/Down and draft preservation.
  */
-import { RefObject, useState, useRef, useCallback } from 'react';
+import { ReactNode, RefObject, useState, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 
 const MAX_HISTORY = 20;
@@ -13,10 +13,11 @@ interface CommandInputBarProps {
   onChatSubmit: () => void;
   chatInputRef: RefObject<HTMLInputElement>;
   isMobile?: boolean;
+  trailing?: ReactNode;
 }
 
 export default function CommandInputBar({
-  chatInput, onChatInputChange, onChatSubmit, chatInputRef, isMobile,
+  chatInput, onChatInputChange, onChatSubmit, chatInputRef, isMobile, trailing,
 }: CommandInputBarProps) {
   const [history] = useState<string[]>(() => []);
   const historyIndexRef = useRef(-1);
@@ -82,15 +83,18 @@ export default function CommandInputBar({
 
   return (
     <div className={wrapper}>
-      <Input
-        ref={chatInputRef}
-        value={chatInput}
-        onChange={e => onChatInputChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Type a command or message... (/w name to whisper)"
-        className="h-7 text-xs bg-background/50 border-border"
-        autoComplete="off"
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          ref={chatInputRef}
+          value={chatInput}
+          onChange={e => onChatInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type a command or message... (/w name to whisper)"
+          className="h-7 text-xs bg-background/50 border-border flex-1 min-w-0"
+          autoComplete="off"
+        />
+        {trailing}
+      </div>
     </div>
   );
 }
