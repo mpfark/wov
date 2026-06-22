@@ -592,12 +592,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // ── useGameLoop: regen, death, buff state ────────────────
   const gameLoop = useGameLoop({
-    character, updateCharacter, equipped, equipmentBonuses, getNode, addLog,
+    character, updateCharacter, updateCharacterLocal, equipped, equipmentBonuses, getNode, addLog,
     startingNodeId, creatures,
     party, partyMembers,
     bus,
     enabled: resourcesSynced,
   });
+
 
   const { buffState, buffSetters } = gameLoop;
 
