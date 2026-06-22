@@ -1,50 +1,87 @@
-# Plan: Blacksmith Onboarding Whisper + Crafting XP
+## Goal
 
-Two small, independent additions.
+Make world entry immersive with a typed welcome, drop the overlay whispers (blacksmith + soulforge), and replace the soulforge nag with an event-log whisper that fires only when the ring is actually acquired/upgraded.
 
-## 1. "Visit the Blacksmith" whisper (new player nudge)
+I'll do this in three phases — small, independent, easy to ship one at a time.
 
-New component `BlacksmithIntroWhisper.tsx`, modeled directly on the existing `SoulforgeWhisper` (same fixed bottom-center fade style — feels consistent, no new visual language).
+---
 
-Behavior:
-- Shows for a character only if **all** of these are true:
-  - Character `level <= 3` (i.e. truly new — won't pester a returning veteran on a fresh alt forever).
-  - Character has never crafted (see below) AND has never visited a blacksmith node.
-  - Currently NOT standing at a blacksmith node.
-  - Not dismissed.
-- Copy: *"💍 A gruff voice whispers: 'When you've a coin to spare, come see me at the forge in Hearthvale — north-east of the square.'"*
-- Dismissal persists in `localStorage` under `onboarding.blacksmith-intro.${characterId}.dismissed.v1` (same pattern as `OnboardingCoachmark`). Click to dismiss; auto-hides permanently the first time the character stands on any `is_blacksmith` node.
+## Phase 1 — Immersive entry text
 
-Mounted from `GamePage.tsx` next to the existing `SoulforgeWhisper`, fed `character`, current node's `is_blacksmith` flag, and a `hasCrafted` boolean (see §2 — same flag the XP code touches).
+**Detect first entry per character** with a `localStorage` flag `entry.first-welcome.${characterId}.v1` (same pattern as our other onboarding flags; no DB change).
 
-No DB schema change — the "has visited blacksmith" + "has crafted" signals are stored in `localStorage` keyed per character. This matches how the keyboard-shortcuts coachmark and Soulforge whisper already work (pure client-side onboarding state). If we later want this cross-device, we can promote the flag to `characters` in a follow-up.
+In `src/pages/GamePage.tsx`, replace the static `['Welcome, Wayfarer!']` initial event-log seed with logic that runs once on mount per character:
 
-## 2. Small static crafting XP
+- **First time** (flag missing): push the long welcome as a sequence of separate event-log lines, then set the flag. Each line lands as its own log entry so it reads like the world telling the story:
+  1. *You awaken from a wandering daydream, as though your mind had drifted far beyond the waking world. The thought that held your attention is gone now, lost like mist in the morning sun.*
+  2. *As your senses return, you find yourself standing in Hearthvale Square. Familiar voices mingle with the scent of fresh bread and woodsmoke. In your pockets are a few gems and bits of salvaged material gathered from your recent travels.*
+  3. *From somewhere to the northeast comes the rhythmic song of hammer against anvil.*
+  4. *Clang... clang... clang...*
+  5. *Ah, of course.*
+  6. *You were on your way to see the blacksmith.*
+  7. *What happens next is up to you. Welcome to Wayfarers of Varneth.*
 
-Award a flat **25 XP** every successful craft, in these edge functions:
-- `blacksmith-forge` (forge mode)
-- `jewelcrafter-forge` (forge mode)
-- `stonebinder-fuse` (successful fusion)
+  Lines are pushed with a small stagger (~600 ms between lines) using `setTimeout` chained off the existing event bus, so the player visibly sees them appear one at a time — the closest thing to "typed out" without building a new typewriter component.
 
-Rationale: 25 XP is ~2.5 kills at L1 (meaningful nudge for a first-time crafter), and by L10+ it's a rounding error — exactly the shape you asked for. Static, no level scaling.
+- **Returning** (flag present): seed with the single line *Welcome back, Wayfarer!*
 
-Rules:
-- Skipped silently when `character.level >= 42` (level cap — matches existing XP-grant pattern).
-- Added to `characters.xp` in the same update that already writes gold/inventory, so it's atomic with the craft.
-- Returned in the function response as `xp_awarded: 25` so the client can show a small log line: *"🔩 The blacksmith forged: X! (+25 XP)"*.
-- Does **not** trigger level-up math here — XP threshold/level-up is already handled centrally on next character refresh. (Confirm during build by checking how `xp_boost` / kill rewards currently grant XP; reuse that path so a craft that crosses a level boundary still levels the player up properly.)
+Implementation lives in a tiny new hook `useFirstEntryWelcome(character, bus)` in `src/features/world/hooks/` so `GamePage.tsx` stays clean. The hook fires once per character per device.
 
-No new tables, no schema migration, no formula module changes.
+**Also in Phase 1:** delete the blacksmith overlay.
+- Remove the `<BlacksmithIntroWhisper …>` mount from `GamePage.tsx` and its import.
+- Delete `src/features/inventory/components/BlacksmithIntroWhisper.tsx`.
+- The "crafted" / "visited" localStorage flags the whisper wrote remain harmless; no cleanup needed. The `craftedKey` export is unused elsewhere (only the deleted file referenced it via the import the panels never used).
+
+---
+
+## Phase 2 — Soulforge whisper moves to the event log
+
+Remove the floating overlay and replace it with an in-log whisper that only fires when the player actually **gains or upgrades** a Soulforged Ring tier.
+
+**Detection:** watch `character.soulring_tier`. Keep the last-seen tier in a `useRef` (seeded on first render so we don't fire a fake "upgrade" at login). When it increases:
+- Emit one styled event-log line via the existing `bus.emit('log', { message })`:
+  *"💍 You feel a warmth at your hand — your Soulforged Ring hums with new power. Return to the Soulforge when you are ready."*
+- The ring item already exists in inventory; for the "soft glow" feedback, add a brief CSS pulse on the equipped ring slot in the paper-doll (or the inventory tile) for ~6 s, triggered by the same tier-change effect. This reuses the existing `soulforge-whisper` keyframes in `index.css` — just toggle a class via state.
+
+**Remove the overlay:**
+- Delete the `<SoulforgeWhisper …>` mount in `GamePage.tsx` and its import.
+- Delete `src/features/inventory/components/SoulforgeWhisper.tsx`.
+
+**Where the ring-glow lives:** the equipped paper-doll slot in `CharacterPanel.tsx`'s Equipment tab (slot `ring`/`ring_2`). The effect is purely visual — a temporary `ring-soulforge-pulse` class added by a small `useSoulringGlow(character)` hook that returns whether the pulse is active. The hook owns the timer.
+
+**Edge case:** if a player levels through a threshold offline and `soulring_tier` is still behind (re-forge isn't auto), the whisper won't fire — that's correct under the new "only when acquired" rule. The old overlay's role of nagging at the threshold is intentionally gone.
+
+---
+
+## Phase 3 — Polish / cleanup
+
+- Audit the two deleted whisper components for any stray imports (`rg`). Remove the now-orphaned `soulforge-whisper` CSS class if nothing else uses it (the new ring-glow gets its own class to keep concerns separate).
+- Verify the new entry text renders correctly on mobile (each line is short enough; the event log already wraps).
+- Confirm `useFirstEntryWelcome` doesn't double-fire under React Strict Mode (guard with a `ref` in addition to the localStorage check).
+
+---
 
 ## Files touched
 
-- **New:** `src/features/inventory/components/BlacksmithIntroWhisper.tsx`
-- **Edited:** `src/pages/GamePage.tsx` (mount the whisper, pass `is_blacksmith` for current node)
-- **Edited:** `supabase/functions/blacksmith-forge/index.ts`, `supabase/functions/jewelcrafter-forge/index.ts`, `supabase/functions/stonebinder-fuse/index.ts` (add 25 XP grant on success, return `xp_awarded`)
-- **Edited:** `BlacksmithPanel.tsx`, `JewelcrafterPanel.tsx`, `StonebinderPanel.tsx` (append `(+25 XP)` to the success log, and set the `crafted` localStorage flag the whisper reads)
+**Phase 1**
+- New: `src/features/world/hooks/useFirstEntryWelcome.ts`
+- Edited: `src/pages/GamePage.tsx` (replace seed, mount hook, remove `BlacksmithIntroWhisper`)
+- Deleted: `src/features/inventory/components/BlacksmithIntroWhisper.tsx`
+
+**Phase 2**
+- New: `src/features/inventory/hooks/useSoulringGlow.ts` (tier-change watcher → log whisper + transient glow flag)
+- Edited: `src/pages/GamePage.tsx` (mount the hook, remove `SoulforgeWhisper`)
+- Edited: `src/features/character/components/CharacterPanel.tsx` (apply pulse class to ring slots when glow active)
+- Edited: `src/index.css` (add `ring-soulforge-pulse` keyframes/class; optionally drop the now-unused overlay class)
+- Deleted: `src/features/inventory/components/SoulforgeWhisper.tsx`
+
+**Phase 3**
+- Cleanup-only edits as discovered.
+
+---
 
 ## Out of scope
 
-- No promotion of the onboarding flag to the database.
-- No XP for `ai-item-forge` (admin tool) or vendor/marketplace flows.
-- No change to crafting costs or item stats.
+- No DB schema changes (entry flag stays in localStorage).
+- No change to soulforge/blacksmith crafting mechanics or XP rewards.
+- No new typewriter animation engine — the per-line stagger is enough to feel paced without new infrastructure.
