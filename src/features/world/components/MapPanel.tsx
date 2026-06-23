@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
+import WimpControl from '@/features/world/components/WimpControl';
 import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/features/world';
 
 export interface ActiveBuffs {
