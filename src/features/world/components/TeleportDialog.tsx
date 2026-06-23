@@ -61,7 +61,7 @@ export default function TeleportDialog({ open, onClose, currentNode, currentRegi
   }, [open, characterId]);
 
   const destinations: TeleportDestination[] = nodes
-    .filter(n => n.is_teleport && n.id !== currentNode.id && visitedIds.has(n.id))
+    .filter(n => n.is_teleport && n.id !== currentNode.id && (visitedIds.has(n.id) || n.is_public_teleport))
     .map(n => {
       const region = regions.find(r => r.id === n.region_id);
       return region ? { node: n, region, cpCost: calculateTeleportCpCost(currentRegion, region) } : null;
