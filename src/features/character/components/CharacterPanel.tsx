@@ -981,6 +981,7 @@ export default function CharacterPanel({
                     </>
                   );
                 })()}
+                <WimpSettings character={character} />
               </div>
             </TabsContent>
 
