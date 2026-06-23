@@ -49,6 +49,7 @@ import { APP_VERSION } from '@/lib/version';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
+import { useWimp } from '@/features/combat/hooks/useWimp';
 import { useOffscreenDotWakeup } from '@/features/combat';
 import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
