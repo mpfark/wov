@@ -810,6 +810,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseConsumable } = consumableActions;
   const { handleUseAbility, handleAttack } = combatActions;
 
+  // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
+  useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
+
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
     character, updateCharacter, addLog,
