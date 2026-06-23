@@ -1,26 +1,27 @@
-# Unify the two world-loading screens
+# Remove activity_log feature + combine creature crons
 
-## What you're seeing
+## Frontend (all activity_log call sites)
+- **Delete** `src/hooks/useActivityLog.ts`, `src/hooks/activityLogBatcher.ts`, `src/components/admin/users/ActivityLogColumn.tsx` *(already deleted)*
+- `src/components/admin/users/UserManager.tsx` — remove import + `<ActivityLogColumn />` mount
+- `src/components/ErrorBoundary.tsx` — drop the `activity_log` insert in `componentDidCatch` (keeps `console.error`)
+- `src/contexts/GameContext.tsx` — drop `logActivity` import + login-logging effect
+- `src/features/world/hooks/useMovementActions.ts` — drop import + 4 call sites (move / teleport / waymark / search)
+- `src/features/inventory/hooks/useConsumableActions.ts` — drop import + 2 call sites
+- `src/features/combat/hooks/useGameLoop.ts` — drop import + death-log call
 
-Two separate loaders render back-to-back on the way into the game:
+## Database (one migration)
+- `DROP TABLE public.activity_log CASCADE;`
+- `DROP FUNCTION IF EXISTS public.log_activity_batch(jsonb);`
+- `DROP FUNCTION IF EXISTS public.log_activity(uuid, uuid, text, text, jsonb);` (if present)
+- Consolidate creature crons: replace `respawn_creatures` + `regen_creature_hp` (both 2 min) with a single `tick_creatures` cron that runs both inside one transaction. Cuts cron metadata overhead by half.
 
-| Where | Text | Styling |
-|---|---|---|
-| `src/pages/GameRoute.tsx:42` | "Loading your adventure…" | `font-display text-primary text-glow animate-pulse` (default size, gold glow) |
-| `src/pages/GamePage.tsx:1139` | "Loading world…" | `font-display text-sm text-muted-foreground animate-pulse` (small, dim, no glow) |
+## Gameplay impact
+None. No player-visible feature uses activity_log.
 
-The gate shows while auth/character/nodes/sync are pending. Once it passes, `GamePage` mounts and briefly shows its own loader because it re-checks `useNodes` locally. The result is a visible style jump (size + color + glow change) right before the world appears.
+## Cost impact
+- Removes ~41k inserts/day on `activity_log`
+- Removes that table from realtime WAL decoding
+- Removes the `log_activity_batch` RPC (#11 by total time)
+- Halves the creature cron metadata overhead
 
-## Plan
-
-1. **Create a shared component** `src/components/LoadingScreen.tsx` that renders the parchment-bg full-screen layout with a single, consistent style: `font-display text-primary text-glow animate-pulse` (the more polished of the two), accepting a `message` prop with a default of `"Loading your adventure..."`.
-2. **Replace the inline loader in `GameRoute.tsx`** (lines 40-44) with `<LoadingScreen />`.
-3. **Replace the inline loader in `GamePage.tsx`** (lines 1137-1141) with `<LoadingScreen message="Loading world..." />` — same visual treatment, different copy so the second flash (if it occurs) is just a text swap, not a style swap.
-
-## Result
-
-Both states share identical typography, color, glow, and layout. The transition between them becomes seamless — at most a brief copy change, with no visible restyle.
-
-## Out of scope (mention only)
-
-The fact that `GamePage` re-runs `useNodes(true)` after the gate already loaded nodes via context is the deeper reason a second loader can flash at all. Collapsing that to a single fetch is a separate refactor; I'd rather not bundle it into a visual fix unless you want me to.
+Approve to switch to build mode and I'll finish the edits + run the migration.

@@ -8,7 +8,6 @@ import UserListColumn from './UserListColumn';
 import CharacterListColumn from './CharacterListColumn';
 import CharacterActionsColumn from './CharacterActionsColumn';
 import CharacterSheetColumn from './CharacterSheetColumn';
-import ActivityLogColumn from './ActivityLogColumn';
 import type { AdminUser, AdminNode, CharacterEdits } from './constants';
 
 interface Props {
@@ -321,8 +320,6 @@ export default function UserManager({ isValar }: Props) {
           onSave={handleSaveCharacter}
           onCancel={() => { setEditingChar(null); setCharEdits({}); }}
         />
-
-        <ActivityLogColumn userId={selectedUser?.id ?? null} />
       </div>
     </TooltipProvider>
   );

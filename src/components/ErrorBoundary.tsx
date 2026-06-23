@@ -18,26 +18,6 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
-    // Best-effort: log to activity_log so we can see prod crashes. Ignore failures.
-    (async () => {
-      try {
-        const { data } = await supabase.auth.getUser();
-        const userId = data.user?.id ?? null;
-        await supabase.from('activity_log').insert({
-          user_id: userId,
-          event_type: 'general',
-          message: 'Client error boundary caught a crash',
-          metadata: {
-            error: String(error?.message ?? error),
-            stack: String(error?.stack ?? '').slice(0, 4000),
-            componentStack: String(info?.componentStack ?? '').slice(0, 4000),
-            url: typeof window !== 'undefined' ? window.location.href : null,
-          },
-        });
-      } catch {
-        /* swallow */
-      }
-    })();
   }
 
   handleReload = () => {

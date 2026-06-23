@@ -4,7 +4,7 @@ import { useCharacter, Character } from '@/features/character';
 import { useRole } from '@/hooks/useRole';
 import { useNodes, GameNode, Region } from '@/features/world';
 import { useInactivityLogout } from '@/hooks/useInactivityLogout';
-import { logActivity } from '@/hooks/useActivityLog';
+
 import { supabase } from '@/integrations/supabase/client';
 
 interface GameContextValue {
@@ -93,15 +93,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   useInactivityLogout(handleInactiveLogout);
 
-  // Log login event once per session
-  const loggedLoginRef = useRef(false);
-  useEffect(() => {
-    if (user && !loggedLoginRef.current) {
-      loggedLoginRef.current = true;
-      logActivity(user.id, null, 'login', 'Logged in');
-    }
-    if (!user) loggedLoginRef.current = false;
-  }, [user]);
 
   const startingNode = nodes.find(n => n.name === 'Hearthvale Square') ?? nodes[0];
 

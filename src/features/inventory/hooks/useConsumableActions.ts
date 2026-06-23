@@ -6,7 +6,7 @@
  */
 import { useCallback } from 'react';
 import { Character } from '@/features/character';
-import { logActivity } from '@/hooks/useActivityLog';
+
 import { getEffectiveMaxHp } from '@/lib/game-data';
 import type { BuffSetters } from '@/features/combat/hooks/useBuffState';
 
@@ -37,10 +37,10 @@ export function useConsumableActions(params: UseConsumableActionsParams) {
       if (result.isPotion) {
         if (result.restored > 0) p.addLog(`🧪 You used ${result.itemName} and restored ${result.restored} HP.`);
         else p.addLog(`🧪 You used ${result.itemName}. You are already at full health.`);
-        logActivity(p.character.user_id, p.character.id, 'general', `Used ${result.itemName} (+${result.restored} HP)`);
+        
       } else if (result.hpRegen > 0) {
         p.addLog(`🍞 You consumed ${result.itemName}. +${result.hpRegen} HP & CP regen for 5 minutes.`);
-        logActivity(p.character.user_id, p.character.id, 'general', `Consumed ${result.itemName} (+${result.hpRegen} regen)`);
+        
         p.buffSetters.setFoodBuff({ flatRegen: result.hpRegen, expiresAt: Date.now() + 300000 });
       }
     }
