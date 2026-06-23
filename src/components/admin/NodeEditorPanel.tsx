@@ -1046,6 +1046,7 @@ export default function NodeEditorPanel({
                   <input type="checkbox" checked={form.is_public_teleport} disabled={!form.is_teleport}
                     onChange={e => setForm(f => ({ ...f, is_public_teleport: e.target.checked }))} />
                   ★ Always Available (no discovery required — e.g. class halls)
+                </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_trainer}
                     onChange={e => setForm(f => ({ ...f, is_trainer: e.target.checked }))} />
