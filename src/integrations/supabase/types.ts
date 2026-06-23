@@ -2054,6 +2054,9 @@ export type Database = {
         Args: { p_character_id: string }
         Returns: undefined
       }
+      guarded_expire_king_slayer: { Args: never; Returns: undefined }
+      guarded_expire_marketplace_listings: { Args: never; Returns: undefined }
+      guarded_return_unique_items: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2195,6 +2198,7 @@ export type Database = {
         Args: { _character_id: string; _new_hp: number }
         Returns: undefined
       }
+      world_is_awake: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "player" | "steward" | "overlord"
