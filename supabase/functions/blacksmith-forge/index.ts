@@ -139,11 +139,21 @@ serve(async (req) => {
     const CRAFT_XP = 25;
     const xpAwarded = char.level < 42 ? CRAFT_XP : 0;
 
-    // Deduct gold (still on characters until economy refactor) + add xp.
+    // Deduct gold (still on characters until economy refactor).
     await db.from("characters").update({
       gold: char.gold - goldCost,
-      xp: (char.xp ?? 0) + xpAwarded,
     }).eq("id", character_id);
+
+    // Award XP through the level-up-aware RPC so crossing a level threshold
+    // here actually promotes the character (stat point, class bonus, max
+    // HP/CP/MP refresh, full heal). Writing xp directly skipped all of that
+    // and left players stuck at full bar until next combat tick.
+    if (xpAwarded > 0) {
+      await db.rpc('apply_crafting_xp' as any, {
+        p_character_id: character_id,
+        p_xp: xpAwarded,
+      });
+    }
 
     // Add item to inventory
     await db.from("character_inventory").insert({
