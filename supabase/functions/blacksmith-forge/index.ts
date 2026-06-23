@@ -148,11 +148,14 @@ serve(async (req) => {
     // here actually promotes the character (stat point, class bonus, max
     // HP/CP/MP refresh, full heal). Writing xp directly skipped all of that
     // and left players stuck at full bar until next combat tick.
+    let xpResult: any = null;
     if (xpAwarded > 0) {
-      await db.rpc('apply_crafting_xp' as any, {
+      const { data: xpData, error: xpErr } = await db.rpc('apply_crafting_xp' as any, {
         p_character_id: character_id,
         p_xp: xpAwarded,
       });
+      if (xpErr) throw xpErr;
+      xpResult = xpData;
     }
 
     // Add item to inventory
@@ -167,6 +170,7 @@ serve(async (req) => {
       gold_remaining: char.gold - goldCost,
       gem_used: gemKey,
       xp_awarded: xpAwarded,
+      xp_result: xpResult,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

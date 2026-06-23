@@ -131,11 +131,14 @@ serve(async (req) => {
     }).eq("id", character_id);
 
     // Award XP through the level-up-aware RPC (see blacksmith-forge for why).
+    let xpResult: any = null;
     if (xpAwarded > 0) {
-      await db.rpc('apply_crafting_xp' as any, {
+      const { data: xpData, error: xpErr } = await db.rpc('apply_crafting_xp' as any, {
         p_character_id: character_id,
         p_xp: xpAwarded,
       });
+      if (xpErr) throw xpErr;
+      xpResult = xpData;
     }
 
     await db.from("character_inventory").insert({
@@ -149,6 +152,7 @@ serve(async (req) => {
       gold_remaining: char.gold - goldCost,
       gem_used: gemKey,
       xp_awarded: xpAwarded,
+      xp_result: xpResult,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

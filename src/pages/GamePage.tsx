@@ -1385,6 +1385,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
+          onCharacterRefresh={refetchCharacters}
           addLog={addLog}
           isSoulforgeNode={(currentNode as any).is_soulforge === true}
           character={character}
@@ -1407,6 +1408,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
           inventory={[...equipped, ...unequipped]}
           onGoldChange={(g) => updateCharacter({ gold: g })}
           onInventoryChange={fetchInventory}
+          onCharacterRefresh={refetchCharacters}
           addLog={addLog}
           character={character}
           npcName={activeServiceNpc?.service_role === 'jewelcrafter' ? activeServiceNpc.name : undefined}

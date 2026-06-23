@@ -29,6 +29,8 @@ interface Props {
   inventory: InventoryItem[];
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
+  /** Refetch the authoritative character row (level, XP, max HP/CP/MP, stat points). */
+  onCharacterRefresh?: () => void;
   addLog: (msg: string) => void;
   character?: Character;
   npcName?: string;
@@ -71,7 +73,7 @@ interface ForgePoolItem {
 
 export default function JewelcrafterPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, addLog,
+  onGoldChange, onInventoryChange, onCharacterRefresh, addLog,
   character, npcName, npcFlavor,
 }: Props) {
   const [tab, setTab] = useState<JewelcrafterTab>('repair');
@@ -167,10 +169,14 @@ export default function JewelcrafterPanel({
       onGoldChange(data.gold_remaining);
       // Salvage + gem counts come from the character_materials realtime subscription.
       onInventoryChange();
+      onCharacterRefresh?.();
       const gemUsed: GemKey | undefined = data.gem_used;
       const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
       const xpNote = data.xp_awarded > 0 ? ` (+${data.xp_awarded} XP)` : '';
       addLog(`💎 The jeweler crafted: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!${xpNote}`);
+      if (data?.xp_result?.leveled_up) {
+        addLog(`✨ You reached level ${data.xp_result.level}!`);
+      }
       try { localStorage.setItem(`onboarding.blacksmith-intro.${characterId}.crafted.v1`, '1'); } catch {}
       if (forgeSlot) browseSlot(forgeSlot);
       setSelectedForgeItem(null);
