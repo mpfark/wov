@@ -49,6 +49,7 @@ import { APP_VERSION } from '@/lib/version';
 import { useCreateGameEventBus, useGameEvent } from '@/hooks/useGameEvents';
 import { useGameLoop } from '@/features/combat';
 import { useCombatActions } from '@/features/combat/hooks/useCombatActions';
+import { useWimp } from '@/features/combat/hooks/useWimp';
 import { useOffscreenDotWakeup } from '@/features/combat';
 import { useMovementActions } from '@/features/world/hooks/useMovementActions';
 import { useConsumableActions } from '@/features/inventory/hooks/useConsumableActions';
@@ -809,6 +810,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleMove, handleTeleport, handleReturnToWaymark, handleSearch, waymarkNodeId, teleportOpen, setTeleportOpen } = movementActions;
   const { handleUseConsumable } = consumableActions;
   const { handleUseAbility, handleAttack } = combatActions;
+
+  // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
+  useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
 
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({

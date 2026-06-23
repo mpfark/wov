@@ -70,6 +70,10 @@ export interface Character {
   portrait_generated_at?: string | null;
   /** True until the player visits a hall and joins an Order. */
   is_classless?: boolean;
+  /** Auto-flee threshold as % of max HP (0 = disabled). */
+  wimp_hp_threshold?: number;
+  /** Compass direction to flee toward when wimp triggers (N/S/E/W/NE/NW/SE/SW). */
+  wimp_direction?: string | null;
 }
 
 export function useCharacter(user: User | null) {

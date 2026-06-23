@@ -448,6 +448,8 @@ export type Database = {
           unspent_stat_points: number
           updated_at: string
           user_id: string
+          wimp_direction: string | null
+          wimp_hp_threshold: number
           wis: number
           xp: number
         }
@@ -495,6 +497,8 @@ export type Database = {
           unspent_stat_points?: number
           updated_at?: string
           user_id: string
+          wimp_direction?: string | null
+          wimp_hp_threshold?: number
           wis?: number
           xp?: number
         }
@@ -542,6 +546,8 @@ export type Database = {
           unspent_stat_points?: number
           updated_at?: string
           user_id?: string
+          wimp_direction?: string | null
+          wimp_hp_threshold?: number
           wis?: number
           xp?: number
         }
