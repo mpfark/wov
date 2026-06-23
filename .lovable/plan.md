@@ -1,45 +1,33 @@
 ## Goal
-Let players set an HP threshold and a flee direction; when their HP drops at or below the threshold during combat, the client automatically triggers the existing flee-move in that direction.
-
-## Approach
-
-**Client-driven**, reusing existing flee path. Combat tick runs server-side but movement is already client-driven (`useMovementActions.moveToNode` with `fleeStopCombat`), so a small watcher hook decides when to fire it. Settings persist on the character row so they survive relog and follow the character.
+Replace the Attributes-tab Wimp form with a compact control in the MapPanel's bottom toolbar: an HP threshold number input (absolute HP, not %) and a direction button that opens a compass picker popover.
 
 ## Changes
 
-**Database (migration)**
-- Add two columns to `characters`:
-  - `wimp_hp_threshold int NOT NULL DEFAULT 0` (0 = disabled)
-  - `wimp_direction text` nullable, one of `N, S, E, W, NE, NW, SE, SW`
+**Schema — `wimp_hp_threshold` semantics change from "percent" to "absolute HP"**
+- New migration: drop the `0–100` CHECK constraint on `characters.wimp_hp_threshold` so values up to `max_hp` are allowed. Keep `>= 0`. Default stays 0 (disabled).
+- No data migration needed — current values are 0 for all live characters (feature was just added).
 
-**Settings UI — new small panel inside Character sheet (Attributes tab footer) or a dedicated "Combat" section**
-- Number input for threshold (0–100 % of max HP; stored as percent for portability across level-ups).
-- Dropdown of 8 compass directions + "Disabled".
-- Save button calls `updateCharacter({ wimp_hp_threshold, wimp_direction })`.
+**New component — `src/features/world/components/WimpControl.tsx`**
+- Compact pill placed in the MapPanel bottom toolbar (between left action buttons and the right-side legend, or grouped with the action buttons).
+- Layout: `[⚠️ icon] [number input HP] [direction button → popover]`
+- HP input: small number field, min 0, max `character.max_hp`. 0 = disabled.
+- Direction button: shows the current compass arrow (or `—` when none); clicking opens a Popover with a 3×3 compass grid (N/NE/E/SE/S/SW/W/NW + center "Off").
+- Saving: debounced auto-save on change via `useGameContext().updateCharacter({ wimp_hp_threshold, wimp_direction })`. No explicit Save button.
+- Visual state: glows amber when active (`threshold > 0 && direction`), muted when off.
+- Tooltip on the wrapper: "Wimp: auto-flee when HP drops to this value".
 
-> Decision: store as **percent of max HP**, not absolute HP — otherwise the threshold becomes meaningless after a level-up. UI label: "Flee when HP drops below X %".
+**Wire-up — `src/features/world/components/MapPanel.tsx`**
+- Render `<WimpControl character={character} />` inside the bottom toolbar's left action group.
 
-**Watcher hook — `src/features/combat/hooks/useWimp.ts` (new)**
-- Inputs: `character`, `inCombat`, `currentNode`, `moveToNode`.
-- When `inCombat && character.wimp_hp_threshold > 0 && character.wimp_direction` and `character.hp / character.max_hp * 100 <= threshold`:
-  - Find the connection in the configured direction from `currentNode.connections`.
-  - If found and not locked, call `moveToNode(targetNodeId, direction)` — this reuses the existing flee path (opportunity attacks + `fleeStopCombat`).
-  - Add a log line: `⚠️ Wimp triggered — fleeing <direction>!`
-  - Guard with a ref so it fires once per combat session (reset when `inCombat` flips false).
-  - If no valid exit in that direction, log a warning: `⚠️ Wimp wanted to flee <dir> but no path exists.`
+**Auto-flee hook — `src/features/combat/hooks/useWimp.ts`**
+- Change trigger condition from `(hp / max_hp) * 100 <= threshold` to `hp <= threshold` (absolute HP).
+- Update the trigger log to show the HP value, not the percent.
 
-**Wire-up — `src/pages/GamePage.tsx`**
-- Call `useWimp({ character, inCombat, currentNode, moveToNode, addLog })` alongside the other combat hooks.
-
-**Types — regenerated automatically after migration**; no manual `types.ts` edits.
-
-## Edge cases
-- Party leader vs. follower: only the leader's `moveToNode` actually relocates the party, but a follower triggering wimp would still want to bail. Followers leaving the party mid-combat is already handled by existing flee logic, so the hook can run for everyone.
-- Locked connections: skip and log warning (don't auto-unlock).
-- Dead character: skip (hp <= 0 already ends combat).
-- Already moving / on cooldown: `moveToNode` no-ops naturally; we just don't reset the "fired" flag so it retries on next HP tick.
+**Remove old UI**
+- Delete `src/features/character/components/WimpSettings.tsx`.
+- Remove its import and `<WimpSettings />` usage from `CharacterPanel.tsx` (just under the Defense renderSection).
 
 ## Out of scope
-- Smart pathing (always X exits away). Single-step flee only.
-- Per-creature wimp rules.
-- Auto-potion before wimp (could be a follow-up).
+- No party-wide wimp.
+- No "wimp toward party leader" smart targeting.
+- Threshold still client-enforced (closing the tab disables it) — unchanged from current behavior.
