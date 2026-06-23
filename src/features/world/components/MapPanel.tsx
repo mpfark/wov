@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 import ReportIssueDialog from '@/components/game/ReportIssueDialog';
+import WimpControl from '@/features/world/components/WimpControl';
 import { type Direction, type KeyBindings, type ActionBindings, type ActionName, getKeyLabel } from '@/features/world';
 
 export interface ActiveBuffs {
@@ -383,6 +384,9 @@ export default function MapPanel({
 
           {/* Bottom toolbar — action buttons + legend */}
           <div className="absolute bottom-1 left-1 right-1 z-10 flex items-center justify-between">
+            <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+              <WimpControl character={character} />
+            </div>
             <div className="flex items-center gap-1">
               <TooltipProvider delayDuration={200}>
                 {onSearch && (

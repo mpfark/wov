@@ -37,10 +37,8 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     const threshold = character.wimp_hp_threshold ?? 0;
     const direction = character.wimp_direction;
     if (threshold <= 0 || !direction) return;
-    if (character.hp <= 0 || character.max_hp <= 0) return;
-
-    const pct = (character.hp / character.max_hp) * 100;
-    if (pct > threshold) return;
+    if (character.hp <= 0) return;
+    if (character.hp > threshold) return;
 
     const conn = (currentNode?.connections as any[] | undefined)?.find(
       (c: any) => c.direction === direction
@@ -61,7 +59,7 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     }
 
     firedRef.current = true;
-    addLog(`⚠️ Wimp triggered at ${Math.round(pct)}% HP — fleeing ${DIR_NAMES[direction] || direction}!`);
+    addLog(`⚠️ Wimp triggered at ${character.hp} HP — fleeing ${DIR_NAMES[direction] || direction}!`);
     onMove(conn.node_id, direction);
   }, [inCombat, character, currentNode, onMove, addLog]);
 }
