@@ -1,64 +1,48 @@
-# Idle-world auto-sleep
+## Problem
 
-Yes — and it's a high-leverage change. Right now the creature tick, marketplace expirer, unique-item return, king-slayer expirer, and email queue all run on schedule regardless of whether anyone is logged in. When the realm is empty those jobs still burn cron slots, WAL, and CPU.
+When an existing user creates a brand-new character, the event log only shows the empty-state placeholder ("Your journey begins…") instead of the staggered first-entry welcome sequence (the 7-line "You awaken from a wandering daydream…" intro).
 
-## Concept
+The welcome sequence lives in `src/features/world/hooks/useFirstEntryWelcome.ts` and emits via `addLocalLog` → `bus.emit('log:local')` → `setEventLog`. It only fires when no `localStorage` flag exists for that character id.
 
-Add a single "world is awake" check that every periodic job consults as its first line. If no character has been online in the last N minutes, return immediately without touching any tables. When a player logs in, the world "wakes" and the next cron tick resumes normal work.
+## Likely root cause
 
-## How it works
+The hook uses a **module-level `Set` (`handledThisPageLoad`)** as a second gate on top of the `localStorage` flag. In the create-new-character flow there's a window where the hook can be invoked, mark the new character id as "handled", and then the actual emit never lands in the *current* `bus`:
 
-### Wake-state source
-We already track `characters.last_online`. Define **awake** as:
+1. `CharacterCreation` calls `onCharacterReady(char.id)` → context selects the new id.
+2. `Index` navigates to `/game`. `GameRoute` mounts, `character?.id` is now set.
+3. `GameRoute` starts `sync_character_resources` and renders `<LoadingScreen />` — `GamePage` (and its `bus` + `log:local` listener) is **not mounted yet**.
+4. If anything during that window causes the hook to run with the new id (e.g. a transient mount of GamePage before `syncing` flips true, a StrictMode-style double effect on a parent, or a fast remount), the id gets added to `handledThisPageLoad` and the `localStorage` flag is scheduled (with a 6.3 s delay).
+5. When `GamePage` finally mounts on the *new* bus, the hook bails out (`handledThisPageLoad.has(id)` is true), so no welcome lines are ever emitted on the bus that the event log is actually listening to.
 
-```sql
-EXISTS (SELECT 1 FROM public.characters WHERE last_online > now() - interval '5 minutes')
-```
+The result: the user sees the placeholder text and never the intro. (Players who only ever have one character don't hit this because there's no prior session state and timing tends to align.)
 
-Wrap that in a tiny `STABLE` function `public.world_is_awake()` so callers are cheap and consistent. 5 minutes is the right window because `last_online` is heartbeated about that often; anything tighter risks false-sleep mid-session.
+## Fix
 
-### Cron jobs gated by it
-Each scheduled function gets an early-exit guard:
+Make `localStorage` the single source of truth and remove the brittle module-level gate. Stamp the flag *at the moment we schedule the lines*, not 6.3 s later, so remounts during the opening seconds collapse cleanly to "Welcome back" instead of either double-firing or being silently suppressed.
 
-```sql
-CREATE OR REPLACE FUNCTION public.tick_creatures() …
-BEGIN
-  IF NOT public.world_is_awake() THEN RETURN; END IF;
-  PERFORM public.regen_creature_hp();
-  PERFORM public.respawn_creatures();
-END;
-```
+Concrete changes in `src/features/world/hooks/useFirstEntryWelcome.ts`:
 
-Apply the same guard to:
-- `tick_creatures` (regen + respawn)
-- `return_unique_items`
-- `expire_marketplace_listings`
-- `expire_king_slayer`
-- `prune-cron-history` — **keep running** even when asleep (it's the housekeeping itself)
-- `process-email-queue` — **keep running** (out-of-band notifications, e.g. password reset, must work when no one is in-game)
-- `monthly-scene-drain` — **keep running** (must fire on the last day)
+- Delete the module-level `handledThisPageLoad` set entirely.
+- In the effect:
+  - Read the `localStorage` flag synchronously.
+  - If absent: write it **immediately**, then schedule the 7 staggered `emitRef.current(line)` calls.
+  - If present: emit "Welcome back, Wayfarer!" once.
+- Keep the `emitRef` indirection so late timers still reach the current `bus`.
 
-### Wake on login
-First time a player's `last_online` updates after a sleep period, the next cron tick (≤2 min later) just runs normally. No login handler change needed. The very first creature respawn after wake-up may lag up to one cron interval; this is invisible because the player still needs to walk to a node.
+## Why this fixes the reported case
 
-### Optional fast-wake (not in scope)
-We could call `tick_creatures()` directly from the login edge function to skip the 2-minute lag. Adds complexity for a single cycle of wait; recommend skipping unless players complain.
+- New character → no `localStorage` key → flag written immediately → all 7 lines scheduled against the live `GamePage` bus → they appear in the event log.
+- Remount during the 6 s window → flag already set → "Welcome back" (acceptable fallback, no more stuck-on-placeholder state).
+- Existing character returning → unchanged behavior.
 
-## Gameplay impact
+## Files touched
 
-- **Active sessions**: zero change. As long as one player is online, everything runs as before.
-- **First player after a quiet period**: world state is whatever it was when the last player left, plus up to ~2 minutes of catch-up lag for creature respawns (which players won't notice — they have to travel to a node anyway).
-- **Marketplace listings**: an expired listing might linger up to one cron interval past its expiry while asleep. Harmless — the next awake tick removes it before anyone could buy it.
-- **Unique items held by offline characters**: same — return delay is bounded by the gap until someone logs in.
+- `src/features/world/hooks/useFirstEntryWelcome.ts` (only)
 
-## Cost impact
+No DB, no other component changes.
 
-When the realm is empty (likely the majority of hours in early days), the awake-guarded jobs become a single index-touch SELECT that returns instantly. Effectively we drop most cron-driven write load to zero during quiet hours.
+## Verification
 
-## Open questions
-
-1. **Awake window** — `5 minutes` matches the heartbeat. Want a tighter or looser threshold?
-2. **Fast-wake on login** — should we eagerly tick on first login after sleep, or accept the small lag?
-3. **What counts as "online"** — just `last_online` from `characters`, or also include `auth.users.last_sign_in_at`? `last_online` is the right answer for gameplay; `last_sign_in_at` would keep the world awake for someone idling on the login screen.
-
-Default if you don't answer: 5 min window, no fast-wake, `characters.last_online` only.
+- Create a new character on an account that already has one → confirm the 7-line intro plays in the event log.
+- Reload the game on that same character → confirm only "Welcome back, Wayfarer!" appears.
+- Create a second new character → confirm the intro plays again for that one.
