@@ -28,6 +28,8 @@ interface Props {
   inventory: InventoryItem[];
   onGoldChange: (newGold: number) => void;
   onInventoryChange: () => void;
+  /** Refetch the authoritative character row (level, XP, max HP/CP/MP, stat points). */
+  onCharacterRefresh?: () => void;
   addLog: (msg: string) => void;
   /** Whether the current node has the soulforge flag — adds a 3rd tab. */
   isSoulforgeNode?: boolean;
@@ -78,7 +80,7 @@ interface ForgePoolItem {
 
 export default function BlacksmithPanel({
   open, onClose, characterId, gold, level, inventory,
-  onGoldChange, onInventoryChange, addLog,
+  onGoldChange, onInventoryChange, onCharacterRefresh, addLog,
   isSoulforgeNode = false, character, npcName, npcFlavor,
 }: Props) {
   const [tab, setTab] = useState<BlacksmithTab>('repair');
@@ -171,10 +173,17 @@ export default function BlacksmithPanel({
       onGoldChange(data.gold_remaining);
       // Salvage + gem counts come from the character_materials realtime subscription.
       onInventoryChange();
+      // Pull the authoritative character row so level / XP / max HP/CP/MP /
+      // unspent stat points reflect any crafting-XP level-up immediately
+      // instead of waiting for the next session reload.
+      onCharacterRefresh?.();
       const gemUsed: GemKey | undefined = data.gem_used;
       const gemName = gemUsed ? GEM_CATALOG[gemUsed].name : null;
       const xpNote = data.xp_awarded > 0 ? ` (+${data.xp_awarded} XP)` : '';
       addLog(`🔩 The blacksmith forged: ${data.item.name}${gemName ? ` (consumed 1 ${gemName})` : ''}!${xpNote}`);
+      if (data?.xp_result?.leveled_up) {
+        addLog(`✨ You reached level ${data.xp_result.level}!`);
+      }
       try { localStorage.setItem(`onboarding.blacksmith-intro.${characterId}.crafted.v1`, '1'); } catch {}
       // Re-browse to refresh available items based on remaining gems
       if (forgeSlot) browseSlot(forgeSlot);
