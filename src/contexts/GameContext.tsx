@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useEffect, useRef, useState, ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCharacter, Character } from '@/features/character';
 import { useRole } from '@/hooks/useRole';
