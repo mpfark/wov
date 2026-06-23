@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import { getStatRegen, getCpRegen, getMpRegenRate, getMilestoneHpRegen, getMilestoneCpRegen, getEffectiveMaxHp, getEffectiveMaxCp, getEffectiveMaxMp } from '@/lib/game-data';
 import { supabase } from '@/integrations/supabase/client';
-import { logActivity } from '@/hooks/useActivityLog';
+
 import type { GameEventBus } from '@/hooks/useGameEvents';
 import { useBuffState } from './useBuffState';
 
@@ -318,7 +318,7 @@ export function useGameLoop(params: UseGameLoopParams) {
         current_node_id: deathNodeRef.current,
       });
       addLogRef.current(`💀 You have fallen! You lost ${goldLost} gold and awaken at the starting area with 1 HP.`);
-      logActivity(character.user_id, character.id, 'combat_death', `Died and lost ${goldLost} gold`, { gold_lost: goldLost });
+      
       isDeadRef.current = false;
       setIsDead(false);
       clearInterval(countdownInterval);
