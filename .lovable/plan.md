@@ -1,21 +1,27 @@
-## Plan
+## Goal
+Let admins mark teleport nodes as "always available" so players can teleport to them without first discovering them (useful for class order halls and major hubs).
 
-1. **Make the backend return the authoritative character after crafting XP**
-   - Update `apply_crafting_xp` so it returns the final level, XP, resources, stats, stat points, and whether a level-up occurred.
-   - Keep the current server-side level-up math, but make the response complete enough for the UI to update immediately.
+## Approach
 
-2. **Pass that level-up result through the forge functions**
-   - Update `blacksmith-forge` and `jewelcrafter-forge` to include the RPC result in their JSON response.
-   - Add a defensive error check so a failed XP RPC cannot silently leave the UI believing crafting succeeded normally.
+Add a new boolean column `is_public_teleport` on `nodes` (defaults to false). The admin Node Editor gets a toggle next to "Teleport". The teleport dialog treats any node with this flag as visited.
 
-3. **Refresh the selected character after successful crafting**
-   - Add an `onCharacterRefresh` callback from `GamePage` into both crafting panels.
-   - After a craft succeeds, call the refresh before/alongside inventory refresh so the level, XP bar, HP/CP/MP caps, and unspent stat point update without relog.
-   - Show a level-up log line when the returned crafting XP result says a level was gained.
+## Changes
 
-4. **Avoid stale optimistic gold masking the level-up update**
-   - Replace the current `onGoldChange(data.gold_remaining)` path for crafting with an authoritative refresh, because `updateCharacter({ gold })` creates a temporary pending-write mask that can merge out nearby realtime updates.
-   - Keep repair/sell behavior unchanged unless directly needed.
+**Database (migration)**
+- `ALTER TABLE public.nodes ADD COLUMN is_public_teleport boolean NOT NULL DEFAULT false;`
 
-5. **Validate the flow**
-   - Re-test crafting two 25 XP items on a level 1 character and confirm the UI moves from `50/50` to level 2 with rollover XP immediately, without switching/reloading the character.
+**Admin UI — `src/components/admin/NodeEditorPanel.tsx`**
+- Add `is_public_teleport` to form state, load/save paths, and flags badge ("Public Teleport").
+- Render a checkbox under the Teleport toggle, disabled unless `is_teleport` is true.
+
+**Player teleport — `src/features/world/components/TeleportDialog.tsx`**
+- Change destination filter from `visitedIds.has(n.id)` to `visitedIds.has(n.id) || n.is_public_teleport`.
+
+**Types — `src/features/world/hooks/useNodes.ts`**
+- Add `is_public_teleport: boolean` to `GameNode`, include in select if it whitelists columns.
+
+No changes to discovery logic (`character_visited_nodes`) — public-teleport simply bypasses the visited gate for the teleport list. Walking discovery still works normally.
+
+## Out of scope
+- Bulk-toggle in batch edit panel (can be added later if needed).
+- No changes to map fog-of-war; public-teleport only affects the teleport menu.
