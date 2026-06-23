@@ -37,10 +37,8 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     const threshold = character.wimp_hp_threshold ?? 0;
     const direction = character.wimp_direction;
     if (threshold <= 0 || !direction) return;
-    if (character.hp <= 0 || character.max_hp <= 0) return;
-
-    const pct = (character.hp / character.max_hp) * 100;
-    if (pct > threshold) return;
+    if (character.hp <= 0) return;
+    if (character.hp > threshold) return;
 
     const conn = (currentNode?.connections as any[] | undefined)?.find(
       (c: any) => c.direction === direction
