@@ -11,17 +11,21 @@ export default function GameRoute() {
 
 
   const navigate = useNavigate();
-  const [syncing, setSyncing] = useState(false);
-  const syncedForCharRef = useRef<string | null>(null);
+  // Track which character id has finished the entry-sync. Using state (not a
+  // ref) ensures the gate below re-renders when sync completes, and crucially
+  // prevents GamePage from mounting before sync — a pre-sync mount would emit
+  // the first-entry welcome on a bus that gets discarded when sync flips this
+  // value, leaving the player with only "Welcome back" on the real mount.
+  const [syncedCharId, setSyncedCharId] = useState<string | null>(null);
+  const syncStartedForRef = useRef<string | null>(null);
 
   // On world entry, recalculate gear-adjusted max_hp/max_cp/max_mp on the
   // server so the persisted row matches the gear baseline. Prevents the
   // HP/CP/MP "snap-back" caused by the row's max_* lagging behind gear.
   useEffect(() => {
     if (!character?.id) return;
-    if (syncedForCharRef.current === character.id) return;
-    syncedForCharRef.current = character.id;
-    setSyncing(true);
+    if (syncStartedForRef.current === character.id) return;
+    syncStartedForRef.current = character.id;
     (async () => {
       try {
         // Wipe any leftover stance reservations from a previous session, then
@@ -32,12 +36,14 @@ export default function GameRoute() {
       } catch (e) {
         console.error('Failed to sync character resources on entry:', e);
       } finally {
-        setSyncing(false);
+        setSyncedCharId(character.id);
       }
     })();
   }, [character?.id, refetchCharacters]);
 
-  if (authLoading || charLoading || nodesLoading || syncing) {
+  const isSyncedForCurrent = !!character?.id && syncedCharId === character.id;
+
+  if (authLoading || charLoading || nodesLoading || (!!character?.id && !isSyncedForCurrent)) {
     return <LoadingScreen />;
   }
 
@@ -67,7 +73,7 @@ export default function GameRoute() {
       startingNodeId={startingNode?.id ?? nodes[0]?.id}
       onSwitchCharacter={() => { clearSelectedCharacter(); navigate('/'); }}
       refetchCharacters={refetchCharacters}
-      resourcesSynced={syncedForCharRef.current === character.id && !syncing}
+      resourcesSynced={isSyncedForCurrent}
     />
   );
 }
