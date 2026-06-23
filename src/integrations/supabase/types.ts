@@ -1901,6 +1901,10 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
       }
+      apply_crafting_xp: {
+        Args: { p_character_id: string; p_xp: number }
+        Returns: Json
+      }
       apply_family_to_character: {
         Args: { _character_id: string; _display: string }
         Returns: Json
