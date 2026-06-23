@@ -59,7 +59,7 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     }
 
     firedRef.current = true;
-    addLog(`⚠️ Wimp triggered at ${Math.round(pct)}% HP — fleeing ${DIR_NAMES[direction] || direction}!`);
+    addLog(`⚠️ Wimp triggered at ${character.hp} HP — fleeing ${DIR_NAMES[direction] || direction}!`);
     onMove(conn.node_id, direction);
   }, [inCombat, character, currentNode, onMove, addLog]);
 }
