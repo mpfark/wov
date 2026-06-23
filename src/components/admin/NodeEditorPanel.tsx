@@ -1042,6 +1042,10 @@ export default function NodeEditorPanel({
                     onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
                   🌀 Is Teleport Point (fast travel destination)
                 </label>
+                <label className={`flex items-center gap-2 text-xs ml-6 ${form.is_teleport ? 'text-muted-foreground' : 'text-muted-foreground/50 cursor-not-allowed'}`}>
+                  <input type="checkbox" checked={form.is_public_teleport} disabled={!form.is_teleport}
+                    onChange={e => setForm(f => ({ ...f, is_public_teleport: e.target.checked }))} />
+                  ★ Always Available (no discovery required — e.g. class halls)
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_trainer}
                     onChange={e => setForm(f => ({ ...f, is_trainer: e.target.checked }))} />
