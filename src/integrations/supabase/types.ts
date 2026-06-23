@@ -1330,6 +1330,7 @@ export type Database = {
           is_inn: boolean
           is_jewelcrafter: boolean
           is_marketplace: boolean
+          is_public_teleport: boolean
           is_soulforge: boolean
           is_stonebinder: boolean
           is_teleport: boolean
@@ -1355,6 +1356,7 @@ export type Database = {
           is_inn?: boolean
           is_jewelcrafter?: boolean
           is_marketplace?: boolean
+          is_public_teleport?: boolean
           is_soulforge?: boolean
           is_stonebinder?: boolean
           is_teleport?: boolean
@@ -1380,6 +1382,7 @@ export type Database = {
           is_inn?: boolean
           is_jewelcrafter?: boolean
           is_marketplace?: boolean
+          is_public_teleport?: boolean
           is_soulforge?: boolean
           is_stonebinder?: boolean
           is_teleport?: boolean

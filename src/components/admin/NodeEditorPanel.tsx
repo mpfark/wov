@@ -78,7 +78,7 @@ function getNodeLabel(node: any, areas: any[]): string {
   if (node?.is_vendor) flags.push('Vendor');
   if (node?.is_blacksmith) flags.push('Blacksmith');
   if (node?.is_jewelcrafter) flags.push('Jewelcrafter');
-  if (node?.is_teleport) flags.push('Teleport');
+  if (node?.is_teleport) flags.push(node?.is_public_teleport ? 'Teleport★' : 'Teleport');
   if (node?.is_trainer) flags.push('Trainer');
   if ((node as any)?.is_heraldry) flags.push('Heraldry');
   const area = node?.area_id ? areas.find((a: any) => a.id === node.area_id) : null;
@@ -534,7 +534,7 @@ export default function NodeEditorPanel({
   nodeId, regions, initialRegionId, allNodesGlobal, onClose, onSaved, isValar, adjacentToNodeId, adjacentDirection, nodePositions,
 }: NodeEditorPanelProps) {
   const [form, setForm] = useState({
-    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false,
+    name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_public_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false,
     connections: '[]', searchable_items: [] as { item_id: string; chance: number }[],
     area_id: '' as string,
     illustration_url: '', illustration_metadata: {} as Record<string, string>,
@@ -633,7 +633,7 @@ export default function NodeEditorPanel({
       loadNpcs(nodeId);
       loadVendorInventory(nodeId);
     } else {
-      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {}, class_hall: '' });
+      setForm({ name: '', description: '', is_vendor: false, is_inn: false, is_blacksmith: false, is_jewelcrafter: false, is_stonebinder: false, is_teleport: false, is_public_teleport: false, is_trainer: false, is_marketplace: false, is_soulforge: false, is_heraldry: false, connections: '[]', searchable_items: [], area_id: '', illustration_url: '', illustration_metadata: {}, class_hall: '' });
       setCreatures([]);
       setNpcs([]);
       setVendorItems([]);
@@ -653,6 +653,7 @@ export default function NodeEditorPanel({
         is_jewelcrafter: (data as any).is_jewelcrafter ?? false,
         is_stonebinder: (data as any).is_stonebinder ?? false,
         is_teleport: (data as any).is_teleport ?? false,
+        is_public_teleport: (data as any).is_public_teleport ?? false,
         is_trainer: (data as any).is_trainer ?? false,
         is_marketplace: (data as any).is_marketplace ?? false,
         is_soulforge: (data as any).is_soulforge ?? false,
@@ -844,7 +845,7 @@ export default function NodeEditorPanel({
     if (activeNodeId) {
       const { error } = await supabase.from('nodes').update({
         name: form.name, description: form.description, is_vendor: form.is_vendor,
-        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, is_heraldry: (form as any).is_heraldry, searchable_items, region_id: selectedRegionId,
+        is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_public_teleport: form.is_public_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, is_heraldry: (form as any).is_heraldry, searchable_items, region_id: selectedRegionId,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -872,7 +873,7 @@ export default function NodeEditorPanel({
       }
       const { data: inserted, error } = await supabase.from('nodes').insert({
         name: form.name, description: form.description, region_id: selectedRegionId,
-        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, is_heraldry: (form as any).is_heraldry, connections, searchable_items,
+        is_vendor: form.is_vendor, is_inn: form.is_inn, is_blacksmith: form.is_blacksmith, is_jewelcrafter: form.is_jewelcrafter, is_stonebinder: form.is_stonebinder, is_teleport: form.is_teleport, is_public_teleport: form.is_public_teleport, is_trainer: form.is_trainer, is_marketplace: form.is_marketplace, is_soulforge: form.is_soulforge, is_heraldry: (form as any).is_heraldry, connections, searchable_items,
         area_id: form.area_id || null,
         illustration_url: form.illustration_url,
         illustration_metadata: form.illustration_metadata,
@@ -1040,6 +1041,11 @@ export default function NodeEditorPanel({
                   <input type="checkbox" checked={form.is_teleport}
                     onChange={e => setForm(f => ({ ...f, is_teleport: e.target.checked }))} />
                   🌀 Is Teleport Point (fast travel destination)
+                </label>
+                <label className={`flex items-center gap-2 text-xs ml-6 ${form.is_teleport ? 'text-muted-foreground' : 'text-muted-foreground/50 cursor-not-allowed'}`}>
+                  <input type="checkbox" checked={form.is_public_teleport} disabled={!form.is_teleport}
+                    onChange={e => setForm(f => ({ ...f, is_public_teleport: e.target.checked }))} />
+                  ★ Always Available (no discovery required — e.g. class halls)
                 </label>
                 <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <input type="checkbox" checked={form.is_trainer}

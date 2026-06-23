@@ -1,0 +1,1 @@
+ALTER TABLE public.nodes ADD COLUMN IF NOT EXISTS is_public_teleport boolean NOT NULL DEFAULT false;

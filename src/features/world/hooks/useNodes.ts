@@ -29,6 +29,7 @@ export interface GameNode {
   is_inn: boolean;
   is_blacksmith: boolean;
   is_teleport: boolean;
+  is_public_teleport?: boolean;
   is_trainer: boolean;
   is_soulforge: boolean;
   area_id?: string | null;
