@@ -20,7 +20,7 @@ import { MaterialsSection } from '@/features/inventory/components/MaterialsSecti
 import { useMaterials } from '@/features/inventory/hooks/useMaterials';
 // import PortraitTab from './PortraitTab'; // disabled — feature coming later
 import ClassBondRow from './ClassBondRow';
-import WimpSettings from './WimpSettings';
+
 
 interface Props {
   character: Character;
