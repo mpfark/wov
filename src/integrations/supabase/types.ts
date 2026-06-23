@@ -59,44 +59,6 @@ export type Database = {
         }
         Relationships: []
       }
-      activity_log: {
-        Row: {
-          character_id: string | null
-          created_at: string
-          event_type: string
-          id: string
-          message: string
-          metadata: Json
-          user_id: string
-        }
-        Insert: {
-          character_id?: string | null
-          created_at?: string
-          event_type?: string
-          id?: string
-          message: string
-          metadata?: Json
-          user_id: string
-        }
-        Update: {
-          character_id?: string | null
-          created_at?: string
-          event_type?: string
-          id?: string
-          message?: string
-          metadata?: Json
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_log_character_id_fkey"
-            columns: ["character_id"]
-            isOneToOne: false
-            referencedRelation: "characters"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       ai_credit_drain_item_log: {
         Row: {
           area_id: string | null
@@ -2161,7 +2123,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      log_activity_batch: { Args: { _entries: Json }; Returns: undefined }
       move_follower: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
@@ -2225,6 +2186,7 @@ export type Database = {
         Args: { p_character_id: string }
         Returns: Json
       }
+      tick_creatures: { Args: never; Returns: undefined }
       try_acquire_unique_item: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
