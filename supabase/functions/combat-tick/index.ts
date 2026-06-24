@@ -988,10 +988,16 @@ Deno.serve(async (req) => {
       } else if (pa.ability_type === 'burst_damage') {
         // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
         // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
+        // Rolls to hit on CHA; crit edge applies only on a successful hit.
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const effInt = (c.int || 10) + (eb.int || 0);
         const chaMod = sm(effCha);
         const intMod = sm(effInt);
+        const hit = rollAbilityHit(chaMod);
+        if (!hit.hit) {
+          events.push({ type: 'ability_miss', message: `🎵💥 ${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
+          continue;
+        }
         // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
         // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
         const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
@@ -1014,12 +1020,17 @@ Deno.serve(async (req) => {
       } else if (pa.ability_type === 'dot_debuff') {
         // Server-side Rend/bleed: create persistent active_effects row
         // Dual-primary (Warrior STR+DEX): damage = STR (the wound),
-        // duration = DEX (precision keeps it open). Mirrors the client preview
-        // in useCombatActions.ts and the ability description.
+        // duration = DEX (precision keeps it open). Rolls to hit on DEX.
         const effStr = (c.str || 10) + (eb.str || 0);
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
         const dexMod = sm(effDex);
+        const hit = rollAbilityHit(dexMod);
+        if (!hit.hit) {
+          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.`, character_id: member.id });
+          continue;
+        }
+
         // Soft-scaled STR contribution (profile 'dot') — mirrors client preview.
         const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
         let dmgPerTick = Math.max(1, Math.floor((effStrDot * 1.5 + 2) * 0.67));
