@@ -1191,10 +1191,11 @@ Deno.serve(async (req) => {
             // Bond multiplier scales the Shield Wall stance's block-amount bonus (utility magnitude).
             const bonusAmt = sw ? Math.floor((sw.amount_bonus ?? 0) * bondM) : 0;
             const blockAmt = Math.min(baseAmt + bonusAmt, dmg);
+
             const preDmg = dmg;
             dmg = Math.max(dmg - blockAmt, 0);
-            const stanceTag = sw ? ` 🛡️ (Shield Wall +${bonusAmt})` : '';
-            events.push({ type: 'shield_block', message: `🛡️ ${targetName} raises their shield and turns the blow!${stanceTag} [${blockAmt}]`, character_id: targetId });
+            events.push({ type: 'shield_block', message: `🛡️ ${targetName} raises their shield and turns the blow! [${blockAmt}]`, character_id: targetId });
+
             if (dmg <= 0) return;
           }
         }
