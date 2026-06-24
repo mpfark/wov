@@ -134,14 +134,15 @@ const STANCE_FLAVOR: Record<StanceKey, StanceFlavor> = {
   },
 };
 
-export function getStanceActivateFlavor(key: StanceKey, cost: number): string {
+export function getStanceActivateFlavor(key: StanceKey, _cost: number): string {
   const f = STANCE_FLAVOR[key];
-  if (!f) return `${key} activated. (${cost} CP reserved.)`;
-  return `${f.activate} (${cost} CP reserved.)`;
+  if (!f) return `${key} activated.`;
+  return f.activate;
 }
 
 export function getStanceDropFlavor(key: StanceKey): string {
   const f = STANCE_FLAVOR[key];
-  if (!f) return `${key} dropped. (Reserved CP is not refunded.)`;
-  return `${f.drop} (Reserved CP is not refunded.)`;
+  if (!f) return `${key} dropped.`;
+  return f.drop;
 }
+
