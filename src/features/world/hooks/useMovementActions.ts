@@ -208,7 +208,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const [teleportOpen, setTeleportOpen] = useState(false);
 
   // ── Movement ───────────────────────────────────────────────────
-  const handleMove = useCallback(async (nodeId: string, direction?: string) => {
+  const handleMove = useCallback(async (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => {
     if (p.isDead) return;
 
     // ── Locked connection check ──
