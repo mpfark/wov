@@ -51,7 +51,6 @@ import {
   getEnvenomProc,
   getEnvenomMaxStacks,
   getIgniteOrbChance,
-  getBarragePerArrowRatio,
   getBattleCryDR,
 } from "../_shared/formulas/abilities.ts";
 import {
@@ -779,25 +778,38 @@ Deno.serve(async (req) => {
         return { hit: total >= effAC, roll: d };
       };
 
-      // Class abilities use ability-specific stat-scaling formulas (NOT the
-      // weapon-die autoattack path). Each ability's identity is tied to its
-      // class's primary stat and is independent of equipped weapon.
+      // ── Weapon-die helper for physical abilities ──────────────────
+      // Returns the equipped main-hand weapon die (and tag) for this member.
+      // If no main-hand weapon is equipped, falls back to 1d4 "unarmed".
+      // Used by Power Strike, Aimed Shot, Backstab, Eviscerate, Rend, Barrage.
+      const getMemberWeaponDie = (): { die: number; tag: string } => {
+        const wTag = mainHandTag[member.id];
+        if (!wTag) return { die: 4, tag: 'unarmed' };
+        const wHands: 1 | 2 = isTwoHanded[member.id] ? 2 : 1;
+        const die = getWeaponDieForItem(wTag, wHands, mainHandLevel[member.id], weaponProgression, mainHandRarity[member.id]);
+        return { die, tag: wTag };
+      };
+
+      // Physical weapon abilities (Power Strike, Aimed Shot, Backstab, Eviscerate,
+      // Rend, Barrage) roll the equipped weapon's die + stat + ability bonus, so
+      // weapon upgrades feed directly into ability damage. Spell-flavored abilities
+      // (Fireball, Smite, Cutting Words, Grand Finale, Conflagrate) remain stat-only.
 
       if (pa.ability_type === 'multi_attack') {
-        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow base = 2 + dexMod + floor(level/4).
+        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
         // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
         // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
         // Buff parity with autoattacks: respects Eagle Eye (crit_buff), Arcane Surge
         // (damage_buff), Shadowstep (stealth_buff), and Disengage (disengage_next_hit).
         // Stealth/Disengage are consumed once for the whole Barrage volley (not per arrow).
+        // If main-hand isn't a bow, falls back to the unarmed 1d4 die.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const effWis = (c.wis || 10) + (eb.wis || 0);
         const dexMod = sm(effDex);
         const wisMod = sm(effWis);
         const arrowCount = Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0));
-        // Per-arrow ratio scales with DEX (no more flat 70% of base); arrow count already scales with WIS.
-        const perArrowRatio = getBarragePerArrowRatio(dexMod);
-        const perArrowBase = Math.max(Math.floor((2 + dexMod + Math.floor((c.level || 1) / 4)) * perArrowRatio), 1);
+        const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
+        const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
@@ -815,7 +827,8 @@ Deno.serve(async (req) => {
           const totalAtk = roll + dexMod;
           if (roll !== 1 && (roll === 20 || totalAtk >= t.ac)) {
             const isCrit = roll >= critRange;
-            let arrowDmg = Math.max(isCrit ? perArrowBase * 2 : perArrowBase, 1);
+            let arrowDmg = Math.max(rollDmg(1, arrowDie) + arrowBonus, 1);
+            if (isCrit) arrowDmg *= 2;
             if (isStealth) arrowDmg = Math.max(Math.floor(arrowDmg * stealthMult), 1);
             if (isDmgBuff) arrowDmg = Math.floor(arrowDmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0))));
             if (hasDisengage) arrowDmg = Math.floor(arrowDmg * (1 + disengageMult));
@@ -829,7 +842,7 @@ Deno.serve(async (req) => {
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
-              weapon_tag: 'bow',
+              weapon_tag: arrowTag,
               damage: arrowDmg,
               is_crit: isCrit,
               character_id: member.id,
@@ -841,7 +854,7 @@ Deno.serve(async (req) => {
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
-              weapon_tag: 'bow',
+              weapon_tag: arrowTag,
               character_id: member.id,
             });
           }
@@ -859,8 +872,8 @@ Deno.serve(async (req) => {
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
       } else if (pa.ability_type === 'execute_attack') {
-        // Eviscerate (Rogue / dual-primary DEX+CHA finisher): base = 4 + 2*dexMod + floor(level/3).
-        // Per-stack bonus scales with CHA showmanship (cap +0.65/stack). Rolls to hit on DEX.
+        // Eviscerate (Rogue / dual-primary DEX+CHA finisher): damage = 1d{weaponDie} + dexMod + ability bonus.
+        // Per-stack bonus scales with CHA showmanship. Rolls to hit on DEX.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const dexMod = sm(effDex);
@@ -874,12 +887,14 @@ Deno.serve(async (req) => {
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
-        // Soft-scaled: DEX base via 'damage' profile, CHA per-stack rider via
-        // 'stacking' profile. The old hard +0.65/stack ceiling is replaced by
-        // reduced marginal gain — high CHA still climbs, just slower.
+        // Weapon-die roll + DEX (soft-scaled via 'damage' profile) + level bonus.
+        // CHA per-stack rider uses 'stacking' profile — high CHA still climbs, just slower.
+        const { die: evisDie } = getMemberWeaponDie();
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
-        const baseDmg = 4 + 2 * effDexDmg + Math.floor((c.level || 1) / 3);
+        const weaponRoll = rollDmg(1, evisDie);
+        const abilityBonus = 2 + effDexDmg + Math.floor((c.level || 1) / 3);
+        const baseDmg = weaponRoll + dexMod + abilityBonus;
         const perStackBonus = 0.50 + effChaStack * 0.02;
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
@@ -936,10 +951,15 @@ Deno.serve(async (req) => {
         pa.ability_type === 'smite' ||
         pa.ability_type === 'cutting_words'
       ) {
-        // Phase 1 T0 class identity abilities. All share one formula:
-        //   damage = max(1, 5 + 2*statMod + floor(level/3))
-        // Rolls to hit on the class stat (no crit roll, no weapon interaction). CP already
-        // deducted above. Stat is per-class.
+        // T0 class identity abilities. Two damage paths:
+        //   • Physical (power_strike / aimed_shot / backstab):
+        //       damage = 1d{weaponDie} + statMod + (3 + statMod + floor(level/3))
+        //     Weapon die / tier / rarity feed directly through the autoattack helper.
+        //     Unarmed falls back to 1d4. Aimed Shot uses whatever main-hand is equipped
+        //     (a non-bow still rolls its die — fantasy nudge, not a hard gate).
+        //   • Spell (fireball / smite / cutting_words):
+        //       damage = max(1, 5 + 2*statMod + floor(level/3))   (unchanged, stat-only)
+        // Rolls to hit on the class stat (no crit roll on the d20).
         const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
           fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
           backstab: 'dex', smite: 'wis', cutting_words: 'cha',
@@ -952,6 +972,7 @@ Deno.serve(async (req) => {
           smite:         { emoji: '⭐',  verb: 'smites' },
           cutting_words: { emoji: '🎵',  verb: 'mocks' },
         };
+        const PHYSICAL_T0 = new Set(['power_strike', 'aimed_shot', 'backstab']);
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
@@ -969,7 +990,15 @@ Deno.serve(async (req) => {
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
-        let dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
+        let dmg: number;
+        if (PHYSICAL_T0.has(pa.ability_type)) {
+          const { die } = getMemberWeaponDie();
+          const weaponRoll = rollDmg(1, die);
+          const abilityBonus = Math.round(3 + effMod + Math.floor((c.level || 1) / 3));
+          dmg = Math.max(1, weaponRoll + mod + abilityBonus);
+        } else {
+          dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
+        }
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
@@ -1018,9 +1047,11 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, effCha, member.id);
         }
       } else if (pa.ability_type === 'dot_debuff') {
-        // Server-side Rend/bleed: create persistent active_effects row
-        // Dual-primary (Warrior STR+DEX): damage = STR (the wound),
+        // Server-side Rend/bleed: create persistent active_effects row.
+        // Dual-primary (Warrior STR+DEX): magnitude = weapon damage + STR (the wound),
         // duration = DEX (precision keeps it open). Rolls to hit on DEX.
+        // Per-tick bleed pulls from the equipped weapon die (avg) so big swords
+        // bleed harder; unarmed falls back to 1d4.
         const effStr = (c.str || 10) + (eb.str || 0);
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
@@ -1031,9 +1062,11 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Soft-scaled STR contribution (profile 'dot') — mirrors client preview.
+        // Soft-scaled STR contribution (profile 'dot') + weapon-die avg / 3.
+        const { die: rendDie } = getMemberWeaponDie();
+        const weaponAvg = (rendDie + 1) / 2; // average roll of 1d{die}
         const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
-        let dmgPerTick = Math.max(1, Math.floor((effStrDot * 1.5 + 2) * 0.67));
+        let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effStrDot + 2) / 3 * 0.67 + effStrDot * 0.5));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);

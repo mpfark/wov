@@ -1,58 +1,54 @@
 ## Goal
 
-Make damaging player abilities subject to a to-hit roll (currently they auto-land). Brings them in line with autoattacks and creature attacks, so AC and missing become meaningful for ability play.
+Make physical weapon abilities actually care about the equipped weapon. Right now Power Strike, Aimed Shot, Backstab, Eviscerate, Rend, and Barrage all use fixed math — a soulforged sword and a rusty one hit for the same number. After this change, the weapon's die, tier, and rarity feed directly into each strike.
 
-## Scope — abilities that gain a to-hit roll
+## Formula
 
-All damaging branches in `supabase/functions/combat-tick/index.ts`:
+All affected abilities switch to:
 
-| Ability                          | Type                | To-hit stat (per class identity) |
-| -------------------------------- | ------------------- | -------------------------------- |
-| Eviscerate (Rogue)               | `execute_attack`    | DEX                              |
-| Conflagrate (Wizard)             | `ignite_consume`    | INT                              |
-| Fireball (Wizard)                | `fireball`          | INT                              |
-| Power Strike (Warrior)           | `power_strike`      | STR                              |
-| Aimed Shot (Ranger)              | `aimed_shot`        | DEX                              |
-| Backstab (Rogue)                 | `backstab`          | DEX                              |
-| Smite / Judgment (Healer/Templar)| `smite`             | WIS                              |
-| Cutting Words (Bard)             | `cutting_words`     | CHA                              |
-| Grand Finale (Bard)              | `burst_damage`      | CHA                              |
-| Rend (Warrior)                   | `dot_debuff`        | DEX (precision to land bleed)    |
-
-**Unchanged:**
-- **Barrage** (`multi_attack`) — already rolls per arrow; keep as is.
-- Buffs/heals/debuffs that aren't direct damage (Battle Cry, Snare, Dissonance, Cloak, etc.).
-- Crit-edge logic on Grand Finale (separate roll, untouched).
-
-## To-hit formula
-
-Mirror the autoattack pattern already in the Barrage branch:
-
-```
-d20 + abilityStatMod + INT hit bonus + weapon affinity hit (if applicable)
-   vs creature AC (minus sunder reduction, if any)
+```text
+damage = WeaponDie + statMod + abilityBonus
 ```
 
-- Nat 20 always hits; nat 1 always misses (consistent with existing rules).
-- Apply **no crit** on these ability rolls — abilities keep deterministic damage. The d20 is purely hit/miss. (Grand Finale still uses its own crit-edge roll.)
-- On miss: push an `ability_miss` event with a flavored message and refund nothing (CP/cooldowns already consumed, parity with autoattack miss). Stack consumption for Eviscerate/Conflagrate **still happens on miss** — the strike was committed.
-- Procs/buffs (Arcane Surge, stealth, Bond) only multiply on hit, same as autoattacks.
+- **WeaponDie** = roll `1dN` where N comes from the same `getWeaponDieForItem(...)` already used by autoattacks (so weapon level/rarity/tier scaling carries over for free).
+- **statMod** = the ability's primary stat modifier (STR / DEX), matching today's hit roll.
+- **abilityBonus** = the part that makes it feel like an ability and not a basic swing.
+- **Unarmed fallback:** if no main-hand weapon is equipped, use `1d4` and a `weapon_tag` of `unarmed`. Hit roll and ability bonus unchanged.
+- Existing multipliers (bond, Arcane Surge, stealth, etc.) keep applying after the roll, in the same order as today.
+- Existing **to-hit roll on miss** still skips damage entirely (no weapon roll on miss).
 
-## Implementation steps
+### Per-ability `abilityBonus`
 
-1. Add a small helper at the top of the per-ability block in `combat-tick/index.ts`:
-   ```
-   function rollAbilityHit(statMod, intMod, creatureAC, sunderRed = 0): { hit: boolean; roll: number }
-   ```
-   Returns `{ hit, roll }` using the rule above.
-2. Wrap each of the listed branches with a single hit check before applying damage / DoT. Emit either the existing `ability_hit` event (on hit) or a new `ability_miss` event (on miss). Preserve every existing on-hit side effect (kill resolution, stack consumption, buff consumption).
-3. **Client preview** in `useCombatActions.ts` and any tooltip/ability descriptions: add "rolls to hit" wording so players understand the new rule. No client-side prediction changes (these abilities are not predicted today).
-4. **Tests**: add a deterministic unit test that confirms each ability branch consults `rollD20` and produces a miss event when the roll fails. The existing combat-resolver test harness pattern is sufficient.
+Tuned to land in the same neighborhood as today's `5 + 2*statMod + level/3` once a tier-appropriate weapon is equipped, so this is a flavor/scaling change rather than a flat buff.
 
-## Open questions
+| Ability       | Stat | Weapon          | abilityBonus                          | Notes                                          |
+| ------------- | ---- | --------------- | ------------------------------------- | ---------------------------------------------- |
+| Power Strike  | STR  | main hand       | `3 + statMod + floor(level/3)`        | Two-handed weapons benefit naturally (bigger die). |
+| Aimed Shot    | DEX  | main hand (bow) | `3 + statMod + floor(level/3)`        | If main-hand isn't a bow tag → unarmed 1d4 fallback. |
+| Backstab      | DEX  | main hand       | `3 + statMod + floor(level/3)`        | Stealth multiplier still wraps the total.       |
+| Eviscerate    | DEX  | main hand       | `2 + statMod + floor(level/3)` + per-stack CHA bonus (unchanged) | Stack consumption on miss unchanged. |
+| Rend (bleed)  | DEX  | main hand       | initial hit: `2 + statMod`; DoT ticks: `floor((WeaponDie_avg + statMod)/3) per tick × duration` | Bleed pulled from weapon damage so big swords bleed harder. |
+| Barrage       | DEX  | main hand (bow) | per arrow: roll `1dWeaponDie + floor(statMod/2)`, then apply existing crit / stealth / count rules | Drops the current `perArrowBase` calc. |
 
-- **Should miss still consume Eviscerate's poison stacks and Conflagrate's burn stacks?** Default in plan: yes (you committed to the strike). Confirm or flip.
-- **Should Rend missing prevent the bleed from being applied at all?** Default: yes — miss = no bleed, no refresh of an existing stack.
-- **Should boss-rarity creatures get any to-hit nudge** (e.g. abilities ignore Boss AC bonus)? Default: no, treat them like any AC.
+## Files to touch
 
-If you want different defaults on any of those, tell me and I'll revise before building.
+- `supabase/functions/combat-tick/index.ts`
+  - Add a small `getMemberWeaponDie(member)` helper near the equipment block that returns `{ die, tag }` (1d4 / `unarmed` fallback).
+  - Rewrite the damage line in each of the six handlers above; leave the to-hit roll, miss flavor, kill resolution, and buff/proc plumbing alone.
+  - `multi_attack` (Barrage) — replace `perArrowBase` with a per-arrow weapon roll; keep arrow count, crit range, stealth/disengage consumption as-is.
+  - `execute_attack` (Eviscerate) — replace `baseDmg` line; keep stack math.
+  - `dot_debuff` (Rend) — recompute initial damage and per-tick magnitude from weapon die; leave duration formula alone.
+  - T0 block — branch `power_strike` / `aimed_shot` / `backstab` out of the shared `5 + 2*statMod + level/3` line into the new formula. `fireball`, `smite`, `cutting_words` stay on the old stat-only formula (spells/words, no weapon).
+- `src/features/character/abilities/*` tooltip strings — update wording to "Rolls weapon damage + STR/DEX + bonus" so players see why their new sword matters.
+- `supabase/functions/combat-tick/abilities.test.ts` (or whichever the existing ability test file is) — add deterministic cases for: (a) bigger die → bigger damage, (b) unarmed fallback = 1d4, (c) miss → no weapon roll, (d) Barrage rolls die per arrow.
+
+## Memory update
+
+Append a new entry under `mem://game/combat-system/` describing "Weapon abilities roll equipped weapon die + stat + ability bonus; unarmed = 1d4" and link it from the index, so this rule sticks across future ability work.
+
+## Non-goals
+
+- No change to spells (Fireball, Smite, Cutting Words, Grand Finale, Conflagrate) — they remain stat-only.
+- No change to buffs, heals, debuffs without damage.
+- No change to to-hit math, crit rules, or proc system.
+- No balance pass on weapon dice tables themselves.
