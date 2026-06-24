@@ -20,6 +20,7 @@ import { useAreaTypes } from '@/features/world';
 import { getAreaHeaderColor } from '@/features/world';
 import LocationBackground from './LocationBackground';
 import OrderRosterPanel from './OrderRosterPanel';
+import { describeAdjacentLandmarks } from '@/features/world/utils/adjacency-description';
 
 
 
@@ -27,6 +28,8 @@ interface Props {
   node: GameNode;
   region: Region | undefined;
   area?: Area | null;
+  /** All world nodes — used to describe what stands in adjacent directions. */
+  allNodes?: GameNode[];
   players: PlayerPresence[];
   creatures: Creature[];
   npcs?: NPC[];
@@ -64,7 +67,7 @@ interface Props {
 }
 
 export default function NodeView({
-  node, region, area, players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
+  node, region, area, allNodes = [], players, creatures, npcs = [], character, eventLog: _eventLog, onAttack, onSelectTarget, onTalkToNPC,
   inCombat, lastTickTime, activeCombatCreatureId, selectedTargetId, engagedCreatureIds = [], creatureHpOverrides = {}, classAbilities = [], onUseAbility, abilityTargetId,
   pendingAbilityIndex = null,
   reservedBuffs = null,
@@ -242,6 +245,18 @@ export default function NodeView({
           <p className="text-sm text-foreground/90 leading-relaxed italic">
             {getNodeDisplayDescription(node, area) || 'A quiet corner of the world...'}
           </p>
+
+          {(() => {
+            const lines = describeAdjacentLandmarks(node, allNodes);
+            if (lines.length === 0) return null;
+            return (
+              <p className="text-xs text-muted-foreground leading-relaxed italic">
+                {lines.map((l, i) => (
+                  <span key={i} className="block">{l}</span>
+                ))}
+              </p>
+            );
+          })()}
 
           {node.class_hall && (
             <OrderRosterPanel hallClass={node.class_hall} selfCharacterId={character.id} />
