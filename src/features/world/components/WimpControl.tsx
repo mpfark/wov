@@ -117,7 +117,7 @@ export default function WimpControl({ character }: Props) {
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
-          Wimp: auto-flee when HP ≤ threshold
+          Wimp: panic-flee when HP ≤ threshold (no opportunity attack)
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
