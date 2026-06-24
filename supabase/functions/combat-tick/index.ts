@@ -1812,7 +1812,7 @@ Deno.serve(async (req) => {
             wimp_hp_threshold: c.wimp_hp_threshold ?? null,
             wimp_direction: c.wimp_direction ?? null,
             party_size: members.length,
-            node_id: nodeId,
+            node_id: combatNodeId,
             events: charEvents,
           };
         } catch (e) {
