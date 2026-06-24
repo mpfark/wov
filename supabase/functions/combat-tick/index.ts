@@ -896,11 +896,17 @@ Deno.serve(async (req) => {
 
       } else if (pa.ability_type === 'ignite_consume') {
         // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Per-stack bonus scales with INT (no more flat 50%).
-        // Burn stack count itself scales with WIS via the Ignite pulse engine.
+        // Per-stack bonus scales with INT. Burn stack count scales with WIS via Ignite. Rolls to hit on INT.
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const hit = rollAbilityHit(intMod);
+        if (!hit.hit) {
+          const stackNote = stacks > 0 ? `, squandering ${stacks} burn stack${stacks > 1 ? 's' : ''}` : '';
+          events.push({ type: 'ability_miss', message: `💥 ${c.name}'s Conflagrate fizzles against ${target.name}${stackNote}!`, character_id: member.id });
+          if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
+          continue;
+        }
         // Soft-scaled INT base (profile 'burst'). Per-stack bonus already uses
         // diminishingFloat in getConflagratePerStack, so no additional scaling there.
         const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
@@ -918,6 +924,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
         }
+
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
