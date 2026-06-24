@@ -97,6 +97,12 @@ export interface UsePartyCombatParams {
   /** Force-clear reserved_buffs locally on death so stance buttons don't
    *  remain pressed past the server's authoritative wipe. */
   clearReservedBuffsLocal?: () => void;
+  /**
+   * Optional pre-apply hook: called with the new HP value the server is about
+   * to commit for THIS player. Return true if the caller initiated a flee
+   * (wimp panic escape); usePartyCombat still applies the HP update either way.
+   */
+  onIncomingPlayerHp?: (newHp: number) => boolean;
 
 }
 
