@@ -94,17 +94,18 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
     return { newHp: currentHp, logs, clearStealth: false, clearEvasion: true, newAbsorbHp: undefined, memberDamages };
   }
 
-  // Panic mitigation (wimp-flee only). AoOs still resolve but each one gets
-  // a class-based dodge chance and any landed damage is scaled down.
-  const mitigation = wimpFlee ? getWimpMitigation((character as any).class) : null;
-  if (mitigation) {
-    logs.push(`🏃 Panic escape — ${namePrefixOf(party, character)} ${mitigation.flavor}!`);
-  }
-
   let currentAbsorb = buffState.absorbBuff && Date.now() < buffState.absorbBuff.expiresAt ? buffState.absorbBuff.shieldHp : 0;
   const hasEvasion = buffState.evasionBuff && Date.now() < buffState.evasionBuff.expiresAt && buffState.evasionBuff.dodgeChance > 0;
   const namePrefix = party ? character.name : 'You';
   const namePrefixLower = party ? character.name : 'you';
+
+  // Panic mitigation (wimp-flee only). AoOs still resolve but each one gets
+  // a class-based dodge chance and any landed damage is scaled down.
+  const mitigation = wimpFlee ? getWimpMitigation((character as any).class) : null;
+  if (mitigation) {
+    logs.push(`🏃 Panic escape — ${namePrefix} ${mitigation.flavor}!`);
+  }
+
 
   for (const creature of livingCreatures) {
     if (currentHp <= 0) break;
