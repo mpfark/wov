@@ -426,6 +426,8 @@ export type Database = {
           int: number
           is_classless: boolean
           king_slayer_at: string | null
+          last_death_at: string | null
+          last_death_log: Json | null
           last_online: string
           level: number
           max_cp: number
@@ -475,6 +477,8 @@ export type Database = {
           int?: number
           is_classless?: boolean
           king_slayer_at?: string | null
+          last_death_at?: string | null
+          last_death_log?: Json | null
           last_online?: string
           level?: number
           max_cp?: number
@@ -524,6 +528,8 @@ export type Database = {
           int?: number
           is_classless?: boolean
           king_slayer_at?: string | null
+          last_death_at?: string | null
+          last_death_log?: Json | null
           last_online?: string
           level?: number
           max_cp?: number
