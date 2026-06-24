@@ -797,20 +797,20 @@ Deno.serve(async (req) => {
       // (Fireball, Smite, Cutting Words, Grand Finale, Conflagrate) remain stat-only.
 
       if (pa.ability_type === 'multi_attack') {
-        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow base = 2 + dexMod + floor(level/4).
+        // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
         // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
         // Hit: d20 + dexMod vs AC. Crit on roll >= class crit range doubles arrow damage.
         // Buff parity with autoattacks: respects Eagle Eye (crit_buff), Arcane Surge
         // (damage_buff), Shadowstep (stealth_buff), and Disengage (disengage_next_hit).
         // Stealth/Disengage are consumed once for the whole Barrage volley (not per arrow).
+        // If main-hand isn't a bow, falls back to the unarmed 1d4 die.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const effWis = (c.wis || 10) + (eb.wis || 0);
         const dexMod = sm(effDex);
         const wisMod = sm(effWis);
         const arrowCount = Math.min(4, 2 + (dexMod >= 3 ? 1 : 0) + (wisMod >= 4 ? 1 : 0));
-        // Per-arrow ratio scales with DEX (no more flat 70% of base); arrow count already scales with WIS.
-        const perArrowRatio = getBarragePerArrowRatio(dexMod);
-        const perArrowBase = Math.max(Math.floor((2 + dexMod + Math.floor((c.level || 1) / 4)) * perArrowRatio), 1);
+        const { die: arrowDie, tag: arrowTag } = getMemberWeaponDie();
+        const arrowBonus = Math.max(0, Math.floor(dexMod / 2));
         const mb = buffs[member.id] || {};
         const critBuffBonus = mb.crit_buff?.bonus || 0;
         const critRange = getClassCritRange(c.class) - critBuffBonus;
