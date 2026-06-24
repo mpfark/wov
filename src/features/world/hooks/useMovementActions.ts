@@ -32,6 +32,8 @@ interface OpportunityAttackParams {
   effectiveAC: number;
   party: any;
   partyMembers: any[];
+  /** When true, applies class-based panic mitigation (dodge chance + damage reduction). */
+  wimpFlee?: boolean;
 }
 
 interface OpportunityAttackResult {
@@ -41,6 +43,32 @@ interface OpportunityAttackResult {
   clearEvasion: boolean;
   newAbsorbHp: number | null; // null = clear, undefined = no change
   memberDamages: { characterId: string; damage: number; creatureName: string; maxHp: number }[];
+}
+
+/**
+ * Panic mitigation per class when a wimp-flee triggers an opportunity attack.
+ * Opportunity attacks still happen — but the character's class shapes how
+ * much they can shrug off in the heat of escape:
+ *   - dodgeChance: per-attack chance the swing is completely avoided
+ *   - damageMult:  multiplier applied to any damage that lands
+ *   - flavor:      log snippet describing the panic move
+ *
+ * Tuning dial. Rogue/Ranger lean on agility, Warrior/Templar lean on armor,
+ * Wizard/Healer on a small arcane/divine ward, Bard on misdirection.
+ */
+const WIMP_PANIC_MITIGATION: Record<string, { dodgeChance: number; damageMult: number; flavor: string }> = {
+  rogue:   { dodgeChance: 0.90, damageMult: 0.50, flavor: 'vanishes into shadow' },
+  ranger:  { dodgeChance: 0.70, damageMult: 0.50, flavor: 'tumbles out of reach' },
+  bard:    { dodgeChance: 0.50, damageMult: 0.60, flavor: 'spins past the blow' },
+  wizard:  { dodgeChance: 0.40, damageMult: 0.50, flavor: 'blinks aside' },
+  healer:  { dodgeChance: 0.30, damageMult: 0.50, flavor: 'wards the strike' },
+  warrior: { dodgeChance: 0.20, damageMult: 0.40, flavor: 'braces behind shield' },
+  templar: { dodgeChance: 0.20, damageMult: 0.35, flavor: 'turtles up' },
+};
+
+function getWimpMitigation(charClass: string | undefined | null) {
+  return WIMP_PANIC_MITIGATION[(charClass || '').toLowerCase()]
+    ?? { dodgeChance: 0.25, damageMult: 0.60, flavor: 'scrambles away' };
 }
 
 /**
