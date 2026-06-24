@@ -790,10 +790,21 @@ Deno.serve(async (req) => {
         return { die, tag: wTag };
       };
 
+      // ── Dual-wield / off-hand rule for abilities ──────────────────
+      // CANONICAL: every physical ability resolves with the MAIN-HAND weapon only.
+      //   • Off-hand is never substituted, never picked-best, never adds an
+      //     extra ability swing. Off-hand keeps its autoattack-only bonus swing
+      //     (30% damage) elsewhere in this file.
+      //   • Bow abilities (Aimed Shot / Barrage) are NOT gated by weapon_tag —
+      //     they roll whatever main-hand die is equipped (or 1d4 if unarmed).
+      //   • Two-handed weapons already produce a larger die via getWeaponDieForItem,
+      //     so 2H benefit is automatic.
       // Physical weapon abilities (Power Strike, Aimed Shot, Backstab, Eviscerate,
       // Rend, Barrage) roll the equipped weapon's die + stat + ability bonus, so
       // weapon upgrades feed directly into ability damage. Spell-flavored abilities
       // (Fireball, Smite, Cutting Words, Grand Finale, Conflagrate) remain stat-only.
+      // Every physical-ability event below stamps a `weapon_tag` so the combat log
+      // shows the hand that rolled the die ('unarmed' if no main-hand).
 
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
