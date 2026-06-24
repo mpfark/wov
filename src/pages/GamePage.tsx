@@ -816,7 +816,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseAbility, handleAttack } = combatActions;
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
-  useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
+  const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
+  useEffect(() => { wimpFleeRef.current = wimp.tryFleeForIncomingHp; }, [wimp.tryFleeForIncomingHp]);
 
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({
