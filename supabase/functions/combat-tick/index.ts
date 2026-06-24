@@ -51,7 +51,6 @@ import {
   getEnvenomProc,
   getEnvenomMaxStacks,
   getIgniteOrbChance,
-  getBarragePerArrowRatio,
   getBattleCryDR,
 } from "../_shared/formulas/abilities.ts";
 import {
