@@ -758,9 +758,31 @@ Deno.serve(async (req) => {
       // (so T0 openers transition out-of-combat → in-combat correctly).
       sessionEngaged.add(target.id);
 
+      // ── Ability to-hit helper ─────────────────────────────────────
+      // All damaging abilities (except Barrage which rolls per-arrow) call this
+      // once to determine hit/miss. Mirrors the autoattack hit rule:
+      //   d20 + statMod + intHitBonus  vs  creature AC (minus Sunder if active).
+      // Nat 20 always hits, nat 1 always misses. No crit on these rolls — ability
+      // damage stays deterministic; the d20 is purely hit/miss.
+      const mbForHit = buffs[member.id] || {};
+      const sunderRedForTarget =
+        mbForHit.sunder_target === target.id && mbForHit.sunder_reduction
+          ? Math.max(0, Math.round(mbForHit.sunder_reduction * (mBondMult[member.id] ?? 1)))
+          : 0;
+      const intModForHit = sm((c.int || 10) + (eb.int || 0));
+      const rollAbilityHit = (statMod: number): { hit: boolean; roll: number } => {
+        const d = rollD20();
+        if (d === 20) return { hit: true, roll: d };
+        if (d === 1) return { hit: false, roll: d };
+        const effAC = Math.max((target.ac || 0) - sunderRedForTarget, 0);
+        const total = d + statMod + intHitBonus(intModForHit);
+        return { hit: total >= effAC, roll: d };
+      };
+
       // Class abilities use ability-specific stat-scaling formulas (NOT the
       // weapon-die autoattack path). Each ability's identity is tied to its
       // class's primary stat and is independent of equipped weapon.
+
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow base = 2 + dexMod + floor(level/4).
         // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
