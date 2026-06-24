@@ -993,18 +993,25 @@ Deno.serve(async (req) => {
           emoji = '✝️';
           verb = 'passes divine judgment upon';
         }
+        const isPhysT0 = PHYSICAL_T0.has(pa.ability_type);
+        // Resolve main-hand weapon once so both damage and event share the same tag.
+        const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
         const hit = rollAbilityHit(mod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `${emoji} ${c.name} ${verb} ${target.name} — misses!`, character_id: member.id });
+          events.push({
+            type: 'ability_miss',
+            message: `${emoji} ${c.name} ${verb} ${target.name} — misses!`,
+            character_id: member.id,
+            ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
+          });
           continue;
         }
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
         let dmg: number;
-        if (PHYSICAL_T0.has(pa.ability_type)) {
-          const { die } = getMemberWeaponDie();
-          const weaponRoll = rollDmg(1, die);
+        if (t0Weapon) {
+          const weaponRoll = rollDmg(1, t0Weapon.die);
           const abilityBonus = Math.round(3 + effMod + Math.floor((c.level || 1) / 3));
           dmg = Math.max(1, weaponRoll + mod + abilityBonus);
         } else {
@@ -1020,6 +1027,7 @@ Deno.serve(async (req) => {
           type: 'ability_hit',
           message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]`,
           character_id: member.id,
+          ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
         });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
