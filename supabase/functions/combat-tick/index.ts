@@ -860,12 +860,20 @@ Deno.serve(async (req) => {
         }
       } else if (pa.ability_type === 'execute_attack') {
         // Eviscerate (Rogue / dual-primary DEX+CHA finisher): base = 4 + 2*dexMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Per-stack bonus scales with CHA showmanship (cap +0.65/stack).
+        // Per-stack bonus scales with CHA showmanship (cap +0.65/stack). Rolls to hit on DEX.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const dexMod = sm(effDex);
         const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const hit = rollAbilityHit(dexMod);
+        if (!hit.hit) {
+          // Strike committed — poison stacks still consumed on miss.
+          const stackNote = stacks > 0 ? `, wasting ${stacks} poison stack${stacks > 1 ? 's' : ''}` : '';
+          events.push({ type: 'ability_miss', message: `🔪 ${c.name}'s Eviscerate misses ${target.name}${stackNote}!`, character_id: member.id });
+          if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
+          continue;
+        }
         // Soft-scaled: DEX base via 'damage' profile, CHA per-stack rider via
         // 'stacking' profile. The old hard +0.65/stack ceiling is replaced by
         // reduced marginal gain — high CHA still climbs, just slower.
@@ -885,6 +893,7 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
+
       } else if (pa.ability_type === 'ignite_consume') {
         // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
         // Guaranteed hit, no crit roll. Per-stack bonus scales with INT (no more flat 50%).
