@@ -790,10 +790,24 @@ Deno.serve(async (req) => {
         return { die, tag: wTag };
       };
 
+      // ── Dual-wield / off-hand rule for abilities ──────────────────
+      // CANONICAL: every physical ability resolves with the MAIN-HAND weapon only.
+      //   • Off-hand is never substituted, never picked-best, never adds an
+      //     extra ability swing. Off-hand keeps its autoattack-only bonus swing
+      //     (30% damage) elsewhere in this file.
+      //   • Bow abilities (Aimed Shot / Barrage) are NOT gated by weapon_tag —
+      //     they roll whatever main-hand die is equipped (or 1d4 if unarmed).
+      //   • Two-handed weapons already produce a larger die via getWeaponDieForItem,
+      //     so 2H benefit is automatic.
       // Physical weapon abilities (Power Strike, Aimed Shot, Backstab, Eviscerate,
       // Rend, Barrage) roll the equipped weapon's die + stat + ability bonus, so
       // weapon upgrades feed directly into ability damage. Spell-flavored abilities
       // (Fireball, Smite, Cutting Words, Grand Finale, Conflagrate) remain stat-only.
+      // Every physical-ability event below stamps a `weapon_tag` so the combat log
+      // shows the hand that rolled the die ('unarmed' if no main-hand).
+      // Tiny suffix helper: render '(sword)' / '(unarmed)' on physical-ability
+      // log lines so dual-wielders can see which weapon was used.
+      const tagSuffix = (tag: string) => ` (${tag})`;
 
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
@@ -879,17 +893,18 @@ Deno.serve(async (req) => {
         const dexMod = sm(effDex);
         const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
+        // Resolve weapon once so miss + hit + tag all share the same source.
+        const { die: evisDie, tag: evisTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
         if (!hit.hit) {
           // Strike committed — poison stacks still consumed on miss.
           const stackNote = stacks > 0 ? `, wasting ${stacks} poison stack${stacks > 1 ? 's' : ''}` : '';
-          events.push({ type: 'ability_miss', message: `🔪 ${c.name}'s Eviscerate misses ${target.name}${stackNote}!`, character_id: member.id });
+          events.push({ type: 'ability_miss', message: `🔪 ${c.name}'s Eviscerate misses ${target.name}${stackNote}!${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
         // Weapon-die roll + DEX (soft-scaled via 'damage' profile) + level bonus.
         // CHA per-stack rider uses 'stacking' profile — high CHA still climbs, just slower.
-        const { die: evisDie } = getMemberWeaponDie();
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
         const weaponRoll = rollDmg(1, evisDie);
@@ -900,10 +915,10 @@ Deno.serve(async (req) => {
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
         } else {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]${tagSuffix(evisTag)}`, character_id: member.id, weapon_tag: evisTag });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
@@ -982,18 +997,25 @@ Deno.serve(async (req) => {
           emoji = '✝️';
           verb = 'passes divine judgment upon';
         }
+        const isPhysT0 = PHYSICAL_T0.has(pa.ability_type);
+        // Resolve main-hand weapon once so both damage and event share the same tag.
+        const t0Weapon = isPhysT0 ? getMemberWeaponDie() : null;
         const hit = rollAbilityHit(mod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `${emoji} ${c.name} ${verb} ${target.name} — misses!`, character_id: member.id });
+          events.push({
+            type: 'ability_miss',
+            message: `${emoji} ${c.name} ${verb} ${target.name} — misses!${t0Weapon ? tagSuffix(t0Weapon.tag) : ''}`,
+            character_id: member.id,
+            ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
+          });
           continue;
         }
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
         let dmg: number;
-        if (PHYSICAL_T0.has(pa.ability_type)) {
-          const { die } = getMemberWeaponDie();
-          const weaponRoll = rollDmg(1, die);
+        if (t0Weapon) {
+          const weaponRoll = rollDmg(1, t0Weapon.die);
           const abilityBonus = Math.round(3 + effMod + Math.floor((c.level || 1) / 3));
           dmg = Math.max(1, weaponRoll + mod + abilityBonus);
         } else {
@@ -1007,8 +1029,9 @@ Deno.serve(async (req) => {
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         events.push({
           type: 'ability_hit',
-          message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]`,
+          message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]${t0Weapon ? tagSuffix(t0Weapon.tag) : ''}`,
           character_id: member.id,
+          ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
         });
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
@@ -1056,14 +1079,15 @@ Deno.serve(async (req) => {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
         const dexMod = sm(effDex);
+        // Resolve weapon once so miss + apply event + per-tick math all share it.
+        const { die: rendDie, tag: rendTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.`, character_id: member.id });
+          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
           continue;
         }
 
         // Soft-scaled STR contribution (profile 'dot') + weapon-die avg / 3.
-        const { die: rendDie } = getMemberWeaponDie();
         const weaponAvg = (rendDie + 1) / 2; // average roll of 1d{die}
         const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
         let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effStrDot + 2) / 3 * 0.67 + effStrDot * 0.5));
@@ -1089,7 +1113,7 @@ Deno.serve(async (req) => {
         } else {
           activeEffects.push({ id: crypto.randomUUID(), ...effData });
         }
-        events.push({ type: 'bleed_applied', message: `🩸 ${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]`, character_id: member.id });
+        events.push({ type: 'bleed_applied', message: `🩸 ${c.name} rends ${target.name} — blood weeps from the gash! [${dmgPerTick}/tick]${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
       }
     }
 
