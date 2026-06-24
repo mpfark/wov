@@ -1083,7 +1083,7 @@ Deno.serve(async (req) => {
         const { die: rendDie, tag: rendTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.`, character_id: member.id, weapon_tag: rendTag });
+          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.${tagSuffix(rendTag)}`, character_id: member.id, weapon_tag: rendTag });
           continue;
         }
 
