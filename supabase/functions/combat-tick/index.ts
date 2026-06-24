@@ -888,12 +888,14 @@ Deno.serve(async (req) => {
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
-        // Soft-scaled: DEX base via 'damage' profile, CHA per-stack rider via
-        // 'stacking' profile. The old hard +0.65/stack ceiling is replaced by
-        // reduced marginal gain — high CHA still climbs, just slower.
+        // Weapon-die roll + DEX (soft-scaled via 'damage' profile) + level bonus.
+        // CHA per-stack rider uses 'stacking' profile — high CHA still climbs, just slower.
+        const { die: evisDie } = getMemberWeaponDie();
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
-        const baseDmg = 4 + 2 * effDexDmg + Math.floor((c.level || 1) / 3);
+        const weaponRoll = rollDmg(1, evisDie);
+        const abilityBonus = 2 + effDexDmg + Math.floor((c.level || 1) / 3);
+        const baseDmg = weaponRoll + dexMod + abilityBonus;
         const perStackBonus = 0.50 + effChaStack * 0.02;
         const multiplier = 1 + perStackBonus * stacks;
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
