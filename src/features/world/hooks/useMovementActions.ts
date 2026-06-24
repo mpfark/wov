@@ -76,7 +76,7 @@ function getWimpMitigation(charClass: string | undefined | null) {
  * without performing any side effects (pure).
  */
 function resolveOpportunityAttacks(params: OpportunityAttackParams): OpportunityAttackResult {
-  const { character, creatures, activeCombatCreatureId, buffState, effectiveAC, party, partyMembers } = params;
+  const { character, creatures, activeCombatCreatureId, buffState, effectiveAC, party, partyMembers, wimpFlee } = params;
   const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0 && (c.is_aggressive || c.id === activeCombatCreatureId));
   const logs: string[] = [];
   let currentHp = character.hp;
@@ -94,6 +94,13 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
     return { newHp: currentHp, logs, clearStealth: false, clearEvasion: true, newAbsorbHp: undefined, memberDamages };
   }
 
+  // Panic mitigation (wimp-flee only). AoOs still resolve but each one gets
+  // a class-based dodge chance and any landed damage is scaled down.
+  const mitigation = wimpFlee ? getWimpMitigation((character as any).class) : null;
+  if (mitigation) {
+    logs.push(`🏃 Panic escape — ${namePrefixOf(party, character)} ${mitigation.flavor}!`);
+  }
+
   let currentAbsorb = buffState.absorbBuff && Date.now() < buffState.absorbBuff.expiresAt ? buffState.absorbBuff.shieldHp : 0;
   const hasEvasion = buffState.evasionBuff && Date.now() < buffState.evasionBuff.expiresAt && buffState.evasionBuff.dodgeChance > 0;
   const namePrefix = party ? character.name : 'You';
@@ -105,9 +112,14 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
       logs.push(`🌫️ ${namePrefix} dodge${party ? 's' : ''} ${creature.name}'s opportunity attack!`);
       continue;
     }
+    if (mitigation && Math.random() < mitigation.dodgeChance) {
+      logs.push(`💨 ${namePrefix} evade${party ? 's' : ''} ${creature.name}'s parting blow!`);
+      continue;
+    }
     const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
     if (atkRoll >= effectiveAC) {
-      const rawDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+      let rawDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+      if (mitigation) rawDmg = Math.max(Math.floor(rawDmg * mitigation.damageMult), 1);
       let dmgToHp = rawDmg;
       if (currentAbsorb > 0) {
         const absorbed = Math.min(currentAbsorb, rawDmg);
@@ -121,6 +133,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
       logs.push(`${creature.name} swipes at ${namePrefixLower} while fleeing — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
     }
   }
+
 
   // Party opportunity attacks
   if (party && livingCreatures.length > 0) {
