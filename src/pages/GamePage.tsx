@@ -690,6 +690,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // Ref to break circular dependency: usePartyCombat needs ability executor, useCombatActions needs queueAbility
   const executeAbilityRef = useRef<(index: number, targetId?: string) => Promise<void>>();
+  // Ref to break circular dependency: usePartyCombat needs the wimp pre-flee
+  // hook, but useWimp is initialised AFTER usePartyCombat (it needs handleMove).
+  const wimpFleeRef = useRef<((newHp: number) => boolean) | null>(null);
 
   const combat = usePartyCombat({
     character, creatures,
