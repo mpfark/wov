@@ -84,14 +84,10 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
       logs.push(`🌫️ ${namePrefix} dodge${party ? 's' : ''} ${creature.name}'s opportunity attack!`);
       continue;
     }
-    if (mitigation && Math.random() < mitigation.dodgeChance) {
-      logs.push(`💨 ${namePrefix} evade${party ? 's' : ''} ${creature.name}'s parting blow!`);
-      continue;
-    }
     const atkRoll = rollD20() + getStatModifier(creature.stats.str || 10);
     if (atkRoll >= effectiveAC) {
-      let rawDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-      if (mitigation) rawDmg = Math.max(Math.floor(rawDmg * mitigation.damageMult), 1);
+      const rawDmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
+
       let dmgToHp = rawDmg;
       if (currentAbsorb > 0) {
         const absorbed = Math.min(currentAbsorb, rawDmg);
