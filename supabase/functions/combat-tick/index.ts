@@ -758,9 +758,31 @@ Deno.serve(async (req) => {
       // (so T0 openers transition out-of-combat → in-combat correctly).
       sessionEngaged.add(target.id);
 
+      // ── Ability to-hit helper ─────────────────────────────────────
+      // All damaging abilities (except Barrage which rolls per-arrow) call this
+      // once to determine hit/miss. Mirrors the autoattack hit rule:
+      //   d20 + statMod + intHitBonus  vs  creature AC (minus Sunder if active).
+      // Nat 20 always hits, nat 1 always misses. No crit on these rolls — ability
+      // damage stays deterministic; the d20 is purely hit/miss.
+      const mbForHit = buffs[member.id] || {};
+      const sunderRedForTarget =
+        mbForHit.sunder_target === target.id && mbForHit.sunder_reduction
+          ? Math.max(0, Math.round(mbForHit.sunder_reduction * (mBondMult[member.id] ?? 1)))
+          : 0;
+      const intModForHit = sm((c.int || 10) + (eb.int || 0));
+      const rollAbilityHit = (statMod: number): { hit: boolean; roll: number } => {
+        const d = rollD20();
+        if (d === 20) return { hit: true, roll: d };
+        if (d === 1) return { hit: false, roll: d };
+        const effAC = Math.max((target.ac || 0) - sunderRedForTarget, 0);
+        const total = d + statMod + intHitBonus(intModForHit);
+        return { hit: total >= effAC, roll: d };
+      };
+
       // Class abilities use ability-specific stat-scaling formulas (NOT the
       // weapon-die autoattack path). Each ability's identity is tied to its
       // class's primary stat and is independent of equipped weapon.
+
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow base = 2 + dexMod + floor(level/4).
         // Arrow count: base 2, +1 if dexMod>=3 (precision), +1 more if wisMod>=4 (attunement). Cap 4.
@@ -838,12 +860,20 @@ Deno.serve(async (req) => {
         }
       } else if (pa.ability_type === 'execute_attack') {
         // Eviscerate (Rogue / dual-primary DEX+CHA finisher): base = 4 + 2*dexMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Per-stack bonus scales with CHA showmanship (cap +0.65/stack).
+        // Per-stack bonus scales with CHA showmanship (cap +0.65/stack). Rolls to hit on DEX.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const dexMod = sm(effDex);
         const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const hit = rollAbilityHit(dexMod);
+        if (!hit.hit) {
+          // Strike committed — poison stacks still consumed on miss.
+          const stackNote = stacks > 0 ? `, wasting ${stacks} poison stack${stacks > 1 ? 's' : ''}` : '';
+          events.push({ type: 'ability_miss', message: `🔪 ${c.name}'s Eviscerate misses ${target.name}${stackNote}!`, character_id: member.id });
+          if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
+          continue;
+        }
         // Soft-scaled: DEX base via 'damage' profile, CHA per-stack rider via
         // 'stacking' profile. The old hard +0.65/stack ceiling is replaced by
         // reduced marginal gain — high CHA still climbs, just slower.
@@ -863,13 +893,20 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
+
       } else if (pa.ability_type === 'ignite_consume') {
         // Conflagrate (Wizard / dual-primary INT+WIS): base = 4 + 2*intMod + floor(level/3).
-        // Guaranteed hit, no crit roll. Per-stack bonus scales with INT (no more flat 50%).
-        // Burn stack count itself scales with WIS via the Ignite pulse engine.
+        // Per-stack bonus scales with INT. Burn stack count scales with WIS via Ignite. Rolls to hit on INT.
         const effInt = (c.int || 10) + (eb.int || 0);
         const intMod = sm(effInt);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
+        const hit = rollAbilityHit(intMod);
+        if (!hit.hit) {
+          const stackNote = stacks > 0 ? `, squandering ${stacks} burn stack${stacks > 1 ? 's' : ''}` : '';
+          events.push({ type: 'ability_miss', message: `💥 ${c.name}'s Conflagrate fizzles against ${target.name}${stackNote}!`, character_id: member.id });
+          if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'ignite' });
+          continue;
+        }
         // Soft-scaled INT base (profile 'burst'). Per-stack bonus already uses
         // diminishingFloat in getConflagratePerStack, so no additional scaling there.
         const effIntBurst = getEffectiveCombatMod(Math.max(0, intMod), 'burst');
@@ -887,6 +924,7 @@ Deno.serve(async (req) => {
         } else {
           events.push({ type: 'ability_hit', message: `💥 ${c.name} blasts ${target.name} (no burn stacks). [${finalDmg}]`, character_id: member.id });
         }
+
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
@@ -900,7 +938,7 @@ Deno.serve(async (req) => {
       ) {
         // Phase 1 T0 class identity abilities. All share one formula:
         //   damage = max(1, 5 + 2*statMod + floor(level/3))
-        // Guaranteed hit, no crit roll, no weapon interaction. CP already
+        // Rolls to hit on the class stat (no crit roll, no weapon interaction). CP already
         // deducted above. Stat is per-class.
         const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
           fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
@@ -917,6 +955,17 @@ Deno.serve(async (req) => {
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
+        let { emoji, verb } = T0_LABEL[pa.ability_type];
+        // Templars share the 'smite' handler with healers but flavor it as Judgment.
+        if (pa.ability_type === 'smite' && c.class === 'templar') {
+          emoji = '✝️';
+          verb = 'passes divine judgment upon';
+        }
+        const hit = rollAbilityHit(mod);
+        if (!hit.hit) {
+          events.push({ type: 'ability_miss', message: `${emoji} ${c.name} ${verb} ${target.name} — misses!`, character_id: member.id });
+          continue;
+        }
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
@@ -927,12 +976,6 @@ Deno.serve(async (req) => {
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
-        let { emoji, verb } = T0_LABEL[pa.ability_type];
-        // Templars share the 'smite' handler with healers but flavor it as Judgment.
-        if (pa.ability_type === 'smite' && c.class === 'templar') {
-          emoji = '✝️';
-          verb = 'passes divine judgment upon';
-        }
         events.push({
           type: 'ability_hit',
           message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]`,
@@ -941,13 +984,20 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
+
       } else if (pa.ability_type === 'burst_damage') {
         // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
         // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
+        // Rolls to hit on CHA; crit edge applies only on a successful hit.
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const effInt = (c.int || 10) + (eb.int || 0);
         const chaMod = sm(effCha);
         const intMod = sm(effInt);
+        const hit = rollAbilityHit(chaMod);
+        if (!hit.hit) {
+          events.push({ type: 'ability_miss', message: `🎵💥 ${c.name}'s Grand Finale falls flat — ${target.name} is untouched!`, character_id: member.id });
+          continue;
+        }
         // Soft-scaled CHA magnitude (profile 'burst') — Grand Finale base and
         // dice both taper past softCap. INT crit-edge is unchanged (threshold, not magnitude).
         const effChaBurst = getEffectiveCombatMod(Math.max(0, chaMod), 'burst');
@@ -970,12 +1020,17 @@ Deno.serve(async (req) => {
       } else if (pa.ability_type === 'dot_debuff') {
         // Server-side Rend/bleed: create persistent active_effects row
         // Dual-primary (Warrior STR+DEX): damage = STR (the wound),
-        // duration = DEX (precision keeps it open). Mirrors the client preview
-        // in useCombatActions.ts and the ability description.
+        // duration = DEX (precision keeps it open). Rolls to hit on DEX.
         const effStr = (c.str || 10) + (eb.str || 0);
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
         const dexMod = sm(effDex);
+        const hit = rollAbilityHit(dexMod);
+        if (!hit.hit) {
+          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.`, character_id: member.id });
+          continue;
+        }
+
         // Soft-scaled STR contribution (profile 'dot') — mirrors client preview.
         const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
         let dmgPerTick = Math.max(1, Math.floor((effStrDot * 1.5 + 2) * 0.67));

@@ -1,91 +1,58 @@
 ## Goal
 
-Append a short "what you see from here" paragraph to the node description that calls out adjacent nodes worth noticing — named landmarks or anything that offers a service.
+Make damaging player abilities subject to a to-hit roll (currently they auto-land). Brings them in line with autoattacks and creature attacks, so AC and missing become meaningful for ability play.
 
-## What counts as "worth mentioning"
+## Scope — abilities that gain a to-hit roll
 
-A connected node is included if **either**:
-- It has a non-empty custom `name` (a named landmark, not just inheriting its area's name), **or**
-- It has at least one service flag from the registry below.
+All damaging branches in `supabase/functions/combat-tick/index.ts`:
 
-Hidden connections (`connections[].hidden === true`) are skipped. Locked connections are still mentioned — you can see the building, you just can't enter it yet.
+| Ability                          | Type                | To-hit stat (per class identity) |
+| -------------------------------- | ------------------- | -------------------------------- |
+| Eviscerate (Rogue)               | `execute_attack`    | DEX                              |
+| Conflagrate (Wizard)             | `ignite_consume`    | INT                              |
+| Fireball (Wizard)                | `fireball`          | INT                              |
+| Power Strike (Warrior)           | `power_strike`      | STR                              |
+| Aimed Shot (Ranger)              | `aimed_shot`        | DEX                              |
+| Backstab (Rogue)                 | `backstab`          | DEX                              |
+| Smite / Judgment (Healer/Templar)| `smite`             | WIS                              |
+| Cutting Words (Bard)             | `cutting_words`     | CHA                              |
+| Grand Finale (Bard)              | `burst_damage`      | CHA                              |
+| Rend (Warrior)                   | `dot_debuff`        | DEX (precision to land bleed)    |
 
-## Streamlined sentence style
+**Unchanged:**
+- **Barrage** (`multi_attack`) — already rolls per arrow; keep as is.
+- Buffs/heals/debuffs that aren't direct damage (Battle Cry, Snare, Dissonance, Cloak, etc.).
+- Crit-edge logic on Grand Finale (separate roll, untouched).
 
-One uniform pattern, no special-case phrasing:
+## To-hit formula
 
-```text
-To the north‑east stands the Ember Forge (blacksmith, vendor).
-To the south‑east stands the Archive of Ages (renown trainer).
-To the west lies a teleport circle.
+Mirror the autoattack pattern already in the Barrage branch:
+
+```
+d20 + abilityStatMod + INT hit bonus + weapon affinity hit (if applicable)
+   vs creature AC (minus sunder reduction, if any)
 ```
 
-Rules:
-- Always uses the connection's `direction` field (preserves admin-authored direction labels).
-- **Named landmark** → `"To the {dir} stands {Name} ({service list})"`. Service list omitted when there are none.
-- **Unnamed but has services** → `"To the {dir} lies {generic service phrase}"` (e.g. "a blacksmith's forge", "a teleport circle", "an inn").
-- Multiple destinations in the same direction are listed on separate lines for readability.
-- Block is omitted entirely when nothing qualifies.
+- Nat 20 always hits; nat 1 always misses (consistent with existing rules).
+- Apply **no crit** on these ability rolls — abilities keep deterministic damage. The d20 is purely hit/miss. (Grand Finale still uses its own crit-edge roll.)
+- On miss: push an `ability_miss` event with a flavored message and refund nothing (CP/cooldowns already consumed, parity with autoattack miss). Stack consumption for Eviscerate/Conflagrate **still happens on miss** — the strike was committed.
+- Procs/buffs (Arcane Surge, stealth, Bond) only multiply on hit, same as autoattacks.
 
-## Service registry — single source of truth
+## Implementation steps
 
-To answer your second question directly: **yes, future services adopt automatically — but only if you add them to one small registry.** The helper doesn't scan the whole node row blindly (that would pick up unrelated booleans like `is_inn` vs. internal flags), so we centralise the list:
+1. Add a small helper at the top of the per-ability block in `combat-tick/index.ts`:
+   ```
+   function rollAbilityHit(statMod, intMod, creatureAC, sunderRed = 0): { hit: boolean; roll: number }
+   ```
+   Returns `{ hit, roll }` using the rule above.
+2. Wrap each of the listed branches with a single hit check before applying damage / DoT. Emit either the existing `ability_hit` event (on hit) or a new `ability_miss` event (on miss). Preserve every existing on-hit side effect (kill resolution, stack consumption, buff consumption).
+3. **Client preview** in `useCombatActions.ts` and any tooltip/ability descriptions: add "rolls to hit" wording so players understand the new rule. No client-side prediction changes (these abilities are not predicted today).
+4. **Tests**: add a deterministic unit test that confirms each ability branch consults `rollD20` and produces a miss event when the roll fails. The existing combat-resolver test harness pattern is sufficient.
 
-`src/features/world/utils/service-registry.ts`:
+## Open questions
 
-```ts
-export interface ServiceDef {
-  /** Node column / flag — checked for truthiness on the target node. */
-  key: keyof GameNode | string;
-  /** Short label used inside parentheses after a named landmark. */
-  label: string;
-  /** Phrase used when the node has no custom name. */
-  generic: string;
-}
+- **Should miss still consume Eviscerate's poison stacks and Conflagrate's burn stacks?** Default in plan: yes (you committed to the strike). Confirm or flip.
+- **Should Rend missing prevent the bleed from being applied at all?** Default: yes — miss = no bleed, no refresh of an existing stack.
+- **Should boss-rarity creatures get any to-hit nudge** (e.g. abilities ignore Boss AC bonus)? Default: no, treat them like any AC.
 
-export const SERVICES: ServiceDef[] = [
-  { key: 'is_blacksmith',   label: 'blacksmith',     generic: "a blacksmith's forge" },
-  { key: 'is_vendor',       label: 'vendor',         generic: 'a vendor stall' },
-  { key: 'is_jewelcrafter', label: 'jewelcrafter',   generic: "a jeweler's bench" },
-  { key: 'is_trainer',      label: 'renown trainer', generic: "a renown trainer's hall" },
-  { key: 'is_inn',          label: 'inn',            generic: 'an inn' },
-  { key: 'is_teleport',     label: 'teleport',       generic: 'a teleport circle' },
-  { key: 'is_soulforge',    label: 'soulforge',      generic: 'a soulforge' },
-  { key: 'is_stonebinder',  label: 'stonebinder',    generic: 'a stonebinder shrine' },
-  { key: 'is_heraldry',     label: 'heraldry',       generic: 'a heraldry hall' },
-];
-// class_hall handled separately: label `"{Class} Order Hall"`.
-```
-
-When you add a new service later, you add one row here and it appears in node descriptions, no other code changes. (The icon row in `NodeView.tsx` already enumerates each flag by hand — that's a separate concern and not touched by this change.)
-
-## Where it goes
-
-Inside `NodeView.tsx`, directly under the existing italic description `<p>` (around lines 242–244), as a second `<p>` with slightly dimmer styling so it reads as ambient flavour.
-
-## Technical sketch
-
-New helper `src/features/world/utils/adjacency-description.ts`:
-
-```ts
-export function describeAdjacentLandmarks(
-  node: GameNode,
-  allNodes: GameNode[],
-): string[]   // one line per landmark, [] when nothing qualifies
-```
-
-Reads the registry above, iterates `node.connections`, resolves targets via `allNodes`, applies the rules, returns sentence lines.
-
-In `NodeView.tsx`:
-- Accept `allNodes: GameNode[]` via props (already in `GameContext`).
-- Render the lines under the description when non-empty.
-
-In `GamePage.tsx`:
-- Pass `nodes` from `useGameContext()` into `NodeView`.
-
-## Out of scope
-
-- No database changes.
-- No admin opt-out toggle per node (easy to add later if some landmark should stay hush-hush).
-- No creatures / NPCs / players in adjacent nodes — only static landmarks and services.
-- The icon strip at the top of the node view is not refactored to share the registry in this pass.
+If you want different defaults on any of those, tell me and I'll revise before building.
