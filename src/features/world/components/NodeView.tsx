@@ -250,7 +250,7 @@ export default function NodeView({
             const lines = describeAdjacentLandmarks(node, allNodes);
             if (lines.length === 0) return null;
             return (
-              <p className="text-xs text-muted-foreground leading-relaxed italic">
+              <p className="text-xs text-foreground/90 leading-relaxed italic">
                 {lines.map((l, i) => (
                   <span key={i} className="block">{l}</span>
                 ))}

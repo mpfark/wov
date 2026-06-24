@@ -1,6 +1,19 @@
 import type { GameNode } from '@/features/world/hooks/useNodes';
 import { SERVICES } from './service-registry';
 
+const DIRECTION_NAMES: Record<string, string> = {
+  n: 'north',
+  ne: 'northeast',
+  e: 'east',
+  se: 'southeast',
+  s: 'south',
+  sw: 'southwest',
+  w: 'west',
+  nw: 'northwest',
+  up: 'above',
+  down: 'below',
+};
+
 /**
  * Build "you can see ..." flavour lines for nodes adjacent to `node`.
  *
@@ -36,7 +49,9 @@ export function describeAdjacentLandmarks(
     const hasName = !!(target.name && target.name.trim());
     if (!hasName && services.length === 0) continue;
 
-    const dir = conn.direction || 'nearby';
+    const dirRaw = conn.direction || 'nearby';
+    const dir = DIRECTION_NAMES[dirRaw.toLowerCase()] || dirRaw;
+
     if (hasName) {
       const tail = services.length ? ` (${services.join(', ')})` : '';
       lines.push(`To the ${dir} stands ${target.name.trim()}${tail}.`);
