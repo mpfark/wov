@@ -1029,7 +1029,7 @@ Deno.serve(async (req) => {
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
         events.push({
           type: 'ability_hit',
-          message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]`,
+          message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]${t0Weapon ? tagSuffix(t0Weapon.tag) : ''}`,
           character_id: member.id,
           ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
         });
