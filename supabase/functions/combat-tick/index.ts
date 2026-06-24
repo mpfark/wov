@@ -890,17 +890,18 @@ Deno.serve(async (req) => {
         const dexMod = sm(effDex);
         const chaMod = sm(effCha);
         const stacks = Math.min(pa.consume_stacks || 0, 5);
+        // Resolve weapon once so miss + hit + tag all share the same source.
+        const { die: evisDie, tag: evisTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
         if (!hit.hit) {
           // Strike committed — poison stacks still consumed on miss.
           const stackNote = stacks > 0 ? `, wasting ${stacks} poison stack${stacks > 1 ? 's' : ''}` : '';
-          events.push({ type: 'ability_miss', message: `🔪 ${c.name}'s Eviscerate misses ${target.name}${stackNote}!`, character_id: member.id });
+          events.push({ type: 'ability_miss', message: `🔪 ${c.name}'s Eviscerate misses ${target.name}${stackNote}!`, character_id: member.id, weapon_tag: evisTag });
           if (stacks > 0) consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
           continue;
         }
         // Weapon-die roll + DEX (soft-scaled via 'damage' profile) + level bonus.
         // CHA per-stack rider uses 'stacking' profile — high CHA still climbs, just slower.
-        const { die: evisDie } = getMemberWeaponDie();
         const effDexDmg = getEffectiveCombatMod(Math.max(0, dexMod), 'damage');
         const effChaStack = getEffectiveCombatMod(Math.max(0, chaMod), 'stacking');
         const weaponRoll = rollDmg(1, evisDie);
@@ -911,10 +912,10 @@ Deno.serve(async (req) => {
         const finalDmg = Math.max(1, Math.floor(Math.round(baseDmg * multiplier) * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - finalDmg, 0);
         if (stacks > 0) {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} eviscerates ${target.name}, consuming ${stacks} poison stack${stacks > 1 ? 's' : ''}! [${finalDmg}]`, character_id: member.id, weapon_tag: evisTag });
           consumedAbilityStacks.push({ character_id: member.id, creature_id: target.id, stack_type: 'poison' });
         } else {
-          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]`, character_id: member.id });
+          events.push({ type: 'ability_hit', message: `🔪 ${c.name} strikes ${target.name} (no poison stacks). [${finalDmg}]`, character_id: member.id, weapon_tag: evisTag });
         }
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
