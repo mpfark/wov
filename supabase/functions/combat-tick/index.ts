@@ -1048,9 +1048,11 @@ Deno.serve(async (req) => {
           handleCreatureKill(target, c.name, effCha, member.id);
         }
       } else if (pa.ability_type === 'dot_debuff') {
-        // Server-side Rend/bleed: create persistent active_effects row
-        // Dual-primary (Warrior STR+DEX): damage = STR (the wound),
+        // Server-side Rend/bleed: create persistent active_effects row.
+        // Dual-primary (Warrior STR+DEX): magnitude = weapon damage + STR (the wound),
         // duration = DEX (precision keeps it open). Rolls to hit on DEX.
+        // Per-tick bleed pulls from the equipped weapon die (avg) so big swords
+        // bleed harder; unarmed falls back to 1d4.
         const effStr = (c.str || 10) + (eb.str || 0);
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
@@ -1061,9 +1063,11 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Soft-scaled STR contribution (profile 'dot') — mirrors client preview.
+        // Soft-scaled STR contribution (profile 'dot') + weapon-die avg / 3.
+        const { die: rendDie } = getMemberWeaponDie();
+        const weaponAvg = (rendDie + 1) / 2; // average roll of 1d{die}
         const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
-        let dmgPerTick = Math.max(1, Math.floor((effStrDot * 1.5 + 2) * 0.67));
+        let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effStrDot + 2) / 3 * 0.67 + effStrDot * 0.5));
         // Damage buffs (e.g. Arcane Surge, future warrior empowerments) bake into
         // the bleed at apply time so the DoT inherits the boost for its full duration.
         if (buffs[member.id]?.damage_buff) dmgPerTick = Math.max(Math.floor(dmgPerTick * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
