@@ -843,7 +843,7 @@ Deno.serve(async (req) => {
               attacker_name: c.name,
               target_name: t.name,
               attacker_class: c.class,
-              weapon_tag: 'bow',
+              weapon_tag: arrowTag,
               damage: arrowDmg,
               is_crit: isCrit,
               character_id: member.id,
