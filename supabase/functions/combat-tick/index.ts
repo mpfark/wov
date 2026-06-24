@@ -952,10 +952,15 @@ Deno.serve(async (req) => {
         pa.ability_type === 'smite' ||
         pa.ability_type === 'cutting_words'
       ) {
-        // Phase 1 T0 class identity abilities. All share one formula:
-        //   damage = max(1, 5 + 2*statMod + floor(level/3))
-        // Rolls to hit on the class stat (no crit roll, no weapon interaction). CP already
-        // deducted above. Stat is per-class.
+        // T0 class identity abilities. Two damage paths:
+        //   • Physical (power_strike / aimed_shot / backstab):
+        //       damage = 1d{weaponDie} + statMod + (3 + statMod + floor(level/3))
+        //     Weapon die / tier / rarity feed directly through the autoattack helper.
+        //     Unarmed falls back to 1d4. Aimed Shot uses whatever main-hand is equipped
+        //     (a non-bow still rolls its die — fantasy nudge, not a hard gate).
+        //   • Spell (fireball / smite / cutting_words):
+        //       damage = max(1, 5 + 2*statMod + floor(level/3))   (unchanged, stat-only)
+        // Rolls to hit on the class stat (no crit roll on the d20).
         const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
           fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
           backstab: 'dex', smite: 'wis', cutting_words: 'cha',
@@ -968,6 +973,7 @@ Deno.serve(async (req) => {
           smite:         { emoji: '⭐',  verb: 'smites' },
           cutting_words: { emoji: '🎵',  verb: 'mocks' },
         };
+        const PHYSICAL_T0 = new Set(['power_strike', 'aimed_shot', 'backstab']);
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
@@ -985,7 +991,15 @@ Deno.serve(async (req) => {
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
-        let dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
+        let dmg: number;
+        if (PHYSICAL_T0.has(pa.ability_type)) {
+          const { die } = getMemberWeaponDie();
+          const weaponRoll = rollDmg(1, die);
+          const abilityBonus = Math.round(3 + effMod + Math.floor((c.level || 1) / 3));
+          dmg = Math.max(1, weaponRoll + mod + abilityBonus);
+        } else {
+          dmg = Math.max(1, Math.round(5 + 2 * effMod + Math.floor((c.level || 1) / 3)));
+        }
         // Arcane Surge empowers all wizard damage (only fireball benefits, but
         // gating purely on damage_buff keeps the rule consistent for any class
         // that ever picks it up).
