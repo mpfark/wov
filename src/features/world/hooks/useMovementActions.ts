@@ -115,7 +115,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
         const memberAC = calculateAC(member.character.class, member.character.dex ?? 10);
         if (atkRoll >= memberAC) {
           const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-          logs.push(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing! (Rolled ${atkRoll}) — ${dmg} damage!`);
+          logs.push(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing — ${dmg} damage!`);
           memberDamages.push({ characterId: member.character_id, damage: dmg, creatureName: creature.name, maxHp: member.character.max_hp });
         } else {
           logs.push(`${creature.name} swipes at ${member.character.name} while fleeing — misses!`);
