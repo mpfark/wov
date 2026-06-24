@@ -805,6 +805,9 @@ Deno.serve(async (req) => {
       // (Fireball, Smite, Cutting Words, Grand Finale, Conflagrate) remain stat-only.
       // Every physical-ability event below stamps a `weapon_tag` so the combat log
       // shows the hand that rolled the die ('unarmed' if no main-hand).
+      // Tiny suffix helper: render '(sword)' / '(unarmed)' on physical-ability
+      // log lines so dual-wielders can see which weapon was used.
+      const tagSuffix = (tag: string) => ` (${tag})`;
 
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow damage = 1d{bowDie} + floor(dexMod/2).
