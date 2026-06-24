@@ -938,7 +938,7 @@ Deno.serve(async (req) => {
       ) {
         // Phase 1 T0 class identity abilities. All share one formula:
         //   damage = max(1, 5 + 2*statMod + floor(level/3))
-        // Guaranteed hit, no crit roll, no weapon interaction. CP already
+        // Rolls to hit on the class stat (no crit roll, no weapon interaction). CP already
         // deducted above. Stat is per-class.
         const T0_STAT: Record<string, 'str' | 'dex' | 'int' | 'wis' | 'cha'> = {
           fireball: 'int', power_strike: 'str', aimed_shot: 'dex',
