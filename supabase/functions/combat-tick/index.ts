@@ -955,6 +955,17 @@ Deno.serve(async (req) => {
         const stat = T0_STAT[pa.ability_type];
         const eff = ((c as any)[stat] || 10) + ((eb as any)[stat] || 0);
         const mod = sm(eff);
+        let { emoji, verb } = T0_LABEL[pa.ability_type];
+        // Templars share the 'smite' handler with healers but flavor it as Judgment.
+        if (pa.ability_type === 'smite' && c.class === 'templar') {
+          emoji = '✝️';
+          verb = 'passes divine judgment upon';
+        }
+        const hit = rollAbilityHit(mod);
+        if (!hit.hit) {
+          events.push({ type: 'ability_miss', message: `${emoji} ${c.name} ${verb} ${target.name} — misses!`, character_id: member.id });
+          continue;
+        }
         // Soft-scaled primary stat (profile 'damage') — late-game stacking has
         // reduced marginal gain past softCap=20; no hard ceiling.
         const effMod = getEffectiveCombatMod(Math.max(0, mod), 'damage');
@@ -965,12 +976,6 @@ Deno.serve(async (req) => {
         if (buffs[member.id]?.damage_buff) dmg = Math.max(Math.floor(dmg * getArcaneSurgeMult(sm((c.int||10)+(eb.int||0)))), 1);
         dmg = Math.max(1, Math.floor(dmg * mBondMult[member.id]));
         cHp[target.id] = Math.max(cHp[target.id] - dmg, 0);
-        let { emoji, verb } = T0_LABEL[pa.ability_type];
-        // Templars share the 'smite' handler with healers but flavor it as Judgment.
-        if (pa.ability_type === 'smite' && c.class === 'templar') {
-          emoji = '✝️';
-          verb = 'passes divine judgment upon';
-        }
         events.push({
           type: 'ability_hit',
           message: `${emoji} ${c.name} ${verb} ${target.name}. [${dmg}]`,
@@ -979,6 +984,7 @@ Deno.serve(async (req) => {
         if (cHp[target.id] <= 0 && !cKilled.has(target.id)) {
           handleCreatureKill(target, c.name, (c.cha || 10) + (eb.cha || 0), member.id);
         }
+
       } else if (pa.ability_type === 'burst_damage') {
         // Grand Finale (Bard / dual-primary CHA+INT): magnitude = CHA; INT sharpens
         // the killing note by lowering the crit threshold (+floor(intMod/2) edge).
