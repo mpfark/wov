@@ -71,7 +71,6 @@ export function useWimp({ character, inCombat, currentNode, onMove, addLog }: Us
     }
 
     firedRef.current = true;
-    addLog(`⚠️ Wimp triggered at ${observedHp} HP — fleeing ${DIR_NAMES[direction] || direction}!`);
     onMove(conn.node_id, direction, { wimpFlee: true });
     return true;
   }, [inCombat, character, currentNode, onMove, addLog]);
