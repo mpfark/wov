@@ -208,7 +208,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
   const [teleportOpen, setTeleportOpen] = useState(false);
 
   // ── Movement ───────────────────────────────────────────────────
-  const handleMove = useCallback(async (nodeId: string, direction?: string) => {
+  const handleMove = useCallback(async (nodeId: string, direction?: string, options?: { wimpFlee?: boolean }) => {
     if (p.isDead) return;
 
     // ── Locked connection check ──
@@ -269,43 +269,50 @@ export function useMovementActions(params: UseMovementActionsParams) {
     if (p.inCombat) {
       const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
-      p.addLog(`🏃 You flee${dirText}!`);
+      if (options?.wimpFlee) {
+        p.addLog(`🏃 Panic escape${dirText} — no opportunity attacks!`);
+      } else {
+        p.addLog(`🏃 You flee${dirText}!`);
+      }
       p.fleeStopCombat();
     }
 
     // ── Opportunity attacks (delegated to pure helper) ──
-    const oaResult = resolveOpportunityAttacks({
-      character: p.character,
-      creatures: p.creatures,
-      activeCombatCreatureId: p.activeCombatCreatureId,
-      buffState: p.buffState,
-      effectiveAC: p.effectiveAC,
-      party: p.party,
-      partyMembers: p.partyMembers,
-    });
-    for (const log of oaResult.logs) p.addLog(log);
-    if (oaResult.clearStealth) p.buffSetters.setStealthBuff(null);
-    if (oaResult.clearEvasion) p.buffSetters.setEvasionBuff(null);
-    if (oaResult.newAbsorbHp === null) p.buffSetters.setAbsorbBuff(null);
-    else if (oaResult.newAbsorbHp !== undefined && p.buffState.absorbBuff) {
-      p.buffSetters.setAbsorbBuff({ ...p.buffState.absorbBuff, shieldHp: oaResult.newAbsorbHp });
-    }
+    // Wimp-initiated flees are a panic escape — skip opportunity attacks entirely.
+    if (!options?.wimpFlee) {
+      const oaResult = resolveOpportunityAttacks({
+        character: p.character,
+        creatures: p.creatures,
+        activeCombatCreatureId: p.activeCombatCreatureId,
+        buffState: p.buffState,
+        effectiveAC: p.effectiveAC,
+        party: p.party,
+        partyMembers: p.partyMembers,
+      });
+      for (const log of oaResult.logs) p.addLog(log);
+      if (oaResult.clearStealth) p.buffSetters.setStealthBuff(null);
+      if (oaResult.clearEvasion) p.buffSetters.setEvasionBuff(null);
+      if (oaResult.newAbsorbHp === null) p.buffSetters.setAbsorbBuff(null);
+      else if (oaResult.newAbsorbHp !== undefined && p.buffState.absorbBuff) {
+        p.buffSetters.setAbsorbBuff({ ...p.buffState.absorbBuff, shieldHp: oaResult.newAbsorbHp });
+      }
 
-    // Apply party member opportunity attack damage
-    for (const md of oaResult.memberDamages) {
-      try {
-        const { data: newHp } = await supabase.rpc('damage_party_member', { _character_id: md.characterId, _damage: md.damage });
-        if (newHp !== null) p.broadcastHp?.(md.characterId, newHp, md.maxHp, md.creatureName);
-      } catch (e) { console.error('Failed to apply opportunity attack to party member:', e); }
-    }
+      // Apply party member opportunity attack damage
+      for (const md of oaResult.memberDamages) {
+        try {
+          const { data: newHp } = await supabase.rpc('damage_party_member', { _character_id: md.characterId, _damage: md.damage });
+          if (newHp !== null) p.broadcastHp?.(md.characterId, newHp, md.maxHp, md.creatureName);
+        } catch (e) { console.error('Failed to apply opportunity attack to party member:', e); }
+      }
 
-    if (oaResult.newHp < p.character.hp) {
-      await p.updateCharacter({ hp: oaResult.newHp });
-      await p.degradeEquipment();
-    }
-    if (oaResult.newHp <= 0) {
-      p.addLog('💀 You were struck down while retreating...');
-      return;
+      if (oaResult.newHp < p.character.hp) {
+        await p.updateCharacter({ hp: oaResult.newHp });
+        await p.degradeEquipment();
+      }
+      if (oaResult.newHp <= 0) {
+        p.addLog('💀 You were struck down while retreating...');
+        return;
+      }
     }
 
     // ── Execute move ──

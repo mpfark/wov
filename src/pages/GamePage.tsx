@@ -690,6 +690,9 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
 
   // Ref to break circular dependency: usePartyCombat needs ability executor, useCombatActions needs queueAbility
   const executeAbilityRef = useRef<(index: number, targetId?: string) => Promise<void>>();
+  // Ref to break circular dependency: usePartyCombat needs the wimp pre-flee
+  // hook, but useWimp is initialised AFTER usePartyCombat (it needs handleMove).
+  const wimpFleeRef = useRef<((newHp: number) => boolean) | null>(null);
 
   const combat = usePartyCombat({
     character, creatures,
@@ -728,6 +731,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
     setPoisonBuff: buffSetters.setPoisonBuff,
     setIgniteBuff: buffSetters.setIgniteBuff,
     clearReservedBuffsLocal: () => clearCharacterFields?.({ reserved_buffs: {} as any }),
+    onIncomingPlayerHp: (newHp) => wimpFleeRef.current?.(newHp) ?? false,
 
     getCreatureStacks: (creatureId, stackType) => {
       const map = stackType === 'poison' ? poisonStacks : igniteStacks;
@@ -812,7 +816,8 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const { handleUseAbility, handleAttack } = combatActions;
 
   // ── Wimp: auto-flee when HP drops below the player's configured threshold ──
-  useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
+  const wimp = useWimp({ character, inCombat, currentNode, onMove: handleMove, addLog });
+  useEffect(() => { wimpFleeRef.current = wimp.tryFleeForIncomingHp; }, [wimp.tryFleeForIncomingHp]);
 
   // ── Stat allocation (extracted hook) ───────────────────────────
   const { handleFullRespec, handleBatchAllocateStats } = useStatAllocation({

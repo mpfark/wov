@@ -1786,6 +1786,41 @@ Deno.serve(async (req) => {
         updates.reserved_buffs = {};
       }
 
+      // ── Death log (for post-mortem diagnostics, esp. wimp tuning) ──
+      // On the tick that drops a character to 0 HP, persist a short trace of
+      // the last events that mention them plus their pre/post HP and the
+      // wimp configuration that was (or wasn't) in effect.
+      if (mHp[m.id] <= 0 && c.hp > 0) {
+        try {
+          const charEvents = events
+            .filter((ev: any) =>
+              ev.character_id === m.id ||
+              (typeof ev.message === 'string' && ev.message.includes(c.name))
+            )
+            .slice(-20)
+            .map((ev: any) => ({
+              type: ev.type,
+              message: ev.message,
+              creature_id: ev.creature_id,
+              creature_name: ev.creature_name,
+            }));
+          updates.last_death_at = new Date().toISOString();
+          updates.last_death_log = {
+            pre_hp: c.hp,
+            max_hp: c.max_hp,
+            tick_damage: c.hp - mHp[m.id],
+            wimp_hp_threshold: c.wimp_hp_threshold ?? null,
+            wimp_direction: c.wimp_direction ?? null,
+            party_size: members.length,
+            node_id: combatNodeId,
+            events: charEvents,
+          };
+        } catch (e) {
+          console.error('[combat-tick] death log build failed:', e);
+        }
+      }
+
+
       let newXp = c.xp + mXp[m.id];
       let newGold = c.gold + mGold[m.id];
       let newLevel = c.level;

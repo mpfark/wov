@@ -97,6 +97,12 @@ export interface UsePartyCombatParams {
   /** Force-clear reserved_buffs locally on death so stance buttons don't
    *  remain pressed past the server's authoritative wipe. */
   clearReservedBuffsLocal?: () => void;
+  /**
+   * Optional pre-apply hook: called with the new HP value the server is about
+   * to commit for THIS player. Return true if the caller initiated a flee
+   * (wimp panic escape); usePartyCombat still applies the HP update either way.
+   */
+  onIncomingPlayerHp?: (newHp: number) => boolean;
 
 }
 
@@ -360,6 +366,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           // optimistic flag so subsequent ticks behave normally.
           optimisticCpRef.current = null;
         }
+      }
+      // Wimp pre-apply hook: give the wimp system a chance to start a panic
+      // flee SYNCHRONOUSLY before we commit the new HP. This catches single-
+      // tick burst damage that drops the player past the threshold in one
+      // server write, where the reactive `useEffect` in useWimp would
+      // otherwise only fire after the HP update has already been applied
+      // (and possibly killed the player).
+      if (typeof updates.hp === 'number' && ext.current.onIncomingPlayerHp) {
+        try { ext.current.onIncomingPlayerHp(updates.hp); }
+        catch (e) { console.error('[combat] onIncomingPlayerHp threw:', e); }
       }
       if (Object.keys(updates).length > 0) {
         if (ext.current.updateCharacterLocal) {
