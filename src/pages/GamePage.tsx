@@ -1188,6 +1188,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
               node={currentNode}
               region={currentRegion}
               area={currentNode.area_id ? getNodeArea(currentNode) : undefined}
+              allNodes={nodes}
               players={playersHere}
               creatures={creatures}
               npcs={npcs}
