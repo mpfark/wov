@@ -96,9 +96,9 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
         if (absorbed > 0) logs.push(`🛡️ Your shield absorbs ${absorbed} damage from ${creature.name}'s opportunity attack!`);
       }
       if (dmgToHp > 0) currentHp = Math.max(currentHp - dmgToHp, 0);
-      logs.push(`⚔️ ${creature.name} strikes ${namePrefixLower} while fleeing! (Rolled ${atkRoll} vs AC ${effectiveAC}) — ${rawDmg} damage${dmgToHp < rawDmg ? ` (${dmgToHp} after shield)` : ''}!`);
+      logs.push(`⚔️ ${creature.name} strikes ${namePrefixLower} while fleeing — ${rawDmg} damage${dmgToHp < rawDmg ? ` (${dmgToHp} after shield)` : ''}!`);
     } else {
-      logs.push(`${creature.name} swipes at ${namePrefixLower} while fleeing — misses! (Rolled ${atkRoll} vs AC ${effectiveAC})`);
+      logs.push(`${creature.name} swipes at ${namePrefixLower} while fleeing — misses!`);
     }
   }
 
@@ -115,7 +115,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
         const memberAC = calculateAC(member.character.class, member.character.dex ?? 10);
         if (atkRoll >= memberAC) {
           const dmg = Math.max(rollDamage(1, 6) + getStatModifier(creature.stats.str || 10), 1);
-          logs.push(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing! (Rolled ${atkRoll}) — ${dmg} damage!`);
+          logs.push(`⚔️ ${creature.name} strikes ${member.character.name} while fleeing — ${dmg} damage!`);
           memberDamages.push({ characterId: member.character_id, damage: dmg, creatureName: creature.name, maxHp: member.character.max_hp });
         } else {
           logs.push(`${creature.name} swipes at ${member.character.name} while fleeing — misses!`);
