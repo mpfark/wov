@@ -367,6 +367,16 @@ export function usePartyCombat(params: UsePartyCombatParams) {
           optimisticCpRef.current = null;
         }
       }
+      // Wimp pre-apply hook: give the wimp system a chance to start a panic
+      // flee SYNCHRONOUSLY before we commit the new HP. This catches single-
+      // tick burst damage that drops the player past the threshold in one
+      // server write, where the reactive `useEffect` in useWimp would
+      // otherwise only fire after the HP update has already been applied
+      // (and possibly killed the player).
+      if (typeof updates.hp === 'number' && ext.current.onIncomingPlayerHp) {
+        try { ext.current.onIncomingPlayerHp(updates.hp); }
+        catch (e) { console.error('[combat] onIncomingPlayerHp threw:', e); }
+      }
       if (Object.keys(updates).length > 0) {
         if (ext.current.updateCharacterLocal) {
           ext.current.updateCharacterLocal(updates);
