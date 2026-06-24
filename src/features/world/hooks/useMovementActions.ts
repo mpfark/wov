@@ -279,7 +279,7 @@ export function useMovementActions(params: UseMovementActionsParams) {
       const dirLabel: Record<string, string> = { N: 'north', S: 'south', E: 'east', W: 'west', NE: 'northeast', NW: 'northwest', SE: 'southeast', SW: 'southwest' };
       const dirText = direction ? ` to the ${dirLabel[direction] || direction}` : '';
       if (options?.wimpFlee) {
-        p.addLog(`🏃 Panic escape${dirText}!`);
+        p.addLog(`⚠️ Wimp flee${dirText}!`);
       } else {
         p.addLog(`🏃 You flee${dirText}!`);
       }
@@ -287,7 +287,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
     }
 
     // ── Opportunity attacks (delegated to pure helper) ──
-    // Wimp-initiated flees still take AoOs, but with class-based panic mitigation.
+    // Wimp-initiated flees are NOT special — they take full AoOs.
+    // Mitigation comes from class abilities (Battle Cry, Disengage, Cloak, etc.).
     {
       const oaResult = resolveOpportunityAttacks({
         character: p.character,
@@ -297,8 +298,8 @@ export function useMovementActions(params: UseMovementActionsParams) {
         effectiveAC: p.effectiveAC,
         party: p.party,
         partyMembers: p.partyMembers,
-        wimpFlee: options?.wimpFlee,
       });
+
       for (const log of oaResult.logs) p.addLog(log);
       if (oaResult.clearStealth) p.buffSetters.setStealthBuff(null);
       if (oaResult.clearEvasion) p.buffSetters.setEvasionBuff(null);
