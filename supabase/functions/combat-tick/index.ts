@@ -779,9 +779,22 @@ Deno.serve(async (req) => {
         return { hit: total >= effAC, roll: d };
       };
 
-      // Class abilities use ability-specific stat-scaling formulas (NOT the
-      // weapon-die autoattack path). Each ability's identity is tied to its
-      // class's primary stat and is independent of equipped weapon.
+      // ── Weapon-die helper for physical abilities ──────────────────
+      // Returns the equipped main-hand weapon die (and tag) for this member.
+      // If no main-hand weapon is equipped, falls back to 1d4 "unarmed".
+      // Used by Power Strike, Aimed Shot, Backstab, Eviscerate, Rend, Barrage.
+      const getMemberWeaponDie = (): { die: number; tag: string } => {
+        const wTag = mainHandTag[member.id];
+        if (!wTag) return { die: 4, tag: 'unarmed' };
+        const wHands: 1 | 2 = isTwoHanded[member.id] ? 2 : 1;
+        const die = getWeaponDieForItem(wTag, wHands, mainHandLevel[member.id], weaponProgression, mainHandRarity[member.id]);
+        return { die, tag: wTag };
+      };
+
+      // Physical weapon abilities (Power Strike, Aimed Shot, Backstab, Eviscerate,
+      // Rend, Barrage) roll the equipped weapon's die + stat + ability bonus, so
+      // weapon upgrades feed directly into ability damage. Spell-flavored abilities
+      // (Fireball, Smite, Cutting Words, Grand Finale, Conflagrate) remain stat-only.
 
       if (pa.ability_type === 'multi_attack') {
         // Barrage (Ranger / dual-primary DEX+WIS): per-arrow base = 2 + dexMod + floor(level/4).
