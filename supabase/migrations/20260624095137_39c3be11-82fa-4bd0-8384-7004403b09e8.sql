@@ -1,0 +1,1 @@
+ALTER TABLE public.characters ALTER COLUMN gold SET DEFAULT 200;
