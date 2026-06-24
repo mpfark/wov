@@ -1076,14 +1076,15 @@ Deno.serve(async (req) => {
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const strMod = sm(effStr);
         const dexMod = sm(effDex);
+        // Resolve weapon once so miss + apply event + per-tick math all share it.
+        const { die: rendDie, tag: rendTag } = getMemberWeaponDie();
         const hit = rollAbilityHit(dexMod);
         if (!hit.hit) {
-          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.`, character_id: member.id });
+          events.push({ type: 'ability_miss', message: `🩸 ${c.name}'s Rend glances off ${target.name} — no wound opens.`, character_id: member.id, weapon_tag: rendTag });
           continue;
         }
 
         // Soft-scaled STR contribution (profile 'dot') + weapon-die avg / 3.
-        const { die: rendDie } = getMemberWeaponDie();
         const weaponAvg = (rendDie + 1) / 2; // average roll of 1d{die}
         const effStrDot = getEffectiveCombatMod(Math.max(0, strMod), 'dot');
         let dmgPerTick = Math.max(1, Math.floor((weaponAvg + effStrDot + 2) / 3 * 0.67 + effStrDot * 0.5));
