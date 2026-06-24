@@ -873,8 +873,8 @@ Deno.serve(async (req) => {
           if (hasDisengage) consumedBuffs[member.id].push('disengage');
         }
       } else if (pa.ability_type === 'execute_attack') {
-        // Eviscerate (Rogue / dual-primary DEX+CHA finisher): base = 4 + 2*dexMod + floor(level/3).
-        // Per-stack bonus scales with CHA showmanship (cap +0.65/stack). Rolls to hit on DEX.
+        // Eviscerate (Rogue / dual-primary DEX+CHA finisher): damage = 1d{weaponDie} + dexMod + ability bonus.
+        // Per-stack bonus scales with CHA showmanship. Rolls to hit on DEX.
         const effDex = (c.dex || 10) + (eb.dex || 0);
         const effCha = (c.cha || 10) + (eb.cha || 0);
         const dexMod = sm(effDex);
