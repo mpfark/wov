@@ -1004,7 +1004,7 @@ Deno.serve(async (req) => {
         if (!hit.hit) {
           events.push({
             type: 'ability_miss',
-            message: `${emoji} ${c.name} ${verb} ${target.name} — misses!`,
+            message: `${emoji} ${c.name} ${verb} ${target.name} — misses!${t0Weapon ? tagSuffix(t0Weapon.tag) : ''}`,
             character_id: member.id,
             ...(t0Weapon ? { weapon_tag: t0Weapon.tag } : {}),
           });
