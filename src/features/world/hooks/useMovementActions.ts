@@ -32,8 +32,6 @@ interface OpportunityAttackParams {
   effectiveAC: number;
   party: any;
   partyMembers: any[];
-  /** When true, applies class-based panic mitigation (dodge chance + damage reduction). */
-  wimpFlee?: boolean;
 }
 
 interface OpportunityAttackResult {
@@ -46,37 +44,15 @@ interface OpportunityAttackResult {
 }
 
 /**
- * Panic mitigation per class when a wimp-flee triggers an opportunity attack.
- * Opportunity attacks still happen — but the character's class shapes how
- * much they can shrug off in the heat of escape:
- *   - dodgeChance: per-attack chance the swing is completely avoided
- *   - damageMult:  multiplier applied to any damage that lands
- *   - flavor:      log snippet describing the panic move
- *
- * Tuning dial. Rogue/Ranger lean on agility, Warrior/Templar lean on armor,
- * Wizard/Healer on a small arcane/divine ward, Bard on misdirection.
- */
-const WIMP_PANIC_MITIGATION: Record<string, { dodgeChance: number; damageMult: number; flavor: string }> = {
-  rogue:   { dodgeChance: 0.90, damageMult: 0.50, flavor: 'vanishes into shadow' },
-  ranger:  { dodgeChance: 0.70, damageMult: 0.50, flavor: 'tumbles out of reach' },
-  bard:    { dodgeChance: 0.50, damageMult: 0.60, flavor: 'spins past the blow' },
-  wizard:  { dodgeChance: 0.40, damageMult: 0.50, flavor: 'blinks aside' },
-  healer:  { dodgeChance: 0.30, damageMult: 0.50, flavor: 'wards the strike' },
-  warrior: { dodgeChance: 0.20, damageMult: 0.40, flavor: 'braces behind shield' },
-  templar: { dodgeChance: 0.20, damageMult: 0.35, flavor: 'turtles up' },
-};
-
-function getWimpMitigation(charClass: string | undefined | null) {
-  return WIMP_PANIC_MITIGATION[(charClass || '').toLowerCase()]
-    ?? { dodgeChance: 0.25, damageMult: 0.60, flavor: 'scrambles away' };
-}
-
-/**
  * Resolve opportunity attacks when fleeing. Returns damage, logs, and shield changes
  * without performing any side effects (pure).
+ *
+ * Mitigation of these AoOs is the job of class abilities (Battle Cry DR,
+ * Disengage, Cloak of Shadows, etc.) — NOT of the wimp system. Wimp-flee
+ * behaves identically to a manual flee here.
  */
 function resolveOpportunityAttacks(params: OpportunityAttackParams): OpportunityAttackResult {
-  const { character, creatures, activeCombatCreatureId, buffState, effectiveAC, party, partyMembers, wimpFlee } = params;
+  const { character, creatures, activeCombatCreatureId, buffState, effectiveAC, party, partyMembers } = params;
   const livingCreatures = creatures.filter(c => c.is_alive && c.hp > 0 && (c.is_aggressive || c.id === activeCombatCreatureId));
   const logs: string[] = [];
   let currentHp = character.hp;
@@ -99,12 +75,7 @@ function resolveOpportunityAttacks(params: OpportunityAttackParams): Opportunity
   const namePrefix = party ? character.name : 'You';
   const namePrefixLower = party ? character.name : 'you';
 
-  // Panic mitigation (wimp-flee only). AoOs still resolve but each one gets
-  // a class-based dodge chance and any landed damage is scaled down.
-  const mitigation = wimpFlee ? getWimpMitigation((character as any).class) : null;
-  if (mitigation) {
-    logs.push(`🏃 Panic escape — ${namePrefix} ${mitigation.flavor}!`);
-  }
+
 
 
   for (const creature of livingCreatures) {
