@@ -112,12 +112,23 @@ Deno.serve(async (req) => {
     // Verify character ownership
     const { data: charRow, error: charErr } = await supabase
       .from('characters')
-      .select('id, user_id, name')
+      .select('id, user_id, name, current_node_id')
       .eq('id', character_id)
       .maybeSingle();
     if (charErr) return jsonResponse({ error: charErr.message }, 500);
     if (!charRow || charRow.user_id !== user.id) {
       return jsonResponse({ error: 'Character not found.' }, 403);
+    }
+
+    // Enforce node location — must be at a Stonebinder shrine.
+    const { data: nodeRow, error: nodeErr } = await supabase
+      .from('nodes')
+      .select('is_stonebinder')
+      .eq('id', charRow.current_node_id)
+      .maybeSingle();
+    if (nodeErr) return jsonResponse({ error: nodeErr.message }, 500);
+    if (!nodeRow?.is_stonebinder) {
+      return jsonResponse({ error: 'You must be at a Stonebinder shrine to fuse stones.' }, 403);
     }
 
     // Load both inventory rows + their item data
