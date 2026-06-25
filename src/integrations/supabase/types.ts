@@ -2136,15 +2136,6 @@ export type Database = {
         }
         Returns: Json
       }
-      log_activity: {
-        Args: {
-          _character_id: string
-          _event_type: string
-          _message: string
-          _metadata?: Json
-        }
-        Returns: undefined
-      }
       move_follower: {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined

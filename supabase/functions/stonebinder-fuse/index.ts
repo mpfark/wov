@@ -218,18 +218,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Activity log (deterministic ritual flavor)
-    await supabase.rpc('log_activity', {
-      _character_id: character_id,
-      _event_type: 'blacksmith',
-      _message: `⚜ The Stonebinder binds ${a.item.name} and ${b.item.name} into ${ascended.name}.`,
-      _metadata: {
-        consumed: [a.item.id, b.item.id],
-        produced: ascended.id,
-        consumed_inv: [a.id, b.id],
-        produced_inv: inserted?.id ?? null,
-      },
-    });
+    // Activity log removed — feature deprecated.
 
     return jsonResponse({
       item: ascended,
