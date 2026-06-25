@@ -31,7 +31,7 @@ export default function BatchNodeEditPanel({ selectedNodeIds, regions, areas, on
     }
     setSaving(true);
     try {
-      const updates: Record<string, unknown> = {};
+      const updates: { area_id?: string | null; region_id?: string } = {};
       if (areaId === '__clear__') updates.area_id = null;
       else if (areaId) updates.area_id = areaId;
       if (regionId) updates.region_id = regionId;
