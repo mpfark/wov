@@ -1,21 +1,29 @@
-## Goal
+## Issue
 
-Stop replaying the long first-entry welcome for established characters when they log in from a new device or after localStorage gets cleared. New level-1 characters still get the full immersive intro on their actual first entry.
+`/admin` redirects to the character/login screen even for accounts with the `overlord` role (e.g. `jeger@mikferdinandsen.dk`).
 
-## Behavior
+## Root cause
 
-In `src/features/world/hooks/useFirstEntryWelcome.ts`:
+`src/pages/AdminRoute.tsx` gates on `!user || !isAdmin` and falls back to `<Navigate to="/game" replace />`. Two problems:
 
-- If `character.level > 1` and there's no existing localStorage flag for that character, **skip the long intro and emit "Welcome back, Wayfarer!"** instead. Also write the localStorage flag so the logic stays consistent on subsequent entries.
-- If `character.level === 1` and no flag exists → play the full `FIRST_LINES` sequence as today (genuine first entry).
-- If the flag already exists → "Welcome back, Wayfarer!" as today.
+1. **No session in the tab** — `/admin` is opened via `window.open('/admin', '_blank')`. If the new tab hasn't hydrated the Supabase session yet (or the user is logged out — auth logs show a logout at 11:33:24 right before the repro), `user` is `null`, so AdminRoute bounces to `/game`. `GameRoute` then sees no user and bounces to `/`, landing on the character/login screen. The user perceives this as "admin sent me to characters."
 
-## Technical notes
+2. **Role-derivation timing** — `useRole` only flips `loading=false` after the `user_roles` query resolves. But the guard combines `authLoading || roleLoading`. If `useAuth` resolves with `user=null`, `useRole`'s effect early-returns with `loading=false` and `role=null`, so `isAdmin=false`. The redirect target is still wrong (should go to login, not `/game`).
 
-- Pass `characterLevel` into `useFirstEntryWelcome` from the caller (likely `GamePage`), alongside the existing `characterId` and `emit`.
-- Update the hook signature: `useFirstEntryWelcome(characterId, characterLevel, emit)`.
-- No DB change, no server change, no other call sites affected.
+3. **Role enum check is correct** — DB confirms `jeger@…` has role `overlord`, and `useRole` maps that to `isAdmin=true`. So once the session is present, admin access works. The only failure mode is the "no session in this tab" path above.
 
-## Caveat (for awareness, no action)
+## Fix
 
-This is still client-side, so localStorage eviction on a level-1 character could replay the intro once. In practice, characters spend very little time at level 1, so this edge case is small.
+Update `src/pages/AdminRoute.tsx`:
+
+- When `!user`: redirect to `/` (login/character screen entry) and pass `state={{ from: '/admin' }}` so the user lands back on `/admin` after sign-in (optional polish — at minimum redirect to `/` directly so they see the login form, not a flicker through `/game`).
+- When `user && !isAdmin`: keep current `/game` redirect (correct — a logged-in player without admin role should go to the game).
+- Optionally surface a `toast.error('Admin access required')` on the player-without-admin branch so it's not silent.
+
+That's it — one file, no DB or role changes needed.
+
+## Verification
+
+1. Logged out → open `/admin` → land on `/` login (not flicker to `/game`).
+2. Logged in as `jeger@mikferdinandsen.dk` (overlord) → open `/admin` → admin page loads.
+3. Logged in as a `player` → open `/admin` → redirected to `/game` with toast.
