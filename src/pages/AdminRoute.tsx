@@ -1,13 +1,11 @@
 import { useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useRole } from '@/hooks/useRole';
 import { Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useGameContext } from '@/contexts/GameContext';
 import AdminPage from './AdminPage';
 
 export default function AdminRoute() {
-  const { user, loading: authLoading } = useAuth();
-  const { isAdmin, isValar, loading: roleLoading } = useRole(user);
+  const { user, authLoading, isAdmin, isValar, roleLoading } = useGameContext();
 
   const needsLogin = !authLoading && !user;
   const accessDenied = !authLoading && !roleLoading && !!user && !isAdmin;
@@ -16,7 +14,7 @@ export default function AdminRoute() {
     if (accessDenied) toast.error('Admin access required');
   }, [accessDenied]);
 
-  if (authLoading || roleLoading) {
+  if (authLoading || (!!user && roleLoading)) {
     return (
       <div className="flex min-h-screen items-center justify-center parchment-bg">
         <p className="font-display text-primary text-glow animate-pulse">Loading...</p>

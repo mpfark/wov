@@ -2043,6 +2043,7 @@ export type Database = {
       }
       get_app_secret: { Args: { _key: string }; Returns: string }
       get_character_name: { Args: { _character_id: string }; Returns: string }
+      get_my_admin_role: { Args: never; Returns: string }
       get_order_roster: {
         Args: { _class: Database["public"]["Enums"]["character_class"] }
         Returns: {
