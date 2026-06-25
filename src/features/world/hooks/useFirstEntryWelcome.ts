@@ -37,7 +37,7 @@ type Emit = (msg: string) => void;
 // worse, flip from first-entry to "Welcome back" on a remount).
 const handledThisPageLoad = new Set<string>();
 
-export function useFirstEntryWelcome(characterId: string | undefined, emit: Emit) {
+export function useFirstEntryWelcome(characterId: string | undefined, characterLevel: number | undefined, emit: Emit) {
   const emitRef = useRef(emit);
   emitRef.current = emit;
 
@@ -48,20 +48,25 @@ export function useFirstEntryWelcome(characterId: string | undefined, emit: Emit
 
     const hasEntered = !!localStorage.getItem(key(characterId));
 
-    if (!hasEntered) {
+    // Only play the full immersive intro for a genuine first entry on a
+    // brand-new (level 1) character. Established characters arriving on a
+    // new device — or after localStorage eviction — get the short greeting
+    // and we backfill the flag so subsequent entries stay consistent.
+    if (!hasEntered && (characterLevel ?? 1) <= 1) {
       FIRST_LINES.forEach((line, i) => {
         window.setTimeout(() => emitRef.current(line), i * STAGGER_MS);
       });
-      // Mark complete only after the last line has been scheduled to emit,
-      // so any remount during the opening seconds still treats this as
-      // first entry on retry rather than collapsing to "Welcome back".
       window.setTimeout(() => {
         localStorage.setItem(key(characterId), "1");
       }, FIRST_LINES.length * STAGGER_MS);
     } else {
       emitRef.current("Welcome back, Wayfarer!");
+      if (!hasEntered) {
+        try { localStorage.setItem(key(characterId), "1"); } catch { /* ignore */ }
+      }
     }
     // No cleanup: scheduled timers are intentionally allowed to fire even if
     // the component briefly unmounts (emit is captured via ref).
-  }, [characterId]);
+  }, [characterId, characterLevel]);
 }
+
