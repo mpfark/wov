@@ -1,29 +1,37 @@
-## Issue
+## Problem
+`jeger@mikferdinandsen.dk` does have the `overlord` role in the database, so the role assignment itself is correct. The recurring failure is likely caused by the `/admin` route doing its own client-side auth/role fetch, separate from the main `GameContext`. If that fetch is briefly empty, stale, blocked, or races in a new tab, the route treats a real Overlord as non-admin and redirects to character selection.
 
-`/admin` redirects to the character/login screen even for accounts with the `overlord` role (e.g. `jeger@mikferdinandsen.dk`).
+## Better fix
+Make admin access backend-authoritative and stop relying on reading `user_roles` directly from the browser for the guard.
 
-## Root cause
+## Implementation plan
+1. **Add a small backend RPC for admin bootstrap**
+   - Create a `SECURITY DEFINER` function, e.g. `public.get_my_admin_role()`.
+   - It returns only the current user's effective admin role: `overlord`, `steward`, or `null`.
+   - It uses `auth.uid()` internally, so the browser cannot ask for another user's role.
+   - It sets `search_path = public` per project security rules.
 
-`src/pages/AdminRoute.tsx` gates on `!user || !isAdmin` and falls back to `<Navigate to="/game" replace />`. Two problems:
+2. **Update role loading to call the RPC**
+   - Change `useRole` from `.from('user_roles').select('role')` to `supabase.rpc('get_my_admin_role')`.
+   - Treat `overlord` and `steward` as admin.
+   - Treat `null` as normal player.
+   - This removes dependency on `user_roles` RLS policy behavior for route authorization.
 
-1. **No session in the tab** — `/admin` is opened via `window.open('/admin', '_blank')`. If the new tab hasn't hydrated the Supabase session yet (or the user is logged out — auth logs show a logout at 11:33:24 right before the repro), `user` is `null`, so AdminRoute bounces to `/game`. `GameRoute` then sees no user and bounces to `/`, landing on the character/login screen. The user perceives this as "admin sent me to characters."
+3. **Make `/admin` use the shared app auth state**
+   - Refactor `AdminRoute` to read `user`, `authLoading`, `isAdmin`, `isValar`, and `roleLoading` from `useGameContext()` instead of creating a second `useAuth()` + `useRole()` pair.
+   - This prevents two independent auth listeners/role requests from disagreeing during tab/session hydration.
 
-2. **Role-derivation timing** — `useRole` only flips `loading=false` after the `user_roles` query resolves. But the guard combines `authLoading || roleLoading`. If `useAuth` resolves with `user=null`, `useRole`'s effect early-returns with `loading=false` and `role=null`, so `isAdmin=false`. The redirect target is still wrong (should go to login, not `/game`).
+4. **Improve redirects without breaking players**
+   - If unauthenticated: send to `/` with `from: '/admin'`.
+   - If authenticated but not admin: send to `/game` only after the backend role RPC has completed.
+   - Keep the existing “Admin access required” toast for true non-admin users.
 
-3. **Role enum check is correct** — DB confirms `jeger@…` has role `overlord`, and `useRole` maps that to `isAdmin=true`. So once the session is present, admin access works. The only failure mode is the "no session in this tab" path above.
+5. **Preserve gameplay/party behavior**
+   - No changes to character selection, party logic, combat, or gameplay permissions.
+   - Existing `user_roles` table and policies remain intact for admin management; the route guard just becomes more reliable.
 
-## Fix
-
-Update `src/pages/AdminRoute.tsx`:
-
-- When `!user`: redirect to `/` (login/character screen entry) and pass `state={{ from: '/admin' }}` so the user lands back on `/admin` after sign-in (optional polish — at minimum redirect to `/` directly so they see the login form, not a flicker through `/game`).
-- When `user && !isAdmin`: keep current `/game` redirect (correct — a logged-in player without admin role should go to the game).
-- Optionally surface a `toast.error('Admin access required')` on the player-without-admin branch so it's not silent.
-
-That's it — one file, no DB or role changes needed.
-
-## Verification
-
-1. Logged out → open `/admin` → land on `/` login (not flicker to `/game`).
-2. Logged in as `jeger@mikferdinandsen.dk` (overlord) → open `/admin` → admin page loads.
-3. Logged in as a `player` → open `/admin` → redirected to `/game` with toast.
+6. **Verify**
+   - Confirm the RPC returns `overlord` for `jeger@mikferdinandsen.dk`.
+   - Confirm `/admin` loads for Overlord.
+   - Confirm a normal player still cannot access `/admin`.
+   - Confirm logged-out users land at login, not character/game redirection loops.
