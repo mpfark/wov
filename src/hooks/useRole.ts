@@ -16,38 +16,25 @@ export function useRole(user: User | null) {
     let active = true;
     setLoading(true);
 
-    const fetchRole = async () => {
+    (async () => {
       try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
-
+        // Backend-authoritative: RPC uses auth.uid() and SECURITY DEFINER so it
+        // never depends on user_roles RLS visibility in the browser.
+        const { data, error } = await supabase.rpc('get_my_admin_role' as any);
         if (!active) return;
-
         if (error) {
           console.error('Error fetching role:', error);
           setRole(null);
-          setLoading(false);
-          return;
+        } else {
+          setRole((data as string | null) ?? null);
         }
-
-        let effectiveRole: string | null = null;
-        if (data && data.length > 0) {
-          if (data.some(r => r.role === 'overlord')) effectiveRole = 'overlord';
-          else if (data.some(r => r.role === 'steward')) effectiveRole = 'steward';
-          else effectiveRole = 'player';
-        }
-
-        setRole(effectiveRole);
       } catch (e) {
         if (active) setRole(null);
       } finally {
         if (active) setLoading(false);
       }
-    };
+    })();
 
-    fetchRole();
     return () => { active = false; };
   }, [user?.id]);
 
