@@ -442,7 +442,7 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   // First-entry immersive welcome (staggered) or short returning greeting.
   // Uses the local-only emitter — these are personal narrative and must not
   // be persisted to the party log or broadcast to nearby players.
-  useFirstEntryWelcome(character?.id, addLocalLog);
+  useFirstEntryWelcome(character?.id, character?.level, addLocalLog);
   // Whisper + transient ring glow when soulring tier increases. Local-only
   // for the same reason as the welcome above.
   const soulringGlow = useSoulringGlow(character?.id, character?.soulring_tier, addLocalLog);
