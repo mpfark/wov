@@ -2155,6 +2155,7 @@ export type Database = {
         Args: { p_character_id: string; p_loot_id: string }
         Returns: boolean
       }
+      prune_cron_history: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
