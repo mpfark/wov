@@ -101,13 +101,13 @@ export interface UseCombatDriverParams {
   /**
    * Optional pre-apply hook: called with the new HP value the server is about
    * to commit for THIS player. Return true if the caller initiated a flee
-   * (wimp panic escape); usePartyCombat still applies the HP update either way.
+   * (wimp panic escape); useCombatDriver still applies the HP update either way.
    */
   onIncomingPlayerHp?: (newHp: number) => boolean;
 
 }
 
-export function usePartyCombat(params: UsePartyCombatParams) {
+export function useCombatDriver(params: UseCombatDriverParams) {
   const ext = useRef(params);
   ext.current = params;
 
