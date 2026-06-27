@@ -187,6 +187,45 @@ export function usePartyCombat(params: UsePartyCombatParams) {
     }
   }, []);
 
+  // ── Mobile / background-tab catchup ───────────────────────────
+  // When the tab returns to the foreground:
+  //  - drivers (solo / leader) immediately fire a tick so any kill that
+  //    resolved while throttled is processed before the player moves;
+  //  - non-leader party members refresh their character row to pick up
+  //    XP/gold/Renown awarded by the leader's tick that they may have
+  //    missed if the realtime broadcast was dropped while suspended.
+  useEffect(() => {
+    const onVisible = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const p = ext.current;
+      const solo = !p.party;
+      const driver = solo || p.isLeader;
+      if (driver) {
+        if (inCombatRef.current) {
+          try { doTickRef.current(); } catch { /* noop */ }
+        }
+        return;
+      }
+      // Non-leader: pull a fresh character snapshot in case the broadcast was missed.
+      try {
+        const { data } = await supabase
+          .from('characters')
+          .select('xp, gold, level, bhp, rp_total_earned, unspent_stat_points, max_cp, max_mp, max_hp, respec_points')
+          .eq('id', p.character.id)
+          .single();
+        if (data && ext.current.updateCharacterLocal) {
+          ext.current.updateCharacterLocal(data as Partial<Character>);
+        }
+      } catch (e) {
+        console.warn('[combat] visibility refresh failed', e);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+
+
   // ── Queue ability for next tick ────────────────────────────────
 
   const queueAbility = useCallback((index: number, targetId?: string) => {
