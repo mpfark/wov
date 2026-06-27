@@ -1,5 +1,6 @@
 /**
- * usePartyCombat — unified server-authoritative combat via the combat-tick edge function.
+ * useCombatDriver — unified server-authoritative combat via the combat-tick edge function.
+ * (Drives both solo and party combat; formerly usePartyCombat.)
  *
  * HYBRID MODEL:
  * - Live combat sessions exist only while players are actively present in the node.
