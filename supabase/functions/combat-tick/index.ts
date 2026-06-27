@@ -401,8 +401,29 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
     }
 
+    // ── XP-grace pool: members who just left this node still get rewards ──
+    // (Mobile players in particular often move/lock the screen seconds before
+    // a kill resolves — without this grace they would silently lose XP/loot.)
+    const KILL_GRACE_MS = 3000;
+    const recentMap: Record<string, { last_at_node_ms: number }> =
+      ((session?.recent_member_ids as any) || {}) as Record<string, { last_at_node_ms: number }>;
+    const atNodeIds = new Set(members.map(m => m.id));
+    const gracedExtras: { id: string; c: any }[] = [];
+    if (party_id) {
+      for (const [cid, ch] of partyAllMap.entries()) {
+        if (atNodeIds.has(cid)) continue;
+        if (!ch || (ch.hp ?? 0) <= 0) continue;
+        const ts = recentMap[cid]?.last_at_node_ms || 0;
+        if (now - ts <= KILL_GRACE_MS) gracedExtras.push({ id: cid, c: ch });
+      }
+    }
+    // Recipients eligible for kill rewards = active combatants + recently-departed
+    const killRecipients: { id: string; c: any }[] = [...members, ...gracedExtras];
+
     // ── Parallel fetch: equipment, creatures, effects, xp_boost ──
-    const charIds = members.map(m => m.id);
+    // Include graced members in equipment/bond fetches so their stat bonuses
+    // (e.g. CHA for gold/Renown rolls) are accounted for at reward time.
+    const charIds = killRecipients.map(m => m.id);
     const combatNodeId = session.node_id;
     const [equipRes, creaturesRes, effectsRes, xpRes, weaponCfgRes, bondsRes] = await Promise.all([
       db.from('character_inventory')
@@ -415,6 +436,7 @@ Deno.serve(async (req) => {
       db.from('weapon_progression_config').select('tier1_level, tier2_level, tier3_level').eq('id', 1).maybeSingle(),
       db.from('character_class_bonds').select('character_id, class, bond').in('character_id', charIds),
     ]);
+
 
     const allEquip = equipRes.data;
     const creaturesRaw = creaturesRes.data;
