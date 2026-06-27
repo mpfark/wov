@@ -1,39 +1,76 @@
-## What I found
+# Diagnosis: Why XP can be missed on mobile when the character is far from the dying creature
 
-Total DB size is **4.49 GB**, and **4.46 GB of that is a single table: `cron.job_run_details`** (Postgres' built-in log of every cron job execution).
+## What I found in the code
 
-- 1,900,459 rows, oldest from **Feb 12, 2026** — never pruned.
-- Your `public` schema (all gameplay data) is only **4.3 MB**.
-- A daily prune job (`jobid 9`, runs 03:00 UTC, keeps 3 days) exists, but its last 4 runs **all failed** — so nothing has been deleted since it was set up. Likely it now times out because the table is too big to scan in one DELETE.
+There are **two independent gates** that decide whether you get XP for a kill, and both can silently drop a mobile player who is "far from" the creature's node.
 
-So this is pure log bloat from cron itself (every 2-min creature tick, every 1-min email check, etc., logged forever).
+### 1. Server-side node filter (`supabase/functions/combat-tick/index.ts`)
 
-## The fix
+When a party tick runs, the function loads party members and filters them:
 
-### 1. One-time cleanup (instant ~4.4 GB reclaim)
-`TRUNCATE cron.job_run_details` inside a migration. TRUNCATE is O(1), bypasses the timeout that's killing the DELETE, and immediately returns the disk to Postgres (no VACUUM FULL needed). The cron history is purely diagnostic — losing it is fine.
+```ts
+members = (membersRaw || []).filter(m => {
+  const ch = m.character as any;
+  return ch?.current_node_id === node_id && ch?.hp > 0;
+});
+```
 
-### 2. Replace the broken prune job with a smaller, faster one
-Drop `jobid 9` and re-create it as:
-- Runs **hourly** instead of daily (smaller batches → never times out again).
-- Keeps **1 day** of history instead of 3 (we only ever need recent runs for debugging).
-- Wrapped in a tiny SECURITY DEFINER helper `public.prune_cron_history()` so failures surface in logs and we can call it manually if needed.
+`node_id` is the **driver/leader's** `current_node_id`. Then `recipients = members` is passed straight into `resolveCreatureKill` (`_shared/kill-resolver.ts`).
 
-### 3. Bonus: shrink `net._http_response` (1.4 MB, also bloated to 0 live rows)
-Add it to the same hourly prune (delete rows older than 1 hour). Tiny gain today but it grows the same way over time.
+Consequences:
+- A party member who has walked even one node away at the moment the killing tick lands is removed from `recipients` and **gets 0 XP / gold / Renown / loot for that kill**.
+- If the **leader** is the one who walked away, the tick body still carries the leader's `current_node_id`, which no longer matches the creature's node. Combat-tick then deletes the session (`session_deleted_reason: 'node_changed'`) and *nobody* gets XP for in-flight kills.
 
-## Why this won't affect gameplay
+This is the "party-at-node" rule and it's intentional for live combat, but it makes movement timing brittle.
 
-- `cron.job_run_details` is only used to see whether a cron job ran successfully. No app code reads it.
-- `net._http_response` stores responses from `pg_net` HTTP calls (the email cron uses this). It's a debugging artifact; the email flow doesn't read it back.
-- No public-schema table, RLS policy, or edge function changes.
+### 2. Client tick cadence under mobile throttling (`src/features/combat/hooks/usePartyCombat.ts`)
 
-## Deliverable
+- Only the driver (solo player, or party leader) calls `combat-tick`.
+- The interval uses `setWorkerInterval(...,2000)` from `src/lib/worker-timer.ts`, which is good — the Web Worker isn't throttled by background tabs **as long as the page is still alive**.
+- But on mobile (especially iOS Safari) backgrounded tabs are eventually **suspended entirely**, including workers. When the leader is on mobile and the tab is hidden/locked:
+  - Ticks stop firing → kills don't resolve.
+  - When the tab comes back, the first tick uses the **current** `current_node_id`. If the player moved meanwhile (or wimped), the session is killed with `node_changed` and the queued damage never converts into a kill event with rewards.
+- The leader then re-broadcasts tick results to other members via `channelRef.current?.send({ event: 'combat_tick_result' })`. A backgrounded mobile member can miss that broadcast, so even when the server *did* award them XP, the local UI/XP bar doesn't update until next refresh.
 
-A single migration that:
-1. `TRUNCATE cron.job_run_details;`
-2. `TRUNCATE net._http_response;` (if accessible)
-3. `SELECT cron.unschedule(9);` then `cron.schedule('prune-logs','0 * * * *', ...)` calling the new helper.
-4. Creates `public.prune_cron_history()` (SECURITY DEFINER, owned by postgres) that deletes rows older than 1 day from both tables.
+### 3. Offscreen DoT path (`useOffscreenDotWakeup.ts` + `combat-catchup`)
 
-Expected result: DB size drops from ~4.5 GB to ~25 MB and stays there.
+When you walk away with a DoT ticking, the client schedules a `reconcileNode` call. On mobile this scheduler is a plain `setTimeout`, so a backgrounded tab can fire it late or not at all — the kill (and its XP) won't be credited until the next foreground event triggers reconciliation. Solo DoT kills off-node only pay the source, so a far-away mobile soloist relies entirely on this timer.
+
+## Net answer for the user
+
+Yes — there are real, reproducible reasons a mobile player who is far from the dying creature can miss the XP event:
+
+1. **Party kills**: the server only pays members whose `current_node_id` equals the combat node at the exact tick of the kill. Move one step early → no XP for that mob.
+2. **Mobile background suspension**: workers/timers stop, so the leader's combat-tick is late; on resume the session is invalidated by `node_changed` and the queued damage is discarded with no reward.
+3. **Broadcast loss**: even when the server does award, the result is delivered to non-leaders via realtime broadcast; a suspended mobile tab misses it and the XP bar doesn't visibly update until the next character refresh.
+
+## Proposed fixes (in priority order)
+
+1. **Per-member node check at kill time, not at tick start.**
+   In `combat-tick`, when a creature dies, refetch each session member's `current_node_id` (or use the per-tick `members` already loaded) and *re-evaluate eligibility at the moment of the kill*, not at the start of the tick. Members who left between damage-application and creature-death this tick should still count.
+
+2. **Grace window for "just left" party members.**
+   When building `recipients`, include any party member whose `current_node_id !== node_id` but whose `last_node_change_at < kill_tick_start - GRACE_MS` (e.g. 1500ms). Matches the existing 1000ms movement grace already used for party-movement sync.
+
+3. **Refresh-on-resume for the driver.**
+   In `usePartyCombat`, add a `visibilitychange` handler that, on `visible`, immediately fires a "catchup" tick before resuming the 2s interval. This shortens the window where mobile suspension lets the session be invalidated by `node_changed`.
+
+4. **Self-heal the XP bar on broadcast miss.**
+   On `visibilitychange → visible` for non-leader party members, run a lightweight character refresh (`refetchCharacter`) so any XP awarded while suspended appears immediately, even if the broadcast was missed.
+
+5. **Reconciliation safety net for offscreen DoT on mobile.**
+   In `useOffscreenDotWakeup`, also subscribe to `visibilitychange`: when the tab returns from hidden, immediately call `reconcileNode` for every tracked node instead of waiting for the predicted timer.
+
+## Files to touch
+
+- `supabase/functions/combat-tick/index.ts` — recipient re-evaluation at kill time + grace window.
+- `src/features/combat/hooks/usePartyCombat.ts` — visibilitychange resume tick + non-leader character refresh.
+- `src/features/combat/hooks/useOffscreenDotWakeup.ts` — visibilitychange-driven reconcile.
+
+No DB schema changes required. No formula changes; rewards still computed by the existing `resolveCreatureKill` pipeline.
+
+## Verification
+
+- Repro on mobile: engage a slow creature, walk 1–2 nodes away just before death, confirm XP arrives.
+- Backgrounded leader: lock phone mid-fight, return after the creature would have died, confirm the kill is credited.
+- Party member on mobile far from leader: confirm XP bar updates on return-to-foreground.
