@@ -63,7 +63,7 @@ export interface MemberBuffState {
   divine_challenge?: { reduction: number; expires_at: number };
 }
 
-export interface UsePartyCombatParams {
+export interface UseCombatDriverParams {
   character: Character;
   creatures: Creature[];
   party: Party | null;
