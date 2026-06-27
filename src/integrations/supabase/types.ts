@@ -613,6 +613,7 @@ export type Database = {
           member_buffs: Json
           node_id: string
           party_id: string | null
+          recent_member_ids: Json
           tick_rate_ms: number
         }
         Insert: {
@@ -624,6 +625,7 @@ export type Database = {
           member_buffs?: Json
           node_id: string
           party_id?: string | null
+          recent_member_ids?: Json
           tick_rate_ms?: number
         }
         Update: {
@@ -635,6 +637,7 @@ export type Database = {
           member_buffs?: Json
           node_id?: string
           party_id?: string | null
+          recent_member_ids?: Json
           tick_rate_ms?: number
         }
         Relationships: [
