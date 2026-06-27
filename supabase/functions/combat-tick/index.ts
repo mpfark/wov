@@ -570,9 +570,14 @@ Deno.serve(async (req) => {
     const killedCreatureIds = new Set<string>();
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
+    // Initialize reward maps for everyone who could collect XP this tick
+    // (active combatants + graced recently-departed party members).
+    for (const m of killRecipients) {
+      mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0;
+    }
     for (const m of members) {
       mHp[m.id] = m.c.hp;
-      mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0;
+
       // Trust DB for CP, but allow client to report a LOWER value (i.e. an
       // ability cost the server hasn't seen yet). Never adopt a higher
       // client value — that would let stale client-side regen leak in
