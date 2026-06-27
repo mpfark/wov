@@ -1987,6 +1987,88 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Graced (recently-departed) recipients: apply rewards only ─
+    // These characters earned XP/gold/Renown/salvage from kills this tick
+    // because they were at the node within the grace window, but they are
+    // NOT active combatants — skip HP/CP/death/stance handling entirely.
+    for (const m of gracedExtras) {
+      const c = m.c;
+      const eb = eq[m.id] || {};
+      const updates: Record<string, any> = {};
+      let newXp = c.xp + (mXp[m.id] || 0);
+      let newGold = c.gold + (mGold[m.id] || 0);
+      let newLevel = c.level;
+      let newMaxHp = c.max_hp;
+
+      if ((mXp[m.id] || 0) > 0 || (mGold[m.id] || 0) > 0) {
+        const needed = xpForLevel(c.level);
+        if (newXp >= needed && c.level < 42) {
+          newLevel = c.level + 1;
+          newXp -= needed;
+          updates.level = newLevel;
+          updates.unspent_stat_points = (c.unspent_stat_points || 0) + 1;
+          if (newLevel % 3 === 0) {
+            const bonuses = CLASS_LVL_BONUS[c.class] || {};
+            const bonusNames: string[] = [];
+            for (const [s, amt] of Object.entries(bonuses)) {
+              updates[s] = (c[s] || 10) + amt;
+              bonusNames.push(`+${amt} ${s.toUpperCase()}`);
+            }
+            if (bonusNames.length) {
+              events.push({ type: 'level_bonus', message: `📈 ${CLASS_LABELS[c.class] || c.class} bonus: ${bonusNames.join(', ')}!` });
+            }
+          }
+          if ([10, 20, 30, 40].includes(newLevel)) {
+            updates.respec_points = (c.respec_points || 0) + 1;
+            events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
+          }
+          const fInt = (updates.int ?? c.int) + (eb.int || 0);
+          const fWis = (updates.wis ?? c.wis) + (eb.wis || 0);
+          const fDex = (updates.dex ?? c.dex) + (eb.dex || 0);
+          const fCon = (updates.con ?? c.con) + (eb.con || 0);
+          newMaxHp = calcMaxHp(c.class, fCon, newLevel) + (eb.hp || 0);
+          updates.max_hp = newMaxHp;
+          updates.hp = newMaxHp;
+          updates.max_cp = calcMaxCp(newLevel, fWis);
+          updates.max_mp = calcMaxMp(newLevel, fDex);
+          events.push({ type: 'level_up', character_id: m.id, message: `🎉 Level Up! ${c.name} is now level ${newLevel}!` });
+          events.push({ type: 'stat_point', message: `📊 ${c.name} gained 1 stat point to allocate!` });
+        }
+        if (newLevel >= 42) newXp = 0;
+        updates.xp = newXp;
+        updates.gold = newGold;
+      }
+      if ((mBhp[m.id] || 0) > 0) {
+        updates.bhp = (c.bhp || 0) + mBhp[m.id];
+        updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
+      }
+      if ((mSalvage[m.id] || 0) > 0) {
+        materialAddPromises.push(
+          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
+        );
+      }
+      if (Object.keys(updates).length > 0) {
+        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
+      }
+      memberStates.push({
+        character_id: m.id,
+        hp: updates.hp ?? c.hp,
+        xp: updates.xp ?? c.xp,
+        gold: updates.gold ?? c.gold,
+        level: newLevel,
+        max_hp: newMaxHp,
+        bhp: updates.bhp ?? (c.bhp || 0),
+        rp_total_earned: updates.rp_total_earned ?? (c.rp_total_earned || 0),
+        unspent_stat_points: updates.unspent_stat_points ?? c.unspent_stat_points ?? 0,
+        max_cp: updates.max_cp ?? c.max_cp,
+        max_mp: updates.max_mp ?? c.max_mp,
+        respec_points: updates.respec_points ?? c.respec_points ?? 0,
+        cp: c.cp ?? 0,
+      });
+    }
+
+
+
     // ── Equipment degradation promises ──────────────────────────
     const degradePromises = [...degradeSet].map(async (cid) => {
       const { data: equipped } = await db
