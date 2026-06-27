@@ -290,6 +290,9 @@ Deno.serve(async (req) => {
     let tankId: string | null = null;
     let tankAtNode = false;
     let sessionKey: { character_id?: string; party_id?: string } = {};
+    // All party members regardless of node — used to grant XP-grace to
+    // members who just left the combat node milliseconds before a kill.
+    const partyAllMap = new Map<string, any>();
 
     if (party_id) {
       const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
@@ -302,6 +305,10 @@ Deno.serve(async (req) => {
         .select('character_id, character:characters(*)')
         .eq('party_id', party_id)
         .eq('status', 'accepted');
+
+      for (const m of (membersRaw || [])) {
+        partyAllMap.set(m.character_id, m.character as any);
+      }
 
       members = (membersRaw || [])
         .filter(m => {
@@ -322,6 +329,7 @@ Deno.serve(async (req) => {
       members = [{ id: character_id, c: char }];
       sessionKey = { character_id };
     }
+
 
     // ── Load or create combat session ────────────────────────────
     let session: any = null;
