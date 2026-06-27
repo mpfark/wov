@@ -685,13 +685,16 @@ Deno.serve(async (req) => {
       }
       killedCreatureIds.add(creature.id);
 
-      // Recipients = every member in this combat session (party-at-node, or solo).
-      const recipients = members.map(mm => ({
+      // Recipients = active combatants at the node PLUS any party member
+      // who was at the node within the last KILL_GRACE_MS (mobile / movement
+      // grace). Solo collapses to the single character.
+      const recipients = killRecipients.map(mm => ({
         id: mm.id,
         level: mm.c.level,
         cha: (mm.c.cha || 10) + ((eq[mm.id] as any)?.cha || 0),
         isUncapped: mm.c.level < 42,
       }));
+
 
       const outcome = resolveCreatureKill(
         {
