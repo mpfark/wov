@@ -2083,13 +2083,22 @@ Deno.serve(async (req) => {
       await db.from('combat_sessions').delete().eq('id', session.id);
       console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_creatures_alive', session_id: session.id }));
     } else {
+      // Refresh the recent-member presence map so the grace window covers
+      // anyone currently at the combat node. Prune entries older than 30s.
+      const newRecent: Record<string, { last_at_node_ms: number }> = { ...recentMap };
+      for (const m of members) newRecent[m.id] = { last_at_node_ms: now };
+      for (const k of Object.keys(newRecent)) {
+        if (now - (newRecent[k]?.last_at_node_ms || 0) > 30000) delete newRecent[k];
+      }
       await db.from('combat_sessions').update({
         last_tick_at: newLastTickAt,
         engaged_creature_ids: [...sessionEngaged],
         member_buffs: buffs,
         node_id: combatNodeId,
+        recent_member_ids: newRecent,
       }).eq('id', session.id);
     }
+
 
     // ── Response ─────────────────────────────────────────────────
     const combatCreatureStates = creatures.map(cr => ({
