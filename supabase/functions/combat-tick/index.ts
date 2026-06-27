@@ -290,6 +290,9 @@ Deno.serve(async (req) => {
     let tankId: string | null = null;
     let tankAtNode = false;
     let sessionKey: { character_id?: string; party_id?: string } = {};
+    // All party members regardless of node — used to grant XP-grace to
+    // members who just left the combat node milliseconds before a kill.
+    const partyAllMap = new Map<string, any>();
 
     if (party_id) {
       const { data: party } = await db.from('parties').select('id, leader_id, tank_id').eq('id', party_id).single();
@@ -302,6 +305,10 @@ Deno.serve(async (req) => {
         .select('character_id, character:characters(*)')
         .eq('party_id', party_id)
         .eq('status', 'accepted');
+
+      for (const m of (membersRaw || [])) {
+        partyAllMap.set(m.character_id, m.character as any);
+      }
 
       members = (membersRaw || [])
         .filter(m => {
@@ -322,6 +329,7 @@ Deno.serve(async (req) => {
       members = [{ id: character_id, c: char }];
       sessionKey = { character_id };
     }
+
 
     // ── Load or create combat session ────────────────────────────
     let session: any = null;
@@ -393,8 +401,29 @@ Deno.serve(async (req) => {
       return json({ events: [], creature_states, member_states: [], ticks_processed: 0, active_effects: (effectsIdleRes.data || []) });
     }
 
+    // ── XP-grace pool: members who just left this node still get rewards ──
+    // (Mobile players in particular often move/lock the screen seconds before
+    // a kill resolves — without this grace they would silently lose XP/loot.)
+    const KILL_GRACE_MS = 3000;
+    const recentMap: Record<string, { last_at_node_ms: number }> =
+      ((session?.recent_member_ids as any) || {}) as Record<string, { last_at_node_ms: number }>;
+    const atNodeIds = new Set(members.map(m => m.id));
+    const gracedExtras: { id: string; c: any }[] = [];
+    if (party_id) {
+      for (const [cid, ch] of partyAllMap.entries()) {
+        if (atNodeIds.has(cid)) continue;
+        if (!ch || (ch.hp ?? 0) <= 0) continue;
+        const ts = recentMap[cid]?.last_at_node_ms || 0;
+        if (now - ts <= KILL_GRACE_MS) gracedExtras.push({ id: cid, c: ch });
+      }
+    }
+    // Recipients eligible for kill rewards = active combatants + recently-departed
+    const killRecipients: { id: string; c: any }[] = [...members, ...gracedExtras];
+
     // ── Parallel fetch: equipment, creatures, effects, xp_boost ──
-    const charIds = members.map(m => m.id);
+    // Include graced members in equipment/bond fetches so their stat bonuses
+    // (e.g. CHA for gold/Renown rolls) are accounted for at reward time.
+    const charIds = killRecipients.map(m => m.id);
     const combatNodeId = session.node_id;
     const [equipRes, creaturesRes, effectsRes, xpRes, weaponCfgRes, bondsRes] = await Promise.all([
       db.from('character_inventory')
@@ -407,6 +436,7 @@ Deno.serve(async (req) => {
       db.from('weapon_progression_config').select('tier1_level, tier2_level, tier3_level').eq('id', 1).maybeSingle(),
       db.from('character_class_bonds').select('character_id, class, bond').in('character_id', charIds),
     ]);
+
 
     const allEquip = equipRes.data;
     const creaturesRaw = creaturesRes.data;
@@ -540,9 +570,14 @@ Deno.serve(async (req) => {
     const killedCreatureIds = new Set<string>();
 
     for (const cr of creatures) cHp[cr.id] = cr.hp;
+    // Initialize reward maps for everyone who could collect XP this tick
+    // (active combatants + graced recently-departed party members).
+    for (const m of killRecipients) {
+      mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0;
+    }
     for (const m of members) {
       mHp[m.id] = m.c.hp;
-      mXp[m.id] = 0; mGold[m.id] = 0; mBhp[m.id] = 0; mSalvage[m.id] = 0;
+
       // Trust DB for CP, but allow client to report a LOWER value (i.e. an
       // ability cost the server hasn't seen yet). Never adopt a higher
       // client value — that would let stale client-side regen leak in
@@ -655,13 +690,16 @@ Deno.serve(async (req) => {
       }
       killedCreatureIds.add(creature.id);
 
-      // Recipients = every member in this combat session (party-at-node, or solo).
-      const recipients = members.map(mm => ({
+      // Recipients = active combatants at the node PLUS any party member
+      // who was at the node within the last KILL_GRACE_MS (mobile / movement
+      // grace). Solo collapses to the single character.
+      const recipients = killRecipients.map(mm => ({
         id: mm.id,
         level: mm.c.level,
         cha: (mm.c.cha || 10) + ((eq[mm.id] as any)?.cha || 0),
         isUncapped: mm.c.level < 42,
       }));
+
 
       const outcome = resolveCreatureKill(
         {
@@ -1949,6 +1987,88 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Graced (recently-departed) recipients: apply rewards only ─
+    // These characters earned XP/gold/Renown/salvage from kills this tick
+    // because they were at the node within the grace window, but they are
+    // NOT active combatants — skip HP/CP/death/stance handling entirely.
+    for (const m of gracedExtras) {
+      const c = m.c;
+      const eb = eq[m.id] || {};
+      const updates: Record<string, any> = {};
+      let newXp = c.xp + (mXp[m.id] || 0);
+      let newGold = c.gold + (mGold[m.id] || 0);
+      let newLevel = c.level;
+      let newMaxHp = c.max_hp;
+
+      if ((mXp[m.id] || 0) > 0 || (mGold[m.id] || 0) > 0) {
+        const needed = xpForLevel(c.level);
+        if (newXp >= needed && c.level < 42) {
+          newLevel = c.level + 1;
+          newXp -= needed;
+          updates.level = newLevel;
+          updates.unspent_stat_points = (c.unspent_stat_points || 0) + 1;
+          if (newLevel % 3 === 0) {
+            const bonuses = CLASS_LVL_BONUS[c.class] || {};
+            const bonusNames: string[] = [];
+            for (const [s, amt] of Object.entries(bonuses)) {
+              updates[s] = (c[s] || 10) + amt;
+              bonusNames.push(`+${amt} ${s.toUpperCase()}`);
+            }
+            if (bonusNames.length) {
+              events.push({ type: 'level_bonus', message: `📈 ${CLASS_LABELS[c.class] || c.class} bonus: ${bonusNames.join(', ')}!` });
+            }
+          }
+          if ([10, 20, 30, 40].includes(newLevel)) {
+            updates.respec_points = (c.respec_points || 0) + 1;
+            events.push({ type: 'respec', message: `🔄 ${c.name} earned a respec point!` });
+          }
+          const fInt = (updates.int ?? c.int) + (eb.int || 0);
+          const fWis = (updates.wis ?? c.wis) + (eb.wis || 0);
+          const fDex = (updates.dex ?? c.dex) + (eb.dex || 0);
+          const fCon = (updates.con ?? c.con) + (eb.con || 0);
+          newMaxHp = calcMaxHp(c.class, fCon, newLevel) + (eb.hp || 0);
+          updates.max_hp = newMaxHp;
+          updates.hp = newMaxHp;
+          updates.max_cp = calcMaxCp(newLevel, fWis);
+          updates.max_mp = calcMaxMp(newLevel, fDex);
+          events.push({ type: 'level_up', character_id: m.id, message: `🎉 Level Up! ${c.name} is now level ${newLevel}!` });
+          events.push({ type: 'stat_point', message: `📊 ${c.name} gained 1 stat point to allocate!` });
+        }
+        if (newLevel >= 42) newXp = 0;
+        updates.xp = newXp;
+        updates.gold = newGold;
+      }
+      if ((mBhp[m.id] || 0) > 0) {
+        updates.bhp = (c.bhp || 0) + mBhp[m.id];
+        updates.rp_total_earned = (c.rp_total_earned || 0) + mBhp[m.id];
+      }
+      if ((mSalvage[m.id] || 0) > 0) {
+        materialAddPromises.push(
+          db.rpc('add_material', { _character_id: m.id, _key: 'salvage', _delta: mSalvage[m.id] })
+        );
+      }
+      if (Object.keys(updates).length > 0) {
+        memberUpdatePromises.push(db.from('characters').update(updates).eq('id', m.id));
+      }
+      memberStates.push({
+        character_id: m.id,
+        hp: updates.hp ?? c.hp,
+        xp: updates.xp ?? c.xp,
+        gold: updates.gold ?? c.gold,
+        level: newLevel,
+        max_hp: newMaxHp,
+        bhp: updates.bhp ?? (c.bhp || 0),
+        rp_total_earned: updates.rp_total_earned ?? (c.rp_total_earned || 0),
+        unspent_stat_points: updates.unspent_stat_points ?? c.unspent_stat_points ?? 0,
+        max_cp: updates.max_cp ?? c.max_cp,
+        max_mp: updates.max_mp ?? c.max_mp,
+        respec_points: updates.respec_points ?? c.respec_points ?? 0,
+        cp: c.cp ?? 0,
+      });
+    }
+
+
+
     // ── Equipment degradation promises ──────────────────────────
     const degradePromises = [...degradeSet].map(async (cid) => {
       const { data: equipped } = await db
@@ -2045,13 +2165,22 @@ Deno.serve(async (req) => {
       await db.from('combat_sessions').delete().eq('id', session.id);
       console.log(JSON.stringify({ fn: 'combat-tick', session_deleted_reason: 'no_creatures_alive', session_id: session.id }));
     } else {
+      // Refresh the recent-member presence map so the grace window covers
+      // anyone currently at the combat node. Prune entries older than 30s.
+      const newRecent: Record<string, { last_at_node_ms: number }> = { ...recentMap };
+      for (const m of members) newRecent[m.id] = { last_at_node_ms: now };
+      for (const k of Object.keys(newRecent)) {
+        if (now - (newRecent[k]?.last_at_node_ms || 0) > 30000) delete newRecent[k];
+      }
       await db.from('combat_sessions').update({
         last_tick_at: newLastTickAt,
         engaged_creature_ids: [...sessionEngaged],
         member_buffs: buffs,
         node_id: combatNodeId,
+        recent_member_ids: newRecent,
       }).eq('id', session.id);
     }
+
 
     // ── Response ─────────────────────────────────────────────────
     const combatCreatureStates = creatures.map(cr => ({

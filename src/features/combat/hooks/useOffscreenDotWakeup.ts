@@ -232,6 +232,25 @@ export function useOffscreenDotWakeup({
     }
   }, [currentNodeId]);
 
+  // On tab resume, immediately reconcile any tracked node whose predicted
+  // death time has already passed — mobile browsers throttle setTimeout in
+  // background tabs, so kills can be silently delayed otherwise.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      for (const [nodeId, entry] of trackedRef.current.entries()) {
+        if (entry.predictedDeathTime && now >= entry.predictedDeathTime) {
+          if (entry.timerId) clearTimeout(entry.timerId);
+          console.log(`[offscreen-dot] visibility-resume immediate wake for node=${nodeId}`);
+          scheduleWakeup(trackedRef.current, entry.snapshot, entry.rescheduleCount, eventBus);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [eventBus]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -242,6 +261,7 @@ export function useOffscreenDotWakeup({
     };
   }, []);
 }
+
 
 // ── Scheduling logic ────────────────────────────────────────────
 
