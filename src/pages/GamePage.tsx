@@ -32,7 +32,7 @@ import { useMarketplaceSaleAlerts } from '@/features/marketplace/hooks/useMarket
 import { useInventory } from '@/features/inventory';
 import { useParty } from '@/features/party';
 import { usePartyCombatLog } from '@/features/combat';
-import { usePartyCombat } from '@/features/combat';
+import { useCombatDriver } from '@/features/combat';
 import { getBagWeight, getEffectiveMaxHp, getEffectiveAC } from '@/lib/game-data';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { supabase } from '@/integrations/supabase/client';
@@ -688,13 +688,13 @@ export default function GamePage({ character, updateCharacter, updateCharacterLo
   const leaderNodeId = leaderMember?.character?.current_node_id ?? null;
   const usePartyCombatMode = !!party && (isLeader || leaderNodeId === character.current_node_id);
 
-  // Ref to break circular dependency: usePartyCombat needs ability executor, useCombatActions needs queueAbility
+  // Ref to break circular dependency: useCombatDriver needs ability executor, useCombatActions needs queueAbility
   const executeAbilityRef = useRef<(index: number, targetId?: string) => Promise<void>>();
-  // Ref to break circular dependency: usePartyCombat needs the wimp pre-flee
-  // hook, but useWimp is initialised AFTER usePartyCombat (it needs handleMove).
+  // Ref to break circular dependency: useCombatDriver needs the wimp pre-flee
+  // hook, but useWimp is initialised AFTER useCombatDriver (it needs handleMove).
   const wimpFleeRef = useRef<((newHp: number) => boolean) | null>(null);
 
-  const combat = usePartyCombat({
+  const combat = useCombatDriver({
     character, creatures,
     party: usePartyCombatMode ? party : null,
     isLeader, isDead,

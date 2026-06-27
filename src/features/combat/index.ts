@@ -1,6 +1,6 @@
 // Combat feature — hooks, utilities, and types for the combat system
 
-export { usePartyCombat } from './hooks/usePartyCombat';
+export { useCombatDriver } from './hooks/useCombatDriver';
 export { usePartyCombatLog } from './hooks/usePartyCombatLog';
 export { useGameLoop } from './hooks/useGameLoop';
 export type {

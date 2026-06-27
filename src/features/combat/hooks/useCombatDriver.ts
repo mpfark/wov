@@ -1,5 +1,6 @@
 /**
- * usePartyCombat — unified server-authoritative combat via the combat-tick edge function.
+ * useCombatDriver — unified server-authoritative combat via the combat-tick edge function.
+ * (Drives both solo and party combat; formerly usePartyCombat.)
  *
  * HYBRID MODEL:
  * - Live combat sessions exist only while players are actively present in the node.
@@ -62,7 +63,7 @@ export interface MemberBuffState {
   divine_challenge?: { reduction: number; expires_at: number };
 }
 
-export interface UsePartyCombatParams {
+export interface UseCombatDriverParams {
   character: Character;
   creatures: Creature[];
   party: Party | null;
@@ -100,13 +101,13 @@ export interface UsePartyCombatParams {
   /**
    * Optional pre-apply hook: called with the new HP value the server is about
    * to commit for THIS player. Return true if the caller initiated a flee
-   * (wimp panic escape); usePartyCombat still applies the HP update either way.
+   * (wimp panic escape); useCombatDriver still applies the HP update either way.
    */
   onIncomingPlayerHp?: (newHp: number) => boolean;
 
 }
 
-export function usePartyCombat(params: UsePartyCombatParams) {
+export function useCombatDriver(params: UseCombatDriverParams) {
   const ext = useRef(params);
   ext.current = params;
 
