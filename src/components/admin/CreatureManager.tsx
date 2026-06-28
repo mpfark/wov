@@ -615,10 +615,6 @@ export default function CreatureManager() {
                   <span>AC: <strong>{previewStats.ac}</strong></span>
                   <span>STR: <strong>{previewStats.stats.str}</strong></span>
                   <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
-                  <span>CON: <strong>{previewStats.stats.con}</strong></span>
-                  <span>INT: <strong>{previewStats.stats.int}</strong></span>
-                  <span>WIS: <strong>{previewStats.stats.wis}</strong></span>
-                  <span>CHA: <strong>{previewStats.stats.cha}</strong></span>
                 </div>
                 <div className="mt-1.5 pt-1.5 border-t border-border/50 flex items-center gap-3 text-xs">
                   <span>⚔️ Damage: <strong className="text-primary">1d{getCreatureDamageDie(form.level, form.rarity)} + {getStatModifier(previewStats.stats.str)}</strong></span>
