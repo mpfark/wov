@@ -354,10 +354,9 @@ Call the generate_world tool with the structured output.`;
                         respawn_seconds: { type: "integer" },
                         stats: {
                           type: "object",
+                          description: "Only str (drives to-hit and damage) and dex (drives crit threshold) are used by combat.",
                           properties: {
                             str: { type: "integer" }, dex: { type: "integer" },
-                            con: { type: "integer" }, int: { type: "integer" },
-                            wis: { type: "integer" }, cha: { type: "integer" },
                           },
                         },
                         loot_table_id: { type: "string", description: "ID of an existing loot table to assign. Use null if no suitable table exists or for non-humanoid creatures." },

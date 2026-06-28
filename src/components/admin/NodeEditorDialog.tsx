@@ -525,10 +525,6 @@ export default function NodeEditorDialog({ nodeId, regionId, open, allNodes, all
                     <span>AC: <strong>{previewStats.ac}</strong></span>
                     <span>STR: <strong>{previewStats.stats.str}</strong></span>
                     <span>DEX: <strong>{previewStats.stats.dex}</strong></span>
-                    <span>CON: <strong>{previewStats.stats.con}</strong></span>
-                    <span>INT: <strong>{previewStats.stats.int}</strong></span>
-                    <span>WIS: <strong>{previewStats.stats.wis}</strong></span>
-                    <span>CHA: <strong>{previewStats.stats.cha}</strong></span>
                   </div>
                 </div>
 

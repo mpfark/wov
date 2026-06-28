@@ -1191,7 +1191,7 @@ export default function NodeEditorPanel({
                         {/* Stats */}
                         {c.stats && (
                           <div className="flex flex-wrap gap-x-2 gap-y-0 text-[9px] font-mono text-muted-foreground">
-                            {['str','dex','con','int','wis','cha'].map(s => (
+                            {['str','dex'].map(s => (
                               <span key={s}>{s.toUpperCase()} {(c.stats as any)[s] ?? '?'}</span>
                             ))}
                           </div>
