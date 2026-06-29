@@ -195,8 +195,8 @@ export default function JewelcrafterPanel({
     <div className="text-xs text-muted-foreground text-center">Click an item's price to refurbish it.</div>
   );
 
-  // ── Forge (Craft + Upgrade) ───────────────────────────────────
-  const { craftBlock, upgradeBlock } = useForgeUpgradeView({
+  // ── Forge (Craft) + Enhance ───────────────────────────────────
+  const { craftBlock, enhanceLeft, enhanceRight } = useForgeUpgradeView({
     characterId, characterLevel: level, gold, inventory,
     slots: FORGE_SLOTS,
     onGoldChange, onInventoryChange, addLog,
