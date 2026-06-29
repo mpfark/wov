@@ -4,6 +4,8 @@ import { isShield } from '@/shared/formulas/classes';
 import { CLASS_WEAPON_AFFINITY } from '@/lib/game-data';
 import ItemIllustration from '@/components/items/ItemIllustration';
 import { itemSubtitle, statLabel, affinityLabelFor, type DisplayItem } from '@/lib/item-display';
+import { effectiveItemStats } from '@/shared/formulas/items';
+import { GEM_CATALOG, type GemKey } from '@/shared/formulas/gems';
 
 interface ItemLike extends DisplayItem {
   description?: string | null;
@@ -13,6 +15,7 @@ interface ItemLike extends DisplayItem {
   illustration_url?: string | null;
   procs?: any;
 }
+
 
 // Subtle, non-revealing flavor lines for items with chance-on-hit procs.
 const PROC_FLAVOR_LINES = [
