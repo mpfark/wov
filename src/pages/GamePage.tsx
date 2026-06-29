@@ -13,6 +13,7 @@ import HeraldryPanel from '@/features/character/components/HeraldryPanel';
 import TrainerPanel from '@/features/character/components/TrainerPanel';
 import TeleportDialog from '@/features/world/components/TeleportDialog';
 import { useGroundLoot } from '@/features/inventory';
+import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { Character } from '@/features/character';
 import { useNodes } from '@/features/world';
 import { useNodeChannel } from '@/features/world';
