@@ -1925,6 +1925,10 @@ export type Database = {
         Args: { _character_id: string; _node_id: string }
         Returns: undefined
       }
+      apply_contract_complete: {
+        Args: { _character_id: string; _new_count: number }
+        Returns: undefined
+      }
       apply_crafting_xp: {
         Args: { p_character_id: string; p_xp: number }
         Returns: Json
