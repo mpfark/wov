@@ -61,6 +61,12 @@ export function useMaterials(characterId: string | null | undefined) {
     };
   }, [characterId, refresh]);
 
+  const entries: MaterialEntry[] = catalog.map(m => ({ ...m, count: counts[m.key] ?? 0 }));
+  const byCategory = (cat: string) => entries.filter(e => e.category === cat);
+
+  return { catalog, counts, entries, byCategory, refresh };
+}
+
 export function notifyMaterialsChanged(characterId?: string | null) {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('materials:changed', {
@@ -68,9 +74,3 @@ export function notifyMaterialsChanged(characterId?: string | null) {
   }));
 }
 
-
-  const entries: MaterialEntry[] = catalog.map(m => ({ ...m, count: counts[m.key] ?? 0 }));
-  const byCategory = (cat: string) => entries.filter(e => e.category === cat);
-
-  return { catalog, counts, entries, byCategory, refresh };
-}
