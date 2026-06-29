@@ -586,23 +586,24 @@ export default function CharacterPanel({
                               if (inv.item.slot) {
                                 const isTwoHandedItem = inv.item.hands === 2;
                                 const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
-                                const newStats = inv.item.stats || {};
+                                const newStats = getEffectiveStats(inv);
                                 const oldStats: Record<string, number> = {};
                                 if (isTwoHandedItem) {
                                   const mh = equipped.find(e => e.equipped_slot === 'main_hand');
                                   const oh = equipped.find(e => e.equipped_slot === 'off_hand');
                                   for (const it of [mh, oh]) {
-                                    if (it) for (const [k, v] of Object.entries(it.item.stats || {})) oldStats[k] = (oldStats[k] || 0) + (v as number);
+                                    if (it) for (const [k, v] of Object.entries(getEffectiveStats(it))) oldStats[k] = (oldStats[k] || 0) + (v as number);
                                   }
                                 } else {
                                   const mh = equipped.find(e => e.equipped_slot === 'main_hand');
                                   const mainIs2H = mh && mh.item.hands === 2;
                                   if (mainIs2H && (inv.item.slot === 'main_hand' || inv.item.slot === 'off_hand')) {
-                                    for (const [k, v] of Object.entries(mh!.item.stats || {})) oldStats[k] = (v as number) || 0;
+                                    for (const [k, v] of Object.entries(getEffectiveStats(mh!))) oldStats[k] = (v as number) || 0;
                                   } else if (currentlyEquipped) {
-                                    for (const [k, v] of Object.entries(currentlyEquipped.item.stats || {})) oldStats[k] = (v as number) || 0;
+                                    for (const [k, v] of Object.entries(getEffectiveStats(currentlyEquipped))) oldStats[k] = (v as number) || 0;
                                   }
                                 }
+
                                 const allKeys = new Set([...Object.keys(newStats), ...Object.keys(oldStats)]);
                                 const diffs: { key: string; diff: number }[] = [];
                                 for (const k of allKeys) {
