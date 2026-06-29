@@ -65,7 +65,7 @@ describe('Gear-effective caps add bonuses correctly', () => {
     expect(getEffectiveMaxMp(5, 10, { dex: 4 })).toBe(base + 20);
   });
   it('empty bonuses returns base value', () => {
-    expect(getEffectiveMaxHp('rogue', 12, 8, {})).toBe(getMaxHp('rogue', 12, 8));
+    expect(getEffectiveMaxHp('assassin', 12, 8, {})).toBe(getMaxHp('assassin', 12, 8));
     expect(getEffectiveMaxCp(8, 12, {})).toBe(getMaxCp(8, 12));
     expect(getEffectiveMaxMp(8, 14, {})).toBe(getMaxMp(8, 14));
   });

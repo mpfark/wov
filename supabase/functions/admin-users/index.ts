@@ -11,7 +11,7 @@ const CLASS_LEVEL_BONUSES: Record<string, Record<string, number>> = {
   warrior: { str: 1, dex: 1 },
   wizard:  { int: 1, wis: 1 },
   ranger:  { dex: 1, wis: 1 },
-  rogue:   { dex: 1, cha: 1 },
+  assassin:   { dex: 1, cha: 1 },
   healer:  { wis: 1, con: 1 },
   bard:    { cha: 1, int: 1 },
 };
@@ -180,12 +180,12 @@ Deno.serve(async (req) => {
         warrior: { str: 3, dex: 1, con: 2, int: 0, wis: 0, cha: 0 },
         wizard:  { str: 0, dex: 0, con: 0, int: 3, wis: 2, cha: 1 },
         ranger:  { str: 1, dex: 3, con: 1, int: 0, wis: 2, cha: 0 },
-        rogue:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
+        assassin:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
         healer:  { str: 0, dex: 0, con: 1, int: 1, wis: 3, cha: 2 },
         bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
       };
       const CLASS_BASE_HP: Record<string, number> = {
-        warrior: 24, wizard: 16, ranger: 20, rogue: 16, healer: 18, bard: 16,
+        warrior: 24, wizard: 16, ranger: 20, assassin: 16, healer: 18, bard: 16,
       };
 
       const statKeys = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
@@ -435,7 +435,7 @@ Deno.serve(async (req) => {
         warrior: { str: 3, dex: 1, con: 2, int: 0, wis: 0, cha: 0 },
         wizard:  { str: 0, dex: 0, con: 0, int: 3, wis: 2, cha: 1 },
         ranger:  { str: 1, dex: 3, con: 1, int: 0, wis: 2, cha: 0 },
-        rogue:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
+        assassin:   { str: 0, dex: 3, con: 0, int: 1, wis: 0, cha: 2 },
         healer:  { str: 0, dex: 0, con: 1, int: 1, wis: 3, cha: 2 },
         bard:    { str: 0, dex: 1, con: 0, int: 1, wis: 1, cha: 3 },
       };

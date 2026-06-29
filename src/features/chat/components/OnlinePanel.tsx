@@ -12,7 +12,7 @@ const RACE_LABELS: Record<string, string> = {
   human: 'Human', elf: 'Elf', dwarf: 'Dwarf', halfling: 'Halfling', edain: 'Edain', half_elf: 'Half-Elf',
 };
 const CLASS_LABELS: Record<string, string> = {
-  warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger', rogue: 'Rogue', healer: 'Healer', bard: 'Bard',
+  warrior: 'Warrior', wizard: 'Wizard', ranger: 'Ranger', assassin: 'Assassin', healer: 'Healer', bard: 'Bard',
 };
 
 interface OnlinePanelProps {

@@ -45,23 +45,23 @@ export function getDisengageMult(wisMod: number): number {
   return 1.30 + diminishingFloat(Math.max(0, wisMod), 0.05, 0.40);
 }
 
-// ── Rogue Cloak of Shadows ───────────────────────────────────────
+// ── Assassin Cloak of Shadows ───────────────────────────────────────
 
-/** Cloak of Shadows dodge chance (rogue, DEX duration / CHA magnitude).
+/** Cloak of Shadows dodge chance (assassin, DEX duration / CHA magnitude).
  *  Floor 40%, scales with CHA up to 60%. */
 export function getCloakDodge(chaMod: number): number {
   return 0.40 + diminishingFloat(Math.max(0, chaMod), 0.03, 0.20);
 }
 
-// ── Rogue Envenom (server-side proc) ─────────────────────────────
+// ── Assassin Envenom (server-side proc) ─────────────────────────────
 
-/** Envenom hit-proc chance (rogue, DEX magnitude).
+/** Envenom hit-proc chance (assassin, DEX magnitude).
  *  Floor 25%, scales with DEX up to 45%. */
 export function getEnvenomProc(dexMod: number): number {
   return 0.25 + diminishingFloat(Math.max(0, dexMod), 0.04, 0.20);
 }
 
-/** Envenom max stack ceiling (rogue, CHA rate).
+/** Envenom max stack ceiling (assassin, CHA rate).
  *  Floor 3 stacks, scales with CHA up to 7. */
 export function getEnvenomMaxStacks(chaMod: number): number {
   return 3 + diminishing(Math.max(0, chaMod), 4);

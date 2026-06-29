@@ -12,7 +12,7 @@ export const CLASS_COMBAT: Record<string, ClassCombat> = {
   warrior: { label: 'Strike',        stat: 'str', diceMin: 1, diceMax: 10, critRange: 20, emoji: '⚔️', verb: 'swing your blade at' },
   wizard:  { label: 'Cast Fireball', stat: 'int', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '🔥', verb: 'hurl arcane flame at' },
   ranger:  { label: 'Shoot',         stat: 'dex', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '🏹', verb: 'loose an arrow at' },
-  rogue:   { label: 'Backstab',      stat: 'dex', diceMin: 1, diceMax: 6,  critRange: 19, emoji: '🗡️', verb: 'strike from the shadows at' },
+  assassin:   { label: 'Backstab',      stat: 'dex', diceMin: 1, diceMax: 6,  critRange: 19, emoji: '🗡️', verb: 'strike from the shadows at' },
   healer:  { label: 'Smite',         stat: 'wis', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '⭐', verb: 'channel divine light against' },
   bard:    { label: 'Mock',          stat: 'cha', diceMin: 1, diceMax: 6,  critRange: 20, emoji: '🎵', verb: 'unleash cutting words upon' },
   templar: { label: 'Judgment',      stat: 'wis', diceMin: 1, diceMax: 8,  critRange: 20, emoji: '✝️', verb: 'pass divine judgment upon' },
@@ -71,7 +71,7 @@ export const CLASS_ABILITIES: Record<string, ClassAbility[]> = {
     { label: 'Crescendo', emoji: '✨', description: 'A rising melody that heals all nearby allies over time. Heal/tick scales with CHA; duration scales with INT.', tooltip: 'Heal nearby allies over time. Heal scales with CHA, duration with INT.', cpCost: 40, type: 'party_regen', tier: 3, levelRequired: 15 },
     { label: 'Grand Finale', emoji: '💥', description: 'Unleash a devastating crescendo of sound (CHA-scaled damage). INT sharpens the killing note — each point of INT widens the crit-edge.', tooltip: 'Burst damage on one target. Damage scales with CHA, crit-edge with INT.', cpCost: 60, type: 'burst_damage', tier: 4, levelRequired: 20 },
   ],
-  rogue: [
+  assassin: [
     { label: 'Backstab', emoji: '🗡️', description: 'Strike at a vital point. Rolls your equipped weapon damage + DEX + ability bonus (unarmed falls back to 1d4).', tooltip: 'Vital strike. Rolls weapon damage + DEX + bonus.', cpCost: 10, type: 'backstab', tier: 0, levelRequired: 1 },
     { label: 'Shadowstep', emoji: '🌑', description: 'Vanish into shadow — duration scales with DEX, and your next strike from stealth deals an ambush multiplier scaling with CHA (cap ×2.5).', tooltip: 'Vanish into stealth; next strike is an ambush. Duration scales with DEX, ambush with CHA.', cpCost: 15, type: 'stealth_buff', tier: 1, levelRequired: 5 },
     { label: 'Envenom', emoji: '🐍', description: '⚓ Stance. Each hit may apply a stackable poison DoT — proc chance scales with DEX, max stack ceiling scales with CHA. Mutually exclusive with Ignite. Click again to drop.', tooltip: 'Hits may apply stacking poison. Proc scales with DEX, max stacks with CHA. Stance.', cpCost: 50, type: 'poison_buff', tier: 2, levelRequired: 10 },
