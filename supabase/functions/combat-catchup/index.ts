@@ -373,14 +373,52 @@ Deno.serve(async (req) => {
           // XP/gold/salvage/Renown atomically and the next combat-tick / refetch
           // will reconcile derived values (level, max_hp, etc.) when the
           // player engages again.
+          // Per-recipient: standard reward + Assassin contract bonus (if eligible).
+          const recipIds = outcome.memberRewards.map(r => r.memberId);
+          const { data: recipMeta } = await db
+            .from('characters')
+            .select('id, class, active_contract, contracts_completed')
+            .in('id', recipIds);
+          const metaById = new Map<string, any>((recipMeta || []).map((r: any) => [r.id, r]));
+
           for (const mr of outcome.memberRewards) {
+            let xp = mr.xp, gold = mr.gold, salvage = mr.salvage, bhp = mr.bhp;
+            const meta = metaById.get(mr.memberId);
+            const contract = meta?.active_contract;
+            const isContractKill =
+              meta?.class === 'assassin'
+              && contract
+              && contract.creature_id === creature.id
+              && creature.rarity !== 'boss';
+            if (isContractKill) {
+              const bxp = Math.floor(mr.xp * 1.25);
+              const bgold = Math.floor(mr.gold * 1.25);
+              const bbhp = Math.floor(mr.bhp * 1.25);
+              xp += bxp; gold += bgold; bhp += bbhp;
+              const tokens: string[] = [];
+              if (bxp > 0) tokens.push(`+${bxp} XP`);
+              if (bgold > 0) tokens.push(`+${bgold} gold`);
+              if (bbhp > 0) tokens.push(`+${bbhp} 🏛️ Renown`);
+              outcome.events.push({
+                type: 'contract_complete',
+                character_id: mr.memberId,
+                message: `🗡️ Contract fulfilled — ${creature.name} put down.${tokens.length ? ' ' + tokens.join(', ') + '.' : ''}`,
+              });
+            }
             await db.rpc('award_party_member', {
               _character_id: mr.memberId,
-              _xp: mr.xp,
-              _gold: mr.gold,
-              _salvage: mr.salvage,
-              _bhp: mr.bhp,
+              _xp: xp,
+              _gold: gold,
+              _salvage: salvage,
+              _bhp: bhp,
             });
+            if (isContractKill) {
+              const newCount = (meta?.contracts_completed || 0) + 1;
+              await db.rpc('apply_contract_complete', {
+                _character_id: mr.memberId,
+                _new_count: newCount,
+              });
+            }
           }
 
           // Apply gem drops via the unified materials helper.
