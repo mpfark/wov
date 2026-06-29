@@ -1,0 +1,1 @@
+ALTER TYPE public.character_class RENAME VALUE 'rogue' TO 'assassin';
