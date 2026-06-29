@@ -20,6 +20,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Character } from '@/features/character';
 import { Creature } from '@/features/creatures';
 import { supabase } from '@/integrations/supabase/client';
+import { notifyMaterialsChanged } from '@/features/inventory/hooks/useMaterials';
 import { setWorkerInterval, clearWorkerInterval } from '@/lib/worker-timer';
 import { CLASS_ABILITIES } from '@/features/combat';
 import { interpretCombatTickResult } from '../utils/interpretCombatTickResult';
