@@ -3,8 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   GEM_CATALOG,
   PRIMARY_GEM_KEYS,
-  HYBRID_GEM_KEYS,
-  hybridRecipe,
   GEM_SALVAGE_COST_PRIMARY,
   type GemKey,
 } from "../_shared/formulas/gems.ts";
@@ -100,47 +98,7 @@ serve(async (req) => {
       );
     }
 
-    if (mode === "combine_gem") {
-      if (!gem_key || !HYBRID_GEM_KEYS.includes(gem_key as GemKey)) {
-        throw new Error("Pick a valid hybrid gem");
-      }
-      const recipe = hybridRecipe(gem_key as GemKey);
-      if (!recipe) throw new Error("Unknown hybrid recipe");
-      const [a, b] = recipe;
-
-      const { data: okA } = await db.rpc('consume_material', {
-        _character_id: character_id, _key: a, _delta: 1,
-      });
-      if (!okA) {
-        throw new Error(`Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}`);
-      }
-
-      const { data: okB } = await db.rpc('consume_material', {
-        _character_id: character_id, _key: b, _delta: 1,
-      });
-      if (!okB) {
-        // Refund the first gem.
-        await db.rpc('add_material', { _character_id: character_id, _key: a, _delta: 1 });
-        throw new Error(`Requires 1 ${GEM_CATALOG[a].name} and 1 ${GEM_CATALOG[b].name}`);
-      }
-
-      const { data: newHybrid } = await db.rpc('add_material', {
-        _character_id: character_id, _key: gem_key, _delta: 1,
-      });
-
-      return new Response(
-        JSON.stringify({
-          gem_key,
-          gem_name: GEM_CATALOG[gem_key as GemKey].name,
-          new_count: newHybrid,
-          consumed: [
-            { gem_key: a, name: GEM_CATALOG[a].name },
-            { gem_key: b, name: GEM_CATALOG[b].name },
-          ],
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
+    // Hybrid gem combine retired in the gear rework.
 
     throw new Error(`Unknown mode: ${mode}`);
   } catch (e: any) {

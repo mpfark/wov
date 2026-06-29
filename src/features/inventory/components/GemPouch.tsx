@@ -1,5 +1,5 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, HYBRID_GEM_KEYS } from '@/shared/formulas/gems';
+import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS } from '@/shared/formulas/gems';
 import { GemIcon } from '@/components/icons/GemIcon';
 
 interface GemPouchProps {
@@ -25,7 +25,7 @@ function GemDot({ gemKey, count }: { gemKey: GemKey; count: number }) {
         </span>
       </TooltipTrigger>
       <TooltipContent side="top" className="text-xs">
-        <div className="font-display">{def.name} {def.isHybrid && '(hybrid)'}</div>
+        <div className="font-display">{def.name}</div>
         <div className="text-muted-foreground">{statLabel}</div>
       </TooltipContent>
     </Tooltip>
@@ -34,8 +34,7 @@ function GemDot({ gemKey, count }: { gemKey: GemKey; count: number }) {
 
 export function GemPouch({ owned, showEmpty = true }: GemPouchProps) {
   const primaries = PRIMARY_GEM_KEYS.filter(k => showEmpty || (owned[k] || 0) > 0);
-  const hybrids = HYBRID_GEM_KEYS.filter(k => showEmpty || (owned[k] || 0) > 0);
-  const empty = primaries.length === 0 && hybrids.length === 0;
+  const empty = primaries.length === 0;
   return (
     <TooltipProvider delayDuration={150}>
       <div className="gap-row">
@@ -47,8 +46,6 @@ export function GemPouch({ owned, showEmpty = true }: GemPouchProps) {
         ) : (
           <div className="flex flex-wrap gap-1">
             {primaries.map(k => <GemDot key={k} gemKey={k} count={owned[k] || 0} />)}
-            {hybrids.length > 0 && <span className="w-px self-stretch bg-border mx-0.5" />}
-            {hybrids.map(k => <GemDot key={k} gemKey={k} count={owned[k] || 0} />)}
           </div>
         )}
       </div>

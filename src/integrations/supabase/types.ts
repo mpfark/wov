@@ -295,31 +295,40 @@ export type Database = {
       }
       character_inventory: {
         Row: {
+          applied_gems: Json
           character_id: string
+          crafted_level: number | null
           created_at: string
           current_durability: number
           equipped_slot: Database["public"]["Enums"]["item_slot"] | null
           id: string
           is_pinned: boolean
           item_id: string
+          stat_override: Json | null
         }
         Insert: {
+          applied_gems?: Json
           character_id: string
+          crafted_level?: number | null
           created_at?: string
           current_durability?: number
           equipped_slot?: Database["public"]["Enums"]["item_slot"] | null
           id?: string
           is_pinned?: boolean
           item_id: string
+          stat_override?: Json | null
         }
         Update: {
+          applied_gems?: Json
           character_id?: string
+          crafted_level?: number | null
           created_at?: string
           current_durability?: number
           equipped_slot?: Database["public"]["Enums"]["item_slot"] | null
           id?: string
           is_pinned?: boolean
           item_id?: string
+          stat_override?: Json | null
         }
         Relationships: [
           {

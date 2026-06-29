@@ -86,3 +86,33 @@ export function calculateRepairCost(_maxDurability: number, currentDurability: n
   if (mult === 0) return 0;
   return Math.max(1, Math.ceil((100 - currentDurability) * value * mult / 100));
 }
+
+// effectiveItemStats — see src/shared/formulas/items.ts for full docs.
+const GEM_TO_ATTR: Record<string, string> = {
+  garnet: 'str', topaz: 'dex', emerald: 'con',
+  sapphire: 'int', pearl: 'wis', amethyst: 'cha',
+};
+
+export interface EffectiveStatsInput {
+  baseStats?: Record<string, number> | null;
+  statOverride?: Record<string, number> | null;
+  appliedGems?: Record<string, number> | null;
+}
+
+export function effectiveItemStats(input: EffectiveStatsInput): Record<string, number> {
+  const base = input.statOverride ?? input.baseStats ?? {};
+  const out: Record<string, number> = { ...base };
+  const gems = input.appliedGems ?? {};
+  for (const [gem, count] of Object.entries(gems)) {
+    if (!count || count <= 0) continue;
+    const attr = GEM_TO_ATTR[gem];
+    if (!attr) continue;
+    out[attr] = (out[attr] ?? 0) + count;
+  }
+  return out;
+}
+
+export function effectiveItemLevel(itemLevel: number | null | undefined, craftedLevel?: number | null): number {
+  return (craftedLevel ?? itemLevel ?? 1);
+}
+
