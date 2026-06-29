@@ -87,7 +87,7 @@ export default function JewelcrafterPanel({
   const [selling, setSelling] = useState(false);
   const [cutting, setCutting] = useState<string | null>(null);
   const weaponProgression = useWeaponProgression();
-  const { counts, byCategory } = useMaterials(characterId);
+  const { counts, byCategory, refresh: refreshMaterials } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
   const ownedGems: Record<string, number> = {};
   for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;

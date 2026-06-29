@@ -51,5 +51,5 @@ export function useMaterials(characterId: string | null | undefined) {
   const entries: MaterialEntry[] = catalog.map(m => ({ ...m, count: counts[m.key] ?? 0 }));
   const byCategory = (cat: string) => entries.filter(e => e.category === cat);
 
-  return { catalog, counts, entries, byCategory };
+  return { catalog, counts, entries, byCategory, refresh };
 }
