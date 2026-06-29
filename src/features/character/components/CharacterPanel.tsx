@@ -14,7 +14,7 @@ import { Shield, Trash2, Heart, ArrowDownToLine, ArrowUpDown, Pin, PinOff } from
 import _vitruvianMan from '@/assets/vitruvian-man.png';
 // StatPlannerDialog has moved into the Trainer service panel.
 import ItemTooltipCard from '@/components/items/ItemTooltipCard';
-import { effectiveItemStats } from '@/shared/formulas/items';
+import { getEffectiveStats } from '@/features/inventory/hooks/useInventory';
 
 import { STAT_CONTRIBUTIONS, type StatKey } from '@/features/character/utils/statContributions';
 import { GemPouch } from '@/features/inventory/components/GemPouch';
@@ -588,21 +588,21 @@ export default function CharacterPanel({
                               if (inv.item.slot) {
                                 const isTwoHandedItem = inv.item.hands === 2;
                                 const currentlyEquipped = equipped.find(e => e.equipped_slot === inv.item.slot);
-                                const newStats = effectiveItemStats({ baseStats: inv.item.stats, statOverride: inv.stat_override, appliedGems: inv.applied_gems });
+                                const newStats = getEffectiveStats(inv);
                                 const oldStats: Record<string, number> = {};
                                 if (isTwoHandedItem) {
                                   const mh = equipped.find(e => e.equipped_slot === 'main_hand');
                                   const oh = equipped.find(e => e.equipped_slot === 'off_hand');
                                   for (const it of [mh, oh]) {
-                                    if (it) for (const [k, v] of Object.entries(effectiveItemStats({ baseStats: it.item.stats, statOverride: it.stat_override, appliedGems: it.applied_gems }))) oldStats[k] = (oldStats[k] || 0) + (v as number);
+                                    if (it) for (const [k, v] of Object.entries(getEffectiveStats(it))) oldStats[k] = (oldStats[k] || 0) + (v as number);
                                   }
                                 } else {
                                   const mh = equipped.find(e => e.equipped_slot === 'main_hand');
                                   const mainIs2H = mh && mh.item.hands === 2;
                                   if (mainIs2H && (inv.item.slot === 'main_hand' || inv.item.slot === 'off_hand')) {
-                                    for (const [k, v] of Object.entries(effectiveItemStats({ baseStats: mh!.item.stats, statOverride: mh!.stat_override, appliedGems: mh!.applied_gems }))) oldStats[k] = (v as number) || 0;
+                                    for (const [k, v] of Object.entries(getEffectiveStats(mh!))) oldStats[k] = (v as number) || 0;
                                   } else if (currentlyEquipped) {
-                                    for (const [k, v] of Object.entries(effectiveItemStats({ baseStats: currentlyEquipped.item.stats, statOverride: currentlyEquipped.stat_override, appliedGems: currentlyEquipped.applied_gems }))) oldStats[k] = (v as number) || 0;
+                                    for (const [k, v] of Object.entries(getEffectiveStats(currentlyEquipped))) oldStats[k] = (v as number) || 0;
                                   }
                                 }
 
