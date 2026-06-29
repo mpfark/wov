@@ -82,9 +82,15 @@ export default function ItemTooltipCard({
   item, weaponProgression, classKey,
   durabilityPct, qty, isBroken,
   comparison, flavorText, showValue = true,
+  appliedGems, statOverride,
 }: Props) {
-  const stats = item.stats || {};
+  const stats = effectiveItemStats({
+    baseStats: item.stats,
+    statOverride,
+    appliedGems,
+  });
   const statEntries = Object.entries(stats).filter(([, v]) => (v as number) !== 0);
+  const gemEntries = Object.entries(appliedGems ?? {}).filter(([, v]) => (v as number) > 0);
   const subtitle = itemSubtitle(item);
   const isWeapon = !!item.weapon_tag && !isShield(item.weapon_tag);
   const die = isWeapon
@@ -95,7 +101,9 @@ export default function ItemTooltipCard({
   const hasStatsBlock = isWeapon || statEntries.length > 0 || (comparison && comparison.diffs.length > 0);
   const hasMetaBlock = durabilityPct != null || (showValue && item.value != null) || (qty && qty > 1) || isBroken;
   const effectiveFlavor = flavorText ?? (hasProcs(item.procs) ? procFlavorFor(item) : null);
+  const hasGemBlock = gemEntries.length > 0;
   const hasFlavorBlock = !!(effectiveFlavor || item.description);
+
 
 
   return (
