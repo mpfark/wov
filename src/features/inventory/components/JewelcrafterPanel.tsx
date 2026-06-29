@@ -14,7 +14,7 @@ import { GEM_CATALOG, GemKey, PRIMARY_GEM_KEYS, GEM_SALVAGE_COST_PRIMARY } from 
 import { GemIcon } from '@/components/icons/GemIcon';
 import { useForgeUpgradeView } from './useForgeUpgradeView';
 
-type JewelcrafterTab = 'repair' | 'forge' | 'gems';
+type JewelcrafterTab = 'repair' | 'forge' | 'enhance' | 'gems';
 
 const JEWELRY_SLOTS = new Set(['ring', 'trinket']);
 const FORGE_SLOTS = [
