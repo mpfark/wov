@@ -93,7 +93,7 @@ export default function BlacksmithPanel({
   const [sellAmount, setSellAmount] = useState(1);
   const [selling, setSelling] = useState(false);
   const weaponProgression = useWeaponProgression();
-  const { counts, byCategory } = useMaterials(characterId);
+  const { counts, byCategory, refresh: refreshMaterials } = useMaterials(characterId);
   const salvage = counts.salvage ?? 0;
   const ownedGems: Record<string, number> = {};
   for (const e of byCategory('gem')) if (e.count > 0) ownedGems[e.key] = e.count;
@@ -171,7 +171,7 @@ export default function BlacksmithPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
-      // Salvage + gem counts come from the character_materials realtime subscription.
+      void refreshMaterials();
       onInventoryChange();
       // Pull the authoritative character row so level / XP / max HP/CP/MP /
       // unspent stat points reflect any crafting-XP level-up immediately
@@ -204,6 +204,7 @@ export default function BlacksmithPanel({
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       onGoldChange(data.gold_remaining);
+      void refreshMaterials();
       addLog(`🔩 Sold ${data.amount_sold} salvage for ${data.gold_gained} gold.`);
       setSellAmount(Math.min(sellAmount, salvage - data.amount_sold) || 1);
     } catch (e: any) {
