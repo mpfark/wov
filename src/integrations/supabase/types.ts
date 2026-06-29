@@ -406,11 +406,13 @@ export type Database = {
       characters: {
         Row: {
           ac: number
+          active_contract: Json | null
           bhp: number
           bhp_trained: Json
           cha: number
           class: Database["public"]["Enums"]["character_class"]
           con: number
+          contracts_completed: number
           cp: number
           created_at: string
           crown_item_created: boolean
@@ -457,11 +459,13 @@ export type Database = {
         }
         Insert: {
           ac?: number
+          active_contract?: Json | null
           bhp?: number
           bhp_trained?: Json
           cha?: number
           class: Database["public"]["Enums"]["character_class"]
           con?: number
+          contracts_completed?: number
           cp?: number
           created_at?: string
           crown_item_created?: boolean
@@ -508,11 +512,13 @@ export type Database = {
         }
         Update: {
           ac?: number
+          active_contract?: Json | null
           bhp?: number
           bhp_trained?: Json
           cha?: number
           class?: Database["public"]["Enums"]["character_class"]
           con?: number
+          contracts_completed?: number
           cp?: number
           created_at?: string
           crown_item_created?: boolean
@@ -1935,6 +1941,11 @@ export type Database = {
         Args: { _area_type: string }
         Returns: string
       }
+      assassin_abandon_contract: {
+        Args: { _character_id: string }
+        Returns: undefined
+      }
+      assassin_take_contract: { Args: { _character_id: string }; Returns: Json }
       award_class_bond: {
         Args: {
           _amount: number
